@@ -496,7 +496,7 @@ class TgpuFixedStorageTextureImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   $name(label: string): this {
     this._texture.$name(label);
@@ -523,7 +523,7 @@ class TgpuFixedStorageTextureImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {
@@ -550,7 +550,7 @@ export class TgpuLaidOutStorageTextureImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -565,7 +565,7 @@ export class TgpuLaidOutStorageTextureImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {
@@ -611,7 +611,7 @@ class TgpuFixedSampledTextureImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   $name(label: string): this {
     this._texture.$name(label);
@@ -645,7 +645,7 @@ class TgpuFixedSampledTextureImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {
@@ -672,7 +672,7 @@ export class TgpuLaidOutSampledTextureImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -691,7 +691,7 @@ export class TgpuLaidOutSampledTextureImpl
 
       // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
       // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-      return snip(id, this as any, /* ref */ true);
+      return snip(id, this as any, /* ref */ 'handle');
     }
 
     ctx.addDeclaration(
@@ -702,7 +702,7 @@ export class TgpuLaidOutSampledTextureImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {

@@ -239,10 +239,10 @@ function applyActionToSnippet(
 
   switch (action.action) {
     case 'ref':
-      return snip(stitch`&${snippet}`, targetType, /* ref */ true);
+      return snip(stitch`&${snippet}`, targetType, /* ref */ snippet.ref);
     case 'deref':
       // Dereferencing a pointer does not return a copy of the value, it's still a reference.
-      return snip(stitch`*${snippet}`, targetType, /* ref */ true);
+      return snip(stitch`*${snippet}`, targetType, /* ref */ snippet.ref);
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
       return (targetType as unknown as (val: Snippet) => Snippet)(snippet);

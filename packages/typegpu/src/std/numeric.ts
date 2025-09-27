@@ -609,7 +609,7 @@ export const frexp: FrexpOverload = createDualImpl(
       );
     }
 
-    return snip(stitch`frexp(${value})`, returnType, /* ref */ false);
+    return snip(stitch`frexp(${value})`, returnType, /* ref */ undefined);
   },
   'frexp',
 );
@@ -975,7 +975,11 @@ export const refract = createDualImpl(
   },
   // GPU implementation
   (e1, e2, e3) =>
-    snip(stitch`refract(${e1}, ${e2}, ${e3})`, e1.dataType, /* ref */ false),
+    snip(
+      stitch`refract(${e1}, ${e2}, ${e3})`,
+      e1.dataType,
+      /* ref */ undefined,
+    ),
   'refract',
   (e1, e2, e3) => [
     e1.dataType as AnyWgslData,

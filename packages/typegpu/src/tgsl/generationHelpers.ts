@@ -178,9 +178,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* ref */ false);
+    return snip(value, abstractInt, /* ref */ undefined);
   }
-  return snip(value, abstractFloat, /* ref */ false);
+  return snip(value, abstractFloat, /* ref */ undefined);
 }
 
 export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
@@ -249,8 +249,7 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    // It's a reference to an external value, so `ref` is true
-    return snip(value, kindToSchema[value.kind], /* ref */ true);
+    return snip(value, kindToSchema[value.kind], /* ref */ undefined);
   }
 
   if (
@@ -259,7 +258,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* ref */ true);
+    return snip(value, UnknownData, /* ref */ undefined);
   }
 
   if (typeof value === 'number') {
@@ -268,9 +267,8 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (typeof value === 'boolean') {
     // It's a primitive, so `ref` is false
-    return snip(value, bool, /* ref */ false);
+    return snip(value, bool, /* ref */ undefined);
   }
 
-  // Hard to determine referentiality, so let's assume it's true
-  return snip(value, UnknownData, /* ref */ true);
+  return snip(value, UnknownData, /* ref */ undefined);
 }

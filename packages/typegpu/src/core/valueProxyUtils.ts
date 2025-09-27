@@ -38,7 +38,9 @@ export const valueProxyHandler: ProxyHandler<
       return undefined;
     }
 
-    const ref = targetSnippet.ref && isNaturallyRef(propType);
+    const ref = targetSnippet.ref !== undefined && isNaturallyRef(propType)
+      ? targetSnippet.ref
+      : undefined;
 
     return new Proxy({
       [$internal]: true,

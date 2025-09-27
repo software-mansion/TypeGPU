@@ -130,7 +130,13 @@ class TgpuFixedBufferImpl<
       };`,
     );
 
-    return snip(id, dataType, /* ref */ isNaturallyRef(dataType));
+    return snip(
+      id,
+      dataType,
+      /* ref */ isNaturallyRef(dataType)
+        ? this.usage === 'uniform' ? 'uniform' : 'storage'
+        : undefined,
+    );
   }
 
   toString(): string {
@@ -139,11 +145,18 @@ class TgpuFixedBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType, /* ref */ isNaturallyRef(dataType));
+        return snip(
+          this,
+          dataType,
+          /* ref */ isNaturallyRef(dataType)
+            ? usage === 'uniform' ? 'uniform' : 'storage'
+            : undefined,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -250,7 +263,13 @@ export class TgpuLaidOutBufferImpl<
       };`,
     );
 
-    return snip(id, dataType, /* ref */ isNaturallyRef(dataType));
+    return snip(
+      id,
+      dataType,
+      /* ref */ isNaturallyRef(dataType)
+        ? this.usage === 'uniform' ? 'uniform' : 'storage'
+        : undefined,
+    );
   }
 
   toString(): string {
@@ -259,11 +278,18 @@ export class TgpuLaidOutBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const schema = this.dataType as unknown as AnyData;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, schema, /* ref */ isNaturallyRef(schema));
+        return snip(
+          this,
+          schema,
+          /* ref */ isNaturallyRef(schema)
+            ? usage === 'uniform' ? 'uniform' : 'storage'
+            : undefined,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

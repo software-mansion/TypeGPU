@@ -60,7 +60,7 @@ export const disarrayOf = createDualImpl(
       partial[$internal] = true;
 
       // Why ref? It's a function.
-      return snip(partial, UnknownData, /* ref */ false);
+      return snip(partial, UnknownData, /* ref */ undefined);
     }
 
     if (typeof elementCount.value !== 'number') {
@@ -72,7 +72,7 @@ export const disarrayOf = createDualImpl(
     return snip(
       cpu_disarrayOf(elementType.value as AnyWgslData, elementCount.value),
       elementType.value as AnyWgslData,
-      /* ref */ false,
+      /* ref */ undefined,
     );
   },
   'disarrayOf',

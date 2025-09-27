@@ -156,7 +156,7 @@ export class TgpuLaidOutSamplerImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -168,7 +168,7 @@ export class TgpuLaidOutSamplerImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {
@@ -188,7 +188,7 @@ export class TgpuLaidOutComparisonSamplerImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -200,7 +200,7 @@ export class TgpuLaidOutComparisonSamplerImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {
@@ -238,7 +238,7 @@ class TgpuFixedSamplerImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
@@ -256,7 +256,7 @@ class TgpuFixedSamplerImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   $name(label: string) {
@@ -293,7 +293,7 @@ class TgpuFixedComparisonSamplerImpl
 
   // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
   // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ true);
+  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   $name(label: string) {
     setName(this, label);
@@ -313,7 +313,7 @@ class TgpuFixedComparisonSamplerImpl
 
     // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
     // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ true);
+    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {

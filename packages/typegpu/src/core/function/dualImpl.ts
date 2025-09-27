@@ -86,13 +86,17 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       return snip(
         options.normalImpl(...converted.map((s) => s.value) as never[]),
         returnType,
-        // Functions give up ownership of their return value
-        /* ref */ false,
+        // Why no ref? Functions give up ownership of their return value
+        /* ref */ undefined,
       );
     }
 
-    // Functions give up ownership of their return value
-    return snip(options.codegenImpl(...converted), returnType, /* ref */ false);
+    return snip(
+      options.codegenImpl(...converted),
+      returnType,
+      // Why no ref? Functions give up ownership of their return value
+      /* ref */ undefined,
+    );
   };
 
   const impl = ((...args: Parameters<T>) => {

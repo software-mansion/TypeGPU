@@ -283,7 +283,7 @@ export const isCloseTo = dualImpl({
     return false;
   },
   // GPU implementation
-  codegenImpl: (lhs, rhs, precision = snip(0.01, f32, /* ref */ false)) => {
+  codegenImpl: (lhs, rhs, precision = snip(0.01, f32, /* ref */ undefined)) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }

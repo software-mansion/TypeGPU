@@ -305,9 +305,9 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   const call = createDualImpl<InferImplSchema<ImplSchema>>(
     (...args) => innerFn(...args),
-    // Functions give up ownership of their return value (so ref is false)
     (...args) =>
-      snip(new FnCall(fn, args), innerFn.shell.returnType, /* ref */ false),
+      // Why no ref? Functions give up ownership of their return value
+      snip(new FnCall(fn, args), innerFn.shell.returnType, /* ref */ undefined),
     'tgpuFnCall',
     innerFn.shell.argTypes,
   );
@@ -343,8 +343,12 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this.#fn = fn;
     this.#params = params;
     this[$getNameForward] = fn;
-    // Functions give up ownership of their return value (so ref is false)
-    this[$ownSnippet] = snip(this, this.#fn.shell.returnType, /* ref */ false);
+    this[$ownSnippet] = snip(
+      this,
+      this.#fn.shell.returnType,
+      // Why no ref? Functions give up ownership of their return value (so ref is false)
+      /* ref */ undefined,
+    );
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -354,8 +358,8 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
       return snip(
         stitch`${ctx.resolve(this.#fn).value}(${this.#params})`,
         this.#fn.shell.returnType,
-        // Functions give up ownership of their return value (so ref is false)
-        /* ref */ false,
+        // Why no ref? Functions give up ownership of their return value (so ref is false)
+        /* ref */ undefined,
       );
     });
   }

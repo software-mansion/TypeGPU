@@ -1,5 +1,6 @@
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type AnyWgslData, isNaturallyRef } from '../../data/wgslTypes.ts';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
@@ -11,6 +12,7 @@ import {
   $resolve,
 } from '../../shared/symbols.ts';
 import {
+  getOwnSnippet,
   isBufferUsage,
   type ResolutionCtx,
   type SelfResolvable,
@@ -91,10 +93,26 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     }
 
     if (isBufferUsage(value) || isBufferShorthand(value)) {
-      return snip(value, this.schema, /* ref */ true);
+      return snip(
+        value,
+        this.schema,
+        /* ref */ value.resourceType === 'uniform' ||
+            value.resourceType === 'buffer-usage' && value.usage === 'uniform'
+          ? 'uniform'
+          : 'storage',
+      );
     }
 
-    return snip(value, this.schema, /* ref */ isNaturallyRef(this.schema));
+    const ownSnippet = getOwnSnippet(value);
+    if (ownSnippet) {
+      return ownSnippet;
+    }
+
+    // Doing a deep copy each time so that we don't have to deal with refs
+    return schemaCallWrapper(
+      this.schema,
+      snip(value, this.schema, /* ref */ undefined),
+    );
   }
 
   $name(label: string) {

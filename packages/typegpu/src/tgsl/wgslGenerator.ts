@@ -167,7 +167,7 @@ ${this.ctx.pre}}`;
     const snippet = snip(
       this.ctx.makeNameValid(id),
       dataType,
-      /* ref */ wgsl.isNaturallyRef(dataType),
+      /* ref */ wgsl.isNaturallyRef(dataType) ? 'function' : undefined,
     );
     this.ctx.defineVariable(id, snippet);
     return snippet;
@@ -213,7 +213,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* ref */ false);
+      return snip(expression, bool, /* ref */ undefined);
     }
 
     if (
@@ -251,7 +251,7 @@ ${this.ctx.pre}}`;
           : `${lhsStr} ${op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
 
@@ -262,7 +262,7 @@ ${this.ctx.pre}}`;
       const argStr = this.ctx.resolve(argExpr.value).value;
 
       // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ false);
+      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ undefined);
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -273,7 +273,7 @@ ${this.ctx.pre}}`;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* ref */ false);
+      return snip(`${op}${argStr}`, type, /* ref */ undefined);
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -282,7 +282,7 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData, /* ref */ true);
+        return snip(new ConsoleLog(), UnknownData, /* ref */ undefined);
       }
 
       if (target.dataType.type === 'unknown') {
@@ -314,7 +314,7 @@ ${this.ctx.pre}}`;
             infixOperators[property as InfixOperator][$internal].gpuImpl,
           ),
           UnknownData,
-          /* ref */ true,
+          /* ref */ target.ref,
         );
       }
 
@@ -326,14 +326,14 @@ ${this.ctx.pre}}`;
               ? `arrayLength(${this.ctx.resolve(target.value).value})`
               : `arrayLength(&${this.ctx.resolve(target.value).value})`,
             u32,
-            /* ref */ false,
+            /* ref */ undefined,
           );
         }
 
         return snip(
           String(targetDataType.elementCount),
           abstractInt,
-          /* ref */ false,
+          /* ref */ undefined,
         );
       }
 
@@ -341,7 +341,7 @@ ${this.ctx.pre}}`;
         return snip(
           new MatrixColumnsAccess(target),
           UnknownData,
-          /* ref */ true,
+          /* ref */ target.ref,
         );
       }
 
@@ -359,7 +359,7 @@ ${this.ctx.pre}}`;
           ? `(*${this.ctx.resolve(target.value).value}).${property}`
           : `${this.ctx.resolve(target.value).value}.${property}`,
         propType,
-        /* ref */ target.ref && wgsl.isNaturallyRef(propType),
+        /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
       );
     }
 
@@ -414,7 +414,7 @@ ${this.ctx.pre}}`;
         return snip(
           `(*${targetStr})[${propertyStr}]`,
           propType,
-          /* ref */ wgsl.isNaturallyRef(propType),
+          /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
         );
       }
 
@@ -424,7 +424,7 @@ ${this.ctx.pre}}`;
       return snip(
         `${targetStr}[${propertyStr}]`,
         propType,
-        /* ref */ target.ref && wgsl.isNaturallyRef(propType),
+        /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
       );
     }
 
@@ -459,7 +459,7 @@ ${this.ctx.pre}}`;
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
             // A new struct, so not a reference
-            /* ref */ false,
+            /* ref */ undefined,
           );
         }
 
@@ -474,7 +474,7 @@ ${this.ctx.pre}}`;
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
           // A new struct, so not a reference
-          /* ref */ false,
+          /* ref */ undefined,
         );
       }
 
@@ -506,7 +506,7 @@ ${this.ctx.pre}}`;
             return snip(
               stitch`${snippet.value}(${converted})`,
               snippet.dataType,
-              /* ref */ false,
+              /* ref */ undefined,
             );
           });
         }
@@ -634,7 +634,7 @@ ${this.ctx.pre}}`;
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
 
@@ -690,12 +690,12 @@ ${this.ctx.pre}}`;
           elemType as wgsl.AnyWgslData,
           values.length,
         ) as wgsl.AnyWgslData,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* ref */ true);
+      return snip(expression[1], UnknownData, /* ref */ undefined);
     }
 
     if (expression[0] === NODE.preUpdate) {

@@ -16,7 +16,7 @@ export const workgroupBarrier = createDualImpl(
   // CPU implementation
   () => console.warn('workgroupBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
-  () => snip('workgroupBarrier()', Void, /* ref */ false),
+  () => snip('workgroupBarrier()', Void, /* ref */ undefined),
   'workgroupBarrier',
 );
 
@@ -24,7 +24,7 @@ export const storageBarrier = createDualImpl(
   // CPU implementation
   () => console.warn('storageBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
-  () => snip('storageBarrier()', Void, /* ref */ false),
+  () => snip('storageBarrier()', Void, /* ref */ undefined),
   'storageBarrier',
 );
 
@@ -32,7 +32,7 @@ export const textureBarrier = createDualImpl(
   // CPU implementation
   () => console.warn('textureBarrier is a no-op outside of CODEGEN mode.'),
   // CODEGEN implementation
-  () => snip('textureBarrier()', Void, /* ref */ false),
+  () => snip('textureBarrier()', Void, /* ref */ undefined),
   'textureBarrier',
 );
 
@@ -46,7 +46,11 @@ export const atomicLoad = createDualImpl(
   // CODEGEN implementation
   (a) => {
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(stitch`atomicLoad(&${a})`, a.dataType.inner, /* ref */ false);
+      return snip(
+        stitch`atomicLoad(&${a})`,
+        a.dataType.inner,
+        /* ref */ undefined,
+      );
     }
     throw new Error(
       `Invalid atomic type: ${safeStringify(a.dataType)}`,
@@ -69,7 +73,11 @@ export const atomicStore = createDualImpl(
         `Invalid atomic type: ${safeStringify(a.dataType)}`,
       );
     }
-    return snip(stitch`atomicStore(&${a}, ${value})`, Void, /* ref */ false);
+    return snip(
+      stitch`atomicStore(&${a}, ${value})`,
+      Void,
+      /* ref */ undefined,
+    );
   },
   'atomicStore',
 );
@@ -94,7 +102,7 @@ export const atomicAdd = createDualImpl(
       return snip(
         stitch`atomicAdd(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -118,7 +126,7 @@ export const atomicSub = createDualImpl(
       return snip(
         stitch`atomicSub(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -142,7 +150,7 @@ export const atomicMax = createDualImpl(
       return snip(
         stitch`atomicMax(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -166,7 +174,7 @@ export const atomicMin = createDualImpl(
       return snip(
         stitch`atomicMin(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -190,7 +198,7 @@ export const atomicAnd = createDualImpl(
       return snip(
         stitch`atomicAnd(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -214,7 +222,7 @@ export const atomicOr = createDualImpl(
       return snip(
         stitch`atomicOr(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
@@ -238,7 +246,7 @@ export const atomicXor = createDualImpl(
       return snip(
         stitch`atomicXor(&${a}, ${value})`,
         a.dataType.inner,
-        /* ref */ false,
+        /* ref */ undefined,
       );
     }
     throw new Error(
