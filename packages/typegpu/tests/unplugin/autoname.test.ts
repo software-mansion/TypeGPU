@@ -20,9 +20,9 @@ describe('autonaming', () => {
 
   it("autonames resources created using tgpu['~unstable']", () => {
     const myAccessor = tgpu['~unstable'].accessor(d.f32);
-    const myPrivateVar = tgpu['~unstable'].privateVar(d.vec2f);
-    const myWorkgroupVar = tgpu['~unstable'].workgroupVar(d.f32);
-    const myConst = tgpu['~unstable'].const(d.f32, 1);
+    const myPrivateVar = tgpu.privateVar(d.vec2f);
+    const myWorkgroupVar = tgpu.workgroupVar(d.f32);
+    const myConst = tgpu.const(d.f32, 1);
 
     expect(getName(myAccessor)).toBe('myAccessor');
     expect(getName(myPrivateVar)).toBe('myPrivateVar');

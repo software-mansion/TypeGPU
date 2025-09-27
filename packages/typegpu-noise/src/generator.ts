@@ -17,7 +17,7 @@ export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
  * "Particle System in WebGPU" by Benedikt Peter
  */
 export const BPETER: StatefulGenerator = (() => {
-  const seed = tgpu['~unstable'].privateVar(d.vec2f);
+  const seed = tgpu.privateVar(d.vec2f);
 
   return {
     seed: tgpu.fn([d.f32])((value) => {

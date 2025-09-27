@@ -1,5 +1,6 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
@@ -10,11 +11,10 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-import { namespace } from '../../src/core/resolve/namespace.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1106,8 +1106,8 @@ describe('wgslGenerator', () => {
   });
 
   it('resolves when accessing matrix elements through .columns', () => {
-    const matrix = tgpu['~unstable'].workgroupVar(d.mat4x4f);
-    const index = tgpu['~unstable'].workgroupVar(d.u32);
+    const matrix = tgpu.workgroupVar(d.mat4x4f);
+    const index = tgpu.workgroupVar(d.u32);
 
     const testFn = tgpu.fn([])(() => {
       const element = matrix.$.columns[index.$];
