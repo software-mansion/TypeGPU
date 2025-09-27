@@ -38,7 +38,7 @@ export function ptrHandle<T extends StorableData>(
   return INTERNAL_createPtr('handle', inner, 'read');
 }
 
-function INTERNAL_createPtr<
+export function INTERNAL_createPtr<
   TAddressSpace extends AddressSpace,
   TInner extends StorableData,
   TAccess extends Access,

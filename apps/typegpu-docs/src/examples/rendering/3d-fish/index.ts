@@ -118,8 +118,8 @@ const randomizeFishPositionsDispatch = prepareDispatch(root, (x) => {
     applySeaFog: 1,
     applySeaDesaturation: 1,
   });
-  buffer0mutable.$[x] = data;
-  buffer1mutable.$[x] = data;
+  buffer0mutable.$[x] = ModelData(data);
+  buffer1mutable.$[x] = ModelData(data);
 });
 
 const randomizeFishPositions = () => {

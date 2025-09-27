@@ -49,7 +49,7 @@ const getCell = (x: number, y: number): d.v4f => {
 const setCell = (x: number, y: number, value: d.v4f) => {
   'kernel';
   const index = coordsToIndex(x, y);
-  outputGridSlot.$[index] = value;
+  outputGridSlot.$[index] = d.vec4f(value);
 };
 
 const setVelocity = (x: number, y: number, velocity: d.v2f) => {
@@ -202,7 +202,7 @@ const mainInitWorld = tgpu['~unstable'].computeFn({
     }
   }
 
-  outputGridSlot.$[index] = value;
+  outputGridSlot.$[index] = d.vec4f(value);
 });
 
 const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
@@ -366,7 +366,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
   const minInflow = getMinimumInFlow(x, y);
   next.z = std.max(minInflow, next.z);
 
-  outputGridSlot.$[index] = next;
+  outputGridSlot.$[index] = d.vec4f(next);
 });
 
 const OBSTACLE_BOX = 0;

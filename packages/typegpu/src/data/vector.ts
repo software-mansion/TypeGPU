@@ -317,7 +317,13 @@ function makeVecSchema<TValue, S extends number | boolean>(
       returnType: schema as AnyData,
     }),
     normalImpl: cpuConstruct,
-    codegenImpl: (...args) => stitch`${type}(${args})`,
+    codegenImpl: (...args) => {
+      if (args.length === 1 && args[0]?.dataType === schema) {
+        // Already typed as the schema
+        return stitch`${args[0]}`;
+      }
+      return stitch`${type}(${args})`;
+    },
   });
 
   const schema:

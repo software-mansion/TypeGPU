@@ -8,6 +8,7 @@ import {
   isData,
   isLooseData,
   MatrixColumnsAccess,
+  toStorable,
   UnknownData,
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
@@ -222,19 +223,27 @@ ${this.ctx.pre}}`;
       expression[0] === NODE.assignmentExpr
     ) {
       // Logical/Binary/Assignment Expression
-      const [_, lhs, op, rhs] = expression;
+      const [exprType, lhs, op, rhs] = expression;
       const lhsExpr = this.expression(lhs);
       const rhsExpr = this.expression(rhs);
+
+      if (lhsExpr.dataType.type === 'unknown') {
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+      }
+
+      if (rhsExpr.dataType.type === 'unknown') {
+        throw new WgslTypeError(
+          `Right-hand side of '${op}' is of unknown type`,
+        );
+      }
 
       const codegen = opCodeToCodegen[op as keyof typeof opCodeToCodegen];
       if (codegen) {
         return codegen(lhsExpr, rhsExpr);
       }
 
-      const forcedType = expression[0] === NODE.assignmentExpr
-        ? lhsExpr.dataType.type === 'ptr'
-          ? [lhsExpr.dataType.inner as AnyData]
-          : [lhsExpr.dataType as AnyData]
+      const forcedType = exprType === NODE.assignmentExpr
+        ? [toStorable(lhsExpr.dataType)]
         : undefined;
 
       const [convLhs, convRhs] =
@@ -244,6 +253,14 @@ ${this.ctx.pre}}`;
       const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
+
+      if (exprType === NODE.assignmentExpr && rhsExpr.ref !== undefined) {
+        throw new WgslTypeError(
+          `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
+            this.ctx.resolve(rhsExpr.dataType).value
+          }(${rhsStr})' instead.\n-----`,
+        );
+      }
 
       return snip(
         parenthesizedOps.includes(op)

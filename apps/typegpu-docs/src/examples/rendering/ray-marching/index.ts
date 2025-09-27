@@ -135,7 +135,7 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
 
     if (dO > MAX_DIST || scene.dist < SURF_DIST) {
       result.dist = dO;
-      result.color = scene.color;
+      result.color = d.vec3f(scene.color);
       break;
     }
   }

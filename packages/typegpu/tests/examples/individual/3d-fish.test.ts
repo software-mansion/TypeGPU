@@ -118,7 +118,7 @@ describe('3d fish example', () => {
 
       @group(0) @binding(2) var<uniform> mouseRay_5: MouseRay_6;
 
-      fn projectPointOnLine_8(point: ptr<function, vec3f>, line: ptr<function, Line3_7>) -> vec3f {
+      fn projectPointOnLine_8(point: ptr<function, vec3f>, line: ptr<uniform, Line3_7>) -> vec3f {
         var pointVector = (*point - (*line).origin);
         var projection = dot(pointVector, (*line).dir);
         return ((*line).origin + ((*line).dir * projection));

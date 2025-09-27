@@ -249,7 +249,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = instanceInfo;
+  nextTrianglePos.value[index] = TriangleData(instanceInfo);
 });
 
 const computePipeline = root['~unstable']

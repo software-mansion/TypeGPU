@@ -29,7 +29,7 @@ describe('cubemap reflection example', () => {
 
       @group(0) @binding(0) var<storage, read> prevVertices_1: array<ComputeVertex_2>;
 
-      fn unpackVec2u_3(packed: ptr<function, vec2u>) -> vec4f {
+      fn unpackVec2u_3(packed: ptr<storage, vec2u, read>) -> vec4f {
         var xy = unpack2x16float((*packed).x);
         var zw = unpack2x16float((*packed).y);
         return vec4f(xy, zw);

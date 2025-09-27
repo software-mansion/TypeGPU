@@ -122,7 +122,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
     }
   }
 
-  computeLayout.$.outState[input.gid.x] = updatedCurrent;
+  computeLayout.$.outState[input.gid.x] = CelestialBody(updatedCurrent);
 });
 
 export const computeGravityShader = tgpu['~unstable'].computeFn({
@@ -182,5 +182,5 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
     );
   }
 
-  computeLayout.$.outState[input.gid.x] = updatedCurrent;
+  computeLayout.$.outState[input.gid.x] = CelestialBody(updatedCurrent);
 });

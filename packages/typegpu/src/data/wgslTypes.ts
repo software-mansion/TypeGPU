@@ -1361,6 +1361,15 @@ export type AddressSpace =
   | 'handle';
 export type Access = 'read' | 'write' | 'read-write';
 
+export const addressSpaceToDefaultAccess = {
+  uniform: 'read',
+  storage: 'read',
+  workgroup: 'read-write',
+  private: 'read-write',
+  function: 'read-write',
+  handle: 'read',
+} as const;
+
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
   TInner extends StorableData = StorableData,
