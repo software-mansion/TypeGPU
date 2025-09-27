@@ -23,11 +23,7 @@ import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import {
-  type FnArgsConversionHint,
-  isKnownAtComptime,
-  isMarkedInternal,
-} from '../types.ts';
+import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,

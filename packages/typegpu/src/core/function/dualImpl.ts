@@ -10,7 +10,6 @@ import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import { isNaturallyRef } from '../../data/wgslTypes.ts';
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
