@@ -60,7 +60,7 @@ class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
     );
 
     ctx.addDeclaration(replacedDeclaration);
-    return snip('', Void, /* ref */ undefined);
+    return snip('', Void, /* ref */ 'constant');
   }
 
   toString() {

@@ -10,7 +10,13 @@ import {
   UnknownData,
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isRef,
+  isSnippet,
+  type RefSpace,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
@@ -139,11 +145,16 @@ ${this.ctx.pre}}`;
   public blockVariable(
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
+    ref: RefSpace,
   ): Snippet {
     const snippet = snip(
       this.ctx.makeNameValid(id),
       dataType,
-      /* ref */ wgsl.isNaturallyRef(dataType) ? 'this-function' : undefined,
+      /* ref */ wgsl.isNaturallyRef(dataType)
+        ? 'this-function'
+        : ref === 'constant'
+        ? 'constant'
+        : 'runtime',
     );
     this.ctx.defineVariable(id, snippet);
     return snippet;
@@ -189,7 +200,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* ref */ undefined);
+      return snip(expression, bool, /* ref */ 'constant');
     }
 
     if (
@@ -229,7 +240,7 @@ ${this.ctx.pre}}`;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
-      if (exprType === NODE.assignmentExpr && rhsExpr.ref !== undefined) {
+      if (exprType === NODE.assignmentExpr && isRef(rhsExpr)) {
         throw new WgslTypeError(
           `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
             this.ctx.resolve(rhsExpr.dataType).value
@@ -243,7 +254,7 @@ ${this.ctx.pre}}`;
           : `${lhsStr} ${op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       );
     }
 
@@ -254,7 +265,7 @@ ${this.ctx.pre}}`;
       const argStr = this.ctx.resolve(argExpr.value).value;
 
       // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ undefined);
+      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ 'runtime');
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -265,7 +276,7 @@ ${this.ctx.pre}}`;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* ref */ undefined);
+      return snip(`${op}${argStr}`, type, /* ref */ 'runtime');
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -274,7 +285,7 @@ ${this.ctx.pre}}`;
       let target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData, /* ref */ undefined);
+        return snip(new ConsoleLog(), UnknownData, /* ref */ 'runtime');
       }
 
       if (wgsl.isPtr(target.dataType)) {
@@ -354,7 +365,7 @@ ${this.ctx.pre}}`;
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
             // A new struct, so not a reference
-            /* ref */ undefined,
+            /* ref */ 'runtime',
           );
         }
 
@@ -369,7 +380,7 @@ ${this.ctx.pre}}`;
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
           // A new struct, so not a reference
-          /* ref */ undefined,
+          /* ref */ 'runtime',
         );
       }
 
@@ -401,7 +412,7 @@ ${this.ctx.pre}}`;
             return snip(
               stitch`${snippet.value}(${converted})`,
               snippet.dataType,
-              /* ref */ undefined,
+              /* ref */ 'runtime',
             );
           });
         }
@@ -529,7 +540,7 @@ ${this.ctx.pre}}`;
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       );
     }
 
@@ -585,12 +596,12 @@ ${this.ctx.pre}}`;
           elemType as wgsl.AnyWgslData,
           values.length,
         ) as wgsl.AnyWgslData,
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       );
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* ref */ undefined);
+      return snip(expression[1], UnknownData, /* ref */ 'runtime'); // arbitrary ref
     }
 
     if (expression[0] === NODE.preUpdate) {
@@ -633,7 +644,7 @@ ${this.ctx.pre}}`;
 
         if (
           !expectedReturnType &&
-          returnSnippet.ref &&
+          isRef(returnSnippet) &&
           returnSnippet.ref !== 'this-function'
         ) {
           const str = this.ctx.resolve(
@@ -717,7 +728,7 @@ ${this.ctx.pre}else ${alternate}`;
       let dataType = eq.dataType as wgsl.AnyWgslData;
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (eq.ref !== undefined) {
+      if (isRef(eq)) {
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
@@ -743,7 +754,7 @@ ${this.ctx.pre}else ${alternate}`;
         if (
           stmtType === NODE.const &&
           !wgsl.isNaturallyRef(dataType) &&
-          isKnownAtComptime(eq)
+          eq.ref === 'constant'
         ) {
           varType = 'const';
         }
@@ -752,6 +763,7 @@ ${this.ctx.pre}else ${alternate}`;
       const snippet = this.blockVariable(
         rawId,
         concretize(dataType),
+        eq.ref,
       );
       return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;

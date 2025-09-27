@@ -135,7 +135,7 @@ class TgpuFixedBufferImpl<
       dataType,
       /* ref */ isNaturallyRef(dataType)
         ? this.usage === 'uniform' ? 'uniform' : 'storage'
-        : undefined,
+        : 'runtime',
     );
   }
 
@@ -155,7 +155,7 @@ class TgpuFixedBufferImpl<
           dataType,
           /* ref */ isNaturallyRef(dataType)
             ? usage === 'uniform' ? 'uniform' : 'storage'
-            : undefined,
+            : 'runtime',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
@@ -268,7 +268,7 @@ export class TgpuLaidOutBufferImpl<
       dataType,
       /* ref */ isNaturallyRef(dataType)
         ? this.usage === 'uniform' ? 'uniform' : 'storage'
-        : undefined,
+        : 'runtime',
     );
   }
 
@@ -288,7 +288,7 @@ export class TgpuLaidOutBufferImpl<
           schema,
           /* ref */ isNaturallyRef(schema)
             ? usage === 'uniform' ? 'uniform' : 'storage'
-            : undefined,
+            : 'runtime',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),

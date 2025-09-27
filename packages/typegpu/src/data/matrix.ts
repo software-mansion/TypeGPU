@@ -96,7 +96,7 @@ function createMatSchema<
       snip(
         stitch`${options.type}(${args})`,
         schema as unknown as AnyData,
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       ),
     options.type,
   );
@@ -182,7 +182,7 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
           .join(', ')
       })`,
       mat2x2f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     );
   }
 
@@ -332,7 +332,7 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
         this[5]
       }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`,
       mat3x3f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     );
   }
 
@@ -531,7 +531,7 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
           .join(', ')
       })`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     );
   }
 
@@ -560,7 +560,7 @@ export const identity2 = createDualImpl(
   // CPU implementation
   () => mat2x2f(1, 0, 0, 1),
   // CODEGEN implementation
-  () => snip('mat2x2f(1, 0, 0, 1)', mat2x2f, /* ref */ undefined),
+  () => snip('mat2x2f(1, 0, 0, 1)', mat2x2f, /* ref */ 'runtime'),
   'identity2',
 );
 
@@ -573,7 +573,7 @@ export const identity3 = createDualImpl(
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
   // CODEGEN implementation
   () =>
-    snip('mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1)', mat3x3f, /* ref */ undefined),
+    snip('mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1)', mat3x3f, /* ref */ 'runtime'),
   'identity3',
 );
 
@@ -589,7 +589,7 @@ export const identity4 = createDualImpl(
     snip(
       'mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)',
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'identity4',
 );
@@ -620,7 +620,7 @@ export const translation4 = createDualImpl(
     snip(
       stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'translation4',
 );
@@ -645,7 +645,7 @@ export const scaling4 = createDualImpl(
     snip(
       stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'scaling4',
 );
@@ -670,7 +670,7 @@ export const rotationX4 = createDualImpl(
     snip(
       stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'rotationX4',
 );
@@ -695,7 +695,7 @@ export const rotationY4 = createDualImpl(
     snip(
       stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'rotationY4',
 );
@@ -720,7 +720,7 @@ export const rotationZ4 = createDualImpl(
     snip(
       stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
       mat4x4f,
-      /* ref */ undefined,
+      /* ref */ 'runtime',
     ),
   'rotationZ4',
 );

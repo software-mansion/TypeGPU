@@ -17,7 +17,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isRef, isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -48,7 +48,6 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { getResolutionCtx } from '../execMode.ts';
 import {
   getOwnSnippet,
   isKnownAtComptime,
@@ -171,14 +170,14 @@ export function accessProp(
       return snip(
         stitch`arrayLength(&${target})`,
         u32,
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       );
     }
 
     return snip(
-      String(target.dataType.elementCount),
+      target.dataType.elementCount,
       abstractInt,
-      /* ref */ undefined,
+      /* ref */ 'constant',
     );
   }
 
@@ -200,9 +199,11 @@ export function accessProp(
     return snip(
       stitch`${target}.${propName}`,
       propType,
-      /* ref */ target.ref !== undefined && isNaturallyRef(propType)
+      /* ref */ isRef(target) && isNaturallyRef(propType)
         ? target.ref
-        : undefined,
+        : target.ref === 'constant'
+        ? 'constant'
+        : 'runtime',
     );
   }
 
@@ -233,7 +234,7 @@ export function accessProp(
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
-      /* ref */ undefined,
+      /* ref */ target.ref === 'constant' ? 'constant' : 'runtime',
     );
   }
 
@@ -262,12 +263,14 @@ export function accessIndex(
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
         // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
-        ? (target.value as any)[index.value as any]
+        ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
-      /* ref */ target.ref !== undefined && isNaturallyRef(elementType)
+      /* ref */ isRef(target) && isNaturallyRef(elementType)
         ? target.ref
-        : undefined,
+        : target.ref === 'constant'
+        ? 'constant'
+        : 'runtime',
     );
   }
 
@@ -279,7 +282,7 @@ export function accessIndex(
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* ref */ undefined,
+      /* ref */ target.ref === 'constant' ? 'constant' : 'runtime',
     );
   }
 
@@ -326,9 +329,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* ref */ undefined);
+    return snip(value, abstractInt, /* ref */ 'constant');
   }
-  return snip(value, abstractFloat, /* ref */ undefined);
+  return snip(value, abstractFloat, /* ref */ 'constant');
 }
 
 export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
@@ -397,7 +400,7 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, kindToSchema[value.kind], /* ref */ undefined);
+    return snip(value, kindToSchema[value.kind], /* ref */ 'constant');
   }
 
   if (
@@ -406,7 +409,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* ref */ undefined);
+    return snip(value, UnknownData, /* ref */ 'constant');
   }
 
   if (typeof value === 'number') {
@@ -415,8 +418,8 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (typeof value === 'boolean') {
     // It's a primitive, so `ref` is false
-    return snip(value, bool, /* ref */ undefined);
+    return snip(value, bool, /* ref */ 'constant');
   }
 
-  return snip(value, UnknownData, /* ref */ undefined);
+  return snip(value, UnknownData, /* ref */ 'constant');
 }

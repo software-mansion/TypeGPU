@@ -71,7 +71,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     // Why not a ref?
     // 1. On the WGSL side, we cannot take pointers to constants.
     // 2. On the JS side, we copy the constant each time we access it, so we're safe.
-    return snip(id, this.dataType, /* ref */ undefined);
+    return snip(id, this.dataType, /* ref */ 'constant');
   }
 
   toString() {
@@ -84,7 +84,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType, /* ref */ undefined);
+        return snip(this, dataType, /* ref */ 'constant');
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,

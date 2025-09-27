@@ -287,7 +287,7 @@ describe('wgslGenerator', () => {
       snip(
         (arg as { type: 'i'; name: string }).name,
         d.u32,
-        /* ref */ undefined,
+        /* ref */ 'runtime',
       )
     );
 
@@ -310,7 +310,7 @@ describe('wgslGenerator', () => {
       // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('value', d.i32);
+      wgslGenerator.blockVariable('value', d.i32, 'runtime');
       const res2 = wgslGenerator.expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
@@ -322,7 +322,7 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('vec', d.vec4f);
+      wgslGenerator.blockVariable('vec', d.vec4f, 'this-function');
       const res3 = wgslGenerator.expression(
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
@@ -471,7 +471,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
-        [snip('idx', d.u32, /* ref */ undefined)],
+        [snip('idx', d.u32, /* ref */ 'runtime')],
         {},
         d.f32,
         astInfo.externals ?? {},

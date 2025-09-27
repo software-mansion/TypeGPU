@@ -57,7 +57,7 @@ describe('tgpu resolve', () => {
       [$gpuValueOf]: {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, d.f32, /* ref */ undefined);
+          return snip(this, d.f32, /* ref */ 'runtime');
         },
         [$resolve]: (ctx: ResolutionCtx) => ctx.resolve(intensity),
       } as unknown as number,
@@ -67,7 +67,7 @@ describe('tgpu resolve', () => {
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return snip(name, d.f32, /* ref */ undefined);
+        return snip(name, d.f32, /* ref */ 'runtime');
       },
 
       get value(): number {

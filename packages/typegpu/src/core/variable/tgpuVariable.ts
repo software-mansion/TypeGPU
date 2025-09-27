@@ -107,7 +107,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     return snip(
       id,
       this.#dataType,
-      /* ref */ isNaturallyRef(this.#dataType) ? this.#scope : undefined,
+      /* ref */ isNaturallyRef(this.#dataType) ? this.#scope : 'runtime',
     );
   }
 
@@ -122,7 +122,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const ref = isNaturallyRef(dataType) ? this.#scope : undefined;
+    const ref = isNaturallyRef(dataType) ? this.#scope : 'runtime';
 
     return new Proxy({
       [$internal]: true,

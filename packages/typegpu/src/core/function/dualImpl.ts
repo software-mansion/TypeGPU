@@ -10,6 +10,7 @@ import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
+import { isNaturallyRef } from '../../data/wgslTypes.ts';
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -82,16 +83,16 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       return snip(
         options.normalImpl(...converted.map((s) => s.value) as never[]),
         returnType,
-        // Why no ref? Functions give up ownership of their return value
-        /* ref */ undefined,
+        // Functions give up ownership of their return value
+        /* ref */ 'constant',
       );
     }
 
     return snip(
       options.codegenImpl(...converted),
       returnType,
-      // Why no ref? Functions give up ownership of their return value
-      /* ref */ undefined,
+      // Functions give up ownership of their return value
+      /* ref */ 'runtime',
     );
   };
 

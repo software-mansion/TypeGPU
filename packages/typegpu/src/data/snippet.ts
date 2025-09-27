@@ -3,7 +3,11 @@ import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { type AddressSpace, isNumericSchema } from './wgslTypes.ts';
 
-type RefSpace = AddressSpace | 'this-function' | undefined;
+export type RefSpace = AddressSpace | 'this-function' | 'runtime' | 'constant';
+
+export function isRef(snippet: Snippet) {
+  return snippet.ref !== 'runtime' && snippet.ref !== 'constant';
+}
 
 export interface Snippet {
   readonly value: unknown;

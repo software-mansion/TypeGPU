@@ -38,7 +38,11 @@ export class ShelllessRepository {
 
     const argTypes = argSnippets.map((s) => {
       const type = concretize(s.dataType as AnyData);
-      const addressSpace = s.ref === 'this-function' ? 'function' : s.ref;
+      const addressSpace = s.ref === 'this-function'
+        ? 'function'
+        : s.ref === 'constant' || s.ref === 'runtime'
+        ? undefined
+        : s.ref;
 
       return addressSpace !== undefined && !isPtr(type)
         ? INTERNAL_createPtr(
