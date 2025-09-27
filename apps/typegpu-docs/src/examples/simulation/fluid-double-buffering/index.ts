@@ -43,7 +43,7 @@ const coordsToIndex = (x: number, y: number) => {
 
 const getCell = (x: number, y: number): d.v4f => {
   'kernel';
-  return inputGridSlot.$[coordsToIndex(x, y)];
+  return d.vec4f(inputGridSlot.$[coordsToIndex(x, y)]);
 };
 
 const setCell = (x: number, y: number, value: d.v4f) => {

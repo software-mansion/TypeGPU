@@ -38,11 +38,13 @@ export class ShelllessRepository {
 
     const argTypes = argSnippets.map((s) => {
       const type = concretize(s.dataType as AnyData);
-      return s.ref !== undefined && !isPtr(type)
+      const addressSpace = s.ref === 'this-function' ? 'function' : s.ref;
+
+      return addressSpace !== undefined && !isPtr(type)
         ? INTERNAL_createPtr(
-          s.ref,
+          addressSpace,
           type as StorableData,
-          addressSpaceToDefaultAccess[s.ref],
+          addressSpaceToDefaultAccess[addressSpace],
         )
         : type;
     });

@@ -3,6 +3,8 @@ import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { type AddressSpace, isNumericSchema } from './wgslTypes.ts';
 
+type RefSpace = AddressSpace | 'this-function' | undefined;
+
 export interface Snippet {
   readonly value: unknown;
   /**
@@ -10,7 +12,7 @@ export interface Snippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData | UnknownData;
-  readonly ref: AddressSpace | undefined;
+  readonly ref: RefSpace;
 }
 
 export interface ResolvedSnippet {
@@ -20,7 +22,7 @@ export interface ResolvedSnippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData;
-  readonly ref: AddressSpace | undefined;
+  readonly ref: RefSpace;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
@@ -29,7 +31,7 @@ class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
     readonly dataType: AnyData | UnknownData,
-    readonly ref: AddressSpace | undefined,
+    readonly ref: RefSpace,
   ) {}
 }
 
@@ -44,17 +46,17 @@ export function isSnippetNumeric(snippet: Snippet) {
 export function snip(
   value: string,
   dataType: AnyData,
-  ref: AddressSpace | undefined,
+  ref: RefSpace,
 ): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
-  ref: AddressSpace | undefined,
+  ref: RefSpace,
 ): Snippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
-  ref: AddressSpace | undefined,
+  ref: RefSpace,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production

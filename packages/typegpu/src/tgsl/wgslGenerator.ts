@@ -174,7 +174,7 @@ ${this.ctx.pre}}`;
     const snippet = snip(
       this.ctx.makeNameValid(id),
       dataType,
-      /* ref */ wgsl.isNaturallyRef(dataType) ? 'function' : undefined,
+      /* ref */ wgsl.isNaturallyRef(dataType) ? 'this-function' : undefined,
     );
     this.ctx.defineVariable(id, snippet);
     return snippet;
@@ -754,6 +754,26 @@ ${this.ctx.pre}}`;
             expectedReturnType,
           )
           : this.expression(returnNode);
+
+        if (
+          !expectedReturnType &&
+          returnSnippet.ref &&
+          returnSnippet.ref !== 'this-function'
+        ) {
+          const str = this.ctx.resolve(
+            returnSnippet.value,
+            returnSnippet.dataType,
+          ).value;
+          const typeStr = this.ctx.resolve(
+            toStorable(returnSnippet.dataType as wgsl.StorableData),
+          ).value;
+          throw new WgslTypeError(
+            `'return ${str};' is invalid, cannot return references.
+-----
+Try 'return ${typeStr}(${str});' instead.
+-----`,
+          );
+        }
 
         returnSnippet = tryConvertSnippet(
           returnSnippet,
