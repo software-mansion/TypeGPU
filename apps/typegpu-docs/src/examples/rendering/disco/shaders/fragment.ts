@@ -129,7 +129,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
     std.abs(std.fract(aspectUv.x * 1.2) - 0.5),
     std.abs(std.fract(aspectUv.y * 1.2) - 0.5),
   ).mul(2).sub(1);
-  aspectUv = mirroredUv;
+  aspectUv = d.vec2f(mirroredUv);
   const originalUv = aspectUv;
   let accumulatedColor = d.vec3f(0, 0, 0);
   const time = timeAccess.$;

@@ -126,8 +126,8 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
       fn func() {
-        let pos = &boid;
-        let vel = &boid.vel;
+        let pos = (&boid);
+        let vel = (&boid.vel);
         var velX = boid.vel.x;
       }"
     `);

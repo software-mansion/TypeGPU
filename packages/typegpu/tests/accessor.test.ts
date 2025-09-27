@@ -161,7 +161,7 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         var color = vec3f(1, 0, 0);
-        let color2 = &redUniform;
+        let color2 = (&redUniform);
         var color3 = getColor();
         var colorX = 1;
         var color2X = redUniform.x;

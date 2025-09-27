@@ -163,7 +163,7 @@ describe('tgsl parsing test example', () => {
       }
 
       fn modifyNumFn_12(ptr: ptr<function, u32>) {
-        *ptr += 1;
+        (*ptr) += 1;
       }
 
       fn modifyVecFn_13(ptr: ptr<function, vec2f>) {
@@ -181,7 +181,7 @@ describe('tgsl parsing test example', () => {
       var<private> privateNum_16: u32;
 
       fn modifyNumPrivate_17(ptr: ptr<private, u32>) {
-        *ptr += 1;
+        (*ptr) += 1;
       }
 
       var<private> privateVec_18: vec2f;
@@ -199,19 +199,19 @@ describe('tgsl parsing test example', () => {
       fn pointersTest_11() -> bool {
         var s = true;
         var num = 0u;
-        modifyNumFn_12(&num);
+        modifyNumFn_12((&num));
         s = (s && (num == 1));
         var vec = vec2f();
-        modifyVecFn_13(&vec);
+        modifyVecFn_13((&vec));
         s = (s && all(vec == vec2f(1, 0)));
         var myStruct = SimpleStruct_14();
-        modifyStructFn_15(&myStruct);
+        modifyStructFn_15((&myStruct));
         s = (s && all(myStruct.vec == vec2f(1, 0)));
-        modifyNumPrivate_17(&privateNum_16);
+        modifyNumPrivate_17((&privateNum_16));
         s = (s && (privateNum_16 == 1));
-        modifyVecPrivate_19(&privateVec_18);
+        modifyVecPrivate_19((&privateVec_18));
         s = (s && all(privateVec_18 == vec2f(1, 0)));
-        modifyStructPrivate_21(&privateStruct_20);
+        modifyStructPrivate_21((&privateStruct_20));
         s = (s && all(privateStruct_20.vec == vec2f(1, 0)));
         return s;
       }

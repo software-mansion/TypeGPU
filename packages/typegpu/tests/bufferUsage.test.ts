@@ -89,7 +89,7 @@ describe('TgpuBufferUniform', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn func() {
-        let pos = &boid.pos;
+        let pos = (&boid.pos);
         var velX = boid.vel.x;
       }"
     `);
@@ -180,7 +180,7 @@ describe('TgpuBufferMutable', () => {
       @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
       fn func() {
-        let pos = &boid.pos;
+        let pos = (&boid.pos);
         var velX = boid.vel.x;
       }"
     `);
@@ -284,7 +284,7 @@ describe('TgpuBufferReadonly', () => {
       @group(0) @binding(0) var<storage, read> boid: Boid;
 
       fn func() {
-        let pos = &boid.pos;
+        let pos = (&boid.pos);
         var velX = boid.vel.x;
       }"
     `);

@@ -51,7 +51,7 @@ describe('matrix(next) example', () => {
       }
 
       @compute @workgroup_size(16, 16) fn computeSharedMemory_0(input: computeSharedMemory_Input_10) {
-        let dimensions = &dimensions_1;
+        let dimensions = (&dimensions_1);
         var numTiles = u32((f32((((*dimensions).firstColumnCount + 16) - 1)) / 16f));
         var globalRow = ((input.wid.x * 16) + input.lid.x);
         var globalCol = ((input.wid.y * 16) + input.lid.y);

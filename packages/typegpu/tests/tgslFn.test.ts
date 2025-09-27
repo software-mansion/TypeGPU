@@ -672,7 +672,7 @@ describe('TGSL tgpu.fn function', () => {
 
       fn callAddOnes() {
         var someVec = vec3f(1, 2, 3);
-        addOnes(&someVec);
+        addOnes((&someVec));
       }"
     `);
   });

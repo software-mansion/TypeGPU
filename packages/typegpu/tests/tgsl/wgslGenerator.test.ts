@@ -919,7 +919,7 @@ describe('wgslGenerator', () => {
     expect(parseResolved({ increment })).toBe(
       parse(`
       fn increment(val: ptr<function, f32>) {
-        *val += 1;
+        (*val) += 1;
       }`),
     );
   });
@@ -1102,7 +1102,7 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
         var matrix = mat4x4f();
-        let column = &matrix[1];
+        let column = (&matrix[1]);
         var element = (*column)[0];
         var directElement = matrix[1][0];
       }"
@@ -1123,7 +1123,7 @@ describe('wgslGenerator', () => {
       var<workgroup> matrix: mat4x4f;
 
       fn testFn() {
-        let element = &matrix[index];
+        let element = (&matrix[index]);
       }"
     `);
   });

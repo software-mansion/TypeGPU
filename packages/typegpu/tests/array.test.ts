@@ -431,7 +431,7 @@ describe('array.length', () => {
         "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
         fn testFn() -> u32 {
-          return arrayLength(&values);
+          return arrayLength((&values));
         }"
       `);
     });

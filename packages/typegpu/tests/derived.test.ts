@@ -147,9 +147,9 @@ describe('TgpuDerived', () => {
       fn func() {
         var pos = vec3f(2, 4, 6);
         var posX = 2;
-        let vel = &boid.vel;
+        let vel = (&boid.vel);
         var velX = boid.vel.x;
-        let vel_ = &boid.vel;
+        let vel_ = (&boid.vel);
         var velX_ = boid.vel.x;
       }"
     `);

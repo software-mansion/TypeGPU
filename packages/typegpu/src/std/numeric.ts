@@ -1,5 +1,6 @@
 import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import { toStorable } from '../data/dataTypes.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
   abstractFloat,
@@ -718,10 +719,13 @@ function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
 
 export const length = dualImpl({
   name: 'length',
-  signature: (arg) => ({
-    argTypes: [arg],
-    returnType: isHalfPrecisionSchema(arg) ? f16 : f32,
-  }),
+  signature: (arg) => {
+    const sarg = toStorable(arg);
+    return ({
+      argTypes: [sarg],
+      returnType: isHalfPrecisionSchema(sarg) ? f16 : f32,
+    });
+  },
   normalImpl: cpuLength,
   codegenImpl: (arg) => stitch`length(${arg})`,
 });

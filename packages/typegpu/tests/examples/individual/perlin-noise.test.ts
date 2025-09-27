@@ -58,7 +58,7 @@ describe('perlin noise example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(input: mainCompute_Input_9) {
-        let size = &size_1;
+        let size = (&size_1);
         var idx = ((input.gid.x + (input.gid.y * (*size).x)) + ((input.gid.z * (*size).x) * (*size).y));
         memory_2[idx] = computeJunctionGradient_3(vec3i(input.gid.xyz));
       }

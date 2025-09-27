@@ -107,8 +107,8 @@ describe('caustics example', () => {
       }
 
       fn caustics_7(uv: ptr<function, vec2f>, time2: f32, profile: vec3f) -> vec3f {
-        var distortion = sample_8(vec3f((*uv * 0.5), (time2 * 0.2)));
-        var uv2 = (*uv + distortion);
+        var distortion = sample_8(vec3f(((*uv) * 0.5), (time2 * 0.2)));
+        var uv2 = ((*uv) + distortion);
         var noise = abs(sample_8(vec3f((uv2 * 5), time2)));
         return pow(vec3f((1 - noise)), profile);
       }
@@ -134,7 +134,7 @@ describe('caustics example', () => {
         var tile = tilePattern_5((skewedUv * tileDensity_4));
         var albedo = mix(vec3f(0.10000000149011612), vec3f(1), tile);
         var cuv = vec2f(((_arg_0.uv.x * (pow((_arg_0.uv.y * 1.5), 3) + 0.1)) * 5), (pow((((_arg_0.uv.y * 1.5) + 0.1) * 1.5), 3) * 1));
-        var c1 = (caustics_7(&cuv, (time_6 * 0.2), vec3f(4, 4, 1)) * vec3f(0.4000000059604645, 0.6499999761581421, 1));
+        var c1 = (caustics_7((&cuv), (time_6 * 0.2), vec3f(4, 4, 1)) * vec3f(0.4000000059604645, 0.6499999761581421, 1));
         var c2 = (caustics_17((cuv * 2), (time_6 * 0.4), vec3f(16, 1, 4)) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5));
         var blendCoord = vec3f((_arg_0.uv * vec2f(5, 10)), ((time_6 * 0.2) + 5));
         var blend = saturate((sample_8(blendCoord) + 0.3));

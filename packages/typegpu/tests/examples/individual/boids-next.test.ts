@@ -43,7 +43,7 @@ describe('boids next example', () => {
 
       @compute @workgroup_size(1) fn mainCompute_0(input: mainCompute_Input_6) {
         var index = input.gid.x;
-        let instanceInfo = &currentTrianglePos_1[index];
+        var instanceInfo = currentTrianglePos_1[index];
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
@@ -53,10 +53,10 @@ describe('boids next example', () => {
           if ((i == index)) {
             continue;
           }
-          let other = &currentTrianglePos_1[i];
-          var dist = distance((*instanceInfo).position, (*other).position);
+          let other = (&currentTrianglePos_1[i]);
+          var dist = distance(instanceInfo.position, (*other).position);
           if ((dist < paramsBuffer_3.separationDistance)) {
-            separation = (separation + ((*instanceInfo).position - (*other).position));
+            separation = (separation + (instanceInfo.position - (*other).position));
           }
           if ((dist < paramsBuffer_3.alignmentDistance)) {
             alignment = (alignment + (*other).velocity);
@@ -72,27 +72,27 @@ describe('boids next example', () => {
         }
         if ((cohesionCount > 0)) {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
-          cohesion = (cohesion - (*instanceInfo).position);
+          cohesion = (cohesion - instanceInfo.position);
         }
         var velocity = (paramsBuffer_3.separationStrength * separation);
         velocity = (velocity + (paramsBuffer_3.alignmentStrength * alignment));
         velocity = (velocity + (paramsBuffer_3.cohesionStrength * cohesion));
-        (*instanceInfo).velocity = ((*instanceInfo).velocity + velocity);
-        (*instanceInfo).velocity = (clamp(length((*instanceInfo).velocity), 0, 0.01) * normalize((*instanceInfo).velocity));
-        if (((*instanceInfo).position.x > 1.03)) {
-          (*instanceInfo).position.x = (-1 - 0.03);
+        instanceInfo.velocity = (instanceInfo.velocity + velocity);
+        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
+        if ((instanceInfo.position.x > 1.03)) {
+          instanceInfo.position.x = (-1 - 0.03);
         }
-        if (((*instanceInfo).position.y > 1.03)) {
-          (*instanceInfo).position.y = (-1 - 0.03);
+        if ((instanceInfo.position.y > 1.03)) {
+          instanceInfo.position.y = (-1 - 0.03);
         }
-        if (((*instanceInfo).position.x < (-1 - 0.03))) {
-          (*instanceInfo).position.x = 1.03;
+        if ((instanceInfo.position.x < (-1 - 0.03))) {
+          instanceInfo.position.x = 1.03;
         }
-        if (((*instanceInfo).position.y < (-1 - 0.03))) {
-          (*instanceInfo).position.y = 1.03;
+        if ((instanceInfo.position.y < (-1 - 0.03))) {
+          instanceInfo.position.y = 1.03;
         }
-        (*instanceInfo).position = ((*instanceInfo).position + (*instanceInfo).velocity);
-        nextTrianglePos_5[index] = *instanceInfo;
+        instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
+        nextTrianglePos_5[index] = instanceInfo;
       }
 
       fn getRotationFromVelocity_1(velocity: vec2f) -> f32 {

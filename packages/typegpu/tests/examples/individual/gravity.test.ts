@@ -65,7 +65,7 @@ describe('gravity example', () => {
       @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
         var currentId = input.gid.x;
         var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
-        let updatedCurrent = &current;
+        let updatedCurrent = (&current);
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_3); i++) {
             var otherId = u32(i);
@@ -93,7 +93,7 @@ describe('gravity example', () => {
             }
           }
         }
-        outState_6[input.gid.x] = *updatedCurrent;
+        outState_6[input.gid.x] = (*updatedCurrent);
       }
 
       struct CelestialBody_2 {
@@ -131,7 +131,7 @@ describe('gravity example', () => {
       @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
         var current = CelestialBody_2(inState_1[input.gid.x].destroyed, inState_1[input.gid.x].position, inState_1[input.gid.x].velocity, inState_1[input.gid.x].mass, inState_1[input.gid.x].radiusMultiplier, inState_1[input.gid.x].collisionBehavior, inState_1[input.gid.x].textureIndex, inState_1[input.gid.x].ambientLightFactor);
         var dt = (time_3.passed * time_3.multiplier);
-        let updatedCurrent = &current;
+        let updatedCurrent = (&current);
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_5); i++) {
             var other = CelestialBody_2(inState_1[i].destroyed, inState_1[i].position, inState_1[i].velocity, inState_1[i].mass, inState_1[i].radiusMultiplier, inState_1[i].collisionBehavior, inState_1[i].textureIndex, inState_1[i].ambientLightFactor);
@@ -145,7 +145,7 @@ describe('gravity example', () => {
           }
           (*updatedCurrent).position = ((*updatedCurrent).position + (dt * (*updatedCurrent).velocity));
         }
-        outState_7[input.gid.x] = *updatedCurrent;
+        outState_7[input.gid.x] = (*updatedCurrent);
       }
 
       struct Camera_2 {
@@ -228,7 +228,7 @@ describe('gravity example', () => {
       @vertex fn mainVertex_0(input: mainVertex_Input_7) -> mainVertex_Output_6 {
         var currentBody = CelestialBody_2(celestialBodies_1[input.instanceIndex].destroyed, celestialBodies_1[input.instanceIndex].position, celestialBodies_1[input.instanceIndex].velocity, celestialBodies_1[input.instanceIndex].mass, celestialBodies_1[input.instanceIndex].radiusMultiplier, celestialBodies_1[input.instanceIndex].collisionBehavior, celestialBodies_1[input.instanceIndex].textureIndex, celestialBodies_1[input.instanceIndex].ambientLightFactor);
         var worldPosition = ((radiusOf_3(currentBody) * input.position.xyz) + currentBody.position);
-        let camera = &camera_4;
+        let camera = (&camera_4);
         var positionOnCanvas = ((*camera).projection * ((*camera).view * vec4f(worldPosition, 1)));
         return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, currentBody.textureIndex, currentBody.destroyed, currentBody.ambientLightFactor);
       }

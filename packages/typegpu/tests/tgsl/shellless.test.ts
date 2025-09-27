@@ -188,7 +188,7 @@ describe('shellless', () => {
 
       fn main() {
         var pos = vec3f();
-        advance(&pos, vec3f(1, 2, 3));
+        advance((&pos), vec3f(1, 2, 3));
       }"
     `);
   });

@@ -84,7 +84,7 @@ describe('wgsl resolution example', () => {
 
       @compute @workgroup_size(1) fn compute_shader_8(input: compute_shader_Input_14) {
         var index = input.gid.x;
-        let instanceInfo = &currentTrianglePos_9[index];
+        let instanceInfo = (&currentTrianglePos_9[index]);
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
@@ -94,7 +94,7 @@ describe('wgsl resolution example', () => {
           if ((i == index)) {
             continue;
           }
-          let other = &currentTrianglePos_9[i];
+          let other = (&currentTrianglePos_9[i]);
           var dist = distance((*instanceInfo).position, (*other).position);
           if ((dist < paramsBuffer_11.separationDistance)) {
             separation = (separation + ((*instanceInfo).position - (*other).position));
@@ -133,7 +133,7 @@ describe('wgsl resolution example', () => {
           (*instanceInfo).position.y = 1.03;
         }
         (*instanceInfo).position = ((*instanceInfo).position + (*instanceInfo).velocity);
-        nextTrianglePos_13[index] = *instanceInfo;
+        nextTrianglePos_13[index] = (*instanceInfo);
       }"
     `);
   });

@@ -66,26 +66,26 @@ describe('cubemap reflection example', () => {
           return;
         }
         var baseIndexPrev = (triangleIndex * 3);
-        var v1 = unpackVec2u_3(&prevVertices_1[baseIndexPrev].position);
-        var v2 = unpackVec2u_3(&prevVertices_1[(baseIndexPrev + 1)].position);
-        var v3 = unpackVec2u_3(&prevVertices_1[(baseIndexPrev + 2)].position);
-        var v12 = vec4f(normalize(calculateMidpoint_4(&v1, &v2).xyz), 1);
-        var v23 = vec4f(normalize(calculateMidpoint_4(&v2, &v3).xyz), 1);
-        var v31 = vec4f(normalize(calculateMidpoint_4(&v3, &v1).xyz), 1);
+        var v1 = unpackVec2u_3((&prevVertices_1[baseIndexPrev].position));
+        var v2 = unpackVec2u_3((&prevVertices_1[(baseIndexPrev + 1)].position));
+        var v3 = unpackVec2u_3((&prevVertices_1[(baseIndexPrev + 2)].position));
+        var v12 = vec4f(normalize(calculateMidpoint_4((&v1), (&v2)).xyz), 1);
+        var v23 = vec4f(normalize(calculateMidpoint_4((&v2), (&v3)).xyz), 1);
+        var v31 = vec4f(normalize(calculateMidpoint_4((&v3), (&v1)).xyz), 1);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         var baseIndexNext = (triangleIndex * 12);
         for (var i = 0u; (i < 12); i++) {
-          let reprojectedVertex = &newVertices[i];
+          let reprojectedVertex = (&newVertices[i]);
           var triBase = (i - (i % 3));
-          var normal = reprojectedVertex;
+          var normal = (*reprojectedVertex);
           if ((smoothFlag_5 == 0)) {
-            *normal = getAverageNormal_6(&newVertices[triBase], &newVertices[(triBase + 1)], &newVertices[(triBase + 2)]);
+            normal = getAverageNormal_6((&newVertices[triBase]), (&newVertices[(triBase + 1)]), (&newVertices[(triBase + 2)]));
           }
           var outIndex = (baseIndexNext + i);
-          let nextVertex = &nextVertices_7[outIndex];
+          let nextVertex = (&nextVertices_7[outIndex]);
           (*nextVertex).position = packVec2u_8(reprojectedVertex);
-          (*nextVertex).normal = packVec2u_8(normal);
-          nextVertices_7[outIndex] = *nextVertex;
+          (*nextVertex).normal = packVec2u_8((&normal));
+          nextVertices_7[outIndex] = (*nextVertex);
         }
       }
 

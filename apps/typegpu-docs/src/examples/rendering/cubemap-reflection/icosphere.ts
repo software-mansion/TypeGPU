@@ -188,7 +188,7 @@ export class IcosphereGenerator {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);
-        let normal = reprojectedVertex;
+        let normal = d.vec4f(reprojectedVertex);
         if (smoothFlag.$ === 0) {
           normal = getAverageNormal(
             newVertices[triBase],

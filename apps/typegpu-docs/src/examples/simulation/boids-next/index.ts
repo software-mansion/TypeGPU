@@ -182,7 +182,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   const index = input.gid.x;
-  const instanceInfo = currentTrianglePos.value[index];
+  const instanceInfo = TriangleData(currentTrianglePos.value[index]);
   let separation = d.vec2f();
   let alignment = d.vec2f();
   let cohesion = d.vec2f();

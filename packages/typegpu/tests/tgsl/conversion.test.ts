@@ -239,7 +239,7 @@ describe('convertToCommonType', () => {
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('*ptr_f32'); // Deref applied
+    expect(result?.[0]?.value).toBe('(*ptr_f32)'); // Deref applied
     expect(result?.[1]?.dataType).toBe(d.f32);
     expect(result?.[1]?.value).toBe('2.22');
   });

@@ -119,7 +119,7 @@ describe('3d fish example', () => {
       @group(0) @binding(2) var<uniform> mouseRay_5: MouseRay_6;
 
       fn projectPointOnLine_8(point: ptr<function, vec3f>, line: ptr<uniform, Line3_7>) -> vec3f {
-        var pointVector = (*point - (*line).origin);
+        var pointVector = ((*point) - (*line).origin);
         var projection = dot(pointVector, (*line).dir);
         return ((*line).origin + ((*line).dir * projection));
       }
@@ -182,7 +182,7 @@ describe('3d fish example', () => {
           }
         }
         if ((mouseRay_5.activated == 1)) {
-          var proj = projectPointOnLine_8(&fishData.position, &mouseRay_5.line);
+          var proj = projectPointOnLine_8((&fishData.position), (&mouseRay_5.line));
           var diff = (fishData.position - proj);
           var limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);
@@ -274,8 +274,8 @@ describe('3d fish example', () => {
         var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, currentModelData.position.x, currentModelData.position.y, currentModelData.position.z, 1);
         var worldPosition = (translationMatrix * (yawMatrix * (pitchMatrix * (scaleMatrix * vec4f(wavedVertex.position, 1)))));
         var worldNormal = normalize((yawMatrix * (pitchMatrix * vec4f(wavedVertex.normal, 1))).xyz);
-        let worldPositionUniform = &worldPosition;
-        var canvasPosition = (camera_6.projection * (camera_6.view * *worldPositionUniform));
+        let worldPositionUniform = (&worldPosition);
+        var canvasPosition = (camera_6.projection * (camera_6.view * (*worldPositionUniform)));
         return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
       }
 
@@ -400,10 +400,10 @@ describe('3d fish example', () => {
 
       @fragment fn fragmentShader_10(input: fragmentShader_Input_16) -> @location(0) vec4f {
         var textureColorWithAlpha = sampleTexture_11(input.textureUV);
-        let textureColor = &textureColorWithAlpha.xyz;
-        var ambient = (0.5 * (*textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
+        var textureColor = textureColorWithAlpha.xyz;
+        var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
-        var diffuse = (max(0, cosTheta) * (*textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
+        var diffuse = (max(0, cosTheta) * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var viewSource = normalize((camera_6.position.xyz - input.worldPosition));
         var reflectSource = normalize(reflect((-1 * vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972)), input.worldNormal));
         var specularStrength = pow(max(0, dot(viewSource, reflectSource)), 16);

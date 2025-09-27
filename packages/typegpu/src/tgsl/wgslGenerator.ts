@@ -26,6 +26,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  accessProp,
   coerceToSnippet,
   concretize,
   type GenerationCtx,
@@ -297,7 +298,7 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.memberAccess) {
       // Member Access
       const [_, targetNode, property] = expression;
-      const target = this.expression(targetNode);
+      let target = this.expression(targetNode);
 
       if (target.value === console) {
         return snip(new ConsoleLog(), UnknownData, /* ref */ undefined);
@@ -313,16 +314,13 @@ ${this.ctx.pre}}`;
         return coerceToSnippet(propValue);
       }
 
-      let targetDataType = target.dataType;
-      let isPtr = false;
-
       if (wgsl.isPtr(target.dataType)) {
-        isPtr = true;
-        targetDataType = target.dataType.inner as AnyData;
+        // De-referencing the pointer
+        target = tryConvertSnippet(target, target.dataType.inner, false);
       }
 
       if (
-        infixKinds.includes(targetDataType.type) &&
+        infixKinds.includes(target.dataType.type) &&
         property in infixOperators
       ) {
         return snip(
@@ -336,26 +334,24 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (wgsl.isWgslArray(targetDataType) && property === 'length') {
-        if (targetDataType.elementCount === 0) {
+      if (wgsl.isWgslArray(target.dataType) && property === 'length') {
+        if (target.dataType.elementCount === 0) {
           // Dynamically-sized array
           return snip(
-            isPtr
-              ? `arrayLength(${this.ctx.resolve(target.value).value})`
-              : `arrayLength(&${this.ctx.resolve(target.value).value})`,
+            `arrayLength(&${this.ctx.resolve(target.value).value})`,
             u32,
             /* ref */ undefined,
           );
         }
 
         return snip(
-          String(targetDataType.elementCount),
+          String(target.dataType.elementCount),
           abstractInt,
           /* ref */ undefined,
         );
       }
 
-      if (wgsl.isMat(targetDataType) && property === 'columns') {
+      if (wgsl.isMat(target.dataType) && property === 'columns') {
         return snip(
           new MatrixColumnsAccess(target),
           UnknownData,
@@ -364,21 +360,22 @@ ${this.ctx.pre}}`;
       }
 
       if (
-        wgsl.isVec(targetDataType) && wgsl.isVecInstance(target.value)
+        wgsl.isVec(target.dataType) && wgsl.isVecInstance(target.value)
       ) {
         // We're operating on a vector that's known at resolution time
         // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
         return coerceToSnippet((target.value as any)[property]);
       }
 
-      const propType = getTypeForPropAccess(targetDataType, property);
-      return snip(
-        isPtr
-          ? `(*${this.ctx.resolve(target.value).value}).${property}`
-          : `${this.ctx.resolve(target.value).value}.${property}`,
-        propType,
-        /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
-      );
+      const accessed = accessProp(target, property);
+      if (!accessed) {
+        throw new Error(
+          `Property '${property}' not found on type ${
+            this.ctx.resolve(target.dataType)
+          }`,
+        );
+      }
+      return accessed;
     }
 
     if (expression[0] === NODE.indexAccess) {
@@ -747,12 +744,18 @@ ${this.ctx.pre}}`;
 
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
-        const returnSnippet = expectedReturnType
+        let returnSnippet = expectedReturnType
           ? this.typedExpression(
             returnNode,
             expectedReturnType,
           )
           : this.expression(returnNode);
+
+        returnSnippet = tryConvertSnippet(
+          returnSnippet,
+          toStorable(returnSnippet.dataType as wgsl.StorableData),
+          false,
+        );
 
         invariant(
           returnSnippet.dataType.type !== 'unknown',
@@ -814,10 +817,19 @@ ${this.ctx.pre}else ${alternate}`;
       let dataType = eq.dataType as wgsl.AnyWgslData;
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (eq.ref !== undefined && !wgsl.isPtr(dataType)) {
+      if (eq.ref !== undefined) {
         if (stmtType === NODE.let) {
+          const rhsStr = this.ctx.resolve(eq.value).value;
+          const rhsTypeStr =
+            this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
+              .value;
+
           throw new WgslTypeError(
-            `Cannot assign a reference to a let variable ('${rawId}'). Use const instead, or copy the right-hand side.`,
+            `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
+-----
+- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+- Try 'const ${rawId} = ${rhsTypeStr}(${rhsStr})' if you won't reassign '${rawId}' later.
+-----`,
           );
         }
 
