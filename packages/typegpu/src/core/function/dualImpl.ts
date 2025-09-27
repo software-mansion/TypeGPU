@@ -10,7 +10,6 @@ import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import { isNaturallyRef } from '../../data/wgslTypes.ts';
 
 function isKnownAtComptime(value: unknown): boolean {
   return typeof value !== 'string' && getOwnSnippet(value) === undefined;
@@ -53,6 +52,12 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
     ) => { argTypes: AnyData[]; returnType: AnyData });
+  /**
+   * Whether the function should skip trying to execute the "normal" implementation if
+   * all arguments are known at compile time.
+   * @default false
+   */
+  readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
@@ -67,15 +72,17 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       : options.signature;
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
-    const converted = argSnippets.map((s, idx) =>
-      tryConvertSnippet(
-        s,
-        argTypes[idx] as AnyData,
-        !options.ignoreImplicitCastWarning,
-      )
-    ) as MapValueToSnippet<Parameters<T>>;
+    const converted = argSnippets.map((s, idx) => {
+      const argType = argTypes[idx] as AnyData | undefined;
+      if (!argType) {
+        throw new Error('Function called with invalid arguments');
+      }
+      return tryConvertSnippet(s, argType, !options.ignoreImplicitCastWarning);
+    }) as MapValueToSnippet<Parameters<T>>;
 
-    if (converted.every((s) => isKnownAtComptime(s.value))) {
+    if (
+      !options.noComptime && converted.every((s) => isKnownAtComptime(s.value))
+    ) {
       return snip(
         options.normalImpl(...converted.map((s) => s.value) as never[]),
         returnType,
@@ -101,6 +108,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     value: {
       jsImpl: options.normalImpl,
       gpuImpl,
+      strictSignature: typeof options.signature !== 'function'
+        ? options.signature
+        : undefined,
       argConversionHint: 'keep',
     },
   });

@@ -23,6 +23,7 @@ import { createFnCore } from './fnCore.ts';
  */
 export interface ShelllessImpl extends SelfResolvable {
   readonly resourceType: 'shellless-impl';
+  readonly argTypes: AnyData[];
   readonly [$getNameForward]: unknown;
 }
 
@@ -36,6 +37,7 @@ export function createShelllessImpl(
     [$internal]: true,
     [$getNameForward]: core,
     resourceType: 'shellless-impl' as const,
+    argTypes,
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(ctx, argTypes, undefined);

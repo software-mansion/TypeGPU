@@ -973,10 +973,9 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:bar
-      - call:foo
       - fn:foo
-      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
-      `);
+      - fn:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+    `);
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
@@ -996,13 +995,10 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:two
       - fn:two
-      - call:three
       - fn:three
-      - call:inner
       - fn:inner
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
   });
 
@@ -1028,9 +1024,8 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:fallbackFn
       - fn:fallbackFn
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
 
     const boundOne = one.with(flagSlot, true);

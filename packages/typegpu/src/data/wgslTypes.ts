@@ -1571,7 +1571,8 @@ export type StorableData =
   | ScalarData
   | VecData
   | MatData
-  | Atomic
+  | Atomic<I32>
+  | Atomic<U32>
   | WgslArray
   | WgslStruct;
 

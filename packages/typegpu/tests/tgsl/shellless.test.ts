@@ -165,4 +165,31 @@ describe('shellless', () => {
       }"
     `);
   });
+
+  it('generates pointer type to handle references', () => {
+    const advance = (pos: d.v3f, vel: d.v3f) => {
+      'kernel';
+      pos.x += vel.x;
+      pos.y += vel.y;
+      pos.z += vel.z;
+    };
+
+    const main = tgpu.fn([])(() => {
+      const pos = d.vec3f(0, 0, 0);
+      advance(pos, d.vec3f(1, 2, 3));
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
+        (*pos).x += vel.x;
+        (*pos).y += vel.y;
+        (*pos).z += vel.z;
+      }
+
+      fn main() {
+        var pos = vec3f();
+        advance(&pos, vec3f(1, 2, 3));
+      }"
+    `);
+  });
 });

@@ -127,8 +127,10 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   });
 
   for (let i = 0; i < MAX_STEPS; i++) {
+    // TODO: Detect this pattern??? I think we can do this in unplugin
     const p = std.add(ro, std.mul(rd, dO));
     const scene = getSceneDist(p);
+    // p is not being used afterwards
     dO += scene.dist;
 
     if (dO > MAX_DIST || scene.dist < SURF_DIST) {

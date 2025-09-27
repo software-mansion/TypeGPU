@@ -299,7 +299,7 @@ describe('wgslGenerator with console.log', () => {
       - computePipeline:pipeline
       - computePipelineCore
       - computeFn:fn
-      - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - fn:consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
 });

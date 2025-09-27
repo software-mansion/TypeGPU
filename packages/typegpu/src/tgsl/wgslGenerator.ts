@@ -34,6 +34,7 @@ import {
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import { safeStringify } from '../shared/safeStringify.ts';
+import type { DualFn } from '../data/dualFn.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -284,8 +285,26 @@ ${this.ctx.pre}}`;
         return snip(new ConsoleLog(), UnknownData, /* ref */ true);
       }
 
+      if (target.dataType.type === 'unknown') {
+        // No idea what the type is, so we act on the snippet's value and try to guess
+
+        // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+        const propValue = (target.value as any)[property];
+
+        // We try to extract any type information based on the prop's value
+        return coerceToSnippet(propValue);
+      }
+
+      let targetDataType = target.dataType;
+      let isPtr = false;
+
+      if (wgsl.isPtr(target.dataType)) {
+        isPtr = true;
+        targetDataType = target.dataType.inner as AnyData;
+      }
+
       if (
-        infixKinds.includes(target.dataType.type) &&
+        infixKinds.includes(targetDataType.type) &&
         property in infixOperators
       ) {
         return snip(
@@ -299,47 +318,26 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (target.dataType.type === 'unknown') {
-        // No idea what the type is, so we act on the snippet's value and try to guess
-
-        // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
-        const propValue = (target.value as any)[property];
-
-        // We try to extract any type information based on the prop's value
-        return coerceToSnippet(propValue);
-      }
-
-      if (wgsl.isPtr(target.dataType)) {
-        const propType = getTypeForPropAccess(
-          target.dataType.inner as AnyData,
-          property,
-        );
-
-        return snip(
-          `(*${this.ctx.resolve(target.value).value}).${property}`,
-          propType,
-          /* ref */ wgsl.isNaturallyRef(propType),
-        );
-      }
-
-      if (wgsl.isWgslArray(target.dataType) && property === 'length') {
-        if (target.dataType.elementCount === 0) {
+      if (wgsl.isWgslArray(targetDataType) && property === 'length') {
+        if (targetDataType.elementCount === 0) {
           // Dynamically-sized array
           return snip(
-            `arrayLength(&${this.ctx.resolve(target.value).value})`,
+            isPtr
+              ? `arrayLength(${this.ctx.resolve(target.value).value})`
+              : `arrayLength(&${this.ctx.resolve(target.value).value})`,
             u32,
             /* ref */ false,
           );
         }
 
         return snip(
-          String(target.dataType.elementCount),
+          String(targetDataType.elementCount),
           abstractInt,
           /* ref */ false,
         );
       }
 
-      if (wgsl.isMat(target.dataType) && property === 'columns') {
+      if (wgsl.isMat(targetDataType) && property === 'columns') {
         return snip(
           new MatrixColumnsAccess(target),
           UnknownData,
@@ -348,16 +346,18 @@ ${this.ctx.pre}}`;
       }
 
       if (
-        wgsl.isVec(target.dataType) && wgsl.isVecInstance(target.value)
+        wgsl.isVec(targetDataType) && wgsl.isVecInstance(target.value)
       ) {
         // We're operating on a vector that's known at resolution time
         // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
         return coerceToSnippet((target.value as any)[property]);
       }
 
-      const propType = getTypeForPropAccess(target.dataType, property);
+      const propType = getTypeForPropAccess(targetDataType, property);
       return snip(
-        `${this.ctx.resolve(target.value).value}.${property}`,
+        isPtr
+          ? `(*${this.ctx.resolve(target.value).value}).${property}`
+          : `${this.ctx.resolve(target.value).value}.${property}`,
         propType,
         /* ref */ target.ref && wgsl.isNaturallyRef(propType),
       );
@@ -496,10 +496,15 @@ ${this.ctx.pre}}`;
           args,
         );
         if (shellless) {
+          const converted = args.map((s, idx) => {
+            const argType = shellless.argTypes[idx] as AnyData;
+            return tryConvertSnippet(s, argType, /* verbose */ false);
+          });
+
           return this.ctx.withResetIndentLevel(() => {
             const snippet = this.ctx.resolve(shellless);
             return snip(
-              stitch`${snippet.value}(${args})`,
+              stitch`${snippet.value}(${converted})`,
               snippet.dataType,
               /* ref */ false,
             );
@@ -517,10 +522,27 @@ ${this.ctx.pre}}`;
 
       const argConversionHint = callee.value[$internal]
         ?.argConversionHint as FnArgsConversionHint ?? 'keep';
+      const strictSignature = (callee.value as DualFn)[$internal]
+        ?.strictSignature;
+
       try {
         let convertedArguments: Snippet[];
 
-        if (Array.isArray(argConversionHint)) {
+        if (strictSignature) {
+          // The function's signature does not depend on the context, so it can be used to
+          // give a hint to the argument expressions that a specific type is expected.
+          convertedArguments = argNodes.map((arg, i) => {
+            const argType = strictSignature.argTypes[i];
+            if (!argType) {
+              throw new WgslTypeError(
+                `Function '${
+                  getName(callee.value)
+                }' was called with too many arguments`,
+              );
+            }
+            return this.typedExpression(arg, argType);
+          });
+        } else if (Array.isArray(argConversionHint)) {
           // The hint is an array of schemas.
           convertedArguments = argNodes.map((arg, i) => {
             const argType = argConversionHint[i];
@@ -566,9 +588,13 @@ ${this.ctx.pre}}`;
           );
         }
         return fnRes;
-      } catch (error) {
-        throw new ResolutionError(error, [{
-          toString: () => getName(callee.value),
+      } catch (err) {
+        if (err instanceof ResolutionError) {
+          throw err;
+        }
+
+        throw new ResolutionError(err, [{
+          toString: () => `fn:${getName(callee.value)}`,
         }]);
       }
     }

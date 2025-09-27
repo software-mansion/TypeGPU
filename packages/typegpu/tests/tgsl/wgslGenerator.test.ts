@@ -872,7 +872,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - internalTestFn: Cannot convert value of type 'array' to type 'vec2f']
+        - fn:internalTestFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
       `);
   });
 
@@ -886,7 +886,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - translate4: Cannot read properties of undefined (reading 'dataType')]
+      - fn:translate4: Cannot read properties of undefined (reading 'dataType')]
     `);
   });
 
@@ -902,7 +902,7 @@ describe('wgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - vec4f: Cannot convert value of type 'array' to type 'f32']
+        - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to type 'f32']
       `);
   });
 

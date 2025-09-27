@@ -8,7 +8,7 @@ import {
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
-import { provideInsideTgpuFn } from '../../execMode.ts';
+import { getResolutionCtx, provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -35,7 +35,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
-import { createDualImpl } from './dualImpl.ts';
+import { createDualImpl, dualImpl } from './dualImpl.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   AnyFn,
@@ -214,8 +214,11 @@ function createFn<ImplSchema extends AnyFn>(
     },
   } as This;
 
-  const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) =>
+  const call = dualImpl<InferImplSchema<ImplSchema>>({
+    name: 'tgpuFnCall',
+    noComptime: true,
+    signature: { argTypes: shell.argTypes, returnType: shell.returnType },
+    normalImpl: (...args) =>
       provideInsideTgpuFn(() => {
         try {
           if (typeof implementation === 'string') {
@@ -239,10 +242,14 @@ function createFn<ImplSchema extends AnyFn>(
         }
       }),
     // Functions give up ownership of their return value (so ref is false)
-    (...args) => snip(new FnCall(fn, args), shell.returnType, /* ref */ false),
-    'tgpuFnCall',
-    shell.argTypes,
-  );
+    codegenImpl: (...args) => {
+      // biome-ignore lint/style/noNonNullAssertion: it's there
+      const ctx = getResolutionCtx()!;
+      return ctx.withResetIndentLevel(() =>
+        stitch`${ctx.resolve(fn).value}(${args})`
+      );
+    },
+  });
 
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     ImplSchema
@@ -321,6 +328,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   return fn;
 }
 
+// TODO: Perhaps remove
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$ownSnippet]: Snippet;

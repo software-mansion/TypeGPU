@@ -255,7 +255,7 @@ describe('array', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
-      - arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
+      - fn:arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
     `);
   });
 

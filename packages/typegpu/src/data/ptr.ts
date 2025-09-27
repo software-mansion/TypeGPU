@@ -53,5 +53,6 @@ function INTERNAL_createPtr<
     addressSpace,
     inner,
     access,
+    toString: () => `ptr<${addressSpace}, ${inner}, ${access}>`,
   } as Ptr<TAddressSpace, TInner, TAccess>;
 }
