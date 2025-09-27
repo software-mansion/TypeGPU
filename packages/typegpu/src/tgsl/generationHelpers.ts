@@ -150,9 +150,6 @@ export function accessProp(
   target: Snippet,
   propName: string,
 ): Snippet | undefined {
-  // biome-ignore lint/style/noNonNullAssertion: it's there
-  const ctx = getResolutionCtx()!;
-
   if (
     infixKinds.includes(target.dataType.type) &&
     propName in infixOperators
@@ -172,7 +169,7 @@ export function accessProp(
     if (target.dataType.elementCount === 0) {
       // Dynamically-sized array
       return snip(
-        `arrayLength(&${ctx.resolve(target.value).value})`,
+        stitch`arrayLength(&${target})`,
         u32,
         /* ref */ undefined,
       );
@@ -201,7 +198,7 @@ export function accessProp(
     propType = undecorate(propType);
 
     return snip(
-      `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
+      stitch`${target}.${propName}`,
       propType,
       /* ref */ target.ref !== undefined && isNaturallyRef(propType)
         ? target.ref
@@ -233,7 +230,7 @@ export function accessProp(
       isKnownAtComptime(target)
         // biome-ignore lint/suspicious/noExplicitAny: it's fine, the prop is there
         ? (target.value as any)[propName]
-        : `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
+        : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
       /* ref */ undefined,
@@ -258,16 +255,15 @@ export function accessIndex(
   target: Snippet,
   index: Snippet,
 ): Snippet | undefined {
-  // biome-ignore lint/style/noNonNullAssertion: it's there
-  const ctx = getResolutionCtx()!;
-
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType as AnyData;
-    const targetStr = ctx.resolve(target.value, target.dataType).value;
-    const indexStr = ctx.resolve(index.value, index.dataType).value;
+
     return snip(
-      `${targetStr}[${indexStr}]`,
+      isKnownAtComptime(target) && isKnownAtComptime(index)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        ? (target.value as any)[index.value as any]
+        : stitch`${target}[${index}]`,
       elementType,
       /* ref */ target.ref !== undefined && isNaturallyRef(elementType)
         ? target.ref
