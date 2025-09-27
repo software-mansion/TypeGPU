@@ -20,9 +20,9 @@ import {
   vec4h,
 } from '../../src/data/vector.ts';
 import {
+  accessIndex,
   accessProp,
   coerceToSnippet,
-  getTypeForIndexAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
@@ -114,26 +114,55 @@ describe('generationHelpers', () => {
     });
   });
 
-  describe('getTypeForIndexAccess', () => {
+  describe('accessIndex', () => {
     const arr = arrayOf(f32, 2);
+    const index = snip('0', u32, /* ref */ undefined);
 
     it('returns element type for arrays', () => {
-      expect(getTypeForIndexAccess(arr)).toBe(f32);
+      const target = snip('foo', arr, /* ref */ undefined);
+      expect(accessIndex(target, index)).toStrictEqual(
+        snip('foo[0]', f32, undefined),
+      );
     });
 
     it('returns vector component', () => {
-      expect(getTypeForIndexAccess(vec2i)).toBe(i32);
-      expect(getTypeForIndexAccess(vec4h)).toBe(f16);
+      const target1 = snip('foo', vec2i, /* ref */ undefined);
+      const target2 = snip('foo', vec4h, /* ref */ undefined);
+      expect(accessIndex(target1, index)).toStrictEqual(
+        snip('foo[0]', i32, undefined),
+      );
+      expect(accessIndex(target2, index)).toStrictEqual(
+        snip('foo[0]', f16, undefined),
+      );
     });
 
     it('returns matrix column type', () => {
-      expect(getTypeForIndexAccess(mat2x2f)).toBe(vec2f);
-      expect(getTypeForIndexAccess(mat3x3f)).toBe(vec3f);
-      expect(getTypeForIndexAccess(mat4x4f)).toBe(vec4f);
+      const target1 = accessProp(
+        snip('foo', mat2x2f, /* ref */ undefined),
+        'columns',
+      );
+      const target2 = accessProp(
+        snip('foo', mat3x3f, /* ref */ undefined),
+        'columns',
+      );
+      const target3 = accessProp(
+        snip('foo', mat4x4f, /* ref */ undefined),
+        'columns',
+      );
+      expect(target1 && accessIndex(target1, index)).toStrictEqual(
+        snip('foo[0]', vec2f, undefined),
+      );
+      expect(target2 && accessIndex(target2, index)).toStrictEqual(
+        snip('foo[0]', vec3f, undefined),
+      );
+      expect(target3 && accessIndex(target3, index)).toStrictEqual(
+        snip('foo[0]', vec4f, undefined),
+      );
     });
 
-    it('returns UnknownData otherwise', () => {
-      expect(getTypeForIndexAccess(f32)).toBe(UnknownData);
+    it('returns undefined otherwise', () => {
+      const target = snip('foo', f32, /* ref */ undefined);
+      expect(accessIndex(target, index)).toBe(undefined);
     });
   });
 

@@ -163,7 +163,7 @@ describe('tgpu.accessor', () => {
         var color = vec3f(1, 0, 0);
         let color2 = (&redUniform);
         var color3 = getColor();
-        const colorX = 1;
+        const colorX = 1f;
         var color2X = redUniform.x;
         var color3X = getColor().x;
       }"

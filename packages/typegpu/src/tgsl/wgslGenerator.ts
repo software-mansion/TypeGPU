@@ -5,13 +5,11 @@ import {
   type AnyData,
   ConsoleLog,
   InfixDispatch,
-  isData,
   isLooseData,
-  MatrixColumnsAccess,
   toStorable,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { bool } from '../data/numeric.ts';
+import { bool, i32, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
@@ -30,11 +28,10 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  accessIndex,
   accessProp,
-  coerceToSnippet,
   concretize,
   type GenerationCtx,
-  getTypeForIndexAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
@@ -299,66 +296,31 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.indexAccess) {
       // Index Access
       const [_, targetNode, propertyNode] = expression;
-      const target = this.expression(targetNode);
-      const property = this.expression(propertyNode);
-      const propertyStr =
-        this.ctx.resolve(property.value, property.dataType).value;
-
-      if (target.value instanceof MatrixColumnsAccess) {
-        const propType = getTypeForIndexAccess(
-          target.value.matrix.dataType as AnyData,
-        );
-
-        return snip(
-          stitch`${target.value.matrix}[${propertyStr}]`,
-          propType,
-          /* ref */ target.ref,
-        );
-      }
-      const targetStr = this.ctx.resolve(target.value, target.dataType).value;
-
-      if (target.dataType.type === 'unknown') {
-        // No idea what the type is, so we act on the snippet's value and try to guess
-
-        if (
-          Array.isArray(propertyNode) && propertyNode[0] === NODE.numericLiteral
-        ) {
-          return coerceToSnippet(
-            // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
-            (target.value as any)[propertyNode[1] as number],
-          );
-        }
-
-        throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
-        );
-      }
-
-      if (wgsl.isMat(target.dataType)) {
-        throw new Error(
-          "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
-        );
-      }
+      let target = this.expression(targetNode);
+      const inProperty = this.expression(propertyNode);
+      const property = convertToCommonType(
+        [inProperty],
+        [u32, i32],
+        /* verbose */ false,
+      )?.[0] ?? inProperty;
 
       if (wgsl.isPtr(target.dataType)) {
-        const propType = getTypeForIndexAccess(
-          target.dataType.inner as AnyData,
-        );
-        return snip(
-          `(*${targetStr})[${propertyStr}]`,
-          propType,
-          /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
+        // De-referencing the pointer
+        target = tryConvertSnippet(target, target.dataType.inner, false);
+      }
+
+      const accessed = accessIndex(target, property);
+      if (!accessed) {
+        const targetStr = this.ctx.resolve(target.value, target.dataType).value;
+        const propertyStr =
+          this.ctx.resolve(property.value, property.dataType).value;
+
+        throw new Error(
+          `Cannot index value ${targetStr} with index ${propertyStr}`,
         );
       }
 
-      const propType = isData(target.dataType)
-        ? getTypeForIndexAccess(target.dataType)
-        : UnknownData;
-      return snip(
-        `${targetStr}[${propertyStr}]`,
-        propType,
-        /* ref */ wgsl.isNaturallyRef(propType) ? target.ref : undefined,
-      );
+      return accessed;
     }
 
     if (expression[0] === NODE.numericLiteral) {

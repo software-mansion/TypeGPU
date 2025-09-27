@@ -57,6 +57,7 @@ import {
 import type { ShelllessRepository } from './shellless.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { $internal } from '../shared/symbols.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -192,11 +193,6 @@ export function accessProp(
     );
   }
 
-  if (isKnownAtComptime(target) || target.dataType.type === 'unknown') {
-    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
-    return coerceToSnippet((target.value as any)[propName]);
-  }
-
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
     let propType = target.dataType.propTypes[propName];
     if (!propType) {
@@ -232,12 +228,21 @@ export function accessProp(
     if (!swizzleType) {
       return undefined;
     }
+
     return snip(
-      `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
+      isKnownAtComptime(target)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, the prop is there
+        ? (target.value as any)[propName]
+        : `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
       /* ref */ undefined,
     );
+  }
+
+  if (isKnownAtComptime(target) || target.dataType.type === 'unknown') {
+    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
+    return coerceToSnippet((target.value as any)[propName]);
   }
 
   return undefined;
@@ -249,27 +254,71 @@ const indexableTypeToResult = {
   mat4x4f: vec4f,
 } as const;
 
-export function getTypeForIndexAccess(
-  dataType: AnyData,
-): AnyData | UnknownData {
+export function accessIndex(
+  target: Snippet,
+  index: Snippet,
+): Snippet | undefined {
+  // biome-ignore lint/style/noNonNullAssertion: it's there
+  const ctx = getResolutionCtx()!;
+
   // array
-  if (isWgslArray(dataType) || isDisarray(dataType)) {
-    return dataType.elementType as AnyData;
+  if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
+    const elementType = target.dataType.elementType as AnyData;
+    const targetStr = ctx.resolve(target.value, target.dataType).value;
+    const indexStr = ctx.resolve(index.value, index.dataType).value;
+    return snip(
+      `${targetStr}[${indexStr}]`,
+      elementType,
+      /* ref */ target.ref !== undefined && isNaturallyRef(elementType)
+        ? target.ref
+        : undefined,
+    );
   }
 
   // vector
-  if (isVec(dataType)) {
-    return dataType.primitive;
+  if (isVec(target.dataType)) {
+    return snip(
+      isKnownAtComptime(target) && isKnownAtComptime(index)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        ? (target.value as any)[index.value as any]
+        : stitch`${target}[${index}]`,
+      target.dataType.primitive,
+      /* ref */ undefined,
+    );
+  }
+
+  // matrix.columns
+  if (target.value instanceof MatrixColumnsAccess) {
+    const propType = indexableTypeToResult[
+      target.value.matrix.dataType.type as keyof typeof indexableTypeToResult
+    ];
+
+    return snip(
+      stitch`${target.value.matrix}[${index}]`,
+      propType,
+      /* ref */ target.ref,
+    );
   }
 
   // matrix
-  if (dataType.type in indexableTypeToResult) {
-    return indexableTypeToResult[
-      dataType.type as keyof typeof indexableTypeToResult
-    ];
+  if (target.dataType.type in indexableTypeToResult) {
+    throw new Error(
+      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+    );
   }
 
-  return UnknownData;
+  if (
+    (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
+    target.dataType.type === 'unknown'
+  ) {
+    // No idea what the type is, so we act on the snippet's value and try to guess
+    return coerceToSnippet(
+      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+      (target.value as any)[index.value as number],
+    );
+  }
+
+  return undefined;
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
