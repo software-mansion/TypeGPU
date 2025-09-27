@@ -667,7 +667,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         // the types of the arguments from a WGSL string.
         const shellless = this.#namespace.shelllessRepo.get(
           item,
-          /* no arguments */ [],
+          /* no arguments */ undefined,
         );
         if (!shellless) {
           throw new Error(

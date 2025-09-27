@@ -170,4 +170,17 @@ describe('shellless', () => {
       }"
     `);
   });
+
+  it('throws error when resolving function that expects arguments', () => {
+    const main = (a: number) => {
+      'kernel';
+      return a + 1;
+    };
+
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:item_0: Cannot resolve 'item_0' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
+    `);
+  });
 });
