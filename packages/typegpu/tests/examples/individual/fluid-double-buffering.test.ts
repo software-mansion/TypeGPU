@@ -157,7 +157,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn computeVelocity_8(x: i32, y: i32) -> vec2f {
-        var gravityCost = 0.5;
+        const gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         var cell = getCell_6(x, y);
         var leastCost = cell.z;
@@ -216,7 +216,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<uniform> sourceParams_18: item_19;
 
       fn getMinimumInFlow_17(x: i32, y: i32) -> f32 {
-        var gridSizeF = 256f;
+        const gridSizeF = 256f;
         var sourceRadius2 = max(1, (sourceParams_18.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams_18.center.x * gridSizeF), (sourceParams_18.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
@@ -324,7 +324,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn computeVelocity_8(x: i32, y: i32) -> vec2f {
-        var gravityCost = 0.5;
+        const gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         var cell = getCell_6(x, y);
         var leastCost = cell.z;
@@ -383,7 +383,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<uniform> sourceParams_18: item_19;
 
       fn getMinimumInFlow_17(x: i32, y: i32) -> f32 {
-        var gridSizeF = 256f;
+        const gridSizeF = 256f;
         var sourceRadius2 = max(1, (sourceParams_18.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams_18.center.x * gridSizeF), (sourceParams_18.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
@@ -478,9 +478,9 @@ describe('fluid double buffering example', () => {
         var firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
         var secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
         var thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
-        var firstThreshold = 2f;
-        var secondThreshold = 10f;
-        var thirdThreshold = 20f;
+        const firstThreshold = 2f;
+        const secondThreshold = 10f;
+        const thirdThreshold = 20f;
         if (isInsideObstacle_6(x, y)) {
           return obstacleColor;
         }

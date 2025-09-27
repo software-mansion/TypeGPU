@@ -320,6 +320,11 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
+export function isKnownAtComptime(snippet: Snippet): boolean {
+  return typeof snippet.value !== 'string' &&
+    getOwnSnippet(snippet.value) === undefined;
+}
+
 export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||

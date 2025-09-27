@@ -566,7 +566,7 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
         var a = 12u;
-        var b = 2.5f;
+        const b = 2.5f;
         a = u32(b);
         return a;
       }"
@@ -933,8 +933,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() -> i32 {
-        var notAKeyword = 0;
-        var struct_1 = 1;
+        const notAKeyword = 0;
+        const struct_1 = 1;
         return struct_1;
       }"
     `);
@@ -1014,9 +1014,9 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
-        var mut_1 = 1;
-        var mut_1_1 = 2;
-        var mut_1_2 = 2;
+        const mut_1 = 1;
+        const mut_1_1 = 2;
+        const mut_1_2 = 2;
       }"
     `);
   });
@@ -1041,8 +1041,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var a = 10f;
-        var b = 3f;
+        const a = 10f;
+        const b = 3f;
         var n = pow(a, b);
       }"
     `);
@@ -1056,7 +1056,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var n = 16.;
+        const n = 16.;
       }"
     `);
   });
@@ -1070,8 +1070,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var a = 3u;
-        var b = 5i;
+        const a = 3u;
+        const b = 5i;
         var m = pow(f32(a), f32(b));
       }"
     `);

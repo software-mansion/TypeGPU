@@ -240,14 +240,14 @@ describe('stable-fluid example', () => {
       }
 
       @fragment fn fragmentImageFn_3(input: fragmentImageFn_Input_7) -> @location(0) vec4f {
-        var pixelStep = 0.001953125f;
+        const pixelStep = 0.001953125f;
         var leftSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x - pixelStep), input.uv.y)).x;
         var rightSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x + pixelStep), input.uv.y)).x;
         var upSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y + pixelStep))).x;
         var downSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y - pixelStep))).x;
         var gradientX = (rightSample - leftSample);
         var gradientY = (upSample - downSample);
-        var distortStrength = 0.8;
+        const distortStrength = 0.8;
         var distortVector = vec2f(gradientX, gradientY);
         var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -distortStrength)));
         var outputColor = textureSample(background_6, linSampler_5, vec2f(distortedUV.x, (1 - distortedUV.y)));

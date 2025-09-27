@@ -168,7 +168,7 @@ describe('box raytracing example', () => {
         }
         var linear = (vec3f(1) / invColor);
         var srgb = linearToSrgb_12(linear);
-        var gamma = 2.2;
+        const gamma = 2.2;
         var corrected = pow(srgb, vec3f((1f / gamma)));
         if (intersectionFound) {
           return (min(density, 1) * vec4f(min(corrected, vec3f(1)), 1));

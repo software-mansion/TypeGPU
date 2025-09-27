@@ -5,15 +5,11 @@ import {
   type Snippet,
 } from '../../data/snippet.ts';
 import { inCodegenMode } from '../../execMode.ts';
-import { type FnArgsConversionHint, getOwnSnippet } from '../../types.ts';
+import { type FnArgsConversionHint, isKnownAtComptime } from '../../types.ts';
 import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-
-function isKnownAtComptime(value: unknown): boolean {
-  return typeof value !== 'string' && getOwnSnippet(value) === undefined;
-}
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -81,7 +77,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     }) as MapValueToSnippet<Parameters<T>>;
 
     if (
-      !options.noComptime && converted.every((s) => isKnownAtComptime(s.value))
+      !options.noComptime && converted.every((s) => isKnownAtComptime(s))
     ) {
       return snip(
         options.normalImpl(...converted.map((s) => s.value) as never[]),

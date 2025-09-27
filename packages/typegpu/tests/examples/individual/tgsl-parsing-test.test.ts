@@ -198,7 +198,7 @@ describe('tgsl parsing test example', () => {
 
       fn pointersTest_11() -> bool {
         var s = true;
-        var num = 0u;
+        const num = 0u;
         modifyNumFn_12((&num));
         s = (s && (num == 1));
         var vec = vec2f();

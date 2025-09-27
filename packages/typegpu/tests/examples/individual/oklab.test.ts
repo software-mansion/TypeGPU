@@ -136,7 +136,7 @@ describe('oklab example', () => {
       }
 
       fn findGamutIntersection_13(a: f32, b: f32, L1: f32, C1: f32, L0: f32, cusp: LC_12) -> f32 {
-        var FLT_MAX = 3.4028234663852886e+38f;
+        const FLT_MAX = 3.4028234663852886e+38f;
         var t = 0f;
         if (((((L1 - L0) * cusp.C) - ((cusp.L - L0) * C1)) <= 0)) {
           t = ((cusp.C * L0) / ((C1 * cusp.L) + (cusp.C * (L0 - L1))));
@@ -193,9 +193,9 @@ describe('oklab example', () => {
       }
 
       fn gamutClipAdaptiveL05_8(lab: vec3f) -> vec3f {
-        var alpha = 0.20000000298023224f;
+        const alpha = 0.20000000298023224f;
         var L = lab.x;
-        var eps = 1e-5;
+        const eps = 1e-5;
         var C = max(eps, length(lab.yz));
         var a_ = (lab.y / C);
         var b_ = (lab.z / C);

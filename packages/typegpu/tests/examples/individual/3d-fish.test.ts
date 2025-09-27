@@ -171,7 +171,7 @@ describe('3d fish example', () => {
           repulsion[i] = 1;
           var axisAquariumSize = (vec3f(10, 4, 10)[i] / 2f);
           var axisPosition = fishData.position[i];
-          var distance = 0.1;
+          const distance = 0.1;
           if ((axisPosition > (axisAquariumSize - distance))) {
             var str = (axisPosition - (axisAquariumSize - distance));
             wallRepulsion = (wallRepulsion - (str * repulsion));
@@ -184,7 +184,7 @@ describe('3d fish example', () => {
         if ((mouseRay_5.activated == 1)) {
           var proj = projectPointOnLine_8((&fishData.position), (&mouseRay_5.line));
           var diff = (fishData.position - proj);
-          var limit = 0.9;
+          const limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);
           rayRepulsion = (str * normalize(diff));
         }
@@ -218,8 +218,8 @@ describe('3d fish example', () => {
 
       fn applySinWave_4(index: u32, vertex: PosAndNormal_3, time: f32) -> PosAndNormal_3 {
         var a = -60.1;
-        var b = 0.8;
-        var c = 6.1;
+        const b = 0.8;
+        const c = 6.1;
         var posMod = vec3f();
         posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);

@@ -138,15 +138,15 @@ describe('ray-marching example', () => {
 
       fn getNormal_16(p: ptr<function, vec3f>) -> vec3f {
         var dist = getSceneDist_7(p).dist;
-        var e = 0.01;
+        const e = 0.01;
         var n = vec3f((getSceneDist_17(((*p) + vec3f(e, 0, 0))).dist - dist), (getSceneDist_17(((*p) + vec3f(0, e, 0))).dist - dist), (getSceneDist_17(((*p) + vec3f(0, 0, e))).dist - dist));
         return normalize(n);
       }
 
       fn getOrbitingLightPos_19(t: f32) -> vec3f {
-        var radius = 3f;
-        var height = 6f;
-        var speed = 1f;
+        const radius = 3f;
+        const height = 6f;
+        const speed = 1f;
         return vec3f((cos((t * speed)) * radius), (height + (sin((t * speed)) * radius)), 4);
       }
 

@@ -19,7 +19,11 @@ import { getName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import {
+  type FnArgsConversionHint,
+  isKnownAtComptime,
+  isMarkedInternal,
+} from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -818,6 +822,7 @@ ${this.ctx.pre}else ${alternate}`;
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
       if (eq.ref !== undefined) {
+        // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
           const rhsTypeStr =
@@ -836,6 +841,15 @@ ${this.ctx.pre}else ${alternate}`;
         varType = 'let';
         if (!wgsl.isPtr(dataType)) {
           dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
+        }
+      } else {
+        // Non-referential
+        if (
+          stmtType === NODE.const &&
+          !wgsl.isNaturallyRef(dataType) &&
+          isKnownAtComptime(eq)
+        ) {
+          varType = 'const';
         }
       }
 
