@@ -47,11 +47,7 @@ describe('shellless', () => {
       return dot2(d.vec2f(1, 2)) + dot2(d.vec3f(3, 4, 5));
     };
 
-    const main = tgpu.fn([], d.f32)(() => {
-      return foo();
-    });
-
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn dot2(a: vec2f) -> f32 {
         return dot(a, a);
       }
@@ -60,12 +56,8 @@ describe('shellless', () => {
         return dot(a, a);
       }
 
-      fn foo() -> f32 {
+      fn item_0() -> f32 {
         return (dot2(vec2f(1, 2)) + dot2_1(vec3f(3, 4, 5)));
-      }
-
-      fn main() -> f32 {
-        return foo();
       }"
     `);
   });
@@ -163,6 +155,32 @@ describe('shellless', () => {
       fn main() -> f32 {
         return fn2();
       }"
+    `);
+  });
+
+  it('resolves when accepting no arguments', () => {
+    const main = () => {
+      'kernel';
+      return 4.1;
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn item_0() -> f32 {
+        return 4.1;
+      }"
+    `);
+  });
+
+  it('throws error when resolving function that expects arguments', () => {
+    const main = (a: number) => {
+      'kernel';
+      return a + 1;
+    };
+
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:item_0: Cannot resolve 'item_0' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
     `);
   });
 });
