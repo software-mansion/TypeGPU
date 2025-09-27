@@ -1,7 +1,9 @@
 import {
   type AnyData,
+  InfixDispatch,
   isDisarray,
   isUnstruct,
+  MatrixColumnsAccess,
   undecorate,
   UnknownData,
 } from '../data/dataTypes.ts';
@@ -15,12 +17,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import {
-  isSnippet,
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -42,6 +39,7 @@ import {
   type AnyWgslData,
   type F32,
   type I32,
+  isMat,
   isMatInstance,
   isNaturallyRef,
   isNumericSchema,
@@ -51,8 +49,14 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { getResolutionCtx } from '../execMode.ts';
-import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
+import {
+  getOwnSnippet,
+  isKnownAtComptime,
+  type ResolutionCtx,
+} from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
+import { $internal } from '../shared/symbols.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -114,45 +118,84 @@ const kindToSchema = {
   mat4x4f: mat4x4f,
 } as const;
 
-export function getTypeForPropAccess(
-  targetType: AnyData,
-  propName: string,
-): AnyData | UnknownData {
-  if (isWgslStruct(targetType) || isUnstruct(targetType)) {
-    const propType = targetType.propTypes[propName];
-    return propType ? undecorate(propType) as AnyData : UnknownData;
-  }
+const infixKinds = [
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+];
 
-  if (targetType === bool || isNumericSchema(targetType)) {
-    // No props to be accessed here
-    return UnknownData;
-  }
+export const infixOperators = {
+  add,
+  sub,
+  mul,
+  div,
+} as const;
 
-  const propLength = propName.length;
-  if (
-    isVec(targetType) &&
-    propLength >= 1 &&
-    propLength <= 4
-  ) {
-    const swizzleTypeChar = targetType.type.includes('bool')
-      ? 'b'
-      : (targetType.type[4] as SwizzleableType);
-    const swizzleType =
-      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
-    if (swizzleType) {
-      return swizzleType;
-    }
-  }
-
-  return UnknownData;
-}
+export type InfixOperator = keyof typeof infixOperators;
 
 export function accessProp(
   target: Snippet,
   propName: string,
-): ResolvedSnippet | undefined {
+): Snippet | undefined {
   // biome-ignore lint/style/noNonNullAssertion: it's there
   const ctx = getResolutionCtx()!;
+
+  if (
+    infixKinds.includes(target.dataType.type) &&
+    propName in infixOperators
+  ) {
+    return snip(
+      new InfixDispatch(
+        propName,
+        target,
+        infixOperators[propName as InfixOperator][$internal].gpuImpl,
+      ),
+      UnknownData,
+      /* ref */ target.ref,
+    );
+  }
+
+  if (isWgslArray(target.dataType) && propName === 'length') {
+    if (target.dataType.elementCount === 0) {
+      // Dynamically-sized array
+      return snip(
+        `arrayLength(&${ctx.resolve(target.value).value})`,
+        u32,
+        /* ref */ undefined,
+      );
+    }
+
+    return snip(
+      String(target.dataType.elementCount),
+      abstractInt,
+      /* ref */ undefined,
+    );
+  }
+
+  if (isMat(target.dataType) && propName === 'columns') {
+    return snip(
+      new MatrixColumnsAccess(target),
+      UnknownData,
+      /* ref */ target.ref,
+    );
+  }
+
+  if (isKnownAtComptime(target) || target.dataType.type === 'unknown') {
+    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
+    return coerceToSnippet((target.value as any)[propName]);
+  }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
     let propType = target.dataType.propTypes[propName];

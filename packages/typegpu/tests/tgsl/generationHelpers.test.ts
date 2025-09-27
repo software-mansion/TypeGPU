@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
@@ -20,41 +20,23 @@ import {
   vec4h,
 } from '../../src/data/vector.ts';
 import {
+  accessProp,
   coerceToSnippet,
-  type GenerationCtx,
   getTypeForIndexAccess,
-  getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip } from '../../src/data/snippet.ts';
-import { CodegenState } from '../../src/types.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
-
-const mockCtx = {
-  indent: () => '',
-  dedent: () => '',
-  pushBlockScope: () => {},
-  popBlockScope: () => {},
-  mode: new CodegenState(),
-  getById: vi.fn(),
-  defineVariable: vi.fn((id, dataType) => ({ value: id, dataType })),
-  resolve: vi.fn((val) => {
-    if (
-      (typeof val === 'function' || typeof val === 'object') &&
-      'type' in val
-    ) {
-      return val.type;
-    }
-    return val;
-  }),
-  unwrap: vi.fn((val) => val),
-  pre: '',
-} as unknown as GenerationCtx;
+import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 describe('generationHelpers', () => {
   beforeEach(() => {
-    INTERNAL_setCtx(mockCtx);
+    const ctx = new ResolutionCtxImpl({
+      namespace: namespace(),
+    });
+    INTERNAL_setCtx(ctx);
   });
 
   afterEach(() => {
@@ -93,27 +75,42 @@ describe('generationHelpers', () => {
     });
   });
 
-  describe('getTypeForPropAccess', () => {
+  describe('accessProp', () => {
     const MyStruct = struct({
       foo: f32,
       bar: vec3f,
     });
 
     it('should return struct property types', () => {
-      expect(getTypeForPropAccess(MyStruct, 'foo')).toBe(f32);
-      expect(getTypeForPropAccess(MyStruct, 'bar')).toBe(vec3f);
-      expect(getTypeForPropAccess(MyStruct, 'notfound')).toBe(UnknownData);
+      const target = snip('foo', MyStruct, 'this-function');
+      expect(accessProp(target, 'foo')).toStrictEqual(
+        snip('foo.foo', f32, /* ref */ undefined),
+      );
+      expect(accessProp(target, 'bar')).toStrictEqual(
+        snip('foo.bar', vec3f, /* ref */ 'this-function'),
+      );
+      expect(accessProp(target, 'notfound')).toStrictEqual(undefined);
     });
 
     it('should return swizzle types on vectors', () => {
-      expect(getTypeForPropAccess(vec4f, 'x')).toBe(f32);
-      expect(getTypeForPropAccess(vec4f, 'yz')).toBe(vec2f);
-      expect(getTypeForPropAccess(vec4f, 'xyzw')).toBe(vec4f);
+      const target = snip('foo', vec4f, 'this-function');
+
+      expect(accessProp(target, 'x')).toStrictEqual(
+        snip('foo.x', f32, /* ref */ undefined),
+      );
+      expect(accessProp(target, 'yz')).toStrictEqual(
+        snip('foo.yz', vec2f, /* ref */ undefined),
+      );
+      expect(accessProp(target, 'xyzw')).toStrictEqual(
+        snip('foo.xyzw', vec4f, /* ref */ undefined),
+      );
     });
 
     it('should return UnknownData when applied to primitives or invalid', () => {
-      expect(getTypeForPropAccess(u32, 'x')).toBe(UnknownData);
-      expect(getTypeForPropAccess(bool, 'x')).toBe(UnknownData);
+      const target1 = snip('foo', u32, /* ref */ undefined);
+      const target2 = snip('foo', bool, /* ref */ undefined);
+      expect(accessProp(target1, 'x')).toBe(undefined);
+      expect(accessProp(target2, 'x')).toBe(undefined);
     });
   });
 

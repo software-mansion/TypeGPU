@@ -37,7 +37,7 @@ export const valueProxyHandler: ProxyHandler<
 
     return new Proxy({
       [$internal]: true,
-      [$resolve]: () => accessed,
+      [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
       [$ownSnippet]: accessed,
       toString: () => `${String(target)}.${prop}`,
     }, valueProxyHandler);

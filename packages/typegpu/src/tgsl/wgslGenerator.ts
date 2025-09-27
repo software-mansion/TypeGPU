@@ -11,7 +11,7 @@ import {
   toStorable,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, u32 } from '../data/numeric.ts';
+import { bool } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
@@ -35,7 +35,6 @@ import {
   concretize,
   type GenerationCtx,
   getTypeForIndexAccess,
-  getTypeForPropAccess,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
@@ -67,33 +66,6 @@ const parenthesizedOps = [
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
-
-const infixKinds = [
-  'vec2f',
-  'vec3f',
-  'vec4f',
-  'vec2h',
-  'vec3h',
-  'vec4h',
-  'vec2i',
-  'vec3i',
-  'vec4i',
-  'vec2u',
-  'vec3u',
-  'vec4u',
-  'mat2x2f',
-  'mat3x3f',
-  'mat4x4f',
-];
-
-export const infixOperators = {
-  add,
-  sub,
-  mul,
-  div,
-} as const;
-
-export type InfixOperator = keyof typeof infixOperators;
 
 type Operator =
   | tinyest.BinaryOperator
@@ -308,67 +280,9 @@ ${this.ctx.pre}}`;
         return snip(new ConsoleLog(), UnknownData, /* ref */ undefined);
       }
 
-      if (target.dataType.type === 'unknown') {
-        // No idea what the type is, so we act on the snippet's value and try to guess
-
-        // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
-        const propValue = (target.value as any)[property];
-
-        // We try to extract any type information based on the prop's value
-        return coerceToSnippet(propValue);
-      }
-
       if (wgsl.isPtr(target.dataType)) {
         // De-referencing the pointer
         target = tryConvertSnippet(target, target.dataType.inner, false);
-      }
-
-      if (
-        infixKinds.includes(target.dataType.type) &&
-        property in infixOperators
-      ) {
-        return snip(
-          new InfixDispatch(
-            property,
-            target,
-            infixOperators[property as InfixOperator][$internal].gpuImpl,
-          ),
-          UnknownData,
-          /* ref */ target.ref,
-        );
-      }
-
-      if (wgsl.isWgslArray(target.dataType) && property === 'length') {
-        if (target.dataType.elementCount === 0) {
-          // Dynamically-sized array
-          return snip(
-            `arrayLength(&${this.ctx.resolve(target.value).value})`,
-            u32,
-            /* ref */ undefined,
-          );
-        }
-
-        return snip(
-          String(target.dataType.elementCount),
-          abstractInt,
-          /* ref */ undefined,
-        );
-      }
-
-      if (wgsl.isMat(target.dataType) && property === 'columns') {
-        return snip(
-          new MatrixColumnsAccess(target),
-          UnknownData,
-          /* ref */ target.ref,
-        );
-      }
-
-      if (
-        wgsl.isVec(target.dataType) && wgsl.isVecInstance(target.value)
-      ) {
-        // We're operating on a vector that's known at resolution time
-        // biome-ignore lint/suspicious/noExplicitAny: it's probably a swizzle
-        return coerceToSnippet((target.value as any)[property]);
       }
 
       const accessed = accessProp(target, property);

@@ -3,7 +3,7 @@ import { mat4x4f, vec4f } from '../../../src/data/index.ts';
 import tgpu from '../../../src/index.ts';
 import { isCloseTo, mul } from '../../../src/std/index.ts';
 import { rotateX4, rotateY4, rotateZ4 } from '../../../src/std/matrix.ts';
-import { asWgsl, parse, parseResolved } from '../../utils/parseResolved.ts';
+import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('rotate', () => {
   it('generates correct WGSL for rotateX4 with custom matrix', () => {
