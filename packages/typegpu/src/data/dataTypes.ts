@@ -128,6 +128,21 @@ export function undecorate(data: AnyData): AnyData {
   return data;
 }
 
+export function unptr(data: AnyData): AnyData {
+  if (data.type === 'ptr') {
+    return data.inner as AnyData;
+  }
+  return data;
+}
+
+export function toStorable(schema: AnyData): AnyData {
+  return undecorate(unptr(undecorate(schema)));
+}
+
+export function toStorables<T extends AnyData[]>(schemas: T): T {
+  return schemas.map(toStorable) as T;
+}
+
 const looseTypeLiterals = [
   'unstruct',
   'disarray',

@@ -1,5 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { toStorables } from '../data/dataTypes.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -54,7 +55,8 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 export const add = dualImpl({
   name: 'add',
   signature: (...args) => {
-    const uargs = unify(args) ?? args;
+    const sargs = toStorables(args);
+    const uargs = unify(sargs) ?? sargs;
     return {
       argTypes: uargs,
       returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
@@ -138,7 +140,8 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 export const mul = dualImpl({
   name: 'mul',
   signature: (...args) => {
-    const uargs = unify(args) ?? args;
+    const sargs = toStorables(args);
+    const uargs = unify(sargs) ?? sargs;
     const returnType = isNumericSchema(uargs[0])
       // Scalar * Scalar/Vector/Matrix
       ? uargs[1]
