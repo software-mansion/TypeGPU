@@ -6,7 +6,7 @@ import type {
 import * as d from '../src/data/index.ts';
 import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {
@@ -117,26 +117,20 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       const velX = boid.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
-        var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
-
-        fn func() {
-          var pos = boid;
-          var vel = boid.vel;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        let pos = &boid;
+        let vel = &boid.vel;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   it('supports atomic operations on workgroupVar atomics accessed via .$', () => {

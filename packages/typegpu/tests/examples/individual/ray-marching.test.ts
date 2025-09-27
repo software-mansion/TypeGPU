@@ -183,10 +183,10 @@ describe('ray-marching example', () => {
         var lightPos = getOrbitingLightPos_19(time_12);
         var l = normalize((lightPos - p));
         var diff = max(dot(n, l), 0);
-        var shadowRo = p;
-        var shadowRd = l;
+        let shadowRo = &p;
+        let shadowRd = &l;
         var shadowDist = length((lightPos - p));
-        var shadow = softShadow_20(&shadowRo, &shadowRd, 0.1, shadowDist, 16);
+        var shadow = softShadow_20(shadowRo, shadowRd, 0.1, shadowDist, 16);
         var litColor = (march.color * diff);
         var finalColor = mix((litColor * 0.5), litColor, shadow);
         return mix(vec4f(finalColor, 1), vec4f(0.699999988079071, 0.800000011920929, 0.8999999761581421, 1), fog);

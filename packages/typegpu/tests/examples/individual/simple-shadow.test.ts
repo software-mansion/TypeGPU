@@ -87,11 +87,11 @@ describe('simple shadow example', () => {
       }
 
       @vertex fn mainVert_0(_arg_0: mainVert_Input_7) -> mainVert_Output_6 {
-        var modelMatrixUniform = instanceInfo_1.modelMatrix;
-        var worldPos = (modelMatrixUniform * _arg_0.position);
+        let modelMatrixUniform = &instanceInfo_1.modelMatrix;
+        var worldPos = (*modelMatrixUniform * _arg_0.position);
         var viewPos = (cameraUniform_4.view * worldPos);
         var clipPos = (cameraUniform_4.projection * viewPos);
-        var transformedNormal = (modelMatrixUniform * _arg_0.normal);
+        var transformedNormal = (*modelMatrixUniform * _arg_0.normal);
         return mainVert_Output_6(clipPos, transformedNormal, worldPos.xyz);
       }
 
@@ -125,7 +125,7 @@ describe('simple shadow example', () => {
       }
 
       @fragment fn mainFrag_8(_arg_0: mainFrag_Input_17) -> @location(0) vec4f {
-        var instanceInfo = instanceInfo_1;
+        let instanceInfo = &instanceInfo_1;
         var N = normalize(_arg_0.normal.xyz);
         var L = normalize(-(light_9.direction));
         var V = normalize((cameraUniform_4.position - _arg_0.worldPos));
@@ -140,11 +140,11 @@ describe('simple shadow example', () => {
         if (!inBounds) {
           shadowFactor = 1;
         }
-        var ambient = (instanceInfo.material.ambient * light_9.color);
+        var ambient = ((*instanceInfo).material.ambient * light_9.color);
         var diff = max(0, dot(N, L));
-        var diffuse = ((instanceInfo.material.diffuse * light_9.color) * diff);
-        var spec = pow(max(0, dot(V, R)), instanceInfo.material.shininess);
-        var specular = ((instanceInfo.material.specular * light_9.color) * spec);
+        var diffuse = (((*instanceInfo).material.diffuse * light_9.color) * diff);
+        var spec = pow(max(0, dot(V, R)), (*instanceInfo).material.shininess);
+        var specular = (((*instanceInfo).material.specular * light_9.color) * spec);
         var lit = ((diffuse + specular) * shadowFactor);
         var finalColor = (ambient + lit);
         if ((paramsUniform_15.shadowOnly == 1)) {

@@ -15,7 +15,12 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isSnippet,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -38,12 +43,14 @@ import {
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyRef,
   isNumericSchema,
   isVec,
   isVecInstance,
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
+import { getResolutionCtx } from '../execMode.ts';
 import { getOwnSnippet, type ResolutionCtx } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 
@@ -138,6 +145,59 @@ export function getTypeForPropAccess(
   }
 
   return UnknownData;
+}
+
+export function accessProp(
+  target: Snippet,
+  propName: string,
+): ResolvedSnippet | undefined {
+  // biome-ignore lint/style/noNonNullAssertion: it's there
+  const ctx = getResolutionCtx()!;
+
+  if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
+    let propType = target.dataType.propTypes[propName];
+    if (!propType) {
+      return undefined;
+    }
+    propType = undecorate(propType);
+
+    return snip(
+      `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
+      propType,
+      /* ref */ target.ref !== undefined && isNaturallyRef(propType)
+        ? target.ref
+        : undefined,
+    );
+  }
+
+  if (target.dataType.type === 'bool' || isNumericSchema(target.dataType)) {
+    // No props to be accessed here
+    return undefined;
+  }
+
+  const propLength = propName.length;
+  if (
+    isVec(target.dataType) &&
+    propLength >= 1 &&
+    propLength <= 4
+  ) {
+    const swizzleTypeChar = target.dataType.type.includes('bool')
+      ? 'b'
+      : (target.dataType.type[4] as SwizzleableType);
+    const swizzleType =
+      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
+    if (!swizzleType) {
+      return undefined;
+    }
+    return snip(
+      `${ctx.resolve(target.value, target.dataType).value}.${propName}`,
+      swizzleType,
+      // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
+      /* ref */ undefined,
+    );
+  }
+
+  return undefined;
 }
 
 const indexableTypeToResult = {

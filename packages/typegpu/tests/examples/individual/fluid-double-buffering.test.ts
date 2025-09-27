@@ -35,14 +35,14 @@ describe('fluid double buffering example', () => {
 
       fn isInsideObstacle_4(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_5[obsIdx];
-          if ((obs.enabled == 0)) {
+          let obs = &obstacles_5[obsIdx];
+          if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, (obs.center.x - i32((f32(obs.size.x) / 2f))));
-          var maxX = min(256, (obs.center.x + i32((f32(obs.size.x) / 2f))));
-          var minY = max(0, (obs.center.y - i32((f32(obs.size.y) / 2f))));
-          var maxY = min(256, (obs.center.y + i32((f32(obs.size.y) / 2f))));
+          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -119,14 +119,14 @@ describe('fluid double buffering example', () => {
 
       fn isInsideObstacle_11(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_12[obsIdx];
-          if ((obs.enabled == 0)) {
+          let obs = &obstacles_12[obsIdx];
+          if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, (obs.center.x - i32((f32(obs.size.x) / 2f))));
-          var maxX = min(256, (obs.center.x + i32((f32(obs.size.x) / 2f))));
-          var minY = max(0, (obs.center.y - i32((f32(obs.size.y) / 2f))));
-          var maxY = min(256, (obs.center.y + i32((f32(obs.size.y) / 2f))));
+          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -156,7 +156,7 @@ describe('fluid double buffering example', () => {
         return item_15();
       }
 
-      fn computeVelocity_8(x: i32, y: i32) -> vec2f {
+      fn computeVelocity_8(x: i32, y: i32) -> ptr<function, vec2f> {
         var gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         var cell = getCell_6(x, y);
@@ -164,25 +164,25 @@ describe('fluid double buffering example', () => {
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         for (var i = 0; (i < 4); i++) {
-          var offset = neighborOffsets[i];
-          var neighborDensity = getCell_6((x + offset.x), (y + offset.y));
-          var cost = (neighborDensity.z + (f32(offset.y) * gravityCost));
-          if (!isValidFlowOut_9((x + offset.x), (y + offset.y))) {
+          let offset = &neighborOffsets[i];
+          var neighborDensity = getCell_6((x + (*offset).x), (y + (*offset).y));
+          var cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
+          if (!isValidFlowOut_9((x + (*offset).x), (y + (*offset).y))) {
             continue;
           }
           if ((cost == leastCost)) {
-            dirChoices[dirChoiceCount] = vec2f(f32(offset.x), f32(offset.y));
+            dirChoices[dirChoiceCount] = vec2f(f32((*offset).x), f32((*offset).y));
             dirChoiceCount++;
           }
           else {
             if ((cost < leastCost)) {
               leastCost = cost;
-              dirChoices[0] = vec2f(f32(offset.x), f32(offset.y));
+              dirChoices[0] = vec2f(f32((*offset).x), f32((*offset).y));
               dirChoiceCount = 1;
             }
           }
         }
-        var leastCostDir = dirChoices[u32((randFloat01_14() * f32(dirChoiceCount)))];
+        let leastCostDir = &dirChoices[u32((randFloat01_14() * f32(dirChoiceCount)))];
         return leastCostDir;
       }
 
@@ -238,8 +238,8 @@ describe('fluid double buffering example', () => {
         randSeed2_3(vec2f(f32(index), time_2));
         var next = getCell_6(x, y);
         var nextVelocity = computeVelocity_8(x, y);
-        next.x = nextVelocity.x;
-        next.y = nextVelocity.y;
+        next.x = (*nextVelocity).x;
+        next.y = (*nextVelocity).y;
         next.z = flowFromCell_16(x, y, x, y);
         next.z += flowFromCell_16(x, y, x, (y + 1));
         next.z += flowFromCell_16(x, y, x, (y - 1));
@@ -286,14 +286,14 @@ describe('fluid double buffering example', () => {
 
       fn isInsideObstacle_11(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_12[obsIdx];
-          if ((obs.enabled == 0)) {
+          let obs = &obstacles_12[obsIdx];
+          if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, (obs.center.x - i32((f32(obs.size.x) / 2f))));
-          var maxX = min(256, (obs.center.x + i32((f32(obs.size.x) / 2f))));
-          var minY = max(0, (obs.center.y - i32((f32(obs.size.y) / 2f))));
-          var maxY = min(256, (obs.center.y + i32((f32(obs.size.y) / 2f))));
+          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -323,7 +323,7 @@ describe('fluid double buffering example', () => {
         return item_15();
       }
 
-      fn computeVelocity_8(x: i32, y: i32) -> vec2f {
+      fn computeVelocity_8(x: i32, y: i32) -> ptr<function, vec2f> {
         var gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         var cell = getCell_6(x, y);
@@ -331,25 +331,25 @@ describe('fluid double buffering example', () => {
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         for (var i = 0; (i < 4); i++) {
-          var offset = neighborOffsets[i];
-          var neighborDensity = getCell_6((x + offset.x), (y + offset.y));
-          var cost = (neighborDensity.z + (f32(offset.y) * gravityCost));
-          if (!isValidFlowOut_9((x + offset.x), (y + offset.y))) {
+          let offset = &neighborOffsets[i];
+          var neighborDensity = getCell_6((x + (*offset).x), (y + (*offset).y));
+          var cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
+          if (!isValidFlowOut_9((x + (*offset).x), (y + (*offset).y))) {
             continue;
           }
           if ((cost == leastCost)) {
-            dirChoices[dirChoiceCount] = vec2f(f32(offset.x), f32(offset.y));
+            dirChoices[dirChoiceCount] = vec2f(f32((*offset).x), f32((*offset).y));
             dirChoiceCount++;
           }
           else {
             if ((cost < leastCost)) {
               leastCost = cost;
-              dirChoices[0] = vec2f(f32(offset.x), f32(offset.y));
+              dirChoices[0] = vec2f(f32((*offset).x), f32((*offset).y));
               dirChoiceCount = 1;
             }
           }
         }
-        var leastCostDir = dirChoices[u32((randFloat01_14() * f32(dirChoiceCount)))];
+        let leastCostDir = &dirChoices[u32((randFloat01_14() * f32(dirChoiceCount)))];
         return leastCostDir;
       }
 
@@ -405,8 +405,8 @@ describe('fluid double buffering example', () => {
         randSeed2_3(vec2f(f32(index), time_2));
         var next = getCell_6(x, y);
         var nextVelocity = computeVelocity_8(x, y);
-        next.x = nextVelocity.x;
-        next.y = nextVelocity.y;
+        next.x = (*nextVelocity).x;
+        next.y = (*nextVelocity).y;
         next.z = flowFromCell_16(x, y, x, y);
         next.z += flowFromCell_16(x, y, x, (y + 1));
         next.z += flowFromCell_16(x, y, x, (y - 1));
@@ -448,14 +448,14 @@ describe('fluid double buffering example', () => {
 
       fn isInsideObstacle_6(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_7[obsIdx];
-          if ((obs.enabled == 0)) {
+          let obs = &obstacles_7[obsIdx];
+          if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, (obs.center.x - i32((f32(obs.size.x) / 2f))));
-          var maxX = min(256, (obs.center.x + i32((f32(obs.size.x) / 2f))));
-          var minY = max(0, (obs.center.y - i32((f32(obs.size.y) / 2f))));
-          var maxY = min(256, (obs.center.y + i32((f32(obs.size.y) / 2f))));
+          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -471,8 +471,8 @@ describe('fluid double buffering example', () => {
         var x = i32((input.uv.x * 256));
         var y = i32((input.uv.y * 256));
         var index = coordsToIndex_4(x, y);
-        var cell = gridAlphaBuffer_5[index];
-        var density = max(0, cell.z);
+        let cell = &gridAlphaBuffer_5[index];
+        var density = max(0, (*cell).z);
         var obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
         var background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
         var firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);

@@ -136,7 +136,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     std.sub(layout.$.camera.position.xyz, input.worldPosition),
   );
 
-  let desaturatedColor = lightedColor;
+  let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {
     const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
       3;
@@ -148,7 +148,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     desaturatedColor = hsvToRgb(hsv);
   }
 
-  let foggedColor = desaturatedColor;
+  let foggedColor = d.vec3f(desaturatedColor);
   if (input.applySeaFog === 1) {
     const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
     const fogFactor = fogParameter / (1 + fogParameter);

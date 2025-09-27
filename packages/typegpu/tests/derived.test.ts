@@ -3,7 +3,7 @@ import * as d from '../src/data/index.ts';
 import tgpu, { type TgpuDerived } from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl, parse, parseResolved } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
@@ -136,30 +136,23 @@ describe('TgpuDerived', () => {
       const velX_ = derivedDerivedUniformSlot.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<uniform> boid: Boid;
 
-        @group(0) @binding(0) var<uniform> boid: Boid;
-
-        fn func(){
-          var pos = vec3f(2, 4, 6);
-          var posX = 2;
-          var vel = boid.vel;
-          var velX = boid.vel.x;
-
-          var vel_ = boid.vel;
-          var velX_ = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = vec3f(2, 4, 6);
+        var posX = 2;
+        let vel = &boid.vel;
+        var velX = boid.vel.x;
+        let vel_ = &boid.vel;
+        var velX_ = boid.vel.x;
+      }"
+    `);
   });
 
   // TODO: rethink this behavior of derived returning a function,

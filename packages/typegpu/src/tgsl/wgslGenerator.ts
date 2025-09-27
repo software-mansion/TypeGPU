@@ -36,6 +36,7 @@ import {
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import { safeStringify } from '../shared/safeStringify.ts';
 import type { DualFn } from '../data/dualFn.ts';
+import { ptrFn } from '../data/ptr.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -794,7 +795,8 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      const [_, rawId, rawValue] = statement;
+      let varType = 'var';
+      const [stmtType, rawId, rawValue] = statement;
       const eq = rawValue !== undefined ? this.expression(rawValue) : undefined;
 
       if (!eq) {
@@ -809,12 +811,28 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      let dataType = eq.dataType as wgsl.AnyWgslData;
+      // Assigning a reference to a `const` variable means we store the pointer
+      // of the rhs.
+      if (eq.ref !== undefined && !wgsl.isPtr(dataType)) {
+        if (stmtType === NODE.let) {
+          throw new WgslTypeError(
+            `Cannot assign a reference to a let variable ('${rawId}'). Use const instead, or copy the right-hand side.`,
+          );
+        }
+
+        varType = 'let';
+        if (!wgsl.isPtr(dataType)) {
+          dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
+        }
+      }
+
       const snippet = this.blockVariable(
         rawId,
-        concretize(eq.dataType as wgsl.AnyWgslData),
+        concretize(dataType),
       );
-      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
-        .value as string} = ${eq};`;
+      return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
+        .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
     }
 
     if (statement[0] === NODE.block) {

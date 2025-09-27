@@ -274,8 +274,8 @@ describe('3d fish example', () => {
         var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, currentModelData.position.x, currentModelData.position.y, currentModelData.position.z, 1);
         var worldPosition = (translationMatrix * (yawMatrix * (pitchMatrix * (scaleMatrix * vec4f(wavedVertex.position, 1)))));
         var worldNormal = normalize((yawMatrix * (pitchMatrix * vec4f(wavedVertex.normal, 1))).xyz);
-        var worldPositionUniform = worldPosition;
-        var canvasPosition = (camera_6.projection * (camera_6.view * worldPositionUniform));
+        let worldPositionUniform = &worldPosition;
+        var canvasPosition = (camera_6.projection * (camera_6.view * *worldPositionUniform));
         return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
       }
 
@@ -400,10 +400,10 @@ describe('3d fish example', () => {
 
       @fragment fn fragmentShader_10(input: fragmentShader_Input_16) -> @location(0) vec4f {
         var textureColorWithAlpha = sampleTexture_11(input.textureUV);
-        var textureColor = textureColorWithAlpha.xyz;
-        var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
+        let textureColor = &textureColorWithAlpha.xyz;
+        var ambient = (0.5 * (*textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
-        var diffuse = (max(0, cosTheta) * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
+        var diffuse = (max(0, cosTheta) * (*textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var viewSource = normalize((camera_6.position.xyz - input.worldPosition));
         var reflectSource = normalize(reflect((-1 * vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972)), input.worldNormal));
         var specularStrength = pow(max(0, dot(viewSource, reflectSource)), 16);

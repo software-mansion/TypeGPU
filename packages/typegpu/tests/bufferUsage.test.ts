@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { parse } from './utils/parseResolved.ts';
+import { asWgsl, parse } from './utils/parseResolved.ts';
 
 import tgpu from '../src/index.ts';
 
@@ -80,20 +80,19 @@ describe('TgpuBufferUniform', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-        @group(0) @binding(0) var<uniform> boid: Boid;
+      @group(0) @binding(0) var<uniform> boid: Boid;
 
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        let pos = &boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 });
 
@@ -172,20 +171,19 @@ describe('TgpuBufferMutable', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-        @group(0) @binding(0) var<storage, read_write> boid: Boid;
+      @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        let pos = &boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   describe('simulate mode', () => {
@@ -277,25 +275,19 @@ describe('TgpuBufferReadonly', () => {
       const velX = boidReadonly.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<storage, read> boid: Boid;
 
-        @group(0) @binding(0) var<storage, read> boid: Boid;
-
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        let pos = &boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   it('cannot be accessed via .$ or .value top-level', ({ root }) => {

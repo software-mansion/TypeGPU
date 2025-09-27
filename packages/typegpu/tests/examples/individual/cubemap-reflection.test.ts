@@ -75,17 +75,17 @@ describe('cubemap reflection example', () => {
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         var baseIndexNext = (triangleIndex * 12);
         for (var i = 0u; (i < 12); i++) {
-          var reprojectedVertex = newVertices[i];
+          let reprojectedVertex = &newVertices[i];
           var triBase = (i - (i % 3));
           var normal = reprojectedVertex;
           if ((smoothFlag_5 == 0)) {
-            normal = getAverageNormal_6(&newVertices[triBase], &newVertices[(triBase + 1)], &newVertices[(triBase + 2)]);
+            *normal = getAverageNormal_6(&newVertices[triBase], &newVertices[(triBase + 1)], &newVertices[(triBase + 2)]);
           }
           var outIndex = (baseIndexNext + i);
-          var nextVertex = nextVertices_7[outIndex];
-          nextVertex.position = packVec2u_8(&reprojectedVertex);
-          nextVertex.normal = packVec2u_8(&normal);
-          nextVertices_7[outIndex] = nextVertex;
+          let nextVertex = &nextVertices_7[outIndex];
+          (*nextVertex).position = packVec2u_8(reprojectedVertex);
+          (*nextVertex).normal = packVec2u_8(normal);
+          nextVertices_7[outIndex] = *nextVertex;
         }
       }
 

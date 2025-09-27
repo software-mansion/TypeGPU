@@ -152,30 +152,22 @@ describe('tgpu.accessor', () => {
       const color3X = colorAccessorFn.value.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { main },
-      names: 'strict',
-    });
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> redUniform: vec3f;
 
-    expect(parse(resolved)).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var<uniform> redUniform: vec3f;
+      fn getColor() -> vec3f {
+        return vec3f(1, 0, 0);
+      }
 
-        fn getColor() -> vec3f {
-          return vec3f(1, 0, 0);
-        }
-
-        fn main() {
-          var color = vec3f(1, 0, 0);
-          var color2 = redUniform;
-          var color3 = getColor();
-
-          var colorX = 1;
-          var color2X = redUniform.x;
-          var color3X = getColor().x;
-        }
-    `),
-    );
+      fn main() {
+        var color = vec3f(1, 0, 0);
+        let color2 = &redUniform;
+        var color3 = getColor();
+        var colorX = 1;
+        var color2X = redUniform.x;
+        var color3X = getColor().x;
+      }"
+    `);
   });
 
   it('retains type information', ({ root }) => {

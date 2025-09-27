@@ -851,14 +851,14 @@ describe('wgslGenerator', () => {
       while (i < 10) i += 1;
     });
 
-    expect(parseResolved({ main })).toBe(parse(`
-      fn main() {
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
         var i = 0;
-        while((i < 10)){
+        while ((i < 10)) {
           i += 1;
         }
-      }
-    `));
+      }"
+    `);
   });
 
   it('throws error when incorrectly initializing function', () => {
@@ -1102,8 +1102,8 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
         var matrix = mat4x4f();
-        var column = matrix[1];
-        var element = column[0];
+        let column = &matrix[1];
+        var element = (*column)[0];
         var directElement = matrix[1][0];
       }"
     `);
@@ -1123,7 +1123,7 @@ describe('wgslGenerator', () => {
       var<workgroup> matrix: mat4x4f;
 
       fn testFn() {
-        var element = matrix[index];
+        let element = &matrix[index];
       }"
     `);
   });
