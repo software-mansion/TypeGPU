@@ -20,20 +20,23 @@ import type * as s from './structures.ts';
 interface SurfaceResources {
   vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
   indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
+  indexCount: number;
 }
 
 export class Plotter implements IPlotter {
   readonly #context: GPUCanvasContext;
   readonly #canvas: HTMLCanvasElement;
-  #presentationFormat: GPUTextureFormat;
+  readonly #presentationFormat: GPUTextureFormat;
   #cameraConfig: CameraConfig;
-  #eventHandler: EventHandler;
+  readonly #eventHandler: EventHandler;
   #surfaceStack: SurfaceResources[] = [];
   #root!: TgpuRoot;
-  #resources!: ResourceKeeper;
-  #renderPipeline!: TgpuRenderPipeline;
+  #resourceKeeper!: ResourceKeeper;
+  #backgroundRenderPipeline!: TgpuRenderPipeline;
+  #noBackgroudRenderPipeline!: TgpuRenderPipeline;
   #plotConfig!: PlotConfig;
   #bindedFrameFunction!: () => void;
+  #keepRendering = false;
 
   constructor(canvas: HTMLCanvasElement, cameraConfig?: CameraConfig) {
     this.#canvas = canvas;
@@ -52,7 +55,7 @@ export class Plotter implements IPlotter {
       alphaMode: 'premultiplied',
     });
 
-    this.#resources = new ResourceKeeper(
+    this.#resourceKeeper = new ResourceKeeper(
       this.#root,
       this.#canvas,
       this.#presentationFormat,
@@ -60,17 +63,10 @@ export class Plotter implements IPlotter {
 
     this.updateCamera(this.#cameraConfig);
 
-    this.#createRenderPipeline();
+    this.#createRenderPipelines();
   }
 
-  plot(surfaces: ISurface[], options: PlotConfig): void {
-    if (surfaces.length !== 0) {
-      for (const resource of this.#surfaceStack) {
-        resource.vertexBuffer.destroy();
-        resource.indexBuffer.destroy();
-      }
-    }
-
+  addPlots(surfaces: ISurface[], options: PlotConfig): void {
     const root = this.#root;
 
     this.#plotConfig = options;
@@ -89,16 +85,27 @@ export class Plotter implements IPlotter {
             d.arrayOf(d.u16, indices.length),
             indices,
           ).$usage('index'),
+
+          indexCount: indices.length,
         },
       );
     }
   }
 
+  resetPlots(): void {
+    for (const surface of this.#surfaceStack) {
+      surface.vertexBuffer.destroy();
+      surface.indexBuffer.destroy();
+    }
+    this.#surfaceStack = [];
+  }
+
   startRenderLoop(): void {
+    this.#keepRendering = true;
     this.#eventHandler.setup();
 
     const resizeObserver = new ResizeObserver(() =>
-      this.#resources.updateDepthAndMsaa()
+      this.#resourceKeeper.updateDepthAndMsaa()
     );
     resizeObserver.observe(this.#canvas);
     this.#canvas;
@@ -110,19 +117,26 @@ export class Plotter implements IPlotter {
   }
 
   stopRenderLoop(): void {
+    this.#keepRendering = false;
   }
 
   updateCamera(cameraConfig: CameraConfig): void {
     this.#cameraConfig = cameraConfig;
-    this.#resources.updateCameraUniform(
+    this.#resourceKeeper.updateCameraUniform(
       this.#cameraConfig,
       this.#canvas.clientWidth / this.#canvas.clientHeight,
     );
   }
 
   #frame() {
+    if (!this.#keepRendering) {
+      return;
+    }
+
     if (this.#eventHandler.cameraChanged) {
-      this.#resources.updateCameraView(this.#eventHandler.cameraViewMatrix);
+      this.#resourceKeeper.updateCameraView(
+        this.#eventHandler.cameraViewMatrix,
+      );
       this.#eventHandler.resetCameraChangedFlag();
     }
 
@@ -131,42 +145,68 @@ export class Plotter implements IPlotter {
   }
 
   #render() {
-    const planes = this.#resources.planes;
-    this.#drawObject(
-      planes.vertexBuffer,
-      planes.yZero.bindgroup,
-      planes.indexBuffer,
-      6,
-      'clear',
-    );
-
-    if (this.#plotConfig.yZeroPlane) {
+    const emptySurfaceStack = this.#surfaceStack.length === 0;
+    if (!emptySurfaceStack) {
+      const firstSurface = this.#surfaceStack[0];
       this.#drawObject(
-        planes.vertexBuffer,
-        planes.yZero.bindgroup,
-        planes.indexBuffer,
-        6,
-        'load',
+        firstSurface.vertexBuffer,
+        this.#resourceKeeper.bindgroup,
+        firstSurface.indexBuffer,
+        firstSurface.indexCount,
+        'clear',
+        true,
       );
+      for (const surface of this.#surfaceStack.slice(1)) {
+        this.#drawObject(
+          surface.vertexBuffer,
+          this.#resourceKeeper.bindgroup,
+          surface.indexBuffer,
+          surface.indexCount,
+          'load',
+          true,
+        );
+      }
     }
 
-    if (this.#plotConfig.xZeroPlane) {
+    const planes = this.#resourceKeeper.planes;
+
+    const yPlane = this.#plotConfig.yZeroPlane;
+    const xPlane = this.#plotConfig.xZeroPlane;
+    const zPlane = this.#plotConfig.zZeroPlane;
+    const xLoadOp = emptySurfaceStack ? 'clear' : 'load';
+    const zLoadOp = emptySurfaceStack && !xPlane ? 'clear' : 'load';
+    const yLoadOp = emptySurfaceStack && !xPlane && !zPlane ? 'clear' : 'load';
+
+    if (xPlane) {
       this.#drawObject(
         planes.vertexBuffer,
         planes.xZero.bindgroup,
         planes.indexBuffer,
         6,
-        'load',
+        xLoadOp,
+        true,
       );
     }
 
-    if (this.#plotConfig.zZeroPlane) {
+    if (zPlane) {
       this.#drawObject(
         planes.vertexBuffer,
         planes.zZero.bindgroup,
         planes.indexBuffer,
         6,
-        'load',
+        zLoadOp,
+        true,
+      );
+    }
+
+    if (yPlane) {
+      this.#drawObject(
+        planes.vertexBuffer,
+        planes.yZero.bindgroup,
+        planes.indexBuffer,
+        6,
+        yLoadOp,
+        true,
       );
     }
   }
@@ -177,9 +217,14 @@ export class Plotter implements IPlotter {
     indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag,
     vertexCount: number,
     loadOp: 'clear' | 'load',
+    includeBackground: boolean,
   ): void {
-    const resources = this.#resources;
-    this.#renderPipeline
+    const resources = this.#resourceKeeper;
+    const pipeline = includeBackground
+      ? this.#backgroundRenderPipeline
+      : this.#noBackgroudRenderPipeline;
+
+    pipeline
       .withColorAttachment({
         view: resources.depthAndMsaa.msaaTextureView,
         resolveTarget: this.#context.getCurrentTexture().createView(),
@@ -199,8 +244,8 @@ export class Plotter implements IPlotter {
       .drawIndexed(vertexCount);
   }
 
-  #createRenderPipeline(): void {
-    this.#renderPipeline = this.#root['~unstable']
+  #createRenderPipelines(): void {
+    this.#backgroundRenderPipeline = this.#root['~unstable']
       .withVertex(vertexFn, vertexLayout.attrib)
       .withFragment(fragmentFn, {
         format: this.#presentationFormat,
@@ -226,9 +271,36 @@ export class Plotter implements IPlotter {
         count: 4,
       })
       .createPipeline();
+
+    this.#noBackgroudRenderPipeline = this.#root['~unstable']
+      .withVertex(vertexFn, vertexLayout.attrib)
+      .withFragment(fragmentFn, {
+        format: this.#presentationFormat,
+        blend: {
+          color: {
+            srcFactor: 'src-alpha',
+            dstFactor: 'zero',
+            operation: 'add',
+          },
+          alpha: {
+            srcFactor: 'one',
+            dstFactor: 'zero',
+            operation: 'add',
+          },
+        },
+      })
+      .withDepthStencil({
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+      })
+      .withMultisample({
+        count: 4,
+      })
+      .createPipeline();
   }
 
-  destroy(): void {
+  [Symbol.dispose]() {
     this.#eventHandler.destroy();
     this.#root.destroy();
   }

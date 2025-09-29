@@ -5,14 +5,13 @@ import type * as s from './structures.ts';
 export interface IPlotter {
   init: (context: GPUCanvasContext) => Promise<void>;
   updateCamera: (cameraConfig: CameraConfig) => void;
-  plot: (surfaces: ISurface[], options: PlotConfig) => void;
+  addPlots: (surfaces: ISurface[], options: PlotConfig) => void;
+  resetPlots: () => void;
   startRenderLoop: () => void;
   stopRenderLoop: () => void;
-  destroy: () => void;
 }
 
 export interface PlotConfig {
-  colormap: (y: number) => d.v4f;
   xScaler?: IScaler;
   yScaler?: IScaler;
   zScaler?: IScaler;

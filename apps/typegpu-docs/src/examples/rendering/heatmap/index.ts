@@ -1,15 +1,16 @@
-import * as d from 'typegpu/data';
-
-import { Plotter } from './lib/src/plotter.ts';
+import { Plotter } from './prism/src/plotter.ts';
+import { predefinedSurfaces } from './prism/src/surfaces.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
 const plotter = new Plotter(canvas);
 await plotter.init();
-plotter.plot([], {
-  colormap: (y: number) => d.vec4f(1),
-  xZeroPlane: true,
-  yZeroPlane: true,
-  zZeroPlane: true,
-});
+plotter.addPlots(
+  [predefinedSurfaces.mistyMountains],
+  {
+    xZeroPlane: true,
+    yZeroPlane: true,
+    zZeroPlane: true,
+  },
+);
 plotter.startRenderLoop();

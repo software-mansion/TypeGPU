@@ -6,7 +6,7 @@ export const EPS = 1e-6;
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
   zoomable: true,
   draggable: true,
-  position: d.vec4f(14, 7, 14, 1),
+  position: d.vec4f(14, 8, 14, 1),
   target: d.vec3f(),
   up: d.vec3f(0, 1, 0),
   fov: Math.PI / 4,

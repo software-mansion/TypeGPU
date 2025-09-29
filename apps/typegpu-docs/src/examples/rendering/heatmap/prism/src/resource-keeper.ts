@@ -45,6 +45,8 @@ export class ResourceKeeper {
   #canvas: HTMLCanvasElement;
   #presentationFormat: GPUTextureFormat;
   #cameraUniform: TgpuBuffer<typeof s.Camera> & UniformFlag;
+  #transformUniform: TgpuBuffer<typeof s.Transform> & UniformFlag;
+  #bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
   #planes: PlanesResources;
   #depthAndMsaa: DepthAndMsaa;
 
@@ -59,6 +61,18 @@ export class ResourceKeeper {
 
     this.#cameraUniform = root.createBuffer(s.Camera).$usage('uniform');
 
+    const defaultTransform = createTransformMatrix(
+      c.DEFAULT_TRANSLATION,
+      c.DEFAULT_SCALE,
+    );
+    this.#transformUniform = root.createBuffer(s.Transform, defaultTransform)
+      .$usage('uniform');
+
+    this.#bindgroup = root.createBindGroup(layout, {
+      camera: this.#cameraUniform,
+      transform: this.#transformUniform,
+    });
+
     this.#planes = this.#initPlanes();
 
     this.#depthAndMsaa = this.#createDepthAndMsaaTextures(
@@ -67,12 +81,20 @@ export class ResourceKeeper {
     );
   }
 
+  get bindgroup(): TgpuBindGroup<(typeof layout)['entries']> {
+    return this.#bindgroup;
+  }
+
   get planes(): PlanesResources {
     return this.#planes;
   }
 
   get depthAndMsaa(): DepthAndMsaa {
     return this.#depthAndMsaa;
+  }
+
+  updateTransformUniform(transformMatrix: d.m4x4f) {
+    this.#transformUniform.write({ model: transformMatrix });
   }
 
   updateDepthAndMsaa() {
@@ -122,7 +144,7 @@ export class ResourceKeeper {
       gridIndices,
     ).$usage('index');
 
-    const defaultTransform = createTransformMatrix(
+    const defaultPlaneTransform = createTransformMatrix(
       c.DEFAULT_PLANE_TRANSLATION,
       c.DEFAULT_PLANE_SCALE,
     );
@@ -132,7 +154,7 @@ export class ResourceKeeper {
         s.Transform,
         {
           model: m.mat4.rotateZ(
-            defaultTransform.model,
+            defaultPlaneTransform.model,
             Math.PI / 2,
             d.mat4x4f(),
           ),
@@ -146,7 +168,7 @@ export class ResourceKeeper {
     });
 
     const yTransform = this.#root
-      .createBuffer(s.Transform, defaultTransform)
+      .createBuffer(s.Transform, defaultPlaneTransform)
       .$usage('uniform');
 
     const yBindgroup = this.#root.createBindGroup(layout, {
@@ -159,7 +181,7 @@ export class ResourceKeeper {
         s.Transform,
         {
           model: m.mat4.rotateX(
-            defaultTransform.model,
+            defaultPlaneTransform.model,
             Math.PI / 2,
             d.mat4x4f(),
           ),
