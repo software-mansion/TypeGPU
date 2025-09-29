@@ -3,7 +3,7 @@ import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
 
-interface MirroredValue<TSchema> {
+export interface MirroredValue<TSchema> {
   schema: TSchema;
   readonly $: d.InferGPU<TSchema>;
 }

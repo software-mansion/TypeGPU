@@ -3,7 +3,7 @@ import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
 
-interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
+export interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
   value: TValue;
   readonly $: d.InferGPU<TSchema>;
