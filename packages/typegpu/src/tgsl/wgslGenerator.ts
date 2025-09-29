@@ -15,6 +15,7 @@ import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
@@ -33,7 +34,6 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -163,7 +163,9 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    return this.ctx.defineVariable(id, dataType);
+    const snippet = snip(this.ctx.makeNameValid(id), dataType);
+    this.ctx.defineVariable(id, snippet);
+    return snippet;
   }
 
   public identifier(id: string): Snippet {
@@ -717,12 +719,12 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      this.blockVariable(
+      const snippet = this.blockVariable(
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      const id = this.identifier(rawId);
-      return stitchWithExactTypes`${this.ctx.pre}var ${id} = ${eq};`;
+      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+        .value as string} = ${eq};`;
     }
 
     if (statement[0] === NODE.block) {

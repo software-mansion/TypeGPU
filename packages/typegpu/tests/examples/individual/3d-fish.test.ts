@@ -77,11 +77,11 @@ describe('3d fish example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       struct ModelData_2 {
         position: vec3f,
@@ -121,8 +121,7 @@ describe('3d fish example', () => {
       fn projectPointOnLine_8(point: vec3f, line: Line3_7) -> vec3f {
         var pointVector = (point - line.origin);
         var projection = dot(pointVector, line.dir);
-        var closestPoint = (line.origin + (projection * line.dir));
-        return closestPoint;
+        return (line.origin + (line.dir * projection));
       }
 
       @group(0) @binding(3) var<uniform> timePassed_9: f32;
@@ -221,13 +220,14 @@ describe('3d fish example', () => {
         var a = -60.1;
         var b = 0.8;
         var c = 6.1;
-        var positionModification = vec3f(0, 0, (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c));
+        var posMod = vec3f();
+        posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var newOX = normalize(vec3f(1, 0, coeff));
         var newOZ = vec3f(-newOX.z, 0, newOX.x);
-        var newNormalXZ = ((vertex.normal.x * newOX) + (vertex.normal.z * newOZ));
+        var newNormalXZ = ((newOX * vertex.normal.x) + (newOZ * vertex.normal.z));
         var wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
-        var wavedPosition = (vertex.position + positionModification);
+        var wavedPosition = (vertex.position + posMod);
         return PosAndNormal_3(wavedPosition, wavedNormal);
       }
 
