@@ -6,6 +6,7 @@ import type {
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
+import { isMarkedInternal } from '../types.ts';
 import { f32, i32, u32 } from './numeric.ts';
 import {
   vec2f,
@@ -267,8 +268,6 @@ export type PackedData =
 export function isPackedData(
   value: unknown,
 ): value is PackedData {
-  return (value as PackedData)?.[$internal] &&
-    packedFormats.has(
-      (value as PackedData)?.type,
-    );
+  return isMarkedInternal(value) &&
+    packedFormats.has((value as PackedData)?.type);
 }

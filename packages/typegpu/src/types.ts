@@ -371,6 +371,6 @@ export function isBufferUsage<
 
 export function isMarkedInternal(
   value: unknown,
-): value is { [$internal]: Record<string, unknown> } {
+): value is { [$internal]: Record<string, unknown> | true } {
   return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
 }

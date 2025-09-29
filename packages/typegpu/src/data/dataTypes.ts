@@ -19,6 +19,7 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
+import { isMarkedInternal } from '../types.ts';
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
@@ -141,7 +142,7 @@ export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return (
-    (data as AnyLooseData)?.[$internal] &&
+    isMarkedInternal(data) &&
     looseTypeLiterals.includes((data as AnyLooseData)?.type)
   );
 }
@@ -162,7 +163,7 @@ export function isLooseData(data: unknown): data is AnyLooseData {
 export function isDisarray<T extends Disarray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'disarray';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'disarray';
 }
 
 /**
@@ -181,13 +182,13 @@ export function isDisarray<T extends Disarray>(
 export function isUnstruct<T extends Unstruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'unstruct';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'unstruct';
 }
 
 export function isLooseDecorated<T extends LooseDecorated>(
   value: T | unknown,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === 'loose-decorated';
+  return isMarkedInternal(value) && (value as T)?.type === 'loose-decorated';
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
