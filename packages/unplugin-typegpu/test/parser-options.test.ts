@@ -61,6 +61,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       const increment = tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));

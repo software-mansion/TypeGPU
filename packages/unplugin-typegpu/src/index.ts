@@ -193,15 +193,12 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
 
             const metadata = `{
               v: ${FORMAT_VERSION},
+              name: ${name},
               ast: ${embedJSON({ params, body, externalNames })},
               get externals() { return {${externalNames.join(', ')}}; },
             }`;
 
             assignMetadata(magicString, def, metadata);
-
-            if (ctx.autoNamingEnabled && name) {
-              wrapInAutoName(magicString, def, name);
-            }
 
             if (isFunctionStatement && name) {
               magicString.prependLeft(def.start, `const ${name} = `);

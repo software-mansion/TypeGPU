@@ -87,6 +87,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       hello.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -109,6 +110,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -131,6 +133,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
       t.tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));

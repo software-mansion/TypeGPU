@@ -253,6 +253,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
+                    name: addGPU,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));
@@ -294,6 +295,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -330,6 +332,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -367,6 +370,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
+                    name: addGPU,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -404,6 +408,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
+                    name: addGPU,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));
@@ -443,11 +448,12 @@ describe('[ROLLUP] "kernel" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      "const add = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'kernel';
               return a + b;
             }), {
                     v: 1,
+                    name: add,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));
