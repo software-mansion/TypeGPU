@@ -53,6 +53,7 @@
     "onlyBuiltDependencies": [
       "@biomejs/biome",
       "@tailwindcss/oxide",
+      "canvas",
       "esbuild",
       "msw",
       "sharp"

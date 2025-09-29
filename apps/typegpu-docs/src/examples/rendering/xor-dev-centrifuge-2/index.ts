@@ -13,7 +13,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // deno-fmt-ignore: just a list of standard functions
-import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, tanh } from 'typegpu/std';
+import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -23,9 +23,10 @@ import { abs, add, atan2, cos, gt, length, mul, normalize, select, sign, sub, ta
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh3 = tgpu.fn([d.vec3f], d.vec3f)((v) =>
-  select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)))
-);
+const safeTanh = (v: d.v3f) => {
+  'kernel';
+  return select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)));
+};
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.
@@ -50,12 +51,12 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   const ratio = d.vec2f(aspectRatio.$, 1);
-  const dir = normalize(d.vec3f(mul(uv, ratio), -1));
+  const dir = normalize(d.vec3f(uv.mul(ratio), -1));
 
   let z = d.f32(0);
   let acc = d.vec3f();
   for (let i = 0; i < tunnelDepth.$; i++) {
-    const p = mul(z, dir);
+    const p = dir.mul(z);
     p.x += cameraPos.$.x;
     p.y += cameraPos.$.y;
 
@@ -65,15 +66,15 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
       length(p.xy) - tunnelRadius,
     );
 
-    const coords2 = sub(cos(add(coords, cos(mul(coords, smallStrips.$)))), 1.);
+    const coords2 = cos(coords.add(cos(coords.mul(smallStrips.$)))).sub(1);
     const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
 
-    acc = add(acc, mul(sub(1.2, cos(mul(p.z, color.$))), 1 / dd));
+    acc = acc.add(sub(1.2, cos(color.$.mul(p.z))).div(dd));
     z += dd;
   }
 
   // Tone mapping
-  acc = safeTanh3(mul(acc, 0.005));
+  acc = safeTanh(acc.mul(0.005));
 
   return d.vec4f(acc, 1);
 });
