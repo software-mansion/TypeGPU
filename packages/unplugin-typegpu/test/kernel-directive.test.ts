@@ -24,6 +24,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: "addGPU",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -60,6 +61,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -96,6 +98,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -132,6 +135,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: "addGPU",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -165,6 +169,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: "addGPU",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -191,6 +196,7 @@ describe('[BABEL] "kernel" directive', () => {
         return a + b;
       }, {
         v: 1,
+        name: "add",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
         get externals() {
           return {};

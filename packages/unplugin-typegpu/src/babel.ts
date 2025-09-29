@@ -45,13 +45,19 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
+  parent: babel.Node | null,
 ): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
+  const maybeName = getFunctionName(node, parent);
 
   const metadata = types.objectExpression([
     types.objectProperty(
       i('v'),
       types.numericLiteral(FORMAT_VERSION),
+    ),
+    types.objectProperty(
+      i('name'),
+      maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
     ),
     types.objectProperty(
       i('ast'),
@@ -115,19 +121,6 @@ function wrapInAutoName(
   );
 }
 
-function transpileAndAutoname(
-  ctx: Context,
-  node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  parent: babel.Node | null,
-): babel.Expression {
-  const transpiled = functionToTranspiled(node);
-  if (!ctx.autoNamingEnabled) {
-    return transpiled;
-  }
-  const maybeName = getFunctionName(node, parent);
-  return maybeName ? wrapInAutoName(transpiled, maybeName) : transpiled;
-}
-
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     VariableDeclarator(path) {
@@ -156,7 +149,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
       const node = path.node;
       const parent = path.parentPath.node;
       if (containsKernelDirective(node)) {
-        path.replaceWith(transpileAndAutoname(ctx, node, parent));
+        path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
     },
@@ -165,7 +158,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
       const node = path.node;
       const parent = path.parentPath.node;
       if (containsKernelDirective(node)) {
-        path.replaceWith(transpileAndAutoname(ctx, node, parent));
+        path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
     },
@@ -184,7 +177,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
           types.variableDeclaration('const', [
             types.variableDeclarator(
               node.id,
-              transpileAndAutoname(ctx, expression, parent),
+              functionToTranspiled(expression, parent),
             ),
           ]),
         );
@@ -205,6 +198,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
+            null,
           ) as babel.CallExpression;
 
           path.replaceWith(
