@@ -4,6 +4,7 @@ import { struct } from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
+import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
@@ -152,7 +153,7 @@ describe('autonaming', () => {
 
     expect(getName(myFun)).toBe('myFun');
     expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
-    expect(getName(myGpuFun)).toBe('myGpuFun');
+    expect(getName(myGpuFun)).toBe('myFun');
   });
 
   it('names function expression', () => {
@@ -166,7 +167,7 @@ describe('autonaming', () => {
 
     expect(getName(myFun)).toBe('myFun');
     expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
-    expect(getName(myGpuFun)).toBe('myGpuFun');
+    expect(getName(myGpuFun)).toBe('myFun');
   });
 
   it('names function definition', () => {
@@ -179,6 +180,27 @@ describe('autonaming', () => {
 
     expect(getName(myFun)).toBe('myFun');
     expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
-    expect(getName(myGpuFun)).toBe('myGpuFun');
+    expect(getName(myGpuFun)).toBe('myFun');
+  });
+
+  it('shellless name carries over to WGSL', () => {
+    function myFun() {
+      'kernel';
+      return 0;
+    }
+
+    const main = tgpu.fn([])(() => {
+      myFun();
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn myFun() -> i32 {
+        return 0;
+      }
+
+      fn main() {
+        myFun();
+      }"
+    `);
   });
 });

@@ -33,8 +33,6 @@ Object.assign(globalThis, {
   '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T => {
     if (isNamable(exp) && isMarkedInternal(exp) && !getName(exp)) {
       exp.$name(label);
-    } else if (typeof exp === 'function') {
-      setName(exp, label);
     }
     return exp;
     // if (isMarkedInternal(exp) && !getName(exp)) {
