@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, setName } from '../../shared/meta.ts';
+import { getName, isKernel, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -103,7 +103,9 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
-    if (isWgsl(external) || isLooseData(external)) {
+    if (
+      isWgsl(external) || isLooseData(external) || isKernel(external)
+    ) {
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 

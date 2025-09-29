@@ -40,7 +40,7 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const cst = tgpu['~unstable'].const(d.u32, 1);
+      const cst = tgpu.const(d.u32, 1);
 
       console.log(accessor, shell, fn, cst);
     `;
@@ -51,7 +51,7 @@ describe('[BABEL] auto naming', () => {
         import * as d from 'typegpu/data';
         let nothing,
           accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor");
-        const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].const(d.u32, 1), "cst");
+        const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst");
         console.log(accessor, shell, fn, cst);"
       `);
   });
@@ -393,7 +393,7 @@ describe('[ROLLUP] auto naming', () => {
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const cst = tgpu['~unstable'].const(d.u32, 1);
+      const cst = tgpu.const(d.u32, 1);
 
       console.log(accessor, shell, fn, cst);
     `;
@@ -404,7 +404,7 @@ describe('[ROLLUP] auto naming', () => {
         import * as d from 'typegpu/data';
 
         let accessor = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor"));
-              const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].const(d.u32, 1), "cst"));
+              const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst"));
 
               console.log(accessor, shell, fn, cst);
         "

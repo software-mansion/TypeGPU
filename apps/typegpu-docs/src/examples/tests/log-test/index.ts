@@ -26,14 +26,14 @@ export const controls = {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(1), d.vec3u(2, 3, 4), d.u32(5), d.u32(6));
+        console.log(1, d.vec3u(2, 3, 4), 5, 6);
       }).dispatch(),
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
         'kernel';
-        console.log(d.u32(2), 'plus', d.u32(3), 'equals', d.u32(5));
+        console.log(2, 'plus', 3, 'equals', 5);
       }).dispatch(),
   },
   'Two logs': {
@@ -88,6 +88,32 @@ export const controls = {
         }
       }).dispatch(),
   },
+  'Compound types': {
+    onButtonClick: () => {
+      const SimpleStruct = d.struct({ vec: d.vec3u, num: d.u32 });
+      const ComplexStruct = d.struct({ nested: SimpleStruct, bool: d.bool });
+      const SimpleArray = d.arrayOf(d.u32, 2);
+      const ComplexArray = d.arrayOf(SimpleArray, 3);
+
+      prepareDispatch(root, () => {
+        'kernel';
+        const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
+        console.log(simpleStruct);
+
+        const complexStruct = ComplexStruct({
+          nested: simpleStruct,
+          bool: true,
+        });
+        console.log(complexStruct);
+
+        const simpleArray = SimpleArray([1, 2]);
+        console.log(simpleArray);
+
+        const complexArray = ComplexArray([[3, 4], [5, 6], [7, 8]]);
+        console.log(complexArray);
+      }).dispatch();
+    },
+  },
   'Two threads': {
     onButtonClick: () =>
       prepareDispatch(root, (x) => {
@@ -115,7 +141,7 @@ export const controls = {
       const test = prepareDispatch(root, () => {
         'kernel';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
-          console.log('Log index', d.u32(i) + 1, 'out of', logCountUniform.$);
+          console.log('Log index', i + 1, 'out of', logCountUniform.$);
         }
       });
       logCountUniform.write(3);
@@ -143,7 +169,7 @@ export const controls = {
         in: { pos: d.builtin.position },
         out: d.vec4f,
       })(({ pos }) => {
-        console.log('X:', d.u32(pos.x), 'Y:', d.u32(pos.y));
+        console.log('X:', pos.x, 'Y:', pos.y);
         return d.vec4f(0.769, 0.392, 1.0, 1);
       });
 
@@ -186,7 +212,7 @@ export const controls = {
       try {
         prepareDispatch(root, () => {
           'kernel';
-          console.log(d.vec3u(), d.vec3u(), d.vec3u());
+          console.log(d.mat4x4f(), d.mat4x4f(), 1);
         }).dispatch();
       } catch (err) {
         console.log(err);

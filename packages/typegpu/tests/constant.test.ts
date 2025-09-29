@@ -5,7 +5,7 @@ import { asWgsl } from './utils/parseResolved.ts';
 
 describe('tgpu.const', () => {
   it('should inject const declaration when used in functions', () => {
-    const x = tgpu['~unstable'].const(d.u32, 2);
+    const x = tgpu.const(d.u32, 2);
     const fn1 = tgpu.fn([], d.u32)`() { return x; }`.$uses({ x });
 
     expect(asWgsl(fn1)).toMatchInlineSnapshot(`
@@ -21,7 +21,7 @@ describe('tgpu.const', () => {
       vel: d.vec3u,
     });
 
-    const boid = tgpu['~unstable'].const(Boid, {
+    const boid = tgpu.const(Boid, {
       pos: d.vec3f(1, 2, 3),
       vel: d.vec3u(4, 5, 6),
     });
