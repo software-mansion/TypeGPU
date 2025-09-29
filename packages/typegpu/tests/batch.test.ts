@@ -84,7 +84,8 @@ describe('Batch', () => {
       expect(callback).toBeCalledTimes(0);
     });
 
-    expect(flushMock).toBeCalledTimes(1);
+    // first from batch itself, second from querySet.read
+    expect(flushMock).toBeCalledTimes(2);
     await donePerformancing;
     expect(callback).toBeCalledTimes(1);
 
@@ -102,7 +103,8 @@ describe('Batch', () => {
       expect(callback).toBeCalledTimes(0);
     });
 
-    expect(flushMock).toBeCalledTimes(1);
+    // first from batch, second from querySet.read
+    expect(flushMock).toBeCalledTimes(2);
     await donePerformancing;
     expect(callback).toBeCalledTimes(1);
 
@@ -120,7 +122,8 @@ describe('Batch', () => {
       expect(callback).toBeCalledTimes(0);
     });
 
-    expect(flushMock).toBeCalledTimes(1);
+    // first from batch, second from querySet.read
+    expect(flushMock).toBeCalledTimes(2);
     await donePerformancing;
     expect(callback).toBeCalledTimes(1);
   });
@@ -159,7 +162,8 @@ describe('Batch', () => {
       expect(callback).toBeCalledTimes(0);
     });
 
-    expect(flushMock).toBeCalledTimes(1);
+    // first from batch, second from querySet.read
+    expect(flushMock).toBeCalledTimes(2);
     await donePerformancing;
     expect(callback).toBeCalledTimes(1);
   });

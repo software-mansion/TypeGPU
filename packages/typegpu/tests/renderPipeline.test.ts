@@ -983,7 +983,8 @@ describe('TgpuRenderPipeline', () => {
 
       pipeline.draw(3);
 
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      // first from pipeline, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
     });
     it('flushes after draw with timestamp writes', ({ root }) => {
       const querySet = root.createQuerySet('timestamp', 2);
@@ -1059,7 +1060,8 @@ describe('TgpuRenderPipeline', () => {
 
       pipeline.drawIndexed(3);
 
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      // first from pipeline itself, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
     });
     it('flushes after drawIndexed with timestamp writes', ({ root }) => {
       const indexBuffer = root

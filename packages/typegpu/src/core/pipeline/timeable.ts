@@ -151,6 +151,11 @@ export function triggerPerformanceCallback({
     );
   }
 
+  // we don't want to override content of unavailable querySet
+  if (!querySet.available) {
+    return;
+  }
+
   root[$internal].commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
@@ -158,10 +163,6 @@ export function triggerPerformanceCallback({
     querySet[$internal].resolveBuffer,
     0,
   );
-
-  if (!querySet.available) {
-    return;
-  }
 
   querySet.read().then(async (result) => {
     const start =

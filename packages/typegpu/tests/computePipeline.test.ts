@@ -561,7 +561,8 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroups(777);
 
-      expect(root[$internal].flush).toBeCalledTimes(1);
+      // first from pipeline itself, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
     });
 
     it('flushes after draw with timestamp writes', ({ root }) => {

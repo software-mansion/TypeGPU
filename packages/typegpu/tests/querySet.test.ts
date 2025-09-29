@@ -64,14 +64,16 @@ describe('TgpuQuerySet', () => {
       resolveBuffer,
       0,
     );
-    expect(commandEncoder.finish).toHaveBeenCalled();
-    expect(device.queue.submit).toHaveBeenCalled();
   });
 
-  it('should read from query set after resolution', async ({ root, device, commandEncoder }) => {
+  it('should read from query set after resolution', async ({ root, commandEncoder }) => {
+    const flushMock = vi.spyOn(root[$internal], 'flush');
+
     const querySet = root.createQuerySet('timestamp', 2);
 
     querySet.resolve();
+
+    expect(flushMock).toBeCalledTimes(0);
 
     const testData = new BigUint64Array([123n, 456n]);
     const readBuffer = querySet[$internal].readBuffer;
@@ -86,8 +88,7 @@ describe('TgpuQuerySet', () => {
       0,
       2 * BigUint64Array.BYTES_PER_ELEMENT,
     );
-    expect(device.queue.submit).toHaveBeenCalled();
-    expect(device.queue.onSubmittedWorkDone).toHaveBeenCalled();
+    expect(flushMock).toBeCalledTimes(1);
     expect(readBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ);
     expect(readBuffer.getMappedRange).toHaveBeenCalled();
     expect(readBuffer.unmap).toHaveBeenCalled();
@@ -244,9 +245,7 @@ describe('TgpuQuerySet', () => {
     querySet.resolve();
     querySet.resolve();
 
-    expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(2);
+    expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
     expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(2);
-    expect(commandEncoder.finish).toHaveBeenCalledTimes(2);
-    expect(device.queue.submit).toHaveBeenCalledTimes(2);
   });
 });

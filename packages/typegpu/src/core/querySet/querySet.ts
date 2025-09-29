@@ -122,7 +122,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       throw new Error('This QuerySet is busy resolving or reading.');
     }
 
-    const commandEncoder = this._group.device.createCommandEncoder();
+    const commandEncoder = this._group[$internal].commandEncoder;
     commandEncoder.resolveQuerySet(
       this.querySet,
       0,
@@ -130,7 +130,6 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       this[$internal].resolveBuffer,
       0,
     );
-    this._group.device.queue.submit([commandEncoder.finish()]);
   }
 
   async read(): Promise<bigint[]> {
@@ -149,7 +148,6 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
         this.count * BigUint64Array.BYTES_PER_ELEMENT,
       );
       this._group[$internal].flush();
-      await this._group.device.queue.onSubmittedWorkDone();
 
       const readBuffer = this[$internal].readBuffer;
       await readBuffer.mapAsync(GPUMapMode.READ);
