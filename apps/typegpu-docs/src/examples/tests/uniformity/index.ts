@@ -2,7 +2,7 @@ import tgpu, { type TgpuRenderPipeline } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import * as c from './constants.ts';
-import { PRNG } from './prngs.ts';
+import type { PRNG } from './prngs.ts';
 import { executePipeline, preparePipeline } from './helpers.ts';
 
 const root = await tgpu.init();
@@ -62,7 +62,6 @@ export const controls = {
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () => {
       c.prngs
-        .filter((prng) => prng !== PRNG.DEFAULT_GENERATOR)
         .map((prng) =>
           tgpu.resolve({
             externals: {

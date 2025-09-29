@@ -91,12 +91,12 @@ describe('uniformity test example', () => {
 
       var<private> seed_8: u32;
 
-      fn seed2_7(value: vec2f) {
+      fn item_7(value: vec2f) {
         seed_8 = u32(((value.x * 32768) + (value.y * 1024)));
       }
 
       fn randSeed2_6(seed: vec2f) {
-        seed2_7(seed);
+        item_7(seed);
       }
 
       fn u32ToFloat_11(val: u32) -> f32{
