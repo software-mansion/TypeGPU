@@ -259,7 +259,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
-                    name: addGPU,
+                    name: "addGPU",
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));
@@ -376,7 +376,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
-                    name: addGPU,
+                    name: "addGPU",
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -414,7 +414,7 @@ describe('[ROLLUP] "kernel" directive', () => {
               return a + b;
             }), {
                     v: 1,
-                    name: addGPU,
+                    name: "addGPU",
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));
@@ -454,12 +454,12 @@ describe('[ROLLUP] "kernel" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const add = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'kernel';
               return a + b;
             }), {
                     v: 1,
-                    name: add,
+                    name: "add",
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({}));

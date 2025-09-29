@@ -193,7 +193,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
 
             const metadata = `{
               v: ${FORMAT_VERSION},
-              name: ${name},
+              name: ${name ? `"${name}"` : 'undefined'},
               ast: ${embedJSON({ params, body, externalNames })},
               get externals() { return {${externalNames.join(', ')}}; },
             }`;

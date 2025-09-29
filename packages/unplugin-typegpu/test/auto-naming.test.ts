@@ -673,7 +673,7 @@ describe('[ROLLUP] auto naming', () => {
                 return 0;
               }), {
                       v: 1,
-                      name: myFun1,
+                      name: "myFun1",
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
                       get externals() { return {}; },
                     }) && $.f)({}));
@@ -683,7 +683,7 @@ describe('[ROLLUP] auto naming', () => {
                 return 0;
               }), {
                       v: 1,
-                      name: myFun2,
+                      name: "myFun2",
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
                       get externals() { return {}; },
                     }) && $.f)({}));
@@ -693,7 +693,7 @@ describe('[ROLLUP] auto naming', () => {
                 return 0;
               }), {
                       v: 1,
-                      name: myFun3,
+                      name: "myFun3",
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
                       get externals() { return {}; },
                     }) && $.f)({}));
