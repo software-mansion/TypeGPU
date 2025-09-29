@@ -1,4 +1,5 @@
 import { setName, type TgpuNamable } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
@@ -19,7 +20,6 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
-import { isMarkedInternal } from '../types.ts';
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';

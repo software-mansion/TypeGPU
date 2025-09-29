@@ -1,4 +1,5 @@
 import type { TgpuNamable } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -25,7 +26,6 @@ import type {
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
-import { isMarkedInternal } from '../types.ts';
 import type { DualFn } from './dualFn.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;

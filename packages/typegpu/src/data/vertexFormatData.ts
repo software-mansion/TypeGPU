@@ -1,3 +1,4 @@
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
@@ -6,7 +7,6 @@ import type {
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
-import { isMarkedInternal } from '../types.ts';
 import { f32, i32, u32 } from './numeric.ts';
 import {
   vec2f,

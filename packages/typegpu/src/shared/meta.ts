@@ -1,6 +1,6 @@
 import type { Block, FuncParameter } from 'tinyest';
 import { DEV, TEST } from './env.ts';
-import { $getNameForward, $internal } from './symbols.ts';
+import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
 export interface MetaData {
   v?: number;
@@ -104,8 +104,4 @@ export function setMetaData(definition: object, metaData: object) {
   globalWithMeta.__TYPEGPU_META__ ??= new WeakMap();
   const map = globalWithMeta.__TYPEGPU_META__;
   map.set(definition, { ...map.get(definition), ...metaData });
-}
-
-export function isMarkedInternal(obj: unknown): boolean {
-  return !!((obj as unknown as { [$internal]: unknown })?.[$internal]);
 }

@@ -11,6 +11,7 @@ import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { isMarkedInternal } from '../../shared/symbols.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
@@ -20,11 +21,7 @@ import {
   $resolve,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
-import {
-  isMarkedInternal,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,

@@ -368,9 +368,3 @@ export function isBufferUsage<
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
 }
-
-export function isMarkedInternal(
-  value: unknown,
-): value is { [$internal]: Record<string, unknown> | true } {
-  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
-}
