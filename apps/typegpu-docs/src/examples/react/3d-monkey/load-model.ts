@@ -1,13 +1,29 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
+import type { TgpuBuffer, VertexFlag } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { modelVertexLayout } from './schemas.ts';
 
+export type ModelVertex = d.WgslArray<
+  d.WgslStruct<{
+    readonly modelPosition: d.Vec3f;
+    readonly modelNormal: d.Vec3f;
+    readonly textureUV: d.Vec2f;
+  }>
+>;
+
+export type VertexBuffer = TgpuBuffer<ModelVertex> & VertexFlag;
+
+export type Model = {
+  vertexBuffer: VertexBuffer;
+  polygonCount: number;
+};
+
 export async function loadModel(
   root: TgpuRoot,
   modelPath: string,
-) {
+): Promise<Model> {
   const modelMesh = await load(modelPath, OBJLoader);
   const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
 
