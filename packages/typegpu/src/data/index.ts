@@ -166,6 +166,7 @@ export {
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';
+export { deepEqual } from './deepEqual.ts';
 export type {
   AnyBuiltin,
   BuiltinClipDistances,

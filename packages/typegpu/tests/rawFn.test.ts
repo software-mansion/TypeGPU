@@ -62,7 +62,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('replaces external usage just for exact identifier matches', () => {
-    const getx = tgpu.fn([], d.f32)`() { return 3.0f; }`.$name('external');
+    const getx = tgpu.fn([], d.f32)`() { return 3.0f; }`.$name('externalFn');
 
     const getY = tgpu.fn([], d.f32)`() {
         let x = getx();
@@ -79,18 +79,18 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     const actual = parseResolved({ getY });
 
     const expected = parse(`
-      fn external() -> f32 {
+      fn externalFn() -> f32 {
         return 3.0f;
       }
 
       fn get_y() -> f32 {
-        let x = external();
-        let y = external() + external();
+        let x = externalFn();
+        let y = externalFn() + externalFn();
         let z = hellogetx();
-        external();
+        externalFn();
         xgetx();
         getxx();
-        return external();
+        return externalFn();
       }
     `);
 
