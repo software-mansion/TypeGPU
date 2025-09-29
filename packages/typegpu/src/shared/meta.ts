@@ -3,9 +3,9 @@ import { DEV, TEST } from './env.ts';
 import { $getNameForward, $internal } from './symbols.ts';
 
 export interface MetaData {
+  v?: number;
   name?: string | undefined;
   ast?: {
-    v: number;
     params: FuncParameter[];
     body: Block;
     externalNames: string[];
