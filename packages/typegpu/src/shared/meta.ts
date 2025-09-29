@@ -35,10 +35,6 @@ Object.assign(globalThis, {
       exp.$name(label);
     }
     return exp;
-    // if (isMarkedInternal(exp) && !getName(exp)) {
-    //   setName(exp as object, label);
-    // }
-    // return exp;
   },
 });
 
