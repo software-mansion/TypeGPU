@@ -275,8 +275,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistrySetting: 'random' | 'strict',

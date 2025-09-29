@@ -286,7 +286,6 @@ function frame() {
         storeOp: 'store' as const,
       })
       .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
-      .with(renderLayout, renderBindGroups[even ? 1 : 0])
       .draw(3, triangleAmount);
   });
 
