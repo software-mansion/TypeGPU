@@ -31,16 +31,16 @@ export type INTERNAL_GlobalExt = typeof globalThis & {
 
 Object.assign(globalThis, {
   '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T => {
-    if (
-      isNamable(exp) &&
-      (exp as unknown as { [$internal]: unknown })?.[$internal] &&
-      !getName(exp)
-    ) {
+    if (isNamable(exp) && isMarkedInternal(exp) && !getName(exp)) {
       exp.$name(label);
     } else if (typeof exp === 'function') {
       setName(exp, label);
     }
     return exp;
+    // if (isMarkedInternal(exp) && !getName(exp)) {
+    //   setName(exp as object, label);
+    // }
+    // return exp;
   },
 });
 
@@ -110,4 +110,8 @@ export function setMetaData(definition: object, metaData: object) {
   globalWithMeta.__TYPEGPU_META__ ??= new WeakMap();
   const map = globalWithMeta.__TYPEGPU_META__;
   map.set(definition, { ...map.get(definition), ...metaData });
+}
+
+export function isMarkedInternal(obj: unknown): boolean {
+  return !!((obj as unknown as { [$internal]: unknown })?.[$internal]);
 }
