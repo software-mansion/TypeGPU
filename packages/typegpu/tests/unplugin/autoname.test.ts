@@ -4,6 +4,7 @@ import { struct } from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
+import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
@@ -142,42 +143,64 @@ describe('autonaming', () => {
     expect(getName(mySchemas.myStruct)).toBe('myStruct');
   });
 
-  // TODO: make it work
-  // it('names arrow functions', () => {
-  //   const myFun = () => {
-  //     'kernel';
-  //     return 0;
-  //   };
+  it('names arrow functions', () => {
+    const myFun = () => {
+      'kernel';
+      return 0;
+    };
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myFun');
+  });
 
-  // TODO: make it work
-  // it('names function expression', () => {
-  //   const myFun = function () {
-  //     'kernel';
-  //     return 0;
-  //   };
+  it('names function expression', () => {
+    // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
+    const myFun = function () {
+      'kernel';
+      return 0;
+    };
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myFun');
+  });
 
-  // TODO: make it work
-  // it('names function definition', () => {
-  //   function myFun() {
-  //     'kernel';
-  //     return 0;
-  //   }
+  it('names function definition', () => {
+    function myFun() {
+      'kernel';
+      return 0;
+    }
 
-  //   const myGpuFun = tgpu.fn([], d.u32)(myFun);
+    const myGpuFun = tgpu.fn([], d.u32)(myFun);
 
-  //   expect(getName(myFun)).toBe('myFun');
-  //   expect(getName(myGpuFun)).toBe('myGpuFun');
-  // });
+    expect(getName(myFun)).toBe('myFun');
+    expect(getName(tgpu.fn([], d.u32)(myFun))).toBe('myFun');
+    expect(getName(myGpuFun)).toBe('myFun');
+  });
+
+  it('shellless name carries over to WGSL', () => {
+    function myFun() {
+      'kernel';
+      return 0;
+    }
+
+    const main = tgpu.fn([])(() => {
+      myFun();
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn myFun() -> i32 {
+        return 0;
+      }
+
+      fn main() {
+        myFun();
+      }"
+    `);
+  });
 });

@@ -927,7 +927,7 @@ describe('tgsl fn when using plugin', () => {
     expect(addKernelJs(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(asWgsl(add)).toMatchInlineSnapshot(`
-      "fn add(x: u32, y: u32) -> u32 {
+      "fn addKernelJs(x: u32, y: u32) -> u32 {
         return (x + y);
       }"
     `);

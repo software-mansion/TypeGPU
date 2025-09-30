@@ -11,6 +11,7 @@ import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { isMarkedInternal } from '../../shared/symbols.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
@@ -147,7 +148,7 @@ export function fn<
 export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
   value: unknown | TgpuFn<(...args: Args) => Return>,
 ): value is TgpuFn<(...args: Args) => Return> {
-  return !!(value as TgpuFn<(...args: Args) => Return>)?.[$internal] &&
+  return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
 }
 

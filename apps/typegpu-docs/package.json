@@ -12,7 +12,7 @@
   "dependencies": {
     "@astrojs/check": "^0.9.4",
     "@astrojs/react": "^4.3.1",
-    "@astrojs/sitemap": "^3.5.0",
+    "@astrojs/sitemap": "^3.6.0",
     "@astrojs/starlight": "^0.35.2",
     "@astrojs/starlight-tailwind": "^4.0.1",
     "@astrojs/tailwind": "^6.0.2",
@@ -64,7 +64,7 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
-    "@types/node": "^24.2.0",
+    "@types/node": "^24.6.0",
     "@types/dom-mediacapture-record": "^1.0.22",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@webgpu/types": "catalog:types",

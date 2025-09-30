@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import { parse, parseResolved } from '../utils/parseResolved.ts';
+import { asWgsl } from '../utils/parseResolved.ts';
 
 // Library entrypoints
 import { tgpu } from '../../src/index.ts';
@@ -14,9 +14,11 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse('fn main() -> f32 { return 6; }'),
-      );
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() -> f32 {
+          return 6;
+        }"
+      `);
     });
 
     it('handles member access for local vectors', () => {
@@ -25,12 +27,12 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(parseResolved({ main })).toBe(parse(`
-        fn main() -> f32 {
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() -> f32 {
           var size = vec3f(1, 2, 3);
           return ((size.x * size.y) * size.z);
-        }
-      `));
+        }"
+      `);
     });
   });
 });
