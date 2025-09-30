@@ -254,4 +254,79 @@ describe('useMirroredUniform', () => {
       `);
     });
   });
+
+  describe('Schema stability', () => {
+    it('should maintain stable memoized value when schema reference changes but content is identical', () => {
+      const schema1 = d.struct({ a: d.f32 });
+      const schema2 = d.struct({ a: d.f32 });
+
+      const { result, rerender } = renderHook(
+        ({ schema, value }) => useMirroredUniform(schema, value),
+        {
+          initialProps: { schema: schema1, value: { a: 1.0 } },
+        },
+      );
+
+      const firstResult = result.current;
+
+      rerender({ schema: schema2, value: { a: 1.0 } });
+
+      // The memoized value should be stable (same reference)
+      // even though schema reference changed
+      expect(result.current).toBe(firstResult);
+      expect(createUniformMock).toHaveBeenCalledTimes(1); // No buffer recreation
+    });
+
+    it('should update memoized value when schema content actually changes', () => {
+      const schema1 = d.struct({ a: d.f32 });
+      const schema2 = d.struct({ a: d.f32, b: d.f32 });
+
+      const { result, rerender } = renderHook(
+        ({
+          schema,
+          value,
+        }: {
+          schema: d.AnyWgslData;
+          value: d.Infer<d.AnyWgslData>;
+        }) => useMirroredUniform(schema, value),
+        {
+          initialProps: { schema: schema1, value: { a: 1.0 } } as {
+            schema: d.AnyWgslData;
+            value: d.Infer<d.AnyWgslData>;
+          },
+        },
+      );
+
+      const firstResult = result.current;
+
+      rerender({ schema: schema2, value: { a: 1.0, b: 2.0 } });
+
+      // The memoized value should be different (new reference)
+      // because schema content changed
+      expect(result.current).not.toBe(firstResult);
+      expect(createUniformMock).toHaveBeenCalledTimes(2); // Buffer recreation
+    });
+
+    it('should use currentSchemaRef in returned schema property', () => {
+      const schema1 = d.struct({ a: d.f32 });
+      const schema2 = d.struct({ a: d.f32 });
+
+      const { result, rerender } = renderHook(
+        ({ schema, value }) => useMirroredUniform(schema, value),
+        {
+          initialProps: { schema: schema1, value: { a: 1.0 } },
+        },
+      );
+
+      const initialSchema = result.current.schema;
+
+      rerender({ schema: schema2, value: { a: 1.0 } });
+
+      // The returned schema should be the stable reference (currentSchemaRef)
+      // not the new schema reference
+      expect(result.current.schema).toBe(initialSchema);
+      expect(result.current.schema).toBe(schema1); // Still the original reference
+      expect(result.current.schema).not.toBe(schema2); // Not the new reference
+    });
+  });
 });
