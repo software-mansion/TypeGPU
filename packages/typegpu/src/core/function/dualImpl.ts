@@ -91,8 +91,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
           returnType,
         );
       } catch (e) {
-        // if cpuImpl is not yet implemented, fallback to codegenImpl
-        // otherwise, rethrow error
+        // cpuImpl may in some cases be present but implemented only partially.
+        // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+        // If it is any other error, we just rethrow.
         if (!(e instanceof MissingCpuImplError)) {
           throw e;
         }
