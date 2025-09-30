@@ -9,6 +9,7 @@ import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
@@ -45,10 +46,10 @@ export interface TgpuComputePipeline
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline;
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
 
   dispatchWorkgroups(
     x: number,
@@ -118,17 +119,17 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return this._core.unwrap().pipeline;
   }
 
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline {
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this {
     return new TgpuComputePipelineImpl(this._core, {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
         [bindGroupLayout, bindGroup],
       ]),
-    });
+    }) as this;
   }
 
   withPerformanceCallback(
