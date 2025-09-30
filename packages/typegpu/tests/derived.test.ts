@@ -19,7 +19,7 @@ describe('TgpuDerived', () => {
     };
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn item_0() -> i32 {
+      "fn main() -> i32 {
         return 7;
       }"
     `);
@@ -55,7 +55,7 @@ describe('TgpuDerived', () => {
         return 8;
       }
 
-      fn item_0() {
+      fn main() {
         getDouble();
         getDouble();
         getDouble_1();
@@ -240,7 +240,7 @@ describe('TgpuDerived', () => {
         var array = array<f16, 4>();
       }
 
-      fn item_0() {
+      fn main() {
         foo();
         foo_1();
       }"

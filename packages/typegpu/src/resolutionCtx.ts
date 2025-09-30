@@ -33,6 +33,7 @@ import {
 } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
+import { isMarkedInternal } from './shared/symbols.ts';
 import type { Infer } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
 import { $internal, $providing, $resolve } from './shared/symbols.ts';
@@ -66,12 +67,7 @@ import type {
   ResolutionCtx,
   Wgsl,
 } from './types.ts';
-import {
-  CodegenState,
-  isMarkedInternal,
-  isSelfResolvable,
-  NormalState,
-} from './types.ts';
+import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { isKernel } from './shared/meta.ts';
 
