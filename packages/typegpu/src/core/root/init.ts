@@ -312,7 +312,9 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   batch<T>(
-    ...args: T extends Promise<unknown> ? ['Batch only works in sync']
+    ...args: T extends Promise<unknown> ? [
+        'Batch operations must be synchronous. Async functions are not allowed. Use synchronous callbacks only.',
+      ]
       : [callback: () => T]
   ) {
     const [callback] = args as [() => T];
