@@ -47,6 +47,10 @@ export interface TgpuComputePipeline
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
+  /**
+   * @deprecated This overload is outdated.
+   * Call `pipeline.with(bindGroup)` instead.
+   */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,

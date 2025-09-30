@@ -96,6 +96,10 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
   ): this;
+  /**
+   * @deprecated This overload is outdated.
+   * Call `pipeline.with(bindGroup)` instead.
+   */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
