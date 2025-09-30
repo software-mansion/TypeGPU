@@ -466,9 +466,6 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
-      wesl:
-        specifier: 0.6.7
-        version: 0.6.7
       wgpu-matrix:
         specifier: catalog:example
         version: 3.4.0
@@ -4596,9 +4593,6 @@ packages:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
 
-  mini-parse@0.6.7:
-    resolution: {integrity: sha512-rxyTgJNp4GwmE0JGFx8DKLuJfdiMV7TRP/aonobpIdL0Fp4RxkEX16A/rFpGhD5B3UzEYJZ7S8EtbQbdJPWQew==}
-
   minimatch@10.0.3:
     resolution: {integrity: sha512-IPZ167aShDZZUMdRk66cyQAW3qr0WzbHkPdMYa8bzZhlHhO3jALbKdxcaak7W9FfT2rZNpQuUu4Od7ILEpXSaw==}
     engines: {node: 20 || >=22}
@@ -6281,9 +6275,6 @@ packages:
 
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
-
-  wesl@0.6.7:
-    resolution: {integrity: sha512-/T8KvIscZZnya1Xa6RoGM4RicgGNFrUIOzubz95Sz2ZhTJmJrV+jsdQNqvH3nBghR3yCIvA/H32GOjG1HG8XKA==}
 
   wgpu-matrix@3.4.0:
     resolution: {integrity: sha512-kXHrbAPKEn9A32Wf4wVldyx9MmnzwhuB5p8GCqoJP3ItU5+iDT4J3aTQwPZWkfb153hwGtqZtUwR2M+ipJKadg==}
@@ -10924,8 +10915,6 @@ snapshots:
   mimic-response@3.1.0:
     optional: true
 
-  mini-parse@0.6.7: {}
-
   minimatch@10.0.3:
     dependencies:
       '@isaacs/brace-expansion': 5.0.0
@@ -12767,10 +12756,6 @@ snapshots:
   webidl-conversions@8.0.0: {}
 
   webpack-virtual-modules@0.6.2: {}
-
-  wesl@0.6.7:
-    dependencies:
-      mini-parse: 0.6.7
 
   wgpu-matrix@3.4.0: {}
 
