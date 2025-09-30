@@ -27,17 +27,17 @@ export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
 
 export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = tgpu
   .fn([d.vec2f])((seed) => {
-    randomGeneratorSlot.value.seed2(seed);
+    (randomGeneratorSlot.value.seed2 as (seed: d.v2f) => void)(seed);
   });
 
 export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = tgpu
   .fn([d.vec3f])((seed) => {
-    randomGeneratorSlot.value.seed3(seed);
+    (randomGeneratorSlot.value.seed3 as (seed: d.v3f) => void)(seed);
   });
 
 export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
   .fn([d.vec4f])((seed) => {
-    randomGeneratorSlot.value.seed4(seed);
+    (randomGeneratorSlot.value.seed4 as (seed: d.v4f) => void)(seed);
   });
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu

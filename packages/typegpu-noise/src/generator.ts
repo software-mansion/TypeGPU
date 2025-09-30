@@ -4,9 +4,9 @@ import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
   seed: TgpuFn<(seed: d.F32) => d.Void> | ((seed: number) => void);
-  seed2: TgpuFn<(seed: d.Vec2f) => d.Void> | ((seed: d.v2f) => void);
-  seed3: TgpuFn<(seed: d.Vec3f) => d.Void> | ((seed: d.v3f) => void);
-  seed4: TgpuFn<(seed: d.Vec4f) => d.Void> | ((seed: d.v4f) => void);
+  seed2?: TgpuFn<(seed: d.Vec2f) => d.Void> | ((seed: d.v2f) => void);
+  seed3?: TgpuFn<(seed: d.Vec3f) => d.Void> | ((seed: d.v3f) => void);
+  seed4?: TgpuFn<(seed: d.Vec4f) => d.Void> | ((seed: d.v4f) => void);
   sample: TgpuFn<() => d.F32> | (() => number);
 }
 

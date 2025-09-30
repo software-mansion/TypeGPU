@@ -22,20 +22,6 @@ export const LCG: StatefulGenerator = (() => {
       'kernel';
       seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
     },
-    seed3: (value: d.v3f) => {
-      'kernel';
-      seed.$ = d.u32(
-        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
-          value.z * std.pow(32, 1),
-      );
-    },
-    seed4: (value: d.v4f) => {
-      'kernel';
-      seed.$ = d.u32(
-        value.x * std.pow(32, 3) + value.y * std.pow(32, 2) +
-          value.z * std.pow(32, 1) + value.w * std.pow(32, 0),
-      );
-    },
     sample: () => {
       'kernel';
       seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
