@@ -64,7 +64,7 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
-    "@types/node": "^24.2.0",
+    "@types/node": "^24.6.0",
     "@types/dom-mediacapture-record": "^1.0.22",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@webgpu/types": "catalog:types",
