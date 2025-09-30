@@ -22,7 +22,7 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
@@ -222,19 +222,14 @@ describe('TgpuBindGroupLayout', () => {
 
     const fooTexture = layout.bound.fooTexture;
 
-    const resolved = tgpu.resolve({
-      template: 'fn main () { textureLoad(fooTexture); }',
-      externals: { fooTexture },
-      names: 'strict',
-    });
+    const main = tgpu.fn([])`() { textureLoad(fooTexture); }`
+      .$uses({ fooTexture });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-      @group(0) @binding(0) var fooTexture: texture_1d<f32>;
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
-      fn main() { textureLoad(fooTexture); }
-    `),
-    );
+      fn main() { textureLoad(fooTexture); }"
+    `);
   });
 });
 
