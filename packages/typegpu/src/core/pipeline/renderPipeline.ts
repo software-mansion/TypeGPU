@@ -627,27 +627,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    if (
-      internals.priors.performanceCallback &&
-      branch[$internal].batchState.ongoingBatch
-    ) {
+    const hasPerformanceCallback = !!internals.priors.performanceCallback;
+    const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
+
+    if (hasPerformanceCallback && isOngoingBatch) {
       branch[$internal].batchState.performanceCallbacks.push(() =>
         triggerPerformanceCallback({ root: branch, priors: internals.priors })
       );
-    } else if (
-      internals.priors.performanceCallback &&
-      !branch[$internal].batchState.ongoingBatch
-    ) {
+    } else if (!isOngoingBatch) {
       branch[$internal].flush();
-      triggerPerformanceCallback({
-        root: branch,
-        priors: internals.priors,
-      });
-    } else if (
-      !branch[$internal].batchState.ongoingBatch &&
-      !internals.priors.performanceCallback
-    ) {
-      branch[$internal].flush();
+      if (hasPerformanceCallback) {
+        triggerPerformanceCallback({ root: branch, priors: internals.priors });
+      }
     }
   }
 }

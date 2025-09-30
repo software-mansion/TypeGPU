@@ -311,26 +311,41 @@ class TgpuRootImpl extends WithBindingImpl
     };
   }
 
-  batch(callback: () => void) {
+  batch<T>(
+    ...args: T extends Promise<unknown> ? ['Batch only works in sync']
+      : [callback: () => T]
+  ) {
+    const [callback] = args as [() => T];
+
     const { batchState } = this[$internal];
+    const isOuterBatch = !batchState.ongoingBatch;
+    const performanceCallbackIdx = batchState.performanceCallbacks.length;
 
-    if (batchState.ongoingBatch) {
-      throw new Error('Nested batch is not allowed');
+    if (isOuterBatch) {
+      batchState.ongoingBatch = true;
     }
-
-    batchState.ongoingBatch = true;
 
     try {
       callback();
     } finally {
       this[$internal].flush();
 
-      for (const performanceCallback of batchState.performanceCallbacks) {
+      for (
+        const performanceCallback of batchState.performanceCallbacks.slice(
+          performanceCallbackIdx,
+        )
+      ) {
         performanceCallback();
       }
 
-      batchState.ongoingBatch = false;
-      batchState.performanceCallbacks = [];
+      batchState.performanceCallbacks = batchState.performanceCallbacks.slice(
+        0,
+        performanceCallbackIdx,
+      );
+
+      if (isOuterBatch) {
+        batchState.ongoingBatch = false;
+      }
     }
   }
 

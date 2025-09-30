@@ -701,5 +701,8 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    *
    * @param callback A function with GPU computations to be batched.
    */
-  batch(callback: () => void): void;
+  batch<T>(
+    ...args: T extends Promise<unknown> ? ['Batch only works in sync']
+      : [callback: () => T]
+  ): void;
 }

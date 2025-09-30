@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, type TestAPI, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu, {
+  prepareDispatch,
   type TgpuComputePipeline,
   type TgpuRenderPipeline,
 } from '../src/index.ts';
@@ -216,15 +217,39 @@ describe('Batch', () => {
     expect(flushMock).toBeCalledTimes(4);
   });
 
-  it('throws an error when encounters nested batch', ({ root }) => {
+  it('handles nested batches with performance callbacks', async ({ root }) => {
+    const callback1 = () => {};
+    const callback2 = () => {};
+    const callback3 = () => {};
+
+    const renderPipelineWithPerformance1 = renderPipeline
+      .withPerformanceCallback(callback1);
+    const renderPipelineWithPerformance2 = renderPipeline
+      .withPerformanceCallback(callback2);
+    const renderPipelineWithPerformance3 = renderPipeline
+      .withPerformanceCallback(callback3);
+
+    const flushMock = vi.spyOn(root[$internal], 'flush');
+
     root.batch(() => {
-      computePipeline.dispatchWorkgroups(1);
-      expect(() => {
-        root.batch(() => {
-          computePipeline.dispatchWorkgroups(1);
-        });
-      }).toThrowError('Nested batch is not allowed');
+      renderPipelineWithPerformance1.draw(7);
+      expect(root[$internal].batchState.performanceCallbacks.length).toBe(1);
+      root.batch(() => {
+        renderPipelineWithPerformance2.draw(7);
+        expect(root[$internal].batchState.performanceCallbacks.length).toBe(2);
+      });
+
+      // first one from batch, second one from querySet.read
+      expect(flushMock).toBeCalledTimes(2);
+      expect(root[$internal].batchState.performanceCallbacks.length).toBe(1);
+
+      renderPipelineWithPerformance3.draw(7);
+
+      expect(root[$internal].batchState.performanceCallbacks.length).toBe(2);
     });
+
+    expect(flushMock).toBeCalledTimes(5);
+    expect(root[$internal].batchState.performanceCallbacks.length).toBe(0);
   });
 
   it('clears callback stack at the end of batch', async ({ root }) => {
@@ -300,7 +325,25 @@ describe('Batch', () => {
     expect(root[$internal].batchState.performanceCallbacks.length).toBe(0);
   });
 
-  it('flushes immediately after console.log', ({ device }) => {
+  it('handles prepareDispatch().dispatch', ({ root }) => {
+    const flushMock = vi.spyOn(root[$internal], 'flush');
+
+    prepareDispatch(root, () => {
+      'kernel';
+    }).dispatch();
+    expect(flushMock).toBeCalledTimes(1);
+
+    root['~unstable'].batch(() => {
+      prepareDispatch(root, () => {
+        'kernel';
+      }).dispatch();
+      // from write inside dispatch
+      expect(flushMock).toBeCalledTimes(2);
+    });
+    expect(flushMock).toBeCalledTimes(3);
+  });
+
+  it('flushes immediately after pipeline with console.log', ({ device }) => {
     const root = tgpu.initFromDevice({
       device,
       unstable_logOptions: {
