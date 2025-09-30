@@ -140,6 +140,36 @@ describe('TgpuRenderPipeline', () => {
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
+  it('type checks passed bind groups', ({ root }) => {
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      out: { bar: d.location(0, d.vec3f) },
+    })(() => ({
+      bar: d.vec3f(),
+    }));
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      in: { bar: d.location(0, d.vec3f) },
+      out: d.vec4f,
+    })(() => d.vec4f());
+    const renderPipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { format: 'r8unorm' })
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    renderPipeline.with(layout1, bindGroup1);
+    renderPipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => renderPipeline.with(layout1, bindGroup2));
+  });
+
   describe('resolve', () => {
     it('allows resolving the entire shader code', ({ root }) => {
       const pipeline = root['~unstable']
