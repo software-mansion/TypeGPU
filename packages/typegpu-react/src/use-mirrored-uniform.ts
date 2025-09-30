@@ -20,19 +20,8 @@ export function useMirroredUniform<
     return root.createUniform(schema, value);
   });
   const prevSchemaRef = useRef(schema);
+  const currentSchemaRef = useRef(schema);
   const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    let currentBuffer = uniformBuffer;
-    if (!d.deepEqual(prevSchemaRef.current as d.AnyData, schema as d.AnyData)) {
-      currentBuffer.buffer.destroy();
-      currentBuffer = root.createUniform(schema, value);
-      setUniformBuffer(currentBuffer);
-      prevSchemaRef.current = schema;
-    }
-
-    currentBuffer.write(value);
-  }, [schema, value, root, uniformBuffer]);
 
   useEffect(() => {
     if (cleanupRef.current) {
@@ -46,6 +35,26 @@ export function useMirroredUniform<
     };
   }, [uniformBuffer]);
 
+  useEffect(() => {
+    if (!d.deepEqual(prevSchemaRef.current as d.AnyData, schema as d.AnyData)) {
+      uniformBuffer.buffer.destroy();
+      setUniformBuffer(root.createUniform(schema, value));
+      prevSchemaRef.current = schema;
+    } else {
+      uniformBuffer.write(value);
+    }
+  }, [schema, value, root, uniformBuffer]);
+
+  if (
+    !d.deepEqual(currentSchemaRef.current as d.AnyData, schema as d.AnyData)
+  ) {
+    currentSchemaRef.current = schema;
+  }
+
+  // Using current schema ref instead of schema directly
+  // to prevent unnecessary re-memoization when schema object
+  // reference changes but content is structurally equivalent.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This value needs to be stable
   const mirroredValue = useMemo(
     () => ({
       schema,
@@ -53,7 +62,7 @@ export function useMirroredUniform<
         return uniformBuffer.$;
       },
     }),
-    [schema, uniformBuffer],
+    [currentSchemaRef.current, uniformBuffer],
   );
 
   return mirroredValue as MirroredValue<TSchema>;
