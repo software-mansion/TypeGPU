@@ -6,26 +6,25 @@ import type {
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import * as std from '../src/std/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu.privateVar(d.u32, 2);
     const fn1 = tgpu.fn([])`() {
-        let y = x;
-        return x;
-      }`
+      let y = x;
+      return x;
+    }`
       .$uses({ x });
 
-    expect(parseResolved({ fn1 })).toBe(
-      parse(`
-        var<private> x: u32 = 2;
-        fn fn1() {
-          let y = x;
-          return x;
-        }
-      `),
-    );
+    expect(asWgsl(fn1)).toMatchInlineSnapshot(`
+      "var<private> x: u32 = 2;
+
+      fn fn1() {
+            let y = x;
+            return x;
+          }"
+    `);
   });
 
   it('should properly resolve variables', () => {
@@ -33,7 +32,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      expect(parseResolved({ x: variable })).toBe(parse(expected));
+      expect(asWgsl(variable)).toBe(expected);
     }
 
     test(
@@ -72,13 +71,13 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
 
     test(
       tgpu.privateVar(s, { x: 2, y: d.vec2i(1, 2) }).$name('x'),
-      `
-      struct s {
-        x: u32,
-        y: vec2i,
-      }
+      `\
+struct s {
+  x: u32,
+  y: vec2i,
+}
 
-      var<private> x: s = s(2, vec2i(1, 2));`,
+var<private> x: s = s(2, vec2i(1, 2));`,
     );
 
     const a = d.arrayOf(s, 2);
@@ -88,13 +87,13 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
         { x: 1, y: d.vec2i(2, 3) },
         { x: 4, y: d.vec2i(5, 6) },
       ]).$name('x'),
-      `
-      struct s {
-        x: u32,
-        y: vec2i,
-      }
+      `\
+struct s {
+  x: u32,
+  y: vec2i,
+}
 
-      var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));`,
+var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));`,
     );
   });
 
@@ -115,26 +114,20 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       const velX = boid.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
-        var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
-
-        fn func() {
-          var pos = boid;
-          var vel = boid.vel;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = boid;
+        var vel = boid.vel;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   it('supports atomic operations on workgroupVar atomics accessed via .$', () => {
@@ -145,20 +138,14 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       const currentValue = std.atomicLoad(atomicCounter.$);
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "var<workgroup> atomicCounter: atomic<u32>;
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        var<workgroup> atomicCounter: atomic<u32>;
-
-        fn func() {
-          var oldValue = atomicAdd(&atomicCounter, 1);
-          var currentValue = atomicLoad(&atomicCounter);
-        }`),
-    );
+      fn func() {
+        var oldValue = atomicAdd(&atomicCounter, 1);
+        var currentValue = atomicLoad(&atomicCounter);
+      }"
+    `);
   });
 
   it('should throw an error when trying to access variable outside of a function', () => {
