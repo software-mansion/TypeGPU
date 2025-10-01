@@ -1,0 +1,101 @@
+name: Tree-shake Testing
+
+on:
+  pull_request:
+    paths:
+      - 'packages/typegpu/**'
+      - 'apps/treeshake-test/**'
+  workflow_dispatch:
+
+jobs:
+  treeshake-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeGPU packages
+        run: pnpm run -r build
+
+      - name: Run tree-shake tests
+        id: treeshake
+        run: |
+          cd apps/treeshake-test
+          pnpm test
+        continue-on-error: true
+
+      - name: Read tree-shake results
+        id: results
+        run: |
+          if [ -f apps/treeshake-test/treeshake-results.md ]; then
+            echo "results_exist=true" >> $GITHUB_OUTPUT
+            echo 'results<<EOF' >> $GITHUB_OUTPUT
+            cat apps/treeshake-test/treeshake-results.md >> $GITHUB_OUTPUT
+            echo 'EOF' >> $GITHUB_OUTPUT
+          else
+            echo "results_exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && steps.results.outputs.results_exist == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = `${{ steps.results.outputs.results }}`;
+            
+            // Look for existing tree-shake comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const existingComment = comments.data.find(comment => 
+              comment.body.includes('# TypeGPU Tree-shake Test Results')
+            );
+            
+            const commentBody = `🌳 **Tree-shake Testing Results**
+
+${results}
+
+---
+*This comment is automatically updated when the tree-shake test is re-run.*`;
+            
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
+
+      - name: Upload tree-shake results artifact
+        if: steps.results.outputs.results_exist == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: treeshake-results
+          path: apps/treeshake-test/treeshake-results.md

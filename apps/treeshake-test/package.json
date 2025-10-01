@@ -1,0 +1,24 @@
+{
+  "name": "treeshake-test",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Tree-shake testing app for TypeGPU",
+  "type": "module",
+  "scripts": {
+    "test": "tsx index.ts",
+    "test:treeshake": "tsx index.ts"
+  },
+  "dependencies": {
+    "typegpu": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:types",
+    "esbuild": "^0.24.2",
+    "tsdown": "^0.2.16",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^5.1.4",
+    "ts-loader": "^9.5.1"
+  }
+}
