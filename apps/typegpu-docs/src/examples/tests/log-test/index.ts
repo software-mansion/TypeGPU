@@ -164,7 +164,6 @@ export const controls = {
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
         test.dispatch();
-        console.log(`dispatched ${i}`);
       }
     },
   },
