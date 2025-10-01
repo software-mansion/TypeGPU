@@ -62,7 +62,7 @@ prepareDispatch(root, (x, y) => {
 console.log(await waterLevelMutable.read());
 ```
 
-Analogously to `TgpuComputePipeline`, the result of `prepareDispatch` can have bind groups bound using the `with` method.
+The result of `prepareDispatch` can have bind groups bound using the `with` method.
 
 ```ts twoslash
 import tgpu, { prepareDispatch } from 'typegpu';
