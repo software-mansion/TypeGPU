@@ -169,17 +169,21 @@ const dispatchY = Math.ceil(p.SIM_N / p.WORKGROUP_SIZE_Y);
 // Create bind groups
 const brushBindGroup = root.createBindGroup(c.brushLayout, {
   brushParams: brushParamBuffer,
-  forceDst: forceTex.createView('writeonly'),
-  inkDst: newInkTex.createView('writeonly'),
+  forceDst: forceTex.createView(
+    d.textureStorage2d('rgba16float', 'write-only'),
+  ),
+  inkDst: newInkTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
 });
 
 const addInkBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.addInkLayout, {
-    src: inkTex[srcIdx].createView('sampled'),
-    add: newInkTex.createView('sampled'),
-    dst: inkTex[dstIdx].createView('writeonly'),
+    src: inkTex[srcIdx].createView(d.texture2d(d.f32)),
+    add: newInkTex.createView(d.texture2d(d.f32)),
+    dst: inkTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -187,9 +191,11 @@ const addForceBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.addForcesLayout, {
-    src: velTex[srcIdx].createView('sampled'),
-    force: forceTex.createView('sampled'),
-    dst: velTex[dstIdx].createView('writeonly'),
+    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    force: forceTex.createView(d.texture2d(d.f32)),
+    dst: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
   });
 });
@@ -198,8 +204,10 @@ const advectBindGroups = [0, 1].map((i) => {
   const srcIdx = 1 - i;
   const dstIdx = i;
   return root.createBindGroup(c.advectLayout, {
-    src: velTex[srcIdx].createView('sampled'),
-    dst: velTex[dstIdx].createView('writeonly'),
+    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    dst: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
     linSampler,
   });
@@ -209,8 +217,10 @@ const diffusionBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.diffusionLayout, {
-    in: velTex[srcIdx].createView('sampled'),
-    out: velTex[dstIdx].createView('writeonly'),
+    in: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    out: velTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
     simParams: simParamBuffer,
   });
 });
@@ -218,8 +228,10 @@ const diffusionBindGroups = [0, 1].map((i) => {
 const divergenceBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   return root.createBindGroup(c.divergenceLayout, {
-    vel: velTex[srcIdx].createView('sampled'),
-    div: divergenceTex.createView('writeonly'),
+    vel: velTex[srcIdx].createView(d.texture2d(d.f32)),
+    div: divergenceTex.createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -227,9 +239,11 @@ const pressureBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   const dstIdx = 1 - i;
   return root.createBindGroup(c.pressureLayout, {
-    x: pressureTex[srcIdx].createView('sampled'),
-    b: divergenceTex.createView('sampled'),
-    out: pressureTex[dstIdx].createView('writeonly'),
+    x: pressureTex[srcIdx].createView(d.texture2d(d.f32)),
+    b: divergenceTex.createView(d.texture2d(d.f32)),
+    out: pressureTex[dstIdx].createView(
+      d.textureStorage2d('rgba16float', 'write-only'),
+    ),
   });
 });
 
@@ -239,9 +253,11 @@ const projectBindGroups = [0, 1].map((velIdx) =>
     const dstVelIdx = 1 - velIdx;
     const srcPIdx = pIdx;
     return root.createBindGroup(c.projectLayout, {
-      vel: velTex[srcVelIdx].createView('sampled'),
-      p: pressureTex[srcPIdx].createView('sampled'),
-      out: velTex[dstVelIdx].createView('writeonly'),
+      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
+      p: pressureTex[srcPIdx].createView(d.texture2d(d.f32)),
+      out: velTex[dstVelIdx].createView(
+        d.textureStorage2d('rgba16float', 'write-only'),
+      ),
     });
   })
 );
@@ -252,9 +268,11 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
     const srcInkIdx = inkIdx;
     const dstInkIdx = 1 - inkIdx;
     return root.createBindGroup(c.advectInkLayout, {
-      vel: velTex[srcVelIdx].createView('sampled'),
-      src: inkTex[srcInkIdx].createView('sampled'),
-      dst: inkTex[dstInkIdx].createView('writeonly'),
+      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
+      src: inkTex[srcInkIdx].createView(d.texture2d(d.f32)),
+      dst: inkTex[dstInkIdx].createView(
+        d.textureStorage2d('rgba16float', 'write-only'),
+      ),
       simParams: simParamBuffer,
       linSampler,
     });
@@ -264,25 +282,25 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
 const renderBindGroups = {
   ink: [
     root.createBindGroup(renderLayout, {
-      result: inkTex[0].createView('sampled'),
-      background: backgroundTexture.createView('sampled'),
+      result: inkTex[0].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
     root.createBindGroup(renderLayout, {
-      result: inkTex[1].createView('sampled'),
-      background: backgroundTexture.createView('sampled'),
+      result: inkTex[1].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
   ],
   velocity: [
     root.createBindGroup(renderLayout, {
-      result: velTex[0].createView('sampled'),
-      background: backgroundTexture.createView('sampled'),
+      result: velTex[0].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
     root.createBindGroup(renderLayout, {
-      result: velTex[1].createView('sampled'),
-      background: backgroundTexture.createView('sampled'),
+      result: velTex[1].createView(d.texture2d(d.f32)),
+      background: backgroundTexture.createView(d.texture2d(d.f32)),
       linSampler,
     }),
   ],
@@ -355,8 +373,8 @@ function loop() {
   inkBuffer.swap();
 
   let renderBG: TgpuBindGroup<{
-    result: { texture: 'float' };
-    background: { texture: 'float' };
+    result: { texture: d.WgslTexture2d<d.F32> };
+    background: { texture: d.WgslTexture2d<d.F32> };
   }>;
   let pipeline:
     | typeof renderPipelineInk

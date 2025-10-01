@@ -36,8 +36,8 @@ catalogs:
       version: 3.2.4
   types:
     '@webgpu/types':
-      specifier: ^0.1.63
-      version: 0.1.63
+      specifier: ^0.1.65
+      version: 0.1.65
     typescript:
       specifier: ^5.8.2
       version: 5.8.3
@@ -63,7 +63,7 @@ importers:
         version: 3.1.2(@vitest/browser@3.2.4)(vitest@3.2.4)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       dpdm:
         specifier: ^3.14.0
         version: 3.14.0
@@ -123,8 +123,8 @@ importers:
         specifier: ^4.3.1
         version: 4.3.1(@types/node@24.6.0)(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(jiti@2.6.0)(lightningcss@1.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tsx@4.19.3)(yaml@2.8.0)
       '@astrojs/sitemap':
-        specifier: ^3.5.0
-        version: 3.5.0
+        specifier: ^3.6.0
+        version: 3.6.0
       '@astrojs/starlight':
         specifier: ^0.35.2
         version: 0.35.2(astro@5.13.7(@types/node@24.6.0)(jiti@2.6.0)(lightningcss@1.30.1)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.8.0))
@@ -189,11 +189,11 @@ importers:
         specifier: catalog:frontend
         version: 7.1.0
       jotai:
-        specifier: ^2.14.0
-        version: 2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
+        specifier: ^2.15.0
+        version: 2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
       jotai-location:
         specifier: ^0.6.2
-        version: 0.6.2(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0))
+        version: 0.6.2(jotai@2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0))
       lucide-react:
         specifier: ^0.536.0
         version: 0.536.0(react@19.1.0)
@@ -284,7 +284,7 @@ importers:
         version: 2.1.0(vite@6.3.6(@types/node@24.6.0)(jiti@2.6.0)(lightningcss@1.30.1)(tsx@4.19.3)(yaml@2.8.0))
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       astro-vtbot:
         specifier: ^2.1.6
         version: 2.1.6
@@ -373,7 +373,7 @@ importers:
         version: 2.11.5
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       moo:
         specifier: ^0.5.2
         version: 0.5.2
@@ -447,7 +447,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       arktype:
         specifier: 'catalog:'
         version: 2.1.22
@@ -478,7 +478,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -500,7 +500,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -522,7 +522,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -709,8 +709,8 @@ packages:
   '@astrojs/rss@4.0.11':
     resolution: {integrity: sha512-3e3H8i6kc97KGnn9iaZBJpIkdoQi8MmR5zH5R+dWsfCM44lLTszOqy1OBfGGxDt56mpQkYVtZJWoxMyWuUZBfw==}
 
-  '@astrojs/sitemap@3.5.0':
-    resolution: {integrity: sha512-ldOvoBxuRgpcdndzksskOTzU55g76tkHC/POpejUbPGz6zR4rJKiXh8thX4WEPWDhCTZUafhJ1qf7k1muStHfg==}
+  '@astrojs/sitemap@3.6.0':
+    resolution: {integrity: sha512-4aHkvcOZBWJigRmMIAJwRQXBS+ayoP5z40OklTXYXhUDhwusz+DyDl+nSshY6y9DvkVEavwNcFO8FD81iGhXjg==}
 
   '@astrojs/starlight-tailwind@4.0.1':
     resolution: {integrity: sha512-AOOEWTGqJ7fG66U04xTmZQZ40oZnUYe4Qljpr+No88ozKywtsD1DiXOrGTeHCnZu0hRtMbRtBGB1fZsf0L62iw==}
@@ -2842,8 +2842,8 @@ packages:
   '@vtbag/utensil-drawer@1.2.11':
     resolution: {integrity: sha512-ZopaB1qd8RCjfbVCpI+xgVAzFVe/b65SzQhKX8E6+TLdkq7Tp2+0z091W0Ro7C4QHXpfi7Y93cXSA+1DDYQOVA==}
 
-  '@webgpu/types@0.1.63':
-    resolution: {integrity: sha512-s9Kuh0nE/2+nKrvmKNMB2fE5Zlr3DL2t3OFKM55v5jRcfCOxbkOHhQoshoFum5mmXIfEtRXtLCWmkeTJsVjE9w==}
+  '@webgpu/types@0.1.65':
+    resolution: {integrity: sha512-cYrHab4d6wuVvDW5tdsfI6/o6vcLMDe6w2Citd1oS51Xxu2ycLCnVo4fqwujfKWijrZMInTJIKcXxteoy21nVA==}
 
   '@xmldom/xmldom@0.9.8':
     resolution: {integrity: sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==}
@@ -4131,8 +4131,8 @@ packages:
     peerDependencies:
       jotai: '>=1.11.0'
 
-  jotai@2.14.0:
-    resolution: {integrity: sha512-JQkNkTnqjk1BlSUjHfXi+pGG/573bVN104gp6CymhrWDseZGDReTNniWrLhJ+zXbM6pH+82+UNJ2vwYQUkQMWQ==}
+  jotai@2.15.0:
+    resolution: {integrity: sha512-nbp/6jN2Ftxgw0VwoVnOg0m5qYM1rVcfvij+MZx99Z5IK13eGve9FJoCwGv+17JvVthTjhSmNtT5e1coJnr6aw==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@babel/core': '>=7.0.0'
@@ -6693,7 +6693,7 @@ snapshots:
       fast-xml-parser: 4.5.3
       kleur: 4.1.5
 
-  '@astrojs/sitemap@3.5.0':
+  '@astrojs/sitemap@3.6.0':
     dependencies:
       sitemap: 8.0.0
       stream-replace-string: 2.0.0
@@ -6708,7 +6708,7 @@ snapshots:
     dependencies:
       '@astrojs/markdown-remark': 6.3.3
       '@astrojs/mdx': 4.2.6(astro@5.13.7(@types/node@24.6.0)(jiti@2.6.0)(lightningcss@1.30.1)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.8.3)(yaml@2.8.0))
-      '@astrojs/sitemap': 3.5.0
+      '@astrojs/sitemap': 3.6.0
       '@pagefind/default-ui': 1.3.0
       '@types/hast': 3.0.4
       '@types/js-yaml': 4.0.9
@@ -8597,7 +8597,7 @@ snapshots:
 
   '@vtbag/utensil-drawer@1.2.11': {}
 
-  '@webgpu/types@0.1.63': {}
+  '@webgpu/types@0.1.65': {}
 
   '@xmldom/xmldom@0.9.8': {}
 
@@ -10197,11 +10197,11 @@ snapshots:
 
   jiti@2.6.0: {}
 
-  jotai-location@0.6.2(jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)):
+  jotai-location@0.6.2(jotai@2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)):
     dependencies:
-      jotai: 2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
+      jotai: 2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0)
 
-  jotai@2.14.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0):
+  jotai@2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.1.8)(react@19.1.0):
     optionalDependencies:
       '@babel/core': 7.28.4
       '@babel/template': 7.27.2
