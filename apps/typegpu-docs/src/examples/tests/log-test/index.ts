@@ -12,6 +12,39 @@ const root = await tgpu.init({
   },
 });
 
+// setup for render tests
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const positions = [
+    d.vec2f(0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
+});
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  console.log('X:', pos.x, 'Y:', pos.y);
+  return d.vec4f(0.769, 0.392, 1.0, 1);
+});
+
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
 // #region Example controls and cleanup
 
 export const controls = {
@@ -152,29 +185,6 @@ export const controls = {
   },
   'Render pipeline': {
     onButtonClick: () => {
-      const mainVertex = tgpu['~unstable'].vertexFn({
-        in: { vertexIndex: d.builtin.vertexIndex },
-        out: { pos: d.builtin.position },
-      })((input) => {
-        const positions = [
-          d.vec2f(0, 0.5),
-          d.vec2f(-0.5, -0.5),
-          d.vec2f(0.5, -0.5),
-        ];
-
-        return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
-      });
-
-      const mainFragment = tgpu['~unstable'].fragmentFn({
-        in: { pos: d.builtin.position },
-        out: d.vec4f,
-      })(({ pos }) => {
-        console.log('X:', pos.x, 'Y:', pos.y);
-        return d.vec4f(0.769, 0.392, 1.0, 1);
-      });
-
-      const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-      const canvas = document.querySelector('canvas') as HTMLCanvasElement;
       const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
       context.configure({
@@ -196,6 +206,27 @@ export const controls = {
           storeOp: 'store',
         })
         .draw(3);
+    },
+  },
+  'Draw indexed': {
+    onButtonClick: () => {
+      const pipeline = root['~unstable']
+        .withVertex(mainVertex, {})
+        .withFragment(mainFragment, { format: presentationFormat })
+        .createPipeline();
+
+      const indexBuffer = root
+        .createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2])
+        .$usage('index');
+
+      pipeline
+        .withIndexBuffer(indexBuffer)
+        .withColorAttachment({
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        }).drawIndexed(3);
     },
   },
   'Too many logs': {
