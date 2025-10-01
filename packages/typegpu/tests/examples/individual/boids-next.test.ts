@@ -121,8 +121,8 @@ describe('boids next example', () => {
       @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
         var angle = getRotationFromVelocity_1(input.velocity);
         var rotated = rotate_2(input.v, angle);
-        var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
-        var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.z)) * 0.45) + 0.45), 1);
+        var pos = vec4f((rotated + input.center), 0, 1);
+        var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1);
         return mainVert_Output_4(pos, color);
       }
 

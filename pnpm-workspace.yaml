@@ -3,16 +3,16 @@ packages:
   - 'apps/*'
 
 catalog:
-  arktype: ^2.1.20
+  arktype: ^2.1.22
 
 catalogs:
   build:
     tsup: ^8.5.0
     unbuild: ^3.5.0
-    jiti: ^2.4.2
+    jiti: ^2.6.0
   types:
     typescript: ^5.8.2
-    '@webgpu/types': ^0.1.63
+    '@webgpu/types': ^0.1.65
   test:
     vitest: ^3.2.4
   frontend:

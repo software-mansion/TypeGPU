@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 
 // schemas
 
+export type Line3 = d.Infer<typeof Line3>;
 export const Line3 = d.struct({
   /**
    * A point on the line

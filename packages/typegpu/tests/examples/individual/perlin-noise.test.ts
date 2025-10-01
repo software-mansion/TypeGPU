@@ -42,9 +42,9 @@ describe('perlin noise example', () => {
       fn randOnUnitSphere_7() -> vec3f {
         var z = ((2 * item_8()) - 1);
         var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = ((6.283185307179586 * item_8()) - 3.141592653589793);
-        var x = (sin(theta) * oneMinusZSq);
-        var y = (cos(theta) * oneMinusZSq);
+        var theta = (6.283185307179586 * item_8());
+        var x = (cos(theta) * oneMinusZSq);
+        var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
@@ -99,7 +99,7 @@ describe('perlin noise example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolation3_11(t: vec3f) -> vec3f {
+      fn quinticInterpolationImpl_11(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
@@ -114,7 +114,7 @@ describe('perlin noise example', () => {
         var XYz = dotProdGrid_7(pos, (minJunction + vec3f(1, 1, 0)));
         var XYZ = dotProdGrid_7(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation3_11(partial);
+        var smoothPartial = quinticInterpolationImpl_11(partial);
         var xy = mix(xyz, xyZ, smoothPartial.z);
         var xY = mix(xYz, xYZ, smoothPartial.z);
         var Xy = mix(Xyz, XyZ, smoothPartial.z);

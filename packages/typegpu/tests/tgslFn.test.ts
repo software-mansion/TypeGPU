@@ -4,8 +4,8 @@ import { builtin } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
 import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { it } from './utils/extendedIt.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -65,18 +65,18 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves structs', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
 
     const createGradient = tgpu.fn([], Gradient)(() => {
-      return Gradient({ to: d.vec3f(1, 2, 3), from: d.vec3f(4, 5, 6) });
+      return Gradient({ end: d.vec3f(1, 2, 3), start: d.vec3f(4, 5, 6) });
     });
 
     expect(asWgsl(createGradient)).toMatchInlineSnapshot(`
       "struct Gradient {
-        from: vec3f,
-        to: vec3f,
+        start: vec3f,
+        end: vec3f,
       }
 
       fn createGradient() -> Gradient {
@@ -622,21 +622,25 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function accepting a subset of arguments', () => {
     const foo = tgpu.fn([d.u32, d.u32], d.u32)((a) => a);
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(asWgsl(foo)).toMatchInlineSnapshot(
+      `
       "fn foo(a: u32, _arg_1: u32) -> u32 {
         return a;
       }"
-    `);
+    `,
+    );
   });
 
   it('resolves its header based on the shell, not AST, allowing passing function with no arguments', () => {
     const foo = tgpu.fn([d.u32, d.u32], d.u32)(() => 2);
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(asWgsl(foo)).toMatchInlineSnapshot(
+      `
       "fn foo(_arg_0: u32, _arg_1: u32) -> u32 {
         return 2;
       }"
-    `);
+    `,
+    );
   });
 
   it('resolves a function with a pointer parameter', () => {
@@ -923,7 +927,7 @@ describe('tgsl fn when using plugin', () => {
     expect(addKernelJs(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(asWgsl(add)).toMatchInlineSnapshot(`
-      "fn add(x: u32, y: u32) -> u32 {
+      "fn addKernelJs(x: u32, y: u32) -> u32 {
         return (x + y);
       }"
     `);
@@ -1031,13 +1035,13 @@ describe('tgsl fn when using plugin', () => {
 
     const boundOne = one.with(flagSlot, true);
 
-    expect(tgpu.resolve({ externals: { boundOne } })).toMatchInlineSnapshot(`
-      "fn mainFn_1() -> f32 {
+    expect(asWgsl(boundOne)).toMatchInlineSnapshot(`
+      "fn mainFn() -> f32 {
         return 1000;
       }
 
-      fn one_0() -> f32 {
-        return (mainFn_1() + 2);
+      fn one() -> f32 {
+        return (mainFn() + 2);
       }"
     `);
   });

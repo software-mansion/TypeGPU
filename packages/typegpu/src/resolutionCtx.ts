@@ -33,8 +33,9 @@ import {
 } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
+import { isMarkedInternal } from './shared/symbols.ts';
 import type { Infer } from './shared/repr.ts';
-import { safeStringify } from './shared/safeStringify.ts';
+import { safeStringify } from './shared/stringify.ts';
 import { $internal, $providing, $resolve } from './shared/symbols.ts';
 import {
   bindGroupLayout,
@@ -43,12 +44,12 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { getBestConversion } from './tgsl/conversion.ts';
 import {
   LogGeneratorImpl,
   LogGeneratorNullImpl,
 } from './tgsl/consoleLog/logGenerator.ts';
 import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
+import { getBestConversion } from './tgsl/conversion.ts';
 import {
   coerceToSnippet,
   concretize,
@@ -66,13 +67,9 @@ import type {
   ResolutionCtx,
   Wgsl,
 } from './types.ts';
-import {
-  CodegenState,
-  isMarkedInternal,
-  isSelfResolvable,
-  NormalState,
-} from './types.ts';
+import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import { isKernel } from './shared/meta.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -100,7 +97,7 @@ type SlotBindingLayer = {
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyData | UnknownData>;
+  declarations: Map<string, Snippet>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -177,7 +174,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
-      declarations: new Map<string, AnyData | UnknownData>(),
+      declarations: new Map(),
     });
   }
 
@@ -248,9 +245,9 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const declarationType = layer.declarations.get(id);
-        if (declarationType !== undefined) {
-          return snip(id, declarationType);
+        const snippet = layer.declarations.get(id);
+        if (snippet !== undefined) {
+          return snippet;
         }
       } else {
         // Skip
@@ -260,8 +257,8 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
-  defineBlockVariable(id: string, type: AnyData | UnknownData): Snippet {
-    if (type.type === 'unknown') {
+  defineBlockVariable(id: string, snippet: Snippet): void {
+    if (snippet.dataType.type === 'unknown') {
       throw Error(`Tried to define variable '${id}' of unknown type`);
     }
 
@@ -269,9 +266,8 @@ class ItemStateStackImpl implements ItemStateStack {
       const layer = this._stack[i];
 
       if (layer?.type === 'blockScope') {
-        layer.declarations.set(id, type);
-
-        return snip(id, type);
+        layer.declarations.set(id, snippet);
+        return;
       }
     }
 
@@ -382,6 +378,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return getUniqueName(this.#namespace, resource);
   }
 
+  makeNameValid(name: string): string {
+    return this.#namespace.nameRegistry.makeValid(name);
+  }
+
   get pre(): string {
     return this._indentController.pre;
   }
@@ -418,8 +418,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return item;
   }
 
-  defineVariable(id: string, dataType: AnyData | UnknownData): Snippet {
-    return this._itemStateStack.defineBlockVariable(id, dataType);
+  defineVariable(id: string, snippet: Snippet) {
+    this._itemStateStack.defineBlockVariable(id, snippet);
   }
 
   reportReturnType(dataType: AnyData) {
@@ -658,6 +658,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
+      } else if (isKernel(item)) {
+        // Resolving a kernel directly means calling it with no arguments, since we cannot infer
+        // the types of the arguments from a WGSL string.
+        const shellless = this.#namespace.shelllessRepo.get(
+          item,
+          /* no arguments */ undefined,
+        );
+        if (!shellless) {
+          throw new Error(
+            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another kernel.`,
+          );
+        }
+
+        return this.withResetIndentLevel(() => this.resolve(shellless));
       } else {
         throw new TypeError(
           `Unresolvable internal value: ${safeStringify(item)}`,
@@ -690,7 +704,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     schema?: AnyData | UnknownData | undefined,
     exact = false,
   ): ResolvedSnippet {
-    if (isTgpuFn(item)) {
+    if (isTgpuFn(item) || isKernel(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
         !this.#namespace.memoizedResolves.has(item)
@@ -709,7 +723,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    if (isMarkedInternal(item)) {
+    if (isMarkedInternal(item) || isKernel(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {

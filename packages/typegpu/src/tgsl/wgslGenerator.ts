@@ -15,10 +15,12 @@ import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -33,7 +35,6 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -163,7 +164,9 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    return this.ctx.defineVariable(id, dataType);
+    const snippet = snip(this.ctx.makeNameValid(id), dataType);
+    this.ctx.defineVariable(id, snippet);
+    return snippet;
   }
 
   public identifier(id: string): Snippet {
@@ -468,8 +471,9 @@ ${this.ctx.pre}}`;
 
       // Other, including tgsl functions, std and vector/matrix schema calls.
 
-      const argConversionHint = callee.value[$internal]
-        ?.argConversionHint as FnArgsConversionHint ?? 'keep';
+      const argConversionHint =
+        (callee.value[$internal] as Record<string, unknown>)
+          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
       try {
         let convertedArguments: Snippet[];
 
@@ -717,12 +721,12 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      this.blockVariable(
+      const snippet = this.blockVariable(
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      const id = this.identifier(rawId);
-      return stitchWithExactTypes`${this.ctx.pre}var ${id} = ${eq};`;
+      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+        .value as string} = ${eq};`;
     }
 
     if (statement[0] === NODE.block) {
