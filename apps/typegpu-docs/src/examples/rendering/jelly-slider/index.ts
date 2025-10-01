@@ -44,12 +44,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 18, -0.03);
+const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 16, -0.03);
 const sliderStorage = slider.pointsBuffer.as('readonly');
 const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
 
-const [width, height] = [canvas.width * 0.7, canvas.height * 0.7];
+const [width, height] = [canvas.width * 0.5, canvas.height * 0.5];
 
 const textures = [0, 1].map(() => {
   const texture = root['~unstable'].createTexture({
