@@ -43,7 +43,7 @@ const Params = d.struct({
   tintStrength: d.f32,
   tintColor: d.vec3f,
 });
-const defaultParams = Params({
+const defaultParams = {
   rectDims: d.vec2f(0.13, 0.01),
   radius: 0.003,
   start: 0.05,
@@ -55,7 +55,7 @@ const defaultParams = Params({
   edgeBlurMultiplier: 0.7,
   tintStrength: 0.05,
   tintColor: d.vec3f(0.58, 0.44, 0.96),
-});
+};
 
 const paramsUniform = root.createUniform(Params, defaultParams);
 
