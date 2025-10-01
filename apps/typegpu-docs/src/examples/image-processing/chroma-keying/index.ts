@@ -10,7 +10,7 @@ const rareLayout = tgpu.bindGroupLayout({
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: {} },
+  inputTexture: { externalTexture: d.textureExternal() },
 });
 
 const VertexOutput = d.struct({

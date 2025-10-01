@@ -1,17 +1,18 @@
-import { describe, expect, expectTypeOf } from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type {
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
   TgpuTexture,
-  TgpuWriteonlyTexture,
+  TgpuTextureView,
 } from '../src/core/texture/texture.ts';
-import type { Render, Sampled } from '../src/core/texture/usageExtension.ts';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data/index.ts';
+import type {
+  RenderFlag,
+  SampledFlag,
+} from '../src/core/texture/usageExtension.ts';
 import tgpu from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
+import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
+import { attest } from '@ark/attest';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -146,7 +147,7 @@ describe('TgpuTexture', () => {
       .$usage('sampled');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledFlag
     >();
   });
 
@@ -159,7 +160,9 @@ describe('TgpuTexture', () => {
       .$usage('sampled', 'render');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled & Render
+      & TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
+      & SampledFlag
+      & RenderFlag
     >();
   });
 
@@ -185,11 +188,11 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     };
 
-    const sampled1 = texture.createView('sampled');
-    const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
+    const sampled1 = texture.createView(d.texture2d(d.i32));
+    const sampled2 = texture.createView(d.texture2dArray(d.f32));
 
     expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
-      'texture_2d<f32>',
+      'texture_2d<i32>',
     );
 
     expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
@@ -204,166 +207,492 @@ describe('TgpuTexture', () => {
     });
 
     // @ts-expect-error
-    const getSampled = () => texture.createView('sampled');
+    attest(texture.createView(d.texture2d(d.f32)))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as sampled, call $usage('sampled') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: "float" | "unfilterable-float"; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.`,
+      );
+
     // @ts-expect-error
-    const getReadonly = () => texture.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly = () => texture.createView('writeonly');
-    // @ts-expect-error
-    const getMutable = () => texture.createView('mutable');
+    attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Texture not usable as storage, call $usage('storage') first", viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as storage, call $usage('storage') first"'.`,
+      );
 
     const texture2 = texture.$usage('sampled');
 
-    const getSampled2 = () => texture2.createView('sampled');
+    texture2.createView(d.texture2d(d.f32));
+
     // @ts-expect-error
-    const getReadonly2 = () => texture2.createView('readonly');
-    // @ts-expect-error
-    const getWriteonly2 = () => texture2.createView('writeonly');
-    // @ts-expect-error
-    const getMutable2 = () => texture2.createView('mutable');
-  });
-});
-
-describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'2d', Vec4f>
-    >();
-
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'3d', Vec4u>
-    >();
-
-    expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'3d', Vec4u>
-    >();
-
-    expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'3d', Vec4u>
-    >();
-
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('storage');
-
-    expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
-      TgpuReadonlyTexture<'1d', Vec4i>
-    >();
-
-    expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
-      TgpuWriteonlyTexture<'1d', Vec4i>
-    >();
-
-    expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
-      TgpuMutableTexture<'1d', Vec4i>
-    >();
+    attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
+      .type.errors.snap(
+        'Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+      );
   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
+  it('rejects invalid formats for storage texture views', ({ root }) => {
     const texture = root
       .createTexture({
-        size: [512, 512],
+        size: [1, 1],
         format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('storage');
+        viewFormats: ['rgba8unorm-srgb'],
+      }).$usage('storage');
 
-    texture.createView('readonly', {
+    // @ts-expect-error
+    attest(texture.createView(d.textureStorage2d('rgba8snorm', 'read-only')))
+      .type.errors.snap(
+        `No overload matches this call.Overload 1 of 2, '(args_0: "(Error) Texture not usable as sampled, call $usage('sampled') first"): TgpuTextureView<WgslTexture2d<F32>>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as sampled, call $usage('sampled') first"'.
+Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'", viewDescriptor?: (TgpuTextureViewDescriptor & { ...; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8snorm", "read-only">' is not assignable to parameter of type '"(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'"'.`,
+      );
+
+    // valid
+    texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
+
+    // not a valid storage format
+    attest(
       // @ts-expect-error
-      format: 'rgba8snorm',
-    });
-
-    texture.createView('writeonly', {
-      // @ts-expect-error
-      format: 'rg32uint',
-    });
-
-    texture.createView('mutable', {
-      // @ts-expect-error
-      format: 'rgba32float',
-    });
-  });
-});
-
-describe('TgpuSampledTexture', () => {
-  it('inherits the dimension and format from its owner texture', ({ root }) => {
-    const texture1 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'2d', F32>
-    >();
-
-    const texture2 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8uint',
-        dimension: '3d',
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'3d', U32>
-    >();
-
-    const texture3 = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8sint',
-        dimension: '1d',
-        viewFormats: ['rgba8unorm'],
-      })
-      .$usage('sampled');
-
-    expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
-      TgpuSampledTexture<'1d', I32>
-    >();
+      d.textureStorage2d('rgba8unorm-srgb', 'read-only'),
+    )
+      .type.errors.snap(
+        "Argument of type '\"rgba8unorm-srgb\"' is not assignable to parameter of type 'StorageTextureFormats'.",
+      );
   });
 
-  it('rejects formats different than those specified when defining the texture', ({ root }) => {
-    const texture = root
-      .createTexture({
-        size: [512, 512],
-        format: 'rgba8unorm',
-        dimension: '3d',
-      })
-      .$usage('sampled');
+  describe('Texture view', () => {
+    it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({ root }) => {
+      const texture1 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled');
 
-    texture.createView('sampled', {
+      expectTypeOf(texture1.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture2d<d.F32>>
+      >();
+
+      const texture2 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8uint',
+          dimension: '3d',
+        })
+        .$usage('sampled');
+
+      expectTypeOf(texture2.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture3d<d.U32>>
+      >();
+
+      const texture3 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8sint',
+          dimension: '1d',
+          viewFormats: ['rgba8sint'],
+        })
+        .$usage('sampled');
+
+      expectTypeOf(texture3.createView()).toEqualTypeOf<
+        TgpuTextureView<d.WgslTexture1d<d.I32>>
+      >();
+
+      const texture4 = root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('storage');
+
       // @ts-expect-error
-      format: 'rgba8snorm',
+      attest(texture4.createView()).type.errors.snap(
+        'Expected 1-2 arguments, but got 0.',
+      );
+    });
+
+    describe('Texture methods', () => {
+      it('calls queue.writeTexture when clear is called', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        texture.clear();
+
+        // Should clear all 3 mip levels
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(3);
+
+        // Verify mip level 0: 64x32
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          1,
+          { texture: expect.anything(), mipLevel: 0 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 256, rowsPerImage: 32 }, // 64 * 4 bytes per pixel
+          [64, 32, 1],
+        );
+
+        // Verify mip level 1: 32x16
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          2,
+          { texture: expect.anything(), mipLevel: 1 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 128, rowsPerImage: 16 }, // 32 * 4 bytes per pixel
+          [32, 16, 1],
+        );
+
+        // Verify mip level 2: 16x8
+        expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+          3,
+          { texture: expect.anything(), mipLevel: 2 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 64, rowsPerImage: 8 }, // 16 * 4 bytes per pixel
+          [16, 8, 1],
+        );
+      });
+
+      it('calls queue.writeTexture for specific mip level when clear is called with mipLevel', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        texture.clear(1);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 1 },
+          expect.any(Uint8Array),
+          { bytesPerRow: 128, rowsPerImage: 16 }, // 32 * 4 bytes per pixel for mip 1
+          [32, 16, 1],
+        );
+      });
+
+      it('calls appropriate device methods when generateMipmaps is called', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+          mipLevelCount: 4,
+        }).$usage('render');
+
+        texture.generateMipmaps();
+
+        expect(
+          device.mock.createShaderModule.mock.calls.flatMap((call) =>
+            call.flatMap((arg) => (arg as { code: string }).code)
+          ),
+        )
+          .toMatchInlineSnapshot(`
+            [
+              "
+            struct VertexOutput {
+              @builtin(position) pos: vec4f,
+              @location(0) uv: vec2f,
+            }
+
+            @vertex
+            fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+              let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+              let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+              var output: VertexOutput;
+              output.pos = vec4f(pos[vertexIndex], 0, 1);
+              output.uv = uv[vertexIndex];
+              return output;
+            }
+                  ",
+              "
+            @group(0) @binding(0) var inputTexture: texture_2d<f32>;
+            @group(0) @binding(1) var inputSampler: sampler;
+
+            @fragment
+            fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+              return textureSample(inputTexture, inputSampler, uv);
+            }
+                  ",
+            ]
+          `);
+
+        expect(device.mock.createRenderPipeline).toHaveBeenCalledWith(
+          expect.objectContaining({
+            vertex: expect.objectContaining({
+              module: expect.anything(),
+            }),
+            fragment: expect.objectContaining({
+              module: expect.anything(),
+              targets: [{ format: 'rgba8unorm' }],
+            }),
+            primitive: { topology: 'triangle-list' },
+          }),
+        );
+
+        expect(device.mock.createSampler).toHaveBeenCalledWith({
+          magFilter: 'linear',
+          minFilter: 'linear',
+        });
+
+        expect(device.mock.createBindGroupLayout).toHaveBeenCalledWith({
+          entries: [
+            {
+              binding: 0,
+              visibility: GPUShaderStage.FRAGMENT,
+              texture: { sampleType: 'float' },
+            },
+            {
+              binding: 1,
+              visibility: GPUShaderStage.FRAGMENT,
+              sampler: { type: 'filtering' },
+            },
+          ],
+        });
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls generateMipmaps with specific parameters', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 5,
+        }).$usage('render');
+
+        texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
+
+        // Should create shader modules for mipmap generation (fresh cache per test)
+        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+
+        // Should call submit for each mip level transition (2 levels: 1->2, 2->3)
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls queue.writeTexture when write is called with buffer data', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+        });
+
+        const data = new Uint8Array(64); // 4x4x4 bytes per pixel
+        texture.write(data, 0);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({
+            texture: expect.anything(),
+            mipLevel: 0,
+          }),
+          data,
+          expect.objectContaining({
+            bytesPerRow: 16, // 4 pixels * 4 bytes per pixel
+            rowsPerImage: 4,
+          }),
+          [4, 4, 1],
+        );
+      });
+
+      it('calls write with buffer data for specific mip level', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        const data = new Uint8Array(16); // 2x2x4 bytes for mip level 2
+        texture.write(data, 2);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 2 },
+          data,
+          { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
+          [2, 2, 1], // Mip level 2 dimensions
+        );
+      });
+
+      it('calls queue.copyExternalImageToTexture when write is called with image source', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage);
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: mockImage },
+            expect.objectContaining({
+              texture: expect.anything(),
+            }),
+            [32, 32],
+          );
+      });
+
+      it('handles resizing when image dimensions do not match texture', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        });
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage);
+
+        // Should create textures for resampling since image size doesn't match texture size
+        expect(device.mock.createTexture).toHaveBeenCalled();
+        expect(device.mock.createShaderModule).toHaveBeenCalled();
+        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+
+        // Verify that command encoder and render pass are used for resampling
+        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+        expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('calls device methods when copyFrom is called', ({ root, device }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.copyFrom(sourceTexture);
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+
+        const commandEncoder = device.mock.createCommandEncoder.mock
+          .results[device.mock.createCommandEncoder.mock.results.length - 1]
+          ?.value;
+        expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
+          { texture: expect.anything() },
+          { texture: expect.anything() },
+          [16, 16],
+        );
+
+        expect(commandEncoder?.finish).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+      });
+
+      it('throws error when copyFrom is called with mismatched format', ({ root }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8sint',
+        });
+
+        // @ts-expect-error - Testing format mismatch error
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
+          'Texture format mismatch',
+        );
+      });
+
+      it('throws error when copyFrom is called with mismatched size', ({ root }) => {
+        const sourceTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        // @ts-expect-error - Testing size mismatch error
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
+          'Texture size mismatch',
+        );
+      });
+
+      it('throws error when write is called with incorrect buffer size', ({ root }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+        });
+
+        const incorrectData = new Uint8Array(32); // Should be 64 bytes for 4x4x4
+
+        expect(() => texture.write(incorrectData)).toThrow(
+          'Buffer size mismatch',
+        );
+      });
+
+      it('warns and returns early when generateMipmaps would generate no mipmaps', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        }).$usage('render');
+
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
+          () => {},
+        );
+
+        // Base mip level 3 would result in 0 mip levels to generate, so it should return early
+        expect(() => texture.generateMipmaps(3)).not.toThrow();
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'generateMipmaps is a no-op: would generate 0 mip levels (base: 3, total: 3)',
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      it('warns when generateMipmaps would generate only 1 mip level', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        }).$usage('render');
+
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
+          () => {},
+        );
+
+        // Base mip level 2 would result in 1 mip level to generate (3-2=1), so it should warn and return early
+        expect(() => texture.generateMipmaps(2)).not.toThrow();
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'generateMipmaps is a no-op: would generate 1 mip levels (base: 2, total: 3)',
+        );
+
+        consoleSpy.mockRestore();
+      });
+
+      it('throws an error and warns on the type level when the required render usage is missing', ({ root }) => {
+        const texture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+
+        // TODO: Maybe figure out a way to make this a type level error again?
+        // expectTypeOf(texture.generateMipmaps).toExtend<
+        //   (
+        //     missingUsage:
+        //       "(Error) generateMipmaps requires the texture to be usable as a render target. Use .$usage('render') first.",
+        //   ) => void
+        // >;
+
+        expect(() => texture.generateMipmaps())
+          .toThrowErrorMatchingInlineSnapshot(
+            `[Error: generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.]`,
+          );
+      });
     });
   });
 });

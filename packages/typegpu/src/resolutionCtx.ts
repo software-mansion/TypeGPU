@@ -290,7 +290,7 @@ const INDENT = [
 const N = INDENT.length - 1;
 
 export class IndentController {
-  private identLevel = 0;
+  identLevel = 0;
 
   get pre(): string {
     return (
@@ -834,7 +834,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     throw new WgslTypeError(
       `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
-        schema ? ` to type ${schema}` : ''
+        schema ? ` to type ${schema.type}` : ''
       }`,
     );
   }

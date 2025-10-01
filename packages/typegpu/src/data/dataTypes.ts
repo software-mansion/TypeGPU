@@ -20,6 +20,11 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
+import type {
+  WgslExternalTexture,
+  WgslStorageTexture,
+  WgslTexture,
+} from './texture.ts';
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
@@ -216,7 +221,12 @@ export function isData(value: unknown): value is AnyData {
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
 export type AnyConcreteData = Exclude<
   AnyData,
-  wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
+  | wgsl.AbstractInt
+  | wgsl.AbstractFloat
+  | wgsl.Void
+  | WgslTexture
+  | WgslStorageTexture
+  | WgslExternalTexture
 >;
 
 export interface UnknownData {
