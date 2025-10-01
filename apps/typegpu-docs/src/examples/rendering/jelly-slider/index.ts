@@ -2,8 +2,32 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
+
 import { randf } from '@typegpu/noise';
 import { Slider } from './slider.ts';
+import { CameraController } from './camera.ts';
+import { EventHandler } from './events.ts';
+import {
+  AMBIENT_COLOR,
+  AMBIENT_INTENSITY,
+  AO_BIAS,
+  AO_INTENSITY,
+  AO_RADIUS,
+  AO_STEPS,
+  DEBUG_GIZMOS,
+  JELLY_ABSORB,
+  JELLY_IOR,
+  JELLY_SCATTER_STRENGTH,
+  JELLY_SCATTER_TINT,
+  LINE_HALF_THICK,
+  LINE_RADIUS,
+  MAX_DIST,
+  MAX_INTERNAL_STEPS,
+  MAX_STEPS,
+  SPECULAR_INTENSITY,
+  SPECULAR_POWER,
+  SURF_DIST,
+} from './constants.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -20,38 +44,77 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1.2, 0), d.vec2f(1, 0), 26);
+const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 18, -0.03);
 const sliderStorage = slider.pointsBuffer.as('readonly');
+const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
-const anglesStorage = slider.anglesBuffer.as('readonly');
 
-const [width, height] = [canvas.width * 0.8, canvas.height * 0.8];
-const rayMarchTexture = root['~unstable'].createTexture({
-  size: [width, height],
-  format: 'rgba8unorm',
-}).$usage('storage', 'sampled');
-const rayMarchWrite = rayMarchTexture.createView(
-  d.textureStorage2d('rgba8unorm'),
-);
-const rayMarchSampled = rayMarchTexture.createView();
+const [width, height] = [canvas.width * 0.7, canvas.height * 0.7];
+
+const textures = [0, 1].map(() => {
+  const texture = root['~unstable'].createTexture({
+    size: [width, height],
+    format: 'rgba8unorm',
+  }).$usage('storage', 'sampled');
+  const depthTexture = root['~unstable'].createTexture({
+    size: [width, height],
+    format: 'r32float',
+  }).$usage('storage', 'sampled');
+
+  return {
+    write: texture.createView(d.textureStorage2d('rgba8unorm')),
+    sampled: texture.createView(),
+    depth: depthTexture.createView(
+      d.textureStorage2d('r32float', 'read-write'),
+    ),
+    depthSampled: depthTexture.createView(d.texture2d(), {
+      sampleType: 'unfilterable-float',
+    }),
+  };
+});
 
 const filteringSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const Camera = d.struct({
-  position: d.vec3f,
-  focus: d.vec3f,
-  up: d.vec3f,
-  fov: d.f32,
+const rayMarchLayout = tgpu.bindGroupLayout({
+  currentTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
+  currentDepth: {
+    storageTexture: d.textureStorage2d('r32float', 'write-only'),
+  },
 });
-const cameraUniform = root.createUniform(Camera, {
-  position: d.vec3f(0.024, 2.7, 1.9),
-  focus: d.vec3f(0, 0, 0),
-  up: d.vec3f(0, 1, 0),
-  fov: Math.PI / 4,
+
+const taaResolveLayout = tgpu.bindGroupLayout({
+  currentTexture: {
+    texture: d.texture2d(),
+  },
+  historyTexture: {
+    texture: d.texture2d(),
+  },
+  outputTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
 });
+
+const sampleLayout = tgpu.bindGroupLayout({
+  currentTexture: {
+    texture: d.texture2d(),
+  },
+});
+
+const camera = new CameraController(
+  root,
+  d.vec3f(0.024, 2.7, 1.9),
+  d.vec3f(0, 0, 0),
+  d.vec3f(0, 1, 0),
+  Math.PI / 4,
+  width,
+  height,
+);
+const cameraUniform = camera.cameraUniform;
 
 const DirectionalLight = d.struct({
   direction: d.vec3f,
@@ -67,74 +130,95 @@ const HitInfo = d.struct({
   objectType: d.i32,
 });
 
-const AMBIENT_COLOR = d.vec3f(1);
-const AMBIENT_INTENSITY = 0.5;
-const SPECULAR_POWER = 32.0;
-const SPECULAR_INTENSITY = 0.4;
+const sdDebugPoints = (p: d.v3f) => {
+  'kernel';
+  let dmin = d.f32(1e9);
+  for (let i = 0; i < sliderStorage.$.length; i++) {
+    const pt = sliderStorage.$[i];
+    const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
+    if (dist < dmin) dmin = dist;
+  }
+  return dmin;
+};
 
-const MAX_STEPS = 100;
-const MAX_DIST = 10;
-const SURF_DIST = 0.001;
+const sdDebugControlPoints = (p: d.v3f) => {
+  'kernel';
+  let dmin = d.f32(1e9);
+  for (let i = 0; i < controlPointsStorage.$.length; i++) {
+    const pt = controlPointsStorage.$[i];
+    const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
+    if (dist < dmin) dmin = dist;
+  }
+  return dmin;
+};
 
-const JELLY_IOR = 1.42;
-const JELLY_ABSORB = d.vec3f(1.6, 3.2, 6.0).mul(15);
-const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.5, 0.15);
-const JELLY_SCATTER_STRENGTH = 0.7;
-const MAX_INTERNAL_STEPS = 20;
-const JELLY_EDGE_BLEND = 0.02;
-
-const AO_STEPS = 4;
-const AO_RADIUS = 0.14;
-const AO_INTENSITY = 1;
-const AO_BIAS = SURF_DIST * 4.0;
-
-const LINE_RADIUS = 0.024;
-const LINE_HALF_THICK = 0.18;
-const LINE_Y_OFFSET = 0.04;
-
-const segW = tgpu['~unstable'].privateVar(d.vec2f);
-const segIdx = tgpu['~unstable'].privateVar(d.vec2i);
+const sdDebugNormals = (p: d.v3f) => {
+  'kernel';
+  let dmin = d.f32(1e9);
+  for (let i = 0; i < sliderStorage.$.length; i++) {
+    const pt = sliderStorage.$[i];
+    const n = normalsStorage.$[i];
+    const a = d.vec3f(pt, 0);
+    const b = d.vec3f(pt, 0).add(d.vec3f(n, 0).mul(0.2));
+    const dist = sdf.sdCapsule(p, a, b, 0.01);
+    if (dist < dmin) dmin = dist;
+  }
+  return dmin;
+};
 
 const sdInflatedPolyline2D = (p: d.v2f) => {
   'kernel';
   let dmin = d.f32(1e9);
-  let bestI = d.i32(-1);
-  let bestT = d.f32(0.0);
 
-  for (let i = 1; i < sliderStorage.$.length; i++) {
+  for (let i = 1; i < sliderStorage.$.length - 1; i++) {
     const a = sliderStorage.$[i - 1];
     const b = sliderStorage.$[i];
-    const anglesA = anglesStorage.$[i - 1];
-    const anglesB = anglesStorage.$[i];
+    const c = controlPointsStorage.$[i - 1];
 
-    const ab = std.sub(b, a);
-    const ap = std.sub(p, a);
-    const extensionA = std.tan(anglesA.y - Math.PI / 2) * LINE_RADIUS;
-    const extensionB = std.tan(anglesB.x - Math.PI / 2) * LINE_RADIUS;
-    const abLen = std.length(ab);
-    const extendedLen = abLen + extensionA + extensionB;
-    const t = (std.dot(ap, ab) / abLen + extensionA) / extendedLen;
+    let segUnsigned = d.f32();
 
-    const segUnsigned = sdf.sdLine(p, a, b);
-    const seg = segUnsigned - LINE_RADIUS;
+    segUnsigned = sdf.sdBezier(p, a, c, b);
+    const seg = segUnsigned;
     if (seg < dmin) {
       dmin = seg;
-      bestI = i;
-      bestT = t;
     }
   }
-
-  segIdx.$ = d.vec2i(bestI - 1, bestI);
-  segW.$ = d.vec2f(1.0 - bestT, bestT);
 
   return dmin;
 };
 
 const sliderSdf3D = (position: d.v3f) => {
   'kernel';
-  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
-  const poly2D = sdInflatedPolyline2D(p2);
-  return sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK);
+
+  // Body from the polyline center distance, extruded in Z, then inflated by LINE_RADIUS
+  const poly2D = sdInflatedPolyline2D(position.xy);
+  const body = sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK) - LINE_RADIUS;
+
+  const len = sliderStorage.$.length;
+  const secondLastPoint = sliderStorage.$[len - 2];
+  const lastPoint = sliderStorage.$[len - 1];
+
+  const angle = std.atan2(
+    lastPoint.y - secondLastPoint.y,
+    lastPoint.x - secondLastPoint.x,
+  );
+  const rot = d.mat2x2f(
+    std.cos(angle),
+    -std.sin(angle),
+    std.sin(angle),
+    std.cos(angle),
+  );
+
+  let pieP = position.sub(d.vec3f(secondLastPoint, 0));
+  pieP = d.vec3f(rot.mul(pieP.xy), pieP.z);
+  const hmm = sdf.sdPie(pieP.zx, d.vec2f(1, 0), LINE_HALF_THICK);
+  const extrudeEnd = sdf.opExtrudeY(
+    pieP,
+    hmm,
+    0.001,
+  ) - LINE_RADIUS;
+
+  return sdf.opUnion(body, extrudeEnd);
 };
 
 const getMainSceneDist = (position: d.v3f) => {
@@ -156,6 +240,36 @@ const getSceneDist = (position: d.v3f) => {
   const poly3D = sliderSdf3D(position);
 
   const hitInfo = HitInfo();
+
+  if (DEBUG_GIZMOS) {
+    const debugContr = sdDebugControlPoints(position);
+    const debugPoints = sdDebugPoints(position);
+    const debugNormals = sdDebugNormals(position);
+
+    if (
+      debugNormals < debugPoints && debugNormals < debugContr &&
+      debugNormals < poly3D && debugNormals < mainScene
+    ) {
+      hitInfo.distance = debugNormals;
+      hitInfo.objectType = 5; // Debug normals
+      return hitInfo;
+    }
+
+    if (
+      debugPoints < debugContr && debugPoints < poly3D &&
+      debugPoints < mainScene
+    ) {
+      hitInfo.distance = debugPoints;
+      hitInfo.objectType = 3; // Debug points
+      return hitInfo;
+    }
+
+    if (debugContr < poly3D && debugContr < mainScene) {
+      hitInfo.distance = debugContr;
+      hitInfo.objectType = 4; // Debug control points
+      return hitInfo;
+    }
+  }
 
   if (poly3D < mainScene) {
     hitInfo.distance = poly3D;
@@ -237,43 +351,6 @@ const beerLambert = (sigma: d.v3f, dist: number) => {
   );
 };
 
-// Interpolated curve normal blended toward ±Z near extruded edges.
-const getJellyNormal = (position: d.v3f) => {
-  'kernel';
-  const p2 = std.add(position.xy, d.vec2f(0.0, LINE_Y_OFFSET));
-
-  // Evaluate 2D SDF here to lock segIdx/segW for this position
-  const d2 = sdInflatedPolyline2D(p2);
-
-  // Interpolated curve normal (smoothed "fake curve" normal)
-  let n2 = normalsStorage.$[segIdx.$.x]
-    .mul(segW.$.x)
-    .add(normalsStorage.$[segIdx.$.y].mul(segW.$.y));
-  n2 = std.normalize(n2);
-
-  // Orient to outward gradient to avoid flipping artifacts
-  const eps = 0.0005;
-  const gx = sdInflatedPolyline2D(std.add(p2, d.vec2f(eps, 0.0))) -
-    sdInflatedPolyline2D(std.sub(p2, d.vec2f(eps, 0.0)));
-  const gy = sdInflatedPolyline2D(std.add(p2, d.vec2f(0.0, eps))) -
-    sdInflatedPolyline2D(std.sub(p2, d.vec2f(0.0, eps)));
-  const grad2 = std.normalize(d.vec2f(gx, gy));
-  if (std.dot(grad2, n2) < 0.0) {
-    n2 = std.mul(n2, -1.0);
-  }
-  const Nxy = std.normalize(d.vec3f(n2, 0.0));
-
-  // Blend weights: close to 2D boundary => Nxy, close to Z side => ±Z
-  const dz = std.abs(std.abs(position.z) - LINE_HALF_THICK);
-  const wZ = std.min(1.0, std.max(0.0, 1.0 - dz / JELLY_EDGE_BLEND));
-  const wXY = std.min(1.0, std.max(0.0, 1.0 - std.abs(d2) / JELLY_EDGE_BLEND));
-  const Nz = d.vec3f(0.0, 0.0, std.sign(position.z) * 1.0);
-
-  const Nmix = std.add(std.mul(Nxy, wXY), std.mul(Nz, wZ));
-  return std.normalize(Nmix);
-};
-
-// One-hop ray march that ignores the slider
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
   let distanceFromOrigin = d.f32();
@@ -318,9 +395,14 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   return d.vec3f(0.0, 0.0, 0.0);
 };
 
+const MarchingResult = d.struct({
+  color: d.vec4f,
+  hitPos: d.vec3f,
+});
+
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
-  let distanceFromOrigin = d.f32();
+  let distanceFromOrigin = d.f32(0);
   let hitInfo = HitInfo();
 
   for (let i = 0; i < MAX_STEPS; i++) {
@@ -328,6 +410,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       rayOrigin,
       std.mul(rayDirection, distanceFromOrigin),
     );
+
     hitInfo = getSceneDist(currentPosition);
     distanceFromOrigin += hitInfo.distance;
 
@@ -341,10 +424,27 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       rayOrigin,
       std.mul(rayDirection, distanceFromOrigin),
     );
-    let normal = getNormal(hitPosition);
-    if (hitInfo.objectType === 1) {
-      normal = getJellyNormal(hitPosition);
+    if (DEBUG_GIZMOS) {
+      if (hitInfo.objectType === 3) {
+        return MarchingResult({
+          color: d.vec4f(1, 0, 0, 1), // Debug points in red
+          hitPos: hitPosition,
+        });
+      }
+      if (hitInfo.objectType === 4) {
+        return MarchingResult({
+          color: d.vec4f(0, 1, 0, 1), // Debug control points in green
+          hitPos: hitPosition,
+        });
+      }
+      if (hitInfo.objectType === 5) {
+        return MarchingResult({
+          color: d.vec4f(0, 0, 1, 1), // Debug normals in blue
+          hitPos: hitPosition,
+        });
+      }
     }
+    const normal = getNormal(hitPosition);
 
     const lightDir = std.mul(lightUniform.$.direction, -1.0);
     const diffuse = std.max(std.dot(normal, lightDir), 0.0);
@@ -373,10 +473,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
     const litColor = std.add(std.add(directionalLight, ambientLight), specular);
 
     if (hitInfo.objectType === 1) {
-      const originalSegment = segIdx.$.x;
-      const originalT = segW.$.x;
-
-      const N = getJellyNormal(hitPosition);
+      const N = getNormal(hitPosition);
       const I = rayDirection;
       const cosi = std.min(
         1.0,
@@ -413,15 +510,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
         const env = rayMarchNoJelly(exitPos, refrDir);
         const T = beerLambert(
-          JELLY_ABSORB.mul(
-            std.min(
-              1.0,
-              std.pow(
-                (originalSegment + 1 - originalT) / sliderStorage.$.length,
-                3,
-              ),
-            ),
-          ),
+          JELLY_ABSORB,
           insideLen,
         );
         // Subtle forward-scatter glow
@@ -437,15 +526,24 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         std.mul(reflection, F),
         std.mul(refractedColor, 1.0 - F),
       );
-      return d.vec4f(jelly, 1.0);
+      return MarchingResult({
+        color: d.vec4f(jelly, 1.0),
+        hitPos: hitPosition,
+      });
     }
 
     const ao = calculateAO(hitPosition, normal);
     const finalColor = std.mul(litColor, ao);
 
-    return d.vec4f(finalColor, 1.0);
+    return MarchingResult({
+      color: d.vec4f(finalColor, 1.0),
+      hitPos: hitPosition,
+    });
   }
-  return d.vec4f();
+  return MarchingResult({
+    color: d.vec4f(),
+    hitPos: d.vec3f(),
+  });
 };
 
 const raymarchFn = tgpu['~unstable'].computeFn({
@@ -454,31 +552,116 @@ const raymarchFn = tgpu['~unstable'].computeFn({
     gid: d.builtin.globalInvocationId,
   },
 })(({ gid }) => {
-  randf.seed2(d.vec2f(gid.xy).div(d.vec2f(width, height)));
-  const rayOrigin = cameraUniform.$.position;
+  const dimensions = std.textureDimensions(rayMarchLayout.$.currentTexture);
+  randf.seed2(d.vec2f(gid.xy).div(d.vec2f(dimensions)));
 
-  const u = (gid.x / width) * 2.0 - 1.0;
-  const v = 1.0 - (gid.y / height) * 2.0;
+  const u = (gid.x / dimensions.x) * 2.0 - 1.0;
+  const v = 1.0 - (gid.y / dimensions.y) * 2.0;
 
-  const forward = std.normalize(
-    std.sub(cameraUniform.$.focus, cameraUniform.$.position),
+  const clipPos = d.vec4f(u, v, -1.0, 1.0);
+
+  const invView = cameraUniform.$.viewInv;
+  const invProj = cameraUniform.$.projInv;
+
+  const viewPos = std.mul(invProj, clipPos);
+  const viewPosNormalized = d.vec4f(viewPos.xyz.div(viewPos.w), 1.0);
+
+  const worldPos = std.mul(invView, viewPosNormalized);
+
+  const rayOrigin = invView.columns[3].xyz;
+
+  const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
+
+  const hitInfo = rayMarch(rayOrigin, rayDir);
+
+  let depth = d.f32(1.0);
+
+  // Check if we have a valid hit by looking at the alpha channel of the color (should always be the case)
+  if (hitInfo.color.w > 0.0) {
+    const viewSpacePos = std.mul(
+      cameraUniform.$.view,
+      d.vec4f(hitInfo.hitPos, 1.0),
+    );
+    const nearPlane = 0.1;
+    const farPlane = d.f32(10);
+    const linearDepth = -viewSpacePos.z;
+    depth = (linearDepth - nearPlane) / (farPlane - nearPlane);
+    depth = std.saturate(depth);
+  }
+
+  std.textureStore(
+    rayMarchLayout.$.currentDepth,
+    d.vec2u(gid.x, gid.y),
+    d.vec4f(depth, 0, 0, 0),
   );
-  const right = std.normalize(std.cross(forward, cameraUniform.$.up));
-  const up = std.cross(right, forward);
 
-  const aspectRatio = width / height;
-  const tanHalfFov = std.tan(cameraUniform.$.fov / 2.0);
+  std.textureStore(
+    rayMarchLayout.$.currentTexture,
+    d.vec2u(gid.x, gid.y),
+    hitInfo.color,
+  );
+});
 
-  const offsetRight = std.mul(right, u * aspectRatio * tanHalfFov);
-  const offsetUp = std.mul(up, v * tanHalfFov);
-
-  const rayDir = std.normalize(
-    std.add(std.add(forward, offsetRight), offsetUp),
+const taaResolveFn = tgpu['~unstable'].computeFn({
+  workgroupSize: [16, 16],
+  in: {
+    gid: d.builtin.globalInvocationId,
+  },
+})(({ gid }) => {
+  const currentColor = std.textureLoad(
+    taaResolveLayout.$.currentTexture,
+    d.vec2u(gid.xy),
+    0,
   );
 
-  const color = rayMarch(rayOrigin, rayDir);
+  const historyColor = std.textureLoad(
+    taaResolveLayout.$.historyTexture,
+    d.vec2u(gid.xy),
+    0,
+  );
 
-  std.textureStore(rayMarchWrite.$, d.vec2u(gid.x, gid.y), color);
+  let minColor = d.vec3f(9999.0);
+  let maxColor = d.vec3f(-9999.0);
+
+  const dimensions = std.textureDimensions(taaResolveLayout.$.currentTexture);
+
+  // Sample 3x3 neighborhood to create bounding box in color space
+  for (let x = -1; x <= 1; x++) {
+    for (let y = -1; y <= 1; y++) {
+      const sampleCoord = d.vec2i(gid.xy).add(d.vec2i(x, y));
+      // Clamp to texture bounds
+      const clampedCoord = std.clamp(
+        sampleCoord,
+        d.vec2i(0, 0),
+        d.vec2i(dimensions.xy).sub(d.vec2i(1)),
+      );
+
+      const neighborColor = std.textureLoad(
+        taaResolveLayout.$.currentTexture,
+        clampedCoord,
+        0,
+      );
+
+      minColor = std.min(minColor, neighborColor.xyz);
+      maxColor = std.max(maxColor, neighborColor.xyz);
+    }
+  }
+
+  // Clamp history color to neighborhood bounding box
+  const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
+
+  // Blend current with clamped history
+  const blendFactor = d.f32(0.9);
+  const resolvedColor = d.vec4f(
+    std.mix(currentColor.xyz, historyColorClamped, blendFactor),
+    1.0,
+  );
+
+  std.textureStore(
+    taaResolveLayout.$.outputTexture,
+    d.vec2u(gid.x, gid.y),
+    resolvedColor,
+  );
 });
 
 const computePipeline = root['~unstable']
@@ -486,6 +669,10 @@ const computePipeline = root['~unstable']
   .createPipeline().withPerformanceCallback((s, e) => {
     console.log(`${Number(e - s) / 1_000_000} ms`);
   });
+
+const taaResolvePipeline = root['~unstable']
+  .withCompute(taaResolveFn)
+  .createPipeline();
 
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -504,62 +691,14 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  return std.textureSample(rayMarchSampled.$, filteringSampler, input.uv);
+  return std.textureSample(
+    sampleLayout.$.currentTexture,
+    filteringSampler,
+    input.uv,
+  );
 });
 
-let mouseX = 1.0;
-let targetMouseX = 1.0;
-let isMouseDown = false;
-const mouseSmoothing = 0.08;
-
-canvas.addEventListener('mouseup', () => {
-  isMouseDown = false;
-});
-
-canvas.addEventListener('mouseleave', () => {
-  isMouseDown = false;
-});
-
-canvas.addEventListener('mousedown', (e) => {
-  isMouseDown = true;
-  const rect = canvas.getBoundingClientRect();
-  const normalizedX = (e.clientX - rect.left) / rect.width;
-  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
-  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!isMouseDown) return;
-  const rect = canvas.getBoundingClientRect();
-  const normalizedX = (e.clientX - rect.left) / rect.width;
-  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
-  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
-});
-
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  isMouseDown = true;
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const normalizedX = (touch.clientX - rect.left) / rect.width;
-  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
-  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
-});
-
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (!isMouseDown) return;
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const normalizedX = (touch.clientX - rect.left) / rect.width;
-  const clampedX = Math.max(0.45, Math.min(0.9, normalizedX));
-  targetMouseX = ((clampedX - 0.4) / (0.9 - 0.4)) * (1.0 - (-0.7)) + (-0.5);
-});
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  isMouseDown = false;
-});
+const eventHandler = new EventHandler(canvas);
 
 const renderPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
@@ -567,28 +706,77 @@ const renderPipeline = root['~unstable']
   .createPipeline();
 
 let lastTimeStamp = performance.now();
+let frameCount = 0;
+
+const resolvedTextures = [0, 1].map(() => {
+  const texture = root['~unstable'].createTexture({
+    size: [width, height],
+    format: 'rgba8unorm',
+  }).$usage('storage', 'sampled');
+
+  return {
+    write: texture.createView(d.textureStorage2d('rgba8unorm')),
+    sampled: texture.createView(),
+  };
+});
+
 function render(timestamp: number) {
+  frameCount++;
+  camera.jitter();
   const deltaTime = (timestamp - lastTimeStamp) * 0.001;
   lastTimeStamp = timestamp;
 
-  if (isMouseDown) {
-    mouseX += (targetMouseX - mouseX) * mouseSmoothing;
-  }
-  slider.setDragX(mouseX);
+  eventHandler.update();
+  slider.setDragX(eventHandler.currentMouseX);
 
   slider.update(deltaTime);
 
-  computePipeline.dispatchWorkgroups(
+  const currentFrame = frameCount % 2;
+  const previousFrame = 1 - currentFrame;
+
+  // First pass: Ray march to current texture
+  computePipeline.with(
+    rayMarchLayout,
+    root.createBindGroup(rayMarchLayout, {
+      currentTexture: textures[currentFrame].write,
+      currentDepth: textures[currentFrame].depth,
+    }),
+  ).dispatchWorkgroups(
     Math.ceil(width / 16),
     Math.ceil(height / 16),
   );
 
+  // Second pass: TAA resolve
+  taaResolvePipeline.with(
+    taaResolveLayout,
+    root.createBindGroup(taaResolveLayout, {
+      currentTexture: textures[currentFrame].sampled,
+      historyTexture: frameCount === 1
+        ? textures[currentFrame].sampled
+        : resolvedTextures[previousFrame].sampled,
+      outputTexture: resolvedTextures[currentFrame].write,
+    }),
+  ).dispatchWorkgroups(
+    Math.ceil(width / 16),
+    Math.ceil(height / 16),
+  );
+
+  // Final pass: Render resolved result to screen
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
+    .with(
+      sampleLayout,
+      root.createBindGroup(
+        sampleLayout,
+        {
+          currentTexture: resolvedTextures[currentFrame].sampled,
+        },
+      ),
+    )
     .draw(3);
 
   requestAnimationFrame(render);
@@ -601,7 +789,7 @@ export const controls = {
   'Light dir': {
     initial: d.vec3f(0.19, -0.24, 0.75),
     min: d.vec3f(-1, -1, -1),
-    max: d.vec3f(1, 1, 1),
+    max: d.vec3f(1, 0, 1),
     step: d.vec3f(0.01, 0.01, 0.01),
     onVectorSliderChange: (v: [number, number, number]) => {
       lightUniform.writePartial({
