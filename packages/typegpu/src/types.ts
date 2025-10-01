@@ -132,7 +132,7 @@ export interface ItemStateStack {
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
+  defineBlockVariable(id: string, snippet: Snippet): void;
 }
 
 /**
@@ -287,6 +287,7 @@ export interface ResolutionCtx {
   get varyingLocations(): Record<string, number> | undefined;
 
   getUniqueName(resource: object): string;
+  makeNameValid(name: string): string;
 }
 
 /**
@@ -363,10 +364,4 @@ export function isBufferUsage<
     | TgpuBufferMutable<BaseData>,
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
-}
-
-export function isMarkedInternal(
-  value: unknown,
-): value is { [$internal]: Record<string, unknown> } {
-  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
 }

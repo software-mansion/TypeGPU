@@ -27,7 +27,7 @@ describe('frexp', () => {
       err = error as Error;
     }
     expect(err).toMatchInlineSnapshot(
-      '[Error: CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
+      '[MissingCpuImplError: CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
     );
   });
 });

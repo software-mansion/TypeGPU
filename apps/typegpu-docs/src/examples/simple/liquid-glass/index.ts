@@ -43,7 +43,7 @@ const Params = d.struct({
   tintStrength: d.f32,
   tintColor: d.vec3f,
 });
-const defaultParams: d.Infer<typeof Params> = {
+const defaultParams = {
   rectDims: d.vec2f(0.13, 0.01),
   radius: 0.003,
   start: 0.05,
