@@ -24,13 +24,13 @@ export class Slider {
 
   // Physics parameters
   iterations = 16;
-  substeps = 4;
+  substeps = 6;
   damping = 0.01;
   bendingStrength = 0.1;
   archStrength = 2;
   endFlatCount = 1;
-  endFlatStiffness = 0.3;
-  bendingExponent = 1;
+  endFlatStiffness = 0.1;
+  bendingExponent = 1.2;
   archEdgeDeadzone = 0.01;
 
   constructor(

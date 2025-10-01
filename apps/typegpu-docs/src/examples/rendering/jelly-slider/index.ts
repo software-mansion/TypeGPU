@@ -49,7 +49,7 @@ const sliderStorage = slider.pointsBuffer.as('readonly');
 const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
 
-const [width, height] = [canvas.width * 0.5, canvas.height * 0.5];
+const [width, height] = [canvas.width * 0.65, canvas.height * 0.65];
 
 const textures = [0, 1].map(() => {
   const texture = root['~unstable'].createTexture({
@@ -128,6 +128,8 @@ const lightUniform = root.createUniform(DirectionalLight, {
 const HitInfo = d.struct({
   distance: d.f32,
   objectType: d.i32,
+  segmentIndex: d.i32,
+  segmentT: d.f32,
 });
 
 const sdDebugPoints = (p: d.v3f) => {
@@ -166,25 +168,41 @@ const sdDebugNormals = (p: d.v3f) => {
   return dmin;
 };
 
+const LineInfo = d.struct({
+  closestSegIndex: d.i32,
+  t: d.f32,
+  distance: d.f32,
+});
+
 const sdInflatedPolyline2D = (p: d.v2f) => {
   'kernel';
   let dmin = d.f32(1e9);
+  let closestSegIndex = d.i32();
+  let closestT = d.f32();
 
   for (let i = 1; i < sliderStorage.$.length - 1; i++) {
     const a = sliderStorage.$[i - 1];
     const b = sliderStorage.$[i];
     const c = controlPointsStorage.$[i - 1];
 
-    let segUnsigned = d.f32();
+    const segUnsigned = sdf.sdBezier(p, a, c, b);
 
-    segUnsigned = sdf.sdBezier(p, a, c, b);
-    const seg = segUnsigned;
-    if (seg < dmin) {
-      dmin = seg;
+    if (segUnsigned < dmin) {
+      closestSegIndex = i - 1;
+      dmin = segUnsigned;
+
+      // Approximate t by projecting onto line segment a->b
+      const ab = b.sub(a);
+      const ap = p.sub(a);
+      closestT = std.saturate(std.dot(ap, ab) / std.dot(ab, ab));
     }
   }
 
-  return dmin;
+  return LineInfo({
+    closestSegIndex,
+    t: closestT,
+    distance: dmin,
+  });
 };
 
 const sliderSdf3D = (position: d.v3f) => {
@@ -192,7 +210,8 @@ const sliderSdf3D = (position: d.v3f) => {
 
   // Body from the polyline center distance, extruded in Z, then inflated by LINE_RADIUS
   const poly2D = sdInflatedPolyline2D(position.xy);
-  const body = sdf.opExtrudeZ(position, poly2D, LINE_HALF_THICK) - LINE_RADIUS;
+  const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
+    LINE_RADIUS;
 
   const len = sliderStorage.$.length;
   const secondLastPoint = sliderStorage.$[len - 2];
@@ -218,7 +237,11 @@ const sliderSdf3D = (position: d.v3f) => {
     0.001,
   ) - LINE_RADIUS;
 
-  return sdf.opUnion(body, extrudeEnd);
+  return LineInfo({
+    closestSegIndex: poly2D.closestSegIndex,
+    t: poly2D.t,
+    distance: sdf.opUnion(body, extrudeEnd),
+  });
 };
 
 const getMainSceneDist = (position: d.v3f) => {
@@ -248,7 +271,7 @@ const getSceneDist = (position: d.v3f) => {
 
     if (
       debugNormals < debugPoints && debugNormals < debugContr &&
-      debugNormals < poly3D && debugNormals < mainScene
+      debugNormals < poly3D.distance && debugNormals < mainScene
     ) {
       hitInfo.distance = debugNormals;
       hitInfo.objectType = 5; // Debug normals
@@ -256,7 +279,7 @@ const getSceneDist = (position: d.v3f) => {
     }
 
     if (
-      debugPoints < debugContr && debugPoints < poly3D &&
+      debugPoints < debugContr && debugPoints < poly3D.distance &&
       debugPoints < mainScene
     ) {
       hitInfo.distance = debugPoints;
@@ -264,16 +287,18 @@ const getSceneDist = (position: d.v3f) => {
       return hitInfo;
     }
 
-    if (debugContr < poly3D && debugContr < mainScene) {
+    if (debugContr < poly3D.distance && debugContr < mainScene) {
       hitInfo.distance = debugContr;
       hitInfo.objectType = 4; // Debug control points
       return hitInfo;
     }
   }
 
-  if (poly3D < mainScene) {
-    hitInfo.distance = poly3D;
+  if (poly3D.distance < mainScene) {
+    hitInfo.distance = poly3D.distance;
     hitInfo.objectType = 1; // Slider
+    hitInfo.segmentIndex = poly3D.closestSegIndex;
+    hitInfo.segmentT = poly3D.t;
   } else {
     hitInfo.distance = mainScene;
     hitInfo.objectType = 2; // Main scene
@@ -333,7 +358,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
   }
 
   const rawAO = 1.0 - (AO_INTENSITY * totalOcclusion) / AO_RADIUS;
-  return std.min(1.0, std.max(0.0, rawAO));
+  return std.saturate(rawAO);
 };
 
 const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
@@ -344,11 +369,7 @@ const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
 
 const beerLambert = (sigma: d.v3f, dist: number) => {
   'kernel';
-  return d.vec3f(
-    std.exp(-sigma.x * dist),
-    std.exp(-sigma.y * dist),
-    std.exp(-sigma.z * dist),
-  );
+  return std.exp(std.mul(sigma, -dist));
 };
 
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
@@ -501,7 +522,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
         let insideLen = d.f32();
         for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
-          const dIn = sliderSdf3D(p); // negative inside, ~0 at boundary
+          const dIn = sliderSdf3D(p).distance;
           const step = std.max(SURF_DIST, std.abs(dIn));
           p = std.add(p, std.mul(refrDir, step));
           insideLen += step;
@@ -509,15 +530,20 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         }
         const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
         const env = rayMarchNoJelly(exitPos, refrDir);
+
+        const totalSegments = sliderStorage.$.length - 2;
+        const progress = (hitInfo.segmentIndex + hitInfo.segmentT) /
+          totalSegments;
+
         const T = beerLambert(
-          JELLY_ABSORB,
+          JELLY_ABSORB.mul(progress ** 2),
           insideLen,
         );
         // Subtle forward-scatter glow
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
         const scatter = std.mul(
           JELLY_SCATTER_TINT,
-          JELLY_SCATTER_STRENGTH * forward,
+          JELLY_SCATTER_STRENGTH * forward * progress,
         );
         refractedColor = std.add(std.mul(env, T), scatter);
       }
@@ -526,6 +552,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         std.mul(reflection, F),
         std.mul(refractedColor, 1.0 - F),
       );
+
       return MarchingResult({
         color: d.vec4f(jelly, 1.0),
         hitPos: hitPosition,
