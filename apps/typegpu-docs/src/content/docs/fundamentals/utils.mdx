@@ -89,8 +89,8 @@ const test = prepareDispatch(root, (x) => {
   layout.$.buffer[x] *= 2;
 });
 
-test.with(layout, bindGroup1).dispatch(3);
-test.with(layout, bindGroup2).dispatch(4);
+test.with(bindGroup1).dispatch(3);
+test.with(bindGroup2).dispatch(4);
 
 console.log(await buffer1.read()); // [2, 4, 6];
 console.log(await buffer2.read()); // [4, 8, 16, 32];

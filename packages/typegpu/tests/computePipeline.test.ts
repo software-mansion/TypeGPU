@@ -48,7 +48,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(() => pipeline.dispatchWorkgroups(1))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
       );
   });
 
@@ -348,12 +348,12 @@ describe('TgpuComputePipeline', () => {
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
         })
-        .with(layout, bindGroup);
+        .with(bindGroup);
 
       const pipeline2 = root
         .withCompute(entryFn)
         .createPipeline()
-        .with(layout, bindGroup)
+        .with(bindGroup)
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 2,

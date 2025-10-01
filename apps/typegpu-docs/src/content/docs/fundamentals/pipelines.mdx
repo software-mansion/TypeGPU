@@ -305,11 +305,11 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 // binding and execution
 renderPipeline
   .with(vertexLayout, vertexBuffer)
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .draw(8);
 
 computePipeline
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .dispatchWorkgroups(1);
 ```
 

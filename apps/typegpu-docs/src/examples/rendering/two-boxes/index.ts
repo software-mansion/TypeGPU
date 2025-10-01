@@ -281,7 +281,7 @@ function drawObject(
       depthStoreOp: 'store',
     })
     .with(vertexLayout, buffer)
-    .with(layout, group)
+    .with(group)
     .draw(vertexCount);
 }
 

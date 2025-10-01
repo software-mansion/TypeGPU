@@ -114,7 +114,7 @@ describe('TgpuRenderPipeline', () => {
     );
 
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
     );
   });
 

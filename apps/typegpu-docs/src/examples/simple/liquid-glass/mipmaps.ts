@@ -78,7 +78,6 @@ export async function loadExternalImageWithMipmaps(
         loadOp: 'clear',
         storeOp: 'store',
       }).with(
-        downsampleLayout,
         root.createBindGroup(downsampleLayout, {
           source: sourceView,
         }),
