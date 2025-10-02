@@ -671,6 +671,7 @@ class TgpuBindGroupLayoutImpl<
               DEFAULT_MUTABLE_VISIBILITY;
             binding.storageTexture = {
               ...entry.storageTexture,
+              viewDimension: entry.storageTexture.dimension,
             };
           } else if ('externalTexture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
