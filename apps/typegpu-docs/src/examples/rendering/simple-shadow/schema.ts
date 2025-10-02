@@ -45,6 +45,6 @@ export const bindGroupLayout = tgpu.bindGroupLayout({
 });
 
 export const shadowSampleLayout = tgpu.bindGroupLayout({
-  shadowMap: { texture: 'depth' },
+  shadowMap: { texture: d.textureDepth2d() },
   comparisonSampler: { sampler: 'comparison' },
 });

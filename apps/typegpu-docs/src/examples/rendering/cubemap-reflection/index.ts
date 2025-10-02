@@ -98,8 +98,17 @@ const materialBuffer = root
 // Textures & Samplers
 
 let chosenCubemap: CubemapNames = 'campsite';
-let cubemapTexture = await loadCubemap(root, chosenCubemap);
-let cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+const size = 2048;
+const texture = root['~unstable']
+  .createTexture({
+    dimension: '2d',
+    size: [size, size, 6],
+    format: 'rgba8unorm',
+  })
+  .$usage('sampled', 'render');
+await loadCubemap(texture, chosenCubemap);
+
+const cubemap = texture.createView(d.textureCube(d.f32));
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -120,12 +129,12 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 });
 
 const textureLayout = tgpu.bindGroupLayout({
-  cubemap: { texture: 'float', viewDimension: 'cube' },
+  cubemap: { texture: d.textureCube(d.f32) },
   texSampler: { sampler: 'filtering' },
 });
 const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
 
-let textureBindGroup = root.createBindGroup(textureLayout, {
+const textureBindGroup = root.createBindGroup(textureLayout, {
   cubemap,
   texSampler: sampler,
 });
@@ -208,7 +217,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
     normalizedNormal,
   );
   const environmentColor = std.textureSample(
-    cubemapBinding,
+    cubemapBinding.$,
     texSampler,
     reflectionVector,
   );
@@ -256,7 +265,7 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   return std.textureSample(
-    cubemapBinding,
+    cubemapBinding.$,
     texSampler,
     std.normalize(input.texCoord),
   );
@@ -480,16 +489,7 @@ export const controls = {
     options: ['campsite', 'beach', 'chapel', 'city'],
     onSelectChange: async (value: CubemapNames) => {
       chosenCubemap = value;
-      const newCubemapTexture = await loadCubemap(root, chosenCubemap);
-      cubemap = newCubemapTexture.createView('sampled', { dimension: 'cube' });
-
-      textureBindGroup = root.createBindGroup(textureLayout, {
-        cubemap,
-        texSampler: sampler,
-      });
-
-      cubemapTexture.destroy();
-      cubemapTexture = newCubemapTexture;
+      await loadCubemap(texture, chosenCubemap);
     },
   },
   'ambient color': {
@@ -555,7 +555,6 @@ export function onCleanup() {
   window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.unobserve(canvas);
   icosphereGenerator.destroy();
-  cubemapTexture.destroy();
   root.destroy();
 }
 
