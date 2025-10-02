@@ -1,4 +1,5 @@
 {
-  "title": "Slime mold",
-  "category": "simulation"
+  "title": "Slime Mold",
+  "category": "simulation",
+  "tags": ["experimental", "compute", "double buffering"]
 }

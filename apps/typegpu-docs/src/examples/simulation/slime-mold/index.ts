@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
@@ -33,25 +33,23 @@ const Params = d.struct({
 });
 
 const NUM_AGENTS = 200_000;
-const agentsData = root.createMutable(
-  d.arrayOf(Agent, NUM_AGENTS),
-  Array.from({ length: NUM_AGENTS }, (_, i) => {
-    const pos = Math.random() * 2 * Math.PI;
-    const radius = Math.sqrt(Math.random()) * (resolution.x / 2 - 10);
-    const position = d.vec2f(
-      Math.cos(pos) * radius + resolution.x / 2,
-      Math.sin(pos) * radius + resolution.y / 2,
-    );
-    const angle = Math.atan2(
-      resolution.y / 2 - position.y,
-      resolution.x / 2 - position.x,
-    );
-    return Agent({
-      position,
-      angle,
-    });
-  }),
-);
+const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
+
+prepareDispatch(root, (x) => {
+  'kernel';
+  randf.seed(x / NUM_AGENTS + 0.1);
+  const pos = randf.inUnitCircle().mul(resolution.x / 2 - 10).add(
+    resolution.div(2),
+  );
+  const angle = std.atan2(
+    resolution.y / 2 - pos.y,
+    resolution.x / 2 - pos.x,
+  );
+  agentsData.$[x] = Agent({
+    position: pos,
+    angle,
+  });
+}).dispatch(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
   deltaTime: 0.016,
@@ -117,11 +115,10 @@ const updateAgents = tgpu['~unstable'].computeFn({
     -params.$.sensorAngle,
   );
 
-  // Steer based on sensed values
   let angle = agent.angle;
 
   if (weightForward > weightLeft && weightForward > weightRight) {
-    // Continue forward
+    // Go straight
   } else if (weightForward < weightLeft && weightForward < weightRight) {
     // Turn randomly
     angle = angle + (random * 2 - 1) * params.$.turnSpeed * params.$.deltaTime;
@@ -151,7 +148,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
       angle = -angle;
     }
 
-    angle = angle + (random - 0.5) * 0.1;
+    angle += (random - 0.5) * 0.1;
   }
 
   agentsData.$[gid.x] = Agent({
@@ -263,12 +260,10 @@ const renderBindGroups = [0, 1].map((i) =>
 
 let lastTime = performance.now();
 let currentTexture = 0;
-let iteration = 0;
 
 function frame() {
-  iteration++;
   const now = performance.now();
-  const deltaTime = (now - lastTime) / 1000;
+  const deltaTime = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
 
   params.writePartial({ deltaTime });
