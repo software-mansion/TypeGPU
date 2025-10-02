@@ -1,9 +1,7 @@
-name: Tree-shake Test and PR Comment
+name: Tree-shake test
 
 on:
   pull_request:
-    branches:
-      - chore/measure-tree-shakeability-in-ci
 
 jobs:
   treeshake-test:
