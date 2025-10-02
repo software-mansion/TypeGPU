@@ -99,7 +99,7 @@ describe('uniformity test example', () => {
         item_7(seed);
       }
 
-      fn u32ToFloat_11(val: u32) -> f32{
+      fn u32To01Float_11(val: u32) -> f32{
           let exponent: u32 = 0x3f800000;
           let mantissa: u32 = 0x007fffff & val;
           var ufloat: u32 = (exponent | mantissa);
@@ -108,7 +108,7 @@ describe('uniformity test example', () => {
 
       fn item_10() -> f32 {
         seed_8 = ((seed_8 * 1664525) + 1013904223);
-        return u32ToFloat_11(seed_8);
+        return u32To01Float_11(seed_8);
       }
 
       fn randFloat01_9() -> f32 {
