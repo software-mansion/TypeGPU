@@ -6,7 +6,7 @@ import { edgeTable, edgeToVertices, triangleTable } from './tables';
 
 const root = await tgpu.init();
 
-const SIZE = 10;
+const SIZE = 2;
 
 const terrainTexture = root['~unstable'].createTexture({
   size: [SIZE, SIZE, SIZE],
@@ -14,11 +14,13 @@ const terrainTexture = root['~unstable'].createTexture({
   dimension: '3d',
 }).$usage('sampled', 'render', 'storage');
 
-const bindGroupLayout = tgpu.bindGroupLayout({
+// fill texture with noise
+
+const fillBindGroupLayout = tgpu.bindGroupLayout({
   terrain: { storageTexture: d.textureStorage3d('rgba16float', 'write-only') },
 });
 
-const bindGroup = root.createBindGroup(bindGroupLayout, {
+const fillBindGroup = root.createBindGroup(fillBindGroupLayout, {
   terrain: terrainTexture,
 });
 
@@ -26,15 +28,16 @@ prepareDispatch(root, (x, y, z) => {
   'kernel';
   const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
   std.textureStore(
-    bindGroupLayout.$.terrain,
+    fillBindGroupLayout.$.terrain,
     d.vec3u(x, y, z),
     d.vec4f(level, 0, 0, 0),
   );
 })
-  .with(bindGroupLayout, bindGroup)
+  .with(fillBindGroupLayout, fillBindGroup)
   .dispatch(SIZE, SIZE, SIZE);
 
-// ---generate triangles---
+// generate triangles
+
 const Point = d.vec3u;
 const Triangle = d.arrayOf(Point, 3);
 const Triangles = d.struct({ count: d.u32, triangles: d.arrayOf(Triangle, 4) });
@@ -43,6 +46,14 @@ const indexMutable = root.createMutable(d.atomic(d.u32), 0);
 const trianglesMutable = root.createMutable(
   d.arrayOf(Triangle, 4 * ((SIZE - 1) ** 3)),
 );
+
+const generateBindGroupLayout = tgpu.bindGroupLayout({
+  terrain: { storageTexture: d.textureStorage3d('rgba16float', 'read-only') },
+});
+
+const generateBindGroup = root.createBindGroup(generateBindGroupLayout, {
+  terrain: terrainTexture,
+});
 
 const GridCell = d.struct({
   vertex: d.arrayOf(Point, 8),
@@ -58,9 +69,9 @@ const calculateCubeIndex = tgpu.fn([GridCell, d.f32], d.u32)(
   (cell, isoValue) => {
     'kernel';
     let cubeIndex = d.u32(0);
-    for (let i = 0; i < 8; i++) {
+    for (let i = d.u32(0); i < 8; i++) {
       if (cell.value[i] < isoValue) {
-        cubeIndex |= 1 << i;
+        cubeIndex |= d.u32(d.i32(1 << i));
       }
     }
     return cubeIndex;
@@ -127,7 +138,7 @@ const getTriangles = tgpu.fn(
     for (let j = 0; j < 3; j++) {
       triangle[j] = intersections[triangleTable.$[cubeIndex][i + j]];
     }
-    triangles[i / 3] = triangle;
+    triangles[d.u32(i / 3)] = triangle;
     count += 1;
   }
 
@@ -184,15 +195,17 @@ const triangulateField = prepareDispatch(root, (x, y, z) => {
 const loadValue = tgpu.fn([d.u32, d.u32, d.u32], d.f32)((x, y, z) => {
   'kernel';
   const textureValue = std.textureLoad(
-    bindGroupLayout.$.terrain,
+    generateBindGroupLayout.$.terrain,
     d.vec3u(x, y, z),
   );
   return textureValue.x;
 });
 
 triangulateField
-  .with(bindGroupLayout, bindGroup)
+  .with(generateBindGroupLayout, generateBindGroup)
   .dispatch(SIZE - 1, SIZE - 1, SIZE - 1);
+
+console.log(await trianglesMutable.read());
 
 // #region Example controls and cleanup
 
