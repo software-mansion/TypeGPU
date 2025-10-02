@@ -50,18 +50,14 @@ function App() {
     uniforms.value = { modelMatrix, viewProjectionMatrix };
   });
 
+  if (!model) return null;
+
   return (
-    <div>
-      {model
-        ? (
-          <MonkeyRenderer
-            model={model}
-            uniforms={uniforms}
-            modelColor={modelColor}
-          />
-        )
-        : <div>Loading...</div>}
-    </div>
+    <MonkeyRenderer
+      model={model}
+      uniforms={uniforms}
+      modelColor={modelColor}
+    />
   );
 }
 

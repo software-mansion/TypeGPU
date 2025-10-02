@@ -3,6 +3,7 @@ import {
   type UniformValue,
   useRender,
 } from '@typegpu/react';
+import { useEffect } from 'react';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { Model } from './load-model.ts';
@@ -68,5 +69,24 @@ export function MonkeyRenderer({
     depthTest: true,
   });
 
-  return <canvas ref={ref} width='300' />;
+  // Ensure canvas pixel resolution matches its display size
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const resize = () => {
+      canvas.width = canvas.clientWidth * window.devicePixelRatio;
+      canvas.height = canvas.clientHeight * window.devicePixelRatio;
+    };
+    const observer = new window.ResizeObserver(resize);
+    observer.observe(canvas);
+    resize();
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return (
+    <canvas
+      ref={ref}
+      style={{ width: '100%', height: '100%', display: 'block' }}
+    />
+  );
 }
