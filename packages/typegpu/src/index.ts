@@ -18,6 +18,7 @@ import { slot } from './core/slot/slot.ts';
 import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
+import { namespace } from './core/resolve/namespace.ts';
 
 export const tgpu = {
   fn,
@@ -31,6 +32,10 @@ export const tgpu = {
   resolve,
   resolveWithContext,
 
+  privateVar,
+  workgroupVar,
+  const: constant,
+
   '~unstable': {
     /**
      * @deprecated This feature is now stable, use tgpu.fn.
@@ -43,14 +48,24 @@ export const tgpu = {
      * @deprecated This feature is now stable, use tgpu.vertexLayout.
      */
     vertexLayout,
+    namespace,
     derived,
     /**
      * @deprecated This feature is now stable, use tgpu.slot.
      */
     slot,
     accessor,
+    /**
+     * @deprecated This feature is now stable, use tgpu.privateVar.
+     */
     privateVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.workgroupVar.
+     */
     workgroupVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.const.
+     */
     const: constant,
     declare,
     sampler,
@@ -87,6 +102,7 @@ export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
+export { isVariable } from './core/variable/tgpuVariable.ts';
 
 // types
 
@@ -94,6 +110,8 @@ export type {
   Configurable,
   TgpuRoot,
   ValidateBufferSchema,
+  ValidateStorageSchema,
+  ValidateUniformSchema,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -172,6 +190,7 @@ export type {
   TgpuComputeFnShell,
 } from './core/function/tgpuComputeFn.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
+export type { Namespace } from './core/resolve/namespace.ts';
 // Exported for being able to track use of these global extensions easier,
 // and to establish a solid contract between tooling using them.
 export type { INTERNAL_GlobalExt } from './shared/meta.ts';

@@ -21,22 +21,35 @@ import {
 
 export const randf: {
   /**
-   * Sets the private seed of the thread.
+   * Threads do not share the generator's `State`.
+   * As a result, unless you change the seed in each thread,
+   * each thread will produce the same sequence.
+   * `randf.randSeed` sets the private seed of the thread.
    * @param seed seed value to set. For the best results, should be in [-1000, 1000] range.
    */
   seed: typeof randSeed;
   /**
-   * Sets the private seed of the thread.
+   * Threads do not share the generator's `State`.
+   * As a result, unless you change the seed in each thread,
+   * each thread will produce the same sequence.
+   * `randf.randSeed2` sets the private seed of the thread.
    * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed2: typeof randSeed2;
   /**
+   * Threads do not share the generator's `State`.
+   * As a result, unless you change the seed in each thread,
+   * each thread will produce the same sequence.
+   * `randf.randSeed3` sets the private seed of the thread.
    * Sets the private seed of the thread.
    * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed3: typeof randSeed3;
   /**
-   * Sets the private seed of the thread.
+   * Threads do not share the generator's `State`.
+   * As a result, unless you change the seed in each thread,
+   * each thread will produce the same sequence.
+   * `randf.randSeed4` sets the private seed of the thread.
    * @param seed seed value to set. For the best results, all elements should be in [-1000, 1000] range.
    */
   seed4: typeof randSeed4;

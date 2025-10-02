@@ -19,138 +19,138 @@ describe('simple shadow example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct shadowVert_Input_1 {
-        @location(0) position: vec4f,
-      }
-
-      struct shadowVert_Output_2 {
-        @builtin(position) pos: vec4f,
-      }
-
-      struct Material_5 {
+      "struct Material_3 {
         ambient: vec3f,
         diffuse: vec3f,
         specular: vec3f,
         shininess: f32,
       }
 
-      struct InstanceInfo_4 {
+      struct InstanceInfo_2 {
         modelMatrix: mat4x4f,
-        material: Material_5,
+        material: Material_3,
       }
 
-      @group(1) @binding(0) var<uniform> instanceInfo_3: InstanceInfo_4;
+      @group(1) @binding(0) var<uniform> instanceInfo_1: InstanceInfo_2;
 
-      struct LightSpace_7 {
+      struct LightSpace_5 {
         viewProj: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> lightSpaceUniform_6: LightSpace_7;
+      @group(0) @binding(0) var<uniform> lightSpaceUniform_4: LightSpace_5;
 
-      @vertex fn shadowVert_0(_arg_0: shadowVert_Input_1) -> shadowVert_Output_2 {
-        var world = (instanceInfo_3.modelMatrix * _arg_0.position);
-        var clip = (lightSpaceUniform_6.viewProj * world);
-        return shadowVert_Output_2(clip);
-      }
-
-      struct mainVert_Input_9 {
-        @location(0) position: vec4f,
-        @location(1) normal: vec4f,
-      }
-
-      struct mainVert_Output_10 {
+      struct shadowVert_Output_6 {
         @builtin(position) pos: vec4f,
-        @location(0) normal: vec4f,
-        @location(1) worldPos: vec3f,
       }
 
-      struct Material_13 {
+      struct shadowVert_Input_7 {
+        @location(0) position: vec4f,
+      }
+
+      @vertex fn shadowVert_0(_arg_0: shadowVert_Input_7) -> shadowVert_Output_6 {
+        var world = (instanceInfo_1.modelMatrix * _arg_0.position);
+        var clip = (lightSpaceUniform_4.viewProj * world);
+        return shadowVert_Output_6(clip);
+      }
+
+      struct Material_3 {
         ambient: vec3f,
         diffuse: vec3f,
         specular: vec3f,
         shininess: f32,
       }
 
-      struct InstanceInfo_12 {
+      struct InstanceInfo_2 {
         modelMatrix: mat4x4f,
-        material: Material_13,
+        material: Material_3,
       }
 
-      @group(1) @binding(0) var<uniform> instanceInfo_11: InstanceInfo_12;
+      @group(1) @binding(0) var<uniform> instanceInfo_1: InstanceInfo_2;
 
-      struct Camera_15 {
+      struct Camera_5 {
         projection: mat4x4f,
         view: mat4x4f,
         position: vec3f,
       }
 
-      @group(0) @binding(0) var<uniform> cameraUniform_14: Camera_15;
+      @group(0) @binding(0) var<uniform> cameraUniform_4: Camera_5;
 
-      @vertex fn mainVert_8(_arg_0: mainVert_Input_9) -> mainVert_Output_10 {
-        var modelMatrixUniform = instanceInfo_11.modelMatrix;
-        var worldPos = (modelMatrixUniform * _arg_0.position);
-        var viewPos = (cameraUniform_14.view * worldPos);
-        var clipPos = (cameraUniform_14.projection * viewPos);
-        var transformedNormal = (modelMatrixUniform * _arg_0.normal);
-        return mainVert_Output_10(clipPos, transformedNormal, worldPos.xyz);
+      struct mainVert_Output_6 {
+        @builtin(position) pos: vec4f,
+        @location(0) normal: vec4f,
+        @location(1) worldPos: vec3f,
       }
+
+      struct mainVert_Input_7 {
+        @location(0) position: vec4f,
+        @location(1) normal: vec4f,
+      }
+
+      @vertex fn mainVert_0(_arg_0: mainVert_Input_7) -> mainVert_Output_6 {
+        var modelMatrixUniform = instanceInfo_1.modelMatrix;
+        var worldPos = (modelMatrixUniform * _arg_0.position);
+        var viewPos = (cameraUniform_4.view * worldPos);
+        var clipPos = (cameraUniform_4.projection * viewPos);
+        var transformedNormal = (modelMatrixUniform * _arg_0.normal);
+        return mainVert_Output_6(clipPos, transformedNormal, worldPos.xyz);
+      }
+
+      struct DirectionalLight_10 {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(1) var<uniform> light_9: DirectionalLight_10;
+
+      struct LightSpace_12 {
+        viewProj: mat4x4f,
+      }
+
+      @group(0) @binding(2) var<uniform> lightSpaceUniform_11: LightSpace_12;
+
+      @group(2) @binding(0) var shadowMap_13: texture_depth_2d;
+
+      @group(2) @binding(1) var comparisonSampler_14: sampler_comparison;
+
+      struct VisParams_16 {
+        shadowOnly: f32,
+        lightDepth: f32,
+      }
+
+      @group(0) @binding(3) var<uniform> paramsUniform_15: VisParams_16;
 
       struct mainFrag_Input_17 {
         @location(0) normal: vec4f,
         @location(1) worldPos: vec3f,
       }
 
-      struct DirectionalLight_19 {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(1) var<uniform> light_18: DirectionalLight_19;
-
-      struct LightSpace_21 {
-        viewProj: mat4x4f,
-      }
-
-      @group(0) @binding(2) var<uniform> lightSpaceUniform_20: LightSpace_21;
-
-      @group(2) @binding(0) var shadowMap_22: texture_depth_2d;
-
-      @group(2) @binding(1) var comparisonSampler_23: sampler_comparison;
-
-      struct VisParams_25 {
-        shadowOnly: f32,
-        lightDepth: f32,
-      }
-
-      @group(0) @binding(3) var<uniform> paramsUniform_24: VisParams_25;
-
-      @fragment fn mainFrag_16(_arg_0: mainFrag_Input_17) -> @location(0) vec4f {
-        var instanceInfo = instanceInfo_11;
+      @fragment fn mainFrag_8(_arg_0: mainFrag_Input_17) -> @location(0) vec4f {
+        var instanceInfo = instanceInfo_1;
         var N = normalize(_arg_0.normal.xyz);
-        var L = normalize(-(light_18.direction));
-        var V = normalize((cameraUniform_14.position - _arg_0.worldPos));
+        var L = normalize(-(light_9.direction));
+        var V = normalize((cameraUniform_4.position - _arg_0.worldPos));
         var R = reflect(-(L), N);
-        var lp4 = (lightSpaceUniform_20.viewProj * vec4f(_arg_0.worldPos, 1));
+        var lp4 = (lightSpaceUniform_11.viewProj * vec4f(_arg_0.worldPos, 1));
         var ndc = (lp4.xyz / lp4.w);
         var uv = ((ndc.xy * 0.5) + 0.5);
         uv = vec2f(uv.x, (1 - uv.y));
         var currentDepth = ndc.z;
         var inBounds = (all((uv >= vec2f())) && all((uv <= vec2f(1))));
-        var shadowFactor = textureSampleCompare(shadowMap_22, comparisonSampler_23, uv, currentDepth);
+        var shadowFactor = textureSampleCompare(shadowMap_13, comparisonSampler_14, uv, currentDepth);
         if (!inBounds) {
           shadowFactor = 1;
         }
-        var ambient = (instanceInfo.material.ambient * light_18.color);
+        var ambient = (instanceInfo.material.ambient * light_9.color);
         var diff = max(0, dot(N, L));
-        var diffuse = ((instanceInfo.material.diffuse * light_18.color) * diff);
+        var diffuse = ((instanceInfo.material.diffuse * light_9.color) * diff);
         var spec = pow(max(0, dot(V, R)), instanceInfo.material.shininess);
-        var specular = ((instanceInfo.material.specular * light_18.color) * spec);
+        var specular = ((instanceInfo.material.specular * light_9.color) * spec);
         var lit = ((diffuse + specular) * shadowFactor);
         var finalColor = (ambient + lit);
-        if ((paramsUniform_24.shadowOnly == 1)) {
+        if ((paramsUniform_15.shadowOnly == 1)) {
           return vec4f(vec3f(shadowFactor), 1);
         }
-        if ((paramsUniform_24.lightDepth == 1)) {
+        if ((paramsUniform_15.lightDepth == 1)) {
           var remappedDepth = clamp(((currentDepth - 0.2) / 0.49999999999999994f), 0, 1);
           return vec4f(vec3f(remappedDepth), 1);
         }
