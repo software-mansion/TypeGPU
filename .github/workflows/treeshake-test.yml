@@ -26,7 +26,6 @@ jobs:
 
       - name: Run tree-shake test
         run: pnpm --filter treeshake-test test
-        working-directory: ./apps/treeshake-test
 
       - name: Upload results table as artifact
         uses: actions/upload-artifact@v4

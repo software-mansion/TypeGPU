@@ -129,34 +129,34 @@ export async function generateMarkdownReport(
 ) {
   const grouped: Record<string, { bundler: string; size: number }[]> = {};
   for (const r of results) {
-    if (!grouped[r.example]) grouped[r.example] = [];
-    grouped[r.example]?.push({ bundler: r.bundler, size: r.size });
+    const arr = grouped[r.example] ?? [];
+    arr.push({ bundler: r.bundler, size: r.size });
+    grouped[r.example] = arr;
   }
 
   let report = '# Bundler Efficiency Report\n\n';
 
   for (const example of Object.keys(grouped)) {
-    if (grouped[example]) {
-      // Read snippet code
-      let snippet = '';
-      try {
-        const snippetPath = path.join(
-          'examples',
-          example + (example.endsWith('.ts') ? '' : '.ts'),
-        );
-        snippet = await fs.readFile(snippetPath, 'utf8');
-      } catch (e) {
-        snippet = '_Could not read example source._';
-      }
-      report += `## ${example}\n\n`;
-      report += `\`\`\`typescript\n${snippet.trim()}\n\`\`\`\n\n`;
-      report += '| Bundler | Bundle Size (bytes) |\n';
-      report += '|---------|---------------------|\n';
-      for (const row of grouped[example]) {
-        report += `| \`${row.bundler}\` | ${row.size} |\n`;
-      }
-      report += '\n';
+    const rows = grouped[example] ?? [];
+    // Read snippet code
+    let snippet = '';
+    try {
+      const snippetPath = path.join(
+        'examples',
+        example + (example.endsWith('.ts') ? '' : '.ts'),
+      );
+      snippet = await fs.readFile(snippetPath, 'utf8');
+    } catch (e) {
+      snippet = '_Could not read example source._';
     }
+    report += `## ${example}\n\n`;
+    report += `\`\`\`typescript\n${snippet.trim()}\n\`\`\`\n\n`;
+    report += '| Bundler | Bundle Size (bytes) |\n';
+    report += '|---------|---------------------|\n';
+    for (const row of rows) {
+      report += `| \`${row.bundler}\` | ${row.size} |\n`;
+    }
+    report += '\n';
   }
 
   // General table
