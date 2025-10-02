@@ -1,0 +1,35 @@
+name: Tree-shake Test and PR Comment
+
+on:
+  pull_request:
+    branches:
+      - chore/measure-tree-shakeability-in-ci
+
+jobs:
+  treeshake-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tree-shake test
+        run: pnpm --filter treeshake-test test
+        working-directory: ./apps/treeshake-test
+
+      - name: Upload results table as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: treeshake-table
+          path: ./apps/treeshake-test/results.md
