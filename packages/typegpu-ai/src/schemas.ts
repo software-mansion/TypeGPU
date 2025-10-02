@@ -35,6 +35,20 @@ export const weightsBiasesLayout = tgpu.bindGroupLayout({
   biases: ReadonlyFloats,
 });
 
+// Convolution parameters layout:
+// weights are laid out as: [outChannels][inChannels][kH][kW]
+// biases: [outChannels]
+// dims buffer: stores packed u32 values for shape/stride/padding and output dims
+export const convWeightsLayout = tgpu.bindGroupLayout({
+  weights: ReadonlyFloats,
+  biases: ReadonlyFloats,
+  // dims: [inC, outC, inH, inW, kH, kW, strideH, strideW, padH, padW, outH, outW]
+  dims: {
+    storage: d.arrayOf(d.u32),
+    access: 'readonly',
+  },
+});
+
 export const activationFunctionSlot = tgpu.slot<TgpuFn>();
 
 // Generic GPU layer representation (will expand with Conv, etc.)
@@ -52,17 +66,27 @@ export type GpuLayer =
   }
   | {
     kind: 'Conv';
-    inSize: number;
-    outSize: number;
-    // Example fields (to be fleshed out when Conv implemented):
-    // inChannels: number;
-    // outChannels: number;
-    // kernelSize: [number, number];
-    // stride: [number, number];
-    // padding: [number, number];
-    // weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    // biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    descriptor: Layer;
+    inSize: number; // flattened in (C_in * H * W)
+    outSize: number; // flattened out (C_out * H_out * W_out)
+    weights: Float32Array<ArrayBufferLike>;
+    biases: Float32Array<ArrayBufferLike>;
+    dims: {
+      inChannels: number;
+      outChannels: number;
+      inH: number;
+      inW: number;
+      kH: number;
+      kW: number;
+      strideH: number;
+      strideW: number;
+      padH: number;
+      padW: number;
+      outH: number;
+      outW: number;
+    };
+    io: TgpuBindGroup; // shares same layout as dense (ioLayout)
+    params: TgpuBindGroup; // conv-specific params + weights/biases
+    compute: TgpuComputeFn;
     activation: Activation;
   };
 
