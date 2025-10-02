@@ -1,12 +1,12 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { perlin3d } from '@typegpu/noise';
+import { perlin3d, randf } from '@typegpu/noise';
 import { edgeTable, edgeToVertices, triangleTable } from './tables';
 
 const root = await tgpu.init();
 
-const SIZE = 2;
+const SIZE = 10;
 
 const terrainTexture = root['~unstable'].createTexture({
   size: [SIZE, SIZE, SIZE],
@@ -26,7 +26,9 @@ const fillBindGroup = root.createBindGroup(fillBindGroupLayout, {
 
 prepareDispatch(root, (x, y, z) => {
   'kernel';
-  const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
+  randf.seed(x * SIZE * SIZE + y * SIZE + z);
+  const level = randf.sample();
+  // const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
   std.textureStore(
     fillBindGroupLayout.$.terrain,
     d.vec3u(x, y, z),
@@ -205,6 +207,7 @@ triangulateField
   .with(generateBindGroupLayout, generateBindGroup)
   .dispatch(SIZE - 1, SIZE - 1, SIZE - 1);
 
+console.log(await indexMutable.read());
 console.log(await trianglesMutable.read());
 
 // #region Example controls and cleanup
