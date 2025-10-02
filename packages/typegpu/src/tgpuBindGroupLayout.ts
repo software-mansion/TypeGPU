@@ -665,14 +665,16 @@ class TgpuBindGroupLayoutImpl<
               sampleType: entry.sampleType ?? bindingSampleType[0],
               viewDimension: dimension,
               multisampled,
-            };
+            } satisfies Required<GPUTextureBindingLayout>;
           } else if ('storageTexture' in entry) {
             visibility = visibility ??
               DEFAULT_MUTABLE_VISIBILITY;
+            const { dimension, access, format } = entry.storageTexture;
             binding.storageTexture = {
-              ...entry.storageTexture,
-              viewDimension: entry.storageTexture.dimension,
-            };
+              access,
+              format,
+              viewDimension: dimension,
+            } satisfies Required<GPUStorageTextureBindingLayout>;
           } else if ('externalTexture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
             binding.externalTexture = {};
