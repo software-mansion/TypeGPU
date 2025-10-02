@@ -207,9 +207,50 @@ While this constraint may appear restrictive, the recommended approach is to div
 the batch into multiple separate batches if asynchronous operations are required.
 :::
 
-:::danger
-Nested batching is not supported and will result in a runtime error.
-:::
+### Nested batches
+Nested batches flush the existing command encoder and create a new one. Performance callbacks registered inside a nested batch are invoked at its end. For example:
+
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const vertexFn = tgpu['~unstable'].vertexFn({
+  out: { pos: d.builtin.position },
+})(() => {
+  return { pos: d.vec4f() };
+});
+const fragmentFn = tgpu['~unstable'].fragmentFn({
+  out: d.vec4f,
+})(() => d.vec4f());
+
+const root = await tgpu.init();
+
+const callback = () => {};
+
+const pipeline = root['~unstable']
+  .withVertex(vertexFn, {})
+  .withFragment(fragmentFn, { format: 'rgba8unorm' })
+  .createPipeline();
+
+const renderPipelineWithPerformanceCallback1 = pipeline.withPerformanceCallback(
+  callback,
+);
+const renderPipelineWithPerformanceCallback2 = pipeline.withPerformanceCallback(
+  callback,
+);
+
+// ---cut---
+root['~unstable'].batch(() => {
+  renderPipelineWithPerformanceCallback1.draw(1882);
+  root['~unstable'].batch(() => {
+    renderPipelineWithPerformanceCallback2.draw(1882);
+  });
+  // flush of the command encoder occurs, then callback2 is invoked
+});
+// flush of the (empty) command encoder occurs, then callback1 is invoked
+```
+
 
 ## *console.log*
 

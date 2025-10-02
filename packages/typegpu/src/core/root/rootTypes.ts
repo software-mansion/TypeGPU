@@ -691,15 +691,16 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   ): void;
 
   /**
-   * Executes a batch of GPU computations.
+   * Executes a batch of commands.
    *
-   * Commands inside `callback` are stored in a single command buffer,
-   * then submitted to the device queue at once.
+   * The commands inside `callback` are recorded into a single command buffer when possible
+   * and then submitted to the device queue in one submission.
    *
-   * There is one exception, pipelines with
-   * performance callbacks/timestamp writes are flushed immediately.
+   * The `callback` must be synchronous.
    *
-   * @param callback A function with GPU computations to be batched.
+   * While typically used for GPU computations, the batch may also contain other command types.
+   *
+   * @param callback A synchronous function containing the commands to batch.
    */
   batch<T>(
     ...args: T extends Promise<unknown> ? [
