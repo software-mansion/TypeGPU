@@ -15,7 +15,7 @@ describe('cubemap reflection example', () => {
       category: 'rendering',
       name: 'cubemap-reflection',
       setupMocks: () => {
-        mockImageLoading();
+        mockImageLoading({ width: 2048, height: 2048 });
         mockResizeObserver();
       },
       expectedCalls: 3,
