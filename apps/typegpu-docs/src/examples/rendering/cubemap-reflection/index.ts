@@ -315,15 +315,13 @@ function render() {
     .with(renderLayout, renderBindGroup)
     .with(textureLayout, textureBindGroup)
     .draw(vertexBuffer.dataType.elementCount);
-
-  root['~unstable'].flush();
 }
 
 function loop() {
   if (exampleDestroyed) {
     return;
   }
-  render();
+  root['~unstable'].batch(render);
   requestAnimationFrame(loop);
 }
 

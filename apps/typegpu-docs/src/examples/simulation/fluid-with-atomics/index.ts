@@ -372,7 +372,6 @@ function resetGameData() {
         storeOp: 'store' as const,
       })
       .draw(4, options.size ** 2);
-
     currentStateBuffer.copyFrom(nextState.buffer);
   };
 
@@ -397,7 +396,7 @@ function resetGameData() {
 
   createSampleScene();
   applyDrawCanvas();
-  render();
+  root['~unstable'].batch(render);
 }
 
 let isDrawing = false;

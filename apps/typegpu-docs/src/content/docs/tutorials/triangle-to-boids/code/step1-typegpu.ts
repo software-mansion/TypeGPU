@@ -58,6 +58,4 @@ onFrame(() => {
     ],
     vertexCount: 3,
   });
-
-  root.flush();
 });

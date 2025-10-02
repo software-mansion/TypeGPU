@@ -692,7 +692,7 @@ describe('TgpuRenderPipeline', () => {
     );
   });
 
-  it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
+  it('should only allow for drawIndexed with assigned index buffer', ({ root }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -753,7 +753,10 @@ describe('TgpuRenderPipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
 
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const beginRenderPassSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'beginRenderPass',
+    );
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -824,8 +827,14 @@ describe('TgpuRenderPipeline', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
-    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+    const beginRenderPassSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'beginRenderPass',
+    );
+    const resolveQuerySetSpy = vi.spyOn(
+      root[$internal].commandEncoder,
+      'resolveQuerySet',
+    );
 
     const callback = vi.fn();
 
@@ -868,21 +877,23 @@ describe('TgpuRenderPipeline', () => {
       count: 2,
     });
 
-    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
-      colorAttachments: [
-        {
-          loadOp: 'clear',
-          storeOp: 'store',
-          view: expect.any(Object),
+    expect(root[$internal].commandEncoder.beginRenderPass).toHaveBeenCalledWith(
+      {
+        colorAttachments: [
+          {
+            loadOp: 'clear',
+            storeOp: 'store',
+            view: expect.any(Object),
+          },
+        ],
+        label: 'pipeline',
+        timestampWrites: {
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+          querySet: querySet.querySet,
         },
-      ],
-      label: 'pipeline',
-      timestampWrites: {
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-        querySet: querySet.querySet,
       },
-    });
+    );
 
     expect(resolveQuerySetSpy).toHaveBeenCalledWith(
       querySet.querySet,
@@ -906,6 +917,165 @@ describe('TgpuRenderPipeline', () => {
         endOfPassWriteIndex: 1,
         querySet: querySet.querySet,
       },
+    });
+  });
+  describe('Flush', () => {
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })('');
+
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f },
+    })('');
+
+    it('flushes after draw', ({ root }) => {
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.draw(3);
+
+      expect(root[$internal].flush).toHaveBeenCalledTimes(1);
+    });
+    it('flushes after draw with performance callback', ({ root }) => {
+      const callback = vi.fn();
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withPerformanceCallback(callback);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.draw(3);
+
+      // first from pipeline, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
+    });
+    it('flushes after draw with timestamp writes', ({ root }) => {
+      const querySet = root.createQuerySet('timestamp', 2);
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.draw(3);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+    it('flushes after drawIndexed', ({ root }) => {
+      const indexBuffer = root
+        .createBuffer(d.arrayOf(d.u32, 2))
+        .$usage('index');
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withIndexBuffer(indexBuffer);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.drawIndexed(3);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+    it('flushes after drawIndexed with performance callback', ({ root }) => {
+      const indexBuffer = root
+        .createBuffer(d.arrayOf(d.u32, 2))
+        .$usage('index');
+      const callback = vi.fn();
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withIndexBuffer(indexBuffer)
+        .withPerformanceCallback(callback);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.drawIndexed(3);
+
+      // first from pipeline itself, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
+    });
+    it('flushes after drawIndexed with timestamp writes', ({ root }) => {
+      const indexBuffer = root
+        .createBuffer(d.arrayOf(d.u32, 2))
+        .$usage('index');
+      const querySet = root.createQuerySet('timestamp', 2);
+
+      const pipeline = root
+        .withVertex(vertexFn, {})
+        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+        .createPipeline()
+        .withColorAttachment({
+          color: {
+            view: {} as GPUTextureView,
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        })
+        .withIndexBuffer(indexBuffer)
+        .withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.drawIndexed(3);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
     });
   });
 });

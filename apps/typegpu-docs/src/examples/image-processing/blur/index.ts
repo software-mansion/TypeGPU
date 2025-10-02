@@ -203,7 +203,6 @@ function render() {
     loadOp: 'clear',
     storeOp: 'store',
   }).draw(3);
-  root['~unstable'].flush();
 }
 render();
 

@@ -151,7 +151,12 @@ export function triggerPerformanceCallback({
     );
   }
 
-  root.commandEncoder.resolveQuerySet(
+  // we don't want to override content of unavailable querySet
+  if (!querySet.available) {
+    return;
+  }
+
+  root[$internal].commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
     querySet.count,
@@ -159,12 +164,7 @@ export function triggerPerformanceCallback({
     0,
   );
 
-  root.flush();
-  root.device.queue.onSubmittedWorkDone().then(async () => {
-    if (!querySet.available) {
-      return;
-    }
-    const result = await querySet.read();
+  querySet.read().then(async (result) => {
     const start =
       result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
     const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
