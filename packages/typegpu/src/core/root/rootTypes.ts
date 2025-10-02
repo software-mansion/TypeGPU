@@ -19,6 +19,7 @@ import type {
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
+import { $internal } from '../../shared/symbols.ts';
 import type {
   Mutable,
   OmitProps,
@@ -30,6 +31,7 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
@@ -58,10 +60,11 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuTexture } from '../texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
+import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 
 // ----------
 // Public API
@@ -157,6 +160,10 @@ export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
+  with<T extends WgslTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): Configurable;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -183,6 +190,10 @@ export interface WithBinding {
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends WgslTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -195,12 +206,45 @@ export interface WithBinding {
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
 
+type SrgbVariants = {
+  rgba8unorm: 'rgba8unorm-srgb';
+  bgra8unorm: 'bgra8unorm-srgb';
+  'bc1-rgba-unorm': 'bc1-rgba-unorm-srgb';
+  'bc2-rgba-unorm': 'bc2-rgba-unorm-srgb';
+  'bc3-rgba-unorm': 'bc3-rgba-unorm-srgb';
+  'bc7-rgba-unorm': 'bc7-rgba-unorm-srgb';
+  'etc2-rgb8unorm': 'etc2-rgb8unorm-srgb';
+  'etc2-rgb8a1unorm': 'etc2-rgb8a1unorm-srgb';
+  'etc2-rgba8unorm': 'etc2-rgba8unorm-srgb';
+  'astc-4x4-unorm': 'astc-4x4-unorm-srgb';
+  'astc-5x4-unorm': 'astc-5x4-unorm-srgb';
+  'astc-5x5-unorm': 'astc-5x5-unorm-srgb';
+  'astc-6x5-unorm': 'astc-6x5-unorm-srgb';
+  'astc-6x6-unorm': 'astc-6x6-unorm-srgb';
+  'astc-8x5-unorm': 'astc-8x5-unorm-srgb';
+  'astc-8x6-unorm': 'astc-8x6-unorm-srgb';
+  'astc-8x8-unorm': 'astc-8x8-unorm-srgb';
+  'astc-10x5-unorm': 'astc-10x5-unorm-srgb';
+  'astc-10x6-unorm': 'astc-10x6-unorm-srgb';
+  'astc-10x8-unorm': 'astc-10x8-unorm-srgb';
+  'astc-10x10-unorm': 'astc-10x10-unorm-srgb';
+  'astc-12x10-unorm': 'astc-12x10-unorm-srgb';
+  'astc-12x12-unorm': 'astc-12x12-unorm-srgb';
+};
+
+type SrgbVariantOrSelf<T extends GPUTextureFormat> = T extends
+  keyof SrgbVariants ? (SrgbVariants[T] | T)[] | undefined
+  : T extends `${infer Base}-srgb`
+    ? Base extends keyof SrgbVariants ? (T | SrgbVariants[Base])[] | undefined
+    : T[] | undefined
+  : T[] | undefined;
+
 export type CreateTextureOptions<
   TSize,
   TFormat extends GPUTextureFormat,
   TMipLevelCount extends number,
   TSampleCount extends number,
-  TViewFormat extends GPUTextureFormat,
+  TViewFormats extends GPUTextureFormat[],
   TDimension extends GPUTextureDimension,
 > = {
   /**
@@ -226,7 +270,9 @@ export type CreateTextureOptions<
    * when creating views of this texture.
    * @default []
    */
-  viewFormats?: TViewFormat[] | undefined;
+  viewFormats?: TViewFormats extends SrgbVariantOrSelf<NoInfer<TFormat>>
+    ? TViewFormats
+    : SrgbVariantOrSelf<NoInfer<TFormat>>;
   /**
    * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
    * @default '2d'
@@ -239,7 +285,7 @@ export type CreateTextureResult<
   TFormat extends GPUTextureFormat,
   TMipLevelCount extends number,
   TSampleCount extends number,
-  TViewFormat extends GPUTextureFormat,
+  TViewFormats extends GPUTextureFormat[],
   TDimension extends GPUTextureDimension,
 > = Prettify<
   & {
@@ -266,12 +312,14 @@ export type CreateTextureResult<
         // '1' is the default, omitting from type
         : TSampleCount extends 1 ? undefined
         : TSampleCount;
-      viewFormats: GPUTextureFormat extends TViewFormat
+      viewFormats: GPUTextureFormat[] extends TViewFormats
         // Omitted property means the default
+        // '[]' is the default, omitting from type
         ? undefined
-        // 'never[]' is the default, omitting from type
-        : TViewFormat[] extends never[] ? undefined
-        : TViewFormat[];
+        : TViewFormats extends never[] ? undefined
+        // As per WebGPU spec, the only format that can appear here is the srgb variant of the texture format or the base format if the texture format is srgb (or self)
+        : TViewFormats extends SrgbVariantOrSelf<TFormat> ? TViewFormats
+        : never;
     },
     undefined
   >
@@ -437,6 +485,10 @@ export type ValidateUniformSchema<TData extends AnyData> =
     : TData;
 
 export interface TgpuRoot extends Unwrapper {
+  [$internal]: {
+    logOptions: LogGeneratorOptions;
+  };
+
   /**
    * The GPU device associated with this root.
    */
@@ -640,7 +692,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
-    TViewFormat extends GPUTextureFormat,
+    TViewFormats extends GPUTextureFormat[],
     TDimension extends GPUTextureDimension,
   >(
     props: CreateTextureOptions<
@@ -648,7 +700,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >,
   ): TgpuTexture<
@@ -657,7 +709,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >
   >;

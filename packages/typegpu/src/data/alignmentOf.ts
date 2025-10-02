@@ -1,3 +1,4 @@
+import { safeStringify } from '../shared/stringify.ts';
 import {
   type AnyData,
   getCustomAlignment,
@@ -18,19 +19,23 @@ const knownAlignmentMap: Record<string, number> = {
   f16: 2,
   i32: 4,
   u32: 4,
+  bool: 4,
   u16: 2,
   vec2f: 8,
   vec2h: 4,
   vec2i: 8,
   vec2u: 8,
+  vec2b: 8,
   vec3f: 16,
   vec3h: 8,
   vec3i: 16,
   vec3u: 16,
+  vec3b: 16,
   vec4f: 16,
   vec4h: 8,
   vec4i: 16,
   vec4u: 16,
+  vec4b: 16,
   mat2x2f: 8,
   mat3x3f: 16,
   mat4x4f: 16,
@@ -74,7 +79,7 @@ function computeAlignment(data: object): number {
   }
 
   throw new Error(
-    `Cannot determine alignment of data: ${JSON.stringify(data)}`,
+    `Cannot determine alignment of data: ${safeStringify(data)}`,
   );
 }
 

@@ -19,32 +19,32 @@ describe('two boxes example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct vertex_Input_1 {
-        @location(0) position: vec4f,
-        @location(1) color: vec4f,
-      }
-
-      struct vertex_Output_2 {
-        @builtin(position) pos: vec4f,
-        @location(0) color: vec4f,
-      }
-
-      struct Camera_4 {
+      "struct Camera_2 {
         view: mat4x4f,
         projection: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_3: Camera_4;
+      @group(0) @binding(0) var<uniform> camera_1: Camera_2;
 
-      struct Transform_6 {
+      struct Transform_4 {
         model: mat4x4f,
       }
 
-      @group(0) @binding(1) var<uniform> transform_5: Transform_6;
+      @group(0) @binding(1) var<uniform> transform_3: Transform_4;
 
-      @vertex fn vertex_0(input: vertex_Input_1) -> vertex_Output_2 {
-        var pos = (camera_3.projection * (camera_3.view * (transform_5.model * input.position)));
-        return vertex_Output_2(pos, input.color);
+      struct vertex_Output_5 {
+        @builtin(position) pos: vec4f,
+        @location(0) color: vec4f,
+      }
+
+      struct vertex_Input_6 {
+        @location(0) position: vec4f,
+        @location(1) color: vec4f,
+      }
+
+      @vertex fn vertex_0(input: vertex_Input_6) -> vertex_Output_5 {
+        var pos = (camera_1.projection * (camera_1.view * (transform_3.model * input.position)));
+        return vertex_Output_5(pos, input.color);
       }
 
       struct fragment_Input_8 {

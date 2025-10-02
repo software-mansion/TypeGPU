@@ -18,6 +18,7 @@ import {
   MissingVertexBuffersError,
 } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
+import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
@@ -32,6 +33,7 @@ import {
   isBindGroupLayout,
   TgpuBindGroupImpl,
 } from '../../tgpuBindGroupLayout.ts';
+import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
@@ -53,16 +55,15 @@ import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
-  isComputePipeline,
   type TgpuComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  isRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
+import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -76,14 +77,10 @@ import {
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
-  isSampledTextureView,
-  isStorageTextureView,
   isTexture,
-  type TgpuMutableTexture,
-  type TgpuReadonlyTexture,
-  type TgpuSampledTexture,
+  isTextureView,
   type TgpuTexture,
-  type TgpuWriteonlyTexture,
+  type TgpuTextureView,
 } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
@@ -275,15 +272,23 @@ class TgpuRootImpl extends WithBindingImpl
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
+  [$internal]: {
+    logOptions: LogGeneratorOptions;
+  };
+
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistrySetting: 'random' | 'strict',
     private readonly _ownDevice: boolean,
+    logOptions: LogGeneratorOptions,
     public readonly shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
 
     this['~unstable'] = this;
+    this[$internal] = {
+      logOptions,
+    };
   }
 
   get commandEncoder() {
@@ -368,6 +373,8 @@ class TgpuRootImpl extends WithBindingImpl
       disposable.destroy();
     }
 
+    clearTextureUtilsCache(this.device);
+
     if (this._ownDevice) {
       this.device.destroy();
     }
@@ -384,7 +391,7 @@ class TgpuRootImpl extends WithBindingImpl
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
-    TViewFormat extends GPUTextureFormat,
+    TViewFormats extends GPUTextureFormat[],
     TDimension extends GPUTextureDimension,
   >(
     props: CreateTextureOptions<
@@ -392,7 +399,7 @@ class TgpuRootImpl extends WithBindingImpl
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >,
   ): TgpuTexture<
@@ -401,7 +408,7 @@ class TgpuRootImpl extends WithBindingImpl
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >
   > {
@@ -417,13 +424,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(
-    resource:
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture,
-  ): GPUTextureView;
+  unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
@@ -436,10 +437,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuBindGroup
       | TgpuBuffer<AnyData>
       | TgpuTexture
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture
+      | TgpuTextureView
       | TgpuVertexLayout
       | TgpuSampler
       | TgpuComparisonSampler
@@ -479,18 +477,13 @@ class TgpuRootImpl extends WithBindingImpl
       return resource[$internal].unwrap();
     }
 
-    if (isStorageTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
+    if (isTextureView(resource)) {
+      if (!resource[$internal].unwrap) {
+        throw new Error(
+          'Cannot unwrap laid-out texture view as it has no underlying resource.',
+        );
       }
-      throw new Error('Cannot unwrap laid-out texture view.');
-    }
-
-    if (isSampledTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
-      }
-      throw new Error('Cannot unwrap laid-out texture view.');
+      return resource[$internal].unwrap();
     }
 
     if (isVertexLayout(resource)) {
@@ -696,6 +689,7 @@ export type InitOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
+  unstable_logOptions?: LogGeneratorOptions;
 };
 
 /**
@@ -710,6 +704,7 @@ export type InitFromDeviceOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
+  unstable_logOptions?: LogGeneratorOptions;
 };
 
 /**
@@ -735,6 +730,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -771,7 +767,13 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, true, options?.shaderGenerator);
+  return new TgpuRootImpl(
+    device,
+    names,
+    true,
+    unstable_logOptions ?? {},
+    options?.shaderGenerator,
+  );
 }
 
 /**
@@ -787,7 +789,14 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',
+    unstable_logOptions,
   } = options ?? {};
 
-  return new TgpuRootImpl(device, names, false, options?.shaderGenerator);
+  return new TgpuRootImpl(
+    device,
+    names,
+    false,
+    unstable_logOptions ?? {},
+    options?.shaderGenerator,
+  );
 }
