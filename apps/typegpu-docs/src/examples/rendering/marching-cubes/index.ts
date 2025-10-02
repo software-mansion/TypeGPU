@@ -37,6 +37,12 @@ prepareDispatch(root, (x, y, z) => {
 // ---generate triangles---
 const Point = d.vec3u;
 const Triangle = d.arrayOf(Point, 3);
+const Triangles = d.struct({ count: d.u32, triangles: d.arrayOf(Triangle, 4) });
+
+const indexMutable = root.createMutable(d.atomic(d.u32), 0);
+const trianglesMutable = root.createMutable(
+  d.arrayOf(Triangle, 4 * ((SIZE - 1) ** 3)),
+);
 
 const GridCell = d.struct({
   vertex: d.arrayOf(Point, 8),
@@ -50,6 +56,7 @@ const GridCell = d.struct({
  */
 const calculateCubeIndex = tgpu.fn([GridCell, d.f32], d.u32)(
   (cell, isoValue) => {
+    'kernel';
     let cubeIndex = d.u32(0);
     for (let i = 0; i < 8; i++) {
       if (cell.value[i] < isoValue) {
@@ -63,6 +70,7 @@ const calculateCubeIndex = tgpu.fn([GridCell, d.f32], d.u32)(
 // Find the point between `v1` and `v2` where the functional value = `isovalue`
 const interpolate = tgpu.fn([Point, d.f32, Point, d.f32, d.f32], Point)(
   (v1, val1, v2, val2, isoValue) => {
+    'kernel';
     const interpolated = Point();
     const mu = (isoValue - val1) / (val2 - val1);
 
@@ -80,6 +88,7 @@ const getIntersectionCoordinates = tgpu.fn(
   [GridCell, d.f32],
   d.arrayOf(Point, 12),
 )((cell, isoValue) => {
+  'kernel';
   const intersections = d.arrayOf(Point, 12)();
   const cubeIndex = calculateCubeIndex(cell, isoValue);
 
@@ -108,23 +117,27 @@ const getIntersectionCoordinates = tgpu.fn(
 // Given `cubeIndex`, get the edge table entry and using `intersections`, make all triangles
 const getTriangles = tgpu.fn(
   [d.arrayOf(Point, 12), d.u32],
-  d.arrayOf(Triangle, 4),
+  Triangles,
 )((intersections, cubeIndex) => {
+  'kernel';
   const triangles = d.arrayOf(Triangle, 4)();
+  let count = 0;
   for (let i = 0; triangleTable.$[cubeIndex][i] != -1; i += 3) {
     const triangle = Triangle();
     for (let j = 0; j < 3; j++) {
       triangle[j] = intersections[triangleTable.$[cubeIndex][i + j]];
     }
     triangles[i / 3] = triangle;
+    count += 1;
   }
 
-  return triangles;
+  return { count, triangles };
 });
 
 // Get triangles of a single cell
-const triangulateCell = tgpu.fn([GridCell, d.f32], d.arrayOf(Triangle, 4))(
+const triangulateCell = tgpu.fn([GridCell, d.f32], Triangles)(
   (cell, isoValue) => {
+    'kernel';
     const cubeIndex = calculateCubeIndex(cell, isoValue);
     const intersections = getIntersectionCoordinates(cell, isoValue);
     const triangles = getTriangles(intersections, cubeIndex);
@@ -134,7 +147,52 @@ const triangulateCell = tgpu.fn([GridCell, d.f32], d.arrayOf(Triangle, 4))(
 );
 
 // Triangulate a scalar field represented by `scalarFunction`. `isovalue` should be used for isovalue computation
-// const triangulateField = tgpu.fn([d.f32]);
+const triangulateField = prepareDispatch(root, (x, y, z) => {
+  'kernel';
+  const cell = GridCell(
+    {
+      vertex: [
+        d.vec3u(x, y, z),
+        d.vec3u(x + 1, y, z),
+        d.vec3u(x + 1, y, z + 1),
+        d.vec3u(x, y, z + 1),
+        d.vec3u(x, y + 1, z),
+        d.vec3u(x + 1, y + 1, z),
+        d.vec3u(x + 1, y + 1, z + 1),
+        d.vec3u(x, y + 1, z + 1),
+      ],
+      value: [
+        loadValue(x, y, z),
+        loadValue(x + 1, y, z),
+        loadValue(x + 1, y, z + 1),
+        loadValue(x, y, z + 1),
+        loadValue(x, y + 1, z),
+        loadValue(x + 1, y + 1, z),
+        loadValue(x + 1, y + 1, z + 1),
+        loadValue(x, y + 1, z + 1),
+      ],
+    },
+  );
+  const triangles = triangulateCell(cell, 0.5);
+
+  for (let i = 0; i < triangles.count; i++) {
+    const triangleIndex = std.atomicAdd(indexMutable.$, 1);
+    trianglesMutable.$[triangleIndex] = triangles.triangles[i];
+  }
+});
+
+const loadValue = tgpu.fn([d.u32, d.u32, d.u32], d.f32)((x, y, z) => {
+  'kernel';
+  const textureValue = std.textureLoad(
+    bindGroupLayout.$.terrain,
+    d.vec3u(x, y, z),
+  );
+  return textureValue.x;
+});
+
+triangulateField
+  .with(bindGroupLayout, bindGroup)
+  .dispatch(SIZE - 1, SIZE - 1, SIZE - 1);
 
 // #region Example controls and cleanup
 
