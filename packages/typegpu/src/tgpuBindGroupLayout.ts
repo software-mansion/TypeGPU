@@ -602,13 +602,8 @@ class TgpuBindGroupLayoutImpl<
                 : DEFAULT_MUTABLE_VISIBILITY);
 
             binding.storageTexture = {
-              format: entry.storageTexture,
-              access: {
-                mutable: 'read-write' as const,
-                readonly: 'read-only' as const,
-                writeonly: 'write-only' as const,
-              }[access],
-              viewDimension: entry.viewDimension ?? '2d',
+              ...entry.storageTexture,
+              viewDimension: entry.storageTexture.dimension,
             };
           } else if ('externalTexture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
