@@ -108,7 +108,8 @@ export async function bundleWithTsdown(
       const actualOutPath = path.join(outDir, tsdownFile);
       await fs.rename(actualOutPath, outPath);
       return outPath;
-    } else if (tsdownFile) {
+    }
+    if (tsdownFile) {
       return path.join(outDir, tsdownFile);
     }
 
@@ -129,29 +130,32 @@ export async function generateMarkdownReport(
   const grouped: Record<string, { bundler: string; size: number }[]> = {};
   for (const r of results) {
     if (!grouped[r.example]) grouped[r.example] = [];
-    grouped[r.example]!.push({ bundler: r.bundler, size: r.size });
+    grouped[r.example]?.push({ bundler: r.bundler, size: r.size });
   }
 
   let report = '# Bundler Efficiency Report\n\n';
 
   for (const example of Object.keys(grouped)) {
     if (grouped[example]) {
-    // Read snippet code
-    let snippet = '';
-    try {
-      const snippetPath = path.join('examples', example + (example.endsWith('.ts') ? '' : '.ts'));
-      snippet = await fs.readFile(snippetPath, 'utf8');
-    } catch (e) {
-      snippet = '_Could not read example source._';
-    }
-    report += `## ${example}\n\n`;
-    report += '```typescript\n' + snippet.trim() + '\n```\n\n';
-    report += '| Bundler | Bundle Size (bytes) |\n';
-    report += '|---------|---------------------|\n';
+      // Read snippet code
+      let snippet = '';
+      try {
+        const snippetPath = path.join(
+          'examples',
+          example + (example.endsWith('.ts') ? '' : '.ts'),
+        );
+        snippet = await fs.readFile(snippetPath, 'utf8');
+      } catch (e) {
+        snippet = '_Could not read example source._';
+      }
+      report += `## ${example}\n\n`;
+      report += `\`\`\`typescript\n${snippet.trim()}\n\`\`\`\n\n`;
+      report += '| Bundler | Bundle Size (bytes) |\n';
+      report += '|---------|---------------------|\n';
       for (const row of grouped[example]) {
         report += `| \`${row.bundler}\` | ${row.size} |\n`;
-    }
-    report += '\n';
+      }
+      report += '\n';
     }
   }
 
@@ -160,7 +164,8 @@ export async function generateMarkdownReport(
   report += '| Example File | Bundler   | Bundle Size (bytes) |\n';
   report += '|--------------|-----------|---------------------|\n';
   for (const result of results) {
-    report += `| \`${result.example}\` | \`${result.bundler}\` | ${result.size} |\n`;
+    report +=
+      `| \`${result.example}\` | \`${result.bundler}\` | ${result.size} |\n`;
   }
 
   await fs.writeFile('results.md', report);
