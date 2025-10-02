@@ -9,7 +9,7 @@ import { loadModel } from './load-model.ts';
 import { perlin3d, randf } from '@typegpu/noise';
 import { edgeTable, edgeToVertices, triangleTable } from './tables';
 
-const SIZE = 10;
+const SIZE = 50;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -40,9 +40,13 @@ const fillBindGroup = root.createBindGroup(fillBindGroupLayout, {
 
 prepareDispatch(root, (x, y, z) => {
   'kernel';
-  randf.seed(x * SIZE * SIZE + y * SIZE + z);
-  const level = randf.sample();
-  // const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
+  // const level =
+  //   std.distance(d.vec3f(x, y, z), d.vec3f(SIZE / 2, SIZE / 2, SIZE / 2)) /
+  //   SIZE / 0.5;
+  // randf.seed(x * SIZE * SIZE + y * SIZE + z);
+  // const level = randf.sample();
+  const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
+  console.log(level);
   std.textureStore(
     fillBindGroupLayout.$.terrain,
     d.vec3u(x, y, z),
@@ -52,9 +56,9 @@ prepareDispatch(root, (x, y, z) => {
   .with(fillBindGroupLayout, fillBindGroup)
   .dispatch(SIZE, SIZE, SIZE);
 
-// generate triangles
+// --- generate triangles ---
 
-const Point = d.vec3u;
+const Point = d.vec3f;
 const Triangle = d.arrayOf(Point, 3);
 const Triangles = d.struct({ count: d.u32, triangles: d.arrayOf(Triangle, 4) });
 
@@ -154,7 +158,7 @@ const getTriangles = tgpu.fn(
     for (let j = 0; j < 3; j++) {
       triangle[j] = intersections[triangleTable.$[cubeIndex][i + j]];
     }
-    triangles[d.u32(i / 3)] = triangle;
+    triangles[count] = triangle;
     count += 1;
   }
 
@@ -179,14 +183,14 @@ const triangulateField = prepareDispatch(root, (x, y, z) => {
   const cell = GridCell(
     {
       vertex: [
-        d.vec3u(x, y, z),
-        d.vec3u(x + 1, y, z),
-        d.vec3u(x + 1, y, z + 1),
-        d.vec3u(x, y, z + 1),
-        d.vec3u(x, y + 1, z),
-        d.vec3u(x + 1, y + 1, z),
-        d.vec3u(x + 1, y + 1, z + 1),
-        d.vec3u(x, y + 1, z + 1),
+        d.vec3f(x, y, z),
+        d.vec3f(x + 1, y, z),
+        d.vec3f(x + 1, y, z + 1),
+        d.vec3f(x, y, z + 1),
+        d.vec3f(x, y + 1, z),
+        d.vec3f(x + 1, y + 1, z),
+        d.vec3f(x + 1, y + 1, z + 1),
+        d.vec3f(x, y + 1, z + 1),
       ],
       value: [
         loadValue(x, y, z),
@@ -200,7 +204,7 @@ const triangulateField = prepareDispatch(root, (x, y, z) => {
       ],
     },
   );
-  const triangles = triangulateCell(cell, 0.5);
+  const triangles = triangulateCell(cell, 0);
 
   for (let i = 0; i < triangles.count; i++) {
     const triangleIndex = std.atomicAdd(indexMutable.$, 1);
@@ -287,6 +291,7 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list' })
+  .withPrimitive({ cullMode: 'none' })
   .createPipeline();
 
 let depthTexture = root.device.createTexture({
@@ -330,7 +335,7 @@ function frame() {
     })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderBindGroupLayout, renderFishBindGroup)
-    .draw(fishModel.polygonCount);
+    .draw(fishModel.polygonCount * 3);
 
   root['~unstable'].flush();
 
