@@ -120,20 +120,19 @@ export const controls = {
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      c.distributions
-        .flatMap((dist) =>
-          c.generators.map((gen) =>
-            tgpu.resolve({
-              externals: {
-                p: executor.pipelineCacheGet(
-                  getPRNG(dist).prng,
-                  getGenerator(gen),
-                ),
-              },
-            })
-          )
-        )
-        .map((r) => root.device.createShaderModule({ code: r }));
+      for (const dist of c.distributions) {
+        for (const gen of c.generators) {
+          const code = tgpu.resolve({
+            externals: {
+              p: executor.pipelineCacheGet(
+                getPRNG(dist).prng,
+                getGenerator(gen),
+              ),
+            },
+          });
+          root.device.createShaderModule({ code });
+        }
+      }
     },
   },
 };
