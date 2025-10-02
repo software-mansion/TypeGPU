@@ -1,11 +1,5 @@
 import tgpu from 'typegpu';
-import {
-  BPETER,
-  DefaultGenerator,
-  LCG,
-  randf,
-  type StatefulGenerator,
-} from '@typegpu/noise';
+import { BPETER, LCG, randf, type StatefulGenerator } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 
 import { Distribution, Generator, PlotType, type PRNG } from './types.ts';
@@ -105,7 +99,6 @@ export function getCameraPosition(distribution: Distribution): number[] {
 
 const GENERATOR_MAP = {
   [Generator.BPETER]: BPETER,
-  [Generator.DEFAULT_GENERATOR]: DefaultGenerator,
   [Generator.LCG]: LCG,
 };
 
