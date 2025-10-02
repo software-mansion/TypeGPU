@@ -7,5 +7,5 @@ export default defineConfig({
   treeshake: true,
   platform: 'neutral',
   external: [],
-  noExternal: ['typegpu'],
+  noExternal: ['typegpu', /^typegpu\/.*$/], // typegpu/*
 });
