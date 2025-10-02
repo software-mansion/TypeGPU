@@ -16,7 +16,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const resolution = d.vec2f(1024);
+const resolution = d.vec2f(canvas.width, canvas.height);
 
 const Agent = d.struct({
   position: d.vec2f,
@@ -29,29 +29,37 @@ const Params = d.struct({
   sensorAngle: d.f32,
   sensorDistance: d.f32,
   turnSpeed: d.f32,
+  evaporationRate: d.f32,
 });
 
-const NUM_AGENTS = 20000;
+const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(
   d.arrayOf(Agent, NUM_AGENTS),
   Array.from({ length: NUM_AGENTS }, (_, i) => {
-    const angle = (i / NUM_AGENTS) * Math.PI * 2;
-    const radius = 50.0;
+    const pos = Math.random() * 2 * Math.PI;
+    const radius = Math.sqrt(Math.random()) * (resolution.x / 2 - 10);
+    const position = d.vec2f(
+      Math.cos(pos) * radius + resolution.x / 2,
+      Math.sin(pos) * radius + resolution.y / 2,
+    );
+    const angle = Math.atan2(
+      resolution.y / 2 - position.y,
+      resolution.x / 2 - position.x,
+    );
     return Agent({
-      position: d.vec2f(
-        resolution.x / 2 + Math.cos(angle) * radius,
-        resolution.y / 2 + Math.sin(angle) * radius,
-      ),
-      angle: angle + Math.PI,
+      position,
+      angle,
     });
   }),
 );
+
 const params = root.createUniform(Params, {
   deltaTime: 0.016,
-  moveSpeed: 150.0,
+  moveSpeed: 30.0,
   sensorAngle: 0.5,
   sensorDistance: 9.0,
   turnSpeed: 2.0,
+  evaporationRate: 0.05,
 });
 
 const textures = [0, 1].map((i) =>
@@ -101,7 +109,6 @@ const updateAgents = tgpu['~unstable'].computeFn({
   const agent = agentsData.$[gid.x];
   const random = randf.sample();
 
-  // Sense in three directions
   const weightForward = sense(agent.position, agent.angle, d.f32(0));
   const weightLeft = sense(agent.position, agent.angle, params.$.sensorAngle);
   const weightRight = sense(
@@ -131,25 +138,19 @@ const updateAgents = tgpu['~unstable'].computeFn({
     dir.mul(params.$.moveSpeed * params.$.deltaTime),
   );
 
-  // Wall bouncing with proper reflection
   const dimsf = d.vec2f(dims);
   if (
     newPos.x < 0 || newPos.x > dimsf.x || newPos.y < 0 || newPos.y > dimsf.y
   ) {
-    // Clamp position to stay within bounds
     newPos = std.clamp(newPos, d.vec2f(0), dimsf.sub(d.vec2f(1)));
 
-    // Reflect angle based on which wall was hit
     if (newPos.x <= 0 || newPos.x >= dimsf.x - 1) {
-      // Hit left or right wall - flip horizontal component
       angle = Math.PI - angle;
     }
     if (newPos.y <= 0 || newPos.y >= dimsf.y - 1) {
-      // Hit top or bottom wall - flip vertical component
       angle = -angle;
     }
 
-    // Add small random perturbation to avoid getting stuck
     angle = angle + (random - 0.5) * 0.1;
   }
 
@@ -160,7 +161,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
 
   const oldState =
     std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).xyz;
-  const newState = oldState.add(d.vec3f(0.5));
+  const newState = oldState.add(d.vec3f(1));
   std.textureStore(
     computeLayout.$.newState,
     d.vec2u(newPos),
@@ -197,7 +198,11 @@ const blur = tgpu['~unstable'].computeFn({
   }
 
   const blurred = sum.div(count);
-  const newColor = std.clamp(blurred.sub(0.01), d.vec3f(0), d.vec3f(1));
+  const newColor = std.clamp(
+    blurred.sub(params.$.evaporationRate),
+    d.vec3f(0),
+    d.vec3f(1),
+  );
   std.textureStore(
     computeLayout.$.newState,
     gid.xy,
@@ -219,8 +224,8 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
 });
 
 const filteringSampler = tgpu['~unstable'].sampler({
-  magFilter: 'nearest',
-  minFilter: 'nearest',
+  magFilter: 'linear',
+  minFilter: 'linear',
 });
 
 const fragmentShader = tgpu['~unstable'].fragmentFn({
@@ -301,12 +306,49 @@ requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = {
-  'x span ↔️': {
-    initial: 0,
+  'Move Speed': {
+    initial: 30.0,
     min: 0,
-    max: 20,
+    max: 100,
     step: 1,
     onSliderChange: (newValue: number) => {
+      params.writePartial({ moveSpeed: newValue });
+    },
+  },
+  'Sensor Angle': {
+    initial: 0.5,
+    min: 0,
+    max: Math.PI,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      params.writePartial({ sensorAngle: newValue });
+    },
+  },
+  'Sensor Distance': {
+    initial: 9.0,
+    min: 1,
+    max: 50,
+    step: 0.5,
+    onSliderChange: (newValue: number) => {
+      params.writePartial({ sensorDistance: newValue });
+    },
+  },
+  'Turn Speed': {
+    initial: 2.0,
+    min: 0,
+    max: 10,
+    step: 0.1,
+    onSliderChange: (newValue: number) => {
+      params.writePartial({ turnSpeed: newValue });
+    },
+  },
+  'Evaporation Rate': {
+    initial: 0.05,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      params.writePartial({ evaporationRate: newValue });
     },
   },
 };
