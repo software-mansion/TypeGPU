@@ -6,9 +6,11 @@ import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
+import {
+  isBindGroup,
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
@@ -45,10 +47,15 @@ export interface TgpuComputePipeline
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline;
+  /**
+   * @deprecated This overload is outdated.
+   * Call `pipeline.with(bindGroup)` instead.
+   */
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
+  with(bindGroup: TgpuBindGroup): this;
 
   dispatchWorkgroups(
     x: number,
@@ -118,17 +125,32 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return this._core.unwrap().pipeline;
   }
 
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
+  with(bindGroup: TgpuBindGroup): this;
   with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline {
+    layoutOrBindGroup: TgpuBindGroupLayout | TgpuBindGroup,
+    bindGroup?: TgpuBindGroup,
+  ): this {
+    if (isBindGroup(layoutOrBindGroup)) {
+      return new TgpuComputePipelineImpl(this._core, {
+        ...this._priors,
+        bindGroupLayoutMap: new Map([
+          ...(this._priors.bindGroupLayoutMap ?? []),
+          [layoutOrBindGroup.layout, layoutOrBindGroup],
+        ]),
+      }) as this;
+    }
+
     return new TgpuComputePipelineImpl(this._core, {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
-        [bindGroupLayout, bindGroup],
+        [layoutOrBindGroup as TgpuBindGroupLayout, bindGroup as TgpuBindGroup],
       ]),
-    });
+    }) as this;
   }
 
   withPerformanceCallback(

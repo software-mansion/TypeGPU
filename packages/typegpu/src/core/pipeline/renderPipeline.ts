@@ -26,6 +26,7 @@ import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
+  isBindGroup,
   isBindGroupLayout,
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
@@ -95,10 +96,15 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
   ): this;
+  /**
+   * @deprecated This overload is outdated.
+   * Call `pipeline.with(bindGroup)` instead.
+   */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
+  with(bindGroup: TgpuBindGroup): this;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
@@ -330,28 +336,45 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
   ): this;
+  with(bindGroup: TgpuBindGroup): this;
   with(
-    definition: TgpuVertexLayout | TgpuBindGroupLayout,
-    resource: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
+    layoutOrBindGroup:
+      | TgpuVertexLayout
+      | TgpuBindGroupLayout
+      | TgpuBindGroup,
+    resource?: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
   ): this {
     const internals = this[$internal];
 
-    if (isBindGroupLayout(definition)) {
+    if (isBindGroup(layoutOrBindGroup)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [definition, resource as TgpuBindGroup],
+          [layoutOrBindGroup.layout, layoutOrBindGroup],
         ]),
       }) as this;
     }
 
-    if (isVertexLayout(definition)) {
+    if (isBindGroupLayout(layoutOrBindGroup)) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        bindGroupLayoutMap: new Map([
+          ...(internals.priors.bindGroupLayoutMap ?? []),
+          [layoutOrBindGroup, resource as TgpuBindGroup],
+        ]),
+      }) as this;
+    }
+
+    if (isVertexLayout(layoutOrBindGroup)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
-          [definition, resource as TgpuBuffer<AnyWgslData> & VertexFlag],
+          [
+            layoutOrBindGroup,
+            resource as TgpuBuffer<AnyWgslData> & VertexFlag,
+          ],
         ]),
       }) as this;
     }

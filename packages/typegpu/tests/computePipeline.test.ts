@@ -48,7 +48,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(() => pipeline.dispatchWorkgroups(1))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
       );
   });
 
@@ -67,6 +67,30 @@ describe('TgpuComputePipeline', () => {
 
       }"
     `);
+  });
+
+  it('type checks passed bind groups', ({ root }) => {
+    const main = tgpu['~unstable']
+      .computeFn({ workgroupSize: [32] })(() => {
+        // do something
+      });
+    const computePipeline = root
+      .withCompute(main)
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    computePipeline.with(layout1, bindGroup1);
+    computePipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => computePipeline.with(layout1, bindGroup2));
   });
 
   describe('Performance Callbacks', () => {
@@ -324,12 +348,12 @@ describe('TgpuComputePipeline', () => {
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
         })
-        .with(layout, bindGroup);
+        .with(bindGroup);
 
       const pipeline2 = root
         .withCompute(entryFn)
         .createPipeline()
-        .with(layout, bindGroup)
+        .with(bindGroup)
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 2,

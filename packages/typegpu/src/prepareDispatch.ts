@@ -7,10 +7,7 @@ import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
 import type { v3u } from './data/wgslTypes.ts';
 import { ceil } from './std/numeric.ts';
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-} from './tgpuBindGroupLayout.ts';
+import type { TgpuBindGroup } from './tgpuBindGroupLayout.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -43,15 +40,12 @@ class PreparedDispatch<TArgs> {
 
   /**
    * Returns a new PreparedDispatch with the specified bind group bound.
-   * Analogous to `TgpuComputePipeline.with()`.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
    */
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): PreparedDispatch<TArgs> {
+  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
     return new PreparedDispatch(
       this.#createDispatch,
-      this.#pipeline.with(bindGroupLayout, bindGroup),
+      this.#pipeline.with(bindGroup),
     );
   }
 

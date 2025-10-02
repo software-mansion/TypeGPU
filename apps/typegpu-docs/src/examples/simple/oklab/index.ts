@@ -173,7 +173,7 @@ function draw() {
   `;
 
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],

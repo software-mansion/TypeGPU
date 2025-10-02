@@ -274,7 +274,7 @@ function frame() {
   even = !even;
 
   computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
+    .with(computeBindGroups[even ? 0 : 1])
     .dispatchWorkgroups(triangleAmount);
 
   renderPipeline

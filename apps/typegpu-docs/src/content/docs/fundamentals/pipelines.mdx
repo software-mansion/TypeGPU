@@ -277,7 +277,7 @@ renderPipeline
 
 ### Resource bindings
 
-Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts a pair of arguments: [a bind group layout and a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
+Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts either [a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
 
 ```ts
 // vertex layout
@@ -305,11 +305,11 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 // binding and execution
 renderPipeline
   .with(vertexLayout, vertexBuffer)
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .draw(8);
 
 computePipeline
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .dispatchWorkgroups(1);
 ```
 
