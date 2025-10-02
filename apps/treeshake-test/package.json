@@ -5,20 +5,19 @@
   "description": "Tree-shake testing app for TypeGPU",
   "type": "module",
   "scripts": {
-    "test": "tsx index.ts",
-    "test:treeshake": "tsx index.ts"
+    "test": "tsx index.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "esbuild": "^0.25.10",
+    "ts-loader": "^9.5.4",
+    "tsdown": "^0.15.6",
     "tsx": "^4.19.2",
     "typescript": "catalog:types",
-    "esbuild": "^0.24.2",
-    "tsdown": "^0.2.16",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^5.1.4",
-    "ts-loader": "^9.5.1"
+    "webpack": "^5.102.0",
+    "webpack-cli": "^6.0.1"
   }
 }
