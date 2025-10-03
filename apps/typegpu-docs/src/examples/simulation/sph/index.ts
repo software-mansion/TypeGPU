@@ -1,183 +1,259 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
+import {
+  Particle,
+  PosVel,
+  SPHParams,
+  computeCopyPosition,
+  copyPositionLayout,
+} from './alg/copyPosition';
+import {
+  Environment,
+  computeDensity,
+  densityLayout,
+} from './alg/density';
+import { computeForce, forceLayout } from './alg/force';
+import { RealBoxSize, computeIntegrate, integrateLayout } from './alg/integrate';
 
-const root = await tgpu.init({
-  device: {
-    optionalFeatures: ['float32-filterable'],
-  },
-});
-const canFilter = root.enabledFeatures.has('float32-filterable');
+// Initialize WebGPU
+const root = await tgpu.init();
 const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+context.configure({ device, format: presentationFormat, alphaMode: 'premultiplied' });
 
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+// Ensure canvas is sized in device pixels
+const dpr = window.devicePixelRatio || 1;
+function resizeCanvas() {
+  canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+  canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+}
+resizeCanvas();
 
-const VOLUME_SIZE = 256;
-const NUM_AGENTS = 800_000;
-const AGENT_WORKGROUP_SIZE = 64;
-const BLUR_WORKGROUP_SIZE = [4, 4, 4];
+// Camera setup
+const Camera = d.struct({ viewProj: d.mat4x4f, position: d.vec3f });
+const cameraBuffer = root.createBuffer(Camera, {
+  viewProj: d.mat4x4f.identity(),
+  position: d.vec3f(),
+}).$usage('uniform');
 
-const CAMERA_FOV_DEGREES = 60;
-const CAMERA_DISTANCE_MULTIPLIER = 1.5;
-const CAMERA_INITIAL_ANGLE = Math.PI / 4;
-
-const RAYMARCH_STEPS = 128;
-const DENSITY_MULTIPLIER = 0.05;
-
-const RANDOM_DIRECTION_WEIGHT = 0.3;
-const CENTER_BIAS_WEIGHT = 0.7;
-
-const DEFAULT_MOVE_SPEED = 30.0;
-const DEFAULT_SENSOR_ANGLE = 0.5;
-const DEFAULT_SENSOR_DISTANCE = 9.0;
-const DEFAULT_TURN_SPEED = 10.0;
-const DEFAULT_EVAPORATION_RATE = 0.05;
-
-const resolution = d.vec3f(VOLUME_SIZE);
-
-const Camera = d.struct({
-  viewProj: d.mat4x4f,
-  invViewProj: d.mat4x4f,
-  position: d.vec3f,
-});
-
-const cameraTarget = resolution.div(2);
 const cameraUp = d.vec3f(0, 1, 0);
-const fov = (CAMERA_FOV_DEGREES * Math.PI) / 180;
-const aspect = canvas.width / canvas.height;
+const fov = (60 * Math.PI) / 180;
 const near = 0.1;
-const far = 1000.0;
+const far = 500.0;
+const viewport = () => ({ w: canvas.width, h: canvas.height, aspect: canvas.width / canvas.height });
 
-let cameraDistance = Math.max(resolution.x, resolution.y, resolution.z) *
-  CAMERA_DISTANCE_MULTIPLIER;
-let cameraTheta = CAMERA_INITIAL_ANGLE; // azimuth
-let cameraPhi = CAMERA_INITIAL_ANGLE; // elevation
-
+const boxHalf = d.vec3f(15, 10, 15);
+let cameraTheta = Math.PI / 4;
+let cameraPhi = Math.PI / 3;
+let cameraDistance = Math.max(boxHalf.x, boxHalf.y, boxHalf.z) * 4;
 const updateCamera = () => {
-  const cameraPos = cameraTarget.add(d.vec3f(
+  const { aspect } = viewport();
+  const target = d.vec3f(0, 0, 0);
+  const pos = target.add(d.vec3f(
     cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta),
     cameraDistance * Math.cos(cameraPhi),
     cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
   ));
-
-  const view = m.mat4.lookAt(cameraPos, cameraTarget, cameraUp, d.mat4x4f());
+  const view = m.mat4.lookAt(pos, target, cameraUp, d.mat4x4f());
   const proj = m.mat4.perspective(fov, aspect, near, far, d.mat4x4f());
   const viewProj = m.mat4.mul(proj, view, d.mat4x4f());
-  const invViewProj = m.mat4.invert(viewProj, d.mat4x4f());
-
-  cameraData.write({
-    viewProj,
-    invViewProj,
-    position: cameraPos,
-  });
+  cameraBuffer.write({ viewProj, position: pos });
 };
-
-const cameraData = root.createUniform(Camera, {
-  viewProj: d.mat4x4f.identity(),
-  invViewProj: d.mat4x4f.identity(),
-  position: d.vec3f(),
-});
-
 updateCamera();
 
-// #region Example controls and cleanup
+// Install resize listener after updateCamera is defined
+window.addEventListener('resize', () => { resizeCanvas(); updateCamera(); });
 
+// Simulation parameters
+const N = 3000; // keep modest for browser (O(N^2) naive neighborhood via single-cell grid)
+const dt = 0.004;
+const kernelRadius = 1.2;
+const mass = 1.0;
+const restDensity = 1.0;
+const stiffness = 200.0;
+const nearStiffness = 200.0;
+const viscosity = 0.1;
+
+const params = root.createUniform(SPHParams, {
+  mass,
+  kernelRadius,
+  kernelRadiusPow2: kernelRadius * kernelRadius,
+  kernelRadiusPow5: kernelRadius ** 5,
+  kernelRadiusPow6: kernelRadius ** 6,
+  kernelRadiusPow9: kernelRadius ** 9,
+  dt,
+  stiffness,
+  nearStiffness,
+  restDensity,
+  viscosity,
+  n: d.u32(N),
+});
+
+// Degenerate 1x1x1 grid that contains all particles, so prefixSum is [0, N]
+const env = root.createUniform(Environment, {
+  xGrids: 1,
+  yGrids: 1,
+  zGrids: 1,
+  cellSize: Math.max(2 * boxHalf.x, 2 * boxHalf.y, 2 * boxHalf.z) + 1.0,
+  xHalf: boxHalf.x,
+  yHalf: boxHalf.y,
+  zHalf: boxHalf.z,
+  offset: -1e-3,
+});
+
+const realBox = root.createUniform(RealBoxSize, { xHalf: boxHalf.x, yHalf: boxHalf.y, zHalf: boxHalf.z });
+
+const prefixSum = root.createBuffer(d.arrayOf(d.u32, 2), [0, N]).$usage('storage');
+
+// Particles and a view buffer for rendering
+const initialParticles = Array.from({ length: N }, (_, i) => {
+  const u = i / N;
+  // pack initial block of fluid
+  const px = (Math.random() * 0.6 - 0.3) * boxHalf.x * 1.5;
+  const py = Math.random() * boxHalf.y * 0.5 + boxHalf.y * 0.25;
+  const pz = (Math.random() * 0.6 - 0.3) * boxHalf.z * 1.5;
+  return Particle({
+    position: d.vec3f(px, py, pz),
+    v: d.vec3f(0, 0, 0),
+    force: d.vec3f(0, 0, 0),
+    density: 0,
+    nearDensity: 0,
+  });
+});
+
+const particles = root.createBuffer(d.arrayOf(Particle, N), initialParticles).$usage('storage');
+
+const posvel = root.createBuffer(d.arrayOf(PosVel, N)).$usage('storage');
+
+const densityBindGroup = root.createBindGroup(densityLayout, {
+  particles,
+  prefixSum,
+  env: env.buffer,
+  params: params.buffer,
+});
+
+const forceBindGroup = root.createBindGroup(forceLayout, {
+  particles,
+  prefixSum,
+  env: env.buffer,
+  params: params.buffer,
+});
+
+const integrateBindGroup = root.createBindGroup(integrateLayout, {
+  particles,
+  realBox: realBox.buffer,
+  params: params.buffer,
+});
+
+const copyPositionBindGroup = root.createBindGroup(copyPositionLayout, {
+  particles,
+  posvel,
+  params: params.buffer,
+});
+
+// Build compute pipelines from provided kernels
+const densityPipeline = root['~unstable']
+  .withCompute(computeDensity)
+  .createPipeline()
+  .with(densityLayout, densityBindGroup);
+
+const forcePipeline = root['~unstable']
+  .withCompute(computeForce)
+  .createPipeline()
+  .with(forceLayout, forceBindGroup);
+
+const integratePipeline = root['~unstable']
+  .withCompute(computeIntegrate)
+  .createPipeline()
+  .with(integrateLayout, integrateBindGroup);
+
+const copyPosPipeline = root['~unstable']
+  .withCompute(computeCopyPosition)
+  .createPipeline()
+  .with(copyPositionLayout, copyPositionBindGroup);
+
+// Minimal point rendering of particles (1px points)
+const particleLayout = tgpu.bindGroupLayout({
+  camera: { uniform: Camera },
+  posvel: { storage: d.arrayOf(PosVel, N), access: 'readonly' },
+});
+
+const pointVert = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, color: d.vec3f },
+})((input) => {
+  const p = particleLayout.$.posvel[input.vertexIndex].position;
+  const clip = std.mul(particleLayout.$.camera.viewProj, d.vec4f(p, 1));
+  return { pos: clip, color: d.vec3f(0.2, 0.6, 1.0) };
+});
+
+const pointFrag = tgpu['~unstable'].fragmentFn({ in: { color: d.vec3f }, out: d.vec4f })((input) => {
+  return d.vec4f(input.color, 1);
+});
+
+const renderPipeline = root['~unstable']
+  .withVertex(pointVert, {})
+  .withFragment(pointFrag, { format: presentationFormat })
+  .withPrimitive({ topology: 'point-list' })
+  .createPipeline();
+
+// Bind group for render resources
+const particleBindGroup = root.createBindGroup(particleLayout, { camera: cameraBuffer, posvel });
+
+// Interaction: basic orbit controls
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
-
-const handleCameraRotation = (deltaX: number, deltaY: number) => {
-  cameraTheta -= deltaX * 0.01;
-  cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + deltaY * 0.01));
+const handleCameraRotation = (dx: number, dy: number) => {
+  cameraTheta -= dx * 0.01;
+  cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi + dy * 0.01));
   updateCamera();
 };
-
-canvas.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
-});
-
+canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
 canvas.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
-
-  const deltaX = e.clientX - lastMouseX;
-  const deltaY = e.clientY - lastMouseY;
-
-  handleCameraRotation(deltaX, deltaY);
-
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
+  handleCameraRotation(e.clientX - lastMouseX, e.clientY - lastMouseY);
+  lastMouseX = e.clientX; lastMouseY = e.clientY;
 });
+canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); cameraDistance *= 1 + e.deltaY * 0.001; updateCamera(); }, { passive: false });
 
-canvas.addEventListener('mouseup', () => {
-  isDragging = false;
-});
+// Frame loop: density -> force -> integrate -> copy positions -> render
+let running = true;
+function frame() {
+  if (!running) return;
 
-canvas.addEventListener('mouseleave', () => {
-  isDragging = false;
-});
+  // step simulation
+  const groups = Math.ceil(N / 64);
+  densityPipeline.dispatchWorkgroups(groups);
+  forcePipeline.dispatchWorkgroups(groups);
+  integratePipeline.dispatchWorkgroups(groups);
+  copyPosPipeline.dispatchWorkgroups(groups);
 
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  cameraDistance *= 1 + e.deltaY * 0.001;
-  cameraDistance = Math.max(
-    100,
-    Math.min(
-      cameraDistance,
-      Math.max(resolution.x, resolution.y, resolution.z) * 3,
-    ),
-  );
-  updateCamera();
-}, { passive: false });
+  // render
+  renderPipeline.withColorAttachment({
+    view: context.getCurrentTexture().createView(),
+    loadOp: 'clear',
+    storeOp: 'store',
+    clearValue: [0.03, 0.03, 0.04, 1],
+  })
+  .with(particleLayout, particleBindGroup)
+  .draw(N);
 
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    isDragging = true;
-    lastMouseX = e.touches[0].clientX;
-    lastMouseY = e.touches[0].clientY;
-  }
-}, { passive: false });
+  root['~unstable'].flush();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (!isDragging || e.touches.length !== 1) return;
-
-  const deltaX = e.touches[0].clientX - lastMouseX;
-  const deltaY = e.touches[0].clientY - lastMouseY;
-
-  handleCameraRotation(deltaX, deltaY);
-
-  lastMouseX = e.touches[0].clientX;
-  lastMouseY = e.touches[0].clientY;
-}, { passive: false });
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
-
-canvas.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
-
-export const controls = {
-
-};
-
+export const controls = {};
 export function onCleanup() {
+  running = false;
   root.destroy();
 }
 

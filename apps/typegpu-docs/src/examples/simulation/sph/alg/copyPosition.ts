@@ -27,11 +27,17 @@ export const SPHParams = d.struct({
     n: d.u32,
 });
 
-// Factory that builds a compute function bound to provided buffers/uniforms
-export const makeCopyPosition = (particles: any, posvel: any, params: any) =>
-    tgpu['~unstable'].computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [64] })(({ gid }) => {
-        if (gid.x >= params.$.n) return;
-        const p = particles.$[gid.x];
-        posvel.$[gid.x].position = p.position;
-        posvel.$[gid.x].v = p.v;
-    });
+export const copyPositionLayout = tgpu.bindGroupLayout({
+    particles: { storage: d.arrayOf(Particle), access: 'readonly' },
+    posvel: { storage: d.arrayOf(PosVel), access: 'mutable' },
+    params: { uniform: SPHParams },
+});
+
+const { particles, posvel, params } = copyPositionLayout.bound;
+
+export const computeCopyPosition = tgpu['~unstable'].computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [64] })(({ gid }) => {
+    if (gid.x >= params.value.n) return;
+    const p = particles.value[gid.x];
+    posvel.value[gid.x].position = p.position;
+    posvel.value[gid.x].v = p.v;
+});
