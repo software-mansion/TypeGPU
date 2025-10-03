@@ -8,8 +8,7 @@ import { fragmentShader, vertexShader } from './render.ts';
 import { loadModel } from './load-model.ts';
 import { perlin3d, randf } from '@typegpu/noise';
 import { edgeTable, edgeToVertices, triangleTable } from './tables';
-
-const SIZE = 50;
+import { SIZE } from './params.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -45,8 +44,11 @@ prepareDispatch(root, (x, y, z) => {
   //   SIZE / 0.5;
   // randf.seed(x * SIZE * SIZE + y * SIZE + z);
   // const level = randf.sample();
-  const level = perlin3d.sample(d.vec3f(x, y, z).div(SIZE));
-  console.log(level);
+  let level = d.f32(y) / SIZE - 0.3;
+  for (let i = 0; i < 4; i++) {
+    const mult = 3 * d.f32(2 ** i);
+    level += perlin3d.sample(d.vec3f(x, y, z).div(SIZE).mul(mult)) / mult;
+  }
   std.textureStore(
     fillBindGroupLayout.$.terrain,
     d.vec3u(x, y, z),
@@ -59,8 +61,11 @@ prepareDispatch(root, (x, y, z) => {
 // --- generate triangles ---
 
 const Point = d.vec3f;
-const Triangle = d.arrayOf(Point, 3);
-const Triangles = d.struct({ count: d.u32, triangles: d.arrayOf(Triangle, 4) });
+const Triangle = d.struct({ points: d.arrayOf(Point, 3), normal: d.vec3f });
+const CellTriangles = d.struct({
+  count: d.u32,
+  triangles: d.arrayOf(Triangle, 4),
+});
 
 const indexMutable = root.createMutable(d.atomic(d.u32), 0);
 const trianglesMutable = root.createMutable(
@@ -145,10 +150,17 @@ const getIntersectionCoordinates = tgpu.fn(
   return intersections;
 });
 
+const calculateNormal = tgpu.fn([d.arrayOf(Point, 3)], d.vec3f)((points) => {
+  const e1 = points[1].sub(points[0]);
+  const e2 = points[2].sub(points[0]);
+  const n = std.cross(d.vec3f(e1.x, e1.y, e1.z), d.vec3f(e2.x, e2.y, e2.z));
+  return std.normalize(n);
+});
+
 // Given `cubeIndex`, get the edge table entry and using `intersections`, make all triangles
 const getTriangles = tgpu.fn(
   [d.arrayOf(Point, 12), d.u32],
-  Triangles,
+  CellTriangles,
 )((intersections, cubeIndex) => {
   'kernel';
   const triangles = d.arrayOf(Triangle, 4)();
@@ -156,8 +168,9 @@ const getTriangles = tgpu.fn(
   for (let i = 0; triangleTable.$[cubeIndex][i] != -1; i += 3) {
     const triangle = Triangle();
     for (let j = 0; j < 3; j++) {
-      triangle[j] = intersections[triangleTable.$[cubeIndex][i + j]];
+      triangle.points[j] = intersections[triangleTable.$[cubeIndex][i + j]];
     }
+    triangle.normal = calculateNormal(triangle.points);
     triangles[count] = triangle;
     count += 1;
   }
@@ -166,7 +179,7 @@ const getTriangles = tgpu.fn(
 });
 
 // Get triangles of a single cell
-const triangulateCell = tgpu.fn([GridCell, d.f32], Triangles)(
+const triangulateCell = tgpu.fn([GridCell, d.f32], CellTriangles)(
   (cell, isoValue) => {
     'kernel';
     const cubeIndex = calculateCubeIndex(cell, isoValue);
@@ -237,11 +250,12 @@ context.configure({
 
 const triangleCount = await indexMutable.read();
 const triangles = await trianglesMutable.read();
-console.log(triangles);
-const vertexedTriangles = triangles.flat().map((vertex) => ({
+const vertexedTriangles = triangles.map((
+  triangle,
+) => (triangle.points.map((vertex) => ({
   modelPosition: d.vec3f(vertex.x, vertex.y, vertex.z),
-  modelNormal: d.vec3f(0, 1, 0),
-}));
+  modelNormal: triangle.normal,
+})))).flat();
 const vertexBuffer = root.createBuffer(
   d.arrayOf(
     d.struct({ modelPosition: d.vec3f, modelNormal: d.vec3f }),
@@ -291,7 +305,7 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list' })
-  .withPrimitive({ cullMode: 'none' })
+  .withPrimitive({ cullMode: 'back' })
   .createPipeline();
 
 let depthTexture = root.device.createTexture({
@@ -401,7 +415,11 @@ function updateCameraOrbit(dx: number, dy: number) {
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
-  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 100);
+  orbitRadius = std.clamp(
+    orbitRadius + event.deltaY * zoomSensitivity,
+    3,
+    1000,
+  );
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
