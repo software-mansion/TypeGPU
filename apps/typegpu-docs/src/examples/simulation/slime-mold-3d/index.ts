@@ -1,12 +1,16 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { randf } from '@typegpu/noise';
+import { perlin3d, randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
 const root = await tgpu.init({
   device: {
     optionalFeatures: ['float32-filterable'],
+    requiredLimits: {
+      maxStorageBufferBindingSize: 256 * 1024 * 1024,
+      maxComputeInvocationsPerWorkgroup: 1024,
+    },
   },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
@@ -22,7 +26,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const VOLUME_SIZE = 256;
+const VOLUME_SIZE = 128;
 const NUM_AGENTS = 800_000;
 const AGENT_WORKGROUP_SIZE = 64;
 const BLUR_WORKGROUP_SIZE = [4, 4, 4];
@@ -31,19 +35,20 @@ const CAMERA_FOV_DEGREES = 60;
 const CAMERA_DISTANCE_MULTIPLIER = 1.5;
 const CAMERA_INITIAL_ANGLE = Math.PI / 4;
 
-const RAYMARCH_STEPS = 128;
-const DENSITY_MULTIPLIER = 0.05;
+const RAYMARCH_STEPS = 256;
+const DENSITY_MULTIPLIER = 0.7;
 
 const RANDOM_DIRECTION_WEIGHT = 0.3;
 const CENTER_BIAS_WEIGHT = 0.7;
 
-const DEFAULT_MOVE_SPEED = 30.0;
+const DEFAULT_MOVE_SPEED = 40.0;
 const DEFAULT_SENSOR_ANGLE = 0.5;
-const DEFAULT_SENSOR_DISTANCE = 9.0;
-const DEFAULT_TURN_SPEED = 10.0;
-const DEFAULT_EVAPORATION_RATE = 0.05;
+const DEFAULT_SENSOR_DISTANCE = 8.5;
+const DEFAULT_TURN_SPEED = 60.0;
+const DEFAULT_EVAPORATION_RATE = 0.02;
 
 const resolution = d.vec3f(VOLUME_SIZE);
+const cache = perlin3d.staticCache({ root, size: d.vec3u(resolution) });
 
 const Camera = d.struct({
   viewProj: d.mat4x4f,
@@ -134,6 +139,49 @@ const textures = [0, 1].map(() =>
     .$usage('sampled', 'storage')
 );
 
+const terrain = root['~unstable']
+  .createTexture({
+    size: [resolution.x, resolution.y, resolution.z],
+    format: 'r32float',
+    dimension: '3d',
+  })
+  .$usage('sampled', 'storage');
+const terrainWriteView = terrain.createView(
+  d.textureStorage3d('r32float', 'write-only'),
+);
+const terrainReadView = terrain.createView(
+  d.textureStorage3d('r32float', 'read-only'),
+);
+const terrainSampled = terrain.createView();
+
+const initTerrain = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [8, 8, 8],
+})(({ gid }) => {
+  const dims = std.textureDimensions(terrainWriteView.$);
+  if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) return;
+
+  const pos = d.vec3f(gid.xyz);
+  const scale = d.f32(0.007);
+  const noiseValue = perlin3d.sample(pos.mul(scale));
+
+  std.textureStore(
+    terrainWriteView.$,
+    gid.xyz,
+    d.vec4f(std.saturate(noiseValue), 0, 0, 1),
+  );
+});
+const terrainPipeline = root['~unstable']
+  .pipe(cache.inject())
+  .withCompute(initTerrain)
+  .createPipeline();
+
+terrainPipeline.dispatchWorkgroups(
+  Math.ceil(resolution.x / 8),
+  Math.ceil(resolution.y / 8),
+  Math.ceil(resolution.z / 8),
+);
+
 const computeLayout = tgpu.bindGroupLayout({
   oldState: { storageTexture: d.textureStorage3d('r32float', 'read-only') },
   newState: { storageTexture: d.textureStorage3d('r32float', 'write-only') },
@@ -175,6 +223,50 @@ const getPerpendicular = (dir: d.v3f) => {
   return std.normalize(std.cross(dir, axis));
 };
 
+const getTerrainNormal = (
+  pos: d.v3f,
+  dimsf: d.v3f,
+  terrain: d.textureStorage3d,
+) => {
+  'kernel';
+  const offset = d.f32(2);
+  const bounds = d.vec3f();
+  const maxBounds = dimsf.sub(d.vec3f(1));
+
+  const px = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(offset, 0, 0)), bounds, maxBounds)),
+  ).x;
+  const nx = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(-offset, 0, 0)), bounds, maxBounds)),
+  ).x;
+  const py = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(0, offset, 0)), bounds, maxBounds)),
+  ).x;
+  const ny = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(0, -offset, 0)), bounds, maxBounds)),
+  ).x;
+  const pz = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(0, 0, offset)), bounds, maxBounds)),
+  ).x;
+  const nz = std.textureLoad(
+    terrain,
+    d.vec3u(std.clamp(pos.add(d.vec3f(0, 0, -offset)), bounds, maxBounds)),
+  ).x;
+
+  const gradient = d.vec3f(px - nx, py - ny, pz - nz);
+
+  return std.select(
+    d.vec3f(0, 1, 0),
+    std.normalize(gradient),
+    std.length(gradient) > 0.001,
+  );
+};
+
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'kernel';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -202,8 +294,12 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
 
     const weight = std.textureLoad(computeLayout.$.oldState, sensorPosInt).x;
 
-    weightedDir = weightedDir.add(sensorDir.mul(weight));
-    totalWeight = totalWeight + weight;
+    // Check if sensor position hits terrain
+    const terrainValue = std.textureLoad(terrainReadView.$, sensorPosInt).x;
+    const terrainPenalty = std.select(1.0, 0.01, terrainValue > 0);
+
+    weightedDir = weightedDir.add(sensorDir.mul(weight * terrainPenalty));
+    totalWeight = totalWeight + (weight * terrainPenalty);
   }
 
   return SenseResult({ weightedDir, totalWeight });
@@ -241,9 +337,40 @@ const updateAgents = tgpu['~unstable'].computeFn({
     direction = std.normalize(direction.add(randomOffset));
   }
 
-  const newPos = agent.position.add(
-    direction.mul(params.$.moveSpeed * params.$.deltaTime),
-  );
+  // Predictive collision detection - check ahead of agent
+  const moveDistance = params.$.moveSpeed * params.$.deltaTime;
+  const lookAheadDistance = moveDistance * 2.0;
+  const lookAheadPos = agent.position.add(direction.mul(lookAheadDistance));
+
+  const terrainValue = std.textureLoad(
+    terrainReadView.$,
+    d.vec3u(std.clamp(lookAheadPos, d.vec3f(), dimsf.sub(d.vec3f(1)))),
+  ).x;
+
+  if (terrainValue > 0) {
+    const terrainNormal = getTerrainNormal(
+      lookAheadPos,
+      dimsf,
+      terrainReadView.$,
+    );
+    const reflectedDir = direction.sub(
+      terrainNormal.mul(2.0 * std.dot(direction, terrainNormal)),
+    );
+
+    const randomOffset = randf.inUnitSphere().mul(0.2);
+    direction = std.normalize(reflectedDir.add(randomOffset));
+  }
+
+  let newPos = agent.position.add(direction.mul(moveDistance));
+
+  const finalTerrainCheck = std.textureLoad(
+    terrainReadView.$,
+    d.vec3u(std.clamp(newPos, d.vec3f(), dimsf.sub(d.vec3f(1)))),
+  ).x;
+  if (finalTerrainCheck > 0) {
+    const terrainNormal = getTerrainNormal(newPos, dimsf, terrainReadView.$);
+    newPos = agent.position.add(terrainNormal.mul(1.0));
+  }
 
   const center = dimsf.div(2);
 
@@ -416,7 +543,13 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const gamma = d.f32(1.4);
   const sigmaT = d.f32(DENSITY_MULTIPLIER);
 
-  const albedo = d.vec3f(0.57, 0.44, 0.96);
+  const slimeAlbedo = d.vec3f(0.57, 0.44, 0.96);
+  const terrainAlbedo = d.vec3f(0.3, 0.24, 0.3);
+
+  // Lighting setup
+  const lightDir = std.normalize(d.vec3f(0.5, 0.8, 0.3));
+  const ambientLight = d.f32(0.3);
+  const diffuseStrength = d.f32(0.7);
 
   let transmittance = d.f32(1);
   let accum = d.vec3f();
@@ -432,6 +565,77 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     const pos = rayOrigin.add(rayDir.mul(t));
     const texCoord = pos.div(resolution);
 
+    const terrainValue = std
+      .textureSampleLevel(terrainSampled.$, sampler, texCoord, 0)
+      .x;
+
+    if (terrainValue > 0.01) {
+      // Calculate gradient for terrain lighting with edge clamping
+      const gradientOffset = d.f32(1.0 / VOLUME_SIZE);
+      const texCoordMin = d.vec3f(0.0);
+      const texCoordMax = d.vec3f(1.0);
+
+      // Clamp sampling positions to valid texture coordinates
+      const texCoordX = std.clamp(
+        texCoord.add(d.vec3f(gradientOffset, 0, 0)),
+        texCoordMin,
+        texCoordMax,
+      );
+      const texCoordY = std.clamp(
+        texCoord.add(d.vec3f(0, gradientOffset, 0)),
+        texCoordMin,
+        texCoordMax,
+      );
+      const texCoordZ = std.clamp(
+        texCoord.add(d.vec3f(0, 0, gradientOffset)),
+        texCoordMin,
+        texCoordMax,
+      );
+
+      const terrainX = std.textureSampleLevel(
+        terrainSampled.$,
+        sampler,
+        texCoordX,
+        0,
+      ).x;
+      const terrainY = std.textureSampleLevel(
+        terrainSampled.$,
+        sampler,
+        texCoordY,
+        0,
+      ).x;
+      const terrainZ = std.textureSampleLevel(
+        terrainSampled.$,
+        sampler,
+        texCoordZ,
+        0,
+      ).x;
+
+      const terrainGradient = d.vec3f(
+        terrainX - terrainValue,
+        terrainY - terrainValue,
+        terrainZ - terrainValue,
+      );
+
+      const terrainGradientLength = std.length(terrainGradient);
+      let terrainNormal = d.vec3f(0, 1, 0);
+      if (terrainGradientLength > 0.001) {
+        terrainNormal = std.normalize(terrainGradient);
+      }
+
+      // Apply lighting to terrain
+      const terrainDiffuse = std.max(std.dot(terrainNormal, lightDir), 0.0);
+      const terrainLighting = ambientLight + diffuseStrength * terrainDiffuse;
+
+      const terrainContrib = terrainAlbedo.mul(terrainLighting).mul(
+        transmittance,
+      );
+      accum = accum.add(terrainContrib);
+      transmittance = d.f32(0);
+      break;
+    }
+
+    // Sample slime
     const sampleValue = std
       .textureSampleLevel(renderLayout.$.state, sampler, texCoord, 0)
       .x;
@@ -439,12 +643,68 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);
     const density = std.pow(d0, gamma);
 
-    const alphaSrc = 1 - std.exp(-sigmaT * density * stepSize);
+    if (density > 0.01) {
+      const gradientOffset = d.f32(1.0 / VOLUME_SIZE);
+      const texCoordMin = d.vec3f(0.0);
+      const texCoordMax = d.vec3f(1.0);
 
-    const contrib = albedo.mul(alphaSrc);
+      const slimeTexCoordX = std.clamp(
+        texCoord.add(d.vec3f(gradientOffset, 0, 0)),
+        texCoordMin,
+        texCoordMax,
+      );
+      const slimeTexCoordY = std.clamp(
+        texCoord.add(d.vec3f(0, gradientOffset, 0)),
+        texCoordMin,
+        texCoordMax,
+      );
+      const slimeTexCoordZ = std.clamp(
+        texCoord.add(d.vec3f(0, 0, gradientOffset)),
+        texCoordMin,
+        texCoordMax,
+      );
 
-    accum = accum.add(contrib.mul(transmittance));
-    transmittance = transmittance * (1 - alphaSrc);
+      const sampleX = std.textureSampleLevel(
+        renderLayout.$.state,
+        sampler,
+        slimeTexCoordX,
+        0,
+      ).x;
+      const sampleY = std.textureSampleLevel(
+        renderLayout.$.state,
+        sampler,
+        slimeTexCoordY,
+        0,
+      ).x;
+      const sampleZ = std.textureSampleLevel(
+        renderLayout.$.state,
+        sampler,
+        slimeTexCoordZ,
+        0,
+      ).x;
+
+      const gradient = d.vec3f(
+        sampleX - sampleValue,
+        sampleY - sampleValue,
+        sampleZ - sampleValue,
+      );
+
+      const gradientLength = std.length(gradient);
+      let normal = d.vec3f(0, 1, 0);
+      if (gradientLength > 0.001) {
+        normal = std.normalize(gradient);
+      }
+
+      const diffuse = std.max(std.dot(normal, lightDir), 0.0);
+      const lighting = ambientLight + diffuseStrength * diffuse;
+
+      const alphaSrc = 1 - std.exp(-sigmaT * density * stepSize);
+      const litColor = slimeAlbedo.mul(lighting);
+      const contrib = litColor.mul(alphaSrc);
+
+      accum = accum.add(contrib.mul(transmittance));
+      transmittance = transmittance * (1 - alphaSrc);
+    }
   }
 
   const alpha = 1 - transmittance;
