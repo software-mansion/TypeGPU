@@ -24,9 +24,10 @@ describe('console log example', () => {
         '100 dispatches',
         'Varying size logs',
         'Render pipeline',
+        'Draw indexed',
         'Too many logs',
       ],
-      expectedCalls: 11,
+      expectedCalls: 12,
     }, device);
 
     // the resolution variant for when 'shader-f16' is not enabled
@@ -1238,6 +1239,67 @@ describe('console log example', () => {
           return;
         }
         wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      struct mainVertex_Output_1 {
+        @builtin(position) pos: vec4f,
+      }
+
+      struct mainVertex_Input_2 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
+      }
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer_5: atomic<u32>;
+
+      struct SerializedLogData_7 {
+        id: u32,
+        serializedData: array<u32, 32>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> dataBuffer_6: array<SerializedLogData_7, 40>;
+
+      var<private> dataBlockIndex_8: u32;
+
+      var<private> dataByteIndex_9: u32;
+
+      fn nextByteIndex_12() -> u32{
+        let i = dataByteIndex_9;
+        dataByteIndex_9 = dataByteIndex_9 + 1u;
+        return i;
+      }
+
+      fn serializeF32_11(n: f32) {
+        dataBuffer_6[dataBlockIndex_8].serializedData[nextByteIndex_12()] = bitcast<u32>(n);
+      }
+
+      fn log1serializer_10(_arg_0: f32, _arg_1: f32) {
+        serializeF32_11(_arg_0);
+        serializeF32_11(_arg_1);
+      }
+
+      fn log1_4(_arg_0: f32, _arg_1: f32) {
+        dataBlockIndex_8 = atomicAdd(&indexBuffer_5, 1);
+        if (dataBlockIndex_8 >= 40) {
+          return;
+        }
+        dataBuffer_6[dataBlockIndex_8].id = 1;
+        dataByteIndex_9 = 0;
+
+        log1serializer_10(_arg_0, _arg_1);
+      }
+
+      struct mainFragment_Input_13 {
+        @builtin(position) pos: vec4f,
+      }
+
+      @fragment fn mainFragment_3(_arg_0: mainFragment_Input_13) -> @location(0) vec4f {
+        log1_4(_arg_0.pos.x, _arg_0.pos.y);
+        return vec4f(0.7689999938011169, 0.3919999897480011, 1, 1);
       }
 
       struct mainVertex_Output_1 {
