@@ -53,9 +53,9 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   );
   const specularStrength = std.pow(
     std.max(0, std.dot(viewSource, reflectSource)),
-    16,
+    5,
   );
-  const specular = std.mul(specularStrength, p.lightColor);
+  const specular = std.mul(specularStrength * 0.2, p.lightColor);
 
   const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
