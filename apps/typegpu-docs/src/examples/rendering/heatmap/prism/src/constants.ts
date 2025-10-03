@@ -1,6 +1,6 @@
 import * as d from 'typegpu/data';
 
-import type { CameraConfig, GridConfig } from './types.ts';
+import type { CameraConfig, GridConfig, ScaleTransform } from './types.ts';
 
 export const EPS = 1e-6;
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
@@ -28,4 +28,9 @@ export const PLANE_GRID_CONFIG: GridConfig = {
   zRange: { min: -1, max: 1 },
   yCallback: () => 0,
   colorCallback: () => DEFAULT_PLANE_COLOR,
+};
+export const IDENTITY_SCALE_TRANSFORM: ScaleTransform = {
+  X: { offset: 0, scale: 1 },
+  Y: { offset: 0, scale: 1 },
+  Z: { offset: 0, scale: 1 },
 };

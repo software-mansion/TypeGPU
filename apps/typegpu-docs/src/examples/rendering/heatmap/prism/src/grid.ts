@@ -1,39 +1,56 @@
 import * as d from 'typegpu/data';
 
 import type * as s from './structures.ts';
-import type { GridConfig, ISurface } from './types.ts';
+import type { GridConfig, ISurface, ScaleTransform } from './types.ts';
 
 export class GridSurface implements ISurface {
   #gridConfig: GridConfig;
-  #vertices: d.Infer<typeof s.Vertex>[];
-  #indices: number[];
 
   constructor(
     gridConfig: GridConfig,
   ) {
     this.#gridConfig = gridConfig;
-    this.#vertices = [];
-    this.#indices = [];
   }
 
-  getVertexBufferData(): d.Infer<typeof s.Vertex>[] {
-    if (this.#vertices.length === 0) {
-      let vertices = this.#createGrid(this.#gridConfig);
-      vertices = this.#populateGridY(vertices);
-      vertices = this.#populateGridColor(vertices);
-      this.#vertices = vertices;
-    }
-    return this.#vertices;
+  get gridConfig(): GridConfig {
+    return this.#gridConfig;
+  }
+
+  set gridConfig(gridConfig: GridConfig) {
+    this.#gridConfig = gridConfig;
+  }
+
+  getVertexPositions: () => d.v4f[] = () => {
+    let vertices = this.#createGrid();
+    vertices = this.#populateGridY(vertices);
+    return vertices.map((vertex) => vertex.position);
+  };
+
+  getVertexBufferData(
+    scaleTransform: ScaleTransform,
+  ): d.Infer<typeof s.Vertex>[] {
+    let vertices = this.#createGrid();
+    vertices = this.#populateGridY(vertices);
+    vertices = vertices.map((vertex) => {
+      const { position, color } = vertex;
+      const [x, y, z] = position;
+      const [sx, sy, sz] = [
+        x * scaleTransform.X.scale + scaleTransform.X.offset,
+        y * scaleTransform.Y.scale + scaleTransform.Y.offset,
+        z * scaleTransform.Z.scale + scaleTransform.Z.offset,
+      ];
+      return { position: d.vec4f(sx, sy, sz, 1), color };
+    });
+
+    vertices = this.#populateGridColor(vertices);
+    return vertices;
   }
 
   getIndexBufferData(): number[] {
-    if (this.#indices.length === 0) {
-      this.#indices = this.#createGridIndexArray(
-        this.#gridConfig.nx,
-        this.#gridConfig.nz,
-      );
-    }
-    return this.#indices;
+    return this.#createGridIndexArray(
+      this.#gridConfig.nx,
+      this.#gridConfig.nz,
+    );
   }
 
   /**
@@ -46,8 +63,8 @@ export class GridSurface implements ISurface {
    *
    * with x,z coordinates filled
    */
-  #createGrid(gridConfig: GridConfig): d.Infer<typeof s.Vertex>[] {
-    const { nx, nz, xRange, zRange } = gridConfig;
+  #createGrid(): d.Infer<typeof s.Vertex>[] {
+    const { nx, nz, xRange, zRange } = this.#gridConfig;
     const dz = (zRange.max - zRange.min) / (nz - 1);
     const dx = (xRange.max - xRange.min) / (nx - 1);
 

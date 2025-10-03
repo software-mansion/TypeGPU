@@ -7,21 +7,22 @@ import type {
   TgpuRoot,
   VertexFlag,
 } from 'typegpu';
-import * as d from 'typegpu/data';
+import type * as d from 'typegpu/data';
 
-import type { CameraConfig, IPlotter, ISurface, PlotConfig } from './types.ts';
+import type {
+  CameraConfig,
+  IPlotter,
+  ISurface,
+  PlotConfig,
+  ScaleTransform,
+} from './types.ts';
 import { fragmentFn, vertexFn } from './shaders.ts';
 import { layout, vertexLayout } from './layouts.ts';
 import * as c from './constants.ts';
 import { EventHandler } from './event-handler.ts';
 import { ResourceKeeper } from './resource-keeper.ts';
 import type * as s from './structures.ts';
-
-interface SurfaceResources {
-  vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
-  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
-  indexCount: number;
-}
+import { Scalers } from './scalers.ts';
 
 export class Plotter implements IPlotter {
   readonly #context: GPUCanvasContext;
@@ -29,7 +30,6 @@ export class Plotter implements IPlotter {
   readonly #presentationFormat: GPUTextureFormat;
   #cameraConfig: CameraConfig;
   readonly #eventHandler: EventHandler;
-  #surfaceStack: SurfaceResources[] = [];
   #root!: TgpuRoot;
   #resourceKeeper!: ResourceKeeper;
   #backgroundRenderPipeline!: TgpuRenderPipeline;
@@ -67,37 +67,44 @@ export class Plotter implements IPlotter {
   }
 
   addPlots(surfaces: ISurface[], options: PlotConfig): void {
-    const root = this.#root;
-
     this.#plotConfig = options;
+    let { xScaler, yScaler, zScaler } = options;
+    xScaler ??= Scalers.IdentityScaler;
+    yScaler ??= Scalers.IdentityScaler;
+    zScaler ??= Scalers.IdentityScaler;
 
-    for (const surface of surfaces) {
-      const vertices = surface.getVertexBufferData();
-      const indices = surface.getIndexBufferData();
-      this.#surfaceStack.push(
-        {
-          vertexBuffer: root.createBuffer(
-            vertexLayout.schemaForCount(vertices.length),
-            vertices,
-          ).$usage('vertex'),
+    const positions = surfaces.flatMap((surface) =>
+      surface.getVertexPositions()
+    );
 
-          indexBuffer: root.createBuffer(
-            d.arrayOf(d.u16, indices.length),
-            indices,
-          ).$usage('index'),
+    const X = [];
+    const Y = [];
+    const Z = [];
 
-          indexCount: indices.length,
-        },
-      );
+    for (const position of positions) {
+      X.push(position.x);
+      Y.push(position.y);
+      Z.push(position.z);
     }
+
+    const scaleTransform: ScaleTransform = {
+      X: xScaler.fit(X),
+      Y: yScaler.fit(Y),
+      Z: zScaler.fit(Z),
+    };
+
+    const transformedSurfaces = surfaces.map((surface) => {
+      return {
+        vertices: surface.getVertexBufferData(scaleTransform),
+        indices: surface.getIndexBufferData(),
+      };
+    });
+
+    this.#resourceKeeper.createSurfaceStackResources(transformedSurfaces);
   }
 
   resetPlots(): void {
-    for (const surface of this.#surfaceStack) {
-      surface.vertexBuffer.destroy();
-      surface.indexBuffer.destroy();
-    }
-    this.#surfaceStack = [];
+    this.#resourceKeeper.resetSurfaceStack();
   }
 
   startRenderLoop(): void {
@@ -145,9 +152,9 @@ export class Plotter implements IPlotter {
   }
 
   #render() {
-    const emptySurfaceStack = this.#surfaceStack.length === 0;
+    const emptySurfaceStack = this.#resourceKeeper.surfaceStack.length === 0;
     if (!emptySurfaceStack) {
-      const firstSurface = this.#surfaceStack[0];
+      const firstSurface = this.#resourceKeeper.surfaceStack[0];
       this.#drawObject(
         firstSurface.vertexBuffer,
         this.#resourceKeeper.bindgroup,
@@ -156,7 +163,7 @@ export class Plotter implements IPlotter {
         'clear',
         true,
       );
-      for (const surface of this.#surfaceStack.slice(1)) {
+      for (const surface of this.#resourceKeeper.surfaceStack.slice(1)) {
         this.#drawObject(
           surface.vertexBuffer,
           this.#resourceKeeper.bindgroup,
@@ -302,6 +309,7 @@ export class Plotter implements IPlotter {
 
   [Symbol.dispose]() {
     this.#eventHandler.destroy();
+    // surface stack will be handled by root
     this.#root.destroy();
   }
 }

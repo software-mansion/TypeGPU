@@ -20,14 +20,22 @@ export interface PlotConfig {
   zZeroPlane: boolean;
 }
 
+export interface ScaleTransform {
+  X: { offset: number; scale: number };
+  Y: { offset: number; scale: number };
+  Z: { offset: number; scale: number };
+}
+
 export interface ISurface {
-  getVertexBufferData: () => d.Infer<typeof s.Vertex>[];
+  getVertexPositions: () => d.v4f[];
+  getVertexBufferData: (
+    scaleTransform: ScaleTransform,
+  ) => d.Infer<typeof s.Vertex>[];
   getIndexBufferData: () => number[];
 }
 
 export interface IScaler {
-  fit: (data: number[]) => void;
-  scale: (value: number) => number;
+  fit: (data: number[]) => { scale: number; offset: number };
 }
 
 export interface CameraConfig {
@@ -50,6 +58,9 @@ export interface GridConfig {
   xRange: Range;
   zRange: Range;
   yCallback: (x: number, z: number) => number;
+  /**
+   * be aware that colorCallback is applied after scaling
+   */
   colorCallback: (y: number) => d.v4f;
 }
 

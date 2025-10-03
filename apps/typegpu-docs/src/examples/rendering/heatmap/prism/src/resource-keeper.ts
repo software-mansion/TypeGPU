@@ -40,6 +40,12 @@ interface PlanesResources {
   };
 }
 
+interface SurfaceResources {
+  vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
+  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
+  indexCount: number;
+}
+
 export class ResourceKeeper {
   #root: TgpuRoot;
   #canvas: HTMLCanvasElement;
@@ -49,6 +55,7 @@ export class ResourceKeeper {
   #bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
   #planes: PlanesResources;
   #depthAndMsaa: DepthAndMsaa;
+  #surfaceStack: SurfaceResources[] = [];
 
   constructor(
     root: TgpuRoot,
@@ -79,6 +86,45 @@ export class ResourceKeeper {
       canvas,
       presentationFormat,
     );
+  }
+
+  createSurfaceStackResources(
+    surfaces: {
+      vertices: d.Infer<typeof s.Vertex>[];
+      indices: number[];
+    }[],
+  ): void {
+    for (const { vertices, indices } of surfaces) {
+      const vertexBuffer = this.#root.createBuffer(
+        vertexLayout.schemaForCount(vertices.length),
+        vertices,
+      ).$usage(
+        'vertex',
+      );
+      const indexBuffer = this.#root.createBuffer(
+        d.arrayOf(d.u16, indices.length),
+        indices,
+      ).$usage(
+        'index',
+      );
+      this.#surfaceStack.push({
+        vertexBuffer,
+        indexBuffer,
+        indexCount: indices.length,
+      });
+    }
+  }
+
+  resetSurfaceStack(): void {
+    for (const surface of this.#surfaceStack) {
+      surface.vertexBuffer.destroy();
+      surface.indexBuffer.destroy();
+    }
+    this.#surfaceStack = [];
+  }
+
+  get surfaceStack(): SurfaceResources[] {
+    return this.#surfaceStack;
   }
 
   get bindgroup(): TgpuBindGroup<(typeof layout)['entries']> {
@@ -130,7 +176,7 @@ export class ResourceKeeper {
   #initPlanes(): PlanesResources {
     const grid = new GridSurface(c.PLANE_GRID_CONFIG);
 
-    const gridVertices = grid.getVertexBufferData();
+    const gridVertices = grid.getVertexBufferData(c.IDENTITY_SCALE_TRANSFORM);
 
     const gridIndices = grid.getIndexBufferData();
 
