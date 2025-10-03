@@ -17,7 +17,6 @@ import {
 import { computeForce, forceLayout } from './alg/force';
 import { RealBoxSize, computeIntegrate, integrateLayout } from './alg/integrate';
 
-// Initialize WebGPU
 const root = await tgpu.init();
 const device = root.device;
 
@@ -26,7 +25,6 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 context.configure({ device, format: presentationFormat, alphaMode: 'premultiplied' });
 
-// Ensure canvas is sized in device pixels
 const dpr = window.devicePixelRatio || 1;
 function resizeCanvas() {
   canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
@@ -66,11 +64,9 @@ const updateCamera = () => {
 };
 updateCamera();
 
-// Install resize listener after updateCamera is defined
 window.addEventListener('resize', () => { resizeCanvas(); updateCamera(); });
 
-// Simulation parameters
-const N = 3000; // keep modest for browser (O(N^2) naive neighborhood via single-cell grid)
+const N = 3000; // keep under 3000 bo sie zesra
 const dt = 0.004;
 const kernelRadius = 1.2;
 const mass = 1.0;
@@ -94,7 +90,7 @@ const params = root.createUniform(SPHParams, {
   n: d.u32(N),
 });
 
-// Degenerate 1x1x1 grid that contains all particles, so prefixSum is [0, N]
+// 1x1x1 grid that contains all particles
 const env = root.createUniform(Environment, {
   xGrids: 1,
   yGrids: 1,
@@ -110,7 +106,6 @@ const realBox = root.createUniform(RealBoxSize, { xHalf: boxHalf.x, yHalf: boxHa
 
 const prefixSum = root.createBuffer(d.arrayOf(d.u32, 2), [0, N]).$usage('storage');
 
-// Particles and a view buffer for rendering
 const initialParticles = Array.from({ length: N }, (_, i) => {
   const u = i / N;
   // pack initial block of fluid
@@ -156,7 +151,6 @@ const copyPositionBindGroup = root.createBindGroup(copyPositionLayout, {
   params: params.buffer,
 });
 
-// Build compute pipelines from provided kernels
 const densityPipeline = root['~unstable']
   .withCompute(computeDensity)
   .createPipeline()
@@ -177,7 +171,6 @@ const copyPosPipeline = root['~unstable']
   .createPipeline()
   .with(copyPositionLayout, copyPositionBindGroup);
 
-// Minimal point rendering of particles (1px points)
 const particleLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   posvel: { storage: d.arrayOf(PosVel, N), access: 'readonly' },
@@ -202,10 +195,9 @@ const renderPipeline = root['~unstable']
   .withPrimitive({ topology: 'point-list' })
   .createPipeline();
 
-// Bind group for render resources
 const particleBindGroup = root.createBindGroup(particleLayout, { camera: cameraBuffer, posvel });
 
-// Interaction: basic orbit controls
+// orbit controls
 let isDragging = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
