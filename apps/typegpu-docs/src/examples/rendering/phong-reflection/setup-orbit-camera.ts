@@ -15,6 +15,7 @@ interface CameraOptions {
   target: d.v4f;
   minZoom?: number;
   maxZoom?: number;
+  // orbitSensitivity AAA put it here, add default values for everything
 }
 
 /**
@@ -26,45 +27,50 @@ export function setupOrbitCamera(
   canvas: HTMLCanvasElement,
   options: CameraOptions,
 ) {
-  const camera = Camera({
-    position: options.initPos,
-    targetPos: options.target,
-    view: m.mat4.lookAt(
-      options.initPos,
-      options.target,
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
-    ),
-    projection: m.mat4.perspective(
-      Math.PI / 4,
-      canvas.clientWidth / canvas.clientHeight,
-      0.1,
-      1000,
-      d.mat4x4f(),
-    ),
-  });
-  const cameraUniform = root.createUniform(Camera, camera);
+  const cameraUniform = root.createUniform(
+    Camera,
+    Camera({
+      position: options.initPos,
+      targetPos: options.target,
+      view: m.mat4.lookAt(
+        options.initPos,
+        options.target,
+        d.vec3f(0, 1, 0),
+        d.mat4x4f(),
+      ),
+      projection: m.mat4.perspective(
+        Math.PI / 4,
+        canvas.clientWidth / canvas.clientHeight,
+        0.1,
+        1000,
+        d.mat4x4f(),
+      ),
+    }),
+  );
 
   const resizeObserver = new ResizeObserver(() => {
-    camera.projection = m.mat4.perspective(
+    const projection = m.mat4.perspective(
       Math.PI / 4,
       canvas.clientWidth / canvas.clientHeight,
       0.1,
       1000,
       d.mat4x4f(),
     );
+    cameraUniform.writePartial({ projection });
   });
   resizeObserver.observe(canvas);
 
-  // Variables for mouse interaction.
+  const initialVec = options.initPos.sub(options.target);
+
+  // Variables for mouse/touch interaction.
   let isDragging = false;
   let prevX = 0;
   let prevY = 0;
-  let orbitRadius = std.length(options.initPos);
+  let orbitRadius = std.length(initialVec);
 
   // Yaw and pitch angles facing the origin.
-  let orbitYaw = Math.atan2(options.initPos.x, options.initPos.z);
-  let orbitPitch = Math.asin(options.initPos.y / orbitRadius);
+  let orbitYaw = Math.atan2(initialVec.x, initialVec.z);
+  let orbitPitch = Math.asin(initialVec.y / orbitRadius);
 
   function updateCameraOrbit(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
@@ -72,20 +78,23 @@ export function setupOrbitCamera(
     orbitPitch += dy * orbitSensitivity;
     // Clamp pitch to avoid flipping
     const maxPitch = Math.PI / 2 - 0.01;
-    if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-    if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
+    orbitPitch = std.clamp(orbitPitch, -maxPitch, maxPitch);
+
     // Convert spherical coordinates to cartesian coordinates
     const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
     const newCamY = orbitRadius * Math.sin(orbitPitch);
     const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-    const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+    const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1).add(
+      options.target,
+    );
 
     const newView = m.mat4.lookAt(
       newCameraPos,
-      d.vec3f(0, 0, 0),
+      options.target,
       d.vec3f(0, 1, 0),
       d.mat4x4f(),
     );
+
     cameraUniform.writePartial({ view: newView, position: newCameraPos });
   }
 
