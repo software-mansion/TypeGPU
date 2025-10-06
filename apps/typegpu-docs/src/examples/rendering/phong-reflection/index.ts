@@ -10,8 +10,6 @@ import {
 import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from './setup-orbit-camera.ts';
 
-// ----
-
 // setup
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -24,23 +22,24 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// models and textures
-
-// https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
-const fishModel = await loadModel(root, '/TypeGPU/assets/3d-fish/fish.obj');
+// model (https://j5boom.itch.io/utah-teapot-obj)
+const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
 
 // camera
-
 const cameraUniform = root.createUniform(Camera);
 
 const cameraCleanup = setupOrbitCamera(
   (updates) => cameraUniform.writePartial(updates),
   canvas,
-  { initPos: d.vec4f(-5.2, 0, -5.2, 1) },
+  {
+    initPos: d.vec4f(-10, 4, -8, 1),
+    target: d.vec4f(0, 1, 0, 1),
+    minZoom: 8,
+    maxZoom: 40,
+  },
 );
 
 // shaders
-
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
@@ -64,9 +63,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
-  // shade the fragment in Phong reflection model
-  // https://en.wikipedia.org/wiki/Phong_reflection_model
-  // then apply sea fog and sea desaturation
+  // fixed color, can be replaced with texture sample
   const textureColor = d.vec3f(0.8, 0.8, 0.1);
 
   const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
@@ -140,8 +137,8 @@ function frame() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(modelVertexLayout, fishModel.vertexBuffer)
-    .draw(fishModel.polygonCount);
+    .with(modelVertexLayout, model.vertexBuffer)
+    .draw(model.polygonCount);
 
   root['~unstable'].flush();
 

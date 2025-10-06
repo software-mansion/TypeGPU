@@ -29,10 +29,6 @@ export async function loadModel(
         modelMesh.attributes.NORMAL.value[3 * i + 1],
         modelMesh.attributes.NORMAL.value[3 * i + 2],
       ),
-      textureUV: d.vec2f(
-        modelMesh.attributes.TEXCOORD_0.value[2 * i],
-        1 - modelMesh.attributes.TEXCOORD_0.value[2 * i + 1],
-      ),
     });
   }
   modelVertices.reverse();
