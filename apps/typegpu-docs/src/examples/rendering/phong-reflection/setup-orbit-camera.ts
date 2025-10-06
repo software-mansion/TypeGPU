@@ -10,6 +10,13 @@ export const Camera = d.struct({
   projection: d.mat4x4f,
 });
 
+interface CameraOptions {
+  initPos: d.v4f;
+  target: d.v4f;
+  minZoom?: number;
+  maxZoom?: number;
+}
+
 /**
  * Setups an orbit camera and returns a `cameraUniform` and a cleanup function.
  * On scroll events or canvas clicks/touches, updates the `cameraUniform`.
@@ -17,15 +24,14 @@ export const Camera = d.struct({
 export function setupOrbitCamera(
   root: TgpuRoot,
   canvas: HTMLCanvasElement,
-  initPos: d.v4f,
-  target: d.v4f,
+  options: CameraOptions,
 ) {
   const camera = Camera({
-    position: initPos,
-    targetPos: target,
+    position: options.initPos,
+    targetPos: options.target,
     view: m.mat4.lookAt(
-      initPos,
-      target,
+      options.initPos,
+      options.target,
       d.vec3f(0, 1, 0),
       d.mat4x4f(),
     ),
@@ -54,11 +60,11 @@ export function setupOrbitCamera(
   let isDragging = false;
   let prevX = 0;
   let prevY = 0;
-  let orbitRadius = std.length(initPos);
+  let orbitRadius = std.length(options.initPos);
 
   // Yaw and pitch angles facing the origin.
-  let orbitYaw = Math.atan2(initPos.x, initPos.z);
-  let orbitPitch = Math.asin(initPos.y / orbitRadius);
+  let orbitYaw = Math.atan2(options.initPos.x, options.initPos.z);
+  let orbitPitch = Math.asin(options.initPos.y / orbitRadius);
 
   function updateCameraOrbit(dx: number, dy: number) {
     const orbitSensitivity = 0.005;

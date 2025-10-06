@@ -34,8 +34,7 @@ const fishModel = await loadModel(root, '/TypeGPU/assets/3d-fish/fish.obj');
 const { cameraCleanup, cameraUniform } = setupOrbitCamera(
   root,
   canvas,
-  p.cameraInitialPosition,
-  p.cameraInitialTarget,
+  { initPos: p.cameraInitialPosition, target: p.cameraInitialTarget },
 );
 
 // shaders
