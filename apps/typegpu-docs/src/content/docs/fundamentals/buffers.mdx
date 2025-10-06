@@ -332,3 +332,81 @@ const indexBuffer = root
 
 ```
 
+## Binding buffers
+
+To use a buffer in a shader, it needs to be bound using a bind group.
+There are two approaches provided by TypeGPU.
+
+### Manual binding
+
+You can explicitly create bind groups and bind your buffers to them.
+Read more in the chapter dedicated to [bind groups](/TypeGPU/fundamentals/bind-groups).
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const pointsBuffer = root
+  .createBuffer(d.arrayOf(d.vec2i, 100))
+  .$usage('storage');
+
+const bindGroupLayout = tgpu.bindGroupLayout({
+  points: { storage: d.arrayOf(d.vec2i, 100) },
+});
+
+const bindGroup = root
+  .createBindGroup(bindGroupLayout, { points: pointsBuffer });
+
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((x) => {
+  // access and modify the bound buffer via the layout
+  bindGroupLayout.$.points[0] = d.vec2i();
+});
+
+const pipeline = root['~unstable']
+  .withCompute(mainCompute)
+  .createPipeline();
+
+pipeline
+  .with(bindGroupLayout, bindGroup)
+  .dispatchWorkgroups(100);
+```
+
+### Using fixed resources
+
+In many cases, the buffers you attach to shaders remain the same across multiple compute or render operations.
+TypeGPU simplifies this process through fixed resources, that from the code perspective appear to be bindless.
+Fixed buffers are created using specific root methods.
+
+| WGSL type                  | TypeGPU constructor     |
+|----------------------------|-------------------------|
+| `var<uniform>`             | `root.createUniform()`  |
+| `var<storage, read>`       | `root.createReadonly()` |
+| `var<storage, read_write>` | `root.createMutable()`  |
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const pointsBuffer = root.createMutable(d.arrayOf(d.vec2i, 100));
+
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((x) => {
+  // access and modify the bound buffer via the layout
+  pointsBuffer.$[0] = d.vec2i();
+});
+
+const pipeline = root['~unstable'].withCompute(mainCompute).createPipeline();
+```
+
+TypeGPU automatically generates a "catchall" bind group, and populates it with the fixed resources.
+
+You can also use [`resolveWithContext`](/TypeGPU/fundamentals/resolve/#resolvewithcontext) to access the automatically generated bind group and layout that contains your fixed resources.
