@@ -29,7 +29,6 @@ const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
 const cameraUniform = root.createUniform(Camera);
 
 const cameraCleanup = setupOrbitCamera(
-  (updates) => cameraUniform.writePartial(updates),
   canvas,
   {
     initPos: d.vec4f(-10, 4, -8, 1),
@@ -37,6 +36,7 @@ const cameraCleanup = setupOrbitCamera(
     minZoom: 8,
     maxZoom: 40,
   },
+  (updates) => cameraUniform.writePartial(updates),
 );
 
 // shaders

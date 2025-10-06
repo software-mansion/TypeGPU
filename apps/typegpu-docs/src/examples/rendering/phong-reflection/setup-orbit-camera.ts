@@ -30,9 +30,9 @@ const cameraDefaults: Partial<CameraOptions> = {
  * Also, calls the callback during the setup with an initial camera.
  */
 export function setupOrbitCamera(
-  callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
   canvas: HTMLCanvasElement,
   partialOptions: CameraOptions,
+  callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
 ) {
   const options = { ...cameraDefaults, ...partialOptions } as Required<
     CameraOptions
