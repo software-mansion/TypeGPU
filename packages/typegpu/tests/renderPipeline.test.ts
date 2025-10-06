@@ -507,6 +507,34 @@ describe('TgpuRenderPipeline', () => {
       //@ts-ignore
       device.features = originalFeatures;
     });
+
+    it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
+      const vertexFn = tgpu['~unstable'].vertexFn({
+        out: { pos: d.builtin.position },
+      })('');
+
+      const fragmentFn = tgpu['~unstable'].fragmentFn({
+        in: {},
+        out: {
+          fragColor: d.vec4f,
+          fragDepth: d.builtin.fragDepth,
+        },
+      })(() => {
+        return {
+          fragColor: d.vec4f(),
+          fragDepth: 0.0,
+        };
+      });
+
+      expect(() => {
+        root
+          .withVertex(vertexFn, {})
+          .withFragment(fragmentFn, { fragColor: { format: 'rgba8unorm' } })
+          .createPipeline();
+      }).not.toThrow(
+        "A color target by the name of 'fragDepth' was not provided to the shader.",
+      );
+    });
   });
 
   describe('Timestamp Writes', () => {
