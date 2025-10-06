@@ -14,6 +14,13 @@ export const ModelVertexOutput = {
   canvasPosition: d.builtin.position,
 } as const;
 
+export const ExampleControls = d.struct({
+  ambientColor: d.vec3f,
+  ambientStrength: d.f32,
+  lightColor: d.vec3f,
+  lightDirection: d.vec3f,
+});
+
 // layouts
 
 export const modelVertexLayout = tgpu.vertexLayout((n: number) =>

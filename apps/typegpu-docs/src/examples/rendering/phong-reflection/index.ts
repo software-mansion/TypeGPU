@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import {
+  ExampleControls,
   ModelVertexInput,
   modelVertexLayout,
   ModelVertexOutput,
@@ -40,6 +41,8 @@ const cameraCleanup = setupOrbitCamera(
 );
 
 // shaders
+const exampleControlsUniform = root.createUniform(ExampleControls);
+
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
@@ -64,27 +67,29 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   // fixed color, can be replaced with texture sample
-  const textureColor = d.vec3f(0.8, 0.8, 0.1);
+  const ambientColor = exampleControlsUniform.$.ambientColor;
+  const ambientStrength = exampleControlsUniform.$.ambientStrength;
+  const lightColor = std.normalize(exampleControlsUniform.$.lightColor);
+  const lightDirection = std.normalize(exampleControlsUniform.$.lightDirection);
 
-  const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
+  // ambient component
+  const ambient = ambientColor.mul(ambientStrength);
 
-  const cosTheta = std.dot(input.worldNormal, p.lightDirection);
-  const diffuse = std.mul(
-    std.max(0, cosTheta),
-    std.mul(textureColor, p.lightColor),
-  );
+  // ...
+  const cosTheta = std.dot(input.worldNormal, lightDirection);
+  const diffuse = std.mul(std.max(0, cosTheta), ambientColor.mul(lightColor));
 
   const viewSource = std.normalize(
     std.sub(cameraUniform.$.position.xyz, input.worldPosition),
   );
   const reflectSource = std.normalize(
-    std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
+    std.reflect(std.mul(-1, lightDirection), input.worldNormal),
   );
   const specularStrength = std.pow(
     std.max(0, std.dot(viewSource, reflectSource)),
     16,
   );
-  const specular = std.mul(specularStrength, p.lightColor);
+  const specular = std.mul(specularStrength, lightColor);
 
   const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
@@ -149,6 +154,39 @@ requestAnimationFrame(frame);
 // ----
 
 // #region Example controls and cleanup
+
+export const controls = {
+  'ambient color': {
+    initial: [0.8, 0.8, 0.1],
+    onColorChange(value: readonly [number, number, number]) {
+      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
+    },
+  },
+  'ambient strength': {
+    min: 0,
+    max: 1,
+    initial: 0.5,
+    step: 0.01,
+    onSliderChange(v: number) {
+      exampleControlsUniform.writePartial({ ambientStrength: v });
+    },
+  },
+  'light color': {
+    initial: [1, 0.7, 0],
+    onColorChange(value: readonly [number, number, number]) {
+      exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
+    },
+  },
+  'light direction': {
+    min: [-10, -10, -10],
+    max: [10, 10, 10],
+    initial: [0, 7, -7],
+    step: [0.01, 0.01, 0.01],
+    onVectorSliderChange(v: [number, number, number]) {
+      exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    },
+  },
+};
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();
