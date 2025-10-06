@@ -11,16 +11,17 @@ export const Camera = d.struct({
 
 export interface CameraOptions {
   initPos: d.v4f;
-  target: d.v4f;
+  target?: d.v4f;
   minZoom?: number;
   maxZoom?: number;
-  // orbitSensitivity AAA put it here, add default values for everything
+  invertCamera?: boolean;
 }
 
 const cameraDefaults: Partial<CameraOptions> = {
   target: d.vec4f(0, 0, 0, 1),
   minZoom: 1,
   maxZoom: 100,
+  invertCamera: false,
 };
 
 /**
@@ -53,8 +54,8 @@ export function setupOrbitCamera(
 
   function rotateCamera(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
-    yaw += -dx * orbitSensitivity;
-    pitch += dy * orbitSensitivity;
+    yaw += -dx * orbitSensitivity * (options.invertCamera ? -1 : 1);
+    pitch += dy * orbitSensitivity * (options.invertCamera ? -1 : 1);
     pitch = std.clamp(pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
 
     const newCameraPos = calculatePos(options.target, radius, pitch, yaw);
@@ -65,7 +66,7 @@ export function setupOrbitCamera(
 
   function zoomCamera(delta: number) {
     radius += delta * 0.05;
-    radius = std.clamp(radius, 3, 100);
+    radius = std.clamp(radius, options.minZoom, options.maxZoom);
 
     const newPos = calculatePos(options.target, radius, pitch, yaw);
     const newView = calculateView(newPos, options.target);

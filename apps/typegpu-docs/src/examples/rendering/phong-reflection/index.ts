@@ -36,7 +36,7 @@ const cameraUniform = root.createUniform(Camera);
 const cameraCleanup = setupOrbitCamera(
   (updates) => cameraUniform.writePartial(updates),
   canvas,
-  { initPos: d.vec4f(-5.2, 0, -5.2, 1), target: d.vec4f(0, -2, 0, 1) },
+  { initPos: d.vec4f(-5.2, 0, -5.2, 1) },
 );
 
 // shaders
