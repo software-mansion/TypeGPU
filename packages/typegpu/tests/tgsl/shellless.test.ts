@@ -56,7 +56,7 @@ describe('shellless', () => {
         return dot(a, a);
       }
 
-      fn item_0() -> f32 {
+      fn foo() -> f32 {
         return (dot2(vec2f(1, 2)) + dot2_1(vec3f(3, 4, 5)));
       }"
     `);
@@ -165,7 +165,7 @@ describe('shellless', () => {
     };
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn item_0() -> f32 {
+      "fn main() -> f32 {
         return 4.1;
       }"
     `);
@@ -180,7 +180,7 @@ describe('shellless', () => {
     expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn*:item_0: Cannot resolve 'item_0' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
+      - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
     `);
   });
 });

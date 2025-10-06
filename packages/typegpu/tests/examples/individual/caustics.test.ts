@@ -81,7 +81,7 @@ describe('caustics example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolation3_16(t: vec3f) -> vec3f {
+      fn quinticInterpolationImpl_16(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
@@ -96,7 +96,7 @@ describe('caustics example', () => {
         var XYz = dotProdGrid_9(pos, (minJunction + vec3f(1, 1, 0)));
         var XYZ = dotProdGrid_9(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation3_16(partial);
+        var smoothPartial = quinticInterpolationImpl_16(partial);
         var xy = mix(xyz, xyZ, smoothPartial.z);
         var xY = mix(xYz, xYZ, smoothPartial.z);
         var Xy = mix(Xyz, XyZ, smoothPartial.z);
