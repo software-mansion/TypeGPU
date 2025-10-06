@@ -8,7 +8,7 @@ import {
   ModelVertexOutput,
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
-import { setupOrbitCamera } from './setup-orbit-camera.ts';
+import { Camera, setupOrbitCamera } from './setup-orbit-camera.ts';
 
 // ----
 
@@ -31,8 +31,10 @@ const fishModel = await loadModel(root, '/TypeGPU/assets/3d-fish/fish.obj');
 
 // camera
 
-const { cameraCleanup, cameraUniform } = setupOrbitCamera(
-  root,
+const cameraUniform = root.createUniform(Camera);
+
+const { cameraCleanup } = setupOrbitCamera(
+  (updates) => cameraUniform.writePartial(updates),
   canvas,
   { initPos: d.vec4f(-5.2, 0, -5.2, 1), target: d.vec4f(0, -2, 0, 1) },
 );

@@ -1,7 +1,6 @@
 import * as m from 'wgpu-matrix';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import type { TgpuRoot } from 'typegpu';
 
 export const Camera = d.struct({
   position: d.vec4f,
@@ -19,34 +18,32 @@ interface CameraOptions {
 }
 
 /**
- * Setups an orbit camera and returns a `cameraUniform` and a cleanup function.
- * On scroll events or canvas clicks/touches, updates the `cameraUniform`.
+ * Setups an orbit camera and returns a cleanup function.
+ * Calls the callback on scroll events, canvas clicks/touches and resizes.
+ * Also, calls the callback during the setup with an initial camera.
  */
 export function setupOrbitCamera(
-  root: TgpuRoot,
+  callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
   canvas: HTMLCanvasElement,
   options: CameraOptions,
 ) {
-  const cameraUniform = root.createUniform(
-    Camera,
-    Camera({
-      position: options.initPos,
-      targetPos: options.target,
-      view: m.mat4.lookAt(
-        options.initPos,
-        options.target,
-        d.vec3f(0, 1, 0),
-        d.mat4x4f(),
-      ),
-      projection: m.mat4.perspective(
-        Math.PI / 4,
-        canvas.clientWidth / canvas.clientHeight,
-        0.1,
-        1000,
-        d.mat4x4f(),
-      ),
-    }),
-  );
+  callback(Camera({
+    position: options.initPos,
+    targetPos: options.target,
+    view: m.mat4.lookAt(
+      options.initPos,
+      options.target,
+      d.vec3f(0, 1, 0),
+      d.mat4x4f(),
+    ),
+    projection: m.mat4.perspective(
+      Math.PI / 4,
+      canvas.clientWidth / canvas.clientHeight,
+      0.1,
+      1000,
+      d.mat4x4f(),
+    ),
+  }));
 
   const resizeObserver = new ResizeObserver(() => {
     const projection = m.mat4.perspective(
@@ -56,7 +53,7 @@ export function setupOrbitCamera(
       1000,
       d.mat4x4f(),
     );
-    cameraUniform.writePartial({ projection });
+    callback({ projection });
   });
   resizeObserver.observe(canvas);
 
@@ -95,7 +92,7 @@ export function setupOrbitCamera(
       d.mat4x4f(),
     );
 
-    cameraUniform.writePartial({ view: newView, position: newCameraPos });
+    callback({ view: newView, position: newCameraPos });
   }
 
   canvas.addEventListener('wheel', (event: WheelEvent) => {
@@ -116,7 +113,7 @@ export function setupOrbitCamera(
       d.vec3f(0, 1, 0),
       d.mat4x4f(),
     );
-    cameraUniform.writePartial({ view: newView, position: newCameraPos });
+    callback({ view: newView, position: newCameraPos });
   }, { passive: false });
 
   canvas.addEventListener('mousedown', (event) => {
@@ -180,7 +177,6 @@ export function setupOrbitCamera(
   };
 
   return {
-    cameraUniform,
     cameraCleanup,
   };
 }
