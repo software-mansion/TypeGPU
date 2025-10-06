@@ -9,7 +9,7 @@ export const Camera = d.struct({
   projection: d.mat4x4f,
 });
 
-interface CameraOptions {
+export interface CameraOptions {
   initPos: d.v4f;
   target: d.v4f;
   minZoom?: number;
@@ -17,41 +17,38 @@ interface CameraOptions {
   // orbitSensitivity AAA put it here, add default values for everything
 }
 
+const cameraDefaults: Partial<CameraOptions> = {
+  target: d.vec4f(0, 0, 0, 1),
+  minZoom: 1,
+  maxZoom: 100,
+};
+
 /**
- * Setups an orbit camera and returns a cleanup function.
+ * Sets up an orbit camera and returns a cleanup function.
  * Calls the callback on scroll events, canvas clicks/touches and resizes.
  * Also, calls the callback during the setup with an initial camera.
  */
 export function setupOrbitCamera(
   callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
   canvas: HTMLCanvasElement,
-  options: CameraOptions,
+  partialOptions: CameraOptions,
 ) {
+  const options = { ...cameraDefaults, ...partialOptions } as Required<
+    CameraOptions
+  >;
+
   callback(Camera({
     position: options.initPos,
     targetPos: options.target,
-    view: m.mat4.lookAt(
-      options.initPos,
-      options.target,
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
-    ),
-    projection: m.mat4.perspective(
-      Math.PI / 4,
+    view: recalculateCameraView(options.initPos, options.target),
+    projection: recalculateCameraProjection(
       canvas.clientWidth / canvas.clientHeight,
-      0.1,
-      1000,
-      d.mat4x4f(),
     ),
   }));
 
   const resizeObserver = new ResizeObserver(() => {
-    const projection = m.mat4.perspective(
-      Math.PI / 4,
+    const projection = recalculateCameraProjection(
       canvas.clientWidth / canvas.clientHeight,
-      0.1,
-      1000,
-      d.mat4x4f(),
     );
     callback({ projection });
   });
@@ -74,23 +71,15 @@ export function setupOrbitCamera(
     orbitYaw += -dx * orbitSensitivity;
     orbitPitch += dy * orbitSensitivity;
     // Clamp pitch to avoid flipping
-    const maxPitch = Math.PI / 2 - 0.01;
-    orbitPitch = std.clamp(orbitPitch, -maxPitch, maxPitch);
+    orbitPitch = std.clamp(orbitPitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
 
-    // Convert spherical coordinates to cartesian coordinates
-    const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-    const newCamY = orbitRadius * Math.sin(orbitPitch);
-    const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-    const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1).add(
+    const newCameraPos = recalculateCameraPosition(
       options.target,
+      orbitRadius,
+      orbitPitch,
+      orbitYaw,
     );
-
-    const newView = m.mat4.lookAt(
-      newCameraPos,
-      options.target,
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
-    );
+    const newView = recalculateCameraView(newCameraPos, options.target);
 
     callback({ view: newView, position: newCameraPos });
   }
@@ -103,17 +92,14 @@ export function setupOrbitCamera(
       3,
       100,
     );
-    const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-    const newCamY = orbitRadius * Math.sin(orbitPitch);
-    const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-    const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-    const newView = m.mat4.lookAt(
-      newCameraPos,
-      d.vec3f(0, 0, 0),
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
+    const newPos = recalculateCameraPosition(
+      options.target,
+      orbitRadius,
+      orbitPitch,
+      orbitYaw,
     );
-    callback({ view: newView, position: newCameraPos });
+    const newView = recalculateCameraView(newPos, options.target);
+    callback({ view: newView, position: newPos });
   }, { passive: false });
 
   canvas.addEventListener('mousedown', (event) => {
@@ -179,4 +165,30 @@ export function setupOrbitCamera(
   return {
     cameraCleanup,
   };
+}
+
+function recalculateCameraPosition(
+  target: d.v4f,
+  radius: number,
+  pitch: number,
+  yaw: number,
+) {
+  const newX = radius * Math.sin(yaw) * Math.cos(pitch);
+  const newY = radius * Math.sin(pitch);
+  const newZ = radius * Math.cos(yaw) * Math.cos(pitch);
+  const displacement = d.vec4f(newX, newY, newZ, 1);
+  return target.add(displacement);
+}
+
+function recalculateCameraView(position: d.v4f, target: d.v4f) {
+  return m.mat4.lookAt(
+    position,
+    target,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  );
+}
+
+function recalculateCameraProjection(aspectRatio: number) {
+  return m.mat4.perspective(Math.PI / 4, aspectRatio, 0.1, 1000, d.mat4x4f());
 }
