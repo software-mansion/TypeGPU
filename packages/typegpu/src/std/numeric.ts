@@ -4,7 +4,7 @@ import {
   MissingCpuImplError,
 } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { AnyData, toStorable, toStorables } from '../data/dataTypes.ts';
+import { type AnyData, toStorable, toStorables } from '../data/dataTypes.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
   abstractFloat,

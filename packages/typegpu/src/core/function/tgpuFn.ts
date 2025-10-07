@@ -1,10 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
-import {
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
@@ -16,7 +12,6 @@ import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
-  $ownSnippet,
   $providing,
   $resolve,
 } from '../../shared/symbols.ts';
@@ -36,7 +31,7 @@ import {
   type TgpuAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
-import { createDualImpl, dualImpl } from './dualImpl.ts';
+import { dualImpl } from './dualImpl.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   AnyFn,
@@ -242,7 +237,6 @@ function createFn<ImplSchema extends AnyFn>(
           throw new ExecutionError(err, [fn]);
         }
       }),
-    // Functions give up ownership of their return value (so ref is false)
     codegenImpl: (...args) => {
       // biome-ignore lint/style/noNonNullAssertion: it's there
       const ctx = getResolutionCtx()!;
@@ -304,14 +298,22 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     },
   };
 
-  const call = createDualImpl<InferImplSchema<ImplSchema>>(
-    (...args) => innerFn(...args),
-    (...args) =>
-      // Why no ref? Functions give up ownership of their return value
-      snip(new FnCall(fn, args), innerFn.shell.returnType, /* ref */ 'runtime'),
-    'tgpuFnCall',
-    innerFn.shell.argTypes,
-  );
+  const call = dualImpl<InferImplSchema<ImplSchema>>({
+    name: 'tgpuFnCall',
+    noComptime: true,
+    signature: {
+      argTypes: innerFn.shell.argTypes,
+      returnType: innerFn.shell.returnType,
+    },
+    normalImpl: innerFn,
+    codegenImpl: (...args) => {
+      // biome-ignore lint/style/noNonNullAssertion: it's there
+      const ctx = getResolutionCtx()!;
+      return ctx.withResetIndentLevel(() =>
+        stitch`${ctx.resolve(fn).value}(${args})`
+      );
+    },
+  });
 
   const fn = Object.assign(call, fnBase) as unknown as TgpuFn<ImplSchema>;
   fn[$internal].implementation = innerFn[$internal].implementation;
@@ -324,48 +326,5 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     },
   });
 
-  fn[$internal].implementation = innerFn[$internal].implementation;
-
   return fn;
-}
-
-// TODO: Perhaps remove
-class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
-  readonly [$internal] = true;
-  readonly [$ownSnippet]: Snippet;
-  readonly [$getNameForward]: unknown;
-  readonly #fn: TgpuFnBase<ImplSchema>;
-  readonly #params: Snippet[];
-
-  constructor(
-    fn: TgpuFnBase<ImplSchema>,
-    params: Snippet[],
-  ) {
-    this.#fn = fn;
-    this.#params = params;
-    this[$getNameForward] = fn;
-    this[$ownSnippet] = snip(
-      this,
-      this.#fn.shell.returnType,
-      // Why no ref? Functions give up ownership of their return value (so ref is false)
-      /* ref */ 'runtime',
-    );
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-    return ctx.withResetIndentLevel(() => {
-      // TODO: Resolve the params first, then the function (just for consistency)
-      return snip(
-        stitch`${ctx.resolve(this.#fn).value}(${this.#params})`,
-        this.#fn.shell.returnType,
-        // Why no ref? Functions give up ownership of their return value (so ref is false)
-        /* ref */ 'runtime',
-      );
-    });
-  }
-
-  toString() {
-    return `call:${getName(this) ?? '<unnamed>'}`;
-  }
 }

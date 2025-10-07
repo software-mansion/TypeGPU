@@ -96,10 +96,9 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return snip(
         value,
         this.schema,
-        /* ref */ value.resourceType === 'uniform' ||
-            value.resourceType === 'buffer-usage' && value.usage === 'uniform'
-          ? 'uniform'
-          : 'storage',
+        /* ref */ value.resourceType === 'buffer-usage'
+          ? value.usage
+          : value.resourceType,
       );
     }
 
