@@ -53,19 +53,9 @@ export const raymarch = tgpu.fn(
 
       const albedo = std.mix(WHITE, DARK, density);
 
-      const lit = d.vec3f(
-        albedo.x * lighting.x,
-        albedo.y * lighting.y,
-        albedo.z * lighting.z,
-      );
-      const premul = d.vec4f(
-        lit.x * density,
-        lit.y * density,
-        lit.z * density,
-        density,
-      );
-
-      res = std.add(res, std.mul(premul, LIGHT_ABSORPTION - res.w));
+      const lit = albedo.mul(lighting);
+      const premul = d.vec4f(lit, 1).mul(density);
+      res = res.add(premul.mul(LIGHT_ABSORPTION - res.w));
 
       if (res.w >= LIGHT_ABSORPTION - 1e-3) {
         break;
