@@ -97,12 +97,10 @@ const showcaseVideoResolution = [2048, 1200];
         <!-- <br class="hidden sm:block" /> -->
       </h1>
 
-      <div
-        class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row"
-      >
+      <div class="flex flex-col gap-4 sm:flex-row">
         <GetStartedButton />
         <a
-          class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+          class="box-border w-full sm:w-auto text-black/75 border border-accent-500 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
           href="/TypeGPU/examples">See examples</a
         >
       </div>
@@ -227,88 +225,40 @@ const showcaseVideoResolution = [2048, 1200];
   </section>
 </div>
 
-<section
-  class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-15 gap-10 w-full max-w-138 lg:max-w-340"
+<footer
+  class="flex flex-col items-center mx-auto px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138 bg-gradient-to-b from-white to-accent-50"
 >
-  <div>
-    <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">Got hooked?</h1>
-    <p class="text-center text-pretty">
-      Try TypeGPU and reshape your GPU rendering and computing.
+  <div class="flex flex-col items-center gap-20 self-stretch mx-40 py-10">
+    <div class="font-bold text-7xl">We are Software Mansion</div>
+    <p class="font-normal text-pretty mb-4">
+      We’re a software company built around improving developer experience and
+      bringing to life the innovative ideas of our clients. Do you have a
+      software project that we can help you with?
     </p>
-  </div>
+    <GetStartedButton />
 
-  <GetStartedButton />
-
-  <Image
-    src={Illustration}
-    class="hidden md:block lg:w-4xl w-154 max-w-full"
-    alt="An illustration showing the TypeGPU plums in a bowl."
-  />
-</section>
-
-<section></section>
-
-<footer class="text-micro bg-tameplum-50">
-  <div
-    class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20"
-  >
     <div
-      class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-340 md:max-w-234 w-full max-w-138"
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white gap-8 max-w-7xl mx-auto w-full px-4 py-8 text-center"
     >
-      <div class="w-full">
-        <Image
-          src={TypeGPULogomarkMonolight}
-          alt="TypeGPU logomark"
-          class="w-12 h-12 pb-4"
-        />
-        <div
-          class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80"
-        >
-          <div class="text-pretty md:max-w-94 lg:max-w-108">
-            <span class="font-medium">TypeGPU</span>
-            <span class="text-grayscale-100">&mdash;</span> TypeScript library that
-            enhances the WebGPU API, allowing resource management in a type-safe,
-            declarative way.
-          </div>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Reanimated</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Gesture Handler</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Screens</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native SVG</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Audio API</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native ExecuTorch</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">TypeGPU</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">Radon IDE</a>
+      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">BayoJajo</a>
 
-          <div class="grid gap-6 md:w-[24rem] lg:w-108">
-            <FooterLink
-              label="Made by Software Mansion"
-              callToAction="Learn more about us"
-              href="https://swmansion.com"
-            />
+    </div>
+    <div class="flex flex-col items-center gap-4 pb-4 text-grayscale-100">
 
-            <FooterLink
-              label="Check what's underneath"
-              callToAction="Open Github repository"
-              href="https://github.com/software-mansion/TypeGPU"
-            />
 
-            <FooterLink
-              label="Share feedback with us"
-              callToAction="Join our Discord server"
-              href="https://discord.gg/8jpfgDqPcM"
-            />
-          </div>
-        </div>
-      </div>
+          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and copyrights belong to their respective owners..
 
-      <div class="flex items-center self-start gap-4 text-grayscale-100">
-        <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
-        &copy; {new Date().getFullYear()} Software Mansion S.A.
-      </div>
-
-      <div class="hidden md:grid">
-        <div
-          class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"
-        >
-        </div>
-        <Image
-          class="w-full h-auto col-start-1 row-start-1"
-          src={GiantTypeGPULogo}
-          alt="A giant TypeGPU logo."
-        />
-      </div>
+      <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
     </div>
   </div>
 </footer>
+
+<!-- remove FooterLink -->
