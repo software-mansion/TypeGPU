@@ -42,6 +42,7 @@ const { cleanupCamera } = setupOrbitCamera(
 
 // shaders
 const exampleControlsUniform = root.createUniform(ExampleControls);
+exampleControlsUniform.write(p.initialControls);
 
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
