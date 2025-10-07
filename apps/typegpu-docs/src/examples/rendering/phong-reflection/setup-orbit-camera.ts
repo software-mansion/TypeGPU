@@ -50,11 +50,12 @@ export function setupOrbitCamera(
   targetCamera(options.initPos, options.target);
 
   function targetCamera(newPos: d.v4f, newTarget?: d.v4f) {
-    const cameraVector = newPos.sub(options.target);
+    const tgt = newTarget ?? cameraState.target;
+    const cameraVector = newPos.sub(tgt);
     cameraState.radius = std.length(cameraVector);
     cameraState.yaw = Math.atan2(cameraVector.x, cameraVector.z);
     cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
-    cameraState.target = newTarget ?? cameraState.target;
+    cameraState.target = tgt;
 
     callback(Camera({
       position: newPos,
@@ -97,12 +98,12 @@ export function setupOrbitCamera(
     );
 
     const newPos = calculatePos(
-      options.target,
+      cameraState.target,
       cameraState.radius,
       cameraState.pitch,
       cameraState.yaw,
     );
-    const newView = calculateView(newPos, options.target);
+    const newView = calculateView(newPos, cameraState.target);
 
     callback({ view: newView, position: newPos });
   }
@@ -197,7 +198,7 @@ function calculatePos(
   const newX = radius * Math.sin(yaw) * Math.cos(pitch);
   const newY = radius * Math.sin(pitch);
   const newZ = radius * Math.cos(yaw) * Math.cos(pitch);
-  const displacement = d.vec4f(newX, newY, newZ, 1);
+  const displacement = d.vec4f(newX, newY, newZ, 0);
   return target.add(displacement);
 }
 
