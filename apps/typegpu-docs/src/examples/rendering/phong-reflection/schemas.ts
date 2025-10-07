@@ -24,6 +24,4 @@ export const ExampleControls = d.struct({
 
 // layouts
 
-export const modelVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(ModelVertexInput, n)
-);
+export const modelVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertexInput));

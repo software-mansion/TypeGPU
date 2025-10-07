@@ -41,8 +41,10 @@ const { cleanupCamera } = setupOrbitCamera(
 );
 
 // shaders
-const exampleControlsUniform = root.createUniform(ExampleControls);
-exampleControlsUniform.write(p.initialControls);
+const exampleControlsUniform = root.createUniform(
+  ExampleControls,
+  p.initialControls,
+);
 
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
@@ -51,10 +53,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   const worldPosition = d.vec4f(input.modelPosition, 1);
   const camera = cameraUniform.$;
 
-  const canvasPosition = std.mul(
-    camera.projection,
-    std.mul(camera.view, worldPosition),
-  );
+  const canvasPosition = camera.projection.mul(camera.view).mul(worldPosition);
 
   return {
     worldPosition: input.modelPosition,
@@ -80,7 +79,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   // diffuse component
   const cosTheta = std.dot(input.worldNormal, lightDirection);
-  const diffuse = std.mul(std.max(0, cosTheta), lightColor);
+  const diffuse = lightColor.mul(std.max(0, cosTheta));
 
   // specular component
   const reflectionDirection = std.reflect(
