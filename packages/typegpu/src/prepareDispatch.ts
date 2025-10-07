@@ -116,7 +116,6 @@ export function prepareDispatch<TArgs extends number[]>(
         workgroupCount.y,
         workgroupCount.z,
       );
-      root['~unstable'].flush();
     }) as DispatchForArgs<TArgs>;
 
   return new PreparedDispatch(createDispatch, pipeline);

@@ -557,4 +557,57 @@ describe('TgpuComputePipeline', () => {
       }"
     `);
   });
+
+  describe('Flush', () => {
+    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      () => {},
+    );
+
+    it('flushes after dispatchWorkgroups', ({ root }) => {
+      const pipeline = root
+        .withCompute(entryFn)
+        .createPipeline();
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.dispatchWorkgroups(777);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+
+    it('flushes after dispatchWorkgroups with performance callback', ({ root }) => {
+      const callback = vi.fn();
+
+      const pipeline = root
+        .withCompute(entryFn)
+        .createPipeline()
+        .withPerformanceCallback(callback);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.dispatchWorkgroups(777);
+
+      // first from pipeline itself, second from querySet.read
+      expect(root[$internal].flush).toBeCalledTimes(2);
+    });
+
+    it('flushes after draw with timestamp writes', ({ root }) => {
+      const querySet = root.createQuerySet('timestamp', 2);
+
+      const pipeline = root
+        .withCompute(entryFn)
+        .createPipeline()
+        .withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+          endOfPassWriteIndex: 1,
+        });
+
+      vi.spyOn(root[$internal], 'flush');
+
+      pipeline.dispatchWorkgroups(777);
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+  });
 });

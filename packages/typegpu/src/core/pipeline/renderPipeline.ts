@@ -532,7 +532,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     }
 
-    const pass = branch.commandEncoder.beginRenderPass(renderPassDescriptor);
+    const pass = branch[$internal].commandEncoder.beginRenderPass(
+      renderPassDescriptor,
+    );
 
     pass.setPipeline(memo.pipeline);
 
@@ -589,16 +591,23 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
+    const hasPerformanceCallback = !!internals.priors.performanceCallback;
+    const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
+
+    if (hasPerformanceCallback && isOngoingBatch) {
+      branch[$internal].batchState.performanceCallbacks.push(() =>
+        triggerPerformanceCallback({ root: branch, priors: internals.priors })
+      );
+    } else if (!isOngoingBatch) {
+      branch[$internal].flush();
+      if (hasPerformanceCallback) {
+        triggerPerformanceCallback({ root: branch, priors: internals.priors });
+      }
+    }
+
     if (logResources) {
       logDataFromGPU(logResources);
     }
-
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
-        root: branch,
-        priors: internals.priors,
-      })
-      : branch.flush();
   }
 
   drawIndexed(
@@ -641,12 +650,19 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
-        root: branch,
-        priors: internals.priors,
-      })
-      : branch.flush();
+    const hasPerformanceCallback = !!internals.priors.performanceCallback;
+    const isOngoingBatch = branch[$internal].batchState.ongoingBatch;
+
+    if (hasPerformanceCallback && isOngoingBatch) {
+      branch[$internal].batchState.performanceCallbacks.push(() =>
+        triggerPerformanceCallback({ root: branch, priors: internals.priors })
+      );
+    } else if (!isOngoingBatch) {
+      branch[$internal].flush();
+      if (hasPerformanceCallback) {
+        triggerPerformanceCallback({ root: branch, priors: internals.priors });
+      }
+    }
   }
 }
 

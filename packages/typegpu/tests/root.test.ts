@@ -3,6 +3,7 @@ import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
+import { $internal } from '../src/shared/symbols.ts';
 
 describe('TgpuRoot', () => {
   describe('.createBuffer', () => {
@@ -290,6 +291,81 @@ describe('TgpuRoot', () => {
       expect(renderPassMock.setPipeline).toBeCalled();
       expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
       expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+    });
+
+    it('is flushed automatically', ({ root, commandEncoder }) => {
+      const group = root.createBindGroup(layout, {
+        foo: root.createBuffer(d.f32).$usage('uniform'),
+      });
+
+      const pipeline = root
+        .withVertex(mainVertexUsing, {})
+        .withFragment(mainFragment, {})
+        .createPipeline()
+        .with(layout, group);
+
+      vi.spyOn(root[$internal], 'flush');
+
+      root.beginRenderPass(
+        {
+          colorAttachments: [],
+        },
+        (pass) => {
+          pass.setPipeline(pipeline);
+          pass.draw(1);
+        },
+      );
+
+      expect(root[$internal].flush).toBeCalledTimes(1);
+    });
+  });
+
+  describe('commandEncoder', () => {
+    it('is not null', ({ root }) => {
+      const commandEncoder = root[$internal].commandEncoder;
+      expect(commandEncoder).toBeDefined();
+    });
+    it('creates new commandEncoder when called for the first time', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      root[$internal].commandEncoder;
+      expect(device.createCommandEncoder).toBeCalled();
+    });
+    it('does not create a new commandEncoder when called more than once without flush', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      const commandEncoder1 = root[$internal].commandEncoder;
+      const commandEncoder2 = root[$internal].commandEncoder;
+      expect(device.createCommandEncoder).toBeCalledTimes(1);
+      expect(commandEncoder1).toBe(commandEncoder2);
+    });
+  });
+
+  describe('flush', () => {
+    it('should not throw when called without initializing a commandEncoder', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      root[$internal].flush();
+    });
+    it('submits commandEncoder', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      const commandEncoder = root[$internal].commandEncoder;
+      root[$internal].flush();
+      expect(device.queue.submit).toBeCalledWith([commandEncoder.finish()]);
+    });
+    it('clears commandEncoder', ({ device }) => {
+      const root = tgpu.initFromDevice({
+        device: device as unknown as GPUDevice,
+      });
+      root[$internal].commandEncoder;
+      root[$internal].flush();
+      root[$internal].commandEncoder;
+      expect(device.createCommandEncoder).toBeCalledTimes(2);
     });
   });
 
