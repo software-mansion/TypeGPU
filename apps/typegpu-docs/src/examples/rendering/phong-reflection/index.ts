@@ -62,6 +62,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
+// see https://gist.github.com/chicio/d983fff6ff304bd55bebd6ff05a2f9dd
 export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
@@ -71,29 +72,33 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   const ambientStrength = exampleControlsUniform.$.ambientStrength;
   const lightColor = std.normalize(exampleControlsUniform.$.lightColor);
   const lightDirection = std.normalize(exampleControlsUniform.$.lightDirection);
+  const specularStrength = exampleControlsUniform.$.shininess;
 
   // ambient component
   const ambient = ambientColor.mul(ambientStrength);
 
-  // ...
+  // diffuse component
   const cosTheta = std.dot(input.worldNormal, lightDirection);
-  const diffuse = std.mul(std.max(0, cosTheta), ambientColor.mul(lightColor));
+  const diffuse = std.mul(std.max(0, cosTheta), lightColor);
 
-  const viewSource = std.normalize(
-    std.sub(cameraUniform.$.position.xyz, input.worldPosition),
+  // specular component
+  const reflectionDirection = std.reflect(
+    lightDirection.mul(-1),
+    input.worldNormal,
   );
-  const reflectSource = std.normalize(
-    std.reflect(std.mul(-1, lightDirection), input.worldNormal),
+  const viewDirection = std.normalize(
+    cameraUniform.$.position.xyz.sub(input.worldPosition),
   );
-  const specularStrength = std.pow(
-    std.max(0, std.dot(viewSource, reflectSource)),
-    16,
+  const specular = lightColor.mul(
+    std.pow(
+      std.max(0, std.dot(reflectionDirection, viewDirection)),
+      specularStrength,
+    ),
   );
-  const specular = std.mul(specularStrength, lightColor);
 
-  const lightedColor = std.add(ambient, std.add(diffuse, specular));
-
-  return d.vec4f(lightedColor, 1);
+  // add the components up
+  const color = ambient.add(diffuse).add(specular);
+  return d.vec4f(color, 1);
 });
 
 // pipelines
@@ -184,6 +189,15 @@ export const controls = {
     step: [0.01, 0.01, 0.01],
     onVectorSliderChange(v: [number, number, number]) {
       exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    },
+  },
+  'shininess': {
+    min: 0.5,
+    max: 16,
+    initial: 8,
+    step: 0.1,
+    onSliderChange(v: number) {
+      exampleControlsUniform.writePartial({ shininess: v });
     },
   },
 };
