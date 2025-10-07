@@ -67,11 +67,11 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
+  const lightColor = std.normalize(exampleControlsUniform.$.lightColor);
+  const lightDirection = std.normalize(exampleControlsUniform.$.lightDirection);
   // fixed color, can be replaced with texture sample
   const ambientColor = exampleControlsUniform.$.ambientColor;
   const ambientStrength = exampleControlsUniform.$.ambientStrength;
-  const lightColor = std.normalize(exampleControlsUniform.$.lightColor);
-  const lightDirection = std.normalize(exampleControlsUniform.$.lightDirection);
   const specularStrength = exampleControlsUniform.$.shininess;
 
   // ambient component
@@ -161,21 +161,6 @@ requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = {
-  'ambient color': {
-    initial: [0.8, 0.8, 0.1],
-    onColorChange(value: readonly [number, number, number]) {
-      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
-    },
-  },
-  'ambient strength': {
-    min: 0,
-    max: 1,
-    initial: 0.5,
-    step: 0.01,
-    onSliderChange(v: number) {
-      exampleControlsUniform.writePartial({ ambientStrength: v });
-    },
-  },
   'light color': {
     initial: [1, 0.7, 0],
     onColorChange(value: readonly [number, number, number]) {
@@ -189,6 +174,21 @@ export const controls = {
     step: [0.01, 0.01, 0.01],
     onVectorSliderChange(v: [number, number, number]) {
       exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    },
+  },
+  'ambient color': {
+    initial: [0.8, 0.8, 0.1],
+    onColorChange(value: readonly [number, number, number]) {
+      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
+    },
+  },
+  'ambient strength': {
+    min: 0,
+    max: 1,
+    initial: 0.5,
+    step: 0.01,
+    onSliderChange(v: number) {
+      exampleControlsUniform.writePartial({ ambientStrength: v });
     },
   },
   'shininess': {

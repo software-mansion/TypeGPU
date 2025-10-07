@@ -15,10 +15,10 @@ export const ModelVertexOutput = {
 } as const;
 
 export const ExampleControls = d.struct({
-  ambientColor: d.vec3f,
-  ambientStrength: d.f32,
   lightColor: d.vec3f,
   lightDirection: d.vec3f,
+  ambientColor: d.vec3f,
+  ambientStrength: d.f32,
   shininess: d.f32,
 });
 
