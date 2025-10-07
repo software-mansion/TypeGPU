@@ -44,34 +44,42 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 18, -0.03);
+const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 17, -0.03);
 const sliderStorage = slider.pointsBuffer.as('readonly');
 const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
 
-const [width, height] = [canvas.width * 0.65, canvas.height * 0.65];
+let qualityScale = 0.5;
+let [width, height] = [
+  canvas.width * qualityScale,
+  canvas.height * qualityScale,
+];
 
-const textures = [0, 1].map(() => {
-  const texture = root['~unstable'].createTexture({
-    size: [width, height],
-    format: 'rgba8unorm',
-  }).$usage('storage', 'sampled');
-  const depthTexture = root['~unstable'].createTexture({
-    size: [width, height],
-    format: 'r32float',
-  }).$usage('storage', 'sampled');
+function createTextures() {
+  return [0, 1].map(() => {
+    const texture = root['~unstable'].createTexture({
+      size: [width, height],
+      format: 'rgba8unorm',
+    }).$usage('storage', 'sampled');
+    const depthTexture = root['~unstable'].createTexture({
+      size: [width, height],
+      format: 'r32float',
+    }).$usage('storage', 'sampled');
 
-  return {
-    write: texture.createView(d.textureStorage2d('rgba8unorm')),
-    sampled: texture.createView(),
-    depth: depthTexture.createView(
-      d.textureStorage2d('r32float', 'read-write'),
-    ),
-    depthSampled: depthTexture.createView(d.texture2d(), {
-      sampleType: 'unfilterable-float',
-    }),
-  };
-});
+    return {
+      write: texture.createView(d.textureStorage2d('rgba8unorm')),
+      sampled: texture.createView(),
+      depth: depthTexture.createView(
+        d.textureStorage2d('r32float', 'read-write'),
+      ),
+      depthSampled: depthTexture.createView(d.texture2d(), {
+        sampleType: 'unfilterable-float',
+      }),
+    };
+  });
+}
+
+let textures = createTextures();
 
 const filteringSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
@@ -208,7 +216,6 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
 const sliderSdf3D = (position: d.v3f) => {
   'kernel';
 
-  // Body from the polyline center distance, extruded in Z, then inflated by LINE_RADIUS
   const poly2D = sdInflatedPolyline2D(position.xy);
   const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
     LINE_RADIUS;
@@ -735,17 +742,21 @@ const renderPipeline = root['~unstable']
 let lastTimeStamp = performance.now();
 let frameCount = 0;
 
-const resolvedTextures = [0, 1].map(() => {
-  const texture = root['~unstable'].createTexture({
-    size: [width, height],
-    format: 'rgba8unorm',
-  }).$usage('storage', 'sampled');
+function createResolvedTextures() {
+  return [0, 1].map(() => {
+    const texture = root['~unstable'].createTexture({
+      size: [width, height],
+      format: 'rgba8unorm',
+    }).$usage('storage', 'sampled');
 
-  return {
-    write: texture.createView(d.textureStorage2d('rgba8unorm')),
-    sampled: texture.createView(),
-  };
-});
+    return {
+      write: texture.createView(d.textureStorage2d('rgba8unorm')),
+      sampled: texture.createView(),
+    };
+  });
+}
+
+let resolvedTextures = createResolvedTextures();
 
 function render(timestamp: number) {
   frameCount++;
@@ -813,6 +824,36 @@ requestAnimationFrame(render);
 // #region Example controls and cleanup
 
 export const controls = {
+  'Quality': {
+    initial: 'Low',
+    options: [
+      'Very Low',
+      'Low',
+      'Medium',
+      'High',
+      'Ultra',
+    ],
+    onSelectChange: (value: string) => {
+      const qualityMap: { [key: string]: number } = {
+        'Very Low': 0.3,
+        'Low': 0.5,
+        'Medium': 0.7,
+        'High': 0.85,
+        'Ultra': 1.0,
+      };
+
+      qualityScale = qualityMap[value] || 0.5;
+      [width, height] = [
+        canvas.width * qualityScale,
+        canvas.height * qualityScale,
+      ];
+
+      camera.updateProjection(Math.PI / 4, width / height);
+      textures = createTextures();
+      resolvedTextures = createResolvedTextures();
+      frameCount = 0;
+    },
+  },
   'Light dir': {
     initial: d.vec3f(0.18, -0.30, 0.64),
     min: d.vec3f(-1, -1, -1),

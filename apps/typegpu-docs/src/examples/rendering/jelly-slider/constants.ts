@@ -1,8 +1,8 @@
 import * as d from 'typegpu/data';
 
 // Rendering constants
-export const MAX_STEPS = 1000;
-export const MAX_DIST = 10;
+export const MAX_STEPS = 100;
+export const MAX_DIST = 6;
 export const SURF_DIST = 0.001;
 
 // Lighting constants
