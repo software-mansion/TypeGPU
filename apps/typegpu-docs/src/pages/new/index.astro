@@ -41,7 +41,7 @@ const showcaseVideoResolution = [2048, 1200];
 
       <div class="flex items-center h-4 gap-4">
         <!-- Light / Dark -->
-        <div class="grid grid-cols-2 border ">
+        <div class="grid grid-cols-2 border">
           <a class="bg-blue-900 grid place-items-center p-2">
             <Image
               src={LightModeIconSvg}
@@ -87,30 +87,23 @@ const showcaseVideoResolution = [2048, 1200];
     class="box-border relative self-stretch flex flex-col items-center justify-between bg-red md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]"
   >
     <div
-      class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
+      class="grid grid-rows-2 px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
     >
-      <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
-        {/* Blurred background */}
-      </div>
-      <Image
-        src={TypeGPULogoLight}
-        alt="TypeGPU Logo"
-        class="w-58 md:w-[20rem] lg:w-[24rem]"
-      />
-      <h1 class="text-center font-normal text-pretty mb-4">
-        dupaduap library that enhances the WebGPU <br class="hidden sm:block" />
-        API, allowing resource management in <br class="hidden sm:block" />
-        a type-safe, declarative way.
+      <div class="font-bold text-7xl">TypeGPU</div>
+
+      <h1 class="font-normal text-pretty mb-4">
+        A modular and open-ended toolkit for WebGPU, with advanced type
+        interface and ability to write shaders in TypeScript.
+        <!-- <br class="hidden sm:block" /> -->
       </h1>
 
       <div
         class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row"
       >
         <GetStartedButton />
-
         <a
           class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-          href="/TypeGPU/examples">Explore interactive examples</a
+          href="/TypeGPU/examples">See examples</a
         >
       </div>
     </div>
