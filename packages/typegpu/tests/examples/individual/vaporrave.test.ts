@@ -128,7 +128,7 @@ describe('vaporrave example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolation3_20(t: vec3f) -> vec3f {
+      fn quinticInterpolationImpl_20(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
@@ -143,7 +143,7 @@ describe('vaporrave example', () => {
         var XYz = dotProdGrid_17(pos, (minJunction + vec3f(1, 1, 0)));
         var XYZ = dotProdGrid_17(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation3_20(partial);
+        var smoothPartial = quinticInterpolationImpl_20(partial);
         var xy = mix(xyz, xyZ, smoothPartial.z);
         var xY = mix(xYz, xYZ, smoothPartial.z);
         var Xy = mix(Xyz, XyZ, smoothPartial.z);

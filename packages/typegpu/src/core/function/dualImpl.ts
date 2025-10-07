@@ -41,7 +41,7 @@ type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
 interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly name: string;
-  readonly normalImpl: T;
+  readonly normalImpl: T | string;
   readonly codegenImpl: (...args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
     | { argTypes: AnyData[]; returnType: AnyData }
@@ -55,6 +55,13 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
    */
   readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
+}
+
+export class MissingCpuImplError extends Error {
+  constructor(message: string | undefined) {
+    super(message);
+    this.name = this.constructor.name;
+  }
 }
 
 export function dualImpl<T extends (...args: never[]) => unknown>(
@@ -77,14 +84,25 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     }) as MapValueToSnippet<Parameters<T>>;
 
     if (
-      !options.noComptime && converted.every((s) => isKnownAtComptime(s))
+      !options.noComptime &&
+      converted.every((s) => isKnownAtComptime(s)) &&
+      typeof options.normalImpl === 'function'
     ) {
-      return snip(
-        options.normalImpl(...converted.map((s) => s.value) as never[]),
-        returnType,
-        // Functions give up ownership of their return value
-        /* ref */ 'constant',
-      );
+      try {
+        return snip(
+          options.normalImpl(...converted.map((s) => s.value) as never[]),
+          returnType,
+          // Functions give up ownership of their return value
+          /* ref */ 'constant',
+        );
+      } catch (e) {
+        // cpuImpl may in some cases be present but implemented only partially.
+        // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+        // If it is any other error, we just rethrow.
+        if (!(e instanceof MissingCpuImplError)) {
+          throw e;
+        }
+      }
     }
 
     return snip(
@@ -98,6 +116,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   const impl = ((...args: Parameters<T>) => {
     if (inCodegenMode()) {
       return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
+    }
+    if (typeof options.normalImpl === 'string') {
+      throw new MissingCpuImplError(options.normalImpl);
     }
     return options.normalImpl(...args);
   }) as T;

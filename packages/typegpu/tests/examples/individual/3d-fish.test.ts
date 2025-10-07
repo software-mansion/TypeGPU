@@ -77,11 +77,11 @@ describe('3d fish example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        if (any(in.id >= sizeUniform_1)) {
+          return;
         }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
 
       struct ModelData_2 {
         position: vec3f,
@@ -279,16 +279,11 @@ describe('3d fish example', () => {
         return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
       }
 
-      @group(0) @binding(1) var modelTexture_12: texture_2d<f32>;
+      @group(0) @binding(1) var modelTexture_11: texture_2d<f32>;
 
-      @group(0) @binding(3) var sampler_13: sampler;
+      @group(0) @binding(3) var sampler_12: sampler;
 
-      fn sampleTexture_11(uv: vec2f) -> vec4f{
-        return textureSample(modelTexture_12, sampler_13, uv);
-      }
-
-
-      fn rgbToHsv_14(rgb: vec3f) -> vec3f {
+      fn rgbToHsv_13(rgb: vec3f) -> vec3f {
         var r = rgb.x;
         var g = rgb.y;
         var b = rgb.z;
@@ -335,7 +330,7 @@ describe('3d fish example', () => {
         return vec3f(h, s, v);
       }
 
-      fn hsvToRgb_15(hsv: vec3f) -> vec3f {
+      fn hsvToRgb_14(hsv: vec3f) -> vec3f {
         var h = hsv.x;
         var s = hsv.y;
         var v = hsv.z;
@@ -388,7 +383,7 @@ describe('3d fish example', () => {
         return vec3f(r, g, b);
       }
 
-      struct fragmentShader_Input_16 {
+      struct fragmentShader_Input_15 {
         @location(0) worldPosition: vec3f,
         @location(1) worldNormal: vec3f,
         @builtin(position) canvasPosition: vec4f,
@@ -398,8 +393,8 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      @fragment fn fragmentShader_10(input: fragmentShader_Input_16) -> @location(0) vec4f {
-        var textureColorWithAlpha = sampleTexture_11(input.textureUV);
+      @fragment fn fragmentShader_10(input: fragmentShader_Input_15) -> @location(0) vec4f {
+        var textureColorWithAlpha = textureSample(modelTexture_11, sampler_12, input.textureUV);
         var textureColor = textureColorWithAlpha.xyz;
         var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
@@ -413,11 +408,11 @@ describe('3d fish example', () => {
         var desaturatedColor = lightedColor;
         if ((input.applySeaDesaturation == 1)) {
           var desaturationFactor = (-atan2(((distanceFromCamera - 5) / 10f), 1) / 3f);
-          var hsv = rgbToHsv_14(desaturatedColor);
+          var hsv = rgbToHsv_13(desaturatedColor);
           hsv.y += (desaturationFactor / 2f);
           hsv.z += desaturationFactor;
           hsv.x += ((input.variant - 0.5) * 0.2);
-          desaturatedColor = hsvToRgb_15(hsv);
+          desaturatedColor = hsvToRgb_14(hsv);
         }
         var foggedColor = desaturatedColor;
         if ((input.applySeaFog == 1)) {

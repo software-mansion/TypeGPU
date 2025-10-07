@@ -10,7 +10,7 @@ import {
   isPtr,
   type StorableData,
 } from '../data/wgslTypes.ts';
-import { getMetaData } from '../shared/meta.ts';
+import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
 type AnyFn = (...args: never[]) => unknown;
@@ -32,11 +32,21 @@ function shallowEqualSchemas(a: AnyData, b: AnyData): boolean {
 export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
-  get(fn: AnyFn, argSnippets: Snippet[]): ShelllessImpl | undefined {
+  get(
+    fn: AnyFn,
+    argSnippets: Snippet[] | undefined,
+  ): ShelllessImpl | undefined {
     const meta = getMetaData(fn);
     if (!meta?.ast) return undefined;
+    if (!argSnippets && meta.ast.params.length > 0) {
+      throw new Error(
+        `Cannot resolve '${
+          getName(fn)
+        }' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,
+      );
+    }
 
-    const argTypes = argSnippets.map((s) => {
+    const argTypes = (argSnippets ?? []).map((s) => {
       const type = concretize(s.dataType as AnyData);
       const addressSpace = s.ref === 'this-function'
         ? 'function'

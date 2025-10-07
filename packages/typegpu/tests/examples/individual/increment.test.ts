@@ -31,11 +31,11 @@ describe('increment example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_4)  {
-          if (any(in.id >= sizeUniform_1)) {
-            return;
-          }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
-        }"
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }"
     `);
   });
 });

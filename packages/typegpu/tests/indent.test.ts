@@ -144,9 +144,7 @@ describe('indents', () => {
     const layout = tgpu.bindGroupLayout({
       systemData: { storage: SystemData },
       densityField: {
-        storageTexture: 'r32float',
-        access: 'readonly',
-        viewDimension: '3d',
+        storageTexture: d.textureStorage3d('r32float', 'read-only'),
       },
       counter: { storage: d.u32 },
     });
@@ -337,8 +335,9 @@ describe('indents', () => {
 
     const layout = tgpu.bindGroupLayout({
       boids: { uniform: UniBoid },
-      myCamera: { externalTexture: {} },
-      smoothRender: { texture: 'float', multisampled: true },
+      myCamera: { externalTexture: d.textureExternal() },
+      smoothRender: { texture: d.textureMultisampled2d(d.f32) },
+      sampled: { texture: d.texture2dArray(d.f32) },
       sampler: { sampler: 'filtering', multisampled: true },
     });
 
@@ -354,13 +353,19 @@ describe('indents', () => {
       },
     })((input) => {
       const uniBoid = layout.$.boids;
-      for (let i = 0; i < std.floor(std.sin(123)); i++) {
-        const someVal = std.textureSample(
-          layout.$.smoothRender,
+      for (let i = d.u32(); i < std.floor(std.sin(123)); i++) {
+        const sampled = std.textureSample(
+          layout.$.sampled,
           layout.$.sampler,
-          d.vec2f(0, 0),
+          d.vec2f(0.5, 0.5),
+          i,
         );
-        if (someVal.x > 0.5) {
+        const someVal = std.textureLoad(
+          layout.$.smoothRender,
+          d.vec2i(),
+          0,
+        );
+        if (someVal.x + sampled.x > 0.5) {
           const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
         } else {
           while (std.allEq(d.vec2f(1, 2), d.vec2f(1, 2))) {
@@ -388,26 +393,29 @@ describe('indents', () => {
 
       @group(0) @binding(0) var<uniform> boids_1: UniBoid_2;
 
-      @group(0) @binding(2) var smoothRender_3: texture_multisampled_2d<f32>;
+      @group(0) @binding(3) var sampled_3: texture_2d_array<f32>;
 
-      @group(0) @binding(3) var sampler_4: sampler;
+      @group(0) @binding(4) var sampler_4: sampler;
 
-      struct someVertex_Output_5 {
+      @group(0) @binding(2) var smoothRender_5: texture_multisampled_2d<f32>;
+
+      struct someVertex_Output_6 {
         @builtin(position) position: vec4f,
         @location(0) @interpolate(flat, either) uv: vec2f,
       }
 
-      struct someVertex_Input_6 {
+      struct someVertex_Input_7 {
         @builtin(vertex_index) vertexIndex: u32,
         @location(0) position: vec4f,
         @location(1) something: vec4f,
       }
 
-      @vertex fn someVertex_0(input: someVertex_Input_6) -> someVertex_Output_5 {
+      @vertex fn someVertex_0(input: someVertex_Input_7) -> someVertex_Output_6 {
         let uniBoid = (&boids_1);
-        for (var i = 0; (i < -1); i++) {
-          var someVal = textureSample(smoothRender_3, sampler_4, vec2f());
-          if ((someVal.x > 0.5)) {
+        for (var i = 0u; (i < -1); i++) {
+          var sampled = textureSample(sampled_3, sampler_4, vec2f(0.5), i);
+          var someVal = textureLoad(smoothRender_5, vec2i(), 0);
+          if (((someVal.x + sampled.x) > 0.5)) {
             var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
@@ -419,7 +427,7 @@ describe('indents', () => {
             }
           }
         }
-        return someVertex_Output_5(input.position, input.something.xy);
+        return someVertex_Output_6(input.position, input.something.xy);
       }"
     `);
   });
