@@ -162,7 +162,7 @@ requestAnimationFrame(frame);
 
 export const controls = {
   'light color': {
-    initial: [1, 0.7, 0],
+    initial: [...p.initialControls.lightColor],
     onColorChange(value: readonly [number, number, number]) {
       exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
     },
@@ -170,14 +170,14 @@ export const controls = {
   'light direction': {
     min: [-10, -10, -10],
     max: [10, 10, 10],
-    initial: [0, 7, -7],
+    initial: [...p.initialControls.lightDirection],
     step: [0.01, 0.01, 0.01],
     onVectorSliderChange(v: [number, number, number]) {
       exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
     },
   },
   'ambient color': {
-    initial: [0.8, 0.8, 0.1],
+    initial: [...p.initialControls.ambientColor],
     onColorChange(value: readonly [number, number, number]) {
       exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
     },
@@ -185,7 +185,7 @@ export const controls = {
   'ambient strength': {
     min: 0,
     max: 1,
-    initial: 0.5,
+    initial: p.initialControls.ambientStrength,
     step: 0.01,
     onSliderChange(v: number) {
       exampleControlsUniform.writePartial({ ambientStrength: v });
@@ -194,7 +194,7 @@ export const controls = {
   'specular exponent': {
     min: 0.5,
     max: 16,
-    initial: 8,
+    initial: p.initialControls.specularExponent,
     step: 0.1,
     onSliderChange(v: number) {
       exampleControlsUniform.writePartial({ specularExponent: v });
