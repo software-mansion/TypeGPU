@@ -50,11 +50,12 @@ export function setupOrbitCamera(
   targetCamera(options.initPos, options.target);
 
   function targetCamera(newPos: d.v4f, newTarget?: d.v4f) {
-    const cameraVector = newPos.sub(options.target);
+    const tgt = newTarget ?? cameraState.target;
+    const cameraVector = newPos.sub(tgt);
     cameraState.radius = std.length(cameraVector);
     cameraState.yaw = Math.atan2(cameraVector.x, cameraVector.z);
     cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
-    cameraState.target = newTarget ?? cameraState.target;
+    cameraState.target = tgt;
 
     callback(Camera({
       position: newPos,
