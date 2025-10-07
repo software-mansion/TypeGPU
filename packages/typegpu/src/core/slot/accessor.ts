@@ -13,14 +13,10 @@ import {
 } from '../../shared/symbols.ts';
 import {
   getOwnSnippet,
-  isBufferUsage,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
-import {
-  isBufferShorthand,
-  type TgpuBufferShorthand,
-} from '../buffer/bufferShorthand.ts';
+import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import {
@@ -90,16 +86,6 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
 
     if (isTgpuFn(value)) {
       return value[$internal].gpuImpl();
-    }
-
-    if (isBufferUsage(value) || isBufferShorthand(value)) {
-      return snip(
-        value,
-        this.schema,
-        /* ref */ value.resourceType === 'buffer-usage'
-          ? value.usage
-          : value.resourceType,
-      );
     }
 
     const ownSnippet = getOwnSnippet(value);
