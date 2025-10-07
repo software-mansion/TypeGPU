@@ -28,8 +28,8 @@ catalogs:
       specifier: ^7.1.0
       version: 7.1.0
     vite-imagetools:
-      specifier: ^7.1.0
-      version: 7.1.0
+      specifier: ^9.0.0
+      version: 9.0.0
   test:
     vitest:
       specifier: ^3.2.4
@@ -84,7 +84,7 @@ importers:
         version: link:packages/unplugin-typegpu
       vite-imagetools:
         specifier: catalog:frontend
-        version: 7.1.0(rollup@4.34.8)
+        version: 9.0.0(rollup@4.34.8)
       vitest:
         specifier: catalog:test
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.7.0)(@vitest/browser@3.2.4)(jiti@2.6.0)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.6))(lightningcss@1.30.1)(msw@2.10.2(@types/node@24.7.0)(typescript@5.8.3))(tsx@4.20.6)(yaml@2.8.1)
@@ -299,7 +299,7 @@ importers:
         version: 1.1.1(tailwindcss@4.1.11)
       vite-imagetools:
         specifier: catalog:frontend
-        version: 7.1.0(rollup@4.34.8)
+        version: 9.0.0(rollup@4.34.8)
       vite-plugin-wasm:
         specifier: ^3.5.0
         version: 3.5.0(vite@6.3.6(@types/node@24.7.0)(jiti@2.6.0)(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.0))
@@ -3819,9 +3819,9 @@ packages:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
 
-  imagetools-core@7.1.0:
-    resolution: {integrity: sha512-8Aa4NecBBGmTkaAUjcuRYgTPKHCsBEWYmCnvKCL6/bxedehtVVFyZPdXe8DD0Nevd6UWBq85ifUaJ8498lgqNQ==}
-    engines: {node: '>=18.0.0'}
+  imagetools-core@9.0.0:
+    resolution: {integrity: sha512-LAU2iVl6MuLbARLrZFEOrgqUFGmHij0FqqOR1/mMndUzJoPz2BU4gCXUhjikgwwmfhBPa/1szwiliUy//ZWafw==}
+    engines: {node: '>=20.0.0'}
 
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
@@ -5912,9 +5912,9 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  vite-imagetools@7.1.0:
-    resolution: {integrity: sha512-Mqh1uUY2DEMuBOogFz5Rd7cAs70VP6wsdQh2IShrJ+qGk5f7yQa4pN8w0YMLlGIKYW1JfM8oXrznUwVkhG+qxg==}
-    engines: {node: '>=18.0.0'}
+  vite-imagetools@9.0.0:
+    resolution: {integrity: sha512-nxTMh7+PkZlOinV1DwgcDAill4+khOF29yQVqYEzleyKEb6qunRDYBYaT9TmGfx4l1fk2xSvDNgbiTYyiekHAw==}
+    engines: {node: '>=20.0.0'}
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -9819,7 +9819,7 @@ snapshots:
 
   ignore@5.3.2: {}
 
-  imagetools-core@7.1.0: {}
+  imagetools-core@9.0.0: {}
 
   import-meta-resolve@4.2.0: {}
 
@@ -12278,10 +12278,10 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite-imagetools@7.1.0(rollup@4.34.8):
+  vite-imagetools@9.0.0(rollup@4.34.8):
     dependencies:
       '@rollup/pluginutils': 5.3.0(rollup@4.34.8)
-      imagetools-core: 7.1.0
+      imagetools-core: 9.0.0
       sharp: 0.34.2
     transitivePeerDependencies:
       - rollup
