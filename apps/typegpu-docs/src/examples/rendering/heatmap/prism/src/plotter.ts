@@ -78,9 +78,21 @@ export class Plotter implements IPlotter {
       vertices.map((vertex) => vertex.position[coord])
     );
 
-    const { offset: xOffset, scale: xScale } = xScaler.fit(X);
-    const { offset: yOffset, scale: yScale } = yScaler.fit(Y);
-    const { offset: zOffset, scale: zScale } = zScaler.fit(Z);
+    let xOffset = 0;
+    let yOffset = 0;
+    let zOffset = 0;
+    let xScale = 1;
+    let yScale = 1;
+    let zScale = 1;
+    if (xScaler.type === 'affine') {
+      ({ offset: xOffset, scale: xScale } = xScaler.fit(X));
+    }
+    if (yScaler.type === 'affine') {
+      ({ offset: yOffset, scale: yScale } = yScaler.fit(Y));
+    }
+    if (zScaler.type === 'affine') {
+      ({ offset: zOffset, scale: zScale } = zScaler.fit(Z));
+    }
 
     this.#resourceKeeper.updateTransformUniform({
       offset: d.vec3f(xOffset, yOffset, zOffset).mul(basePlotsScale).add(
@@ -98,9 +110,48 @@ export class Plotter implements IPlotter {
       },
     );
 
+    let vertexBuffers = surfaces.map((surface) =>
+      surface.getVertexBufferData()
+    );
+    if (xScaler.type === 'non-affine') {
+      vertexBuffers = vertexBuffers.map((vertices) =>
+        vertices.map((vertex) => ({
+          ...vertex,
+          position: d.vec4f(
+            xScaler.transform(vertex.position.x),
+            vertex.position.yzw,
+          ),
+        }))
+      );
+    }
+    if (yScaler.type === 'non-affine') {
+      vertexBuffers = vertexBuffers.map((vertices) =>
+        vertices.map((vertex) => ({
+          ...vertex,
+          position: d.vec4f(
+            vertex.position.x,
+            yScaler.transform(vertex.position.y),
+            vertex.position.zw,
+          ),
+        }))
+      );
+    }
+    if (zScaler.type === 'non-affine') {
+      vertexBuffers = vertexBuffers.map((vertices) =>
+        vertices.map((vertex) => ({
+          ...vertex,
+          position: d.vec4f(
+            vertex.position.xy,
+            zScaler.transform(vertex.position.z),
+            vertex.position.w,
+          ),
+        }))
+      );
+    }
+
     this.#resourceKeeper.createSurfaceStackResources(
-      surfaces.map((surface) => ({
-        vertices: surface.getVertexBufferData(),
+      surfaces.map((surface, i) => ({
+        vertices: vertexBuffers[i],
         indices: surface.getIndexBufferData(),
       })),
     );

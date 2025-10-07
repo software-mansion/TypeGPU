@@ -2,6 +2,7 @@ import * as c from './constants.ts';
 import type { IScaler } from './types.ts';
 
 const MinMaxScaler: IScaler = {
+  type: 'affine',
   fit(data: number[]): { offset: number; scale: number } {
     const [min, max] = data.reduce(
       (acc, val) => [Math.min(acc[0], val), Math.max(acc[1], val)],
@@ -13,8 +14,9 @@ const MinMaxScaler: IScaler = {
   },
 };
 
-const SignPreservingScaler = {
-  fit: (data: number[]): { offset: number; scale: number } => {
+const SignPreservingScaler: IScaler = {
+  type: 'affine',
+  fit(data: number[]): { offset: number; scale: number } {
     const absMax = data.reduce(
       (acc, val) => Math.max(Math.abs(acc), Math.abs(val)),
       0,
@@ -24,8 +26,16 @@ const SignPreservingScaler = {
 };
 
 const IdentityScaler: IScaler = {
+  type: 'affine',
   fit(data: number[]) {
     return { scale: 1, offset: 0 };
+  },
+};
+
+const LogScaler: IScaler = {
+  type: 'non-affine',
+  transform(value: number): number {
+    return Math.log2(value);
   },
 };
 
@@ -33,4 +43,5 @@ export const Scalers = {
   MinMaxScaler,
   IdentityScaler,
   SignPreservingScaler,
+  LogScaler,
 };

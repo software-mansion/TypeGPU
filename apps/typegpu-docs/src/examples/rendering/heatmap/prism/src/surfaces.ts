@@ -39,9 +39,19 @@ const normal = new GridSurface({
   colorCallback: (y: number) => d.vec4f(d.vec3f(y), 1),
 });
 
+const powerOfTwo = new GridSurface({
+  nx: 101,
+  nz: 101,
+  xRange: { min: -2, max: 2 },
+  zRange: { min: -2, max: 2 },
+  yCallback: (x: number, z: number) => 2 ** Math.abs(x * z),
+  colorCallback: (y: number) => d.vec4f(0.5, 0, 0, 0.5),
+});
+
 export const predefinedSurfaces = {
   mistyMountains,
   logXZ,
   ripple,
   normal,
+  powerOfTwo,
 };

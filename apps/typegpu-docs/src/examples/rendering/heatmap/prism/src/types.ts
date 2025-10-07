@@ -34,9 +34,15 @@ export interface ISurface {
   getIndexBufferData: () => number[];
 }
 
-export interface IScaler {
-  fit: (data: number[]) => { scale: number; offset: number };
-}
+export type IScaler =
+  | {
+    type: 'affine';
+    fit: (data: number[]) => { scale: number; offset: number };
+  }
+  | {
+    type: 'non-affine';
+    transform: (value: number) => number;
+  };
 
 export interface CameraConfig {
   zoomable: boolean;

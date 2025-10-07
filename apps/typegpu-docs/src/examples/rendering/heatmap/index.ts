@@ -11,17 +11,17 @@ await plotter.init();
 
 plotter.addPlots(
   [
-    predefinedSurfaces.logXZ,
+    predefinedSurfaces.powerOfTwo,
   ],
   {
-    xScaler: Scalers.MinMaxScaler,
-    yScaler: Scalers.MinMaxScaler,
-    zScaler: Scalers.MinMaxScaler,
-    xZeroPlane: true,
-    yZeroPlane: true,
-    zZeroPlane: true,
+    xScaler: Scalers.IdentityScaler,
+    yScaler: Scalers.LogScaler,
+    zScaler: Scalers.IdentityScaler,
+    xZeroPlane: false,
+    yZeroPlane: false,
+    zZeroPlane: false,
     basePlanesTranslation: d.vec3f(0, -0.01, 0),
-    basePlanesScale: d.vec3f(2.01),
+    basePlanesScale: d.vec3f(8.01),
     basePlotsTranslation: d.vec3f(),
     basePlotsScale: d.vec3f(2),
   },
