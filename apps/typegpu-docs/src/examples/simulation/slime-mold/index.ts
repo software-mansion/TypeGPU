@@ -24,13 +24,19 @@ const Agent = d.struct({
 });
 
 const Params = d.struct({
-  deltaTime: d.f32,
   moveSpeed: d.f32,
   sensorAngle: d.f32,
   sensorDistance: d.f32,
   turnSpeed: d.f32,
   evaporationRate: d.f32,
 });
+const defaultParams = {
+  moveSpeed: 30.0,
+  sensorAngle: 0.5,
+  sensorDistance: 9.0,
+  turnSpeed: 2.0,
+  evaporationRate: 0.05,
+};
 
 const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
@@ -51,14 +57,8 @@ prepareDispatch(root, (x) => {
   });
 }).dispatch(NUM_AGENTS);
 
-const params = root.createUniform(Params, {
-  deltaTime: 0.016,
-  moveSpeed: 30.0,
-  sensorAngle: 0.5,
-  sensorDistance: 9.0,
-  turnSpeed: 2.0,
-  evaporationRate: 0.05,
-});
+const params = root.createUniform(Params, defaultParams);
+const deltaTime = root.createUniform(d.f32, 0.016);
 
 const textures = [0, 1].map((i) =>
   root['~unstable']
@@ -121,18 +121,18 @@ const updateAgents = tgpu['~unstable'].computeFn({
     // Go straight
   } else if (weightForward < weightLeft && weightForward < weightRight) {
     // Turn randomly
-    angle = angle + (random * 2 - 1) * params.$.turnSpeed * params.$.deltaTime;
+    angle = angle + (random * 2 - 1) * params.$.turnSpeed * deltaTime.$;
   } else if (weightRight > weightLeft) {
     // Turn right
-    angle = angle - params.$.turnSpeed * params.$.deltaTime;
+    angle = angle - params.$.turnSpeed * deltaTime.$;
   } else if (weightLeft > weightRight) {
     // Turn left
-    angle = angle + params.$.turnSpeed * params.$.deltaTime;
+    angle = angle + params.$.turnSpeed * deltaTime.$;
   }
 
   const dir = d.vec2f(std.cos(angle), std.sin(angle));
   let newPos = agent.position.add(
-    dir.mul(params.$.moveSpeed * params.$.deltaTime),
+    dir.mul(params.$.moveSpeed * deltaTime.$),
   );
 
   const dimsf = d.vec2f(dims);
@@ -261,12 +261,11 @@ const renderBindGroups = [0, 1].map((i) =>
 let lastTime = performance.now();
 let currentTexture = 0;
 
-function frame() {
-  const now = performance.now();
-  const deltaTime = Math.min((now - lastTime) / 1000, 0.1);
+function frame(now: number) {
+  const deltaTimeValue = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
 
-  params.writePartial({ deltaTime });
+  deltaTime.write(deltaTimeValue);
 
   blurPipeline.with(computeLayout, bindGroups[currentTexture])
     .dispatchWorkgroups(
@@ -302,7 +301,7 @@ requestAnimationFrame(frame);
 
 export const controls = {
   'Move Speed': {
-    initial: 30.0,
+    initial: defaultParams.moveSpeed,
     min: 0,
     max: 100,
     step: 1,
@@ -311,16 +310,16 @@ export const controls = {
     },
   },
   'Sensor Angle': {
-    initial: 0.5,
+    initial: defaultParams.sensorAngle,
     min: 0,
-    max: Math.PI,
+    max: 3.14,
     step: 0.01,
     onSliderChange: (newValue: number) => {
       params.writePartial({ sensorAngle: newValue });
     },
   },
   'Sensor Distance': {
-    initial: 9.0,
+    initial: defaultParams.sensorDistance,
     min: 1,
     max: 50,
     step: 0.5,
@@ -329,7 +328,7 @@ export const controls = {
     },
   },
   'Turn Speed': {
-    initial: 2.0,
+    initial: defaultParams.turnSpeed,
     min: 0,
     max: 10,
     step: 0.1,
@@ -338,7 +337,7 @@ export const controls = {
     },
   },
   'Evaporation Rate': {
-    initial: 0.05,
+    initial: defaultParams.evaporationRate,
     min: 0,
     max: 0.5,
     step: 0.01,
