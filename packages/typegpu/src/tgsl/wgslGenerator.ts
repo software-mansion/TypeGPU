@@ -738,7 +738,7 @@ ${this.ctx.pre}else ${alternate}`;
             `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
 -----
 - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsTypeStr}(${rhsStr})' if you won't reassign '${rawId}' later.
+- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
 -----`,
           );
         }
