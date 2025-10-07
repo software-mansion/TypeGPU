@@ -12,25 +12,25 @@ export interface IPlotter {
 }
 
 export interface PlotConfig {
-  xScaler?: IScaler;
-  yScaler?: IScaler;
-  zScaler?: IScaler;
+  basePlanesTranslation: d.v3f;
+  basePlanesScale: d.v3f;
+  basePlotsTranslation: d.v3f;
+  basePlotsScale: d.v3f;
+  xScaler: IScaler;
+  yScaler: IScaler;
+  zScaler: IScaler;
   xZeroPlane: boolean;
   yZeroPlane: boolean;
   zZeroPlane: boolean;
 }
 
 export interface ScaleTransform {
-  X: { offset: number; scale: number };
-  Y: { offset: number; scale: number };
-  Z: { offset: number; scale: number };
+  offset: d.v3f;
+  scale: d.v3f;
 }
 
 export interface ISurface {
-  getVertexPositions: () => d.v4f[];
-  getVertexBufferData: (
-    scaleTransform: ScaleTransform,
-  ) => d.Infer<typeof s.Vertex>[];
+  getVertexBufferData: () => d.Infer<typeof s.Vertex>[];
   getIndexBufferData: () => number[];
 }
 

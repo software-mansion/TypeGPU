@@ -7,22 +7,14 @@ import type {
   TgpuRoot,
   VertexFlag,
 } from 'typegpu';
-import type * as d from 'typegpu/data';
-
-import type {
-  CameraConfig,
-  IPlotter,
-  ISurface,
-  PlotConfig,
-  ScaleTransform,
-} from './types.ts';
+import * as d from 'typegpu/data';
+import type { CameraConfig, IPlotter, ISurface, PlotConfig } from './types.ts';
 import { fragmentFn, vertexFn } from './shaders.ts';
 import { layout, vertexLayout } from './layouts.ts';
 import * as c from './constants.ts';
 import { EventHandler } from './event-handler.ts';
 import { ResourceKeeper } from './resource-keeper.ts';
 import type * as s from './structures.ts';
-import { Scalers } from './scalers.ts';
 
 export class Plotter implements IPlotter {
   readonly #context: GPUCanvasContext;
@@ -66,41 +58,52 @@ export class Plotter implements IPlotter {
     this.#createRenderPipelines();
   }
 
-  addPlots(surfaces: ISurface[], options: PlotConfig): void {
-    this.#plotConfig = options;
-    let { xScaler, yScaler, zScaler } = options;
-    xScaler ??= Scalers.IdentityScaler;
-    yScaler ??= Scalers.IdentityScaler;
-    zScaler ??= Scalers.IdentityScaler;
+  addPlots(surfaces: ISurface[], options?: PlotConfig): void {
+    this.#plotConfig = options ?? c.DEFAULT_PLOT_CONFIG;
+    const {
+      xScaler,
+      yScaler,
+      zScaler,
+      basePlanesTranslation,
+      basePlanesScale,
+      basePlotsTranslation,
+      basePlotsScale,
+    } = this.#plotConfig;
 
-    const positions = surfaces.flatMap((surface) =>
-      surface.getVertexPositions()
+    const vertices = surfaces.flatMap((surface) =>
+      surface.getVertexBufferData()
     );
 
-    const X = [];
-    const Y = [];
-    const Z = [];
+    const [X, Y, Z] = [0, 1, 2].map((coord) =>
+      vertices.map((vertex) => vertex.position[coord])
+    );
 
-    for (const position of positions) {
-      X.push(position.x);
-      Y.push(position.y);
-      Z.push(position.z);
-    }
+    const { offset: xOffset, scale: xScale } = xScaler.fit(X);
+    const { offset: yOffset, scale: yScale } = yScaler.fit(Y);
+    const { offset: zOffset, scale: zScale } = zScaler.fit(Z);
 
-    const scaleTransform: ScaleTransform = {
-      X: xScaler.fit(X),
-      Y: yScaler.fit(Y),
-      Z: zScaler.fit(Z),
-    };
-
-    const transformedSurfaces = surfaces.map((surface) => {
-      return {
-        vertices: surface.getVertexBufferData(scaleTransform),
-        indices: surface.getIndexBufferData(),
-      };
+    this.#resourceKeeper.updateTransformUniform({
+      offset: d.vec3f(xOffset, yOffset, zOffset).mul(basePlotsScale).add(
+        basePlotsTranslation,
+      ),
+      scale: d.vec3f(xScale, yScale, zScale).mul(basePlotsScale),
     });
+    this.#resourceKeeper.updatePlanesTransformUniforms(
+      {
+        offset: d.vec3f(xOffset, yOffset, zOffset).mul(basePlotsScale)
+          .add(
+            basePlanesTranslation,
+          ),
+        scale: basePlanesScale,
+      },
+    );
 
-    this.#resourceKeeper.createSurfaceStackResources(transformedSurfaces);
+    this.#resourceKeeper.createSurfaceStackResources(
+      surfaces.map((surface) => ({
+        vertices: surface.getVertexBufferData(),
+        indices: surface.getIndexBufferData(),
+      })),
+    );
   }
 
   resetPlots(): void {

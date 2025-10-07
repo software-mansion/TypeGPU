@@ -1,12 +1,18 @@
 import * as d from 'typegpu/data';
 
-import type { CameraConfig, GridConfig, ScaleTransform } from './types.ts';
+import type {
+  CameraConfig,
+  GridConfig,
+  PlotConfig,
+  ScaleTransform,
+} from './types.ts';
+import { Scalers } from './scalers.ts';
 
 export const EPS = 1e-6;
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
   zoomable: true,
   draggable: true,
-  position: d.vec4f(14, 8, 14, 1),
+  position: d.vec4f(7, 4, 7, 1),
   target: d.vec3f(),
   up: d.vec3f(0, 1, 0),
   fov: Math.PI / 4,
@@ -16,10 +22,20 @@ export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
   zoomSensitivity: 0.05,
   maxZoom: 7,
 };
-export const DEFAULT_TRANSLATION = d.vec3f(0, -2, 0);
-export const DEFAULT_SCALE = d.vec3f(5, 1, 5);
-export const DEFAULT_PLANE_TRANSLATION = d.vec3f(0, -2.1, 0);
-export const DEFAULT_PLANE_SCALE = d.vec3f(5.1);
+
+export const DEFAULT_PLOT_CONFIG: PlotConfig = {
+  xScaler: Scalers.IdentityScaler,
+  yScaler: Scalers.IdentityScaler,
+  zScaler: Scalers.IdentityScaler,
+  xZeroPlane: false,
+  yZeroPlane: false,
+  zZeroPlane: false,
+  basePlanesTranslation: d.vec3f(0, -0.01, 0),
+  basePlanesScale: d.vec3f(2.01),
+  basePlotsTranslation: d.vec3f(),
+  basePlotsScale: d.vec3f(2),
+};
+
 export const DEFAULT_PLANE_COLOR = d.vec4f(d.vec3f(0.29, 0.21, 0.47), 0.5);
 export const PLANE_GRID_CONFIG: GridConfig = {
   nx: 2,
@@ -30,7 +46,6 @@ export const PLANE_GRID_CONFIG: GridConfig = {
   colorCallback: () => DEFAULT_PLANE_COLOR,
 };
 export const IDENTITY_SCALE_TRANSFORM: ScaleTransform = {
-  X: { offset: 0, scale: 1 },
-  Y: { offset: 0, scale: 1 },
-  Z: { offset: 0, scale: 1 },
+  offset: d.vec3f(),
+  scale: d.vec3f(1),
 };

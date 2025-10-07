@@ -15,8 +15,8 @@ const mistyMountains = new GridSurface({
 const logXZ = new GridSurface({
   nx: 49,
   nz: 49,
-  xRange: { min: -5, max: 5 },
-  zRange: { min: -5, max: 5 },
+  xRange: { min: -1, max: 9 },
+  zRange: { min: -1, max: 9 },
   yCallback: (x: number, z: number) => Math.log(Math.abs(x * z) + c.EPS),
   colorCallback: (y: number) => d.vec4f(d.vec3f(y), 1),
 });

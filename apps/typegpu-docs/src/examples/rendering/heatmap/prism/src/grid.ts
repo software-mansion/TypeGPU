@@ -1,7 +1,7 @@
 import * as d from 'typegpu/data';
 
 import type * as s from './structures.ts';
-import type { GridConfig, ISurface, ScaleTransform } from './types.ts';
+import type { GridConfig, ISurface } from './types.ts';
 
 export class GridSurface implements ISurface {
   #gridConfig: GridConfig;
@@ -20,28 +20,9 @@ export class GridSurface implements ISurface {
     this.#gridConfig = gridConfig;
   }
 
-  getVertexPositions: () => d.v4f[] = () => {
+  getVertexBufferData(): d.Infer<typeof s.Vertex>[] {
     let vertices = this.#createGrid();
     vertices = this.#populateGridY(vertices);
-    return vertices.map((vertex) => vertex.position);
-  };
-
-  getVertexBufferData(
-    scaleTransform: ScaleTransform,
-  ): d.Infer<typeof s.Vertex>[] {
-    let vertices = this.#createGrid();
-    vertices = this.#populateGridY(vertices);
-    vertices = vertices.map((vertex) => {
-      const { position, color } = vertex;
-      const [x, y, z] = position;
-      const [sx, sy, sz] = [
-        x * scaleTransform.X.scale + scaleTransform.X.offset,
-        y * scaleTransform.Y.scale + scaleTransform.Y.offset,
-        z * scaleTransform.Z.scale + scaleTransform.Z.offset,
-      ];
-      return { position: d.vec4f(sx, sy, sz, 1), color };
-    });
-
     vertices = this.#populateGridColor(vertices);
     return vertices;
   }

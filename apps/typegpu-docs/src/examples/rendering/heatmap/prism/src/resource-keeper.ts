@@ -9,7 +9,7 @@ import type {
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 
-import type { CameraConfig } from './types.ts';
+import type { CameraConfig, ScaleTransform } from './types.ts';
 import * as s from './structures.ts';
 import { layout, vertexLayout } from './layouts.ts';
 import { createTransformMatrix } from './utils.ts';
@@ -68,11 +68,7 @@ export class ResourceKeeper {
 
     this.#cameraUniform = root.createBuffer(s.Camera).$usage('uniform');
 
-    const defaultTransform = createTransformMatrix(
-      c.DEFAULT_TRANSLATION,
-      c.DEFAULT_SCALE,
-    );
-    this.#transformUniform = root.createBuffer(s.Transform, defaultTransform)
+    this.#transformUniform = root.createBuffer(s.Transform)
       .$usage('uniform');
 
     this.#bindgroup = root.createBindGroup(layout, {
@@ -139,8 +135,39 @@ export class ResourceKeeper {
     return this.#depthAndMsaa;
   }
 
-  updateTransformUniform(transformMatrix: d.m4x4f) {
-    this.#transformUniform.write({ model: transformMatrix });
+  updateTransformUniform(scaleTransform: ScaleTransform): void {
+    this.#transformUniform.write(
+      createTransformMatrix(scaleTransform.offset, scaleTransform.scale),
+    );
+  }
+
+  updatePlanesTransformUniforms(scaleTransform: ScaleTransform): void {
+    const yZeroTransform = createTransformMatrix(
+      d.vec3f(0, scaleTransform.offset.y, 0),
+      scaleTransform.scale,
+    );
+
+    const xZeroMatrix = d.mat4x4f
+      .rotationZ(-Math.PI / 2)
+      .mul(
+        createTransformMatrix(
+          d.vec3f(0, scaleTransform.offset.x, 0),
+          scaleTransform.scale,
+        ).model,
+      );
+
+    const zZeroMatrix = d.mat4x4f
+      .rotationX(Math.PI / 2)
+      .mul(
+        createTransformMatrix(
+          d.vec3f(0, scaleTransform.offset.z, 0),
+          scaleTransform.scale,
+        ).model,
+      );
+
+    this.#planes.yZero.transformUniform.write(yZeroTransform);
+    this.#planes.xZero.transformUniform.write({ model: xZeroMatrix });
+    this.#planes.zZero.transformUniform.write({ model: zZeroMatrix });
   }
 
   updateDepthAndMsaa() {
@@ -176,7 +203,7 @@ export class ResourceKeeper {
   #initPlanes(): PlanesResources {
     const grid = new GridSurface(c.PLANE_GRID_CONFIG);
 
-    const gridVertices = grid.getVertexBufferData(c.IDENTITY_SCALE_TRANSFORM);
+    const gridVertices = grid.getVertexBufferData();
 
     const gridIndices = grid.getIndexBufferData();
 
@@ -190,50 +217,21 @@ export class ResourceKeeper {
       gridIndices,
     ).$usage('index');
 
-    const defaultPlaneTransform = createTransformMatrix(
-      c.DEFAULT_PLANE_TRANSLATION,
-      c.DEFAULT_PLANE_SCALE,
-    );
-
-    const xTransform = this.#root
-      .createBuffer(
-        s.Transform,
-        {
-          model: m.mat4.rotateZ(
-            defaultPlaneTransform.model,
-            Math.PI / 2,
-            d.mat4x4f(),
-          ),
-        },
-      )
-      .$usage('uniform');
+    const xTransform = this.#root.createBuffer(s.Transform).$usage('uniform');
 
     const xBindgroup = this.#root.createBindGroup(layout, {
       camera: this.#cameraUniform,
       transform: xTransform,
     });
 
-    const yTransform = this.#root
-      .createBuffer(s.Transform, defaultPlaneTransform)
-      .$usage('uniform');
+    const yTransform = this.#root.createBuffer(s.Transform).$usage('uniform');
 
     const yBindgroup = this.#root.createBindGroup(layout, {
       camera: this.#cameraUniform,
       transform: yTransform,
     });
 
-    const zTransform = this.#root
-      .createBuffer(
-        s.Transform,
-        {
-          model: m.mat4.rotateX(
-            defaultPlaneTransform.model,
-            Math.PI / 2,
-            d.mat4x4f(),
-          ),
-        },
-      )
-      .$usage('uniform');
+    const zTransform = this.#root.createBuffer(s.Transform).$usage('uniform');
 
     const zBindgroup = this.#root.createBindGroup(layout, {
       camera: this.#cameraUniform,
