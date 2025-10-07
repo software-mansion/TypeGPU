@@ -353,7 +353,7 @@ const pointsBuffer = root
   .$usage('storage');
 
 const bindGroupLayout = tgpu.bindGroupLayout({
-  points: { storage: d.arrayOf(d.vec2i, 100) },
+  points: { storage: d.arrayOf(d.vec2i, 100), access: 'mutable' },
 });
 
 const bindGroup = root
@@ -362,9 +362,9 @@ const bindGroup = root
 const mainCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
-})((x) => {
+})((input) => {
   // Access and modify the bound buffer via the layout
-  bindGroupLayout.$.points[0] = d.vec2i();
+  bindGroupLayout.$.points[input.gid[0]] = d.vec2i(1, 2);
 });
 
 const pipeline = root['~unstable']
@@ -399,9 +399,9 @@ const pointsBuffer = root.createMutable(d.arrayOf(d.vec2i, 100));
 const mainCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
-})((x) => {
+})((input) => {
   // Access and modify the fixed buffer directly
-  pointsBuffer.$[0] = d.vec2i();
+  pointsBuffer.$[input.gid[0]] = d.vec2i();
 });
 
 const pipeline = root['~unstable'].withCompute(mainCompute).createPipeline();
