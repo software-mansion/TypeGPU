@@ -70,20 +70,10 @@ function createTextures() {
       size: [width, height],
       format: 'rgba8unorm',
     }).$usage('storage', 'sampled');
-    const depthTexture = root['~unstable'].createTexture({
-      size: [width, height],
-      format: 'r32float',
-    }).$usage('storage', 'sampled');
 
     return {
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
       sampled: texture.createView(),
-      depth: depthTexture.createView(
-        d.textureStorage2d('r32float', 'read-write'),
-      ),
-      depthSampled: depthTexture.createView(d.texture2d(), {
-        sampleType: 'unfilterable-float',
-      }),
     };
   });
 }
@@ -98,9 +88,6 @@ const filteringSampler = tgpu['~unstable'].sampler({
 const rayMarchLayout = tgpu.bindGroupLayout({
   currentTexture: {
     storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
-  },
-  currentDepth: {
-    storageTexture: d.textureStorage2d('r32float', 'write-only'),
   },
 });
 
@@ -479,12 +466,12 @@ const MarchingResult = d.struct({
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
-  let closestHit = d.f32(MAX_DIST);
-  let closestBoxIndex = d.i32(-1);
+  let distanceFromOrigin = d.f32(0);
+  let totalSteps = 0;
   const boxCount = boundingBoxesStorage.$.length;
 
-  for (let i = 0; i < boxCount; i++) {
-    const bbox = boundingBoxesStorage.$[i];
+  for (let boxIdx = 0; boxIdx < boxCount; boxIdx++) {
+    const bbox = boundingBoxesStorage.$[boxIdx];
     const intersection = intersectBox(
       rayOrigin,
       rayDirection,
@@ -492,167 +479,169 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       bbox.max,
     );
 
-    if (intersection.hit && intersection.tMin >= 0.0) {
-      closestHit = intersection.tMin;
-      closestBoxIndex = i;
-      break;
+    if (!intersection.hit || intersection.tMax < distanceFromOrigin) {
+      continue;
     }
-  }
 
-  let distanceFromOrigin = std.max(0.0, closestHit - SURF_DIST);
-  const bbox = boundingBoxesStorage.$[closestBoxIndex];
-  bboxCenterX.$ = (bbox.min.x + bbox.max.x) * 0.5;
-  const intersection = intersectBox(
-    rayOrigin,
-    rayDirection,
-    bbox.min,
-    bbox.max,
-  );
-  const maxMarchDist = intersection.tMax;
+    distanceFromOrigin = std.max(distanceFromOrigin, intersection.tMin);
+    bboxCenterX.$ = (bbox.min.x + bbox.max.x) * 0.5;
+    const maxMarchDist = intersection.tMax;
 
-  let hitInfo = HitInfo();
+    let hitInfo = HitInfo();
 
-  for (let i = 0; i < MAX_STEPS; i++) {
-    const currentPosition = std.add(
-      rayOrigin,
-      std.mul(rayDirection, distanceFromOrigin),
-    );
-
-    hitInfo = getSceneDist(currentPosition);
-    distanceFromOrigin += hitInfo.distance;
-
-    if (distanceFromOrigin > maxMarchDist || hitInfo.distance < SURF_DIST) {
-      break;
-    }
-  }
-
-  if (distanceFromOrigin < maxMarchDist && hitInfo.distance < SURF_DIST) {
-    const hitPosition = std.add(
-      rayOrigin,
-      std.mul(rayDirection, distanceFromOrigin),
-    );
-    if (DEBUG_GIZMOS) {
-      if (hitInfo.objectType === 3) {
-        return MarchingResult({
-          color: d.vec4f(1, 0, 0, 1), // Debug points in red
-          hitPos: hitPosition,
-        });
+    for (let i = 0; i < MAX_STEPS; i++) {
+      if (totalSteps >= MAX_STEPS) {
+        break;
       }
-      if (hitInfo.objectType === 4) {
-        return MarchingResult({
-          color: d.vec4f(0, 1, 0, 1), // Debug control points in green
-          hitPos: hitPosition,
-        });
-      }
-      if (hitInfo.objectType === 5) {
-        return MarchingResult({
-          color: d.vec4f(0, 0, 1, 1), // Debug normals in blue
-          hitPos: hitPosition,
-        });
-      }
-    }
-    const normal = getNormal(hitPosition);
 
-    const lightDir = std.mul(lightUniform.$.direction, -1.0);
-    const diffuse = std.max(std.dot(normal, lightDir), 0.0);
-
-    const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
-    const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
-    const specularFactor = std.pow(
-      std.max(std.dot(viewDir, reflectDir), 0.0),
-      SPECULAR_POWER,
-    );
-    const specular = std.mul(
-      std.mul(lightUniform.$.color, specularFactor),
-      SPECULAR_INTENSITY,
-    );
-
-    const baseColor = d.vec3f(0.9, 0.9, 0.9);
-    const directionalLight = std.mul(
-      std.mul(baseColor, lightUniform.$.color),
-      diffuse,
-    );
-
-    const ambientLight = std.mul(
-      std.mul(baseColor, AMBIENT_COLOR),
-      AMBIENT_INTENSITY,
-    );
-    const litColor = std.add(std.add(directionalLight, ambientLight), specular);
-
-    if (hitInfo.objectType === 1) {
-      const N = getNormal(hitPosition);
-      const I = rayDirection;
-      const cosi = std.min(
-        1.0,
-        std.max(0.0, std.dot(std.mul(I, -1.0), N)),
+      const currentPosition = std.add(
+        rayOrigin,
+        std.mul(rayDirection, distanceFromOrigin),
       );
-      const F = fresnelSchlick(cosi, 1.0, JELLY_IOR);
 
-      // Reflection
-      const reflDir = std.reflect(I, N);
-      const reflOrigin = std.add(hitPosition, std.mul(N, SURF_DIST * 2.0));
-      const reflection = rayMarchNoJelly(reflOrigin, reflDir);
+      hitInfo = getSceneDist(currentPosition);
+      distanceFromOrigin += hitInfo.distance;
+      totalSteps++;
 
-      // Refraction
-      const eta = 1.0 / JELLY_IOR;
-      const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
-      let refractedColor = d.vec3f(0.0, 0.0, 0.0);
-      if (k > 0.0) {
-        const refrDir = std.normalize(
-          std.add(
-            std.mul(I, eta),
-            std.mul(N, eta * cosi - std.sqrt(k)),
-          ),
+      if (hitInfo.distance < SURF_DIST) {
+        const hitPosition = std.add(
+          rayOrigin,
+          std.mul(rayDirection, distanceFromOrigin),
         );
-        // March inside jelly to exit
-        let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
-        let insideLen = d.f32();
-        for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
-          const dIn = sliderSdf3D(p).distance;
-          const step = std.max(SURF_DIST, std.abs(dIn));
-          p = std.add(p, std.mul(refrDir, step));
-          insideLen += step;
-          if (dIn >= 0.0) break; // exited
+        if (DEBUG_GIZMOS) {
+          if (hitInfo.objectType === 3) {
+            return MarchingResult({
+              color: d.vec4f(1, 0, 0, 1), // Debug points in red
+              hitPos: hitPosition,
+            });
+          }
+          if (hitInfo.objectType === 4) {
+            return MarchingResult({
+              color: d.vec4f(0, 1, 0, 1), // Debug control points in green
+              hitPos: hitPosition,
+            });
+          }
+          if (hitInfo.objectType === 5) {
+            return MarchingResult({
+              color: d.vec4f(0, 0, 1, 1), // Debug normals in blue
+              hitPos: hitPosition,
+            });
+          }
         }
-        const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
-        const env = rayMarchNoJelly(exitPos, refrDir);
+        const normal = getNormal(hitPosition);
 
-        const totalSegments = lineInfos.$.length - 2;
-        const progress = (hitInfo.segmentIndex + hitInfo.segmentT) /
-          totalSegments;
+        const lightDir = std.mul(lightUniform.$.direction, -1.0);
+        const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
-        const T = beerLambert(
-          JELLY_ABSORB.mul(progress ** 2),
-          insideLen,
+        const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
+        const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
+        const specularFactor = std.pow(
+          std.max(std.dot(viewDir, reflectDir), 0.0),
+          SPECULAR_POWER,
         );
-        // Subtle forward-scatter glow
-        const forward = std.max(0.0, std.dot(lightDir, refrDir));
-        const scatter = std.mul(
-          JELLY_SCATTER_TINT,
-          JELLY_SCATTER_STRENGTH * forward * progress,
+        const specular = std.mul(
+          std.mul(lightUniform.$.color, specularFactor),
+          SPECULAR_INTENSITY,
         );
-        refractedColor = std.add(std.mul(env, T), scatter);
+
+        const baseColor = d.vec3f(0.9, 0.9, 0.9);
+        const directionalLight = std.mul(
+          std.mul(baseColor, lightUniform.$.color),
+          diffuse,
+        );
+
+        const ambientLight = std.mul(
+          std.mul(baseColor, AMBIENT_COLOR),
+          AMBIENT_INTENSITY,
+        );
+        const litColor = std.add(
+          std.add(directionalLight, ambientLight),
+          specular,
+        );
+
+        if (hitInfo.objectType === 1) {
+          const N = getNormal(hitPosition);
+          const I = rayDirection;
+          const cosi = std.min(
+            1.0,
+            std.max(0.0, std.dot(std.mul(I, -1.0), N)),
+          );
+          const F = fresnelSchlick(cosi, 1.0, JELLY_IOR);
+
+          // Reflection
+          const reflDir = std.reflect(I, N);
+          const reflOrigin = std.add(hitPosition, std.mul(N, SURF_DIST * 2.0));
+          const reflection = rayMarchNoJelly(reflOrigin, reflDir);
+
+          // Refraction
+          const eta = 1.0 / JELLY_IOR;
+          const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+          let refractedColor = d.vec3f(0.0, 0.0, 0.0);
+          if (k > 0.0) {
+            const refrDir = std.normalize(
+              std.add(
+                std.mul(I, eta),
+                std.mul(N, eta * cosi - std.sqrt(k)),
+              ),
+            );
+            // March inside jelly to exit
+            let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
+            let insideLen = d.f32();
+            for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
+              const dIn = sliderSdf3D(p).distance;
+              const step = std.max(SURF_DIST, std.abs(dIn));
+              p = std.add(p, std.mul(refrDir, step));
+              insideLen += step;
+              if (dIn >= 0.0) break; // exited
+            }
+            const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
+            const env = rayMarchNoJelly(exitPos, refrDir);
+
+            const totalSegments = lineInfos.$.length - 2;
+            const progress = (hitInfo.segmentIndex + hitInfo.segmentT) /
+              totalSegments;
+
+            const T = beerLambert(
+              JELLY_ABSORB.mul(progress ** 2),
+              insideLen,
+            );
+            // Subtle forward-scatter glow
+            const forward = std.max(0.0, std.dot(lightDir, refrDir));
+            const scatter = std.mul(
+              JELLY_SCATTER_TINT,
+              JELLY_SCATTER_STRENGTH * forward * progress,
+            );
+            refractedColor = std.add(std.mul(env, T), scatter);
+          }
+
+          const jelly = std.add(
+            std.mul(reflection, F),
+            std.mul(refractedColor, 1.0 - F),
+          );
+
+          return MarchingResult({
+            color: d.vec4f(jelly, 1.0),
+            hitPos: hitPosition,
+          });
+        }
+
+        const ao = calculateAO(hitPosition, normal);
+        const finalColor = std.mul(litColor, ao);
+
+        return MarchingResult({
+          color: d.vec4f(finalColor, 1.0),
+          hitPos: hitPosition,
+        });
       }
 
-      const jelly = std.add(
-        std.mul(reflection, F),
-        std.mul(refractedColor, 1.0 - F),
-      );
-
-      return MarchingResult({
-        color: d.vec4f(jelly, 1.0),
-        hitPos: hitPosition,
-      });
+      // If we exited this box, break to try next box
+      if (distanceFromOrigin > maxMarchDist) {
+        break;
+      }
     }
-
-    const ao = calculateAO(hitPosition, normal);
-    const finalColor = std.mul(litColor, ao);
-
-    return MarchingResult({
-      color: d.vec4f(finalColor, 1.0),
-      hitPos: hitPosition,
-    });
   }
+
+  // No hit found in any box
   return MarchingResult({
     color: d.vec4f(),
     hitPos: d.vec3f(),
@@ -696,27 +685,6 @@ const raymarchFn = tgpu['~unstable'].computeFn({
   const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
 
   const hitInfo = rayMarch(rayOrigin, rayDir);
-
-  let depth = d.f32(1.0);
-
-  // Check if we have a valid hit by looking at the alpha channel of the color (should always be the case)
-  if (hitInfo.color.w > 0.0) {
-    const viewSpacePos = std.mul(
-      cameraUniform.$.view,
-      d.vec4f(hitInfo.hitPos, 1.0),
-    );
-    const nearPlane = 0.1;
-    const farPlane = d.f32(10);
-    const linearDepth = -viewSpacePos.z;
-    depth = (linearDepth - nearPlane) / (farPlane - nearPlane);
-    depth = std.saturate(depth);
-  }
-
-  std.textureStore(
-    rayMarchLayout.$.currentDepth,
-    d.vec2u(gid.x, gid.y),
-    d.vec4f(depth, 0, 0, 0),
-  );
 
   std.textureStore(
     rayMarchLayout.$.currentTexture,
@@ -866,7 +834,6 @@ function render(timestamp: number) {
     rayMarchLayout,
     root.createBindGroup(rayMarchLayout, {
       currentTexture: textures[currentFrame].write,
-      currentDepth: textures[currentFrame].depth,
     }),
   ).dispatchWorkgroups(
     Math.ceil(width / 16),
