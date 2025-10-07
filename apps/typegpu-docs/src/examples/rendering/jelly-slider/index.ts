@@ -14,7 +14,6 @@ import {
   AO_INTENSITY,
   AO_RADIUS,
   AO_STEPS,
-  DEBUG_GIZMOS,
   JELLY_ABSORB,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
@@ -44,7 +43,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const NUM_POINTS = 16;
+const NUM_POINTS = 17;
 
 const slider = new Slider(
   root,
@@ -134,6 +133,11 @@ const lineInfos = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
 const controlPoints = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
 const normals = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
 
+const ObjectType = {
+  SLIDER: 1,
+  BACKGROUND: 2,
+} as const;
+
 const HitInfo = d.struct({
   distance: d.f32,
   objectType: d.i32,
@@ -141,46 +145,21 @@ const HitInfo = d.struct({
   segmentT: d.f32,
 });
 
-const sdDebugPoints = (p: d.v3f) => {
-  'kernel';
-  let dmin = d.f32(1e9);
-  for (let i = 0; i < NUM_POINTS; i++) {
-    const pt = lineInfos.$[i];
-    const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
-    if (dist < dmin) dmin = dist;
-  }
-  return dmin;
-};
-
-const sdDebugControlPoints = (p: d.v3f) => {
-  'kernel';
-  let dmin = d.f32(1e9);
-  for (let i = 0; i < NUM_POINTS; i++) {
-    const pt = controlPoints.$[i];
-    const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
-    if (dist < dmin) dmin = dist;
-  }
-  return dmin;
-};
-
-const sdDebugNormals = (p: d.v3f) => {
-  'kernel';
-  let dmin = d.f32(1e9);
-  for (let i = 0; i < NUM_POINTS; i++) {
-    const pt = lineInfos.$[i];
-    const n = normals.$[i];
-    const a = d.vec3f(pt, 0);
-    const b = d.vec3f(pt, 0).add(d.vec3f(n, 0).mul(0.2));
-    const dist = sdf.sdCapsule(p, a, b, 0.01);
-    if (dist < dmin) dmin = dist;
-  }
-  return dmin;
-};
-
 const LineInfo = d.struct({
   closestSegIndex: d.i32,
   t: d.f32,
   distance: d.f32,
+});
+
+const BoxIntersection = d.struct({
+  hit: d.bool,
+  tMin: d.f32,
+  tMax: d.f32,
+});
+
+const MarchingResult = d.struct({
+  color: d.vec4f,
+  hitPos: d.vec3f,
 });
 
 const sdInflatedPolyline2D = (p: d.v2f) => {
@@ -275,44 +254,14 @@ const getSceneDist = (position: d.v3f) => {
 
   const hitInfo = HitInfo();
 
-  if (DEBUG_GIZMOS) {
-    const debugContr = sdDebugControlPoints(position);
-    const debugPoints = sdDebugPoints(position);
-    const debugNormals = sdDebugNormals(position);
-
-    if (
-      debugNormals < debugPoints && debugNormals < debugContr &&
-      debugNormals < poly3D.distance && debugNormals < mainScene
-    ) {
-      hitInfo.distance = debugNormals;
-      hitInfo.objectType = 5; // Debug normals
-      return hitInfo;
-    }
-
-    if (
-      debugPoints < debugContr && debugPoints < poly3D.distance &&
-      debugPoints < mainScene
-    ) {
-      hitInfo.distance = debugPoints;
-      hitInfo.objectType = 3; // Debug points
-      return hitInfo;
-    }
-
-    if (debugContr < poly3D.distance && debugContr < mainScene) {
-      hitInfo.distance = debugContr;
-      hitInfo.objectType = 4; // Debug control points
-      return hitInfo;
-    }
-  }
-
   if (poly3D.distance < mainScene) {
     hitInfo.distance = poly3D.distance;
-    hitInfo.objectType = 1; // Slider
+    hitInfo.objectType = ObjectType.SLIDER;
     hitInfo.segmentIndex = poly3D.closestSegIndex;
     hitInfo.segmentT = poly3D.t;
   } else {
     hitInfo.distance = mainScene;
-    hitInfo.objectType = 2; // Main scene
+    hitInfo.objectType = ObjectType.BACKGROUND;
   }
   return hitInfo;
 };
@@ -383,11 +332,39 @@ const beerLambert = (sigma: d.v3f, dist: number) => {
   return std.exp(std.mul(sigma, -dist));
 };
 
-const BoxIntersection = d.struct({
-  hit: d.bool,
-  tMin: d.f32,
-  tMax: d.f32,
-});
+const calculateLighting = (
+  hitPosition: d.v3f,
+  normal: d.v3f,
+  rayOrigin: d.v3f,
+) => {
+  'kernel';
+  const lightDir = std.mul(lightUniform.$.direction, -1.0);
+  const diffuse = std.max(std.dot(normal, lightDir), 0.0);
+
+  const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
+  const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
+  const specularFactor = std.pow(
+    std.max(std.dot(viewDir, reflectDir), 0.0),
+    SPECULAR_POWER,
+  );
+  const specular = std.mul(
+    std.mul(lightUniform.$.color, specularFactor),
+    SPECULAR_INTENSITY,
+  );
+
+  const baseColor = d.vec3f(0.9, 0.9, 0.9);
+  const directionalLight = std.mul(
+    std.mul(baseColor, lightUniform.$.color),
+    diffuse,
+  );
+
+  const ambientLight = std.mul(
+    std.mul(baseColor, AMBIENT_COLOR),
+    AMBIENT_INTENSITY,
+  );
+
+  return std.add(std.add(directionalLight, ambientLight), specular);
+};
 
 const intersectBox = (
   rayOrigin: d.v3f,
@@ -424,50 +401,26 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
     const p = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
     hit = getMainSceneDist(p);
     distanceFromOrigin += hit;
-    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) break;
+    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
+      break;
+    }
   }
 
   if (distanceFromOrigin < MAX_DIST) {
     const pos = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
     const n = getNormalMain(pos);
 
-    const lightDir = std.mul(lightUniform.$.direction, -1.0);
-    const diffuse = std.max(std.dot(n, lightDir), 0.0);
-    const viewDir = std.normalize(std.sub(rayOrigin, pos));
-    const reflectDir = std.reflect(std.mul(lightDir, -1.0), n);
-    const specularFactor = std.pow(
-      std.max(std.dot(viewDir, reflectDir), 0.0),
-      SPECULAR_POWER,
-    );
-    const specular = std.mul(
-      std.mul(lightUniform.$.color, specularFactor),
-      SPECULAR_INTENSITY,
-    );
-    const baseColor = d.vec3f(0.9, 0.9, 0.9);
-    const directionalLight = std.mul(
-      std.mul(baseColor, lightUniform.$.color),
-      diffuse,
-    );
-    const ambientLight = std.mul(
-      std.mul(baseColor, AMBIENT_COLOR),
-      AMBIENT_INTENSITY,
-    );
-    const lit = std.add(std.add(directionalLight, ambientLight), specular);
+    const lit = calculateLighting(pos, n, rayOrigin);
     const ao = calculateAO(pos, n);
     return std.mul(lit, ao);
   }
-  return d.vec3f(0.0, 0.0, 0.0);
+  return d.vec3f();
 };
-
-const MarchingResult = d.struct({
-  color: d.vec4f,
-  hitPos: d.vec3f,
-});
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
-  let distanceFromOrigin = d.f32(0);
-  let totalSteps = 0;
+  let distanceFromOrigin = d.f32();
+  let totalSteps = d.u32();
   const boxCount = boundingBoxesStorage.$.length;
 
   for (let boxIdx = 0; boxIdx < boxCount; boxIdx++) {
@@ -508,58 +461,11 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
           rayOrigin,
           std.mul(rayDirection, distanceFromOrigin),
         );
-        if (DEBUG_GIZMOS) {
-          if (hitInfo.objectType === 3) {
-            return MarchingResult({
-              color: d.vec4f(1, 0, 0, 1), // Debug points in red
-              hitPos: hitPosition,
-            });
-          }
-          if (hitInfo.objectType === 4) {
-            return MarchingResult({
-              color: d.vec4f(0, 1, 0, 1), // Debug control points in green
-              hitPos: hitPosition,
-            });
-          }
-          if (hitInfo.objectType === 5) {
-            return MarchingResult({
-              color: d.vec4f(0, 0, 1, 1), // Debug normals in blue
-              hitPos: hitPosition,
-            });
-          }
-        }
         const normal = getNormal(hitPosition);
-
         const lightDir = std.mul(lightUniform.$.direction, -1.0);
-        const diffuse = std.max(std.dot(normal, lightDir), 0.0);
+        const litColor = calculateLighting(hitPosition, normal, rayOrigin);
 
-        const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
-        const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
-        const specularFactor = std.pow(
-          std.max(std.dot(viewDir, reflectDir), 0.0),
-          SPECULAR_POWER,
-        );
-        const specular = std.mul(
-          std.mul(lightUniform.$.color, specularFactor),
-          SPECULAR_INTENSITY,
-        );
-
-        const baseColor = d.vec3f(0.9, 0.9, 0.9);
-        const directionalLight = std.mul(
-          std.mul(baseColor, lightUniform.$.color),
-          diffuse,
-        );
-
-        const ambientLight = std.mul(
-          std.mul(baseColor, AMBIENT_COLOR),
-          AMBIENT_INTENSITY,
-        );
-        const litColor = std.add(
-          std.add(directionalLight, ambientLight),
-          specular,
-        );
-
-        if (hitInfo.objectType === 1) {
+        if (hitInfo.objectType === ObjectType.SLIDER) {
           const N = getNormal(hitPosition);
           const I = rayDirection;
           const cosi = std.min(
@@ -634,18 +540,13 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         });
       }
 
-      // If we exited this box, break to try next box
       if (distanceFromOrigin > maxMarchDist) {
         break;
       }
     }
   }
 
-  // No hit found in any box
-  return MarchingResult({
-    color: d.vec4f(),
-    hitPos: d.vec3f(),
-  });
+  return MarchingResult();
 };
 
 const raymarchFn = tgpu['~unstable'].computeFn({

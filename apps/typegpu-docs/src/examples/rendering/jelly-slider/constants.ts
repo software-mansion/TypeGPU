@@ -1,8 +1,8 @@
 import * as d from 'typegpu/data';
 
 // Rendering constants
-export const MAX_STEPS = 100;
-export const MAX_DIST = 6;
+export const MAX_STEPS = 128;
+export const MAX_DIST = 10;
 export const SURF_DIST = 0.001;
 
 // Lighting constants
@@ -27,9 +27,6 @@ export const AO_BIAS = SURF_DIST * 4.0;
 // Line/slider constants
 export const LINE_RADIUS = 0.024;
 export const LINE_HALF_THICK = 0.17;
-
-// Debug constants
-export const DEBUG_GIZMOS = false;
 
 // Mouse interaction constants
 export const MOUSE_SMOOTHING = 0.08;
