@@ -1,0 +1,56 @@
+---
+import { Code } from "astro/components";
+
+type SupportedLanguages =
+  | "typescript"
+  | "javascript"
+  | "jsx"
+  | "tsx"
+  | "html"
+  | "css"
+  | "json"
+  | "yaml"
+  | "markdown"
+  | "bash"
+  | "shell";
+
+interface Props {
+  code: string;
+  language?: SupportedLanguages;
+}
+
+const { code, language = "typescript" } = Astro.props as Props;
+
+const formattedCode = code.trim();
+---
+
+<div class="w-full">
+  <div class:list={["overflow-x-auto", "text-[0.5rem] md:text-sm font-mono"]}>
+    <Code
+      code={formattedCode}
+      lang={language}
+      theme="github-dark"
+      class={"p-4"}
+    />
+  </div>
+</div>
+<!-- one-dark-pro, github-dark, github-light, dracula, nord, monokai, solarized-light, solarized-dark -->
+<style>
+  code {
+    counter-reset: line;
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  :global(code) {
+    counter-reset: step;
+    counter-increment: step 0;
+  }
+
+  :global(code .line::before) {
+    content: counter(step);
+    counter-increment: step;
+    width: 1rem;
+    margin-right: 1rem;
+    display: inline-block;
+  }
+</style>
