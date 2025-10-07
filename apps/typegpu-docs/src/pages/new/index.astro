@@ -1,0 +1,321 @@
+---
+import { Image } from "astro:assets";
+import DiscordIconSvg from "../../assets/discord-icon.svg";
+import GiantTypeGPULogo from "../../assets/giant-typegpu.svg";
+import GithubIconSvg from "../../assets/github-icon.svg";
+import LightModeIconSvg from "../../assets/sun.svg";
+import DarkModeIconSvg from "../../assets/moon.svg";
+import Illustration from "../../assets/illustration.svg";
+import SwmLogoSvg from "../../assets/typegpu-logo-light.svg";
+import SwmLogomarkSvg from "../../assets/swm-logomark.svg";
+import TypeGPULogoLight from "../../assets/typegpu-logo-light.svg";
+import TypeGPULogomarkMonolight from "../../assets/typegpu-logomark-monolight.svg";
+import FeatureCard from "../../components/FeatureCard.astro";
+import FooterLink from "../../components/FooterLink.astro";
+import GetStartedButton from "../../components/GetStartedButton.astro";
+import MilestoneBindGroupsBadge from "../../components/roadmap/MilestoneBindGroupsBadge.astro";
+import MilestoneBuffersBadge from "../../components/roadmap/MilestoneBuffersBadge.astro";
+import MilestoneCodeBadge from "../../components/roadmap/MilestoneCodeBadge.astro";
+import MilestoneFunctionsBadge from "../../components/roadmap/MilestoneFunctionsBadge.astro";
+import MilestoneLinkerBadge from "../../components/roadmap/MilestoneLinkerBadge.astro";
+import MilestonePipelinesBadge from "../../components/roadmap/MilestonePipelinesBadge.astro";
+import RoadMapStep from "../../components/roadmap/RoadMapStep.astro";
+import PageLayout from "../../layouts/PageLayout.astro";
+import { MoonIcon } from "lucide-react";
+
+const showcaseVideoResolution = [2048, 1200];
+---
+
+<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
+  <main class="flex flex-col items-center">
+    <header
+      class="flex justify-between items-center self-stretch shrink-0 h-24 px-4 sm:px-7.5 md:px-10 lg:px-12.5"
+    >
+      <a href="https://swmansion.com" target="_blank" rel="noreferrer">
+        <Image
+          src={SwmLogoSvg}
+          class="w-auto h-14"
+          alt="Software Mansion Logo"
+        />
+      </a>
+
+      <div class="flex items-center h-4 gap-4">
+        <!-- Light / Dark -->
+        <div class="grid grid-cols-2 border ">
+          <a class="bg-blue-900 grid place-items-center p-2">
+            <Image
+              src={LightModeIconSvg}
+              class="w-6 h-6 text-white"
+              alt="Light Mode"
+            />
+          </a>
+
+          <a class="bg-white grid place-items-center p-2">
+            <Image
+              src={DarkModeIconSvg}
+              class="w-6 h-6 text-blue-900"
+              alt="Dark Mode"
+            />
+          </a>
+        </div>
+        <!-- Docs -->
+        <a
+          href="https://github.com/software-mansion/TypeGPU/getting-started"
+          target="_blank"
+          class="no-underline"
+          rel="noreferrer"
+        >
+          <p class="text-blue-900">Docs</p>
+        </a>
+        <!-- GitHub -->
+        <a
+          href="https://github.com/software-mansion/TypeGPU"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Image
+            src={GithubIconSvg}
+            class="w-6 h-6 fill-blue-900 opacity-75 sm:w-8 sm:h-8 md:w-10 md:h-10"
+            alt="GitHub Logo"
+          />
+        </a>
+      </div>
+    </header>
+  </main>
+
+  <section
+    class="box-border relative self-stretch flex flex-col items-center justify-between bg-red md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]"
+  >
+    <div
+      class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
+    >
+      <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
+        {/* Blurred background */}
+      </div>
+      <Image
+        src={TypeGPULogoLight}
+        alt="TypeGPU Logo"
+        class="w-58 md:w-[20rem] lg:w-[24rem]"
+      />
+      <h1 class="text-center font-normal text-pretty mb-4">
+        dupaduap library that enhances the WebGPU <br class="hidden sm:block" />
+        API, allowing resource management in <br class="hidden sm:block" />
+        a type-safe, declarative way.
+      </h1>
+
+      <div
+        class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row"
+      >
+        <GetStartedButton />
+
+        <a
+          class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+          href="/TypeGPU/examples">Explore interactive examples</a
+        >
+      </div>
+    </div>
+
+    <div
+      class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-138 md:w-234 lg:w-280 lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl relative md:top-full md:-translate-y-[50%] sm:mb-10"
+    >
+      <video
+        src="/TypeGPU/assets/migration.mp4"
+        style={{
+          aspectRatio: showcaseVideoResolution[0] / showcaseVideoResolution[1],
+        }}
+        autoplay
+        loop
+        muted
+        controls
+        playsinline
+        class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
+      ></video>
+    </div>
+  </section>
+</PageLayout>
+
+<div class="lg:h-64 md:h-52 md:block hidden"></div>
+
+{/* Roadmap Section */}
+<div
+  class="box-border flex flex-col items-center bg-white w-full md:my-8 lg:my-20 py-12 md:p-20 lg:p-32 md:rounded-[5rem] rounded-[2.5rem] overflow-hidden"
+>
+  <section
+    class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
+  >
+    <div>
+      <h2 class="mb-4 font-normal text-center md:mb-8 center">Roadmap</h2>
+      <p class="text-center text-pretty max-w-240">
+        The road to end-to-end type safety on the GPU involves implementing
+        several interoperating primitives. Below is our roadmap of features that
+        aim to fulfill that goal.
+      </p>
+    </div>
+
+    <div class="max-w-200">
+      <ol class="flex flex-col m-0 p-0">
+        <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
+          <MilestoneBuffersBadge slot="visual" />
+          The WebGPU Shading Language (WGSL) gives developers a rich sense of the
+          structure of the data that it operates on. This is lost when accessed through
+          JavaScript, as the APIs accept raw byte buffers. TypeGPU regains that information
+          on the JavaScript side and handles proper byte alignment and padding automatically.
+        </RoadMapStep>
+        <RoadMapStep title="Bind groups" releasedIn="0.2">
+          <MilestoneBindGroupsBadge slot="visual" />
+          Connecting resources to shaders via numeric indices can lead to problems
+          that are hard to catch at build-time/CI. By using named keys and typed
+          data structures we can ensure that the provided resources are what the
+          shader expects.
+        </RoadMapStep>
+        <RoadMapStep title="Linker" releasedIn="0.3">
+          <MilestoneLinkerBadge slot="visual" />
+          No more duplication between JS and GPU object definitions. A dedicated
+          linker combines WGSL code with TypeGPU objects it references, producing
+          shader code ready to be used in pipelines.
+        </RoadMapStep>
+        <RoadMapStep title="Functions" releasedIn="0.6">
+          <MilestoneFunctionsBadge slot="visual" />
+          By wrapping each function with a "typed shell", they can be moved across
+          different files/modules. Any resources (variables, buffers, etc.) in the
+          external scope can be accessed inside the function.
+        </RoadMapStep>
+        <RoadMapStep title="Pipelines">
+          <MilestonePipelinesBadge slot="visual" />
+          To ensure that shader stages match each other, and pipeline constants are
+          filled with proper values, TypeGPU plans to provide typed pipelines.
+        </RoadMapStep>
+        <RoadMapStep title="Imperative code">
+          <MilestoneCodeBadge slot="visual" />
+          By giving developers the ability to write imperative shader code in TypeScript,
+          we can leverage the excellent TypeScript LSP to complete the type safety
+          puzzle, bridging the gap between our API and type-safe shader code.
+        </RoadMapStep>
+      </ol>
+    </div>
+
+    <article class="isolate relative flex flex-col items-center gap-5">
+      <div
+        class="absolute -inset-x-40 inset-y-0 -bottom-20 bg-blurred-radial-tameplum -z-10"
+      >
+        {/* Blurred background */}
+      </div>
+      <p class="text-center text-pretty max-w-200">
+        Take active part in the development by joining our discussions.
+      </p>
+      <div class="flex flex-col items-center sm:flex-row gap-3">
+        <a
+          class="inline-flex justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+          href="https://github.com/software-mansion/TypeGPU/discussions"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Image
+            src={GithubIconSvg}
+            class="w-auto h-7 opacity-75"
+            alt="GitHub Logo"
+          />
+          GitHub Discussions</a
+        >
+        <a
+          class="inline-flex w-fit justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+          href="https://discord.gg/8jpfgDqPcM"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Image
+            src={DiscordIconSvg}
+            class="w-auto h-7 opacity-75"
+            alt="Discord Logo"
+          /> Discord Server</a
+        >
+      </div>
+    </article>
+  </section>
+</div>
+
+<section
+  class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-15 gap-10 w-full max-w-138 lg:max-w-340"
+>
+  <div>
+    <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">Got hooked?</h1>
+    <p class="text-center text-pretty">
+      Try TypeGPU and reshape your GPU rendering and computing.
+    </p>
+  </div>
+
+  <GetStartedButton />
+
+  <Image
+    src={Illustration}
+    class="hidden md:block lg:w-4xl w-154 max-w-full"
+    alt="An illustration showing the TypeGPU plums in a bowl."
+  />
+</section>
+
+<section></section>
+
+<footer class="text-micro bg-tameplum-50">
+  <div
+    class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20"
+  >
+    <div
+      class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-340 md:max-w-234 w-full max-w-138"
+    >
+      <div class="w-full">
+        <Image
+          src={TypeGPULogomarkMonolight}
+          alt="TypeGPU logomark"
+          class="w-12 h-12 pb-4"
+        />
+        <div
+          class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80"
+        >
+          <div class="text-pretty md:max-w-94 lg:max-w-108">
+            <span class="font-medium">TypeGPU</span>
+            <span class="text-grayscale-100">&mdash;</span> TypeScript library that
+            enhances the WebGPU API, allowing resource management in a type-safe,
+            declarative way.
+          </div>
+
+          <div class="grid gap-6 md:w-[24rem] lg:w-108">
+            <FooterLink
+              label="Made by Software Mansion"
+              callToAction="Learn more about us"
+              href="https://swmansion.com"
+            />
+
+            <FooterLink
+              label="Check what's underneath"
+              callToAction="Open Github repository"
+              href="https://github.com/software-mansion/TypeGPU"
+            />
+
+            <FooterLink
+              label="Share feedback with us"
+              callToAction="Join our Discord server"
+              href="https://discord.gg/8jpfgDqPcM"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center self-start gap-4 text-grayscale-100">
+        <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
+        &copy; {new Date().getFullYear()} Software Mansion S.A.
+      </div>
+
+      <div class="hidden md:grid">
+        <div
+          class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"
+        >
+        </div>
+        <Image
+          class="w-full h-auto col-start-1 row-start-1"
+          src={GiantTypeGPULogo}
+          alt="A giant TypeGPU logo."
+        />
+      </div>
+    </div>
+  </div>
+</footer>
