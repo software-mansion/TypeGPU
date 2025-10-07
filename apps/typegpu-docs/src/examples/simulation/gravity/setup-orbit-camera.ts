@@ -34,23 +34,15 @@ export function setupOrbitCamera(
   partialOptions: CameraOptions,
   callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
 ) {
+  // orbit variables storing the current camera position
+  // this, along with options, is the context of this setup
+  let radius: number, yaw: number, pitch: number;
   const options = { ...cameraDefaults, ...partialOptions } as Required<
     CameraOptions
   >;
 
   // initialize the camera
-  callback({
-    position: options.initPos,
-    targetPos: options.target,
-    view: calculateView(options.initPos, options.target),
-    projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
-  });
-
-  // orbit variables storing the current camera position
-  const cameraVector = options.initPos.sub(options.target);
-  let radius = std.length(cameraVector);
-  let yaw = Math.atan2(cameraVector.x, cameraVector.z);
-  let pitch = Math.asin(cameraVector.y / radius);
+  retargetCamera(options.initPos, options.target);
 
   function rotateCamera(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
@@ -145,13 +137,31 @@ export function setupOrbitCamera(
   });
 
   // return cleanup function
-  return () => {
+  function cleanupCamera() {
     window.removeEventListener('mouseup', mouseUpEventListener);
     window.removeEventListener('mousemove', mouseMoveEventListener);
     window.removeEventListener('touchmove', touchMoveEventListener);
     window.removeEventListener('touchend', touchEndEventListener);
     resizeObserver.unobserve(canvas);
-  };
+  }
+
+  function retargetCamera(newPos: d.v4f, newTarget?: d.v4f) {
+    options.initPos = newPos;
+    options.target = newTarget ?? options.target;
+
+    const cameraVector = options.initPos.sub(options.target);
+    radius = std.length(cameraVector);
+    yaw = Math.atan2(cameraVector.x, cameraVector.z);
+    pitch = Math.asin(cameraVector.y / radius);
+
+    callback({
+      position: options.initPos,
+      targetPos: options.target,
+      view: calculateView(options.initPos, options.target),
+      projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
+    });
+  }
+  return { cleanupCamera, retargetCamera };
 }
 
 function calculatePos(

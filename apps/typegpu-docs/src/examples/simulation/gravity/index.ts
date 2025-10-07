@@ -61,7 +61,7 @@ const sampler = tgpu['~unstable'].sampler({
 });
 
 const camera = root.createUniform(Camera);
-const cameraCleanup = setupOrbitCamera(
+const { cleanupCamera, retargetCamera } = setupOrbitCamera(
   canvas,
   {
     initPos: d.vec4f(examplePresets[initialPreset].initialCameraPos, 1),
@@ -251,7 +251,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
   lightSource.write(presetData.lightSource ?? d.vec3f());
-  camera.writePartial({ position: d.vec4f(presetData.initialCameraPos, 1) });
+  retargetCamera(d.vec4f(presetData.initialCameraPos, 1));
 
   return {
     celestialBodiesBufferA: computeBufferA,
@@ -308,7 +308,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 
 export function onCleanup() {
   destroyed = true;
-  cameraCleanup();
+  cleanupCamera();
   root.destroy();
 }
 
