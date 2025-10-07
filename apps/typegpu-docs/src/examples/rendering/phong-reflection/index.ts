@@ -102,7 +102,6 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
 });
 
 // pipelines
-
 const renderPipeline = root['~unstable']
   .withVertex(vertexShader, modelVertexLayout.attrib)
   .withFragment(fragmentShader, { format: presentationFormat })
@@ -121,14 +120,8 @@ let depthTexture = root.device.createTexture({
 });
 
 // frame
-
-let disposed = false;
-
+let frameId: number;
 function frame() {
-  if (disposed) {
-    return;
-  }
-
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -150,16 +143,11 @@ function frame() {
     .with(modelVertexLayout, model.vertexBuffer)
     .draw(model.polygonCount);
 
-  root['~unstable'].flush();
-
-  requestAnimationFrame(frame);
+  frameId = requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
-
-// ----
+frameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
-
 export const controls = {
   'light color': {
     initial: [...p.initialControls.lightColor],
@@ -213,6 +201,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
+  cancelAnimationFrame(frameId);
   cameraCleanup();
   root.destroy();
 }
