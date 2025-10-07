@@ -203,6 +203,7 @@ resizeObserver.observe(canvas);
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
+  resizeObserver.unobserve(canvas);
   root.destroy();
 }
 

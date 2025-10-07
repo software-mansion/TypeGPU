@@ -4,8 +4,6 @@ import tgpu, {
   type TgpuBuffer,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import * as m from 'wgpu-matrix';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -309,6 +307,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
+  resizeObserver.unobserve(canvas);
   root.destroy();
 }
 
