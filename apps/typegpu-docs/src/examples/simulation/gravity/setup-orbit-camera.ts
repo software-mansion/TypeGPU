@@ -198,7 +198,7 @@ function calculatePos(
   const newX = radius * Math.sin(yaw) * Math.cos(pitch);
   const newY = radius * Math.sin(pitch);
   const newZ = radius * Math.cos(yaw) * Math.cos(pitch);
-  const displacement = d.vec4f(newX, newY, newZ, 1);
+  const displacement = d.vec4f(newX, newY, newZ, 0);
   return target.add(displacement);
 }
 
