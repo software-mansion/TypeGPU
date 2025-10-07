@@ -1,13 +1,44 @@
 import { undecorate } from './dataTypes.ts';
 import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
-import { type AddressSpace, isNumericSchema } from './wgslTypes.ts';
+import { isNumericSchema } from './wgslTypes.ts';
 
-export type RefSpace = AddressSpace | 'this-function' | 'runtime' | 'constant';
+export type RefSpace =
+  | 'uniform'
+  | 'readonly' // equivalent to ptr<storage, ..., read>
+  | 'mutable' // equivalent to ptr<storage, ..., read-write>
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle'
+  // more specific version of 'function', telling us that the ref is
+  // to a value defined in the function
+  | 'this-function'
+  // not a ref to anything, known at runtime
+  | 'runtime'
+  // not a ref to anything, known at pipeline creation time
+  // (not to be confused with 'comptime')
+  // note that this doesn't automatically mean the value can be stored in a `const`
+  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in TGSL)
+  | 'constant';
+
+export function isSpaceRef(space: RefSpace) {
+  return space !== 'runtime' && space !== 'constant';
+}
 
 export function isRef(snippet: Snippet) {
-  return snippet.ref !== 'runtime' && snippet.ref !== 'constant';
+  return isSpaceRef(snippet.ref);
 }
+
+export const refSpaceToPtrParams = {
+  uniform: { space: 'uniform', access: 'read' },
+  readonly: { space: 'storage', access: 'read' },
+  mutable: { space: 'storage', access: 'read-write' },
+  workgroup: { space: 'workgroup', access: 'read-write' },
+  private: { space: 'private', access: 'read-write' },
+  function: { space: 'function', access: 'read-write' },
+  'this-function': { space: 'function', access: 'read-write' },
+} as const;
 
 export interface Snippet {
   readonly value: unknown;

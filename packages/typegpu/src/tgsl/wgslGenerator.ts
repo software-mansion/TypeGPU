@@ -13,6 +13,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import {
   isRef,
   isSnippet,
+  isSpaceRef,
   type RefSpace,
   snip,
   type Snippet,
@@ -148,7 +149,7 @@ ${this.ctx.pre}}`;
       this.ctx.makeNameValid(id),
       dataType,
       /* ref */ wgsl.isNaturallyRef(dataType)
-        ? 'this-function'
+        ? isSpaceRef(ref) ? ref : 'this-function'
         : ref === 'constant'
         ? 'constant'
         : 'runtime',

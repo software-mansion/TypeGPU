@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
-import { toStorables } from '../data/dataTypes.ts';
+import { toStorable, toStorables } from '../data/dataTypes.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -188,7 +188,8 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
 export const div = dualImpl({
   name: 'div',
   signature: (...args) => {
-    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    const sargs = toStorables(args);
+    const uargs = unify(sargs, [f32, f16, abstractFloat]) ?? sargs;
     return ({
       argTypes: uargs,
       returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
@@ -213,7 +214,8 @@ type ModOverload = {
 export const mod: ModOverload = dualImpl({
   name: 'mod',
   signature: (...args) => {
-    const uargs = unify(args) ?? args;
+    const sargs = toStorables(args);
+    const uargs = unify(sargs) ?? sargs;
     return {
       argTypes: uargs,
       returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
@@ -256,7 +258,13 @@ function cpuNeg(value: NumVec | number): NumVec | number {
 
 export const neg = dualImpl({
   name: 'neg',
-  signature: (arg) => ({ argTypes: [arg], returnType: arg }),
+  signature: (arg) => {
+    const sarg = toStorable(arg);
+    return {
+      argTypes: [sarg],
+      returnType: sarg,
+    };
+  },
   normalImpl: cpuNeg,
   codegenImpl: (arg) => stitch`-(${arg})`,
 });

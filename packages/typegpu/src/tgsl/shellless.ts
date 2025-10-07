@@ -4,12 +4,8 @@ import {
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
 import { INTERNAL_createPtr } from '../data/ptr.ts';
-import type { Snippet } from '../data/snippet.ts';
-import {
-  addressSpaceToDefaultAccess,
-  isPtr,
-  type StorableData,
-} from '../data/wgslTypes.ts';
+import { refSpaceToPtrParams, type Snippet } from '../data/snippet.ts';
+import { isPtr, type StorableData } from '../data/wgslTypes.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
@@ -48,17 +44,15 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s) => {
       const type = concretize(s.dataType as AnyData);
-      const addressSpace = s.ref === 'this-function'
-        ? 'function'
-        : s.ref === 'constant' || s.ref === 'runtime'
-        ? undefined
-        : s.ref;
+      const ptrParams = s.ref in refSpaceToPtrParams
+        ? refSpaceToPtrParams[s.ref as keyof typeof refSpaceToPtrParams]
+        : undefined;
 
-      return addressSpace !== undefined && !isPtr(type)
+      return ptrParams !== undefined && !isPtr(type)
         ? INTERNAL_createPtr(
-          addressSpace,
+          ptrParams.space,
           type as StorableData,
-          addressSpaceToDefaultAccess[addressSpace],
+          ptrParams.access,
         )
         : type;
     });

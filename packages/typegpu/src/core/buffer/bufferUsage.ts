@@ -133,9 +133,7 @@ class TgpuFixedBufferImpl<
     return snip(
       id,
       dataType,
-      /* ref */ isNaturallyRef(dataType)
-        ? this.usage === 'uniform' ? 'uniform' : 'storage'
-        : 'runtime',
+      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
     );
   }
 
@@ -153,9 +151,7 @@ class TgpuFixedBufferImpl<
         return snip(
           this,
           dataType,
-          /* ref */ isNaturallyRef(dataType)
-            ? usage === 'uniform' ? 'uniform' : 'storage'
-            : 'runtime',
+          /* ref */ isNaturallyRef(dataType) ? usage : 'runtime',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
@@ -266,9 +262,7 @@ export class TgpuLaidOutBufferImpl<
     return snip(
       id,
       dataType,
-      /* ref */ isNaturallyRef(dataType)
-        ? this.usage === 'uniform' ? 'uniform' : 'storage'
-        : 'runtime',
+      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
     );
   }
 
@@ -286,9 +280,7 @@ export class TgpuLaidOutBufferImpl<
         return snip(
           this,
           schema,
-          /* ref */ isNaturallyRef(schema)
-            ? usage === 'uniform' ? 'uniform' : 'storage'
-            : 'runtime',
+          /* ref */ isNaturallyRef(schema) ? usage : 'runtime',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),

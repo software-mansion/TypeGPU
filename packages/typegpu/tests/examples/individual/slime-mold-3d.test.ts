@@ -168,7 +168,7 @@ describe('slime mold 3d example', () => {
             axis = vec3f(0, 0, 1);
           }
         }
-        return (*normalize(cross(dir, axis)));
+        return normalize(cross((*dir), axis));
       }
 
       struct Params_12 {
@@ -187,17 +187,17 @@ describe('slime mold 3d example', () => {
         totalWeight: f32,
       }
 
-      fn sense3D_9(pos: ptr<function, vec3f>, direction: ptr<function, vec3f>) -> SenseResult_13 {
+      fn sense3D_9(pos: ptr<storage, vec3f, read_write>, direction: ptr<function, vec3f>) -> SenseResult_13 {
         var dims = textureDimensions(oldState_4);
         var dimsf = vec3f(dims);
         var weightedDir = vec3f();
         var totalWeight = 0f;
         var perp1 = getPerpendicular_10(direction);
-        var perp2 = cross(direction, perp1);
+        var perp2 = cross((*direction), perp1);
         const numSamples = 8;
         for (var i = 0; (i < numSamples); i++) {
           var theta = (((f32(i) / f32(numSamples)) * 2) * 3.141592653589793);
-          var coneOffset = ((perp1 * cos(theta)) + ((*perp2) * sin(theta)));
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
           var sensorDir = normalize(((*direction) + (coneOffset * sin(params_11.sensorAngle))));
           var sensorPos = ((*pos) + (sensorDir * params_11.sensorDistance));
           var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
@@ -325,7 +325,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn rayBoxIntersection_6(rayOrigin: ptr<function, vec3f>, rayDir: ptr<function, vec3f>, boxMin: ptr<function, vec3f>, boxMax: ptr<function, vec3f>) -> RayBoxResult_7 {
-        var invDir = (vec3f(1) / rayDir);
+        var invDir = (vec3f(1) / (*rayDir));
         var t0 = (((*boxMin) - (*rayOrigin)) * invDir);
         var t1 = (((*boxMax) - (*rayOrigin)) * invDir);
         var tmin = min(t0, t1);
