@@ -61,7 +61,7 @@ const sampler = tgpu['~unstable'].sampler({
 });
 
 const camera = root.createUniform(Camera);
-const { cleanupCamera, retargetCamera } = setupOrbitCamera(
+const { cleanupCamera, targetCamera } = setupOrbitCamera(
   canvas,
   {
     initPos: d.vec4f(examplePresets[initialPreset].initialCameraPos, 1),
@@ -251,7 +251,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
   lightSource.write(presetData.lightSource ?? d.vec3f());
-  retargetCamera(d.vec4f(presetData.initialCameraPos, 1));
+  targetCamera(d.vec4f(presetData.initialCameraPos, 1));
 
   return {
     celestialBodiesBufferA: computeBufferA,
