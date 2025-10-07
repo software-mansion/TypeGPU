@@ -1,4 +1,4 @@
-import tgpu, { type TgpuSampledTexture } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import {
   raymarchSlot,
@@ -53,10 +53,7 @@ device.queue.writeTexture(
   { width: NOISE_SIZE, height: NOISE_SIZE },
 );
 
-const sampledView = imageTexture.createView('sampled') as TgpuSampledTexture<
-  '2d',
-  d.F32
->;
+const sampledView = imageTexture.createView();
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
