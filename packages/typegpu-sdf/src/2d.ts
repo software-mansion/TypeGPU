@@ -13,7 +13,6 @@ import {
   mul,
   pow,
   saturate,
-  select,
   sign,
   sin,
   sqrt,
@@ -83,8 +82,8 @@ export const sdBezier = tgpu.fn([vec2f, vec2f, vec2f, vec2f], f32)(
     const c = a.mul(f32(2));
     const d = A.sub(pos);
 
-    const dotB = dot(b, b);
-    const kk = select(1 / dotB, 10000, dotB < 0.0001);
+    const dotB = max(dot(b, b), 0.0001);
+    const kk = 1 / dotB;
     const kx = kk * dot(a, b);
     const ky = (kk * (f32(2) * dot(a, a) + dot(d, b))) / 3;
     const kz = kk * dot(d, a);

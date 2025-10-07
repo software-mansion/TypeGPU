@@ -2,6 +2,14 @@ import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
+export const BoundingBox = d.struct({
+  min: d.vec3f,
+  max: d.vec3f,
+  segmentIndex: d.i32,
+});
+
+const CAMERA_POS = d.vec3f(0.024, 2.7, 1.9);
+
 export class Slider {
   #root: TgpuRoot;
   #pos: d.v2f[];
@@ -11,10 +19,14 @@ export class Slider {
   #targetX: number;
   #controlPoints: d.v2f[];
   #yOffset: number;
+  #boundingBoxes: d.Infer<typeof BoundingBox>[];
 
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   controlPointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   normalsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
+  boundingBoxesBuffer:
+    & TgpuBuffer<d.WgslArray<typeof BoundingBox>>
+    & StorageFlag;
 
   readonly n: number;
   readonly totalLength: number;
@@ -39,6 +51,7 @@ export class Slider {
     end: d.v2f,
     numPoints: number,
     yOffset = 0,
+    cameraPos: d.v3f = d.vec3f(0, 0, 0),
   ) {
     this.#root = root;
     this.n = Math.max(2, numPoints | 0);
@@ -57,6 +70,11 @@ export class Slider {
     this.#normals = new Array(this.n);
     this.#prev = new Array(this.n);
     this.#invMass = new Float32Array(this.n);
+    this.#boundingBoxes = new Array(this.n).fill(0).map(() => ({
+      min: d.vec3f(),
+      max: d.vec3f(),
+      segmentIndex: 0,
+    }));
 
     for (let i = 0; i < this.n; i++) {
       const t = i / (this.n - 1);
@@ -94,6 +112,17 @@ export class Slider {
         this.#normals,
       )
       .$usage('storage');
+
+    this.boundingBoxesBuffer = this.#root
+      .createBuffer(
+        d.arrayOf(BoundingBox, this.n),
+        this.#boundingBoxes,
+      )
+      .$usage('storage');
+  }
+
+  get boundingBoxes() {
+    return this.#boundingBoxes;
   }
 
   setDragX(x: number) {
@@ -119,6 +148,7 @@ export class Slider {
 
     this.#computeNormals();
     this.#computeControlPoints();
+    this.#computeBoundingBoxes();
     this.#updateGPUBuffer();
   }
 
@@ -336,9 +366,75 @@ export class Slider {
     }
   }
 
+  #computeBoundingBoxes() {
+    const thickness = 0.1;
+    const zDepth = 0.19;
+
+    for (let i = 0; i < this.n - 1; i++) {
+      const p0 = this.#pos[i];
+      const p1 = this.#pos[i + 1];
+      const cp = this.#controlPoints[i];
+
+      let minX = Math.min(p0.x, p1.x);
+      let maxX = Math.max(p0.x, p1.x);
+      let minY = Math.min(p0.y, p1.y);
+      let maxY = Math.max(p0.y, p1.y);
+
+      const denom_x = p0.x - 2 * cp.x + p1.x;
+      if (Math.abs(denom_x) > 1e-6) {
+        const t_x = (p0.x - cp.x) / denom_x;
+        if (t_x > 0 && t_x < 1) {
+          const extrema_x = (1 - t_x) * (1 - t_x) * p0.x +
+            2 * (1 - t_x) * t_x * cp.x + t_x * t_x * p1.x;
+          minX = Math.min(minX, extrema_x);
+          maxX = Math.max(maxX, extrema_x);
+        }
+      }
+
+      const denom_y = p0.y - 2 * cp.y + p1.y;
+      if (Math.abs(denom_y) > 1e-6) {
+        const t_y = (p0.y - cp.y) / denom_y;
+        if (t_y > 0 && t_y < 1) {
+          const extrema_y = (1 - t_y) * (1 - t_y) * p0.y +
+            2 * (1 - t_y) * t_y * cp.y + t_y * t_y * p1.y;
+          minY = Math.min(minY, extrema_y);
+          maxY = Math.max(maxY, extrema_y);
+        }
+      }
+
+      this.#boundingBoxes[i] = {
+        min: d.vec3f(minX - thickness, minY - thickness, -zDepth),
+        max: d.vec3f(maxX + thickness, maxY + thickness, zDepth),
+        segmentIndex: i,
+      };
+    }
+
+    this.#boundingBoxes[this.n - 1] = {
+      min: d.vec3f(-10, -10, -10),
+      max: d.vec3f(10, this.baseY + this.#yOffset - 0.01, 10),
+      segmentIndex: this.n - 1,
+    };
+
+    const sortedBoxes = this.#boundingBoxes.map((bbox, index) => {
+      const centerX = (bbox.min.x + bbox.max.x) * 0.5;
+      const centerY = (bbox.min.y + bbox.max.y) * 0.5;
+      const centerZ = (bbox.min.z + bbox.max.z) * 0.5;
+
+      const dx = centerX - CAMERA_POS.x;
+      const dy = centerY - CAMERA_POS.y;
+      const dz = centerZ - CAMERA_POS.z;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      return { bbox, dist, index };
+    }).sort((a, b) => a.dist - b.dist);
+
+    this.#boundingBoxes = sortedBoxes.map((item) => item.bbox);
+  }
+
   #updateGPUBuffer() {
     this.pointsBuffer.write(this.#pos);
     this.controlPointsBuffer.write(this.#controlPoints);
     this.normalsBuffer.write(this.#normals);
+    this.boundingBoxesBuffer.write(this.#boundingBoxes);
   }
 }

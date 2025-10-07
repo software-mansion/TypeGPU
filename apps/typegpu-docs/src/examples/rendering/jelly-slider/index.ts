@@ -44,10 +44,19 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 17, -0.03);
+const NUM_POINTS = 16;
+
+const slider = new Slider(
+  root,
+  d.vec2f(-1, 0),
+  d.vec2f(0.9, 0),
+  NUM_POINTS,
+  -0.03,
+);
 const sliderStorage = slider.pointsBuffer.as('readonly');
 const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
+const boundingBoxesStorage = slider.boundingBoxesBuffer.as('readonly');
 
 let qualityScale = 0.5;
 let [width, height] = [
@@ -133,6 +142,11 @@ const lightUniform = root.createUniform(DirectionalLight, {
   color: d.vec3f(1, 1, 1),
 });
 
+const bboxCenterX = tgpu.privateVar(d.f32, 0);
+const lineInfos = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
+const controlPoints = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
+const normals = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
+
 const HitInfo = d.struct({
   distance: d.f32,
   objectType: d.i32,
@@ -143,8 +157,8 @@ const HitInfo = d.struct({
 const sdDebugPoints = (p: d.v3f) => {
   'kernel';
   let dmin = d.f32(1e9);
-  for (let i = 0; i < sliderStorage.$.length; i++) {
-    const pt = sliderStorage.$[i];
+  for (let i = 0; i < NUM_POINTS; i++) {
+    const pt = lineInfos.$[i];
     const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
     if (dist < dmin) dmin = dist;
   }
@@ -154,8 +168,8 @@ const sdDebugPoints = (p: d.v3f) => {
 const sdDebugControlPoints = (p: d.v3f) => {
   'kernel';
   let dmin = d.f32(1e9);
-  for (let i = 0; i < controlPointsStorage.$.length; i++) {
-    const pt = controlPointsStorage.$[i];
+  for (let i = 0; i < NUM_POINTS; i++) {
+    const pt = controlPoints.$[i];
     const dist = sdf.sdSphere(p.sub(d.vec3f(pt, 0)), 0.03);
     if (dist < dmin) dmin = dist;
   }
@@ -165,9 +179,9 @@ const sdDebugControlPoints = (p: d.v3f) => {
 const sdDebugNormals = (p: d.v3f) => {
   'kernel';
   let dmin = d.f32(1e9);
-  for (let i = 0; i < sliderStorage.$.length; i++) {
-    const pt = sliderStorage.$[i];
-    const n = normalsStorage.$[i];
+  for (let i = 0; i < NUM_POINTS; i++) {
+    const pt = lineInfos.$[i];
+    const n = normals.$[i];
     const a = d.vec3f(pt, 0);
     const b = d.vec3f(pt, 0).add(d.vec3f(n, 0).mul(0.2));
     const dist = sdf.sdCapsule(p, a, b, 0.01);
@@ -188,10 +202,14 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
   let closestSegIndex = d.i32();
   let closestT = d.f32();
 
-  for (let i = 1; i < sliderStorage.$.length - 1; i++) {
-    const a = sliderStorage.$[i - 1];
-    const b = sliderStorage.$[i];
-    const c = controlPointsStorage.$[i - 1];
+  for (let i = 1; i < lineInfos.$.length - 1; i++) {
+    const a = lineInfos.$[i - 1];
+    const b = lineInfos.$[i];
+    const segCenterX = (a.x + b.x) * 0.5;
+    if (std.abs(bboxCenterX.$ - segCenterX) > 0.3) {
+      continue;
+    }
+    const c = controlPoints.$[i - 1];
 
     const segUnsigned = sdf.sdBezier(p, a, c, b);
 
@@ -215,14 +233,13 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
 
 const sliderSdf3D = (position: d.v3f) => {
   'kernel';
-
   const poly2D = sdInflatedPolyline2D(position.xy);
   const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
     LINE_RADIUS;
 
-  const len = sliderStorage.$.length;
-  const secondLastPoint = sliderStorage.$[len - 2];
-  const lastPoint = sliderStorage.$[len - 1];
+  const len = lineInfos.$.length;
+  const secondLastPoint = lineInfos.$[len - 2];
+  const lastPoint = lineInfos.$[len - 1];
 
   const angle = std.atan2(
     lastPoint.y - secondLastPoint.y,
@@ -379,6 +396,38 @@ const beerLambert = (sigma: d.v3f, dist: number) => {
   return std.exp(std.mul(sigma, -dist));
 };
 
+const BoxIntersection = d.struct({
+  hit: d.bool,
+  tMin: d.f32,
+  tMax: d.f32,
+});
+
+const intersectBox = (
+  rayOrigin: d.v3f,
+  rayDirection: d.v3f,
+  boxMin: d.v3f,
+  boxMax: d.v3f,
+) => {
+  'kernel';
+  const invDir = d.vec3f(1.0).div(rayDirection);
+
+  const t1 = std.sub(boxMin, rayOrigin).mul(invDir);
+  const t2 = std.sub(boxMax, rayOrigin).mul(invDir);
+
+  const tMinVec = std.min(t1, t2);
+  const tMaxVec = std.max(t1, t2);
+
+  const tMin = std.max(std.max(tMinVec.x, tMinVec.y), tMinVec.z);
+  const tMax = std.min(std.min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
+
+  const result = BoxIntersection();
+  result.hit = tMax >= tMin && tMax >= 0.0;
+  result.tMin = tMin;
+  result.tMax = tMax;
+
+  return result;
+};
+
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
   let distanceFromOrigin = d.f32();
@@ -430,7 +479,37 @@ const MarchingResult = d.struct({
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'kernel';
-  let distanceFromOrigin = d.f32(0);
+  let closestHit = d.f32(MAX_DIST);
+  let closestBoxIndex = d.i32(-1);
+  const boxCount = boundingBoxesStorage.$.length;
+
+  for (let i = 0; i < boxCount; i++) {
+    const bbox = boundingBoxesStorage.$[i];
+    const intersection = intersectBox(
+      rayOrigin,
+      rayDirection,
+      bbox.min,
+      bbox.max,
+    );
+
+    if (intersection.hit && intersection.tMin >= 0.0) {
+      closestHit = intersection.tMin;
+      closestBoxIndex = i;
+      break;
+    }
+  }
+
+  let distanceFromOrigin = std.max(0.0, closestHit - SURF_DIST);
+  const bbox = boundingBoxesStorage.$[closestBoxIndex];
+  bboxCenterX.$ = (bbox.min.x + bbox.max.x) * 0.5;
+  const intersection = intersectBox(
+    rayOrigin,
+    rayDirection,
+    bbox.min,
+    bbox.max,
+  );
+  const maxMarchDist = intersection.tMax;
+
   let hitInfo = HitInfo();
 
   for (let i = 0; i < MAX_STEPS; i++) {
@@ -442,12 +521,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
     hitInfo = getSceneDist(currentPosition);
     distanceFromOrigin += hitInfo.distance;
 
-    if (distanceFromOrigin > MAX_DIST || hitInfo.distance < SURF_DIST) {
+    if (distanceFromOrigin > maxMarchDist || hitInfo.distance < SURF_DIST) {
       break;
     }
   }
 
-  if (distanceFromOrigin < MAX_DIST) {
+  if (distanceFromOrigin < maxMarchDist && hitInfo.distance < SURF_DIST) {
     const hitPosition = std.add(
       rayOrigin,
       std.mul(rayDirection, distanceFromOrigin),
@@ -538,7 +617,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
         const env = rayMarchNoJelly(exitPos, refrDir);
 
-        const totalSegments = sliderStorage.$.length - 2;
+        const totalSegments = lineInfos.$.length - 2;
         const progress = (hitInfo.segmentIndex + hitInfo.segmentT) /
           totalSegments;
 
@@ -584,8 +663,18 @@ const raymarchFn = tgpu['~unstable'].computeFn({
   workgroupSize: [16, 16],
   in: {
     gid: d.builtin.globalInvocationId,
+    lid: d.builtin.localInvocationId,
   },
-})(({ gid }) => {
+})(({ gid, lid }) => {
+  const localIndex = lid.y * 16 + lid.x;
+  if (localIndex < sliderStorage.$.length) {
+    lineInfos.$[localIndex] = sliderStorage.$[localIndex];
+    controlPoints.$[localIndex] = controlPointsStorage.$[localIndex];
+    normals.$[localIndex] = normalsStorage.$[localIndex];
+  }
+
+  std.workgroupBarrier();
+
   const dimensions = std.textureDimensions(rayMarchLayout.$.currentTexture);
   randf.seed2(d.vec2f(gid.xy).div(d.vec2f(dimensions)));
 
