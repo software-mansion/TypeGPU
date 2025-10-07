@@ -307,7 +307,7 @@ export class IcosphereGenerator {
     );
 
     this.pipeline
-      .with(generatorLayout, bindGroup)
+      .with(bindGroup)
       .dispatchWorkgroups(xGroups, yGroups, 1);
 
     return nextBuffer;
