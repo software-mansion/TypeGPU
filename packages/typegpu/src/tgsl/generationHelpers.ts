@@ -417,7 +417,6 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    // It's a primitive, so `ref` is false
     return snip(value, bool, /* ref */ 'constant');
   }
 

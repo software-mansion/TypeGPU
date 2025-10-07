@@ -41,7 +41,6 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
     destroyed: computeLayout.$.inState[currentId].destroyed,
   });
 
-  const updatedCurrent = current;
   if (current.destroyed === 0) {
     for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
       const otherId = d.u32(i);
@@ -76,7 +75,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         // bounce occurs
         // push the smaller object outside
         if (isSmaller(currentId, otherId)) {
-          updatedCurrent.position = std.add(
+          current.position = std.add(
             other.position,
             std.mul(
               radiusOf(current) + radiusOf(other),
@@ -85,10 +84,10 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
           );
         }
         // bounce with tiny damping
-        updatedCurrent.velocity = std.mul(
+        current.velocity = std.mul(
           0.99,
           std.sub(
-            updatedCurrent.velocity,
+            current.velocity,
             std.mul(
               (((2 * other.mass) / (current.mass + other.mass)) *
                 std.dot(
@@ -107,22 +106,22 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
             isSmaller(currentId, otherId));
         if (isCurrentAbsorbed) {
           // absorbed by the other
-          updatedCurrent.destroyed = 1;
+          current.destroyed = 1;
         } else {
           // absorbs the other
-          const m1 = updatedCurrent.mass;
+          const m1 = current.mass;
           const m2 = other.mass;
-          updatedCurrent.velocity = std.add(
-            std.mul(m1 / (m1 + m2), updatedCurrent.velocity),
+          current.velocity = std.add(
+            std.mul(m1 / (m1 + m2), current.velocity),
             std.mul(m2 / (m1 + m2), other.velocity),
           );
-          updatedCurrent.mass = m1 + m2;
+          current.mass = m1 + m2;
         }
       }
     }
   }
 
-  computeLayout.$.outState[input.gid.x] = CelestialBody(updatedCurrent);
+  computeLayout.$.outState[input.gid.x] = CelestialBody(current);
 });
 
 export const computeGravityShader = tgpu['~unstable'].computeFn({

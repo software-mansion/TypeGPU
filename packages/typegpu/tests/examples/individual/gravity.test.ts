@@ -65,7 +65,6 @@ describe('gravity example', () => {
       @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
         var currentId = input.gid.x;
         var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
-        let updatedCurrent = (&current);
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_3); i++) {
             var otherId = u32(i);
@@ -75,25 +74,25 @@ describe('gravity example', () => {
             }
             if (((current.collisionBehavior == 1) && (other.collisionBehavior == 1))) {
               if (isSmaller_5(currentId, otherId)) {
-                (*updatedCurrent).position = (other.position + ((radiusOf_4(current) + radiusOf_4(other)) * normalize((current.position - other.position))));
+                current.position = (other.position + ((radiusOf_4(current) + radiusOf_4(other)) * normalize((current.position - other.position))));
               }
-              (*updatedCurrent).velocity = (0.99 * ((*updatedCurrent).velocity - (((((2 * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2)) * (current.position - other.position))));
+              current.velocity = (0.99 * (current.velocity - (((((2 * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2)) * (current.position - other.position))));
             }
             else {
               var isCurrentAbsorbed = ((current.collisionBehavior == 1) || ((current.collisionBehavior == 2) && isSmaller_5(currentId, otherId)));
               if (isCurrentAbsorbed) {
-                (*updatedCurrent).destroyed = 1;
+                current.destroyed = 1;
               }
               else {
-                var m1 = (*updatedCurrent).mass;
+                var m1 = current.mass;
                 var m2 = other.mass;
-                (*updatedCurrent).velocity = (((m1 / (m1 + m2)) * (*updatedCurrent).velocity) + ((m2 / (m1 + m2)) * other.velocity));
-                (*updatedCurrent).mass = (m1 + m2);
+                current.velocity = (((m1 / (m1 + m2)) * current.velocity) + ((m2 / (m1 + m2)) * other.velocity));
+                current.mass = (m1 + m2);
               }
             }
           }
         }
-        outState_6[input.gid.x] = (*updatedCurrent);
+        outState_6[input.gid.x] = current;
       }
 
       struct CelestialBody_2 {

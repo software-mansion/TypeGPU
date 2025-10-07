@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
+import { type AnyData, toStorables } from '../data/dataTypes.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
@@ -19,6 +19,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { unify } from '../tgsl/conversion.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: AnyData) {
@@ -337,7 +338,11 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
  */
 export const select = dualImpl({
   name: 'select',
-  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  signature: (...args) => {
+    const [f, t, cond] = toStorables(args);
+    const [uf, ut] = unify<[AnyData, AnyData]>([f, t]) ?? [f, t];
+    return ({ argTypes: [uf, ut, cond], returnType: uf });
+  },
   normalImpl: cpuSelect,
   codegenImpl: (f, t, cond) => stitch`select(${f}, ${t}, ${cond})`,
 });
