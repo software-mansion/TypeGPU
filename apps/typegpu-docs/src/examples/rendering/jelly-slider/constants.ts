@@ -7,14 +7,14 @@ export const SURF_DIST = 0.001;
 
 // Lighting constants
 export const AMBIENT_COLOR = d.vec3f(1);
-export const AMBIENT_INTENSITY = 0.1;
+export const AMBIENT_INTENSITY = 0.3;
 export const SPECULAR_POWER = 32.0;
 export const SPECULAR_INTENSITY = 0.4;
 
 // Jelly material constants
 export const JELLY_IOR = 1.42;
 export const JELLY_ABSORB = d.vec3f(1.6, 3.2, 6.0).mul(4);
-export const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.3, 0.05);
+export const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.3, 0.05).mul(2);
 export const JELLY_SCATTER_STRENGTH = 1.3;
 export const MAX_INTERNAL_STEPS = 20;
 

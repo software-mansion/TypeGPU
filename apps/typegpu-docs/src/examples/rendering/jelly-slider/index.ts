@@ -44,7 +44,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 16, -0.03);
+const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), 18, -0.03);
 const sliderStorage = slider.pointsBuffer.as('readonly');
 const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
 const normalsStorage = slider.normalsBuffer.as('readonly');
@@ -750,7 +750,7 @@ const resolvedTextures = [0, 1].map(() => {
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
-  const deltaTime = (timestamp - lastTimeStamp) * 0.001;
+  const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
   lastTimeStamp = timestamp;
 
   eventHandler.update();
@@ -814,7 +814,7 @@ requestAnimationFrame(render);
 
 export const controls = {
   'Light dir': {
-    initial: d.vec3f(0.19, -0.24, 0.75),
+    initial: d.vec3f(0.18, -0.30, 0.64),
     min: d.vec3f(-1, -1, -1),
     max: d.vec3f(1, 0, 1),
     step: d.vec3f(0.01, 0.01, 0.01),
