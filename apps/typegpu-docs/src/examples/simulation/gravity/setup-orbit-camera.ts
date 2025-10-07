@@ -98,12 +98,12 @@ export function setupOrbitCamera(
     );
 
     const newPos = calculatePos(
-      options.target,
+      cameraState.target,
       cameraState.radius,
       cameraState.pitch,
       cameraState.yaw,
     );
-    const newView = calculateView(newPos, options.target);
+    const newView = calculateView(newPos, cameraState.target);
 
     callback({ view: newView, position: newPos });
   }
