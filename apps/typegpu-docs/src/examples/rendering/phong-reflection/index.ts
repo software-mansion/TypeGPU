@@ -29,7 +29,7 @@ const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
 // camera
 const cameraUniform = root.createUniform(Camera);
 
-const cameraCleanup = setupOrbitCamera(
+const { cleanupCamera } = setupOrbitCamera(
   canvas,
   {
     initPos: d.vec4f(-10, 4, -8, 1),
@@ -202,7 +202,7 @@ resizeObserver.observe(canvas);
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
-  cameraCleanup();
+  cleanupCamera();
   root.destroy();
 }
 

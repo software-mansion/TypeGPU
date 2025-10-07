@@ -25,7 +25,7 @@ const cameraDefaults: Partial<CameraOptions> = {
 };
 
 /**
- * Sets up an orbit camera and returns a cleanup function.
+ * Sets up an orbit camera.
  * Calls the callback on scroll events, canvas clicks/touches and resizes.
  * Also, calls the callback during the setup with an initial camera.
  */
@@ -38,37 +38,70 @@ export function setupOrbitCamera(
     CameraOptions
   >;
 
-  // initialize the camera
-  callback({
-    position: options.initPos,
-    targetPos: options.target,
-    view: calculateView(options.initPos, options.target),
-    projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
-  });
-
   // orbit variables storing the current camera position
-  const cameraVector = options.initPos.sub(options.target);
-  let radius = std.length(cameraVector);
-  let yaw = Math.atan2(cameraVector.x, cameraVector.z);
-  let pitch = Math.asin(cameraVector.y / radius);
+  const cameraState = {
+    target: d.vec4f(),
+    radius: 0,
+    pitch: 0,
+    yaw: 0,
+  };
+
+  // initialize the camera
+  targetCamera(options.initPos, options.target);
+
+  function targetCamera(newPos: d.v4f, newTarget?: d.v4f) {
+    const cameraVector = newPos.sub(options.target);
+    cameraState.radius = std.length(cameraVector);
+    cameraState.yaw = Math.atan2(cameraVector.x, cameraVector.z);
+    cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
+    cameraState.target = newTarget ?? cameraState.target;
+
+    callback(Camera({
+      position: newPos,
+      targetPos: cameraState.target,
+      view: calculateView(newPos, cameraState.target),
+      projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
+    }));
+  }
 
   function rotateCamera(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
-    yaw += -dx * orbitSensitivity * (options.invertCamera ? -1 : 1);
-    pitch += dy * orbitSensitivity * (options.invertCamera ? -1 : 1);
-    pitch = std.clamp(pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+    cameraState.yaw += -dx * orbitSensitivity * (options.invertCamera ? -1 : 1);
+    cameraState.pitch += dy * orbitSensitivity *
+      (options.invertCamera ? -1 : 1);
+    cameraState.pitch = std.clamp(
+      cameraState.pitch,
+      -Math.PI / 2 + 0.01,
+      Math.PI / 2 - 0.01,
+    );
 
-    const newCameraPos = calculatePos(options.target, radius, pitch, yaw);
-    const newView = calculateView(newCameraPos, options.target);
+    const newCameraPos = calculatePos(
+      cameraState.target,
+      cameraState.radius,
+      cameraState.pitch,
+      cameraState.yaw,
+    );
 
-    callback({ view: newView, position: newCameraPos });
+    callback({
+      view: calculateView(newCameraPos, cameraState.target),
+      position: newCameraPos,
+    });
   }
 
   function zoomCamera(delta: number) {
-    radius += delta * 0.05;
-    radius = std.clamp(radius, options.minZoom, options.maxZoom);
+    cameraState.radius += delta * 0.05;
+    cameraState.radius = std.clamp(
+      cameraState.radius,
+      options.minZoom,
+      options.maxZoom,
+    );
 
-    const newPos = calculatePos(options.target, radius, pitch, yaw);
+    const newPos = calculatePos(
+      options.target,
+      cameraState.radius,
+      cameraState.pitch,
+      cameraState.yaw,
+    );
     const newView = calculateView(newPos, options.target);
 
     callback({ view: newView, position: newPos });
@@ -144,14 +177,15 @@ export function setupOrbitCamera(
     passive: false,
   });
 
-  // return cleanup function
-  return () => {
+  function cleanupCamera() {
     window.removeEventListener('mouseup', mouseUpEventListener);
     window.removeEventListener('mousemove', mouseMoveEventListener);
     window.removeEventListener('touchmove', touchMoveEventListener);
     window.removeEventListener('touchend', touchEndEventListener);
     resizeObserver.unobserve(canvas);
-  };
+  }
+
+  return { cleanupCamera, targetCamera };
 }
 
 function calculatePos(
