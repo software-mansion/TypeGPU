@@ -72,7 +72,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   // fixed color, can be replaced with texture sample
   const ambientColor = exampleControlsUniform.$.ambientColor;
   const ambientStrength = exampleControlsUniform.$.ambientStrength;
-  const specularStrength = exampleControlsUniform.$.shininess;
+  const specularStrength = exampleControlsUniform.$.specularExponent;
 
   // ambient component
   const ambient = ambientColor.mul(ambientStrength);
@@ -191,13 +191,13 @@ export const controls = {
       exampleControlsUniform.writePartial({ ambientStrength: v });
     },
   },
-  'shininess': {
+  'specular exponent': {
     min: 0.5,
     max: 16,
     initial: 8,
     step: 0.1,
     onSliderChange(v: number) {
-      exampleControlsUniform.writePartial({ shininess: v });
+      exampleControlsUniform.writePartial({ specularExponent: v });
     },
   },
 };

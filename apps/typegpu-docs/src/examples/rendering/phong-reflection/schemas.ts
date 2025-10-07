@@ -19,7 +19,7 @@ export const ExampleControls = d.struct({
   lightDirection: d.vec3f,
   ambientColor: d.vec3f,
   ambientStrength: d.f32,
-  shininess: d.f32,
+  specularExponent: d.f32,
 });
 
 // layouts
