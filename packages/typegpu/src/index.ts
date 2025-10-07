@@ -89,11 +89,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export { isDerived, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
-export {
-  isSampledTextureView,
-  isStorageTextureView,
-  isTexture,
-} from './core/texture/texture.ts';
+export { isTexture } from './core/texture/texture.ts';
 export {
   isUsableAsRender,
   isUsableAsSampled,
@@ -146,16 +142,9 @@ export type {
   TgpuDerived,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
-export type {
-  TgpuAnyTextureView,
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
-  TgpuTexture,
-  TgpuWriteonlyTexture,
-} from './core/texture/texture.ts';
+export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
-export type { Render, Sampled } from './core/texture/usageExtension.ts';
+export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';
 export type { TgpuConst } from './core/constant/tgpuConstant.ts';
 export type { TgpuVar, VariableScope } from './core/variable/tgpuVariable.ts';
@@ -172,7 +161,6 @@ export type {
   TgpuLayoutExternalTexture,
   TgpuLayoutSampler,
   TgpuLayoutStorage,
-  TgpuLayoutStorageTexture,
   TgpuLayoutTexture,
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';
