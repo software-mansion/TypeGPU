@@ -39,7 +39,7 @@ export interface Options {
 }
 
 export const defaultOptions = {
-  include: /\.m?[jt]sx?$/,
+  include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
 };
@@ -126,6 +126,21 @@ export function isShellImplementationCall(
   );
 }
 
+export function getFunctionName(
+  node: acorn.AnyNode | babel.Node,
+  parent: acorn.AnyNode | babel.Node | null,
+): string | undefined {
+  if (
+    parent?.type === 'VariableDeclarator' && parent.id.type === 'Identifier'
+  ) {
+    return parent.id.name;
+  }
+  return node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression'
+    ? node.id?.name
+    : undefined;
+}
+
 const resourceConstructors: string[] = [
   // tgpu
   'bindGroupLayout',
@@ -208,6 +223,9 @@ type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
  *
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
+ *
+ * This function is NOT used for auto-naming shell-less functions.
+ * Those are handled separately.
  *
  * @privateRemarks
  * When adding new checks, you need to call this method in the corresponding node in Babel.

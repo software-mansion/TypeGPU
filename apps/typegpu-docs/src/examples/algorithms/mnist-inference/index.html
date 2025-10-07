@@ -1,0 +1,164 @@
+<div class="loading">🤖 Downloading the model...</div>
+<div class="example">
+  <canvas></canvas>
+  <div class="predictions-container">
+    <div class="predictions-label">Predictions (-.--ms)</div>
+
+    <div class="bars-container">
+      <div class="bar">O</div>
+      <div class="bar">1</div>
+      <div class="bar">2</div>
+      <div class="bar">3</div>
+      <div class="bar">4</div>
+      <div class="bar">5</div>
+      <div class="bar">6</div>
+      <div class="bar">7</div>
+      <div class="bar">8</div>
+      <div class="bar">9</div>
+    </div>
+
+    <div class="info">
+      <div>Subgroups: <span id="subgroups-status">-</span></div>
+      <div>Inference: <span id="inference-time">-</span></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .loading {
+    font-size: 1.75rem;
+  }
+
+  .loading.loaded {
+    display: none;
+  }
+
+  .example {
+    display: none;
+  }
+
+  .loading.loaded ~ .example {
+    display: contents;
+  }
+
+  .predictions-container {
+    display: flex;
+    flex-direction: column;
+    width: 30%;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+
+  .predictions-label {
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .bars-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    justify-content: flex-start;
+    row-gap: 0.2rem;
+  }
+
+  .info {
+    width: 100%;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  @media (max-width: 1024px) {
+    .predictions-container {
+      width: 100%;
+      gap: 0.5rem;
+    }
+
+    .predictions-label {
+      font-size: 1rem;
+    }
+
+    .predictions-container .bars-container,
+    .predictions-container .info {
+      display: inline-block;
+      vertical-align: top;
+    }
+
+    .bars-container {
+      width: calc(100% - 9rem);
+      row-gap: 0.1rem;
+    }
+
+    .info {
+      width: 8rem;
+      padding: 0.5rem;
+      font-size: 0.65rem;
+      margin-left: 1rem;
+    }
+
+    .bar {
+      height: 1rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  .info div {
+    display: flex;
+    justify-content: space-between;
+    color: #64748b;
+  }
+
+  .info span {
+    font-family: 'Monaco', monospace;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .info .enabled {
+    color: #16a34a;
+  }
+
+  .info .disabled {
+    color: #dc2626;
+  }
+
+  .bar {
+    position: relative;
+    height: 1.25rem;
+    width: 100%;
+    font-family: 'Monaco', monospace;
+    font-size: 1rem;
+    background: linear-gradient(to right, transparent, #e6e6f2);
+    border-radius: 9999px;
+  }
+
+  .bar::before {
+    content: '';
+    height: 100%;
+    width: calc((100% - 2rem) * var(--bar-width, 0%));
+    background-color: #dadaed;
+    position: absolute;
+    left: 2rem;
+    border-radius: 9999px;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .bar::after {
+    content: '';
+    height: 100%;
+    width: calc((100% - 2rem) * var(--bar-width, 0%));
+    opacity: var(--highlight-opacity, 0);
+    background-image: linear-gradient(to right, #c464ff, #1d72f0);
+    position: absolute;
+    left: 2rem;
+    border-radius: 9999px;
+    transition: width 0.2s ease-in-out, opacity 0.5s ease-in-out;
+  }
+</style>

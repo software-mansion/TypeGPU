@@ -4,20 +4,32 @@ import tgpu from '../../src/index.ts';
 import './webgpuGlobals.ts';
 
 const adapterMock = {
+  features: new Set(['timestamp-query']),
   requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),
+  limits: {
+    maxStorageBufferBindingSize: 64 * 1024 * 1024,
+  },
 };
 
 const navigatorMock = {
   gpu: {
     __brand: 'GPU',
     requestAdapter: vi.fn(() => Promise.resolve(adapterMock)),
+    getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm'),
+  },
+  mediaDevices: {
+    getUserMedia: vi.fn(() => Promise.resolve()),
   },
 };
 
-const mockTexture = {
+const mockTexture = (descriptor: GPUTextureDescriptor) => ({
+  ...descriptor,
+  with: (descriptor.size as number[])[0] ?? 1,
+  height: (descriptor.size as number[])[1] ?? 1,
+  depthOrArrayLayers: (descriptor.size as number[])[2] ?? 1,
   createView: vi.fn(() => 'view'),
   destroy: vi.fn(),
-};
+});
 
 const mockCommandEncoder = {
   get mock() {
@@ -25,6 +37,7 @@ const mockCommandEncoder = {
   },
   beginComputePass: vi.fn(() => mockComputePassEncoder),
   beginRenderPass: vi.fn(() => mockRenderPassEncoder),
+  clearBuffer: vi.fn(),
   copyBufferToBuffer: vi.fn(),
   copyBufferToTexture: vi.fn(),
   copyTextureToBuffer: vi.fn(),
@@ -61,6 +74,13 @@ const mockQuerySet = {
   _label: '<unnamed>',
 };
 
+const mockComputePipeline = {
+  get getBindGroupLayout() {
+    return vi.fn(() => 'mockBindGroupLayout');
+  },
+  label: '<unnamed>',
+};
+
 const mockDevice = {
   get mock() {
     return mockDevice;
@@ -93,7 +113,7 @@ const mockDevice = {
     },
   ),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
+  createComputePipeline: vi.fn(() => mockComputePipeline),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
   createQuerySet: vi.fn(
     ({ type, count }: GPUQuerySetDescriptor) => {
@@ -107,7 +127,7 @@ const mockDevice = {
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => mockTexture),
+  createTexture: vi.fn((descriptor) => mockTexture(descriptor)),
   importExternalTexture: vi.fn(() => 'mockExternalTexture'),
   queue: {
     copyExternalImageToTexture: vi.fn(),

@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
@@ -11,23 +11,17 @@ describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
     const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
 
-    const red = tgpu.fn([], d.vec3f)(`() { return ${RED}; }`).$uses({ RED });
+    const red = tgpu.fn([], d.vec3f)('() { return RED; }').$uses({ RED });
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess })
       .with(colorAccess, red);
 
-    expect(parseResolved({ getColor })).toBe(
-      parse(/* wgsl */ `
-        fn red() -> vec3f {
-          return ${RED_RESOLVED};
-        }
+    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+      "fn red() -> vec3f{ return vec3f(1, 0, 0); }
 
-        fn getColor() -> vec3f {
-          return red();
-        }
-    `),
-    );
+      fn getColor() -> vec3f{ return red(); }"
+    `);
   });
 
   it('resolves to provided buffer usage', ({ root }) => {
@@ -42,34 +36,27 @@ describe('tgpu.accessor', () => {
       .$uses({ colorAccess })
       .with(colorAccess, redUniform);
 
-    expect(parseResolved({ getColor })).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var<uniform> redUniform: vec3f;
+    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> redUniform: vec3f;
 
-        fn getColor() -> vec3f {
-          return redUniform;
-        }
-    `),
-    );
+      fn getColor() -> vec3f{ return redUniform; }"
+    `);
   });
 
   it('resolves to resolved form of provided JS value', () => {
     const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
     const multiplierAccess = tgpu['~unstable'].accessor(d.f32);
 
-    const getColor = tgpu.fn([], d.vec3f)`() {
-        return colorAccess * multiplierAccess;
-      }`
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )`() { return colorAccess * multiplierAccess; }`
       .$uses({ colorAccess, multiplierAccess })
       .with(colorAccess, RED)
       .with(multiplierAccess, 2);
 
-    expect(parseResolved({ getColor })).toBe(
-      parse(/* wgsl */ `
-        fn getColor() -> vec3f {
-          return ${RED_RESOLVED} * 2;
-        }
-    `),
+    expect(asWgsl(getColor)).toMatchInlineSnapshot(
+      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2; }"`,
     );
   });
 
@@ -79,12 +66,8 @@ describe('tgpu.accessor', () => {
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess });
 
-    expect(parseResolved({ getColor })).toBe(
-      parse(/* wgsl */ `
-      fn getColor() -> vec3f {
-        return ${RED_RESOLVED};
-      }
-    `),
+    expect(asWgsl(getColor)).toMatchInlineSnapshot(
+      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0); }"`,
     );
   });
 
@@ -97,22 +80,14 @@ describe('tgpu.accessor', () => {
     // overriding to green
     const getColorWithGreen = getColor.with(colorAccess, d.vec3f(0, 1, 0));
 
-    const main = tgpu.fn([])(`() {
-        return getColorWithGreen();
-      }`)
+    const main = tgpu.fn([])`() { return getColorWithGreen(); }`
       .$uses({ getColorWithGreen });
 
-    expect(parseResolved({ main })).toBe(
-      parse(/* wgsl */ `
-        fn getColor() -> vec3f {
-          return vec3f(0, 1, 0);
-        }
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn getColor() -> vec3f{ return vec3f(0, 1, 0); }
 
-        fn main() {
-          return getColor();
-        }
-    `),
-    );
+      fn main() { return getColor(); }"
+    `);
   });
 
   it('throws error when no default nor value provided', () => {
@@ -121,7 +96,7 @@ describe('tgpu.accessor', () => {
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess });
 
-    expect(() => tgpu.resolve({ externals: { getColor }, names: 'strict' }))
+    expect(() => asWgsl(getColor))
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -152,29 +127,36 @@ describe('tgpu.accessor', () => {
       const color3X = colorAccessorFn.value.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { main },
-      names: 'strict',
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> redUniform: vec3f;
+
+      fn getColor() -> vec3f {
+        return vec3f(1, 0, 0);
+      }
+
+      fn main() {
+        var color = vec3f(1, 0, 0);
+        var color2 = redUniform;
+        var color3 = getColor();
+        var colorX = 1;
+        var color2X = redUniform.x;
+        var color3X = getColor().x;
+      }"
+    `);
+  });
+
+  it('retains type information', () => {
+    // Typed as f32, but literal could be automatically inferred as an i32
+    const fooAccess = tgpu['~unstable'].accessor(d.f32, 1);
+
+    const main = tgpu.fn([])(() => {
+      const foo = fooAccess.$;
     });
 
-    expect(parse(resolved)).toBe(
-      parse(/* wgsl */ `
-        @group(0) @binding(0) var<uniform> redUniform: vec3f;
-
-        fn getColor() -> vec3f {
-          return vec3f(1, 0, 0);
-        }
-
-        fn main() {
-          var color = vec3f(1, 0, 0);
-          var color2 = redUniform;
-          var color3 = getColor();
-
-          var colorX = vec3f(1, 0, 0).x;
-          var color2X = redUniform.x;
-          var color3X = getColor().x;
-        }
-    `),
-    );
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
+        var foo = 1f;
+      }"
+    `);
   });
 });

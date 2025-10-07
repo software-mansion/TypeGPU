@@ -1,17 +1,24 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { DualFn } from '../../data/dualFn.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
-import { schemaCallWrapper } from '../../data/utils.ts';
+import {
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../../data/snippet.ts';
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { isMarkedInternal } from '../../shared/symbols.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $internal,
+  $ownSnippet,
   $providing,
+  $resolve,
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -141,7 +148,7 @@ export function fn<
 export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
   value: unknown | TgpuFn<(...args: Args) => Return>,
 ): value is TgpuFn<(...args: Args) => Return> {
-  return !!(value as TgpuFn<(...args: Args) => Return>)?.[$internal] &&
+  return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
 }
 
@@ -190,7 +197,7 @@ function createFn<ImplSchema extends AnyFn>(
       ]);
     },
 
-    '~resolve'(ctx: ResolutionCtx): string {
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
         addArgTypesToExternals(
           implementation,
@@ -222,7 +229,9 @@ function createFn<ImplSchema extends AnyFn>(
             schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
-          return implementation(...castAndCopiedArgs);
+          const result = implementation(...castAndCopiedArgs);
+          // Casting the result to the appropriate schema
+          return schemaCallWrapper(shell.returnType, result);
         } catch (err) {
           if (err instanceof ExecutionError) {
             throw err.appendToTrace(fn);
@@ -312,6 +321,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
 class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
   readonly [$internal] = true;
+  readonly [$ownSnippet]: Snippet;
   readonly [$getNameForward]: unknown;
   readonly #fn: TgpuFnBase<ImplSchema>;
   readonly #params: Snippet[];
@@ -323,13 +333,18 @@ class FnCall<ImplSchema extends AnyFn> implements SelfResolvable {
     this.#fn = fn;
     this.#params = params;
     this[$getNameForward] = fn;
+    this[$ownSnippet] = snip(this, this.#fn.shell.returnType);
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     // We need to reset the indentation level during function body resolution to ignore the indentation level of the function call
-    return ctx.withResetIndentLevel(() =>
-      stitch`${ctx.resolve(this.#fn)}(${this.#params})`
-    );
+    return ctx.withResetIndentLevel(() => {
+      // TODO: Resolve the params first, then the function (just for consistency)
+      return snip(
+        stitch`${ctx.resolve(this.#fn).value}(${this.#params})`,
+        this.#fn.shell.returnType,
+      );
+    });
   }
 
   toString() {

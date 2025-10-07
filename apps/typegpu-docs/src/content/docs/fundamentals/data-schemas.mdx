@@ -321,7 +321,6 @@ To define arrays of known constant length, use the `d.arrayOf` function with the
 
 ```ts twoslash
 import * as d from 'typegpu/data';
-
 // ---cut---
 const MyArray = d.arrayOf(d.f32, 4);
 
@@ -343,6 +342,57 @@ const ArrayPartialSchema = d.arrayOf(d.f32);
 const array = ArrayPartialSchema(2)([1.2, 19.29]);
 //    ^?
 ```
+
+## Atomics
+
+To create a schema corresponding to an atomic data type, wrap `d.i32` or `d.u32` with `d.atomic`.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const AtomicI32 = d.atomic(d.i32);
+//    ^?
+```
+
+:::tip
+The `std` module provides functions for manipulating atomic data in TGSL.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+// ---cut---
+const count = tgpu.workgroupVar(d.atomic(d.u32));
+
+const incrementAndGet = tgpu.fn([], d.u32)(() => {
+  return std.atomicAdd(count.$, 1);
+});
+```
+
+:::
+
+## Pointers
+
+To create a schema corresponding to a pointer data type, wrap the inner schema with a pointer constructor corresponding to the appropriate address space.
+
+For address spaces `function`, `private`, `workgroup`, `storage` and `uniform`, use `d.ptrFn`, `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage` and `d.ptrUniform` respectively.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const vecPtrFn = d.ptrFn(d.vec3f);
+//    ^?
+
+const vecPtrPrivate = d.ptrPrivate(d.vec2f);
+//    ^?
+```
+
+:::note
+In order to use `workgroup`, `storage` and `uniform` pointers as function parameters,
+WGSL needs the `unrestricted_pointer_parameters` extension.
+
+This extension is enabled automatically when available.
+:::
 
 ## Copy constructors
 

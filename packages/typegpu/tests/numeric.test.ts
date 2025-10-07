@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { tgpu } from '../src/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -70,16 +70,14 @@ describe('TGSL', () => {
         const b = d.bool();
       });
 
-    expect(parseResolved({ main })).toBe(
-      parse(`
-      fn main() {
-        var f = f32();
-        var h = f16();
-        var i = i32();
-        var u = u32();
-        var b = bool();
-      }
-      `),
-    );
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
+        var f = 0f;
+        var h = 0h;
+        var i = 0i;
+        var u = 0u;
+        var b = false;
+      }"
+    `);
   });
 });

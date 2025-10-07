@@ -1,40 +1,20 @@
-import { stitch } from '../core/resolve/stitch.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
-import { isSnippetNumeric, snip, type Snippet } from '../data/snippet.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
+import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
-  type AnyWgslData,
   isFloat32VecInstance,
   isMatInstance,
+  isNumericSchema,
   isVecInstance,
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { convertToCommonType } from '../tgsl/generationHelpers.ts';
-import { getResolutionCtx } from '../execMode.ts';
-import type { ResolutionCtx } from '../types.ts';
 import { $internal } from '../shared/symbols.ts';
-import { f16, f32 } from '../data/numeric.ts';
-
-function tryUnify<T extends Snippet[]>(
-  values: T,
-  restrictTo?: AnyWgslData[],
-  concretizeTypes = false,
-  verbose = true,
-): T {
-  const ctx = getResolutionCtx() as ResolutionCtx;
-  const converted = convertToCommonType({
-    ctx,
-    values,
-    restrictTo,
-    concretizeTypes,
-    verbose,
-  });
-  return converted ?? values;
-}
+import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -71,32 +51,18 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   throw new Error('Add/Sub called with invalid arguments.');
 }
 
-export const add = createDualImpl(
-  // CPU implementation
-  cpuAdd,
-  // CODEGEN implementation
-  (lhs, rhs) => {
-    const [convLhs, convRhs] = tryUnify([lhs, rhs]);
-    const resultType = isSnippetNumeric(convLhs)
-      ? convRhs.dataType
-      : convLhs.dataType;
-
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuAdd(lhs.value as never, rhs.value as never), resultType);
-    }
-
-    return snip(stitch`(${convLhs} + ${convRhs})`, resultType);
+export const add = dualImpl({
+  name: 'add',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return {
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    };
   },
-  'add',
-);
+  normalImpl: cpuAdd,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} + ${rhs})`,
+});
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
 function cpuSub<T extends NumVec>(lhs: number, rhs: T): T; // mixed subtraction
@@ -115,32 +81,18 @@ function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   return cpuAdd(lhs, cpuMul(-1, rhs));
 }
 
-export const sub = createDualImpl(
-  // CPU implementation
-  cpuSub,
-  // CODEGEN implementation
-  (lhs, rhs) => {
-    const [convLhs, convRhs] = tryUnify([lhs, rhs]);
-    const resultType = isSnippetNumeric(convLhs)
-      ? convRhs.dataType
-      : convLhs.dataType;
-
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuSub(lhs.value as never, rhs.value as never), resultType);
-    }
-
-    return snip(stitch`(${convLhs} - ${convRhs})`, resultType);
+export const sub = dualImpl({
+  name: 'sub',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return {
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    };
   },
-  'sub',
-);
+  normalImpl: cpuSub,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} - ${rhs})`,
+});
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
 function cpuMul<MV extends NumVec | Mat>(lhs: number, rhs: MV): MV; // scale
@@ -183,48 +135,35 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   throw new Error('Mul called with invalid arguments.');
 }
 
-export const mul = createDualImpl(
-  // CPU implementation
-  cpuMul,
-  // GPU implementation
-  (lhs, rhs) => {
-    const [convLhs, convRhs] = tryUnify([lhs, rhs]);
-    const returnType = isSnippetNumeric(convLhs)
+export const mul = dualImpl({
+  name: 'mul',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    const returnType = isNumericSchema(uargs[0])
       // Scalar * Scalar/Vector/Matrix
-      ? convRhs.dataType
-      : isSnippetNumeric(convRhs)
+      ? uargs[1]
+      : isNumericSchema(uargs[1])
       // Vector/Matrix * Scalar
-      ? convLhs.dataType
-      : convLhs.dataType.type.startsWith('vec')
+      ? uargs[0]
+      : uargs[0].type.startsWith('vec')
       // Vector * Vector/Matrix
-      ? convLhs.dataType
-      : convRhs.dataType.type.startsWith('vec')
+      ? uargs[0]
+      : uargs[1].type.startsWith('vec')
       // Matrix * Vector
-      ? convRhs.dataType
+      ? uargs[1]
       // Matrix * Matrix
-      : convLhs.dataType;
+      : uargs[0];
 
-    if (
-      (typeof lhs.value === 'number' ||
-        isVecInstance(lhs.value) ||
-        isMatInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' ||
-        isVecInstance(rhs.value) ||
-        isMatInstance(rhs.value))
-    ) {
-      // Precomputing...
-      return snip(cpuMul(lhs.value as never, rhs.value as never), returnType);
-    }
-
-    return snip(stitch`(${convLhs} * ${convRhs})`, returnType);
+    return ({ argTypes: uargs, returnType });
   },
-  'mul',
-);
+  normalImpl: cpuMul,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} * ${rhs})`,
+});
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
-function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): T; // component-wise division
-function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): T; // mixed division
-function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
+function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
+function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs / rhs;
@@ -243,28 +182,19 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   throw new Error('Div called with invalid arguments.');
 }
 
-export const div = createDualImpl(
-  // CPU implementation
-  cpuDiv,
-  // CODEGEN implementation
-  (lhs, rhs) => {
-    const [convLhs, convRhs] = tryUnify([lhs, rhs], [f32, f16], true, false);
-
-    if (
-      (typeof lhs.value === 'number' || isVecInstance(lhs.value)) &&
-      (typeof rhs.value === 'number' || isVecInstance(rhs.value))
-    ) {
-      // Precomputing
-      return snip(
-        cpuDiv(lhs.value as never, rhs.value as never),
-        convLhs.dataType,
-      );
-    }
-
-    return snip(stitch`(${convLhs} / ${convRhs})`, convLhs.dataType);
+export const div = dualImpl({
+  name: 'div',
+  signature: (...args) => {
+    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
+    return ({
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    });
   },
-  'div',
-);
+  normalImpl: cpuDiv,
+  codegenImpl: (lhs, rhs) => stitchWithExactTypes`(${lhs} / ${rhs})`,
+  ignoreImplicitCastWarning: true,
+});
 
 type ModOverload = {
   (a: number, b: number): number;
@@ -277,9 +207,16 @@ type ModOverload = {
  * @privateRemarks
  * Both JS and WGSL implementations use truncated definition of modulo
  */
-export const mod: ModOverload = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(a: T, b: T): T => {
+export const mod: ModOverload = dualImpl({
+  name: 'mod',
+  signature: (...args) => {
+    const uargs = unify(args) ?? args;
+    return {
+      argTypes: uargs,
+      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
+    };
+  },
+  normalImpl<T extends NumVec | number>(a: T, b: T): T {
     if (typeof a === 'number' && typeof b === 'number') {
       return (a % b) as T; // scalar % scalar
     }
@@ -302,24 +239,21 @@ export const mod: ModOverload = createDualImpl(
       'Mod called with invalid arguments, expected types: number or vector.',
     );
   },
-  // GPU implementation
-  (a, b) => {
-    const [convA, convB] = tryUnify([a, b]);
-    const type = isSnippetNumeric(convA) ? convB.dataType : convA.dataType;
-    return snip(stitch`(${convA} % ${convB})`, type);
-  },
-  'mod',
-);
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} % ${rhs})`,
+});
 
-export const neg = createDualImpl(
-  // CPU implementation
-  <T extends NumVec | number>(value: T): T => {
-    if (typeof value === 'number') {
-      return -value as T;
-    }
-    return VectorOps.neg[value.kind](value) as T;
-  },
-  // GPU implementation
-  (value) => snip(stitch`-(${value})`, value.dataType),
-  'neg',
-);
+function cpuNeg(value: number): number;
+function cpuNeg<T extends NumVec>(value: T): T;
+function cpuNeg(value: NumVec | number): NumVec | number {
+  if (typeof value === 'number') {
+    return -value;
+  }
+  return VectorOps.neg[value.kind](value);
+}
+
+export const neg = dualImpl({
+  name: 'neg',
+  signature: (arg) => ({ argTypes: [arg], returnType: arg }),
+  normalImpl: cpuNeg,
+  codegenImpl: (arg) => stitch`-(${arg})`,
+});

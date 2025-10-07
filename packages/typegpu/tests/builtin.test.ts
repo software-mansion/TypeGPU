@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { OmitBuiltins } from '../src/builtin.ts';
 import * as d from '../src/data/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
+import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 
 describe('builtin', () => {
@@ -11,7 +11,7 @@ describe('builtin', () => {
     });
 
     const opts = {
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
     };
 
     expect(resolve(s1, opts).code).toContain(
