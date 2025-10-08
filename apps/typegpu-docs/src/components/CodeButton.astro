@@ -1,0 +1,23 @@
+---
+interface Props {
+  title: string;
+  message: string;
+  icon: string;
+}
+
+const { title, message, icon } = Astro.props as Props;
+---
+
+<div class="flex flex-col items-start aspect-square p-8 bg-accent-50 border-2 border-accent-600/30  max-w-sm">
+  <div class="flex items-center justify-center w-16 h-16 mb-6 bg-accent-600 rounded-lg">
+    <img src={icon}>
+  </div>
+
+  <h3 class="text-2xl font-semibold text-gray-800 mb-4">
+    {title}
+  </h3>
+
+  <p class="text-lg text-gray-600 leading-relaxed">
+    {message}
+  </p>
+</div>

@@ -21,9 +21,9 @@ import MilestoneLinkerBadge from "../../components/roadmap/MilestoneLinkerBadge.
 import MilestonePipelinesBadge from "../../components/roadmap/MilestonePipelinesBadge.astro";
 import RoadMapStep from "../../components/roadmap/RoadMapStep.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
-import { MoonIcon } from "lucide-react";
 import GradientTitle from "../../components/GradientTitle.astro";
 import CodePen from "../../components/CodePen.astro";
+import CodeButton from "../../components/CodeButton.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -111,9 +111,7 @@ import CodePen from "../../components/CodePen.astro";
 
 {/* Code Section */}
 <div class="box-border flex flex-col items-center w-full py-12 md:p-20 lg:p-32">
-  <section
-    class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
-  >
+  <section class="box-border flex flex-col items-center justify-center">
     <div>
       <h2 class="mb-4 font-normal md:mb-8 center text-4xl text-blue-950">
         Ways to use TypeGPU
@@ -122,6 +120,23 @@ import CodePen from "../../components/CodePen.astro";
         TypeGPU is a three-way toolkit that is easy for you to integrate
         granularly and doesn't restrict you in what you can do.
       </p>
+    </div>
+    <div class="flex flex-row gap-4 m-8">
+      <CodeButton
+        title="As a foundation"
+        message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+        icon="DarkModeIconSvg"
+      />
+      <CodeButton
+        title="As a puzzle piece"
+        message="Pick and choose the APIs you need, and plug them into your code however you want."
+        icon="DarkModeIconSvg"
+      />
+      <CodeButton
+        title="For libraries"
+        message="Simplify library internals, and make your user-facing API type-safe by default."
+        icon="DarkModeIconSvg"
+      />
     </div>
     <CodePen
       code={`export interface TgpuComputePipeline
@@ -151,6 +166,28 @@ export function INTERNAL_createComputePipeline(
     {},
   );
 }`}
+      language="typescript"
+    />
+    <CodePen
+      code={`// Define a compute function with typed parameters
+const computeFn = tgpu.computeFunction(
+  (data: tgpu.Buffer<Float32Array>, factor: number) => {
+    // WGSL code using 'data' and 'factor'
+  }
+);
+}`}
+      language="typescript"
+    />
+    <CodePen
+      code={`// Create a buffer with a specific data type
+const buffer = tgpu.buffer(new Float32Array([1.0, 2.0
+, 3.0]));
+// The buffer is now typed as TgpuBuffer<Float32Array>
+const bindGroupLayout = tgpu.bindGroupLayout({
+  myBuffer: tgpu.binding(tgpu.BindingType.StorageBuffer, tgpu.ShaderStage.Compute),
+  mySampler: tgpu.binding(tgpu.BindingType.Sampler, tgpu.ShaderStage.Compute),
+});
+      }`}
       language="typescript"
     />
   </section>
