@@ -22,6 +22,7 @@ import MilestonePipelinesBadge from "../../components/roadmap/MilestonePipelines
 import RoadMapStep from "../../components/roadmap/RoadMapStep.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
 import { MoonIcon } from "lucide-react";
+import GradientTitle from "../../components/GradientTitle.astro";
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -224,37 +225,89 @@ const showcaseVideoResolution = [2048, 1200];
     </article>
   </section>
 </div>
+<section class="flex flex-col items-center gap-16">
+  <div
+    class="flex flex-row items-center gap-3 font-bold text-blue-950 text-7xl"
+  >
+    Ready to try out
+    <GradientTitle title="TypeGPU" />
+    ?
+  </div>
+  <GetStartedButton />
+</section>
 
 <footer
-  class="flex flex-col items-center mx-auto px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138 bg-gradient-to-b from-white to-accent-50"
+  class="mt-20 flex flex-col items-center mx-auto px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138 bg-gradient-to-b from-white to-accent-50"
 >
-  <div class="flex flex-col items-center gap-20 self-stretch mx-40 py-10">
-    <div class="font-bold text-7xl">We are Software Mansion</div>
+  <div
+    class="flex flex-col items-center gap-12 self-stretch mx-40 py-10 text-blue-950"
+  >
+    <div class="font-bold text-7xl">
+      We are
+      <GradientTitle title="Software Mansion" />
+    </div>
     <p class="font-normal text-pretty mb-4">
       We’re a software company built around improving developer experience and
       bringing to life the innovative ideas of our clients. Do you have a
       software project that we can help you with?
     </p>
-    <GetStartedButton />
+    <GetStartedButton
+      title="Hire us"
+      href="https://swmansion.com/contact/projects?utm_source=react-native-executorch&utm_medium=docs"
+    />
 
     <div
       class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white gap-8 max-w-7xl mx-auto w-full px-4 py-8 text-center"
     >
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Reanimated</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Gesture Handler</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Screens</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native SVG</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native Audio API</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">React Native ExecuTorch</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">TypeGPU</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">Radon IDE</a>
-      <a href="#" class="no-underline text-blue-950 hover:text-accent-700 transition-colors">BayoJajo</a>
-
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native Reanimated</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native Gesture Handler</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native Screens</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native SVG</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native Audio API</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >React Native ExecuTorch</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >TypeGPU</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >Radon IDE</a
+      >
+      <a
+        href="#"
+        class="no-underline text-blue-950 hover:text-accent-700 transition-colors"
+        >BayoJajo</a
+      >
     </div>
     <div class="flex flex-col items-center gap-4 pb-4 text-grayscale-100">
-
-
-          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and copyrights belong to their respective owners..
+      &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
+      copyrights belong to their respective owners.
 
       <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
     </div>
