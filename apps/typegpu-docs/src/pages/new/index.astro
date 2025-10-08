@@ -23,12 +23,11 @@ import RoadMapStep from "../../components/roadmap/RoadMapStep.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
 import { MoonIcon } from "lucide-react";
 import GradientTitle from "../../components/GradientTitle.astro";
-
-const showcaseVideoResolution = [2048, 1200];
+import CodePen from "../../components/CodePen.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
-  <main class="flex flex-col items-center">
+  <main>
     <header
       class="flex justify-between items-center self-stretch shrink-0 h-24 px-4 sm:px-7.5 md:px-10 lg:px-12.5"
     >
@@ -40,7 +39,7 @@ const showcaseVideoResolution = [2048, 1200];
         />
       </a>
 
-      <div class="flex items-center h-4 gap-4">
+      <div class="flex items-center h-4 gap-10">
         <!-- Light / Dark -->
         <div class="grid grid-cols-2 border">
           <a class="bg-blue-900 grid place-items-center p-2">
@@ -85,19 +84,20 @@ const showcaseVideoResolution = [2048, 1200];
   </main>
 
   <section
-    class="box-border relative self-stretch flex flex-col items-center justify-between bg-red md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]"
+    class="flex flex-col items-center justify-between box-border relative self-stretch md:gap-0 gap-10 md:max-h-[125vh]"
   >
     <div
       class="grid grid-rows-2 px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
     >
-      <div class="font-bold text-7xl">TypeGPU</div>
-
-      <h1 class="font-normal text-pretty mb-4">
+      <div class="text-blue-900 font-extrabold text-7xl">
+        Type
+        <GradientTitle title="GPU" />
+      </div>
+      <div class="text-blue-950 text-6xl text-pretty">
         A modular and open-ended toolkit for WebGPU, with advanced type
         interface and ability to write shaders in TypeScript.
         <!-- <br class="hidden sm:block" /> -->
-      </h1>
-
+      </div>
       <div class="flex flex-col gap-4 sm:flex-row">
         <GetStartedButton />
         <a
@@ -106,27 +106,55 @@ const showcaseVideoResolution = [2048, 1200];
         >
       </div>
     </div>
-
-    <div
-      class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-138 md:w-234 lg:w-280 lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl relative md:top-full md:-translate-y-[50%] sm:mb-10"
-    >
-      <video
-        src="/TypeGPU/assets/migration.mp4"
-        style={{
-          aspectRatio: showcaseVideoResolution[0] / showcaseVideoResolution[1],
-        }}
-        autoplay
-        loop
-        muted
-        controls
-        playsinline
-        class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
-      ></video>
-    </div>
   </section>
 </PageLayout>
 
-<div class="lg:h-64 md:h-52 md:block hidden"></div>
+{/* Code Section */}
+<div class="box-border flex flex-col items-center w-full py-12 md:p-20 lg:p-32">
+  <section
+    class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
+  >
+    <div>
+      <h2 class="mb-4 font-normal md:mb-8 center text-4xl text-blue-950">
+        Ways to use TypeGPU
+      </h2>
+      <p class="text-center text-pretty text-2xl text-blue-900">
+        TypeGPU is a three-way toolkit that is easy for you to integrate
+        granularly and doesn't restrict you in what you can do.
+      </p>
+    </div>
+    <CodePen
+      code={`export interface TgpuComputePipeline
+  extends TgpuNamable, SelfResolvable, Timeable {
+  readonly [$internal]: ComputePipelineInternals;
+  readonly resourceType: 'compute-pipeline';
+
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup,
+  ): TgpuComputePipeline;
+
+  dispatchWorkgroups(
+    x: number,
+    y?: number | undefined,
+    z?: number | undefined,
+  ): void;
+}
+
+export function INTERNAL_createComputePipeline(
+  branch: ExperimentalTgpuRoot,
+  slotBindings: [TgpuSlot<unknown>, unknown][],
+  entryFn: TgpuComputeFn,
+) {
+  return new TgpuComputePipelineImpl(
+    new ComputePipelineCore(branch, slotBindings, entryFn),
+    {},
+  );
+}`}
+      language="typescript"
+    />
+  </section>
+</div>
 
 {/* Roadmap Section */}
 <div

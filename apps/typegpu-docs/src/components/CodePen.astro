@@ -1,0 +1,52 @@
+---
+import { Code } from 'astro/components';
+
+type SupportedLanguages = "typescript" | "javascript" | "jsx" | "tsx" | "html" | "css" | "json" | "yaml" | "markdown" | "bash" | "shell";
+
+interface Props {
+  code: string;
+  language?: SupportedLanguages;
+}
+
+const { 
+  code,
+  language = "typescript",
+} = Astro.props as Props;
+
+const formattedCode = code.trim();
+---
+
+<div class="w-full rounded-lg shadow-lg bg-grayscale-100/5 backdrop-blur">
+    <div class:list={[
+      "overflow-x-auto",
+      "text-sm font-mono",
+    ]}>
+      <Code code={formattedCode} lang={language} theme="one-dark-pro" />
+    </div>
+</div>
+
+<style>
+
+
+  code {
+    counter-reset: line;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+
+  /* Override Shiki's default styles */
+  :global(code) {
+    counter-reset: step;
+    counter-increment: step 0;
+  }
+
+  :global(code .line::before) {
+    content: counter(step);
+    counter-increment: step;
+    width: 1rem;
+    margin-right: 1.5rem;
+    display: inline-block;
+    text-align: right;
+    color: #636e7b;
+  }
+</style>

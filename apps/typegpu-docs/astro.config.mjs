@@ -30,6 +30,10 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathJax],
+    shikiConfig: {
+      theme: 'one-dark-pro',
+      wrap: true,
+    },
   },
   vite: {
     // Allowing query params, for invalidation
