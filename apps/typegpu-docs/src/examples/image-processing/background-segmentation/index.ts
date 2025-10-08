@@ -88,9 +88,7 @@ context.configure({
 });
 
 const thresholdBuffer = root.createUniform(d.f32, 0.5);
-
 const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
-
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
 const sampler = tgpu['~unstable'].sampler({
@@ -175,7 +173,6 @@ function processVideoFrame(
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
-
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
