@@ -1,4 +1,3 @@
-import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -40,21 +39,11 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
-  let col = std.textureSampleBaseClampToEdge(
+  const col = std.textureSampleBaseClampToEdge(
     textureLayout.$.inputTexture,
     sampler,
     uv2,
   );
-  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
-  const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
-
-  const crDiff = std.abs(ycbcr.y - colycbcr.y);
-  const cbDiff = std.abs(ycbcr.z - colycbcr.z);
-  const distance = std.length(d.vec2f(crDiff, cbDiff));
-
-  if (distance < std.pow(thresholdBuffer.$, 2)) {
-    col = d.vec4f();
-  }
 
   return col;
 });
@@ -87,8 +76,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const thresholdBuffer = root.createUniform(d.f32, 0.5);
-const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
 const sampler = tgpu['~unstable'].sampler({
@@ -176,22 +163,6 @@ function processVideoFrame(
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
-
-export const controls = {
-  color: {
-    onColorChange: (value: readonly [number, number, number]) => {
-      colorUniform.write(d.vec3f(...value));
-    },
-    initial: [0, 1, 0] as const,
-  },
-  threshold: {
-    initial: 0.1,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value: number) => thresholdBuffer.write(value),
-  },
-};
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
