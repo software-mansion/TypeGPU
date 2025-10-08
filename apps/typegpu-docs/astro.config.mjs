@@ -48,6 +48,7 @@ export default defineConfig({
     ssr: {
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
+        'onnxruntime-web',
       ],
     },
   },
