@@ -161,7 +161,7 @@ export class MissingBindGroupsError extends Error {
     super(
       `Missing bind groups for layouts: '${
         [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(layout, bindGroup).(...)`,
+      }'. Please provide it using pipeline.with(bindGroup).(...)`,
     );
 
     // Set the prototype explicitly.

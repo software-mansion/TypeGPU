@@ -176,7 +176,7 @@ async function compute() {
       };
 
       pipelines[state.strategy]
-        .with(computeLayout, bindGroup)
+        .with(bindGroup)
         .dispatchWorkgroups(workgroupCount.x, workgroupCount.y);
 
       await root.device.queue.onSubmittedWorkDone();

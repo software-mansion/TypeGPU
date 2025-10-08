@@ -234,7 +234,7 @@ function processVideoFrame(
   }
 
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
