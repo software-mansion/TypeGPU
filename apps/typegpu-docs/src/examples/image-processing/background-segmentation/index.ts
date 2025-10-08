@@ -3,40 +3,35 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const frequentLayout = tgpu.bindGroupLayout({
+const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const VertexOutput = d.struct({
-  position: d.builtin.position,
-  uv: d.location(0, d.vec2f),
-});
+const vertexPos = tgpu.const(d.arrayOf(d.vec2f, 6), [
+  d.vec2f(1.0, 1.0),
+  d.vec2f(1.0, -1.0),
+  d.vec2f(-1.0, -1.0),
+  d.vec2f(1.0, 1.0),
+  d.vec2f(-1.0, -1.0),
+  d.vec2f(-1.0, 1.0),
+]);
+
+const uv = tgpu.const(d.arrayOf(d.vec2f, 6), [
+  d.vec2f(1.0, 0.0),
+  d.vec2f(1.0, 1.0),
+  d.vec2f(0.0, 1.0),
+  d.vec2f(1.0, 0.0),
+  d.vec2f(0.0, 1.0),
+  d.vec2f(0.0, 0.0),
+]);
 
 const mainVert = tgpu['~unstable'].vertexFn({
   in: { idx: d.builtin.vertexIndex },
-  out: VertexOutput.propTypes,
+  out: { position: d.builtin.position, uv: d.location(0, d.vec2f) },
 })((input, Out) => {
-  const pos = [
-    d.vec2f(1.0, 1.0),
-    d.vec2f(1.0, -1.0),
-    d.vec2f(-1.0, -1.0),
-    d.vec2f(1.0, 1.0),
-    d.vec2f(-1.0, -1.0),
-    d.vec2f(-1.0, 1.0),
-  ];
-
-  const uv = [
-    d.vec2f(1.0, 0.0),
-    d.vec2f(1.0, 1.0),
-    d.vec2f(0.0, 1.0),
-    d.vec2f(1.0, 0.0),
-    d.vec2f(0.0, 1.0),
-    d.vec2f(0.0, 0.0),
-  ];
-
   const output = Out();
-  output.position = d.vec4f(pos[input.idx], 0.0, 1.0);
-  output.uv = uv[input.idx];
+  output.position = d.vec4f(vertexPos.$[input.idx], 0.0, 1.0);
+  output.uv = uv.$[input.idx];
   return output;
 });
 
@@ -44,11 +39,9 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f) },
   out: d.vec4f,
 })((input) => {
-  const uv2 = uvTransformUniform.$.mul(input.uv.sub(d.vec2f(0.5))).add(
-    d.vec2f(0.5),
-  );
+  const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
   let col = std.textureSampleBaseClampToEdge(
-    frequentLayout.$.inputTexture,
+    textureLayout.$.inputTexture,
     sampler,
     uv2,
   );
@@ -173,8 +166,8 @@ function processVideoFrame(
       storeOp: 'store',
     })
     .with(
-      frequentLayout,
-      root.createBindGroup(frequentLayout, {
+      textureLayout,
+      root.createBindGroup(textureLayout, {
         inputTexture: device.importExternalTexture({ source: video }),
       }),
     )
