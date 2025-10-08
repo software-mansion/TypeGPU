@@ -196,6 +196,41 @@ export interface WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
+  /**
+   * Creates a compute pipeline that executes the given callback. It can accept
+   * up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   * of the executing thread.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const action = root.prepareDispatch(() => {
+   *   'kernel';
+   *   console.log('Hello, GPU!');
+   * });
+   *
+   * action.dispatch();
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const action = root.prepareDispatch((x) => {
+   *   'kernel';
+   *   console.log('I am the ', x, ' thread');
+   * });
+   *
+   * action.dispatch(12); // executing 12 threads
+   * ```
+   */
+  prepareDispatch<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): PreparedDispatch<TArgs>;
+
   withVertex<
     VertexIn extends VertexInConstrained,
     VertexOut extends VertexOutConstrained,
@@ -733,41 +768,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
-
-  /**
-   * Creates a compute pipeline that executes the given callback. It can accept
-   * up to 3 parameters (x, y, z) which correspond to the global invocation ID
-   * of the executing thread.
-   *
-   * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
-   *
-   * @example
-   * If no parameters are provided, the callback will be executed once, in a single thread.
-   *
-   * ```ts
-   * const action = root.prepareDispatch(() => {
-   *   'kernel';
-   *   console.log('Hello, GPU!');
-   * });
-   *
-   * action.dispatch();
-   * ```
-   *
-   * @example
-   * One parameter means n-threads will be executed in parallel.
-   *
-   * ```ts
-   * const action = root.prepareDispatch((x) => {
-   *   'kernel';
-   *   console.log('I am the ', x, ' thread');
-   * });
-   *
-   * action.dispatch(12); // executing 12 threads
-   * ```
-   */
-  prepareDispatch<TArgs extends number[]>(
-    callback: (...args: TArgs) => undefined,
-  ): PreparedDispatch<TArgs>;
 
   /**
    * Causes all commands enqueued by pipelines to be

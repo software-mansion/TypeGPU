@@ -177,11 +177,8 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
 
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
-const mainCompute = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [1],
-})((input) => {
-  const index = input.gid.x;
+const simulate = (index: number) => {
+  'kernel';
   const instanceInfo = currentTrianglePos.value[index];
   let separation = d.vec2f();
   let alignment = d.vec2f();
@@ -250,11 +247,9 @@ const mainCompute = tgpu['~unstable'].computeFn({
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
   nextTrianglePos.value[index] = instanceInfo;
-});
+};
 
-const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
+const simulateAction = root['~unstable'].prepareDispatch(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
@@ -273,9 +268,9 @@ function frame() {
 
   even = !even;
 
-  computePipeline
+  simulateAction
     .with(computeBindGroups[even ? 0 : 1])
-    .dispatchWorkgroups(triangleAmount);
+    .dispatch(triangleAmount);
 
   renderPipeline
     .withColorAttachment({

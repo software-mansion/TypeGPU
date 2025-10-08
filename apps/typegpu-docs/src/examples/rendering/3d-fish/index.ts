@@ -3,7 +3,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
+import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { fragmentShader, vertexShader } from './render.ts';
@@ -198,9 +198,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline();
+const simulateAction = root['~unstable'].prepareDispatch(simulate);
 
 // bind groups
 
@@ -256,9 +254,9 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  computePipeline
+  simulateAction
     .with(computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
+    .dispatch(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({

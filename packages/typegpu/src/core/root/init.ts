@@ -239,6 +239,54 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
+  prepareDispatch<TArgs extends number[]>(
+    callback: (...args: TArgs) => undefined,
+  ): PreparedDispatch<TArgs> {
+    const root = this._getRoot();
+
+    if (callback.length >= 4) {
+      throw new Error('Dispatch only supports up to three dimensions.');
+    }
+
+    if (callback.length === 0) {
+      // raw WGSL instead of TGSL
+      // because we do not run unplugin before shipping typegpu package
+      const mainCompute = computeFn({
+        workgroupSize: [1],
+      })(callback as (() => undefined));
+
+      return new PreparedZeroDispatchImpl(
+        root,
+        this.withCompute(mainCompute).createPipeline(),
+      );
+    }
+
+    const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
+    const wrappedCallback = fn([u32, u32, u32])(
+      callback as (...args: number[]) => void,
+    );
+
+    const sizeUniform = root.createUniform(vec3u);
+
+    // raw WGSL instead of TGSL
+    // because we do not run unplugin before shipping typegpu package
+    const mainCompute = computeFn({
+      workgroupSize,
+      in: { id: builtin.globalInvocationId },
+    })`{
+  if (any(in.id >= sizeUniform)) {
+    return;
+  }
+  wrappedCallback(in.id.x, in.id.y, in.id.z);
+}`.$uses({ sizeUniform, wrappedCallback });
+
+    const pipeline = this
+      .withCompute(mainCompute)
+      .createPipeline();
+
+    return new PreparedDispatchImpl(root, pipeline, sizeUniform, workgroupSize);
+  }
+
   withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
@@ -778,52 +826,6 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
-  }
-
-  prepareDispatch<TArgs extends number[]>(
-    callback: (...args: TArgs) => undefined,
-  ): PreparedDispatch<TArgs> {
-    if (callback.length >= 4) {
-      throw new Error('Dispatch only supports up to three dimensions.');
-    }
-
-    if (callback.length === 0) {
-      // raw WGSL instead of TGSL
-      // because we do not run unplugin before shipping typegpu package
-      const mainCompute = computeFn({
-        workgroupSize: [1],
-      })(callback as (() => undefined));
-
-      return new PreparedZeroDispatchImpl(
-        this,
-        this.withCompute(mainCompute).createPipeline(),
-      );
-    }
-
-    const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
-    const wrappedCallback = fn([u32, u32, u32])(
-      callback as (...args: number[]) => void,
-    );
-
-    const sizeUniform = this.createUniform(vec3u);
-
-    // raw WGSL instead of TGSL
-    // because we do not run unplugin before shipping typegpu package
-    const mainCompute = computeFn({
-      workgroupSize,
-      in: { id: builtin.globalInvocationId },
-    })`{
-  if (any(in.id >= sizeUniform)) {
-    return;
-  }
-  wrappedCallback(in.id.x, in.id.y, in.id.z);
-}`.$uses({ sizeUniform, wrappedCallback });
-
-    const pipeline = this
-      .withCompute(mainCompute)
-      .createPipeline();
-
-    return new PreparedDispatchImpl(this, pipeline, sizeUniform, workgroupSize);
   }
 
   flush() {
