@@ -190,6 +190,33 @@ export class PreparedDispatchImpl<TArgs extends number[]>
   }
 }
 
+export class PreparedZeroDispatchImpl<TArgs extends number[]>
+  implements PreparedDispatch<TArgs> {
+  #root: ExperimentalTgpuRoot;
+  #pipeline: TgpuComputePipeline;
+
+  constructor(root: ExperimentalTgpuRoot, pipeline: TgpuComputePipeline) {
+    this.#root = root;
+    this.#pipeline = pipeline;
+  }
+
+  /**
+   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
+    return new PreparedZeroDispatchImpl(
+      this.#root,
+      this.#pipeline.with(bindGroup),
+    );
+  }
+
+  dispatch(): void {
+    this.#pipeline.dispatchWorkgroups(1);
+    this.#root.flush();
+  }
+}
+
 class WithBindingImpl implements WithBinding {
   constructor(
     private readonly _getRoot: () => ExperimentalTgpuRoot,
@@ -758,6 +785,19 @@ class TgpuRootImpl extends WithBindingImpl
   ): PreparedDispatch<TArgs> {
     if (callback.length >= 4) {
       throw new Error('Dispatch only supports up to three dimensions.');
+    }
+
+    if (callback.length === 0) {
+      // raw WGSL instead of TGSL
+      // because we do not run unplugin before shipping typegpu package
+      const mainCompute = computeFn({
+        workgroupSize: [1],
+      })(callback as (() => undefined));
+
+      return new PreparedZeroDispatchImpl(
+        this,
+        this.withCompute(mainCompute).createPipeline(),
+      );
     }
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
