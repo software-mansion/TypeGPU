@@ -1,7 +1,7 @@
 import type * as d from 'typegpu/data';
-import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
+import { useRoot } from './use-root';
 
 interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
@@ -19,7 +19,7 @@ function initialValueFromSchema<T extends d.AnyWgslData>(
   return schema() as d.Infer<T>;
 }
 
-export function useUniformValue<
+export function useUniformRef<
   TSchema extends d.AnyWgslData,
   TValue extends d.Infer<TSchema>,
 >(

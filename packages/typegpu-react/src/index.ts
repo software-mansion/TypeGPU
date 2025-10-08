@@ -1,3 +1,2 @@
-export { useFrame } from './use-frame.ts';
-export { useRender } from './use-render.ts';
-export { useUniformValue } from './use-uniform-value.ts';
+export { useFrame, useUniformRef, useUniform, useRoot } from './hooks';
+export { BindGroup, Pass, Canvas, RenderPipeline } from './components'
