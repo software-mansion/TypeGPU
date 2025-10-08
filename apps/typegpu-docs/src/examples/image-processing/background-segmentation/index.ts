@@ -3,13 +3,6 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const rareLayout = tgpu.bindGroupLayout({
-  sampling: { sampler: 'filtering' },
-  color: { uniform: d.vec3f },
-  threshold: { uniform: d.f32 },
-  uvTransform: { uniform: d.mat2x2f },
-});
-
 const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
@@ -51,22 +44,22 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f) },
   out: d.vec4f,
 })((input) => {
-  const uv2 = rareLayout.$.uvTransform.mul(input.uv.sub(d.vec2f(0.5))).add(
+  const uv2 = uvTransformUniform.$.mul(input.uv.sub(d.vec2f(0.5))).add(
     d.vec2f(0.5),
   );
   let col = std.textureSampleBaseClampToEdge(
     frequentLayout.$.inputTexture,
-    rareLayout.$.sampling,
+    sampler,
     uv2,
   );
   const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
-  const colycbcr = rareLayout.$.color.mul(rgbToYcbcrMatrix.$);
+  const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
 
   const crDiff = std.abs(ycbcr.y - colycbcr.y);
   const cbDiff = std.abs(ycbcr.z - colycbcr.z);
   const distance = std.length(d.vec2f(crDiff, cbDiff));
 
-  if (distance < std.pow(rareLayout.$.threshold, 2)) {
+  if (distance < std.pow(thresholdBuffer.$, 2)) {
     col = d.vec4f();
   }
 
@@ -101,26 +94,15 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
+const thresholdBuffer = root.createUniform(d.f32, 0.5);
 
-const colorBuffer = root
-  .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
-  .$usage('uniform');
+const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
 
-const uvTransformBuffer = root
-  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
-  .$usage('uniform');
+const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const sampler = device.createSampler({
+const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
-});
-
-const rareBindGroup = root.createBindGroup(rareLayout, {
-  color: colorBuffer,
-  sampling: sampler,
-  threshold: thresholdBuffer,
-  uvTransform: uvTransformBuffer,
 });
 
 const renderPipeline = root['~unstable']
@@ -151,24 +133,13 @@ function setUVTransformForIOS() {
     m = d.mat2x2f(-1, 0, 0, -1);
   }
 
-  uvTransformBuffer.write(m);
+  uvTransformUniform.write(m);
 }
 
 if (isIOS) {
   setUVTransformForIOS();
   window.addEventListener('orientationchange', setUVTransformForIOS);
 }
-
-const renderPassDescriptor: GPURenderPassDescriptor = {
-  colorAttachments: [
-    {
-      view: undefined as unknown as GPUTextureView,
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    },
-  ],
-};
 
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined = undefined;
@@ -194,15 +165,13 @@ function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
-  (
-    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
-  )[0].view = context.getCurrentTexture().createView();
-
   renderPipeline
-    .withColorAttachment(
-      renderPassDescriptor.colorAttachments[0] as GPURenderPassColorAttachment,
-    )
-    .with(rareLayout, rareBindGroup)
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
     .with(
       frequentLayout,
       root.createBindGroup(frequentLayout, {
@@ -221,7 +190,7 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 export const controls = {
   color: {
     onColorChange: (value: readonly [number, number, number]) => {
-      colorBuffer.write(d.vec3f(...value));
+      colorUniform.write(d.vec3f(...value));
     },
     initial: [0, 1, 0] as const,
   },
