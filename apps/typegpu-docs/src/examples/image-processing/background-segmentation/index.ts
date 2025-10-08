@@ -1,52 +1,11 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-
-const textureLayout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: d.textureExternal() },
-});
-
-const vertexPos = tgpu.const(d.arrayOf(d.vec2f, 6), [
-  d.vec2f(1.0, 1.0),
-  d.vec2f(1.0, -1.0),
-  d.vec2f(-1.0, -1.0),
-  d.vec2f(1.0, 1.0),
-  d.vec2f(-1.0, -1.0),
-  d.vec2f(-1.0, 1.0),
-]);
-
-const uv = tgpu.const(d.arrayOf(d.vec2f, 6), [
-  d.vec2f(1.0, 0.0),
-  d.vec2f(1.0, 1.0),
-  d.vec2f(0.0, 1.0),
-  d.vec2f(1.0, 0.0),
-  d.vec2f(0.0, 1.0),
-  d.vec2f(0.0, 0.0),
-]);
-
-const mainVert = tgpu['~unstable'].vertexFn({
-  in: { idx: d.builtin.vertexIndex },
-  out: { position: d.builtin.position, uv: d.location(0, d.vec2f) },
-})((input, Out) => {
-  const output = Out();
-  output.position = d.vec4f(vertexPos.$[input.idx], 0.0, 1.0);
-  output.uv = uv.$[input.idx];
-  return output;
-});
-
-const mainFrag = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.location(0, d.vec2f) },
-  out: d.vec4f,
-})((input) => {
-  const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
-  const col = std.textureSampleBaseClampToEdge(
-    textureLayout.$.inputTexture,
-    sampler,
-    uv2,
-  );
-
-  return col;
-});
+import { mainFrag, mainVert } from './render.ts';
+import {
+  samplerSlot,
+  textureLayout,
+  uvTransformUniformSlot,
+} from './schemas.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -84,6 +43,8 @@ const sampler = tgpu['~unstable'].sampler({
 });
 
 const renderPipeline = root['~unstable']
+  .with(samplerSlot, sampler)
+  .with(uvTransformUniformSlot, uvTransformUniform)
   .withVertex(mainVert, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
