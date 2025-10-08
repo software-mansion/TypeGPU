@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -13,7 +13,7 @@ function isEqual(e1: unknown, e2: unknown): boolean {
 
 async function test0d(): Promise<boolean> {
   const mutable = root.createMutable(d.u32);
-  prepareDispatch(root, () => {
+  root['~unstable'].prepareDispatch(() => {
     'kernel';
     mutable.$ = 126;
   }).dispatch();
@@ -24,7 +24,7 @@ async function test0d(): Promise<boolean> {
 async function test1d(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
-  prepareDispatch(root, (x) => {
+  root['~unstable'].prepareDispatch((x) => {
     'kernel';
     mutable.$[x] = x;
   }).dispatch(...size);
@@ -37,7 +37,7 @@ async function test2d(): Promise<boolean> {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
-  prepareDispatch(root, (x, y) => {
+  root['~unstable'].prepareDispatch((x, y) => {
     'kernel';
     mutable.$[x][y] = d.vec2u(x, y);
   }).dispatch(...size);
@@ -56,7 +56,7 @@ async function test3d(): Promise<boolean> {
       size[0],
     ),
   );
-  prepareDispatch(root, (x, y, z) => {
+  root['~unstable'].prepareDispatch((x, y, z) => {
     'kernel';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
   }).dispatch(...size);
@@ -69,7 +69,7 @@ async function test3d(): Promise<boolean> {
 
 async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.atomic(d.u32));
-  prepareDispatch(root, (x, y, z) => {
+  root['~unstable'].prepareDispatch((x, y, z) => {
     'kernel';
     std.atomicAdd(mutable.$, 1);
   }).dispatch(4, 3, 2);
@@ -81,7 +81,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
-  const test = prepareDispatch(root, (x: number) => {
+  const test = root['~unstable'].prepareDispatch((x: number) => {
     'kernel';
     mutable.$[x] *= 2;
   });
@@ -107,7 +107,7 @@ async function testDifferentBindGroups(): Promise<boolean> {
     buffer: buffer2,
   });
 
-  const test = prepareDispatch(root, () => {
+  const test = root['~unstable'].prepareDispatch(() => {
     'kernel';
     for (let i = d.u32(); i < std.arrayLength(layout.$.buffer); i++) {
       layout.$.buffer[i] *= 2;

@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -98,7 +98,7 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
+const randomizeFishPositionsOnGPU = root['~unstable'].prepareDispatch((x) => {
   'kernel';
   randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
   const data = ModelData({

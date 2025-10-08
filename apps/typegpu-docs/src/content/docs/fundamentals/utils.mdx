@@ -3,20 +3,20 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *prepareDispatch*
+## prepareDispatch
 
 The `prepareDispatch` function streamlines running simple computations on the GPU.
 Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with dispatch method that executes the pipeline.
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
 
-const doubleUp = prepareDispatch(root, (x) => {
+const doubleUp = root['~unstable'].prepareDispatch((x) => {
   'kernel';
   data.$[x] *= 2;
 });
@@ -39,7 +39,7 @@ Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // ---cut---
 import { randf } from '@typegpu/noise';
@@ -51,7 +51,7 @@ const waterLevelMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.f32, 512), 1024),
 );
 
-prepareDispatch(root, (x, y) => {
+root['~unstable'].prepareDispatch((x, y) => {
   'kernel';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
@@ -65,7 +65,7 @@ console.log(await waterLevelMutable.read());
 The result of `prepareDispatch` can have bind groups bound using the `with` method.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 const root = await tgpu.init();
@@ -84,7 +84,7 @@ const bindGroup2 = root.createBindGroup(layout, {
   buffer: buffer2,
 });
 
-const test = prepareDispatch(root, (x) => {
+const test = root['~unstable'].prepareDispatch((x) => {
   'kernel';
   layout.$.buffer[x] *= 2;
 });
@@ -117,25 +117,25 @@ The default workgroup sizes are:
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
 
-## *console.log*
+## console.log
 
 Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
-const compute = prepareDispatch(root, () => {
+const compute = root['~unstable'].prepareDispatch(() => {
   'kernel';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);
 });
 
-compute.dispatch(); 
+compute.dispatch();
 compute.dispatch();
 
 // Eventually...
@@ -151,7 +151,7 @@ The buffer is of fixed size, which may limit the total amount of information tha
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const presentationFormat = undefined as any;
