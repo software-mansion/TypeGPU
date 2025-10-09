@@ -124,6 +124,18 @@ describe('tgsl parsing test example', () => {
         for (var i = 0u; (i < arrayLength(&buffer_1)); i++) {
           buffer_1[i] *= 2;
         }
+      }
+
+      @group(0) @binding(0) var<storage, read_write> result_1: f32;
+
+      @compute @workgroup_size(1) fn main_0() {
+        result_1 += 1;
+      }
+
+      @group(0) @binding(0) var<storage, read_write> result_1: f32;
+
+      @compute @workgroup_size(1) fn main_0() {
+        result_1 += 3;
       }"
     `);
   });

@@ -122,6 +122,21 @@ async function testDifferentBindGroups(): Promise<boolean> {
   return isEqual(filled1, [2, 4, 6]) && isEqual(filled2, [4, 8, 16, 32]);
 }
 
+async function testSlots(): Promise<boolean> {
+  const result = root.createMutable(d.f32);
+  const valueSlot = tgpu.slot(1);
+
+  const main = () => {
+    'kernel';
+    result.$ += valueSlot.$;
+  };
+
+  root['~unstable'].prepareDispatch(main).dispatch(); // add 1
+  root['~unstable'].with(valueSlot, 3).prepareDispatch(main).dispatch(); // add 3
+
+  return await result.read() === 4;
+}
+
 async function runTests(): Promise<boolean> {
   let result = true;
   result = await test0d() && result;
@@ -131,6 +146,7 @@ async function runTests(): Promise<boolean> {
   result = await testWorkgroupSize() && result;
   result = await testMultipleDispatches() && result;
   result = await testDifferentBindGroups() && result;
+  result = await testSlots() && result;
   return result;
 }
 
