@@ -249,8 +249,6 @@ class WithBindingImpl implements WithBinding {
     }
 
     if (callback.length === 0) {
-      // raw WGSL instead of TGSL
-      // because we do not run unplugin before shipping typegpu package
       const mainCompute = computeFn({
         workgroupSize: [1],
       })(callback as (() => undefined));

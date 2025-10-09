@@ -3,7 +3,7 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## prepareDispatch
+## *prepareDispatch*
 
 The `prepareDispatch` function streamlines running simple computations on the GPU.
 Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with dispatch method that executes the pipeline.
@@ -117,7 +117,7 @@ The default workgroup sizes are:
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
 
-## console.log
+## *console.log*
 
 Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
