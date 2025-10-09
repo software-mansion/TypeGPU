@@ -172,7 +172,7 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
     const a = lineInfos.$[i - 1];
     const b = lineInfos.$[i];
     const segCenterX = (a.x + b.x) * 0.5;
-    if (std.abs(bboxCenterX.$ - segCenterX) > 0.3) {
+    if (std.abs(bboxCenterX.$ - segCenterX) > 0.13) {
       continue;
     }
     const c = controlPoints.$[i - 1];
@@ -247,6 +247,24 @@ const getMainSceneDist = (position: d.v3f) => {
   );
 };
 
+const sliderApproxDist = (position: d.v3f) => {
+  'kernel';
+  let dmin = d.f32(1e9);
+
+  for (let i = 1; i < lineInfos.$.length - 1; i++) {
+    const a = lineInfos.$[i - 1];
+    const b = lineInfos.$[i];
+
+    const dist2D = sdf.sdLine(position.xy, a, b);
+
+    const dist3D = sdf.opExtrudeZ(position, dist2D, LINE_HALF_THICK) -
+      LINE_RADIUS;
+    dmin = std.min(dmin, dist3D);
+  }
+
+  return dmin;
+};
+
 const getSceneDist = (position: d.v3f) => {
   'kernel';
   const mainScene = getMainSceneDist(position);
@@ -264,6 +282,13 @@ const getSceneDist = (position: d.v3f) => {
     hitInfo.objectType = ObjectType.BACKGROUND;
   }
   return hitInfo;
+};
+
+const getSceneDistForAO = (position: d.v3f) => {
+  'kernel';
+  const mainScene = getMainSceneDist(position);
+  const sliderApprox = sliderApproxDist(position);
+  return std.min(mainScene, sliderApprox);
 };
 
 const getNormal = (position: d.v3f) => {
@@ -305,7 +330,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
   for (let i = 1; i <= AO_STEPS; i++) {
     const sampleHeight = stepDistance * i;
     const samplePosition = std.add(position, std.mul(normal, sampleHeight));
-    const distanceToSurface = getSceneDist(samplePosition).distance - AO_BIAS;
+    const distanceToSurface = getSceneDistForAO(samplePosition) - AO_BIAS;
     const occlusionContribution = std.max(
       0.0,
       sampleHeight - distanceToSurface,
@@ -423,6 +448,21 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   let totalSteps = d.u32();
   const boxCount = boundingBoxesStorage.$.length;
 
+  let backgroundHitDist = d.f32(MAX_DIST);
+  let tempDist = d.f32();
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const p = std.add(rayOrigin, std.mul(rayDirection, tempDist));
+    const hit = getMainSceneDist(p);
+    tempDist += hit;
+    if (hit < SURF_DIST) {
+      backgroundHitDist = tempDist;
+      break;
+    }
+    if (tempDist > MAX_DIST) {
+      break;
+    }
+  }
+
   for (let boxIdx = 0; boxIdx < boxCount; boxIdx++) {
     const bbox = boundingBoxesStorage.$[boxIdx];
     const intersection = intersectBox(
@@ -436,9 +476,19 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       continue;
     }
 
-    distanceFromOrigin = std.max(distanceFromOrigin, intersection.tMin);
+    if (backgroundHitDist < intersection.tMin) {
+      continue;
+    }
+
+    distanceFromOrigin = std.max(
+      distanceFromOrigin,
+      intersection.tMin,
+    );
     bboxCenterX.$ = (bbox.min.x + bbox.max.x) * 0.5;
-    const maxMarchDist = intersection.tMax;
+    const maxMarchDist = std.min(
+      intersection.tMax + 5 * SURF_DIST,
+      backgroundHitDist,
+    );
 
     let hitInfo = HitInfo();
 
@@ -544,6 +594,22 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         break;
       }
     }
+  }
+
+  if (backgroundHitDist < MAX_DIST) {
+    const hitPosition = std.add(
+      rayOrigin,
+      std.mul(rayDirection, backgroundHitDist),
+    );
+    const normal = getNormalMain(hitPosition);
+    const litColor = calculateLighting(hitPosition, normal, rayOrigin);
+    const ao = calculateAO(hitPosition, normal);
+    const finalColor = std.mul(litColor, ao);
+
+    return MarchingResult({
+      color: d.vec4f(finalColor, 1.0),
+      hitPos: hitPosition,
+    });
   }
 
   return MarchingResult();

@@ -367,8 +367,8 @@ export class Slider {
   }
 
   #computeBoundingBoxes() {
-    const thickness = 0.1;
-    const zDepth = 0.19;
+    const thickness = 0.07;
+    const zDepth = 0.18;
 
     for (let i = 0; i < this.n - 1; i++) {
       const p0 = this.#pos[i];
@@ -416,14 +416,9 @@ export class Slider {
     };
 
     const sortedBoxes = this.#boundingBoxes.map((bbox, index) => {
-      const centerX = (bbox.min.x + bbox.max.x) * 0.5;
-      const centerY = (bbox.min.y + bbox.max.y) * 0.5;
-      const centerZ = (bbox.min.z + bbox.max.z) * 0.5;
-
-      const dx = centerX - CAMERA_POS.x;
-      const dy = centerY - CAMERA_POS.y;
-      const dz = centerZ - CAMERA_POS.z;
-      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const center = bbox.min.add(bbox.max).mul(0.5);
+      const delta = center.sub(CAMERA_POS);
+      const dist = std.length(delta);
 
       return { bbox, dist, index };
     }).sort((a, b) => a.dist - b.dist);

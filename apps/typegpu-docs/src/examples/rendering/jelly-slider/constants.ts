@@ -7,7 +7,7 @@ export const SURF_DIST = 0.001;
 
 // Lighting constants
 export const AMBIENT_COLOR = d.vec3f(1);
-export const AMBIENT_INTENSITY = 0.3;
+export const AMBIENT_INTENSITY = 0.2;
 export const SPECULAR_POWER = 32.0;
 export const SPECULAR_INTENSITY = 0.4;
 
@@ -22,7 +22,7 @@ export const MAX_INTERNAL_STEPS = 20;
 export const AO_STEPS = 4;
 export const AO_RADIUS = 0.2;
 export const AO_INTENSITY = 0.8;
-export const AO_BIAS = SURF_DIST * 4.0;
+export const AO_BIAS = SURF_DIST * 5;
 
 // Line/slider constants
 export const LINE_RADIUS = 0.024;
