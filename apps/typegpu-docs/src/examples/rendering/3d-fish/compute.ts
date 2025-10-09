@@ -25,24 +25,21 @@ export const computeShader = tgpu['~unstable'].computeFn({
     }
 
     const other = layout.$.currentFishData[i];
-    const dist = std.length(std.sub(fishData.position, other.position));
+    const dist = std.length(fishData.position.sub(other.position));
     if (dist < layout.$.fishBehavior.separationDist) {
-      separation = std.add(
-        separation,
-        std.sub(fishData.position, other.position),
-      );
+      separation = separation.add(fishData.position.sub(other.position));
     }
     if (dist < layout.$.fishBehavior.alignmentDist) {
-      alignment = std.add(alignment, other.direction);
+      alignment = alignment.add(other.direction);
       alignmentCount = alignmentCount + 1;
     }
     if (dist < layout.$.fishBehavior.cohesionDist) {
-      cohesion = std.add(cohesion, other.position);
+      cohesion = cohesion.add(other.position);
       cohesionCount = cohesionCount + 1;
     }
   }
   if (alignmentCount > 0) {
-    alignment = std.mul(1 / d.f32(alignmentCount), alignment);
+    alignment = alignment.mul(1 / d.f32(alignmentCount));
   }
   if (cohesionCount > 0) {
     cohesion = std.sub(
@@ -60,12 +57,12 @@ export const computeShader = tgpu['~unstable'].computeFn({
 
     if (axisPosition > axisAquariumSize - distance) {
       const str = axisPosition - (axisAquariumSize - distance);
-      wallRepulsion = std.sub(wallRepulsion, std.mul(str, repulsion));
+      wallRepulsion = wallRepulsion.sub(repulsion.mul(str));
     }
 
     if (axisPosition < -axisAquariumSize + distance) {
       const str = -axisAquariumSize + distance - axisPosition;
-      wallRepulsion = std.add(wallRepulsion, std.mul(str, repulsion));
+      wallRepulsion = wallRepulsion.add(repulsion.mul(str));
     }
   }
 
@@ -74,10 +71,10 @@ export const computeShader = tgpu['~unstable'].computeFn({
       fishData.position,
       layout.$.mouseRay.line,
     );
-    const diff = std.sub(fishData.position, proj);
+    const diff = fishData.position.sub(proj);
     const limit = p.fishMouseRayRepulsionDistance;
     const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
-    rayRepulsion = std.mul(str, std.normalize(diff));
+    rayRepulsion = std.normalize(diff).mul(str);
   }
 
   let direction = d.vec3f(fishData.direction);
