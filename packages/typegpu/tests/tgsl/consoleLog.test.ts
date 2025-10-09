@@ -33,7 +33,7 @@ describe('wgslGenerator with console.log', () => {
     `);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is currently only supported in compute pipelines.",
+      "'console.log' is only supported when resolving pipelines.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
@@ -265,7 +265,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      
+
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {

@@ -42,7 +42,6 @@ import {
   isMat,
   isMatInstance,
   isNaturallyRef,
-  isNumericSchema,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -205,11 +204,6 @@ export function accessProp(
         ? 'constant'
         : 'runtime',
     );
-  }
-
-  if (target.dataType.type === 'bool' || isNumericSchema(target.dataType)) {
-    // No props to be accessed here
-    return undefined;
   }
 
   const propLength = propName.length;

@@ -161,7 +161,7 @@ describe('3d fish example', () => {
           }
         }
         if ((alignmentCount > 0)) {
-          alignment = ((1f / f32(alignmentCount)) * alignment);
+          alignment = (alignment * (1f / f32(alignmentCount)));
         }
         if ((cohesionCount > 0)) {
           cohesion = (((1f / f32(cohesionCount)) * cohesion) - (*fishData).position);
@@ -174,11 +174,11 @@ describe('3d fish example', () => {
           const distance = 0.1;
           if ((axisPosition > (axisAquariumSize - distance))) {
             var str = (axisPosition - (axisAquariumSize - distance));
-            wallRepulsion = (wallRepulsion - (str * repulsion));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
           }
           if ((axisPosition < (-axisAquariumSize + distance))) {
             var str = ((-axisAquariumSize + distance) - axisPosition);
-            wallRepulsion = (wallRepulsion + (str * repulsion));
+            wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
         if ((mouseRay_5.activated == 1)) {
@@ -186,7 +186,7 @@ describe('3d fish example', () => {
           var diff = ((*fishData).position - proj);
           const limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);
-          rayRepulsion = (str * normalize(diff));
+          rayRepulsion = (normalize(diff) * str);
         }
         var direction = (*fishData).direction;
         direction = (direction + (separation * fishBehavior_3.separationStr));

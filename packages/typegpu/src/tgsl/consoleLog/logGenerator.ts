@@ -38,9 +38,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
     return undefined;
   }
   generateLog(): Snippet {
-    console.warn(
-      "'console.log' is currently only supported in compute pipelines.",
-    );
+    console.warn("'console.log' is only supported when resolving pipelines.");
     return snip('/* console.log() */', Void, /* ref */ 'runtime');
   }
 }

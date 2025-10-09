@@ -335,7 +335,9 @@ export function tryConvertSnippet(
 
   if (!converted) {
     throw new WgslTypeError(
-      `Cannot convert value of type '${snippet.dataType}' to type '${targetDataType.type}'`,
+      `Cannot convert value of type '${
+        String(snippet.dataType)
+      }' to type '${targetDataType.type}'`,
     );
   }
 

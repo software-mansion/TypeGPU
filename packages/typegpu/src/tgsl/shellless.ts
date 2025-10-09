@@ -22,6 +22,10 @@ function shallowEqualSchemas(a: AnyData, b: AnyData): boolean {
     return a.elementCount === b.elementCount &&
       shallowEqualSchemas(a.elementType as AnyData, b.elementType as AnyData);
   }
+  if (a.type === 'struct' && b.type === 'struct') {
+    // Only structs with the same identity are considered equal
+    return a === b;
+  }
   return true;
 }
 
