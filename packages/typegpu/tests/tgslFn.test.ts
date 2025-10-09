@@ -776,8 +776,8 @@ describe('TGSL tgpu.fn function', () => {
 
 describe('tgpu.fn arguments', () => {
   it('casts u32', () => {
-    const fn = tgpu['~unstable'].fn([d.u32], d.f32)((e) => {
-      'kernel & js';
+    const fn = tgpu.fn([d.u32], d.f32)((e) => {
+      'use gpu';
       return e;
     });
 
@@ -788,8 +788,8 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a float vector', () => {
     const vec = d.vec3f(1, 2, 3);
-    const fn = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((e) => {
-      'kernel & js';
+    const fn = tgpu.fn([d.vec3f], d.vec3f)((e) => {
+      'use gpu';
       return e;
     });
 
@@ -801,8 +801,8 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a bool vector', () => {
     const vec = d.vec4b(false, true, false, true);
-    const fn = tgpu['~unstable'].fn([d.vec4b], d.vec4b)((e) => {
-      'kernel & js';
+    const fn = tgpu.fn([d.vec4b], d.vec4b)((e) => {
+      'use gpu';
       return e;
     });
 
@@ -814,8 +814,8 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a matrix', () => {
     const mat = d.mat2x2f(1, 2, 3, 7);
-    const fn = tgpu['~unstable'].fn([d.mat2x2f], d.mat2x2f)((e) => {
-      'kernel & js';
+    const fn = tgpu.fn([d.mat2x2f], d.mat2x2f)((e) => {
+      'use gpu';
       return e;
     });
 
@@ -827,11 +827,11 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a deep copy of a struct', () => {
     const struct = { prop: d.vec2f(1, 2) };
-    const fn = tgpu['~unstable'].fn(
+    const fn = tgpu.fn(
       [d.struct({ prop: d.vec2f })],
       d.struct({ prop: d.vec2f }),
     )((e) => {
-      'kernel & js';
+      'use gpu';
       return e;
     });
 
@@ -847,8 +847,8 @@ describe('tgpu.fn arguments', () => {
       nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }),
     });
     const struct = schema({ nested: { prop1: d.vec2f(1, 2), prop2: 21 } });
-    const fn = tgpu['~unstable'].fn([schema], schema)((e) => {
-      'kernel & js';
+    const fn = tgpu.fn([schema], schema)((e) => {
+      'use gpu';
       return e;
     });
 
@@ -862,12 +862,12 @@ describe('tgpu.fn arguments', () => {
   // TODO: make it work
   // it('returns a deep copy of an array', () => {
   //   const array = [d.vec2f(), d.vec2f()];
-  //   const fn = tgpu['~unstable'].fn(
+  //   const fn = tgpu.fn(
   //     [d.arrayOf(d.vec2f, 2)],
   //     d.arrayOf(d.vec2f, 2),
   //   )(
   //     (e) => {
-  //       'kernel & js';
+  //       'use gpu';
   //       return e;
   //     },
   //   );
@@ -881,9 +881,9 @@ describe('tgpu.fn arguments', () => {
 
   it('does not modify its argument', () => {
     const vec = d.vec3f();
-    const fn = tgpu['~unstable'].fn([d.vec3f])(
+    const fn = tgpu.fn([d.vec3f])(
       (e) => {
-        'kernel & js';
+        'use gpu';
         const copy = e; // in WGSL, this would copy the value, in JS it only copies the reference
         copy[0] = 1;
       },
@@ -916,9 +916,9 @@ describe('tgpu.fn called top-level', () => {
 });
 
 describe('tgsl fn when using plugin', () => {
-  it('can be invoked for a constant with "kernel" directive', () => {
+  it('can be invoked for a constant with "use gpu" directive', () => {
     const addKernelJs = (x: number, y: number) => {
-      'kernel';
+      'use gpu';
       return x + y;
     };
 

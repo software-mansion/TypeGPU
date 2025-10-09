@@ -7,7 +7,7 @@ const counter = root.createMutable(d.u32);
 
 // A 0-dimentional shader function
 const incrementKernel = prepareDispatch(root, () => {
-  'kernel';
+  'use gpu';
   counter.$ += 1;
 });
 
