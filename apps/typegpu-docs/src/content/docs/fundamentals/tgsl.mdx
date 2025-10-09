@@ -1,5 +1,5 @@
 ---
-title: JS Kernels
+title: TS Kernels
 description: Guide on using JavaScript for WebGPU function definitions.
 ---
 
@@ -8,10 +8,29 @@ This feature is under heavy development and is yet to reach stability.
 :::
 
 :::note[Requires unplugin-typegpu]
-To use JS kernels, you need to install and configure [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu).
+To use TS kernels, you need to install and configure [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu).
 :::
 
-**JS Kernels** are functions marked with the `'kernel'` directive, picked up by our dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) and transformed into a format TypeGPU can understand.
+**TS Kernels** are functions marked with the `'kernel'` directive, picked up by our dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) and transformed into a format TypeGPU can understand.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+function manhattanDistance(a: d.v3f, b: d.v3f) {
+  'tgpu';
+  const dx = std.abs(a.x - b.x);
+  const dy = std.abs(a.y - b.y);
+  const dz = std.abs(a.z - b.z);
+
+  return std.max(dx, std.max(dy, dz));
+}
+```
+
+TypeGPU already provides a set of standard kernels under `typegpu/std`, which you can use in your own kernels. Our goal is for all kernels to have matching
+behavior on the CPU and GPU, which unlocks many possibilities.
+
+There are three main ways to use kernels.
 
 ```ts twoslash
 import tgpu, { prepareDispatch } from 'typegpu';
@@ -27,6 +46,7 @@ function manhattanDistance(a: d.v3f, b: d.v3f) {
   return std.max(dx, std.max(dy, dz));
 }
 
+// ---cut---
 // #1) Can be called in JS
 const dist = manhattanDistance(d.vec3f(1, 2, 3), d.vec3f(6, 5, 4));
 
@@ -41,15 +61,28 @@ prepareDispatch(root, () => {
 const wgsl = tgpu.resolve({ externals: { manhattanDistance } });
 ````
 
-Let's answer a few questions right off the bat:
-- **Do I need to write in TypeScript?** - TypeScript types themselves don't have any effect on the generated WGSL.
+The contents of the `wgsl` variable will be the following:
+
+```wgsl
+// Generated WGSL
+fn manhattanDistance(a: vec3f, b: vec3f) -> f32 {
+  let dx = abs(a.x - b.x);
+  let dy = abs(a.y - b.y);
+  let dz = abs(a.z - b.z);
+
+  return max(dx, max(dy, dz));
+}
+````
+
+You can already notice a few things about TS Kernels:
+- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers.
+- TS types are properly inferred, feel free to hover over the variables to see their types.
+- The generated code closely matches your source code.
 
 ## Anatomy of a kernel
 
-
-
 :::note
-JS kernels are picked up by `unplugin-typegpu` during bundling, their AST is compacted into our custom format called [tinyest](https://www.npmjs.com/package/tinyest) and injected
+TS kernels are picked up by `unplugin-typegpu` during bundling, their AST is compacted into our custom format called [tinyest](https://www.npmjs.com/package/tinyest) and injected
 into the user code. This metadata is then used to generate equivalent WGSL at runtime efficiently.
 :::
 

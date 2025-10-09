@@ -76,7 +76,7 @@ const workgroupSizeConfigs = [
  */
 export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
-  callback: (...args: TArgs) => undefined,
+  callback: (...args: TArgs) => void,
 ): PreparedDispatch<TArgs> {
   if (callback.length >= 4) {
     throw new Error('Dispatch only supports up to three dimensions.');
