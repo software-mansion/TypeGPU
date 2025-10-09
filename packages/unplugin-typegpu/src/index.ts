@@ -131,7 +131,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           const magicString = new MagicStringAST(code);
 
           walk(ast, {
-            enter(_node, _parent, prop, index) {
+            enter(_node, _parent, _prop, _index) {
               const node = _node as acorn.AnyNode;
               const parent = _parent as acorn.AnyNode;
 

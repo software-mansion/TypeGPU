@@ -842,8 +842,7 @@ describe('wgslGenerator', () => {
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
       'kernel';
-      // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
-      for (let i = 0; i < 10; i += 1) ;
+      for (let i = 0; i < 10; i += 1);
     };
 
     const gen = provideCtx(
@@ -928,7 +927,6 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for pointer value assignment', () => {
     const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
-      // biome-ignore  lint/style/noParameterAssign: go away
       val += 1;
     });
 

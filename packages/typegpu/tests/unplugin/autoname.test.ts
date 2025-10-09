@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { struct } from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
@@ -126,7 +126,8 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    let layout ;
+    // biome-ignore lint/style/useConst: it's a test
+    let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
         foo: { uniform: d.vec3f },

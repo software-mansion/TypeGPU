@@ -1,6 +1,6 @@
 import type { Infer, MemIdentity } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type {
+import {
   $gpuRepr,
   $memIdent,
   $repr,

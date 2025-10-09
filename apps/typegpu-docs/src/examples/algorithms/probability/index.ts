@@ -17,10 +17,9 @@ const replot = async (
   currentDistribution: Distribution,
   animate = false,
 ) => {
-  let samples ;
   const prng = getPRNG(currentDistribution);
 
-  samples = await executor.executeMoreWorkers(prng.prng);
+  const samples = await executor.executeMoreWorkers(prng.prng);
   await plotter.plot(samples, prng, animate);
 };
 

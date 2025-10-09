@@ -16,6 +16,9 @@
     "rules": {
       "recommended": true,
       "correctness": {
+        "noUnusedVariables": "off",
+        "noUnusedFunctionParameters": "off",
+        "useParseIntRadix": "off",
         "noUnusedImports": "error",
         "useImportExtensions": "error"
       },
