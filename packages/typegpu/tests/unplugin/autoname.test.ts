@@ -126,7 +126,7 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    let layout = undefined;
+    let layout ;
     layout = tgpu
       .bindGroupLayout({
         foo: { uniform: d.vec3f },
