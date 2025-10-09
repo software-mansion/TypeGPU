@@ -13,9 +13,9 @@ import {
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  useGpuDirective,
 } from './common.ts';
 
 type FunctionNode =
@@ -29,7 +29,7 @@ function containsKernelDirective(node: FunctionNode): boolean {
     for (const statement of node.body.body) {
       if (
         statement.type === 'ExpressionStatement' &&
-        statement.directive === kernelDirective
+        statement.directive === useGpuDirective
       ) {
         return true;
       }
@@ -46,7 +46,7 @@ function removeKernelDirective(node: FunctionNode) {
       (statement) =>
         !(
           statement.type === 'ExpressionStatement' &&
-          statement.directive === kernelDirective
+          statement.directive === useGpuDirective
         ),
     );
   }

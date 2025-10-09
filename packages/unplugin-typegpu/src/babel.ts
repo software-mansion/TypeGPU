@@ -12,9 +12,9 @@ import {
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  useGpuDirective,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -26,7 +26,7 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function containsKernelDirective(
+function containsUseGpuDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
@@ -36,7 +36,7 @@ function containsKernelDirective(
     'directives' in node.body ? (node.body?.directives ?? []) : []
   )
     .map((directive) => directive.value.value))
-    .includes(kernelDirective);
+    .includes(useGpuDirective);
 }
 
 function i(identifier: string): babel.Identifier {
@@ -148,7 +148,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     ArrowFunctionExpression(path) {
       const node = path.node;
       const parent = path.parentPath.node;
-      if (containsKernelDirective(node)) {
+      if (containsUseGpuDirective(node)) {
         path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
@@ -157,7 +157,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionExpression(path) {
       const node = path.node;
       const parent = path.parentPath.node;
-      if (containsKernelDirective(node)) {
+      if (containsUseGpuDirective(node)) {
         path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
@@ -172,7 +172,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.body,
       );
 
-      if (containsKernelDirective(path.node) && node.id) {
+      if (containsUseGpuDirective(path.node) && node.id) {
         path.replaceWith(
           types.variableDeclaration('const', [
             types.variableDeclarator(

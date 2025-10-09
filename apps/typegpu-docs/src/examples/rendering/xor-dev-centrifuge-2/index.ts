@@ -24,7 +24,7 @@ import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 
  * of the <10, -10> range.
  */
 const safeTanh = (v: d.v3f) => {
-  'kernel';
+  'use gpu';
   return select(tanh(v), sign(v), gt(abs(v), d.vec3f(10)));
 };
 

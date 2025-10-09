@@ -99,7 +99,7 @@ const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
 const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
-  'kernel';
+  'use gpu';
   randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
   const data = ModelData({
     position: d.vec3f(

@@ -82,7 +82,7 @@ const calculateWeights = (
   end: number,
   featherUV: number,
 ) => {
-  'kernel';
+  'use gpu';
   const inside = 1 -
     std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
@@ -91,7 +91,7 @@ const calculateWeights = (
 };
 
 const applyTint = (color: d.v3f, tint: d.Infer<typeof TintParams>) => {
-  'kernel';
+  'use gpu';
   return std.mix(d.vec4f(color, 1), d.vec4f(tint.color, 1), tint.strength);
 };
 
@@ -102,7 +102,7 @@ const sampleWithChromaticAberration = (
   dir: d.v2f,
   blur: number,
 ) => {
-  'kernel';
+  'use gpu';
   const samples = d.arrayOf(d.vec3f, 3)();
   for (let i = 0; i < 3; i++) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);

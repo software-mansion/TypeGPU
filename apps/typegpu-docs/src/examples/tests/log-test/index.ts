@@ -51,28 +51,28 @@ export const controls = {
   'One argument': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log(d.u32(321));
       }).dispatch(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log(1, d.vec3u(2, 3, 4), 5, 6);
       }).dispatch(),
   },
   'String literals': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log(2, 'plus', 3, 'equals', 5);
       }).dispatch(),
   },
   'Two logs': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log('First log.');
         console.log('Second log.');
       }).dispatch(),
@@ -80,7 +80,7 @@ export const controls = {
   'Different types': {
     onButtonClick: () =>
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log('--- scalars ---');
         console.log(d.f32(3.14));
         console.log(d.i32(-2_000_000_000));
@@ -129,7 +129,7 @@ export const controls = {
       const ComplexArray = d.arrayOf(SimpleArray, 3);
 
       prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
 
@@ -150,7 +150,7 @@ export const controls = {
   'Two threads': {
     onButtonClick: () =>
       prepareDispatch(root, (x) => {
-        'kernel';
+        'use gpu';
         console.log('Log from thread', x);
       }).dispatch(2),
   },
@@ -158,7 +158,7 @@ export const controls = {
     onButtonClick: async () => {
       const indexUniform = root.createUniform(d.u32);
       const test = prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         console.log('Log from dispatch', indexUniform.$);
       });
       for (let i = 0; i < 100; i++) {
@@ -171,7 +171,7 @@ export const controls = {
     onButtonClick: async () => {
       const logCountUniform = root.createUniform(d.u32);
       const test = prepareDispatch(root, () => {
-        'kernel';
+        'use gpu';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
           console.log('Log index', i + 1, 'out of', logCountUniform.$);
         }
@@ -231,7 +231,7 @@ export const controls = {
   'Too many logs': {
     onButtonClick: () =>
       prepareDispatch(root, (x) => {
-        'kernel';
+        'use gpu';
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);
         console.log('Log 3 from thread', x);

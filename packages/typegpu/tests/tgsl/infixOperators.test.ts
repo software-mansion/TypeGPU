@@ -74,12 +74,12 @@ describe('wgslGenerator', () => {
 
   it('resolves mul infix operator on a function return value', () => {
     const getVec = tgpu.fn([], d.vec3f)(() => {
-      'kernel';
+      'use gpu';
       return d.vec3f(1, 2, 3);
     });
 
     const testFn = tgpu.fn([])(() => {
-      'kernel';
+      'use gpu';
       const v1 = getVec().mul(getVec());
     });
 
@@ -98,7 +98,7 @@ describe('wgslGenerator', () => {
     const Struct = d.struct({ vec: d.vec3f });
 
     const testFn = tgpu.fn([])(() => {
-      'kernel';
+      'use gpu';
       const s = Struct({ vec: d.vec3f() });
       const v1 = s.vec.mul(s.vec);
     });

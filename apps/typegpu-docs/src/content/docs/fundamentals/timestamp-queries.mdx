@@ -7,7 +7,7 @@ description: How to use timestamp queries to measure the performance of your pip
 This feature is under heavy development and is yet to reach stability.
 :::
 
-To measure kernel execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
+To measure shader execution time, you can use **timestamp queries**, which instruct compute or render passes to write timestamps at the start and end of execution. By reading back these timestamps, you can calculate the pipeline’s execution duration in nanoseconds.
 
 :::tip
 To use performance callbacks and timestamp queries, you must enable the `timestamp-query` feature on your GPU device. See [Enabling Features](/TypeGPU/fundamentals/enabling-features) for details.
@@ -15,7 +15,7 @@ To use performance callbacks and timestamp queries, you must enable the `timesta
 
 TypeGPU offers two ways to employ timestamp queries:
 
-1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method  
+1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method
 2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
 
 ## Performance callbacks

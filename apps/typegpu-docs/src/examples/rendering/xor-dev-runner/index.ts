@@ -26,7 +26,7 @@ import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh }
  * of the <10, -10> range.
  */
 const safeTanh = (v: number) => {
-  'kernel';
+  'use gpu';
   return select(tanh(v), sign(v), abs(v) > 10);
 };
 

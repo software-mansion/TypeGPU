@@ -32,41 +32,41 @@ const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
 
 const isValidCoord = (x: number, y: number): boolean => {
-  'kernel';
+  'use gpu';
   return x < gridSize && x >= 0 && y < gridSize && y >= 0;
 };
 
 const coordsToIndex = (x: number, y: number) => {
-  'kernel';
+  'use gpu';
   return x + y * gridSize;
 };
 
 const getCell = (x: number, y: number): d.v4f => {
-  'kernel';
+  'use gpu';
   return inputGridSlot.$[coordsToIndex(x, y)];
 };
 
 const setCell = (x: number, y: number, value: d.v4f) => {
-  'kernel';
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index] = value;
 };
 
 const setVelocity = (x: number, y: number, velocity: d.v2f) => {
-  'kernel';
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].x = velocity.x;
   outputGridSlot.$[index].y = velocity.y;
 };
 
 const addDensity = (x: number, y: number, density: number) => {
-  'kernel';
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
 };
 
 const flowFromCell = (myX: number, myY: number, x: number, y: number) => {
-  'kernel';
+  'use gpu';
   if (!isValidCoord(x, y)) {
     return 0;
   }
@@ -102,7 +102,7 @@ const obstacles = root.createReadonly(BoxObstacleArray);
 const time = root.createUniform(d.f32);
 
 const isInsideObstacle = (x: number, y: number): boolean => {
-  'kernel';
+  'use gpu';
   for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
     const obs = obstacles.$[obsIdx];
 
@@ -124,7 +124,7 @@ const isInsideObstacle = (x: number, y: number): boolean => {
 };
 
 const isValidFlowOut = (x: number, y: number): boolean => {
-  'kernel';
+  'use gpu';
   if (!isValidCoord(x, y)) {
     return false;
   }
@@ -137,7 +137,7 @@ const isValidFlowOut = (x: number, y: number): boolean => {
 };
 
 const computeVelocity = (x: number, y: number): d.v2f => {
-  'kernel';
+  'use gpu';
   const gravityCost = 0.5;
 
   const neighborOffsets = [
@@ -325,7 +325,7 @@ const sourceParams = root.createUniform(d.struct({
 }));
 
 const getMinimumInFlow = (x: number, y: number): number => {
-  'kernel';
+  'use gpu';
   const gridSizeF = d.f32(gridSize);
   const sourceRadius = std.max(1, sourceParams.$.radius * gridSizeF);
   const sourcePos = d.vec2f(

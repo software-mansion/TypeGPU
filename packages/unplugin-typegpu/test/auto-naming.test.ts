@@ -296,17 +296,17 @@ describe('[BABEL] auto naming', () => {
   it('works with functions', () => {
     const code = `\
       const myFun1 = () => {
-        'kernel';
+        'use gpu';
         return 0;
       };
 
       const myFun2 = function () {
-        'kernel';
+        'use gpu';
         return 0;
       };
 
       function myFun3() {
-        'kernel';
+        'use gpu';
         return 0;
       }
     `;
@@ -314,7 +314,7 @@ describe('[BABEL] auto naming', () => {
     expect(babelTransform(code, { autoNamingEnabled: true }))
       .toMatchInlineSnapshot(`
         "const myFun1 = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-          'kernel';
+          'use gpu';
 
           return 0;
         }, {
@@ -326,7 +326,7 @@ describe('[BABEL] auto naming', () => {
           }
         }) && $.f)({});
         const myFun2 = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function () {
-          'kernel';
+          'use gpu';
 
           return 0;
         }, {
@@ -338,7 +338,7 @@ describe('[BABEL] auto naming', () => {
           }
         }) && $.f)({});
         const myFun3 = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
-          'kernel';
+          'use gpu';
 
           return 0;
         }, {
@@ -649,17 +649,17 @@ describe('[ROLLUP] auto naming', () => {
   it('works with functions', async () => {
     const code = `\
       const myFun1 = () => {
-        'kernel';
+        'use gpu';
         return 0;
       };
 
       const myFun2 = function () {
-        'kernel';
+        'use gpu';
         return 0;
       };
 
       function myFun3() {
-        'kernel';
+        'use gpu';
         return 0;
       }
 
@@ -669,7 +669,7 @@ describe('[ROLLUP] auto naming', () => {
     expect(await rollupTransform(code, { autoNamingEnabled: true }))
       .toMatchInlineSnapshot(`
         "const myFun1 = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                'kernel';
+                'use gpu';
                 return 0;
               }), {
                       v: 1,
@@ -679,7 +679,7 @@ describe('[ROLLUP] auto naming', () => {
                     }) && $.f)({}));
 
               const myFun2 = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function () {
-                'kernel';
+                'use gpu';
                 return 0;
               }), {
                       v: 1,
@@ -689,7 +689,7 @@ describe('[ROLLUP] auto naming', () => {
                     }) && $.f)({}));
 
               const myFun3 = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun3() {
-                'kernel';
+                'use gpu';
                 return 0;
               }), {
                       v: 1,
