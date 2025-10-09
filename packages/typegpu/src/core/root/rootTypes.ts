@@ -221,7 +221,7 @@ export interface WithBinding {
    * ```ts
    * const action = root.prepareDispatch((x) => {
    *   'kernel';
-   *   console.log('I am the ', x, ' thread');
+   *   console.log('I am the', x, 'thread');
    * });
    *
    * action.dispatch(12); // executing 12 threads
