@@ -114,7 +114,7 @@ function draw(timestamp: number) {
   time.write(timestamp * 0.0002 % DEPTH);
 
   renderPipelines[activeSharpenFn]
-    .with(dynamicLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',

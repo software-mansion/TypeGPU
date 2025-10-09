@@ -97,7 +97,7 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *   const group = root.createBindGroup(dynamicLayout, { ...perlinCache.bindings });
  *
  *   pipeline
- *     .with(dynamicLayout, group)
+ *     .with(group)
  *     // ...
  *     .draw(3);
  * };
@@ -202,7 +202,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       });
 
       computePipeline
-        .with(computeLayout, computeBindGroup)
+        .with(computeBindGroup)
         .dispatchWorkgroups(size.x, size.y, size.z);
 
       return memory;
