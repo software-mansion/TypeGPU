@@ -13,7 +13,7 @@ describe('tgsl parsing test example', () => {
     const shaderCodes = await runExampleTest({
       category: 'tests',
       name: 'dispatch',
-      expectedCalls: 6,
+      expectedCalls: 9,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
