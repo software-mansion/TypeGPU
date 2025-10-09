@@ -300,8 +300,8 @@ function render() {
       storeOp: 'store',
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
-    .with(renderLayout, renderBindGroup)
-    .with(textureLayout, textureBindGroup)
+    .with(renderBindGroup)
+    .with(textureBindGroup)
     .draw(cubeVertices.length);
 
   pipeline
@@ -312,8 +312,8 @@ function render() {
       storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
-    .with(renderLayout, renderBindGroup)
-    .with(textureLayout, textureBindGroup)
+    .with(renderBindGroup)
+    .with(textureBindGroup)
     .draw(vertexBuffer.dataType.elementCount);
 
   root['~unstable'].flush();

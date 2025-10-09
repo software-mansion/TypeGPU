@@ -16,7 +16,7 @@ catalogs:
   test:
     vitest: ^3.2.4
   frontend:
-    'vite-imagetools': ^7.1.0
+    'vite-imagetools': ^9.0.0
     'fuse.js': ^7.1.0
   example:
     'wgpu-matrix': ^3.4.0

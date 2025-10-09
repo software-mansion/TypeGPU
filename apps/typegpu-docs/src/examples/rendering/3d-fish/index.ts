@@ -257,7 +257,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   cameraBuffer.write(camera);
 
   computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
+    .with(computeBindGroups[odd ? 1 : 0])
     .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
 
   renderPipeline
@@ -280,7 +280,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
     .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
+    .with(renderOceanFloorBindGroup)
     .draw(oceanFloorModel.polygonCount, 1);
 
   renderPipeline
@@ -303,7 +303,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
+    .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
   root['~unstable'].flush();
