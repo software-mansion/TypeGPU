@@ -618,6 +618,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       internals.priors.indexBuffer;
 
     const pass = this.setupRenderPass();
+    const { logResources } = internals.core.unwrap();
     const { branch } = internals.core.options;
 
     if (isGPUBuffer(buffer)) {
@@ -640,6 +641,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     );
 
     pass.end();
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+    }
 
     internals.priors.performanceCallback
       ? triggerPerformanceCallback({
