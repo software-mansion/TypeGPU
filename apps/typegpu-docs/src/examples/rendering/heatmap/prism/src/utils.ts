@@ -10,3 +10,20 @@ export function createTransformMatrix(
     model: d.mat4x4f.translation(translation).mul(d.mat4x4f.scaling(scale)),
   };
 }
+
+export function createLineListFromTriangleList(
+  indexBufferData: number[],
+): number[] {
+  const lineList = [];
+  for (let i = 0; i < indexBufferData.length; i += 3) {
+    lineList.push(
+      indexBufferData[i],
+      indexBufferData[i + 1],
+      indexBufferData[i + 1],
+      indexBufferData[i + 2],
+      indexBufferData[i + 2],
+      indexBufferData[i],
+    );
+  }
+  return lineList;
+}

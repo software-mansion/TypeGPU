@@ -30,6 +30,7 @@ export const DEFAULT_PLOT_CONFIG: PlotConfig = {
   xZeroPlane: false,
   yZeroPlane: false,
   zZeroPlane: false,
+  topology: 'all',
   basePlanesTranslation: d.vec3f(0, -0.01, 0),
   basePlanesScale: d.vec3f(2.01),
   basePlotsTranslation: d.vec3f(),
@@ -44,6 +45,7 @@ export const PLANE_GRID_CONFIG: GridConfig = {
   zRange: { min: -1, max: 1 },
   yCallback: () => 0,
   colorCallback: () => DEFAULT_PLANE_COLOR,
+  edgeColorCallback: () => d.vec4f(),
 };
 export const IDENTITY_SCALE_TRANSFORM: ScaleTransform = {
   offset: d.vec3f(),

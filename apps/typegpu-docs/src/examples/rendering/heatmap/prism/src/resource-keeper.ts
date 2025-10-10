@@ -25,7 +25,7 @@ interface DepthAndMsaa {
 
 interface PlanesResources {
   vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
-  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
+  indexBuffer: TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag;
   xZero: {
     transformUniform: TgpuBuffer<typeof s.Transform> & UniformFlag;
     bindgroup: TgpuBindGroup<(typeof layout)['entries']>;
@@ -42,8 +42,10 @@ interface PlanesResources {
 
 interface SurfaceResources {
   vertexBuffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag;
-  indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag;
-  indexCount: number;
+  triangleIndexBuffer: TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag;
+  lineIndexBuffer: TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag;
+  triangleIndexCount: number;
+  lineIndexCount: number;
 }
 
 export class ResourceKeeper {
@@ -87,26 +89,37 @@ export class ResourceKeeper {
   createSurfaceStackResources(
     surfaces: {
       vertices: d.Infer<typeof s.Vertex>[];
-      indices: number[];
+      triangleIndices: number[];
+      lineIndices: number[];
     }[],
   ): void {
-    for (const { vertices, indices } of surfaces) {
+    for (const { vertices, triangleIndices, lineIndices } of surfaces) {
       const vertexBuffer = this.#root.createBuffer(
         vertexLayout.schemaForCount(vertices.length),
         vertices,
       ).$usage(
         'vertex',
       );
-      const indexBuffer = this.#root.createBuffer(
-        d.arrayOf(d.u16, indices.length),
-        indices,
+      const triangleIndexBuffer = this.#root.createBuffer(
+        d.arrayOf(d.u32, triangleIndices.length),
+        triangleIndices,
       ).$usage(
         'index',
       );
+
+      const lineIndexBuffer = this.#root.createBuffer(
+        d.arrayOf(d.u32, lineIndices.length),
+        lineIndices,
+      ).$usage(
+        'index',
+      );
+
       this.#surfaceStack.push({
         vertexBuffer,
-        indexBuffer,
-        indexCount: indices.length,
+        triangleIndexBuffer,
+        triangleIndexCount: triangleIndices.length,
+        lineIndexBuffer,
+        lineIndexCount: lineIndices.length,
       });
     }
   }
@@ -114,7 +127,8 @@ export class ResourceKeeper {
   resetSurfaceStack(): void {
     for (const surface of this.#surfaceStack) {
       surface.vertexBuffer.destroy();
-      surface.indexBuffer.destroy();
+      surface.triangleIndexBuffer.destroy();
+      surface.lineIndexBuffer.destroy();
     }
     this.#surfaceStack = [];
   }
@@ -213,7 +227,7 @@ export class ResourceKeeper {
     ).$usage('vertex');
 
     const indexBuffer = this.#root.createBuffer(
-      d.arrayOf(d.u16, 6),
+      d.arrayOf(d.u32, 6),
       gridIndices,
     ).$usage('index');
 

@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 export const Vertex = d.struct({
   position: d.vec4f,
   color: d.vec4f,
+  edgeColor: d.vec4f,
 });
 
 export const Camera = d.struct({

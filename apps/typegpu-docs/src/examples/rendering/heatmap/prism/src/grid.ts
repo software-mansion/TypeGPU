@@ -24,6 +24,7 @@ export class GridSurface implements ISurface {
     let vertices = this.#createGrid();
     vertices = this.#populateGridY(vertices);
     vertices = this.#populateGridColor(vertices);
+    vertices = this.#populateGridEdgeColor(vertices);
     return vertices;
   }
 
@@ -55,7 +56,8 @@ export class GridSurface implements ISurface {
     const vertices = zs.flatMap((z) =>
       xs.map((x) => ({
         position: d.vec4f(x, 0, z, 1),
-        color: d.vec4f(0),
+        color: d.vec4f(),
+        edgeColor: d.vec4f(),
       }))
     );
 
@@ -72,8 +74,14 @@ export class GridSurface implements ISurface {
         const bottomLeft = (i + 1) * nx + j;
         const bottomRight = (i + 1) * nx + (j + 1);
 
-        indices.push(topLeft, bottomLeft, bottomRight);
-        indices.push(topLeft, bottomRight, topRight);
+        indices.push(
+          topLeft,
+          bottomLeft,
+          bottomRight,
+          topLeft,
+          bottomRight,
+          topRight,
+        );
       }
     }
 
@@ -86,6 +94,15 @@ export class GridSurface implements ISurface {
     return vertices.map((vertex) => ({
       ...vertex,
       color: this.#gridConfig.colorCallback(vertex.position.y),
+    }));
+  }
+
+  #populateGridEdgeColor(
+    vertices: d.Infer<typeof s.Vertex>[],
+  ): d.Infer<typeof s.Vertex>[] {
+    return vertices.map((vertex) => ({
+      ...vertex,
+      edgeColor: this.#gridConfig.edgeColorCallback(vertex.position.y),
     }));
   }
 

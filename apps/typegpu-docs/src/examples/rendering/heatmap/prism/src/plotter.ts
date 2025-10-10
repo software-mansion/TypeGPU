@@ -15,12 +15,18 @@ import type {
   ISurface,
   PlotConfig,
 } from './types.ts';
-import { fragmentFn, vertexFn } from './shaders.ts';
+import {
+  fragmentFn,
+  lineFragmentFn,
+  lineVertexFn,
+  vertexFn,
+} from './shaders.ts';
 import { layout, vertexLayout } from './layouts.ts';
 import * as c from './constants.ts';
 import { EventHandler } from './event-handler.ts';
 import { ResourceKeeper } from './resource-keeper.ts';
 import type * as s from './structures.ts';
+import { createLineListFromTriangleList } from './utils.ts';
 
 export class Plotter implements IPlotter {
   readonly #context: GPUCanvasContext;
@@ -30,8 +36,8 @@ export class Plotter implements IPlotter {
   readonly #eventHandler: EventHandler;
   #root!: TgpuRoot;
   #resourceKeeper!: ResourceKeeper;
-  #backgroundRenderPipeline!: TgpuRenderPipeline;
-  #noBackgroudRenderPipeline!: TgpuRenderPipeline;
+  #triangleRenderPipeline!: TgpuRenderPipeline;
+  #lineRenderPipeline!: TgpuRenderPipeline;
   #plotConfig!: PlotConfig;
   #bindedFrameFunction!: () => void;
   #keepRendering = false;
@@ -96,13 +102,13 @@ export class Plotter implements IPlotter {
     let yScale = 1;
     let zScale = 1;
 
-    if (xScaler.type === 'affine') {
+    if (xScaler.type === 'affine' && X.length) {
       ({ offset: xOffset, scale: xScale } = xScaler.fit(X));
     }
-    if (yScaler.type === 'affine') {
+    if (yScaler.type === 'affine' && Y.length) {
       ({ offset: yOffset, scale: yScale } = yScaler.fit(Y));
     }
-    if (zScaler.type === 'affine') {
+    if (zScaler.type === 'affine' && Z.length) {
       ({ offset: zOffset, scale: zScale } = zScaler.fit(Z));
     }
 
@@ -137,10 +143,14 @@ export class Plotter implements IPlotter {
     }
 
     this.#resourceKeeper.createSurfaceStackResources(
-      surfaces.map((surface, i) => ({
-        vertices: vertexBuffers[i],
-        indices: surface.getIndexBufferData(),
-      })),
+      surfaces.map((surface, i) => {
+        const triangleIndices = surface.getIndexBufferData();
+        return {
+          vertices: vertexBuffers[i],
+          triangleIndices,
+          lineIndices: createLineListFromTriangleList(triangleIndices),
+        };
+      }),
     );
   }
 
@@ -214,25 +224,54 @@ export class Plotter implements IPlotter {
 
   #render() {
     const emptySurfaceStack = this.#resourceKeeper.surfaceStack.length === 0;
+    const topology = this.#plotConfig.topology;
     if (!emptySurfaceStack) {
       const firstSurface = this.#resourceKeeper.surfaceStack[0];
-      this.#drawObject(
-        firstSurface.vertexBuffer,
-        this.#resourceKeeper.bindgroup,
-        firstSurface.indexBuffer,
-        firstSurface.indexCount,
-        'clear',
-        true,
-      );
-      for (const surface of this.#resourceKeeper.surfaceStack.slice(1)) {
+
+      if (topology === 'triangle' || topology === 'all') {
         this.#drawObject(
-          surface.vertexBuffer,
+          firstSurface.vertexBuffer,
           this.#resourceKeeper.bindgroup,
-          surface.indexBuffer,
-          surface.indexCount,
-          'load',
-          true,
+          firstSurface.triangleIndexBuffer,
+          firstSurface.triangleIndexCount,
+          'clear',
+          'triangle',
         );
+
+        for (const surface of this.#resourceKeeper.surfaceStack.slice(1)) {
+          this.#drawObject(
+            surface.vertexBuffer,
+            this.#resourceKeeper.bindgroup,
+            surface.triangleIndexBuffer,
+            surface.triangleIndexCount,
+            'load',
+            'triangle',
+          );
+        }
+      }
+
+      const lineFirstLoadOp = topology === 'line' ? 'clear' : 'load';
+
+      if (topology === 'line' || topology === 'all') {
+        this.#drawObject(
+          firstSurface.vertexBuffer,
+          this.#resourceKeeper.bindgroup,
+          firstSurface.lineIndexBuffer,
+          firstSurface.lineIndexCount,
+          lineFirstLoadOp,
+          'line',
+        );
+
+        for (const surface of this.#resourceKeeper.surfaceStack.slice(1)) {
+          this.#drawObject(
+            surface.vertexBuffer,
+            this.#resourceKeeper.bindgroup,
+            surface.lineIndexBuffer,
+            surface.lineIndexCount,
+            'load',
+            'line',
+          );
+        }
       }
     }
 
@@ -252,7 +291,7 @@ export class Plotter implements IPlotter {
         planes.indexBuffer,
         6,
         xLoadOp,
-        true,
+        'triangle',
       );
     }
 
@@ -263,7 +302,7 @@ export class Plotter implements IPlotter {
         planes.indexBuffer,
         6,
         zLoadOp,
-        true,
+        'triangle',
       );
     }
 
@@ -274,7 +313,7 @@ export class Plotter implements IPlotter {
         planes.indexBuffer,
         6,
         yLoadOp,
-        true,
+        'triangle',
       );
     }
   }
@@ -282,15 +321,15 @@ export class Plotter implements IPlotter {
   #drawObject(
     buffer: TgpuBuffer<d.WgslArray<typeof s.Vertex>> & VertexFlag,
     group: TgpuBindGroup<typeof layout.entries>,
-    indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag,
+    indexBuffer: TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag,
     vertexCount: number,
     loadOp: 'clear' | 'load',
-    includeBackground: boolean,
+    topology: 'line' | 'triangle' = 'triangle',
   ): void {
     const resources = this.#resourceKeeper;
-    const pipeline = includeBackground
-      ? this.#backgroundRenderPipeline
-      : this.#noBackgroudRenderPipeline;
+    const pipeline = topology === 'triangle'
+      ? this.#triangleRenderPipeline
+      : this.#lineRenderPipeline;
 
     pipeline
       .withColorAttachment({
@@ -313,7 +352,7 @@ export class Plotter implements IPlotter {
   }
 
   #createRenderPipelines(): void {
-    this.#backgroundRenderPipeline = this.#root['~unstable']
+    this.#triangleRenderPipeline = this.#root['~unstable']
       .withVertex(vertexFn, vertexLayout.attrib)
       .withFragment(fragmentFn, {
         format: this.#presentationFormat,
@@ -324,7 +363,7 @@ export class Plotter implements IPlotter {
             operation: 'add',
           },
           alpha: {
-            srcFactor: 'one',
+            srcFactor: 'src-alpha',
             dstFactor: 'one-minus-src-alpha',
             operation: 'add',
           },
@@ -337,22 +376,25 @@ export class Plotter implements IPlotter {
       })
       .withMultisample({
         count: 4,
+      })
+      .withPrimitive({
+        topology: 'triangle-list',
       })
       .createPipeline();
 
-    this.#noBackgroudRenderPipeline = this.#root['~unstable']
-      .withVertex(vertexFn, vertexLayout.attrib)
-      .withFragment(fragmentFn, {
+    this.#lineRenderPipeline = this.#root['~unstable']
+      .withVertex(lineVertexFn, vertexLayout.attrib)
+      .withFragment(lineFragmentFn, {
         format: this.#presentationFormat,
         blend: {
           color: {
             srcFactor: 'src-alpha',
-            dstFactor: 'zero',
+            dstFactor: 'one-minus-src-alpha',
             operation: 'add',
           },
           alpha: {
-            srcFactor: 'one',
-            dstFactor: 'zero',
+            srcFactor: 'src-alpha',
+            dstFactor: 'one-minus-src-alpha',
             operation: 'add',
           },
         },
@@ -364,6 +406,9 @@ export class Plotter implements IPlotter {
       })
       .withMultisample({
         count: 4,
+      })
+      .withPrimitive({
+        topology: 'line-list',
       })
       .createPipeline();
   }

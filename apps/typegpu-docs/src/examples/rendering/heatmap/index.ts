@@ -1,7 +1,7 @@
 import * as d from 'typegpu/data';
 
 import { Plotter } from './prism/src/plotter.ts';
-import { predefinedSurfaces } from './prism/src/surfaces.ts';
+import { predefinedSurfaces } from './prism/src/examples/surfaces.ts';
 import { Scalers } from './prism/src/scalers.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -11,19 +11,20 @@ await plotter.init();
 
 plotter.addPlots(
   [
-    predefinedSurfaces.powerOfTwo,
+    predefinedSurfaces.normal,
   ],
   {
-    xScaler: Scalers.IdentityScaler,
-    yScaler: Scalers.LogScaler,
-    zScaler: Scalers.IdentityScaler,
+    xScaler: Scalers.MinMaxScaler,
+    yScaler: Scalers.SignPreservingScaler,
+    zScaler: Scalers.MinMaxScaler,
     xZeroPlane: false,
-    yZeroPlane: false,
     zZeroPlane: false,
+    yZeroPlane: true,
+    topology: 'all',
     basePlanesTranslation: d.vec3f(0, -0.01, 0),
-    basePlanesScale: d.vec3f(8.01),
+    basePlanesScale: d.vec3f(2.01),
     basePlotsTranslation: d.vec3f(),
-    basePlotsScale: d.vec3f(2),
+    basePlotsScale: d.vec3f(2, 1, 2),
   },
 );
 plotter.startRenderLoop();

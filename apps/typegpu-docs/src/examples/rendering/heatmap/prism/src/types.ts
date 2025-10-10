@@ -16,6 +16,7 @@ export interface PlotConfig {
   basePlanesScale: d.v3f;
   basePlotsTranslation: d.v3f;
   basePlotsScale: d.v3f;
+  topology: 'triangle' | 'line' | 'all';
   xScaler: IScaler;
   yScaler: IScaler;
   zScaler: IScaler;
@@ -68,6 +69,10 @@ export interface GridConfig {
    * be aware that colorCallback is applied after scaling
    */
   colorCallback: (y: number) => d.v4f;
+  /**
+   * be aware that edgeColorCallback is applied after scaling
+   */
+  edgeColorCallback: (y: number) => d.v4f;
 }
 
 export interface Range {
