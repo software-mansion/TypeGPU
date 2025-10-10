@@ -15,7 +15,7 @@ describe('tgpu.const', () => {
     `);
   });
 
-  it('allows accessing constants in tgsl through .value', () => {
+  it('allows accessing constants in tgsl through .$', () => {
     const Boid = d.struct({
       pos: d.vec3f,
       vel: d.vec3u,
@@ -41,9 +41,9 @@ describe('tgpu.const', () => {
       const boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
       fn func() {
-        var pos = boid;
-        var vel = boid.vel;
-        const velX = boid.vel.x;
+        let pos = (&boid);
+        let vel = (&boid.vel);
+        var velX = boid.vel.x;
       }"
     `);
   });
