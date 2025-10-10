@@ -153,11 +153,11 @@ let depthTexture = root.device.createTexture({
 
 function render() {
   computeCollisionsPipeline
-    .with(computeLayout, dynamicResourcesBox.data.computeCollisionsBindGroup)
+    .with(dynamicResourcesBox.data.computeCollisionsBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   computeGravityPipeline
-    .with(computeLayout, dynamicResourcesBox.data.computeGravityBindGroup)
+    .with(dynamicResourcesBox.data.computeGravityBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   skyBoxPipeline
@@ -184,7 +184,7 @@ function render() {
       depthStoreOp: 'store',
     })
     .with(renderVertexLayout, sphereVertexBuffer)
-    .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
+    .with(dynamicResourcesBox.data.renderBindGroup)
     .draw(sphereVertexCount, celestialBodiesCount);
 }
 

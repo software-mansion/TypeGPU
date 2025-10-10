@@ -273,7 +273,7 @@ describe('TgpuRoot', () => {
         .withVertex(mainVertexUsing, {})
         .withFragment(mainFragment, {})
         .createPipeline()
-        .with(layout, group);
+        .with(group);
 
       root.beginRenderPass(
         {

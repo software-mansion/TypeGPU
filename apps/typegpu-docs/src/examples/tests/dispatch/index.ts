@@ -114,8 +114,8 @@ async function testDifferentBindGroups(): Promise<boolean> {
     }
   });
 
-  test.with(layout, bindGroup1).dispatch();
-  test.with(layout, bindGroup2).dispatch();
+  test.with(bindGroup1).dispatch();
+  test.with(bindGroup2).dispatch();
 
   const filled1 = await buffer1.read();
   const filled2 = await buffer2.read();
