@@ -1,15 +1,11 @@
-import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout, ModelData } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
 
-export const computeShader = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [p.workGroupSize],
-})((input) => {
-  const fishIndex = input.gid.x;
+export const simulate = (fishIndex: number) => {
+  'kernel';
   // TODO: replace it with struct copy when Chromium is fixed
   const fishData = ModelData({
     position: layout.$.currentFishData[fishIndex].position,
@@ -131,4 +127,4 @@ export const computeShader = tgpu['~unstable'].computeFn({
   );
   fishData.position = std.add(fishData.position, translation);
   layout.$.nextFishData[fishIndex] = fishData;
-});
+};
