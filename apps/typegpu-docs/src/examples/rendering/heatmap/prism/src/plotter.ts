@@ -8,7 +8,13 @@ import type {
   VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { CameraConfig, IPlotter, ISurface, PlotConfig } from './types.ts';
+import type {
+  CameraConfig,
+  IPlotter,
+  IScaler,
+  ISurface,
+  PlotConfig,
+} from './types.ts';
 import { fragmentFn, vertexFn } from './shaders.ts';
 import { layout, vertexLayout } from './layouts.ts';
 import * as c from './constants.ts';
@@ -29,6 +35,11 @@ export class Plotter implements IPlotter {
   #plotConfig!: PlotConfig;
   #bindedFrameFunction!: () => void;
   #keepRendering = false;
+  readonly #coordsToNumMap = new Map<string, number>([
+    ['x', 0],
+    ['y', 1],
+    ['z', 2],
+  ]);
 
   constructor(canvas: HTMLCanvasElement, cameraConfig?: CameraConfig) {
     this.#canvas = canvas;
@@ -84,6 +95,7 @@ export class Plotter implements IPlotter {
     let xScale = 1;
     let yScale = 1;
     let zScale = 1;
+
     if (xScaler.type === 'affine') {
       ({ offset: xOffset, scale: xScale } = xScaler.fit(X));
     }
@@ -113,40 +125,15 @@ export class Plotter implements IPlotter {
     let vertexBuffers = surfaces.map((surface) =>
       surface.getVertexBufferData()
     );
+
     if (xScaler.type === 'non-affine') {
-      vertexBuffers = vertexBuffers.map((vertices) =>
-        vertices.map((vertex) => ({
-          ...vertex,
-          position: d.vec4f(
-            xScaler.transform(vertex.position.x),
-            vertex.position.yzw,
-          ),
-        }))
-      );
+      vertexBuffers = this.#applyNonAffine(vertexBuffers, xScaler, 'x');
     }
     if (yScaler.type === 'non-affine') {
-      vertexBuffers = vertexBuffers.map((vertices) =>
-        vertices.map((vertex) => ({
-          ...vertex,
-          position: d.vec4f(
-            vertex.position.x,
-            yScaler.transform(vertex.position.y),
-            vertex.position.zw,
-          ),
-        }))
-      );
+      vertexBuffers = this.#applyNonAffine(vertexBuffers, yScaler, 'y');
     }
     if (zScaler.type === 'non-affine') {
-      vertexBuffers = vertexBuffers.map((vertices) =>
-        vertices.map((vertex) => ({
-          ...vertex,
-          position: d.vec4f(
-            vertex.position.xy,
-            zScaler.transform(vertex.position.z),
-            vertex.position.w,
-          ),
-        }))
-      );
+      vertexBuffers = this.#applyNonAffine(vertexBuffers, zScaler, 'z');
     }
 
     this.#resourceKeeper.createSurfaceStackResources(
@@ -186,6 +173,26 @@ export class Plotter implements IPlotter {
     this.#resourceKeeper.updateCameraUniform(
       this.#cameraConfig,
       this.#canvas.clientWidth / this.#canvas.clientHeight,
+    );
+  }
+
+  #applyNonAffine(
+    vertexBuffers: (d.Infer<typeof s.Vertex>[])[],
+    scaler: Extract<IScaler, { type: 'non-affine' }>,
+    coord: 'x' | 'y' | 'z',
+  ): (d.Infer<typeof s.Vertex>[])[] {
+    return vertexBuffers.map((vertices) =>
+      vertices.map((vertex) => {
+        const newPos = vertex.position;
+        //biome-ignore lint/style/noNonNullAssertion: it's hardcoded map
+        newPos[this.#coordsToNumMap.get(coord)!] = scaler.transform(
+          vertex.position[coord],
+        );
+        return {
+          ...vertex,
+          position: newPos,
+        };
+      })
     );
   }
 
