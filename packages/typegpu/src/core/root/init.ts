@@ -190,33 +190,6 @@ export class PreparedDispatchImpl<TArgs extends number[]>
   }
 }
 
-export class PreparedZeroDispatchImpl<TArgs extends number[]>
-  implements PreparedDispatch<TArgs> {
-  #root: ExperimentalTgpuRoot;
-  #pipeline: TgpuComputePipeline;
-
-  constructor(root: ExperimentalTgpuRoot, pipeline: TgpuComputePipeline) {
-    this.#root = root;
-    this.#pipeline = pipeline;
-  }
-
-  /**
-   * Returns a new PreparedDispatch with the specified bind group bound.
-   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
-   */
-  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
-    return new PreparedZeroDispatchImpl(
-      this.#root,
-      this.#pipeline.with(bindGroup),
-    );
-  }
-
-  dispatch(): void {
-    this.#pipeline.dispatchWorkgroups(1);
-    this.#root.flush();
-  }
-}
-
 class WithBindingImpl implements WithBinding {
   constructor(
     private readonly _getRoot: () => ExperimentalTgpuRoot,
@@ -246,17 +219,6 @@ class WithBindingImpl implements WithBinding {
 
     if (callback.length >= 4) {
       throw new Error('Dispatch only supports up to three dimensions.');
-    }
-
-    if (callback.length === 0) {
-      const mainCompute = computeFn({
-        workgroupSize: [1],
-      })(callback as (() => undefined));
-
-      return new PreparedZeroDispatchImpl(
-        root,
-        this.withCompute(mainCompute).createPipeline(),
-      );
     }
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
