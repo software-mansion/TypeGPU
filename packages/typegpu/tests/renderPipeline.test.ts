@@ -481,7 +481,7 @@ describe('TgpuRenderPipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const vertexFn = tgpu['~unstable'].vertexFn({
@@ -504,7 +504,7 @@ describe('TgpuRenderPipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
     });
 

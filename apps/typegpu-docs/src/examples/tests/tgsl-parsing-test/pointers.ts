@@ -5,7 +5,6 @@ import * as std from 'typegpu/std';
 const SimpleStruct = d.struct({ vec: d.vec2f });
 
 const modifyNumFn = tgpu.fn([d.ptrFn(d.u32)])((ptr) => {
-  // biome-ignore lint/style/noParameterAssign: it's just a test
   ptr += 1;
 });
 
@@ -19,7 +18,6 @@ const modifyStructFn = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
 
 const privateNum = tgpu.privateVar(d.u32);
 const modifyNumPrivate = tgpu.fn([d.ptrPrivate(d.u32)])((ptr) => {
-  // biome-ignore lint/style/noParameterAssign: it's just a test
   ptr += 1;
 });
 

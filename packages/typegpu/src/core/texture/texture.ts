@@ -275,6 +275,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   usableAsRender = false;
 
   #formatInfo: TextureFormatInfo;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: wdym, it is used 10 lines below
   #byteSize: number;
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;

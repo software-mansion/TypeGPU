@@ -1,15 +1,14 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.2.5/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "ignore": [
-      "**/dist/*",
-      "**/coverage/*",
-      "**/*.d.ts",
-      "packages/tgpu-wgsl-parser/src/grammar.ts",
-      "**/*.astro"
+    "includes": [
+      "**",
+      "!**/dist/**/*",
+      "!**/coverage/**/*",
+      "!**/*.d.ts",
+      "!**/packages/tgpu-wgsl-parser/src/grammar.ts",
+      "!**/*.astro"
     ]
   },
   "linter": {
@@ -17,6 +16,9 @@
     "rules": {
       "recommended": true,
       "correctness": {
+        "noUnusedVariables": "off",
+        "noUnusedFunctionParameters": "off",
+        "useParseIntRadix": "off",
         "noUnusedImports": "error",
         "useImportExtensions": "error"
       },

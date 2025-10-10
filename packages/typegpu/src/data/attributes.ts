@@ -8,7 +8,7 @@ import type {
   MemIdentity,
 } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
-import type {
+import {
   $gpuRepr,
   $invalidSchemaReason,
   $memIdent,

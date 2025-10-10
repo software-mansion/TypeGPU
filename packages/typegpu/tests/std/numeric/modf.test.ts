@@ -7,7 +7,7 @@ import type { v3h } from '../../../src/data/wgslTypes.ts';
 
 describe('modf', () => {
   it('gets inferred correctly', () => {
-    let err: Error | undefined = undefined;
+    let err: Error | undefined;
     try {
       const x = modf(1);
       expectTypeOf(x).toEqualTypeOf<{ fract: number; whole: number }>();

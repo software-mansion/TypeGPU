@@ -164,7 +164,7 @@ describe('TgpuComputePipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
@@ -182,7 +182,7 @@ describe('TgpuComputePipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
     });
   });
