@@ -346,6 +346,8 @@ describe('wgslGenerator', () => {
     const main = () => {
       'kernel';
       for (let i = 0; i < 10; i += 1) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
       }
     };
 
@@ -374,6 +376,8 @@ describe('wgslGenerator', () => {
       'kernel';
       let i = 0;
       for (; i < 10; i += 1) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
       }
     };
 
@@ -842,7 +846,10 @@ describe('wgslGenerator', () => {
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
       'kernel';
-      for (let i = 0; i < 10; i += 1);
+      for (let i = 0; i < 10; i += 1) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
     };
 
     const gen = provideCtx(

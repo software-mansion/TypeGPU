@@ -20,7 +20,7 @@ const DeleteIcon = () => {
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: This is just an animation
     <div
-      className='m-0 flex cursor-pointer select-none items-center justify-center rounded-md p-2 transition-colors duration-200 hover:bg-accent'
+      className='flex cursor-pointer select-none items-center justify-center rounded-md p-2 transition-colors duration-200 hover:bg-accent'
       onMouseEnter={() => controls.start('animate')}
       onMouseLeave={() => controls.start('normal')}
     >
