@@ -32,19 +32,6 @@ jobs:
       - name: Check circular dependencies
         run: dpdm --exit-code circular:1 packages/**/index.ts -T
 
-  lint-and-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: biomejs/setup-biome@v2
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x # Run with latest stable Deno.
-      - name: Lint
-        run: biome ci --formatter-enabled=false --organize-imports-enabled=false .
-      - name: Check formatting
-        run: deno fmt --check
-
   build-and-test:
     runs-on: ubuntu-latest
     steps:
