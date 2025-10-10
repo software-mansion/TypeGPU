@@ -301,8 +301,8 @@ describe('TGSL tgpu.fn function', () => {
 
       @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
         var index = input.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
+        const iterationF = 0f;
+        const sign = 0;
         var change = vec4f();
       }"
     `);
@@ -328,8 +328,8 @@ describe('TGSL tgpu.fn function', () => {
 
       @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
         var index = _arg_0.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
+        const iterationF = 0f;
+        const sign = 0;
         var change = vec4f();
       }"
     `);
@@ -672,7 +672,7 @@ describe('TGSL tgpu.fn function', () => {
 
       fn callAddOnes() {
         var someVec = vec3f(1, 2, 3);
-        addOnes(&someVec);
+        addOnes((&someVec));
       }"
     `);
   });
@@ -973,10 +973,9 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:bar
-      - call:foo
       - fn:foo
-      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
-      `);
+      - fn:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+    `);
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
@@ -996,13 +995,10 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:two
       - fn:two
-      - call:three
       - fn:three
-      - call:inner
       - fn:inner
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
   });
 
@@ -1028,9 +1024,8 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:fallbackFn
       - fn:fallbackFn
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
 
     const boundOne = one.with(flagSlot, true);

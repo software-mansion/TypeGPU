@@ -72,11 +72,11 @@ describe('TGSL', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
-        var f = 0f;
-        var h = 0h;
-        var i = 0i;
-        var u = 0u;
-        var b = false;
+        const f = 0f;
+        const h = 0h;
+        const i = 0i;
+        const u = 0u;
+        const b = false;
       }"
     `);
   });

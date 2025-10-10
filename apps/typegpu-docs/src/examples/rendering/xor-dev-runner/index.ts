@@ -78,7 +78,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     const p = sub(mul(z, dir), scale.$);
     p.x -= time.$ + 3;
     p.z -= time.$ + 3;
-    let q = p;
+    let q = d.vec3f(p);
     let prox = p.y;
     for (let i = 40.1; i > 0.01; i *= 0.2) {
       q = sub(i * 0.9, abs(sub(mod(q, i + i), i)));

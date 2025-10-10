@@ -53,17 +53,17 @@ describe('boids next example', () => {
           if ((i == index)) {
             continue;
           }
-          var other = currentTrianglePos_1[i];
-          var dist = distance(instanceInfo.position, other.position);
+          let other = (&currentTrianglePos_1[i]);
+          var dist = distance(instanceInfo.position, (*other).position);
           if ((dist < paramsBuffer_3.separationDistance)) {
-            separation = (separation + (instanceInfo.position - other.position));
+            separation = (separation + (instanceInfo.position - (*other).position));
           }
           if ((dist < paramsBuffer_3.alignmentDistance)) {
-            alignment = (alignment + other.velocity);
+            alignment = (alignment + (*other).velocity);
             alignmentCount++;
           }
           if ((dist < paramsBuffer_3.cohesionDistance)) {
-            cohesion = (cohesion + other.position);
+            cohesion = (cohesion + (*other).position);
             cohesionCount++;
           }
         }

@@ -46,8 +46,8 @@ describe('stable-fluid example', () => {
         var velocity = textureLoad(src_1, pixelPos, 0);
         var timeStep = simParams_3.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity.xy));
-        var clampedPos = clamp(prevPos, vec2f(-0.5), vec2f((vec2f(texSize.xy) - vec2f(0.5))));
-        var normalizedPos = ((clampedPos + vec2f(0.5)) / vec2f(texSize.xy));
+        var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - 0.5));
+        var normalizedPos = ((clampedPos + 0.5) / vec2f(texSize.xy));
         var prevVelocity = textureSampleLevel(src_1, linSampler_5, normalizedPos, 0);
         textureStore(dst_2, pixelPos, prevVelocity);
       }
@@ -240,14 +240,14 @@ describe('stable-fluid example', () => {
       }
 
       @fragment fn fragmentImageFn_3(input: fragmentImageFn_Input_7) -> @location(0) vec4f {
-        var pixelStep = 0.001953125f;
+        const pixelStep = 0.001953125f;
         var leftSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x - pixelStep), input.uv.y)).x;
         var rightSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x + pixelStep), input.uv.y)).x;
         var upSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y + pixelStep))).x;
         var downSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y - pixelStep))).x;
         var gradientX = (rightSample - leftSample);
         var gradientY = (upSample - downSample);
-        var distortStrength = 0.8;
+        const distortStrength = 0.8;
         var distortVector = vec2f(gradientX, gradientY);
         var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -distortStrength)));
         var outputColor = textureSample(background_6, linSampler_5, vec2f(distortedUV.x, (1 - distortedUV.y)));

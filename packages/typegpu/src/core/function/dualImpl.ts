@@ -5,15 +5,11 @@ import {
   type Snippet,
 } from '../../data/snippet.ts';
 import { inCodegenMode } from '../../execMode.ts';
-import { type FnArgsConversionHint, getOwnSnippet } from '../../types.ts';
+import { type FnArgsConversionHint, isKnownAtComptime } from '../../types.ts';
 import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-
-function isKnownAtComptime(value: unknown): boolean {
-  return typeof value !== 'string' && getOwnSnippet(value) === undefined;
-}
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -52,6 +48,12 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
     ) => { argTypes: AnyData[]; returnType: AnyData });
+  /**
+   * Whether the function should skip trying to execute the "normal" implementation if
+   * all arguments are known at compile time.
+   * @default false
+   */
+  readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
 }
 
@@ -73,22 +75,25 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       : options.signature;
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
-    const converted = argSnippets.map((s, idx) =>
-      tryConvertSnippet(
-        s,
-        argTypes[idx] as AnyData,
-        !options.ignoreImplicitCastWarning,
-      )
-    ) as MapValueToSnippet<Parameters<T>>;
+    const converted = argSnippets.map((s, idx) => {
+      const argType = argTypes[idx] as AnyData | undefined;
+      if (!argType) {
+        throw new Error('Function called with invalid arguments');
+      }
+      return tryConvertSnippet(s, argType, !options.ignoreImplicitCastWarning);
+    }) as MapValueToSnippet<Parameters<T>>;
 
     if (
-      converted.every((s) => isKnownAtComptime(s.value)) &&
+      !options.noComptime &&
+      converted.every((s) => isKnownAtComptime(s)) &&
       typeof options.normalImpl === 'function'
     ) {
       try {
         return snip(
           options.normalImpl(...converted.map((s) => s.value) as never[]),
           returnType,
+          // Functions give up ownership of their return value
+          /* ref */ 'constant',
         );
       } catch (e) {
         // cpuImpl may in some cases be present but implemented only partially.
@@ -100,7 +105,12 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       }
     }
 
-    return snip(options.codegenImpl(...converted), returnType);
+    return snip(
+      options.codegenImpl(...converted),
+      returnType,
+      // Functions give up ownership of their return value
+      /* ref */ 'runtime',
+    );
   };
 
   const impl = ((...args: Parameters<T>) => {
@@ -119,6 +129,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     value: {
       jsImpl: options.normalImpl,
       gpuImpl,
+      strictSignature: typeof options.signature !== 'function'
+        ? options.signature
+        : undefined,
       argConversionHint: 'keep',
     },
   });

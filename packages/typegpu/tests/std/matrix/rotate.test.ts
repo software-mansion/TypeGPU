@@ -16,7 +16,7 @@ describe('rotate', () => {
 
     expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
@@ -32,7 +32,7 @@ describe('rotate', () => {
 
     expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(cos(angle), 0, -sin(angle), 0, 0, 1, 0, 0, sin(angle), 0, cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
@@ -48,7 +48,7 @@ describe('rotate', () => {
 
     expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);

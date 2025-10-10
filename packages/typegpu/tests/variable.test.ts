@@ -123,8 +123,8 @@ var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));
       var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
       fn func() {
-        var pos = boid;
-        var vel = boid.vel;
+        let pos = (&boid);
+        let vel = (&boid.vel);
         var velX = boid.vel.x;
       }"
     `);

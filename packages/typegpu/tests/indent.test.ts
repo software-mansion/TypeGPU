@@ -116,8 +116,8 @@ describe('indents', () => {
 
       fn main_0() {
         for (var i = 0; (i < 100); i++) {
-          var particle = systemData_1.particles[i];
-          systemData_1.particles[i] = updateParicle_4(particle, systemData_1.gravity, systemData_1.deltaTime);
+          let particle = (&systemData_1.particles[i]);
+          systemData_1.particles[i] = updateParicle_4((*particle), systemData_1.gravity, systemData_1.deltaTime);
         }
       }"
     `);
@@ -241,8 +241,8 @@ describe('indents', () => {
       fn main_0() {
         incrementCounter_1();
         for (var i = 0; (i < 100); i++) {
-          var particle = systemData_3.particles[i];
-          systemData_3.particles[i] = updateParticle_7(particle, systemData_3.gravity, systemData_3.deltaTime);
+          let particle = (&systemData_3.particles[i]);
+          systemData_3.particles[i] = updateParticle_7((*particle), systemData_3.gravity, systemData_3.deltaTime);
         }
       }"
     `);
@@ -411,16 +411,16 @@ describe('indents', () => {
       }
 
       @vertex fn someVertex_0(input: someVertex_Input_7) -> someVertex_Output_6 {
-        var uniBoid = boids_1;
+        let uniBoid = (&boids_1);
         for (var i = 0u; (i < -1); i++) {
           var sampled = textureSample(sampled_3, sampler_4, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender_5, vec2i(), 0);
           if (((someVal.x + sampled.x) > 0.5)) {
-            var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+            var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
             while (true) {
-              var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+              var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0)) {
                 var evenNewer = (newPos + input.position);
               }

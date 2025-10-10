@@ -38,10 +38,8 @@ export class LogGeneratorNullImpl implements LogGenerator {
     return undefined;
   }
   generateLog(): Snippet {
-    console.warn(
-      "'console.log' is currently only supported in compute pipelines.",
-    );
-    return snip('/* console.log() */', Void);
+    console.warn("'console.log' is only supported when resolving pipelines.");
+    return snip('/* console.log() */', Void, /* ref */ 'runtime');
   }
 }
 
@@ -101,7 +99,11 @@ export class LogGeneratorImpl implements LogGenerator {
       ),
     );
 
-    return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
+    return snip(
+      stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`,
+      Void,
+      /* ref */ 'runtime',
+    );
   }
 
   get logResources(): LogResources | undefined {

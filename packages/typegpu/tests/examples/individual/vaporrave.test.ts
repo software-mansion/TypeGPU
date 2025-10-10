@@ -194,7 +194,7 @@ describe('vaporrave example', () => {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay_7(p);
           var sphereDist = getSphere_12(p, sphereColorUniform_21, vec3f(0, 6, 12), sphereAngleUniform_22);
-          glow = ((vec3f(sphereColorUniform_21) * exp(-sphereDist.dist)) + glow);
+          glow = ((sphereColorUniform_21 * exp(-sphereDist.dist)) + glow);
           distOrigin += scene.dist;
           if ((distOrigin > 19)) {
             result.dist = 19;
