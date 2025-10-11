@@ -1,0 +1,136 @@
+---
+import CodeButton from "./CodeButton.astro";
+import CodePen from "./CodePen.astro";
+
+const sectionId = "interactive-code-section";
+---
+
+{/* Code Section */}
+<div class="box-border flex flex-col items-center py-12" id={sectionId}>
+    <div>
+        <h2 class="font-normal center text-4xl text-blue-950">
+            Ways to use TypeGPU
+        </h2>
+        <p class="text-center text-pretty text-2xl text-blue-900">
+            TypeGPU is a three-way toolkit that is easy for you to integrate
+            granularly and doesn't restrict you in what you can do.
+        </p>
+    </div>
+    {/* Container for the buttons */}
+    <div class="flex flex-row gap-4 m-8">
+        <div
+            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+        >
+            <CodeButton
+                title="As a foundation"
+                message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+                icon="DarkModeIconSvg"
+            />
+        </div>
+        <div
+            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+        >
+            <CodeButton
+                title="As a puzzle piece"
+                message="Pick and choose the APIs you need, and plug them into your code however you want."
+                icon="DarkModeIconSvg"
+            />
+        </div>
+        <div
+            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+        >
+            <CodeButton
+                title="For libraries"
+                message="Simplify library internals, and make your user-facing API type-safe by default."
+                icon="DarkModeIconSvg"
+            />
+        </div>
+    </div>
+
+    {/* Container for the CodePen displays */}
+    <div class="codepen-container relative w-full max-w-4xl px-4">
+        <CodePen
+            code={`export interface TgpuComputePipeline
+  extends TgpuNamable, SelfResolvable, Timeable {
+  readonly [$internal]: ComputePipelineInternals;
+  readonly resourceType: 'compute-pipeline';
+
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup,
+  ): TgpuComputePipeline;
+
+  dispatchWorkgroups(
+    x: number,
+    y?: number | undefined,
+    z?: number | undefined,
+  ): void;
+}
+
+export function INTERNAL_createComputePipeline(
+  branch: ExperimentalTgpuRoot,
+  slotBindings: [TgpuSlot<unknown>, unknown][],
+  entryFn: TgpuComputeFn,
+) {
+  return new TgpuComputePipelineImpl(
+    new ComputePipelineCore(branch, slotBindings, entryFn),
+    {},
+  );
+}`}
+            language="typescript"
+        />
+        <CodePen
+            code={`// Define a compute function with typed parameters
+const computeFn = tgpu.computeFunction(
+  (data: tgpu.Buffer<Float32Array>, factor: number) => {
+    // WGSL code using 'data' and 'factor'
+  }
+);
+}`}
+            language="typescript"
+        />
+        <CodePen
+            code={`// Create a buffer with a specific data type
+const buffer = tgpu.buffer(new Float32Array([1.0, 2.0
+, 3.0]));
+// The buffer is now typed as TgpuBuffer<Float32Array>
+const bindGroupLayout = tgpu.bindGroupLayout({
+  myBuffer: tgpu.binding(tgpu.BindingType.StorageBuffer, tgpu.ShaderStage.Compute),
+  mySampler: tgpu.binding(tgpu.BindingType.Sampler, tgpu.ShaderStage.Compute),
+});
+      }`}
+            language="typescript"
+        />
+    </div>
+</div>
+
+<script define:vars={{ sectionId }}>
+    const section = document.getElementById(sectionId);
+
+    const buttons = Array.from(
+        section.querySelectorAll(".code-button-wrapper"),
+    );
+    const codePens = Array.from(
+        section.querySelectorAll(".codepen-container > *"),
+    );
+
+    function showContent(indexToShow) {
+        buttons.forEach((button, index) => {
+            if (button instanceof HTMLElement) {
+                button.classList.toggle("opacity-100", index === indexToShow);
+                button.classList.toggle("opacity-60", index !== indexToShow);
+            }
+        });
+
+        codePens.forEach((pen, index) => {
+            if (pen instanceof HTMLElement) {
+                pen.style.display = index === indexToShow ? "block" : "none";
+            }
+        });
+    }
+
+    buttons.forEach((button, index) => {
+        button.addEventListener("click", () => showContent(index));
+    });
+    showContent(0);
+</script>
