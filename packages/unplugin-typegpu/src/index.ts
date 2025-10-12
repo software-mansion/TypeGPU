@@ -24,7 +24,7 @@ type FunctionNode =
   | acorn.FunctionExpression
   | acorn.ArrowFunctionExpression;
 
-function containsKernelDirective(node: FunctionNode): boolean {
+function containsUseGpuDirective(node: FunctionNode): boolean {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
       if (
@@ -38,7 +38,7 @@ function containsKernelDirective(node: FunctionNode): boolean {
   return false;
 }
 
-function removeKernelDirective(node: FunctionNode) {
+function removeUseGpuDirective(node: FunctionNode) {
   const cloned = structuredClone(node);
 
   if (cloned.body.type === 'BlockStatement') {
@@ -153,7 +153,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                       implementation.type === 'ArrowFunctionExpression')
                   ) {
                     tgslFunctionDefs.push({
-                      def: removeKernelDirective(implementation),
+                      def: removeUseGpuDirective(implementation),
                     });
                     this.skip();
                   }
@@ -165,9 +165,9 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                 node.type === 'FunctionExpression' ||
                 node.type === 'FunctionDeclaration'
               ) {
-                if (containsKernelDirective(node)) {
+                if (containsUseGpuDirective(node)) {
                   tgslFunctionDefs.push({
-                    def: removeKernelDirective(node),
+                    def: removeUseGpuDirective(node),
                     name: getFunctionName(node, parent),
                   });
                   this.skip();
