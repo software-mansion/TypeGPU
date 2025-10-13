@@ -107,7 +107,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       ) : (
         <div className='flex justify-center items-center w-full h-full'>
           {isLoading && (
-            <span className='font-medium text-white/60 text-xs uppercase tracking-widest animate-pulse'>
+            <span className='font-medium text-white/60 text-xs text-center uppercase tracking-widest animate-pulse'>
               Loading…
             </span>
           )}
