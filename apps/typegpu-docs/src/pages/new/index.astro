@@ -25,6 +25,7 @@ import GradientTitle from "../../components/GradientTitle.astro";
 import CodePen from "../../components/CodePen.astro";
 import CodeButton from "../../components/CodeButton.astro";
 import CodeShowcase from "../../components/CodeShowcase.astro";
+import TgpuExamples from "../../components/TgpuExamples.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -109,6 +110,11 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
   {/* Code Showcase */}
   <div class="mx-auto lg:px-72 lg:max-w-340">
     <CodeShowcase />
+  </div>
+
+  {/* TypeGPU examples */}
+  <div class="mx-auto lg:px-72 lg:max-w-340">
+    <TgpuExamples />
   </div>
 
   {/* Call to Action Section */}

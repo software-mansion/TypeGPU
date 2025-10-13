@@ -1,0 +1,64 @@
+---
+import { Image } from "astro:assets";
+import GiantTypeGPULogo from "../assets/giant-typegpu.svg";
+import Illustration from "../assets/illustration.svg";
+import TypeGPULogoDark from "../assets/typegpu-logo-dark.svg";
+import TypeGPULogoLight from "../assets/typegpu-logo-light.svg";
+import TypeGPULogomarkDark from "../assets/typegpu-logomark-dark.svg";
+import TypeGPULogomarkLight from "../assets/typegpu-logomark-light.svg";
+import HoverExampleIsland from "./HoverExampleIsland";
+
+const galleryItems = [
+	{
+		asset: GiantTypeGPULogo,
+		alt: "TypeGPU giant word mark",
+		exampleKey: "rendering--caustics",
+	},
+	{
+		asset: Illustration,
+		alt: "TypeGPU creative illustration",
+		exampleKey: "rendering--cubemap-reflection",
+	},
+	{
+		asset: TypeGPULogoLight,
+		alt: "TypeGPU light logo",
+		exampleKey: "simple--vaporrave",
+	},
+	{
+		asset: TypeGPULogoDark,
+		alt: "TypeGPU dark logo",
+		exampleKey: "rendering--ray-marching",
+	},
+	{
+		asset: TypeGPULogomarkLight,
+		alt: "TypeGPU logomark light variant",
+		exampleKey: "rendering--3d-fish",
+	},
+	{
+		asset: TypeGPULogomarkDark,
+		alt: "TypeGPU logomark dark variant",
+		exampleKey: "rendering--perlin-noise",
+	},
+];
+---
+
+{/* Interactive gallery */}
+<div class="gap-6 grid sm:grid-cols-2 xl:grid-cols-3">
+	{galleryItems.map((item) => (
+		<div
+			class="group relative bg-gradient-to-br from-tameplum-10 via-white shadow-sm hover:shadow-xl border border-accent-200 rounded-3xl aspect-square overflow-hidden transition to-accent-20"
+		>
+			<Image
+				src={item.asset}
+				alt={item.alt}
+				class="p-10 w-full h-full object-contain group-hover:scale-105 transition duration-300 ease-out"
+			/>
+
+			<div class="absolute inset-0 flex justify-center items-center opacity-0 group-hover:opacity-100 transition duration-300 ease-out pointer-events-none">
+				<div class="bg-slate-950/80 backdrop-blur p-4 rounded-3xl ring-1 ring-white/20 w-4/5 h-4/5 pointer-events-auto">
+					<HoverExampleIsland client:visible exampleKey={item.exampleKey} />
+				</div>
+			</div>
+		</div>
+	))}
+</div>
