@@ -255,10 +255,6 @@ class WithFragmentImpl implements WithFragment {
   }
 }
 
-interface Disposable {
-  destroy(): void;
-}
-
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
@@ -266,8 +262,6 @@ interface Disposable {
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
-
-  private _disposables: Disposable[] = [];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -313,9 +307,7 @@ class TgpuRootImpl extends WithBindingImpl
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
-    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
-    this._disposables.push(buffer);
-    return buffer;
+    return INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
   }
 
   createUniform<TData extends AnyWgslData>(
@@ -325,7 +317,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('uniform' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
   }
@@ -337,7 +328,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
   }
@@ -349,7 +339,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
   }
@@ -375,10 +364,6 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   destroy() {
-    for (const disposable of this._disposables) {
-      disposable.destroy();
-    }
-
     clearTextureUtilsCache(this.device);
 
     if (this._ownDevice) {
@@ -419,7 +404,6 @@ class TgpuRootImpl extends WithBindingImpl
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
   }

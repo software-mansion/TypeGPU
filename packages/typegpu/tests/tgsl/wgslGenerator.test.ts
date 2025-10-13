@@ -39,7 +39,7 @@ describe('wgslGenerator', () => {
 
   it('creates a simple return statement', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       return true;
     };
 
@@ -62,7 +62,7 @@ describe('wgslGenerator', () => {
 
   it('creates a function body', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let a = 12;
       a += 21;
       return a;
@@ -102,7 +102,7 @@ describe('wgslGenerator', () => {
     } as const;
 
     const main = () => {
-      'kernel';
+      'use gpu';
       const intLiteral = 12;
       const floatLiteral = 12.5;
       const scientificLiteral = 12e10;
@@ -348,7 +348,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for for statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       for (let i = 0; i < 10; i += 1) {
         // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
         continue;
@@ -377,7 +377,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for for statements with outside init', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
         // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
@@ -408,7 +408,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for while statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       while (i < 10) {
         i += 1;
@@ -849,7 +849,7 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
       for (let i = 0; i < 10; i += 1) continue;
     };

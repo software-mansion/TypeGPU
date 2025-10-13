@@ -69,7 +69,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { isKernel } from './shared/meta.ts';
+import { hasTinyestMetadata } from './shared/meta.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -659,16 +659,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
-      } else if (isKernel(item)) {
-        // Resolving a kernel directly means calling it with no arguments, since we cannot infer
-        // the types of the arguments from a WGSL string.
+      } else if (hasTinyestMetadata(item)) {
+        // Resolving a function with tinyest metadata directly means calling it with no arguments, since
+        // we cannot infer the types of the arguments from a WGSL string.
         const shellless = this.#namespace.shelllessRepo.get(
           item,
           /* no arguments */ undefined,
         );
         if (!shellless) {
           throw new Error(
-            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another kernel.`,
+            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
           );
         }
 
@@ -705,7 +705,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     schema?: AnyData | UnknownData | undefined,
     exact = false,
   ): ResolvedSnippet {
-    if (isTgpuFn(item) || isKernel(item)) {
+    if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
         !this.#namespace.memoizedResolves.has(item)
@@ -724,7 +724,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    if (isMarkedInternal(item) || isKernel(item)) {
+    if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {

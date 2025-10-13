@@ -155,7 +155,7 @@ export function createFnCore(
       const ast = pluginData?.ast;
       if (!ast) {
         throw new Error(
-          "Missing metadata for tgpu.fn function body (either missing 'kernel' directive, or misconfigured `unplugin-typegpu`)",
+          "Missing metadata for tgpu.fn function body (either missing 'use gpu' directive, or misconfigured `unplugin-typegpu`)",
         );
       }
 

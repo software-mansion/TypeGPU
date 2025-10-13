@@ -17,7 +17,7 @@ const root = await tgpu.init();
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
 
 const doubleUp = prepareDispatch(root, (x) => {
-  'kernel';
+  'use gpu';
   data.$[x] *= 2;
 });
 
@@ -30,7 +30,7 @@ console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
 ```
 
 :::note
-Remember to mark the callback with `'kernel'` directive to let TypeGPU know that this function is TGSL.
+Remember to mark the callback with the `'use gpu'` directive to let TypeGPU know that this function is TGSL.
 :::
 
 The callback can have up to three arguments (dimensions).
@@ -52,7 +52,7 @@ const waterLevelMutable = root.createMutable(
 );
 
 prepareDispatch(root, (x, y) => {
-  'kernel';
+  'use gpu';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
 }).dispatch(1024, 512);
@@ -85,7 +85,7 @@ const bindGroup2 = root.createBindGroup(layout, {
 });
 
 const test = prepareDispatch(root, (x) => {
-  'kernel';
+  'use gpu';
   layout.$.buffer[x] *= 2;
 });
 
@@ -130,12 +130,12 @@ const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
 const compute = prepareDispatch(root, () => {
-  'kernel';
+  'use gpu';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);
 });
 
-compute.dispatch(); 
+compute.dispatch();
 compute.dispatch();
 
 // Eventually...

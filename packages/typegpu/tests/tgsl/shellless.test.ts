@@ -8,12 +8,12 @@ import { asWgsl } from '../utils/parseResolved.ts';
 describe('shellless', () => {
   it('is callable from shelled function', () => {
     const dot2 = (a: d.v2f) => {
-      'kernel';
+      'use gpu';
       return std.dot(a, a);
     };
 
     const foo = () => {
-      'kernel';
+      'use gpu';
       return dot2(d.vec2f(1, 2)) + dot2(d.vec2f(3, 4));
     };
 
@@ -38,12 +38,12 @@ describe('shellless', () => {
 
   it('is generic based on arguments', () => {
     const dot2 = (a: d.v2f | d.v3f) => {
-      'kernel';
+      'use gpu';
       return std.dot(a, a);
     };
 
     const foo = () => {
-      'kernel';
+      'use gpu';
       return dot2(d.vec2f(1, 2)) + dot2(d.vec3f(3, 4, 5));
     };
 
@@ -64,7 +64,7 @@ describe('shellless', () => {
 
   it('handles fully abstract cases', () => {
     const someFn = (a: number, b: number) => {
-      'kernel';
+      'use gpu';
       if (a > b) {
         return 12.2;
       }
@@ -102,7 +102,7 @@ describe('shellless', () => {
 
   it('throws when no single return type can be achieved', () => {
     const someFn = (a: number, b: number) => {
-      'kernel';
+      'use gpu';
       if (a > b) {
         return d.u32(12);
       }
@@ -130,12 +130,12 @@ describe('shellless', () => {
 
   it('handles nested shellless', () => {
     const fn1 = () => {
-      'kernel';
+      'use gpu';
       return 4.1;
     };
 
     const fn2 = () => {
-      'kernel';
+      'use gpu';
       return fn1();
     };
 
@@ -187,7 +187,7 @@ describe('shellless', () => {
 
   it('resolves when accepting no arguments', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       return 4.1;
     };
 
@@ -200,7 +200,7 @@ describe('shellless', () => {
 
   it('throws error when resolving function that expects arguments', () => {
     const main = (a: number) => {
-      'kernel';
+      'use gpu';
       return a + 1;
     };
 
