@@ -1,15 +1,11 @@
 import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
-import { prefixScan, scan } from '@typegpu/concurrent-scan';
+import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
 import * as std from 'typegpu/std';
 import { addFn, concat10, mulFn } from './functions';
 
 const root = await tgpu.init({
-  device: {
-    requiredFeatures: [
-      'timestamp-query',
-    ],
-  },
+  device: { requiredFeatures: ['timestamp-query'] },
 });
 
 function isEqual(e1: unknown, e2: unknown): boolean {
@@ -133,10 +129,7 @@ async function testLength16777217(): Promise<boolean> {
     )
     .$usage('storage');
 
-  const output = scan(root, input, {
-    operation: addFn,
-    identityElement: 0,
-  });
+  const output = scan(root, input, { operation: addFn, identityElement: 0 });
 
   console.log(await output.read());
 
@@ -146,7 +139,40 @@ async function testLength16777217(): Promise<boolean> {
   );
 }
 
-// jakiś cache test...
+async function testDoesNotDestroyBuffer(): Promise<boolean> {
+  const input = root
+    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
+    .$usage('storage');
+
+  scan(root, input, {
+    operation: addFn,
+    identityElement: 0,
+  });
+
+  return isEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
+}
+
+async function testDoesNotCacheBuffers(): Promise<boolean> {
+  const op = {
+    operation: addFn,
+    identityElement: 0,
+  };
+
+  const input1 = root
+    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
+    .$usage('storage');
+
+  const output1 = scan(root, input1, op);
+
+  const input2 = root
+    .createBuffer(d.arrayOf(d.f32, 10), Array.from({ length: 10 }, () => 1))
+    .$usage('storage');
+
+  const output2 = scan(root, input2, op);
+
+  return isEqual(await output1.read(), [36]) &&
+    isEqual(await output2.read(), [10]);
+}
 
 // prefix tests
 
@@ -162,6 +188,8 @@ async function runTests(): Promise<boolean> {
   result = await testConcat() && result;
   result = await testLength65537() && result;
   // result = await testLength16777217() && result; // fails, returns 16777216
+  result = await testDoesNotDestroyBuffer() && result;
+  result = await testDoesNotCacheBuffers() && result;
 
   return result;
 }

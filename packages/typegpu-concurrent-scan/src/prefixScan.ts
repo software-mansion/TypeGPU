@@ -253,3 +253,5 @@ export function initCache(
   }
   return rootCache.get(binaryOp) as PrefixScanComputer;
 }
+
+export { BinaryOp };

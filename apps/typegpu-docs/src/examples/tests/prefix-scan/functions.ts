@@ -1,6 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { type BinaryOp } from '@typegpu/concurrent-scan';
 
 export const addFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
   return a + b;
@@ -26,3 +27,17 @@ export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
   const roundedResult = std.ceil(result - 0.4);
   return roundedResult;
 });
+
+// JS helpers
+
+export function prefixScanJS(arr: number[], op: BinaryOp) {
+  const result = Array.from({ length: arr.length }, () => op.identityElement);
+  for (let i = 1; i < arr.length; i++) {
+    result[i] = result[i - 1] + arr[i];
+  }
+  return result;
+}
+
+export function scanJS(arr: number[], op: BinaryOp) {
+  return prefixScanJS(arr, op).at(-1);
+}
