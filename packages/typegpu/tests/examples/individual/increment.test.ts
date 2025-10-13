@@ -20,7 +20,7 @@ describe('increment example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      @group(0) @binding(1) var<storage, read_write> counter_3: f32;
+      @group(0) @binding(1) var<storage, read_write> counter_3: u32;
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         counter_3 += 1;
