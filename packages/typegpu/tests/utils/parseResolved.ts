@@ -25,7 +25,7 @@ export function asWgsl(...values: unknown[]): string {
   });
 }
 
-function extractSnippetFromKernel(cb: () => unknown): Snippet {
+function extractSnippetFromFn(cb: () => unknown): Snippet {
   const ctx = new ResolutionCtxImpl({
     namespace: namespace({ names: 'strict' }),
   });
@@ -38,7 +38,7 @@ function extractSnippetFromKernel(cb: () => unknown): Snippet {
         const meta = getMetaData(cb);
 
         if (!meta || !meta.ast) {
-          throw new Error('No metadata found for the kernel');
+          throw new Error('No metadata found for the function');
         }
 
         ctx.pushMode(new CodegenState());
@@ -83,11 +83,11 @@ function extractSnippetFromKernel(cb: () => unknown): Snippet {
 export function expectSnippetOf(
   cb: () => unknown,
 ): Assertion<Snippet> {
-  return expect(extractSnippetFromKernel(cb));
+  return expect(extractSnippetFromFn(cb));
 }
 
 export function expectDataTypeOf(
   cb: () => unknown,
 ): Assertion<AnyData | UnknownData> {
-  return expect<AnyData | UnknownData>(extractSnippetFromKernel(cb).dataType);
+  return expect<AnyData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }

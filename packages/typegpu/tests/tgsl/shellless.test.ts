@@ -160,7 +160,7 @@ describe('shellless', () => {
 
   it('generates pointer type to handle references', () => {
     const advance = (pos: d.v3f, vel: d.v3f) => {
-      'kernel';
+      'use gpu';
       pos.x += vel.x;
       pos.y += vel.y;
       pos.z += vel.z;
