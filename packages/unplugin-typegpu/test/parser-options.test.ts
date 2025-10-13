@@ -19,6 +19,7 @@ describe('[BABEL] parser options', () => {
         const x = 2 + 2;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -61,6 +62,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       const increment = tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));

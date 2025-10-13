@@ -1,4 +1,8 @@
-import { createDualImpl, dualImpl } from '../core/function/dualImpl.ts';
+import {
+  createDualImpl,
+  dualImpl,
+  MissingCpuImplError,
+} from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
@@ -264,15 +268,14 @@ function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const countLeadingZeros = dualImpl({
+export const countLeadingZeros = dualImpl<typeof cpuCountLeadingZeros>({
   name: 'countLeadingZeros',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuCountLeadingZeros,
+  normalImpl:
+    'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`countLeadingZeros(${value})`,
 });
 
@@ -281,15 +284,14 @@ function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const countOneBits = dualImpl({
+export const countOneBits = dualImpl<typeof cpuCountOneBits>({
   name: 'countOneBits',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuCountOneBits,
+  normalImpl:
+    'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`countOneBits(${value})`,
 });
 
@@ -298,15 +300,14 @@ function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const countTrailingZeros = dualImpl({
+export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
   name: 'countTrailingZeros',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuCountTrailingZeros,
+  normalImpl:
+    'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`countTrailingZeros(${value})`,
 });
 
@@ -324,27 +325,24 @@ function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * 180) / Math.PI) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for degrees on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
 
-export const degrees = dualImpl({
+export const degrees = dualImpl<typeof cpuDegrees>({
   name: 'degrees',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: cpuDegrees,
   codegenImpl: (value) => stitch`degrees(${value})`,
 });
 
-export const determinant = dualImpl({
+export const determinant = dualImpl<(value: AnyMatInstance) => number>({
   name: 'determinant',
   // TODO: The return type is potentially wrong here, it should return whatever the matrix element type is.
   signature: (arg) => ({ argTypes: [arg], returnType: f32 }),
-  normalImpl: (value: AnyMatInstance): number => {
-    throw new Error(
-      'CPU implementation for determinant not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl:
+    'CPU implementation for determinant not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`determinant(${value})`,
 });
 
@@ -383,25 +381,19 @@ export const dot = dualImpl({
   codegenImpl: (lhs, rhs) => stitch`dot(${lhs}, ${rhs})`,
 });
 
-export const dot4U8Packed = dualImpl({
+export const dot4U8Packed = dualImpl<(e1: number, e2: number) => number>({
   name: 'dot4U8Packed',
   signature: (lhs, rhs) => ({ argTypes: [u32, u32], returnType: u32 }),
-  normalImpl: (e1: number, e2: number): number => {
-    throw new Error(
-      'CPU implementation for dot4U8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl:
+    'CPU implementation for dot4U8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e1, e2) => stitch`dot4U8Packed(${e1}, ${e2})`,
 });
 
-export const dot4I8Packed = dualImpl({
+export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
   name: 'dot4I8Packed',
   signature: (lhs, rhs) => ({ argTypes: [u32, u32], returnType: i32 }),
-  normalImpl: (e1: number, e2: number): number => {
-    throw new Error(
-      'CPU implementation for dot4I8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl:
+    'CPU implementation for dot4I8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e1, e2) => stitch`dot4I8Packed(${e1}, ${e2})`,
 });
 
@@ -448,33 +440,31 @@ function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new Error(
-    'CPU implementation for extractBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const extractBits = dualImpl({
+export const extractBits = dualImpl<typeof cpuExtractBits>({
   name: 'extractBits',
   signature: (arg, offset, count) => ({
     argTypes: [arg, u32, u32],
     returnType: arg,
   }),
-  normalImpl: cpuExtractBits,
+  normalImpl:
+    'CPU implementation for extractBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e, offset, count) =>
     stitch`extractBits(${e}, ${offset}, ${count})`,
 });
 
-export const faceForward = dualImpl({
+export const faceForward = dualImpl<
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T) => T
+>({
   name: 'faceForward',
   signature: (arg1, arg2, arg3) => ({
     argTypes: [arg1, arg2, arg3],
     returnType: arg1,
   }),
-  normalImpl: <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T => {
-    throw new Error(
-      'CPU implementation for faceForward not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl:
+    'CPU implementation for faceForward not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e1, e2, e3) => stitch`faceForward(${e1}, ${e2}, ${e3})`,
 });
 
@@ -483,15 +473,14 @@ function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const firstLeadingBit = dualImpl({
+export const firstLeadingBit = dualImpl<typeof cpuFirstLeadingBit>({
   name: 'firstLeadingBit',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuFirstLeadingBit,
+  normalImpl:
+    'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`firstLeadingBit(${value})`,
 });
 
@@ -500,15 +489,14 @@ function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const firstTrailingBit = dualImpl({
+export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
   name: 'firstTrailingBit',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuFirstTrailingBit,
+  normalImpl:
+    'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`firstTrailingBit(${value})`,
 });
 
@@ -538,7 +526,7 @@ function cpuFma<T extends AnyFloatVecInstance | number>(
   if (typeof e1 === 'number') {
     return (e1 * (e2 as number) + (e3 as number)) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for fma on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -594,7 +582,7 @@ export const frexp: FrexpOverload = createDualImpl(
     fract: number;
     exp: number;
   } => {
-    throw new Error(
+    throw new MissingCpuImplError(
       'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
@@ -632,18 +620,17 @@ function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
   offset: number,
   count: number,
 ): T {
-  throw new Error(
-    'CPU implementation for insertBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const insertBits = dualImpl({
+export const insertBits = dualImpl<typeof cpuInsertBits>({
   name: 'insertBits',
   signature: (e, newbits, offset, count) => ({
     argTypes: [e, newbits, u32, u32],
     returnType: e,
   }),
-  normalImpl: cpuInsertBits,
+  normalImpl:
+    'CPU implementation for insertBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e, newbits, offset, count) =>
     stitch`insertBits(${e}, ${newbits}, ${offset}, ${count})`,
 });
@@ -654,7 +641,7 @@ function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return (1 / Math.sqrt(value)) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for inverseSqrt on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -674,12 +661,10 @@ function cpuLdexp<T extends AnyFloatVecInstance | number>(
   e1: T,
   e2: AnyIntegerVecInstance | number,
 ): T {
-  throw new Error(
-    'CPU implementation for ldexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const ldexp = dualImpl({
+export const ldexp = dualImpl<typeof cpuLdexp>({
   name: 'ldexp',
   signature: (e1, e2) => {
     switch (e1.type) {
@@ -703,7 +688,8 @@ export const ldexp = dualImpl({
         );
     }
   },
-  normalImpl: cpuLdexp,
+  normalImpl:
+    'CPU implementation for ldexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e1, e2) => stitch`ldexp(${e1}, ${e2})`,
 });
 
@@ -851,7 +837,6 @@ type ModfOverload = {
     value: T,
   ): Infer<typeof ModfResult[T['kind']]>;
 };
-
 function cpuModf(e: number): Infer<typeof ModfResult['f32']>;
 function cpuModf<T extends AnyFloatVecInstance>(
   e: T,
@@ -859,12 +844,10 @@ function cpuModf<T extends AnyFloatVecInstance>(
 function cpuModf<T extends AnyFloatVecInstance | number>(
   value: T,
 ): Infer<typeof ModfResult[keyof typeof ModfResult]> {
-  throw new Error(
-    'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const modf: ModfOverload = dualImpl({
+export const modf: ModfOverload = dualImpl<typeof cpuModf>({
   name: 'modf',
   signature: (e) => {
     const returnType = ModfResult[e.type as keyof typeof ModfResult];
@@ -877,7 +860,8 @@ export const modf: ModfOverload = dualImpl({
 
     return { argTypes: [e], returnType };
   },
-  normalImpl: cpuModf,
+  normalImpl:
+    'CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`modf(${value})`,
 });
 
@@ -919,21 +903,19 @@ export const pow = dualImpl({
   normalImpl: powCpu,
   codegenImpl: (lhs, rhs) => stitch`pow(${lhs}, ${rhs})`,
 });
-
 function cpuQuantizeToF16(value: number): number;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(
   value: T,
 ): T {
-  throw new Error(
-    'CPU implementation for quantizeToF16 not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const quantizeToF16 = dualImpl({
+export const quantizeToF16 = dualImpl<typeof cpuQuantizeToF16>({
   name: 'quantizeToF16',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuQuantizeToF16,
+  normalImpl:
+    'CPU implementation for quantizeToF16 not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`quantizeToF16(${value})`,
 });
 
@@ -943,7 +925,7 @@ function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return ((value * Math.PI) / 180) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for radians on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -969,7 +951,7 @@ export const reflect = dualImpl({
 export const refract = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T => {
-    throw new Error(
+    throw new MissingCpuImplError(
       'CPU implementation for refract not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
     );
   },
@@ -982,19 +964,17 @@ export const refract = createDualImpl(
     isHalfPrecisionSchema(e1) ? f16 : f32,
   ],
 );
-
 function cpuReverseBits(value: number): number;
 function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
-  throw new Error(
-    'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const reverseBits = dualImpl({
+export const reverseBits = dualImpl<typeof cpuReverseBits>({
   name: 'reverseBits',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuReverseBits,
+  normalImpl:
+    'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`reverseBits(${value})`,
 });
 
@@ -1004,7 +984,7 @@ function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.round(value) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1022,7 +1002,7 @@ function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.max(0, Math.min(1, value)) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for saturate on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1072,7 +1052,7 @@ function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.sinh(value) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1142,7 +1122,7 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
   if (typeof edge === 'number') {
     return (edge <= (x as number) ? 1.0 : 0.0) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1163,7 +1143,7 @@ function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
     return Math.tan(value) as T;
   }
-  throw new Error(
+  throw new MissingCpuImplError(
     'CPU implementation for tan on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   );
 }
@@ -1191,28 +1171,24 @@ export const tanh = dualImpl({
   codegenImpl: (value) => stitch`tanh(${value})`,
 });
 
-export const transpose = dualImpl({
+export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
   name: 'transpose',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: (e: AnyMatInstance) => {
-    throw new Error(
-      'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
+  normalImpl:
+    'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (e) => stitch`transpose(${e})`,
 });
 
 function cpuTrunc(value: number): number;
 function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
-  throw new Error(
-    'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  throw new Error('Unreachable code. The function is only used for the type.');
 }
 
-export const trunc = dualImpl({
+export const trunc = dualImpl<typeof cpuTrunc>({
   name: 'trunc',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: cpuTrunc,
+  normalImpl:
+    'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (value) => stitch`trunc(${value})`,
 });

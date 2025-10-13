@@ -33,6 +33,7 @@ import {
 } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
+import { isMarkedInternal } from './shared/symbols.ts';
 import type { Infer } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
 import { $internal, $providing, $resolve } from './shared/symbols.ts';
@@ -66,14 +67,9 @@ import type {
   ResolutionCtx,
   Wgsl,
 } from './types.ts';
-import {
-  CodegenState,
-  isMarkedInternal,
-  isSelfResolvable,
-  NormalState,
-} from './types.ts';
+import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { isKernel } from './shared/meta.ts';
+import { hasTinyestMetadata } from './shared/meta.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -294,7 +290,7 @@ const INDENT = [
 const N = INDENT.length - 1;
 
 export class IndentController {
-  private identLevel = 0;
+  identLevel = 0;
 
   get pre(): string {
     return (
@@ -662,16 +658,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
-      } else if (isKernel(item)) {
-        // Resolving a kernel directly means calling it with no arguments, since we cannot infer
-        // the types of the arguments from a WGSL string.
+      } else if (hasTinyestMetadata(item)) {
+        // Resolving a function with tinyest metadata directly means calling it with no arguments, since
+        // we cannot infer the types of the arguments from a WGSL string.
         const shellless = this.#namespace.shelllessRepo.get(
           item,
           /* no arguments */ undefined,
         );
         if (!shellless) {
           throw new Error(
-            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another kernel.`,
+            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
           );
         }
 
@@ -708,7 +704,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     schema?: AnyData | UnknownData | undefined,
     exact = false,
   ): ResolvedSnippet {
-    if (isTgpuFn(item) || isKernel(item)) {
+    if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
         !this.#namespace.memoizedResolves.has(item)
@@ -727,7 +723,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    if (isMarkedInternal(item) || isKernel(item)) {
+    if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {
@@ -836,7 +832,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     throw new WgslTypeError(
       `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
-        schema ? ` to type ${schema}` : ''
+        schema ? ` to type ${schema.type}` : ''
       }`,
     );
   }

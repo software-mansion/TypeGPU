@@ -1,3 +1,4 @@
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
@@ -267,8 +268,6 @@ export type PackedData =
 export function isPackedData(
   value: unknown,
 ): value is PackedData {
-  return (value as PackedData)?.[$internal] &&
-    packedFormats.has(
-      (value as PackedData)?.type,
-    );
+  return isMarkedInternal(value) &&
+    packedFormats.has((value as PackedData)?.type);
 }

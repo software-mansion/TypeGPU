@@ -44,7 +44,7 @@
     "@webgpu/types": "catalog:types",
     "moo": "^0.5.2",
     "tsup": "catalog:build",
-    "tsx": "^4.16.2",
+    "tsx": "^4.20.6",
     "typescript": "catalog:types",
     "vitest": "catalog:test",
     "@typegpu/tgpu-dev-cli": "workspace:*"

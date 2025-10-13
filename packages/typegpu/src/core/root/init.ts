@@ -18,6 +18,7 @@ import {
   MissingVertexBuffersError,
 } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
+import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
@@ -76,14 +77,10 @@ import {
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
-  isSampledTextureView,
-  isStorageTextureView,
   isTexture,
-  type TgpuMutableTexture,
-  type TgpuReadonlyTexture,
-  type TgpuSampledTexture,
+  isTextureView,
   type TgpuTexture,
-  type TgpuWriteonlyTexture,
+  type TgpuTextureView,
 } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
@@ -252,10 +249,6 @@ class WithFragmentImpl implements WithFragment {
   }
 }
 
-interface Disposable {
-  destroy(): void;
-}
-
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
@@ -263,8 +256,6 @@ interface Disposable {
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
-
-  private _disposables: Disposable[] = [];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -310,9 +301,7 @@ class TgpuRootImpl extends WithBindingImpl
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
-    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
-    this._disposables.push(buffer);
-    return buffer;
+    return INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
   }
 
   createUniform<TData extends AnyWgslData>(
@@ -322,7 +311,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('uniform' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
   }
@@ -334,7 +322,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
   }
@@ -346,7 +333,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
   }
@@ -372,9 +358,7 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   destroy() {
-    for (const disposable of this._disposables) {
-      disposable.destroy();
-    }
+    clearTextureUtilsCache(this.device);
 
     if (this._ownDevice) {
       this.device.destroy();
@@ -392,7 +376,7 @@ class TgpuRootImpl extends WithBindingImpl
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
-    TViewFormat extends GPUTextureFormat,
+    TViewFormats extends GPUTextureFormat[],
     TDimension extends GPUTextureDimension,
   >(
     props: CreateTextureOptions<
@@ -400,7 +384,7 @@ class TgpuRootImpl extends WithBindingImpl
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >,
   ): TgpuTexture<
@@ -409,12 +393,11 @@ class TgpuRootImpl extends WithBindingImpl
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
   }
@@ -425,13 +408,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(
-    resource:
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture,
-  ): GPUTextureView;
+  unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
@@ -444,10 +421,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuBindGroup
       | TgpuBuffer<AnyData>
       | TgpuTexture
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture
+      | TgpuTextureView
       | TgpuVertexLayout
       | TgpuSampler
       | TgpuComparisonSampler
@@ -487,18 +461,13 @@ class TgpuRootImpl extends WithBindingImpl
       return resource[$internal].unwrap();
     }
 
-    if (isStorageTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
+    if (isTextureView(resource)) {
+      if (!resource[$internal].unwrap) {
+        throw new Error(
+          'Cannot unwrap laid-out texture view as it has no underlying resource.',
+        );
       }
-      throw new Error('Cannot unwrap laid-out texture view.');
-    }
-
-    if (isSampledTextureView(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
-      }
-      throw new Error('Cannot unwrap laid-out texture view.');
+      return resource[$internal].unwrap();
     }
 
     if (isVertexLayout(resource)) {

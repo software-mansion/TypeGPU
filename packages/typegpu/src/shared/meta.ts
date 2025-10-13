@@ -1,13 +1,13 @@
 // The version is inlined during build-time 🎉
 import { version } from '../../package.json';
 import type { Block, FuncParameter } from 'tinyest';
-import { $getNameForward, $internal } from './symbols.ts';
 import { DEV, TEST } from './env.ts';
+import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
 export interface MetaData {
+  v?: number;
   name?: string | undefined;
   ast?: {
-    v: number;
     params: FuncParameter[];
     body: Block;
     externalNames: string[];
@@ -42,8 +42,7 @@ if (globalWithMeta.__TYPEGPU_VERSION__ !== undefined) {
 
 globalWithMeta.__TYPEGPU_VERSION__ = version;
 globalWithMeta.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
-  isNamable(exp) &&
-    (exp as unknown as { [$internal]: unknown })?.[$internal] && !getName(exp)
+  isNamable(exp) && isMarkedInternal(exp) && !getName(exp)
     ? exp.$name(label)
     : exp;
 
@@ -99,9 +98,9 @@ export function isNamable(value: unknown): value is TgpuNamable {
 }
 
 /**
- * AST's are given to functions with a 'kernel' directive, which this function checks for.
+ * AST's are given to functions with a 'use gpu' directive, which this function checks for.
  */
-export function isKernel(
+export function hasTinyestMetadata(
   value: unknown,
 ): value is (...args: never[]) => unknown {
   return !!getMetaData(value)?.ast;

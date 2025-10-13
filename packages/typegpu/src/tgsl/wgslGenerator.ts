@@ -15,11 +15,12 @@ import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -464,14 +465,15 @@ ${this.ctx.pre}}`;
         throw new Error(
           `Function '${
             getName(callee.value) ?? String(callee.value)
-          }' is not marked with the 'kernel' directive and cannot be used in a shader`,
+          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
         );
       }
 
       // Other, including tgsl functions, std and vector/matrix schema calls.
 
-      const argConversionHint = callee.value[$internal]
-        ?.argConversionHint as FnArgsConversionHint ?? 'keep';
+      const argConversionHint =
+        (callee.value[$internal] as Record<string, unknown>)
+          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
       try {
         let convertedArguments: Snippet[];
 
