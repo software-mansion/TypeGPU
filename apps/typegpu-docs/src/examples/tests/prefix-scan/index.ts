@@ -15,7 +15,6 @@ const root = await tgpu.init({
   device: { requiredFeatures: ['timestamp-query'] },
 });
 
-// helpers
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root
     .createBuffer(d.arrayOf(d.f32, arr.length), arr)
