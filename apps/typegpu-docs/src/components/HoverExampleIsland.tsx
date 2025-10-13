@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import type { Example } from '../utils/examples/types.ts';
-import { examples } from '../examples/exampleContent.ts'; // lazy?
 
 type Props = {
   exampleKey: string;
@@ -10,20 +9,15 @@ type Props = {
 
 type CleanupFn = () => void;
 
-const exampleCache = new Map<string, Example>();
-
 async function loadExample(exampleKey: string): Promise<Example> {
-  if (exampleCache.has(exampleKey)) {
-    return exampleCache.get(exampleKey)!;
-  }
+  const exampleContent = await import('../examples/exampleContent.ts');
+  const examples = exampleContent.examples as Record<string, Example>;
 
   const example = examples[exampleKey] as Example | undefined;
-
   if (!example) {
     throw new Error(`Example "${exampleKey}" not found.`);
   }
 
-  exampleCache.set(exampleKey, example);
   return example;
 }
 
@@ -50,7 +44,6 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     }
   }, []);
 
-  useEffect(() => reset, [reset]);
 
   useEffect(() => {
     if (!isHovered) {
@@ -105,10 +98,10 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     <div
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
-      className='flex justify-center items-center bg-slate-950/80 border border-white/10 rounded-2xl w-full h-full overflow-hidden'
+      className='border-white/10 w-full h-full overflow-hidden order'
     >
       {error ? (
-        <p className='p-4 font-medium text-white text-sm text-center'>
+        <p className='font-medium text-white text-sm text-center'>
           {error}
         </p>
       ) : (
@@ -118,7 +111,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
               Loading…
             </span>
           )}
-          <div ref={containerRef} className='flex justify-center items-center w-full h-full' />
+          <div ref={containerRef} className='w-full h-full' />
         </div>
       )}
     </div>
