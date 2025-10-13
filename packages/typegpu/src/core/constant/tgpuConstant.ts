@@ -17,11 +17,17 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 // Public API
 // ----------
 
+type DeepReadonly<T> = T extends { [$internal]: unknown } ? T
+  : T extends unknown[] ? ReadonlyArray<DeepReadonly<T[number]>>
+  : T extends Record<string, unknown>
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : T;
+
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
   readonly [$gpuValueOf]: InferGPU<TDataType>;
-  readonly value: InferGPU<TDataType>;
-  readonly $: InferGPU<TDataType>;
+  readonly value: DeepReadonly<InferGPU<TDataType>>;
+  readonly $: DeepReadonly<InferGPU<TDataType>>;
 
   readonly [$internal]: {
     /** Makes it differentiable on the type level. Does not exist at runtime. */
@@ -43,6 +49,23 @@ export function constant<TDataType extends AnyWgslData>(
 // Implementation
 // --------------
 
+function deepFreeze<T extends object>(object: T): T {
+  // Retrieve the property names defined on object
+  const propNames = Reflect.ownKeys(object);
+
+  // Freeze properties before freezing self
+  for (const name of propNames) {
+    // biome-ignore lint/suspicious/noExplicitAny: chill TypeScript
+    const value = (object as any)[name];
+
+    if ((value && typeof value === 'object') || typeof value === 'function') {
+      deepFreeze(value);
+    }
+  }
+
+  return Object.freeze(object);
+}
+
 class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
@@ -52,7 +75,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     public readonly dataType: TDataType,
     value: InferGPU<TDataType>,
   ) {
-    this.#value = value;
+    this.#value = value && typeof value === 'object'
+      ? deepFreeze(value)
+      : value;
   }
 
   $name(label: string) {

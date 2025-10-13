@@ -2,19 +2,13 @@ import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
-const offset = tgpu.const(d.vec3f, d.vec3f(1, 2, 3));
 // Allocating memory for the counter
 const counter = root.createMutable(d.f32);
-
-const foo = tgpu.fn([])(() => {
-  const off = offset.$;
-  counter.$ += off.x;
-});
 
 // A 0-dimentional shader function
 const gpuIncrement = prepareDispatch(root, () => {
   'use gpu';
-  foo();
+  counter.$ += 1;
 });
 
 async function increment() {
