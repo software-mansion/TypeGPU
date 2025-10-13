@@ -1,6 +1,28 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 export const addFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
   return a + b;
+});
+
+export const mulFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+  return a * b;
+});
+
+/**
+ * Concats two numbers. Loses precision when the result has more than 7 digits.
+ *
+ * @example
+ * concat10(123, 456); // 123456
+ * concat10(123, 0); // 123, since 0 is considered to have 0 digits
+ */
+export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+  if (a === 0) return b;
+  if (b === 0) return a;
+  if (b === 1) return a * 10 + b;
+  const digits = std.ceil(std.log(b) / std.log(10));
+  const result = std.pow(10, digits) * a + b;
+  const roundedResult = std.ceil(result - 0.4);
+  return roundedResult;
 });
