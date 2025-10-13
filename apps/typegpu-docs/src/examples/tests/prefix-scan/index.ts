@@ -20,7 +20,7 @@ async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
     .createBuffer(d.arrayOf(d.f32, arr.length), arr)
     .$usage('storage');
 
-  const output = scan(root, input, op);
+  const output = scanOnly ? scan(root, input, op) : prefixScan(root, input, op);
 
   return isEqual(
     await output.read(),
@@ -105,6 +105,50 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
 // prefix f32 tests
 
+async function testPrefixAdd8(): Promise<boolean> {
+  const arr = [-4, -3, -2, -1, 0, 2, 4, 6];
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixAdd123(): Promise<boolean> {
+  const arr = Array.from({ length: 123 }, () => 2);
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixMul(): Promise<boolean> {
+  const arr = Array.from({ length: 16 }, () => 2);
+  const op = { operation: mulFn, identityElement: 1 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixStdMax(): Promise<boolean> {
+  const arr = Array.from({ length: 16 }, (_, i) => i);
+  const op = { operation: std.max, identityElement: -9999 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixConcat(): Promise<boolean> {
+  const arr = [0, 0, 0, 1, 0, 2, 0, 0, 3, 4, 5, 0, 0, 0, 6];
+  const op = { operation: concat10, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixLength65537(): Promise<boolean> {
+  const arr = Array.from({ length: 65537 }, () => 1);
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
+async function testPrefixLength16777217(): Promise<boolean> {
+  const arr = Array.from({ length: 16777217 }, () => 0);
+  arr[0] = 1;
+  arr[16777217] = 2;
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
 // running the tests
 
 async function runTests(): Promise<boolean> {
@@ -119,6 +163,14 @@ async function runTests(): Promise<boolean> {
   result = await testLength16777217() && result;
   result = await testDoesNotDestroyBuffer() && result;
   result = await testDoesNotCacheBuffers() && result;
+
+  result = await testPrefixAdd8() && result;
+  result = await testPrefixAdd123() && result;
+  result = await testPrefixMul() && result;
+  result = await testPrefixStdMax() && result;
+  result = await testPrefixConcat() && result;
+  result = await testPrefixLength65537() && result;
+  result = await testPrefixLength16777217() && result;
 
   return result;
 }

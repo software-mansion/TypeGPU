@@ -41,7 +41,7 @@ function applyOp(
 export function prefixScanJS(arr: number[], op: BinaryOp) {
   const result = Array.from({ length: arr.length }, () => op.identityElement);
   for (let i = 1; i < arr.length; i++) {
-    result[i] = applyOp(op, result[i - 1], arr[i]);
+    result[i] = applyOp(op, result[i - 1], arr[i - 1]);
   }
   return result;
 }
