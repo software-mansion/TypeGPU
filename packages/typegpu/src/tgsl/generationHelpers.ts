@@ -264,7 +264,7 @@ export function accessIndex(
       elementType,
       /* ref */ isRef(target) && isNaturallyRef(elementType)
         ? target.ref
-        : target.ref === 'constant'
+        : target.ref === 'constant' || target.ref === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -278,7 +278,9 @@ export function accessIndex(
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* ref */ target.ref === 'constant' ? 'constant' : 'runtime',
+      /* ref */ target.ref === 'constant' || target.ref === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
     );
   }
 
