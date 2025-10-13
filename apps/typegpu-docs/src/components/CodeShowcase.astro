@@ -6,20 +6,21 @@ const sectionId = "interactive-code-section";
 ---
 
 {/* Code Section */}
-<div class="flex flex-col items-center py-12" id={sectionId}>
-    <div>
-        <h2 class="font-normal center text-4xl text-blue-950">
+<div class="flex flex-col" id={sectionId}>
+    <div class="mb-12">
+        {/* Section Title */}
+        <h2 class="font-normal text-blue-950 text-4xl center">
             Ways to use TypeGPU
         </h2>
-        <p class="text-center text-pretty text-2xl text-blue-900">
+        <p class="text-blue-900 text-2xl text-pretty">
             TypeGPU is a three-way toolkit that is easy for you to integrate
             granularly and doesn't restrict you in what you can do.
         </p>
     </div>
-    {/* Container for the buttons */}
-    <div class="flex flex-row gap-4 m-8">
+    {/* buttons */}
+    <div class="self-center gap-4 grid grid-cols-3">
         <div
-            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+            class="opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
         >
             <CodeButton
                 title="As a foundation"
@@ -28,7 +29,7 @@ const sectionId = "interactive-code-section";
             />
         </div>
         <div
-            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+            class="opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
         >
             <CodeButton
                 title="As a puzzle piece"
@@ -37,7 +38,7 @@ const sectionId = "interactive-code-section";
             />
         </div>
         <div
-            class="code-button-wrapper cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out"
+            class="opacity-60 hover:opacity-100 transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
         >
             <CodeButton
                 title="For libraries"
@@ -47,8 +48,8 @@ const sectionId = "interactive-code-section";
         </div>
     </div>
 
-    {/* Container for the CodePen displays */}
-    <div class="codepen-container relative w-full max-w-4xl px-4">
+    {/* CodePen */}
+    <div class="relative px-4 w-full codepen-container">
         <CodePen
             code={`export interface TgpuComputePipeline
   extends TgpuNamable, SelfResolvable, Timeable {

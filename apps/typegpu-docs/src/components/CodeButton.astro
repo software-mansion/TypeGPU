@@ -9,19 +9,19 @@ const { title, message, icon } = Astro.props as Props;
 ---
 
 <div
-  class="flex flex-col items-start aspect-square p-8 bg-accent-50 border-2 border-accent-600/30 max-w-sm"
+  class="flex flex-col items-start p-8 border-2 border-accent-600/30 max-w-sm aspect-square bg-accent-50"
 >
   <div
-    class="flex items-center justify-center w-16 h-16 mb-6 bg-accent-600 rounded-lg"
+    class="flex justify-center items-center mb-6 rounded-lg w-16 h-16 bg-accent-600"
   >
     <img src={icon} />
   </div>
 
-  <h3 class="text-2xl font-semibold text-gray-800 mb-4">
+  <h3 class="mb-4 font-semibold text-gray-800 text-2xl">
     {title}
   </h3>
 
-  <p class="text-lg text-gray-600 leading-relaxed">
+  <p class="text-gray-600 text-lg leading-relaxed">
     {message}
   </p>
 </div>
