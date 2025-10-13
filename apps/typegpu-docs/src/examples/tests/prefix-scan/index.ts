@@ -76,7 +76,7 @@ async function testLength65537(): Promise<boolean> {
 async function testLength16777217(): Promise<boolean> {
   const arr = Array.from({ length: 16777217 }, () => 0);
   arr[0] = 1;
-  arr[16777217] = 2;
+  arr[16777216] = 2;
   const op = { operation: addFn, identityElement: 0 };
   return runAndCompare(arr, op, true);
 }
@@ -157,7 +157,7 @@ async function testPrefixLength65537(): Promise<boolean> {
 async function testPrefixLength16777217(): Promise<boolean> {
   const arr = Array.from({ length: 16777217 }, () => 0);
   arr[0] = 1;
-  arr[16777217] = 2;
+  arr[16777216] = 2;
   const op = { operation: addFn, identityElement: 0 };
   return runAndCompare(arr, op, false);
 }
