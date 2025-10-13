@@ -30,14 +30,26 @@ export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
 
 // JS helpers
 
+function applyOp(
+  op: BinaryOp,
+  a: number | undefined,
+  b: number | undefined,
+): number {
+  return op.operation(a as number & d.F32, b as number & d.F32) as number;
+}
+
 export function prefixScanJS(arr: number[], op: BinaryOp) {
   const result = Array.from({ length: arr.length }, () => op.identityElement);
   for (let i = 1; i < arr.length; i++) {
-    result[i] = result[i - 1] + arr[i];
+    result[i] = applyOp(op, result[i - 1], arr[i]);
   }
   return result;
 }
 
 export function scanJS(arr: number[], op: BinaryOp) {
-  return prefixScanJS(arr, op).at(-1);
+  let result = op.identityElement;
+  for (let i = 0; i < arr.length; i++) {
+    result = applyOp(op, result, arr[i]);
+  }
+  return [result];
 }

@@ -2,7 +2,7 @@ import tgpu, { prepareDispatch } from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
 import * as std from 'typegpu/std';
-import { addFn, concat10, mulFn } from './functions';
+import { addFn, concat10, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
 const root = await tgpu.init({
   device: { requiredFeatures: ['timestamp-query'] },
@@ -15,128 +15,63 @@ function isEqual(e1: unknown, e2: unknown): boolean {
   return e1 === e2;
 }
 
-// single element tests
-
-async function testAdd8(): Promise<boolean> {
+async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root
-    .createBuffer(d.arrayOf(d.f32, 8), [-4, -3, -2, -1, 0, 2, 4, 6])
+    .createBuffer(d.arrayOf(d.f32, arr.length), arr)
     .$usage('storage');
 
-  const output = scan(root, input, {
-    operation: addFn,
-    identityElement: 0,
-  });
+  const output = scan(root, input, op);
 
   return isEqual(
     await output.read(),
-    [2],
+    scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op),
   );
+}
+
+// single element f32 tests
+
+async function testAdd8(): Promise<boolean> {
+  const arr = [-4, -3, -2, -1, 0, 2, 4, 6];
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testAdd123(): Promise<boolean> {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, 123), Array.from({ length: 123 }, () => 2))
-    .$usage('storage');
-
-  const output = scan(root, input, {
-    operation: addFn,
-    identityElement: 0,
-  });
-
-  return isEqual(
-    await output.read(),
-    [246],
-  );
+  const arr = Array.from({ length: 123 }, () => 2);
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testMul(): Promise<boolean> {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, 16), Array.from({ length: 16 }, () => 2))
-    .$usage('storage');
-
-  const output = scan(root, input, {
-    operation: mulFn,
-    identityElement: 1,
-  });
-
-  console.log(await output.read());
-
-  return isEqual(
-    await output.read(),
-    [65536],
-  );
+  const arr = Array.from({ length: 16 }, () => 2);
+  const op = { operation: mulFn, identityElement: 1 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testStdMax(): Promise<boolean> {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, 16), Array.from({ length: 16 }, (_, i) => i))
-    .$usage('storage');
-
-  const output = scan(root, input, {
-    operation: std.max,
-    identityElement: -9999,
-  });
-
-  return isEqual(
-    await output.read(),
-    [15],
-  );
+  const arr = Array.from({ length: 16 }, (_, i) => i);
+  const op = { operation: std.max, identityElement: -9999 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testConcat(): Promise<boolean> {
-  const input = root
-    .createBuffer(
-      d.arrayOf(d.f32, 15),
-      [0, 0, 0, 1, 0, 2, 0, 0, 3, 4, 5, 0, 0, 0, 6],
-    )
-    .$usage('storage');
-
-  const output = scan(root, input, {
-    operation: concat10,
-    identityElement: 0,
-  });
-
-  return isEqual(
-    await output.read(),
-    [123456],
-  );
+  const arr = [0, 0, 0, 1, 0, 2, 0, 0, 3, 4, 5, 0, 0, 0, 6];
+  const op = { operation: concat10, identityElement: 0 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testLength65537(): Promise<boolean> {
-  const input = root
-    .createBuffer(
-      d.arrayOf(d.f32, 65537),
-      Array.from({ length: 65537 }, () => 1),
-    )
-    .$usage('storage');
-
-  const output = scan(root, input, {
-    operation: addFn,
-    identityElement: 0,
-  });
-
-  return isEqual(
-    await output.read(),
-    [65537],
-  );
+  const arr = Array.from({ length: 65537 }, () => 1);
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testLength16777217(): Promise<boolean> {
-  const input = root
-    .createBuffer(
-      d.arrayOf(d.f32, 16777217),
-      Array.from({ length: 16777217 }, () => 1),
-    )
-    .$usage('storage');
-
-  const output = scan(root, input, { operation: addFn, identityElement: 0 });
-
-  console.log(await output.read());
-
-  return isEqual(
-    await output.read(),
-    [16777217],
-  );
+  const arr = Array.from({ length: 16777217 }, () => 0);
+  arr[0] = 1;
+  arr[16777217] = 2;
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, true);
 }
 
 async function testDoesNotDestroyBuffer(): Promise<boolean> {
@@ -144,19 +79,13 @@ async function testDoesNotDestroyBuffer(): Promise<boolean> {
     .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
     .$usage('storage');
 
-  scan(root, input, {
-    operation: addFn,
-    identityElement: 0,
-  });
+  scan(root, input, { operation: addFn, identityElement: 0 });
 
   return isEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
 async function testDoesNotCacheBuffers(): Promise<boolean> {
-  const op = {
-    operation: addFn,
-    identityElement: 0,
-  };
+  const op = { operation: addFn, identityElement: 0 };
 
   const input1 = root
     .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
@@ -174,7 +103,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
     isEqual(await output2.read(), [10]);
 }
 
-// prefix tests
+// prefix f32 tests
 
 // running the tests
 
@@ -187,7 +116,7 @@ async function runTests(): Promise<boolean> {
   result = await testStdMax() && result;
   result = await testConcat() && result;
   result = await testLength65537() && result;
-  // result = await testLength16777217() && result; // fails, returns 16777216
+  result = await testLength16777217() && result;
   result = await testDoesNotDestroyBuffer() && result;
   result = await testDoesNotCacheBuffers() && result;
 
