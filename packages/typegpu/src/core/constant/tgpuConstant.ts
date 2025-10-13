@@ -25,7 +25,7 @@ type DeepReadonly<T> = T extends { [$internal]: unknown } ? T
 
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
-  readonly [$gpuValueOf]: InferGPU<TDataType>;
+  readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
   readonly value: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 
@@ -69,15 +69,15 @@ function deepFreeze<T extends object>(object: T): T {
 class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
-  readonly #value: InferGPU<TDataType>;
+  readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
   constructor(
     public readonly dataType: TDataType,
     value: InferGPU<TDataType>,
   ) {
     this.#value = value && typeof value === 'object'
-      ? deepFreeze(value)
-      : value;
+      ? deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>
+      : value as DeepReadonly<InferGPU<TDataType>>;
   }
 
   $name(label: string) {
@@ -106,7 +106,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return `const:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get [$gpuValueOf](): InferGPU<TDataType> {
+  get [$gpuValueOf](): DeepReadonly<InferGPU<TDataType>> {
     const dataType = this.dataType;
 
     return new Proxy({
@@ -120,10 +120,10 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
-    }, valueProxyHandler) as InferGPU<TDataType>;
+    }, valueProxyHandler) as DeepReadonly<InferGPU<TDataType>>;
   }
 
-  get $(): InferGPU<TDataType> {
+  get $(): DeepReadonly<InferGPU<TDataType>> {
     if (inCodegenMode()) {
       return this[$gpuValueOf];
     }
@@ -131,7 +131,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return this.#value;
   }
 
-  get value(): InferGPU<TDataType> {
+  get value(): DeepReadonly<InferGPU<TDataType>> {
     return this.$;
   }
 }

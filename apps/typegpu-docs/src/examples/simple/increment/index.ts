@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // Allocating memory for the counter
-const counter = root.createMutable(d.f32);
+const counter = root.createMutable(d.u32);
 
 // A 0-dimentional shader function
 const gpuIncrement = prepareDispatch(root, () => {
