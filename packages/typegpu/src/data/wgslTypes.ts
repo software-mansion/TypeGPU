@@ -1,6 +1,7 @@
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import type { TgpuFn } from '../core/function/tgpuFn.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -25,9 +26,14 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal, $wgslDataType } from '../shared/symbols.ts';
+import { $internal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
+import type {
+  WgslExternalTexture,
+  WgslStorageTexture,
+  WgslTexture,
+} from './texture.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -83,12 +89,6 @@ export interface matInfixNotation<T extends AnyMatInstance> {
   mul(other: T): T;
 }
 
-export function hasInternalDataType(
-  value: unknown,
-): value is { [$wgslDataType]: BaseData } {
-  return !!(value as { [$wgslDataType]: BaseData })?.[$wgslDataType];
-}
-
 /**
  * Represents a 64-bit integer.
  */
@@ -122,6 +122,9 @@ export interface Void extends BaseData {
 export const Void = {
   [$internal]: true,
   type: 'void',
+  toString() {
+    return 'void';
+  },
 } as Void;
 
 // #region Instance Types
@@ -656,6 +659,8 @@ export type AnyFloat32VecInstance = v2f | v3f | v4f;
 export type AnyFloat16VecInstance = v2h | v3h | v4h;
 
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
+
+export type AnyUnsignedVecInstance = v2u | v3u | v4u;
 
 export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
@@ -1508,6 +1513,23 @@ export const wgslTypeLiterals = [
   'abstractInt',
   'abstractFloat',
   'void',
+  'texture_1d',
+  'texture_storage_1d',
+  'texture_2d',
+  'texture_storage_2d',
+  'texture_multisampled_2d',
+  'texture_depth_2d',
+  'texture_depth_multisampled_2d',
+  'texture_2d_array',
+  'texture_storage_2d_array',
+  'texture_depth_2d_array',
+  'texture_cube',
+  'texture_depth_cube',
+  'texture_cube_array',
+  'texture_depth_cube_array',
+  'texture_3d',
+  'texture_storage_3d',
+  'texture_external',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1540,6 +1562,11 @@ export type FlatInterpolatableData =
   | PerspectiveOrLinearInterpolatableData
   | FlatInterpolatableAdditionalBaseType
   | Decorated<FlatInterpolatableAdditionalBaseType>;
+
+export type TextureSampleTypes =
+  | F32
+  | I32
+  | U32;
 
 export type ScalarData =
   | Bool
@@ -1617,34 +1644,37 @@ export type AnyWgslData =
   | Decorated
   | AbstractInt
   | AbstractFloat
-  | Void;
+  | Void
+  | WgslTexture
+  | WgslStorageTexture
+  | WgslExternalTexture;
 
 // #endregion
 
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
-  return !!v?.[$internal] &&
+  return isMarkedInternal(v) &&
     typeof v.kind === 'string' &&
     v.kind.startsWith('vec');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
-  return !!v?.[$internal] &&
+  return isMarkedInternal(v) &&
     typeof v.type === 'string' &&
     v.type.startsWith('vec2');
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
-  return !!v?.[$internal] &&
+  return isMarkedInternal(v) &&
     typeof v.type === 'string' &&
     v.type.startsWith('vec3');
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
-  return !!v?.[$internal] &&
+  return isMarkedInternal(v) &&
     typeof v.type === 'string' &&
     v.type.startsWith('vec4');
 }
@@ -1669,28 +1699,28 @@ export function isVec(
 
 export function isMatInstance(value: unknown): value is AnyMatInstance {
   const v = value as AnyMatInstance | undefined;
-  return !!v?.[$internal] &&
+  return isMarkedInternal(v) &&
     typeof v.kind?.startsWith === 'function' &&
     v.kind.startsWith('mat');
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
   return (
-    (value as AnyWgslData)?.[$internal] &&
+    isMarkedInternal(value) &&
     (value as AnyWgslData)?.type === 'mat2x2f'
   );
 }
 
 export function isMat3x3f(value: unknown): value is Mat3x3f {
   return (
-    (value as AnyWgslData)?.[$internal] &&
+    isMarkedInternal(value) &&
     (value as AnyWgslData)?.type === 'mat3x3f'
   );
 }
 
 export function isMat4x4f(value: unknown): value is Mat4x4f {
   return (
-    (value as AnyWgslData)?.[$internal] &&
+    isMarkedInternal(value) &&
     (value as AnyWgslData)?.type === 'mat4x4f'
   );
 }
@@ -1708,7 +1738,7 @@ export function isFloat32VecInstance(
 
 export function isWgslData(value: unknown): value is AnyWgslData {
   return (
-    (value as AnyWgslData)?.[$internal] &&
+    isMarkedInternal(value) &&
     wgslTypeLiterals.includes((value as AnyWgslData)?.type)
   );
 }
@@ -1728,7 +1758,7 @@ export function isWgslData(value: unknown): value is AnyWgslData {
 export function isWgslArray<T extends WgslArray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'array';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'array';
 }
 
 /**
@@ -1746,7 +1776,7 @@ export function isWgslArray<T extends WgslArray>(
 export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'struct';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'struct';
 }
 
 /**
@@ -1758,7 +1788,7 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtr(d.f32) // false
  */
 export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'ptr';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'ptr';
 }
 
 /**
@@ -1771,67 +1801,77 @@ export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
 export function isAtomic<T extends Atomic<U32 | I32>>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'atomic';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'atomic';
 }
 
 export function isAlignAttrib<T extends Align<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@align';
+  return isMarkedInternal(value) && (value as T)?.type === '@align';
 }
 
 export function isSizeAttrib<T extends Size<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@size';
+  return isMarkedInternal(value) && (value as T)?.type === '@size';
 }
 
 export function isLocationAttrib<T extends Location<number>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@location';
+  return isMarkedInternal(value) && (value as T)?.type === '@location';
 }
 
 export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@interpolate';
+  return isMarkedInternal(value) && (value as T)?.type === '@interpolate';
 }
 
 export function isBuiltinAttrib<T extends Builtin<string>>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@builtin';
+  return isMarkedInternal(value) && (value as T)?.type === '@builtin';
 }
 
 export function isInvariantAttrib<T extends Invariant>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === '@invariant';
+  return isMarkedInternal(value) && (value as T)?.type === '@invariant';
 }
 
 export function isDecorated<T extends Decorated>(
   value: unknown | T,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === 'decorated';
+  return isMarkedInternal(value) && (value as T)?.type === 'decorated';
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
   return (
-    (value as AbstractFloat)?.[$internal] &&
+    isMarkedInternal(value) &&
     (value as AbstractFloat).type === 'abstractFloat'
   );
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
   return (
-    (value as AbstractInt)?.[$internal] &&
+    isMarkedInternal(value) &&
     (value as AbstractInt).type === 'abstractInt'
   );
 }
 
+export function isAbstract(
+  value: unknown,
+): value is AbstractFloat | AbstractInt {
+  return isAbstractFloat(value) || isAbstractInt(value);
+}
+
+export function isConcrete(value: unknown): boolean {
+  return !isAbstract(value);
+}
+
 export function isVoid(value: unknown): value is Void {
-  return (value as Void)?.[$internal] && (value as Void).type === 'void';
+  return isMarkedInternal(value) && (value as Void).type === 'void';
 }
 
 export function isNumericSchema(
@@ -1840,12 +1880,26 @@ export function isNumericSchema(
   const type = (schema as BaseData)?.type;
 
   return (
-    !!(schema as BaseData)?.[$internal] &&
+    isMarkedInternal(schema) &&
     (type === 'abstractInt' ||
       type === 'abstractFloat' ||
       type === 'f32' ||
       type === 'f16' ||
       type === 'i32' ||
       type === 'u32')
+  );
+}
+
+export function isHalfPrecisionSchema(
+  schema: unknown,
+): schema is F16 | Vec2h | Vec3h | Vec4h {
+  const type = (schema as BaseData)?.type;
+
+  return (
+    isMarkedInternal(schema) &&
+    (type === 'f16' ||
+      type === 'vec2h' ||
+      type === 'vec3h' ||
+      type === 'vec4h')
   );
 }

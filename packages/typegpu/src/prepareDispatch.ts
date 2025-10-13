@@ -1,18 +1,13 @@
 import { builtin } from './builtin.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import { u32 } from './data/numeric.ts';
 import { vec3f, vec3u } from './data/vector.ts';
 import type { v3u } from './data/wgslTypes.ts';
 import { ceil } from './std/numeric.ts';
-
-const workgroupSizeConfigs = [
-  vec3u(1, 1, 1),
-  vec3u(256, 1, 1),
-  vec3u(16, 16, 1),
-  vec3u(8, 8, 4),
-] as const;
+import type { TgpuBindGroup } from './tgpuBindGroupLayout.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -32,6 +27,45 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
   : never
   : never;
 
+class PreparedDispatch<TArgs> {
+  #pipeline: TgpuComputePipeline;
+  #createDispatch: (pipeline: TgpuComputePipeline) => DispatchForArgs<TArgs>;
+  constructor(
+    createDispatch: (pipeline: TgpuComputePipeline) => DispatchForArgs<TArgs>,
+    pipeline: TgpuComputePipeline,
+  ) {
+    this.#createDispatch = createDispatch;
+    this.#pipeline = pipeline;
+  }
+
+  /**
+   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
+    return new PreparedDispatch(
+      this.#createDispatch,
+      this.#pipeline.with(bindGroup),
+    );
+  }
+
+  /**
+   * Run the prepared dispatch.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
+   * this method takes in the number of threads to run in each dimension.
+   */
+  get dispatch(): DispatchForArgs<TArgs> {
+    return this.#createDispatch(this.#pipeline);
+  }
+}
+
+const workgroupSizeConfigs = [
+  vec3u(1, 1, 1),
+  vec3u(256, 1, 1),
+  vec3u(16, 16, 1),
+  vec3u(8, 8, 4),
+] as const;
+
 /**
  * Creates a dispatch function for a compute pipeline.
  *
@@ -43,7 +77,7 @@ type DispatchForArgs<TArgs> = TArgs extends { length: infer TLength }
 export function prepareDispatch<TArgs extends number[]>(
   root: TgpuRoot,
   callback: (...args: TArgs) => undefined,
-): DispatchForArgs<TArgs> {
+): PreparedDispatch<TArgs> {
   if (callback.length >= 4) {
     throw new Error('Dispatch only supports up to three dimensions.');
   }
@@ -60,25 +94,30 @@ export function prepareDispatch<TArgs extends number[]>(
     workgroupSize: workgroupSize,
     in: { id: builtin.globalInvocationId },
   })`{
-    if (any(in.id >= sizeUniform)) {
-      return;
-    }
-    wrappedCallback(in.id.x, in.id.y, in.id.z);
-  }`.$uses({ sizeUniform, wrappedCallback });
+  if (any(in.id >= sizeUniform)) {
+    return;
+  }
+  wrappedCallback(in.id.x, in.id.y, in.id.z);
+}`.$uses({ sizeUniform, wrappedCallback });
 
   const pipeline = root['~unstable']
     .withCompute(mainCompute)
     .createPipeline();
 
-  return ((...size: (number | undefined)[]) => {
-    const sanitizedSize = toVec3(size);
-    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(workgroupSize)));
-    sizeUniform.write(sanitizedSize);
-    pipeline.dispatchWorkgroups(
-      workgroupCount.x,
-      workgroupCount.y,
-      workgroupCount.z,
-    );
-    root['~unstable'].flush();
-  }) as DispatchForArgs<TArgs>;
+  const createDispatch = (pipeline: TgpuComputePipeline) =>
+    ((...size: (number | undefined)[]) => {
+      const sanitizedSize = toVec3(size);
+      const workgroupCount = ceil(
+        vec3f(sanitizedSize).div(vec3f(workgroupSize)),
+      );
+      sizeUniform.write(sanitizedSize);
+      pipeline.dispatchWorkgroups(
+        workgroupCount.x,
+        workgroupCount.y,
+        workgroupCount.z,
+      );
+      root['~unstable'].flush();
+    }) as DispatchForArgs<TArgs>;
+
+  return new PreparedDispatch(createDispatch, pipeline);
 }

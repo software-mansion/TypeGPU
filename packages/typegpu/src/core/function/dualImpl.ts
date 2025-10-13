@@ -5,11 +5,15 @@ import {
   type Snippet,
 } from '../../data/snippet.ts';
 import { inCodegenMode } from '../../execMode.ts';
-import type { FnArgsConversionHint } from '../../types.ts';
+import { type FnArgsConversionHint, getOwnSnippet } from '../../types.ts';
 import { setName } from '../../shared/meta.ts';
-import { $internal, isRuntimeResource } from '../../shared/symbols.ts';
+import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
+
+function isKnownAtComptime(value: unknown): boolean {
+  return typeof value !== 'string' && getOwnSnippet(value) === undefined;
+}
 
 export function createDualImpl<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -41,7 +45,7 @@ type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
 interface DualImplOptions<T extends (...args: never[]) => unknown> {
   readonly name: string;
-  readonly normalImpl: T;
+  readonly normalImpl: T | string;
   readonly codegenImpl: (...args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
     | { argTypes: AnyData[]; returnType: AnyData }
@@ -49,6 +53,13 @@ interface DualImplOptions<T extends (...args: never[]) => unknown> {
       ...inArgTypes: MapValueToDataType<Parameters<T>>
     ) => { argTypes: AnyData[]; returnType: AnyData });
   readonly ignoreImplicitCastWarning?: boolean | undefined;
+}
+
+export class MissingCpuImplError extends Error {
+  constructor(message: string | undefined) {
+    super(message);
+    this.name = this.constructor.name;
+  }
 }
 
 export function dualImpl<T extends (...args: never[]) => unknown>(
@@ -71,14 +82,22 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     ) as MapValueToSnippet<Parameters<T>>;
 
     if (
-      converted.every((s) =>
-        typeof s.value !== 'string' && !isRuntimeResource(s.value)
-      )
+      converted.every((s) => isKnownAtComptime(s.value)) &&
+      typeof options.normalImpl === 'function'
     ) {
-      return snip(
-        options.normalImpl(...converted.map((s) => s.value) as never[]),
-        returnType,
-      );
+      try {
+        return snip(
+          options.normalImpl(...converted.map((s) => s.value) as never[]),
+          returnType,
+        );
+      } catch (e) {
+        // cpuImpl may in some cases be present but implemented only partially.
+        // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+        // If it is any other error, we just rethrow.
+        if (!(e instanceof MissingCpuImplError)) {
+          throw e;
+        }
+      }
     }
 
     return snip(options.codegenImpl(...converted), returnType);
@@ -87,6 +106,9 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   const impl = ((...args: Parameters<T>) => {
     if (inCodegenMode()) {
       return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
+    }
+    if (typeof options.normalImpl === 'string') {
+      throw new MissingCpuImplError(options.normalImpl);
     }
     return options.normalImpl(...args);
   }) as T;
