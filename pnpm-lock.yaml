@@ -503,7 +503,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.63
+        version: 0.1.65
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
