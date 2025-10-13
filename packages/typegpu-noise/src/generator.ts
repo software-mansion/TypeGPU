@@ -1,6 +1,6 @@
 import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { add, cos, dot, fract } from 'typegpu/std';
+import { add, cos, dot, fract, pow } from 'typegpu/std';
 
 export interface StatefulGenerator {
   seed: TgpuFn<(seed: d.F32) => d.Void> | ((seed: number) => void);
@@ -44,6 +44,50 @@ export const BPETER: StatefulGenerator = (() => {
       seed.value.y = fract(cos(b) * 534.7645);
       return seed.value.y;
     }),
+  };
+})();
+
+/**
+ * Naive Linear Congruential Generator (LCG)
+ */
+export const LCG: StatefulGenerator = (() => {
+  const seed = tgpu.privateVar(d.u32);
+
+  const u32To01Float = tgpu.fn([d.u32], d.f32)`(val){
+    let exponent: u32 = 0x3f800000;
+    let mantissa: u32 = 0x007fffff & val;
+    var ufloat: u32 = (exponent | mantissa);
+    return bitcast<f32>(ufloat) - 1f;
+  }`;
+
+  return {
+    seed: (value: number) => {
+      'kernel';
+      seed.$ = d.u32(value * pow(32, 3));
+    },
+    seed2: (value: d.v2f) => {
+      'kernel';
+      seed.$ = d.u32(value.x * pow(32, 3) + value.y * pow(32, 2));
+    },
+    seed3: (value: d.v3f) => {
+      'kernel';
+      seed.$ = d.u32(
+        value.x * pow(32, 3) + value.y * pow(32, 2) +
+          value.z * pow(32, 1),
+      );
+    },
+    seed4: (value: d.v4f) => {
+      'kernel';
+      seed.$ = d.u32(
+        value.x * pow(32, 3) + value.y * pow(32, 2) +
+          value.z * pow(32, 1) + value.w * pow(32, 0),
+      );
+    },
+    sample: () => {
+      'kernel';
+      seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
+      return u32To01Float(seed.$);
+    },
   };
 })();
 
