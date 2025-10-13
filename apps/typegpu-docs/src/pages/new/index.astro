@@ -85,10 +85,10 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
   </main>
 
   <section
-    class="flex flex-col items-center justify-between box-border relative self-stretch"
+    class="box-border flex flex-col items-center justify-between self-stretch"
   >
     <div
-      class="grid grid-rows-2 px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
+      class="grid grid-rows-2 px-20"
     >
       <div class="text-blue-900 font-extrabold text-7xl">
         Type
@@ -99,7 +99,7 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
         interface and ability to write shaders in TypeScript.
         <!-- <br class="hidden sm:block" /> -->
       </div>
-      <div class="flex flex-col gap-4 sm:flex-row">
+      <div class="flex flex-col gap-4 sm:flex-row my-20">
         <GetStartedButton />
         <a
           class="box-border w-full sm:w-auto text-black/75 border border-accent-500 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
@@ -210,6 +210,8 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
       </article>
     </section>
   </div>
+
+  {/* Call to Action Section */}
   <section class="flex flex-col items-center gap-16">
     <div
       class="flex flex-row items-center gap-3 font-bold text-blue-950 text-7xl"
@@ -221,8 +223,10 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
     <GetStartedButton />
   </section>
 </PageLayout>
+
+{/* Footer Section */}
 <footer
-  class="mt-20 flex flex-col items-center mx-auto px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138 bg-gradient-to-b from-white to-accent-50"
+  class="mt-20 flex flex-col items-center mx-auto px-4 bg-gradient-to-b from-white to-accent-50 lg:gap-20 gap-10 md:gap-15 "
 >
   <div
     class="flex flex-col items-center gap-12 self-stretch mx-40 py-10 text-blue-950"
