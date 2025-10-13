@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
-describe('[BABEL] "kernel" directive', () => {
+describe('[BABEL] "use gpu" directive', () => {
   it('makes plugin transpile marked arrow functions', () => {
     const code = `\
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-        'kernel';
+        'use gpu';
         return a + b;
       };
 
@@ -19,7 +19,7 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -43,7 +43,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell((a, b) => {
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -56,7 +56,7 @@ describe('[BABEL] "kernel" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -80,7 +80,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function(a, b){
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -93,7 +93,7 @@ describe('[BABEL] "kernel" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -117,7 +117,7 @@ describe('[BABEL] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -130,7 +130,7 @@ describe('[BABEL] "kernel" directive', () => {
       "import tgpu from 'typegpu';
       const shell = tgpu.fn([]);
       shell(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -152,7 +152,7 @@ describe('[BABEL] "kernel" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel';
+        'use gpu';
         return a + b;
       }
 
@@ -164,7 +164,7 @@ describe('[BABEL] "kernel" directive', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -184,14 +184,14 @@ describe('[BABEL] "kernel" directive', () => {
   it('parses when no typegpu import', () => {
     const code = `\
       function add(a, b) {
-        'kernel';
+        'use gpu';
         return a + b;
       };
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
-        'kernel';
+        'use gpu';
 
         return a + b;
       }, {
@@ -222,7 +222,7 @@ describe('[BABEL] "kernel" directive', () => {
   });
 });
 
-describe('[ROLLUP] "kernel" directive', () => {
+describe('[ROLLUP] "use gpu" directive', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -238,7 +238,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       import tgpu from 'typegpu';
 
       const addGPU = (a, b) => {
-        'kernel';
+        'use gpu';
         return a + b;
       };
 
@@ -255,7 +255,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       "import 'typegpu';
 
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
@@ -282,7 +282,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell((a, b) => {
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -297,7 +297,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
@@ -320,7 +320,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function(a, b){
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -334,7 +334,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
@@ -357,7 +357,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
       shell(function addGPU(a, b){
-        'kernel';
+        'use gpu';
         return a + b;
       })
 
@@ -372,7 +372,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const shell = tgpu.fn([]);
 
             shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
@@ -393,7 +393,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       import tgpu from 'typegpu';
 
       function addGPU(a, b) {
-        'kernel';
+        'use gpu';
         return a + b;
       }
 
@@ -410,7 +410,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       "import 'typegpu';
 
       const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
@@ -434,7 +434,7 @@ describe('[ROLLUP] "kernel" directive', () => {
     const code = `\
       const sum = add(1, 2);
       function add(a, b) {
-        'kernel';
+        'use gpu';
         return a + b;
       };
     `;
@@ -448,14 +448,14 @@ describe('[ROLLUP] "kernel" directive', () => {
   it('parses when no typegpu import', async () => {
     const code = `\
       function add(a, b) {
-        'kernel';
+        'use gpu';
         return a + b;
       };
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
-              'kernel';
+              'use gpu';
               return a + b;
             }), {
                     v: 1,
