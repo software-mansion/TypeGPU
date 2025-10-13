@@ -149,6 +149,37 @@ async function testPrefixLength16777217(): Promise<boolean> {
   return runAndCompare(arr, op, false);
 }
 
+async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
+  const input = root
+    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
+    .$usage('storage');
+
+  prefixScan(root, input, { operation: addFn, identityElement: 0 });
+
+  return isEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
+}
+
+async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
+  const arr1 = [1, 2, 3, 4, 5, 6, 7, 8];
+  const arr2 = Array.from({ length: 10 }, () => 1);
+  const op = { operation: addFn, identityElement: 0 };
+
+  const input1 = root
+    .createBuffer(d.arrayOf(d.f32, arr1.length), arr1)
+    .$usage('storage');
+
+  const output1 = prefixScan(root, input1, op);
+
+  const input2 = root
+    .createBuffer(d.arrayOf(d.f32, arr2.length), arr2)
+    .$usage('storage');
+
+  const output2 = prefixScan(root, input2, op);
+
+  return isEqual(await output1.read(), prefixScanJS(arr1, op)) &&
+    isEqual(await output2.read(), prefixScanJS(arr2, op));
+}
+
 // running the tests
 
 async function runTests(): Promise<boolean> {
@@ -171,6 +202,8 @@ async function runTests(): Promise<boolean> {
   result = await testPrefixConcat() && result;
   result = await testPrefixLength65537() && result;
   result = await testPrefixLength16777217() && result;
+  // result = await testPrefixDoesNotDestroyBuffer() && result; // fails
+  result = await testPrefixDoesNotCacheBuffers() && result;
 
   return result;
 }
