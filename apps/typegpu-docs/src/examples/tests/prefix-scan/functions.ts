@@ -3,6 +3,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { type BinaryOp } from '@typegpu/concurrent-scan';
 
+// tgpu functions
+
 export const addFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
   return a + b;
 });
@@ -52,4 +54,9 @@ export function scanJS(arr: number[], op: BinaryOp) {
     result = applyOp(op, result, arr[i]);
   }
   return [result];
+}
+
+export function isArrayEqual(arr1: number[], arr2: number[]): boolean {
+  return arr1.length === arr2.length &&
+    arr1.every((elem, i) => elem === arr2[i]);
 }

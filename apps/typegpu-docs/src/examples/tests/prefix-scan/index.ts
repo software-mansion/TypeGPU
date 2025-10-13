@@ -2,19 +2,20 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
 import * as std from 'typegpu/std';
-import { addFn, concat10, mulFn, prefixScanJS, scanJS } from './functions.ts';
+import {
+  addFn,
+  concat10,
+  isArrayEqual,
+  mulFn,
+  prefixScanJS,
+  scanJS,
+} from './functions.ts';
 
 const root = await tgpu.init({
   device: { requiredFeatures: ['timestamp-query'] },
 });
 
-function isEqual(e1: unknown, e2: unknown): boolean {
-  if (Array.isArray(e1) && Array.isArray(e2)) {
-    return e1.every((elem, i) => isEqual(elem, e2[i]));
-  }
-  return e1 === e2;
-}
-
+// helpers
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root
     .createBuffer(d.arrayOf(d.f32, arr.length), arr)
@@ -22,7 +23,7 @@ async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
 
   const output = scanOnly ? scan(root, input, op) : prefixScan(root, input, op);
 
-  return isEqual(
+  return isArrayEqual(
     await output.read(),
     scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op),
   );
@@ -87,7 +88,7 @@ async function testDoesNotDestroyBuffer(): Promise<boolean> {
 
   scan(root, input, { operation: addFn, identityElement: 0 });
 
-  return isEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
+  return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
 async function testDoesNotCacheBuffers(): Promise<boolean> {
@@ -105,8 +106,8 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const output2 = scan(root, input2, op);
 
-  return isEqual(await output1.read(), [36]) &&
-    isEqual(await output2.read(), [10]);
+  return isArrayEqual(await output1.read(), [36]) &&
+    isArrayEqual(await output2.read(), [10]);
 }
 
 // prefix f32 tests
@@ -168,7 +169,7 @@ async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
 
   prefixScan(root, input, { operation: addFn, identityElement: 0 });
 
-  return isEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
+  return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
 async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
@@ -188,11 +189,9 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
 
   const output2 = prefixScan(root, input2, op);
 
-  return isEqual(await output1.read(), prefixScanJS(arr1, op)) &&
-    isEqual(await output2.read(), prefixScanJS(arr2, op));
+  return isArrayEqual(await output1.read(), prefixScanJS(arr1, op)) &&
+    isArrayEqual(await output2.read(), prefixScanJS(arr2, op));
 }
-
-// AAA resolve test dla exampla
 
 // running the tests
 
