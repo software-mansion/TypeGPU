@@ -2,7 +2,7 @@
 interface Props {
   title: string;
   message: string;
-  icon: string;
+  icon: ((_props: astroHTML.JSX.SVGAttributes) => any) & ImageMetadata;
 }
 
 const { title, message, icon } = Astro.props as Props;
@@ -11,10 +11,9 @@ const { title, message, icon } = Astro.props as Props;
 <div
   class="flex flex-col items-start p-8 border-2 border-accent-600/30 max-w-sm aspect-square bg-accent-50"
 >
-  <div
-    class="flex justify-center items-center mb-6 rounded-lg w-16 h-16 bg-accent-600"
-  >
-    <img src={icon} />
+  <div class="flex justify-center items-center mb-6 w-16 h-16 bg-accent-600">
+    <!-- this is shit -->
+    {icon && <img src={icon.src} alt="Icon" class="w-8 h-8" />}
   </div>
 
   <h3 class="mb-4 font-semibold text-gray-800 text-2xl">

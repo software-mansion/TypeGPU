@@ -1,6 +1,9 @@
 ---
 import CodeButton from "./CodeButton.astro";
 import CodePen from "./CodePen.astro";
+import as_a_foundation from "../assets/hero/as_a_foundation.svg";
+import as_a_puzzle_piece from "../assets/hero/as_a_puzzle_piece.svg";
+import for_libraries from "../assets/hero/for_libraries.svg";
 
 const sectionId = "interactive-code-section";
 ---
@@ -25,7 +28,7 @@ const sectionId = "interactive-code-section";
             <CodeButton
                 title="As a foundation"
                 message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
-                icon="DarkModeIconSvg"
+                icon={for_libraries}
             />
         </div>
         <div
@@ -34,7 +37,7 @@ const sectionId = "interactive-code-section";
             <CodeButton
                 title="As a puzzle piece"
                 message="Pick and choose the APIs you need, and plug them into your code however you want."
-                icon="DarkModeIconSvg"
+                icon={as_a_puzzle_piece}
             />
         </div>
         <div
@@ -43,7 +46,7 @@ const sectionId = "interactive-code-section";
             <CodeButton
                 title="For libraries"
                 message="Simplify library internals, and make your user-facing API type-safe by default."
-                icon="DarkModeIconSvg"
+                icon={as_a_foundation}
             />
         </div>
     </div>
