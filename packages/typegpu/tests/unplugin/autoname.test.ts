@@ -145,7 +145,7 @@ describe('autonaming', () => {
 
   it('names arrow functions', () => {
     const myFun = () => {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -159,7 +159,7 @@ describe('autonaming', () => {
   it('names function expression', () => {
     // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -172,7 +172,7 @@ describe('autonaming', () => {
 
   it('names function definition', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 
@@ -185,7 +185,7 @@ describe('autonaming', () => {
 
   it('shellless name carries over to WGSL', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 

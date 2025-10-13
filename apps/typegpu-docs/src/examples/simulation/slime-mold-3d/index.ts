@@ -107,7 +107,7 @@ const Params = d.struct({
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
 root['~unstable'].prepareDispatch((x) => {
-  'kernel';
+  'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
   const center = resolution.div(2);
@@ -158,7 +158,7 @@ const RayBoxResult = d.struct({
 });
 
 const getPerpendicular = (dir: d.v3f) => {
-  'kernel';
+  'use gpu';
   let axis = d.vec3f(1, 0, 0);
 
   // Find the axis that is least aligned
@@ -176,7 +176,7 @@ const getPerpendicular = (dir: d.v3f) => {
 };
 
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
-  'kernel';
+  'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
   const dimsf = d.vec3f(dims);
 
@@ -371,7 +371,7 @@ const rayBoxIntersection = (
   boxMin: d.v3f,
   boxMax: d.v3f,
 ) => {
-  'kernel';
+  'use gpu';
   const invDir = d.vec3f(1).div(rayDir);
   const t0 = boxMin.sub(rayOrigin).mul(invDir);
   const t1 = boxMax.sub(rayOrigin).mul(invDir);

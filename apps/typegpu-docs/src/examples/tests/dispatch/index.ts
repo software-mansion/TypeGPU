@@ -14,7 +14,7 @@ function isEqual(e1: unknown, e2: unknown): boolean {
 async function test0d(): Promise<boolean> {
   const mutable = root.createMutable(d.u32);
   root['~unstable'].prepareDispatch(() => {
-    'kernel';
+    'use gpu';
     mutable.$ = 126;
   }).dispatch();
   const filled = await mutable.read();
@@ -25,7 +25,7 @@ async function test1d(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
   root['~unstable'].prepareDispatch((x) => {
-    'kernel';
+    'use gpu';
     mutable.$[x] = x;
   }).dispatch(...size);
   const filled = await mutable.read();
@@ -38,7 +38,7 @@ async function test2d(): Promise<boolean> {
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
   root['~unstable'].prepareDispatch((x, y) => {
-    'kernel';
+    'use gpu';
     mutable.$[x][y] = d.vec2u(x, y);
   }).dispatch(...size);
   const filled = await mutable.read();
@@ -57,7 +57,7 @@ async function test3d(): Promise<boolean> {
     ),
   );
   root['~unstable'].prepareDispatch((x, y, z) => {
-    'kernel';
+    'use gpu';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
   }).dispatch(...size);
   const filled = await mutable.read();
@@ -70,7 +70,7 @@ async function test3d(): Promise<boolean> {
 async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.atomic(d.u32));
   root['~unstable'].prepareDispatch((x, y, z) => {
-    'kernel';
+    'use gpu';
     std.atomicAdd(mutable.$, 1);
   }).dispatch(4, 3, 2);
   const filled = await mutable.read();
@@ -82,7 +82,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
   const test = root['~unstable'].prepareDispatch((x: number) => {
-    'kernel';
+    'use gpu';
     mutable.$[x] *= 2;
   });
   test.dispatch(6);
@@ -108,7 +108,7 @@ async function testDifferentBindGroups(): Promise<boolean> {
   });
 
   const test = root['~unstable'].prepareDispatch(() => {
-    'kernel';
+    'use gpu';
     for (let i = d.u32(); i < std.arrayLength(layout.$.buffer); i++) {
       layout.$.buffer[i] *= 2;
     }

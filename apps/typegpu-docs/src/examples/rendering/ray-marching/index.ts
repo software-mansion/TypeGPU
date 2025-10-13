@@ -32,13 +32,13 @@ const Shape = d.struct({
 });
 
 const checkerBoard = (uv: d.v2f): number => {
-  'kernel';
+  'use gpu';
   const fuv = std.floor(uv);
   return std.abs(fuv.x + fuv.y) % 2;
 };
 
 const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
-  'kernel';
+  'use gpu';
   const h = std.max(k - std.abs(a.dist - b.dist), 0) / k;
   const m = h * h;
 
@@ -53,7 +53,7 @@ const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
 };
 
 const shapeUnion = (a: Shape, b: Shape) => {
-  'kernel';
+  'use gpu';
   return Shape({
     color: std.select(a.color, b.color, a.dist > b.dist),
     dist: std.min(a.dist, b.dist),
@@ -61,7 +61,7 @@ const shapeUnion = (a: Shape, b: Shape) => {
 };
 
 const getMorphingShape = (p: d.v3f, t: number): Shape => {
-  'kernel';
+  'use gpu';
   // Center position
   const center = d.vec3f(0, 2, 6);
   const localP = std.sub(p, center);
@@ -104,7 +104,7 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
 };
 
 const getSceneDist = (p: d.v3f): Shape => {
-  'kernel';
+  'use gpu';
   const shape = getMorphingShape(p, time.$);
   const floor = Shape({
     dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
@@ -119,7 +119,7 @@ const getSceneDist = (p: d.v3f): Shape => {
 };
 
 const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
-  'kernel';
+  'use gpu';
   let dO = d.f32(0);
   const result = Shape({
     dist: d.f32(MAX_DIST),
@@ -148,7 +148,7 @@ const softShadow = (
   maxT: number,
   k: number,
 ): number => {
-  'kernel';
+  'use gpu';
   let res = d.f32(1);
   let t = minT;
 
@@ -164,7 +164,7 @@ const softShadow = (
 };
 
 const getNormal = (p: d.v3f): d.v3f => {
-  'kernel';
+  'use gpu';
   const dist = getSceneDist(p).dist;
   const e = 0.01;
 
@@ -178,7 +178,7 @@ const getNormal = (p: d.v3f): d.v3f => {
 };
 
 const getOrbitingLightPos = (t: number): d.v3f => {
-  'kernel';
+  'use gpu';
   const radius = d.f32(3);
   const height = d.f32(6);
   const speed = d.f32(1);
