@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
 import * as std from 'typegpu/std';
@@ -57,6 +57,12 @@ async function testStdMax(): Promise<boolean> {
 async function testConcat(): Promise<boolean> {
   const arr = [0, 0, 0, 1, 0, 2, 0, 0, 3, 4, 5, 0, 0, 0, 6];
   const op = { operation: concat10, identityElement: 0 };
+  return runAndCompare(arr, op, true);
+}
+
+async function testLength1(): Promise<boolean> {
+  const arr = [42];
+  const op = { operation: addFn, identityElement: 0 };
   return runAndCompare(arr, op, true);
 }
 
@@ -135,6 +141,12 @@ async function testPrefixConcat(): Promise<boolean> {
   return runAndCompare(arr, op, false);
 }
 
+async function testPrefixLength1(): Promise<boolean> {
+  const arr = [42];
+  const op = { operation: addFn, identityElement: 0 };
+  return runAndCompare(arr, op, false);
+}
+
 async function testPrefixLength65537(): Promise<boolean> {
   const arr = Array.from({ length: 65537 }, () => 1);
   const op = { operation: addFn, identityElement: 0 };
@@ -180,6 +192,8 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
     isEqual(await output2.read(), prefixScanJS(arr2, op));
 }
 
+// AAA resolve test dla exampla
+
 // running the tests
 
 async function runTests(): Promise<boolean> {
@@ -190,6 +204,7 @@ async function runTests(): Promise<boolean> {
   // result = await testMul() && result; // fails, returns 0
   result = await testStdMax() && result;
   result = await testConcat() && result;
+  result = await testLength1() && result;
   result = await testLength65537() && result;
   result = await testLength16777217() && result;
   result = await testDoesNotDestroyBuffer() && result;
@@ -200,6 +215,7 @@ async function runTests(): Promise<boolean> {
   result = await testPrefixMul() && result;
   result = await testPrefixStdMax() && result;
   result = await testPrefixConcat() && result;
+  result = await testPrefixLength1() && result;
   result = await testPrefixLength65537() && result;
   result = await testPrefixLength16777217() && result;
   // result = await testPrefixDoesNotDestroyBuffer() && result; // fails
