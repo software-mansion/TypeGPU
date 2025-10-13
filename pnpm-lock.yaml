@@ -153,8 +153,8 @@ importers:
         specifier: ^1.3.5
         version: 1.3.5(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@rolldown/browser':
-        specifier: 1.0.0-beta.32
-        version: 1.0.0-beta.32
+        specifier: 1.0.0-beta.43
+        version: 1.0.0-beta.43
       '@stackblitz/sdk':
         specifier: ^1.11.0
         version: 1.11.0
@@ -1833,10 +1833,6 @@ packages:
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
 
-  '@oxc-project/runtime@0.81.0':
-    resolution: {integrity: sha512-zm/LDVOq9FEmHiuM8zO4DWirv0VP2Tv2VsgaiHby9nvpq+FVrcqNYgv+TysLKOITQXWZj/roluTxFvpkHP0Iuw==}
-    engines: {node: '>=6.9.0'}
-
   '@oxc-project/runtime@0.82.2':
     resolution: {integrity: sha512-cYxcj5CPn/vo5QSpCZcYzBiLidU5+GlFSqIeNaMgBDtcVRBsBJHZg3pHw999W6nHamFQ1EHuPPByB26tjaJiJw==}
     engines: {node: '>=6.9.0'}
@@ -2228,8 +2224,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rolldown/browser@1.0.0-beta.32':
-    resolution: {integrity: sha512-g9Cj/Kn3gO//7eT9RRLN7Zb6juFqSJJjVfm3Mv1aivZW5a66VSEXuQnkCHPsTST4qVnrRXnyGjUk5ftVTKk80A==}
+  '@rolldown/browser@1.0.0-beta.43':
+    resolution: {integrity: sha512-l00mWA7r+8mEbu04lyH1xhO5t/J6mt7yUt6VidtHqike9e8obarB6ePpzr7EA0GvsnuUYgvHhKPqRbnqSKrXJQ==}
     hasBin: true
 
   '@rolldown/pluginutils@1.0.0-beta.27':
@@ -7638,8 +7634,6 @@ snapshots:
 
   '@oslojs/encoding@1.1.0': {}
 
-  '@oxc-project/runtime@0.81.0': {}
-
   '@oxc-project/runtime@0.82.2': {}
 
   '@oxc-project/types@0.82.2': {}
@@ -7960,10 +7954,9 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.33':
     optional: true
 
-  '@rolldown/browser@1.0.0-beta.32':
+  '@rolldown/browser@1.0.0-beta.43':
     dependencies:
       '@napi-rs/wasm-runtime': 1.0.3
-      '@oxc-project/runtime': 0.81.0
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
