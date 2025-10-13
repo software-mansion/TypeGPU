@@ -20,7 +20,8 @@ export type RefSpace =
   // (not to be confused with 'comptime')
   // note that this doesn't automatically mean the value can be stored in a `const`
   // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in TGSL)
-  | 'constant';
+  | 'constant'
+  | 'constant-ref';
 
 export function isSpaceRef(space: RefSpace) {
   return space !== 'runtime' && space !== 'constant';

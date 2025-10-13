@@ -1,6 +1,5 @@
-import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import { type AnyWgslData, isNaturallyRef } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -71,7 +70,11 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     // Why not a ref?
     // 1. On the WGSL side, we cannot take pointers to constants.
     // 2. On the JS side, we copy the constant each time we access it, so we're safe.
-    return snip(id, this.dataType, /* ref */ 'constant');
+    return snip(
+      id,
+      this.dataType,
+      /* ref */ isNaturallyRef(this.dataType) ? 'constant-ref' : 'constant',
+    );
   }
 
   toString() {
@@ -84,22 +87,26 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType, /* ref */ 'constant');
+        return snip(
+          this,
+          dataType,
+          /* ref */ isNaturallyRef(dataType) ? 'constant-ref' : 'constant',
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<TDataType>;
   }
 
-  get value(): InferGPU<TDataType> {
+  get $(): InferGPU<TDataType> {
     if (inCodegenMode()) {
       return this[$gpuValueOf];
     }
 
-    return schemaCallWrapper(this.dataType, this.#value);
+    return this.#value;
   }
 
-  get $(): InferGPU<TDataType> {
-    return this.value;
+  get value(): InferGPU<TDataType> {
+    return this.$;
   }
 }
