@@ -12,16 +12,18 @@ import {
 import {
   assignMetadata,
   containsKernelDirective,
+  containsUseGpuDirective,
   type Context,
   defaultOptions,
   earlyPruneRegex,
   embedJSON,
   type FunctionNode,
   gatherTgpuAliases,
+  getFunctionName,
   isShellImplementationCall,
   type Options,
   performExpressionNaming,
-  removeKernelDirective,
+  removeUseGpuDirective,
   wrapInAutoName,
 } from './common.ts';
 
@@ -94,6 +96,7 @@ const typegpu = createUberPlugin(
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
+              const parent = _parent as acorn.AnyNode;
 
               performExpressionNaming(ctx, node, (node, name) => {
                 wrapInAutoName(magicString, node, name);
@@ -113,7 +116,7 @@ const typegpu = createUberPlugin(
                       implementation.type === 'ArrowFunctionExpression')
                   ) {
                     tgslFunctionDefs.push({
-                      def: removeKernelDirective(implementation),
+                      def: removeUseGpuDirective(implementation),
                     });
                     this.skip();
                   }
@@ -125,17 +128,10 @@ const typegpu = createUberPlugin(
                 node.type === 'FunctionExpression' ||
                 node.type === 'FunctionDeclaration'
               ) {
-                if (containsKernelDirective(node)) {
+                if (containsUseGpuDirective(node)) {
                   tgslFunctionDefs.push({
-                    def: removeKernelDirective(node),
-                    name: node.type === 'FunctionDeclaration' ||
-                        node.type === 'FunctionExpression'
-                      ? node.id?.name
-                      : _parent?.type === 'VariableDeclarator'
-                      ? _parent.id.type === 'Identifier'
-                        ? _parent.id.name
-                        : undefined
-                      : undefined,
+                    def: removeUseGpuDirective(node),
+                    name: getFunctionName(node, parent),
                   });
                   this.skip();
                 }
@@ -160,6 +156,7 @@ const typegpu = createUberPlugin(
 
             const metadata = `{
               v: ${FORMAT_VERSION},
+              name: ${name ? `"${name}"` : 'undefined'},
               ast: ${embedJSON({ params, body, externalNames })},
               get externals() { return {${externalNames.join(', ')}}; },
             }`;

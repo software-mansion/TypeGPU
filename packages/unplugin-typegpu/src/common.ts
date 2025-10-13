@@ -30,7 +30,7 @@ export interface Options {
   autoNamingEnabled?: boolean | undefined;
 
   /**
-   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
    *
@@ -127,6 +127,21 @@ export function isShellImplementationCall(
   );
 }
 
+export function getFunctionName(
+  node: acorn.AnyNode | babel.Node,
+  parent: acorn.AnyNode | babel.Node | null,
+): string | undefined {
+  if (
+    parent?.type === 'VariableDeclarator' && parent.id.type === 'Identifier'
+  ) {
+    return parent.id.name;
+  }
+  return node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression'
+    ? node.id?.name
+    : undefined;
+}
+
 const resourceConstructors: string[] = [
   // tgpu
   'bindGroupLayout',
@@ -210,6 +225,9 @@ type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  *
+ * This function is NOT used for auto-naming shell-less functions.
+ * Those are handled separately.
+ *
  * @privateRemarks
  * When adding new checks, you need to call this method in the corresponding node in Babel.
  */
@@ -250,12 +268,12 @@ export type FunctionNode =
   | acorn.FunctionExpression
   | acorn.ArrowFunctionExpression;
 
-export function containsKernelDirective(node: FunctionNode): boolean {
+export function containsUseGpuDirective(node: FunctionNode): boolean {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
       if (
         statement.type === 'ExpressionStatement' &&
-        statement.directive === kernelDirective
+        statement.directive === useGpuDirective
       ) {
         return true;
       }
@@ -264,7 +282,7 @@ export function containsKernelDirective(node: FunctionNode): boolean {
   return false;
 }
 
-export function removeKernelDirective(node: FunctionNode) {
+export function removeUseGpuDirective(node: FunctionNode) {
   const cloned = structuredClone(node);
 
   if (cloned.body.type === 'BlockStatement') {
@@ -272,7 +290,7 @@ export function removeKernelDirective(node: FunctionNode) {
       (statement) =>
         !(
           statement.type === 'ExpressionStatement' &&
-          statement.directive === kernelDirective
+          statement.directive === useGpuDirective
         ),
     );
   }
@@ -307,7 +325,7 @@ export function wrapInAutoName(
     .appendRight(node.end, `, "${name}"))`);
 }
 
-export const kernelDirective = 'kernel';
+export const useGpuDirective = 'use gpu';
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const earlyPruneRegex = [/["']kernel["']/, /t(ype)?gpu/];
+export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];

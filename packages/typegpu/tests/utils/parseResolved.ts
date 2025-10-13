@@ -1,51 +1,14 @@
 import type * as tinyest from 'tinyest';
-import { WeslStream } from 'wesl';
-import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve.ts';
 import tgpu from '../../src/index.ts';
 import { type Assertion, expect } from 'vitest';
 import type { AnyData } from '../../src/data/index.ts';
 import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
 import { provideCtx } from '../../src/execMode.ts';
-import { CodegenState } from '../../src/types.ts';
+import { CodegenState, type Wgsl } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
-import * as wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-
-export function parse(code: string): string {
-  const stream = new WeslStream(code);
-  const firstToken = stream.nextToken();
-  if (firstToken === null) {
-    return '';
-  }
-
-  let result = firstToken.text;
-  let token = stream.nextToken();
-  while (token !== null) {
-    result += ` ${token.text}`;
-    token = stream.nextToken();
-  }
-  return result;
-}
-
-export function parseResolved(
-  resolvable: TgpuResolveOptions['externals'],
-): string {
-  const resolved = tgpu.resolve({
-    externals: resolvable,
-    names: 'strict',
-  });
-
-  try {
-    return parse(resolved);
-  } catch (e) {
-    throw new Error(
-      `Failed to parse the following: \n${resolved}\n\nCause:${
-        String(e).substring(0, 128)
-      }`,
-    );
-  }
-}
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 /**
  * Just a shorthand for tgpu.resolve
@@ -53,7 +16,9 @@ export function parseResolved(
 export function asWgsl(...values: unknown[]): string {
   return tgpu.resolve({
     // Arrays are objects with numeric keys if you thing about it hard enough
-    externals: values as unknown as Record<string, object>,
+    externals: Object.fromEntries(
+      values.map((v, i) => [`item_${i}`, v as Wgsl]),
+    ),
     names: 'strict',
   });
 }
@@ -62,7 +27,7 @@ export function expectDataTypeOf(
   cb: () => unknown,
 ): Assertion<AnyData | UnknownData> {
   const ctx = new ResolutionCtxImpl({
-    names: new StrictNameRegistry(),
+    namespace: namespace({ names: 'strict' }),
   });
 
   const dataType = provideCtx(
@@ -78,8 +43,8 @@ export function expectDataTypeOf(
           );
         }
 
-        const exprSnippet = wgslGenerator.generateExpression(
-          ctx,
+        wgslGenerator.initGenerator(ctx);
+        const exprSnippet = wgslGenerator.expression(
           statements[0] as tinyest.Expression,
         );
 

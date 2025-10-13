@@ -1,17 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
-import { StrictNameRegistry } from '../../src/nameRegistry.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
 describe('wgsl generator type inference', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
+      shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
   });
@@ -322,7 +324,8 @@ describe('wgsl generator js type inference', () => {
 
   beforeEach(() => {
     ctx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+      namespace: namespace({ names: 'strict' }),
+      shaderGenerator: wgslGenerator,
     });
     ctx.pushMode(new CodegenState());
   });
