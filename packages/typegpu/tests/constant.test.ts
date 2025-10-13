@@ -43,7 +43,7 @@ describe('tgpu.const', () => {
       fn func() {
         const pos = boid;
         const vel = boid.vel;
-        var velX = boid.vel.x;
+        const velX = boid.vel.x;
       }"
     `);
   });
