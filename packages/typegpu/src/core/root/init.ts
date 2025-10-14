@@ -65,9 +65,10 @@ import {
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
-  comparisonSampler,
+  INTERNAL_createComparisonSampler,
+  INTERNAL_createSampler,
+  isComparisonSampler,
   isSampler,
-  sampler,
   type TgpuComparisonSampler,
   type TgpuFixedComparisonSampler,
   type TgpuFixedSampler,
@@ -410,13 +411,13 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   createSampler(props: WgslSamplerProps): TgpuFixedSampler {
-    return sampler(props);
+    return INTERNAL_createSampler(props, this);
   }
 
   createComparisonSampler(
     props: WgslComparisonSamplerProps,
   ): TgpuFixedComparisonSampler {
-    return comparisonSampler(props);
+    return INTERNAL_createComparisonSampler(props, this);
   }
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
@@ -491,9 +492,9 @@ class TgpuRootImpl extends WithBindingImpl
       return resource.vertexLayout;
     }
 
-    if (isSampler(resource)) {
+    if (isSampler(resource) || isComparisonSampler(resource)) {
       if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap(this);
+        return resource[$internal].unwrap();
       }
       throw new Error('Cannot unwrap laid-out sampler.');
     }

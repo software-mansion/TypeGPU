@@ -26,7 +26,7 @@ import { inCodegenMode } from '../../execMode.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 interface SamplerInternals {
-  readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
+  readonly unwrap?: (() => GPUSampler) | undefined;
 }
 
 // ----------
@@ -58,16 +58,25 @@ export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler, TgpuNamable {}
 
-export function sampler(props: WgslSamplerProps): TgpuFixedSampler {
-  return new TgpuFixedSamplerImpl(wgslSampler(), props) as TgpuFixedSampler;
+export function INTERNAL_createSampler(
+  props: WgslSamplerProps,
+  branch: Unwrapper,
+): TgpuFixedSampler {
+  return new TgpuFixedSamplerImpl(
+    wgslSampler(),
+    props,
+    branch,
+  ) as TgpuFixedSampler;
 }
 
-export function comparisonSampler(
+export function INTERNAL_createComparisonSampler(
   props: WgslComparisonSamplerProps,
+  branch: Unwrapper,
 ): TgpuFixedComparisonSampler {
   return new TgpuFixedSamplerImpl(
     wgslComparisonSampler(),
     props,
+    branch,
   ) as TgpuFixedComparisonSampler;
 }
 
@@ -170,21 +179,24 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   #filtering: boolean;
   #sampler: GPUSampler | null = null;
   #props: WgslSamplerProps | WgslComparisonSamplerProps;
+  #branch: Unwrapper;
 
   constructor(
     readonly schema: T,
     props: WgslSamplerProps | WgslComparisonSamplerProps,
+    branch: Unwrapper,
   ) {
     this.#props = props;
+    this.#branch = branch;
     this.resourceType =
       (schema.type === 'comparison_sampler'
         ? 'sampler-comparison'
         : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
           : 'sampler';
     this[$internal] = {
-      unwrap: (branch) => {
+      unwrap: () => {
         if (!this.#sampler) {
-          this.#sampler = branch.device.createSampler({
+          this.#sampler = this.#branch.device.createSampler({
             ...this.#props,
             label: getName(this) ?? '<unnamed>',
           });

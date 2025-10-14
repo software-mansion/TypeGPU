@@ -110,7 +110,7 @@ describe('simple shadow example', () => {
 
       @group(2) @binding(0) var shadowMap_13: texture_depth_2d;
 
-      @group(2) @binding(1) var comparisonSampler_14: sampler_comparison;
+      @group(2) @binding(1) var comparisonSampler_14: comparison_sampler;
 
       struct VisParams_16 {
         shadowOnly: f32,

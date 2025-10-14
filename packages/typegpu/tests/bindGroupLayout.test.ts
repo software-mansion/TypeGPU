@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
@@ -482,11 +481,11 @@ describe('TgpuBindGroup', () => {
 
     it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({ root }) => {
       root.createBindGroup(layout, {
-        foo: sampler({ minFilter: 'linear' }),
+        foo: root.createSampler({ minFilter: 'linear' }),
       });
 
       root.createBindGroup(layout, {
-        foo: sampler({ minFilter: 'nearest' }),
+        foo: root.createSampler({ minFilter: 'nearest' }),
       });
 
       root.createBindGroup(layout, {
@@ -561,7 +560,7 @@ describe('TgpuBindGroup', () => {
 
     it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({ root }) => {
       root.createBindGroup(layout, {
-        foo: comparisonSampler({ compare: 'equal' }),
+        foo: root.createComparisonSampler({ compare: 'equal' }),
       });
 
       root.createBindGroup(layout, {
@@ -570,12 +569,12 @@ describe('TgpuBindGroup', () => {
 
       root.createBindGroup(layout, {
         // @ts-expect-error
-        foo: sampler({ minFilter: 'linear' }),
+        foo: root.createSampler({ minFilter: 'linear' }),
       });
 
       root.createBindGroup(layout, {
         // @ts-expect-error
-        foo: sampler({ minFilter: 'nearest' }),
+        foo: root.createSampler({ minFilter: 'nearest' }),
       });
     });
   });
