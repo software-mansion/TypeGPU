@@ -1,11 +1,6 @@
 import tgpu, { type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
-
-export const Camera = d.struct({
-  position: d.vec3f,
-  view: d.mat4x4f,
-  projection: d.mat4x4f,
-});
+import { Camera } from './setup-orbit-camera.ts';
 
 export const CelestialBody = d.struct({
   destroyed: d.u32, // boolean
