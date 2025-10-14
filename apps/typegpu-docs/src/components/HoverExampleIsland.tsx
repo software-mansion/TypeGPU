@@ -98,7 +98,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     <div
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
-      className='border-white/10 w-full h-full overflow-hidden order'
+      className='w-full h-full overflow-hidden order'
     >
       {error ? (
         <p className='font-medium text-white text-sm text-center'>
