@@ -22,10 +22,14 @@ async function loadExample(exampleKey: string): Promise<Example> {
 }
 
 
-function stretchCanvases(container: HTMLElement) {
-  container.querySelectorAll('canvas').forEach((canvas) => {
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
+function resizeCanvases(container: HTMLElement) {
+  container.querySelectorAll("canvas").forEach((canvas) => {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr * 2;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
   });
 }
 
@@ -69,7 +73,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         }
 
         containerRef.current.innerHTML = example.htmlFile.content;
-        stretchCanvases(containerRef.current);
+        resizeCanvases(containerRef.current);
 
         const { dispose } = await executeExample(example.tsImport);
         if (cancelled) {
