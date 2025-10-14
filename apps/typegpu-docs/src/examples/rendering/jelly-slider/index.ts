@@ -194,8 +194,6 @@ const sdInflatedPolyline2D = (p: d.v2f, segmentIndex: number) => {
   const a = lineInfos.$[i - 1];
   const b = lineInfos.$[i];
 
-  // Convert world position to UV coordinates using bezierBbox
-  // bezierBbox = [top, right, bottom, left]
   const left = d.f32(bezierBbox[3]);
   const right = d.f32(bezierBbox[1]);
   const bottom = d.f32(bezierBbox[2]);
@@ -205,9 +203,7 @@ const sdInflatedPolyline2D = (p: d.v2f, segmentIndex: number) => {
     (p.x - left) / (right - left),
     (top - p.y) / (top - bottom),
   );
-
-  // Clamp UV to [0, 1] to prevent out-of-bounds access
-  const clampedUV = std.clamp(uv, d.vec2f(0, 0), d.vec2f(1, 1));
+  const clampedUV = std.saturate(uv);
 
   // Convert UV to pixel coordinates and sample the bezier distance texture
   const texSize = std.textureDimensions(bezierTexture.$);
@@ -733,24 +729,6 @@ const raymarchFn = tgpu['~unstable'].computeFn({
 
   const u = (gid.x / dimensions.x) * 2.0 - 1.0;
   const v = 1.0 - (gid.y / dimensions.y) * 2.0;
-
-  // TODO: remove debug
-  // const bezierDims = std.textureDimensions(bezierTexture.$);
-  // const bezierCoord = d.vec2u(
-  //   d.u32((d.f32(gid.x) / d.f32(dimensions.x)) * d.f32(bezierDims.x)),
-  //   d.u32((d.f32(gid.y) / d.f32(dimensions.y)) * d.f32(bezierDims.y)),
-  // );
-
-  // std.textureStore(
-  //   rayMarchLayout.$.currentTexture,
-  //   d.vec2u(gid.x, gid.y),
-  //   std.textureLoad(
-  //     bezierTexture.$,
-  //     bezierCoord,
-  //   ),
-  // );
-
-  // return;
 
   const clipPos = d.vec4f(u, v, -1.0, 1.0);
 
