@@ -57,6 +57,7 @@ export async function executeTgslCode(tgslCode: string): Promise<string> {
     const shaderCode = await executeTgslModule(tgslCode);
     return shaderCode.default as string;
   } catch (error) {
+    console.error(error);
     throw new Error(
       `Failed to execute TGSL code: ${
         error instanceof Error ? error.message : String(error)
