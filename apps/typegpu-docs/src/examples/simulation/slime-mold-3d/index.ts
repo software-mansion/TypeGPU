@@ -359,7 +359,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
 });
@@ -433,7 +433,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     const texCoord = pos.div(resolution);
 
     const sampleValue = std
-      .textureSampleLevel(renderLayout.$.state, sampler, texCoord, 0)
+      .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
       .x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);

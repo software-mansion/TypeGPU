@@ -35,7 +35,7 @@ let texture = root['~unstable'].createTexture({
 texture.copyFrom(sourceTex);
 texture.generateMipmaps();
 
-const filteringSampler = tgpu['~unstable'].sampler({
+const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -69,7 +69,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   return color;
 }`.$uses({
   texture: layout.bound.myTexture,
-  sampler: filteringSampler,
+  sampler: filteringSampler.$,
   bias: biasUniform,
 });
 

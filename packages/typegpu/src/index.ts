@@ -68,7 +68,13 @@ export const tgpu = {
      */
     const: constant,
     declare,
+    /**
+     * @deprecated Use root.createSampler() instead.
+     */
     sampler,
+    /**
+     * @deprecated Use root.createComparisonSampler() instead.
+     */
     comparisonSampler,
 
     simulate,

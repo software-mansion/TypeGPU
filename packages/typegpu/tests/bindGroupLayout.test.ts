@@ -455,7 +455,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = tgpu['~unstable'].sampler({
+      const sampler = root['~unstable'].createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
       });
@@ -495,7 +495,7 @@ describe('TgpuBindGroup', () => {
 
       root.createBindGroup(layout, {
         // @ts-expect-error
-        foo: comparisonSampler({ compare: 'less' }),
+        foo: root['~unstable'].createComparisonSampler({ compare: 'less' }),
       });
     });
   });
@@ -535,7 +535,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = tgpu['~unstable'].comparisonSampler({
+      const sampler = root['~unstable'].createComparisonSampler({
         compare: 'equal',
       });
 

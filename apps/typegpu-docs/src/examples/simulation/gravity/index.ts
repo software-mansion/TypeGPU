@@ -55,7 +55,7 @@ context.configure({
 
 // static resources (created on the example load)
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
