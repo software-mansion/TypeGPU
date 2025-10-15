@@ -5,8 +5,18 @@
     <slot />
      <dialog class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 p-6 rounded-none shadow-lg max-w-md w-full backdrop:bg-black/20 dark:backdrop:bg-black/50 backdrop:backdrop-blur-md">
         <form method="dialog">
-            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email:</label>
-            <input type="email" id="email" name="email" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email: *</label>
+            <input type="email" id="email" name="email" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+            <div class="flex items-start mb-4">
+              <input type="checkbox" id="updates-agree" name="updates-agree" required class="relative appearance-none border-2 border-purple-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-purple-600 checked:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
+              <label for="updates-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive updates, news, and marketing materials related to TypeGPU Academy. You can unsubscribe at any time. See our Privacy Policy for details. *</label>
+            </div>
+
+            <div class="flex items-start mb-4">
+              <input type="checkbox" id="newsletter-agree" name="newsletter-agree" class="relative appearance-none border-2 border-purple-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-purple-600 checked:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
+              <label for="newsletter-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive the monthly Software Mansion newsletter with updates on TypeGPU and other React Native, AI, and multimedia projects. You can unsubscribe anytime. See our Privacy Policy for details. *</label>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">* - required</p>
             <button type="submit" class="mt-4 w-full px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white font-medium border-none rounded-none hover:bg-purple-700 dark:hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400">Get Notified</button>
         </form>
     </dialog>
