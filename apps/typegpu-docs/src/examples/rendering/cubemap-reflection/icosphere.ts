@@ -310,8 +310,6 @@ export class IcosphereGenerator {
       .with(bindGroup)
       .dispatchWorkgroups(xGroups, yGroups, 1);
 
-    this.root['~unstable'].flush();
-
     return nextBuffer;
   }
 

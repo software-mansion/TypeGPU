@@ -795,7 +795,7 @@ describe('TgpuRenderPipeline', () => {
     expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
   });
 
-  it('works when combining timestamp writes and index buffer', ({ root, device }) => {
+  it('works when combining timestamp writes and index buffer', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -811,7 +811,7 @@ describe('TgpuRenderPipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
 
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -867,7 +867,7 @@ describe('TgpuRenderPipeline', () => {
     });
   });
 
-  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device }) => {
+  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -882,8 +882,8 @@ describe('TgpuRenderPipeline', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
-    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const resolveQuerySetSpy = vi.spyOn(commandEncoder, 'resolveQuerySet');
 
     const callback = vi.fn();
 
@@ -926,7 +926,7 @@ describe('TgpuRenderPipeline', () => {
       count: 2,
     });
 
-    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
+    expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith({
       colorAttachments: [
         {
           loadOp: 'clear',

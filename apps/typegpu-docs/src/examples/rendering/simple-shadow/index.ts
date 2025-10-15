@@ -352,7 +352,6 @@ function render() {
       }
     },
   );
-  root['~unstable'].flush();
 }
 frameId = requestAnimationFrame(render);
 
