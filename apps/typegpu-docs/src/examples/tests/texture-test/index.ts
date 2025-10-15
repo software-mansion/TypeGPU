@@ -69,7 +69,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   return color;
 }`.$uses({
   texture: layout.bound.myTexture,
-  sampler: filteringSampler.$,
+  sampler: filteringSampler,
   bias: biasUniform,
 });
 
