@@ -567,14 +567,18 @@ describe('TgpuBindGroup', () => {
         foo: root.device.createSampler(),
       });
 
-      root.createBindGroup(layout, {
-        // @ts-expect-error
-        foo: root.createSampler({ minFilter: 'linear' }),
+      (() => {
+        root.createBindGroup(layout, {
+          // @ts-expect-error
+          foo: root.createSampler({ minFilter: 'linear' }),
+        });
       });
 
-      root.createBindGroup(layout, {
-        // @ts-expect-error
-        foo: root.createSampler({ minFilter: 'nearest' }),
+      (() => {
+        root.createBindGroup(layout, {
+          // @ts-expect-error
+          foo: root.createSampler({ minFilter: 'nearest' }),
+        });
       });
     });
   });
