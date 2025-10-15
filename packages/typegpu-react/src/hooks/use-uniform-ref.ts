@@ -1,7 +1,7 @@
 import type * as d from 'typegpu/data';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ValidateUniformSchema } from 'typegpu';
-import { useRoot } from './use-root';
+import { useRoot } from './use-root.ts';
 
 interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
   schema: TSchema;

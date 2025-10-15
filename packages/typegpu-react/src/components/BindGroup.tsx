@@ -1,24 +1,47 @@
-import { useMemo } from 'react';
-import { useRoot } from '../context/root-context';
-import type { TgpuBindGroupLayout, BindGroupEntries } from 'typegpu';
+import { useEffect, useMemo } from 'react';
+import type { TgpuBindGroupLayout } from 'typegpu';
+import type { AnyData } from 'typegpu/data';
+import { useCanvas } from '../hooks/use-canvas.ts';
+import { usePass } from '../hooks/use-pass.ts';
 
-export function BindGroup({
+type Entries<T extends Record<string, AnyData>> = {
+  [K in keyof T]: any; // Using 'any' to match the expected value types for buffers, textures, etc.
+};
+
+interface BindGroupProps<T extends Record<string, AnyData>> {
+  /**
+   * The layout for the bind group.
+   */
+  layout: TgpuBindGroupLayout<T>;
+  /**
+   * An object containing the resources to be bound.
+   * The keys must match the keys in the layout definition.
+   */
+  entries: Entries<T>;
+}
+
+export function BindGroup<T extends Record<string, AnyData>>({
   layout,
   entries,
-}: {
-  layout: BindGroupLayout<any>;
-  entries: BindGroupEntries;
-}) {
-  const root = useRoot();
+}: BindGroupProps<T>) {
+  const { root } = useCanvas();
+  const { addDrawCall } = usePass();
 
   const bindGroup = useMemo(() => {
-    return root.device.createBindGroup({
-      layout: layout.gpuLayout,
-      entries: layout.createEntries(entries),
-    });
+    // It's important that the values in `entries` are stable (e.g., memoized)
+    // to avoid recreating the bind group on every render.
+    return root.createBindGroup(layout, entries);
   }, [root, layout, entries]);
 
-  // This component doesn't render anything itself. It will be used by other
-  // components to access the created bind group.
+  useEffect(() => {
+    const removeDrawCall = addDrawCall((pass) => {
+      // The group index is derived from the layout object itself.
+      pass.setBindGroup(layout.groupIndex, bindGroup);
+    });
+
+    return removeDrawCall;
+  }, [addDrawCall, layout.groupIndex, bindGroup]);
+
+  // This component does not render anything to the DOM.
   return null;
 }
