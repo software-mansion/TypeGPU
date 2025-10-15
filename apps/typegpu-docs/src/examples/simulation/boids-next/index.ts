@@ -178,7 +178,7 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const simulate = (index: number) => {
-  'kernel';
+  'use gpu';
   const instanceInfo = currentTrianglePos.value[index];
   let separation = d.vec2f();
   let alignment = d.vec2f();

@@ -5,7 +5,7 @@ import { computeBindGroupLayout as layout, ModelData } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
 
 export const simulate = (fishIndex: number) => {
-  'kernel';
+  'use gpu';
   // TODO: replace it with struct copy when Chromium is fixed
   const fishData = ModelData({
     position: layout.$.currentFishData[fishIndex].position,

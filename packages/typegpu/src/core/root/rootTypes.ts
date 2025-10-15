@@ -208,7 +208,7 @@ export interface WithBinding {
    *
    * ```ts
    * const action = root.prepareDispatch(() => {
-   *   'kernel';
+   *   'use gpu';
    *   console.log('Hello, GPU!');
    * });
    *
@@ -220,7 +220,7 @@ export interface WithBinding {
    *
    * ```ts
    * const action = root.prepareDispatch((x) => {
-   *   'kernel';
+   *   'use gpu';
    *   console.log('I am the', x, 'thread');
    * });
    *

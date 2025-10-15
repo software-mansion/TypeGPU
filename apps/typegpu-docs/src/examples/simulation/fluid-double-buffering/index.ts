@@ -183,7 +183,7 @@ const computeVelocity = (x: number, y: number): d.v2f => {
 };
 
 const moveObstacles = () => {
-  'kernel';
+  'use gpu';
   for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
     const obs = prevObstacles.$[obsIdx];
     const nextObs = obstacles.$[obsIdx];
@@ -317,7 +317,7 @@ const getMinimumInFlow = (x: number, y: number): number => {
 };
 
 const simulate = (xu: number, yu: number) => {
-  'kernel';
+  'use gpu';
   const x = d.i32(xu);
   const y = d.i32(yu);
   const index = coordsToIndex(x, y);
@@ -457,7 +457,7 @@ function makePipelines(
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .prepareDispatch((xu, yu) => {
-      'kernel';
+      'use gpu';
       const x = d.i32(xu);
       const y = d.i32(yu);
       const index = coordsToIndex(x, y);

@@ -127,7 +127,7 @@ async function testSlots(): Promise<boolean> {
   const valueSlot = tgpu.slot(1);
 
   const main = () => {
-    'kernel';
+    'use gpu';
     result.$ += valueSlot.$;
   };
 
