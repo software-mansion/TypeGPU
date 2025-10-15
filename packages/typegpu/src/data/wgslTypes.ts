@@ -1527,7 +1527,7 @@ export const wgslTypeLiterals = [
   'texture_storage_3d',
   'texture_external',
   'sampler',
-  'comparison_sampler',
+  'sampler_comparison',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];

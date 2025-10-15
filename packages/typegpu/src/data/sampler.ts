@@ -119,7 +119,7 @@ export interface comparisonSampler {
 export function comparisonSampler(): WgslComparisonSampler {
   return {
     [$internal]: true,
-    type: 'comparison_sampler',
+    type: 'sampler_comparison',
     [$repr]: undefined as unknown as comparisonSampler,
   };
 }
@@ -131,7 +131,7 @@ export interface WgslSampler extends BaseData {
 
 export interface WgslComparisonSampler extends BaseData {
   readonly [$repr]: comparisonSampler;
-  readonly type: 'comparison_sampler';
+  readonly type: 'sampler_comparison';
 }
 
 export function isWgslSampler(value: unknown): value is WgslSampler {
@@ -146,6 +146,6 @@ export function isWgslComparisonSampler(
 ): value is WgslComparisonSampler {
   return (
     !!(value as WgslComparisonSampler)[$internal] &&
-    (value as WgslComparisonSampler).type === 'comparison_sampler'
+    (value as WgslComparisonSampler).type === 'sampler_comparison'
   );
 }
