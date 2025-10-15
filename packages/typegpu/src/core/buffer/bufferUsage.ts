@@ -1,7 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isNaturallyRef,
+} from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -126,7 +130,11 @@ class TgpuFixedBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
+    );
   }
 
   toString(): string {
@@ -135,11 +143,16 @@ class TgpuFixedBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType);
+        return snip(
+          this,
+          dataType,
+          /* ref */ isNaturallyRef(dataType) ? usage : 'runtime',
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -246,7 +259,11 @@ export class TgpuLaidOutBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
+    );
   }
 
   toString(): string {
@@ -255,11 +272,16 @@ export class TgpuLaidOutBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const schema = this.dataType as unknown as AnyData;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, schema);
+        return snip(
+          this,
+          schema,
+          /* ref */ isNaturallyRef(schema) ? usage : 'runtime',
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

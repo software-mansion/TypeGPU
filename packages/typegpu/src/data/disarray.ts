@@ -59,7 +59,7 @@ export const disarrayOf = createDualImpl(
       // Marking so the WGSL generator lets this function through
       partial[$internal] = true;
 
-      return snip(partial, UnknownData);
+      return snip(partial, UnknownData, /* ref */ 'runtime');
     }
 
     if (typeof elementCount.value !== 'number') {
@@ -71,6 +71,7 @@ export const disarrayOf = createDualImpl(
     return snip(
       cpu_disarrayOf(elementType.value as AnyWgslData, elementCount.value),
       elementType.value as AnyWgslData,
+      /* ref */ 'runtime',
     );
   },
   'disarrayOf',

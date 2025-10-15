@@ -1,5 +1,4 @@
 import type { TgpuNamable } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -24,7 +23,7 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
 import type {
@@ -1598,7 +1597,8 @@ export type StorableData =
   | ScalarData
   | VecData
   | MatData
-  | Atomic
+  | Atomic<I32>
+  | Atomic<U32>
   | WgslArray
   | WgslStruct;
 
@@ -1897,4 +1897,24 @@ export function isHalfPrecisionSchema(
       type === 'vec3h' ||
       type === 'vec4h')
   );
+}
+
+const valueTypes = [
+  'abstractInt',
+  'abstractFloat',
+  'f32',
+  'f16',
+  'i32',
+  'u32',
+  'bool',
+];
+
+/**
+ * Returns true for schemas that are naturally referential in JS.
+ * @param schema
+ * @returns
+ */
+export function isNaturallyRef(schema: unknown): boolean {
+  return isMarkedInternal(schema) &&
+    !valueTypes.includes((schema as BaseData)?.type);
 }

@@ -294,7 +294,11 @@ describe('wgslGenerator', () => {
     }
 
     const args = astInfo.ast.params.map((arg) =>
-      snip((arg as { type: 'i'; name: string }).name, d.u32)
+      snip(
+        (arg as { type: 'i'; name: string }).name,
+        d.u32,
+        /* ref */ 'runtime',
+      )
     );
 
     provideCtx(ctx, () => {
@@ -316,7 +320,7 @@ describe('wgslGenerator', () => {
       // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('value', d.i32);
+      wgslGenerator.blockVariable('value', d.i32, 'runtime');
       const res2 = wgslGenerator.expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
@@ -328,7 +332,7 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('vec', d.vec4f);
+      wgslGenerator.blockVariable('vec', d.vec4f, 'this-function');
       const res3 = wgslGenerator.expression(
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
@@ -492,7 +496,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
-        [snip('idx', d.u32)],
+        [snip('idx', d.u32, /* ref */ 'runtime')],
         {},
         d.f32,
         astInfo.externals ?? {},
@@ -587,7 +591,7 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
         var a = 12u;
-        var b = 2.5f;
+        const b = 2.5f;
         a = u32(b);
         return a;
       }"
@@ -897,7 +901,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - internalTestFn: Cannot convert value of type 'array' to type 'vec2f']
+      - fn:internalTestFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
     `);
   });
 
@@ -911,7 +915,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - translate4: Cannot read properties of undefined (reading 'dataType')]
+      - fn:translate4: Cannot read properties of undefined (reading 'dataType')]
     `);
   });
 
@@ -926,7 +930,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - vec4f: Cannot convert value of type 'array' to type 'f32']
+      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to type 'f32']
     `);
   });
 
@@ -938,7 +942,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(increment)).toMatchInlineSnapshot(`
       "fn increment(val: ptr<function, f32>) {
-        *val += 1;
+        (*val) += 1;
       }"
     `);
   });
@@ -952,8 +956,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() -> i32 {
-        var notAKeyword = 0;
-        var struct_1 = 1;
+        const notAKeyword = 0;
+        const struct_1 = 1;
         return struct_1;
       }"
     `);
@@ -1033,9 +1037,9 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
-        var mut_1 = 1;
-        var mut_1_1 = 2;
-        var mut_1_2 = 2;
+        const mut_1 = 1;
+        const mut_1_1 = 2;
+        const mut_1_2 = 2;
       }"
     `);
   });
@@ -1060,8 +1064,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var a = 10f;
-        var b = 3f;
+        const a = 10f;
+        const b = 3f;
         var n = pow(a, b);
       }"
     `);
@@ -1075,7 +1079,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var n = 16.;
+        const n = 16.;
       }"
     `);
   });
@@ -1089,8 +1093,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(power)).toMatchInlineSnapshot(`
       "fn power() {
-        var a = 3u;
-        var b = 5i;
+        const a = 3u;
+        const b = 5i;
         var m = pow(f32(a), f32(b));
       }"
     `);
@@ -1121,8 +1125,8 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
         var matrix = mat4x4f();
-        var column = matrix[1];
-        var element = column[0];
+        let column = (&matrix[1]);
+        var element = (*column)[0];
         var directElement = matrix[1][0];
       }"
     `);
@@ -1137,12 +1141,12 @@ describe('wgslGenerator', () => {
     });
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-      "var<workgroup> index: u32;
+      "var<workgroup> matrix: mat4x4f;
 
-      var<workgroup> matrix: mat4x4f;
+      var<workgroup> index: u32;
 
       fn testFn() {
-        var element = matrix[index];
+        let element = (&matrix[index]);
       }"
     `);
   });

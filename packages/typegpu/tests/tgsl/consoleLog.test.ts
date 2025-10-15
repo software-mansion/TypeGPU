@@ -33,7 +33,7 @@ describe('wgslGenerator with console.log', () => {
     `);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is currently only supported in compute pipelines.",
+      "'console.log' is only supported when resolving pipelines.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
@@ -265,7 +265,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      
+
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -602,7 +602,7 @@ describe('wgslGenerator with console.log', () => {
       - computePipeline:pipeline
       - computePipelineCore
       - computeFn:fn
-      - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - fn:consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
 });

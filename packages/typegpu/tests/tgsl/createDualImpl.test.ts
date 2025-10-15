@@ -41,7 +41,7 @@ describe('dualImpl', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() {
-        var a = 5;
+        const a = 5;
       }"
     `);
   });
@@ -122,7 +122,7 @@ describe('dualImpl', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn
-      - myDualImpl: Division by zero]
+      - fn:myDualImpl: Division by zero]
     `);
   });
 });

@@ -111,10 +111,10 @@ export const advectFn = tgpu['~unstable'].computeFn({
   const clampedPos = std.clamp(
     prevPos,
     d.vec2f(-0.5),
-    d.vec2f(std.sub(d.vec2f(texSize.xy), d.vec2f(0.5))),
+    d.vec2f(texSize.xy).sub(0.5),
   );
   const normalizedPos = std.div(
-    std.add(clampedPos, d.vec2f(0.5)),
+    clampedPos.add(0.5),
     d.vec2f(texSize.xy),
   );
 
