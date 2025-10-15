@@ -323,7 +323,7 @@ const getSceneDistForAO = (position: d.v3f) => {
 
 const getNormal = (position: d.v3f, segmentIndex: number) => {
   'kernel';
-  const epsilon = 0.0001;
+  const epsilon = 0.01;
   const xOffset = d.vec3f(epsilon, 0, 0);
   const yOffset = d.vec3f(0, epsilon, 0);
   const zOffset = d.vec3f(0, 0, epsilon);
