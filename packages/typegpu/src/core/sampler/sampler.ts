@@ -80,9 +80,7 @@ export function INTERNAL_createComparisonSampler(
   ) as TgpuFixedComparisonSampler;
 }
 
-export function isSampler(
-  resource: unknown,
-): resource is TgpuSampler {
+export function isSampler(resource: unknown): resource is TgpuSampler {
   const maybe = resource as TgpuSampler | undefined;
   return maybe?.resourceType === 'sampler' && !!maybe[$internal];
 }
