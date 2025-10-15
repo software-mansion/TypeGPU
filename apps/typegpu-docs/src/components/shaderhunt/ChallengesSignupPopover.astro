@@ -30,14 +30,44 @@
   popovers.forEach((popover) => {
     const linkElement: HTMLAnchorElement|null = popover.querySelector('a');
     const dialogElement: HTMLDialogElement|null = popover.querySelector('dialog');
+    const formElement: HTMLFormElement|null = popover.querySelector('form');
 
-    if (!linkElement || !dialogElement) {
+    if (!linkElement || !dialogElement || !formElement) {
       return;
     }
 
     linkElement.addEventListener('click', (e) => {
       e.preventDefault();
       dialogElement?.showModal();
+     });
+
+    formElement.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(formElement);
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        updatesAgree: formData.get('updates-agree') === 'on',
+        newsletterAgree: formData.get('newsletter-agree') === 'on'
+      };
+      console.log(data);
+
+      try {
+        const response = await fetch('https://swmansion.dev/api/shaderhunt/waiting-list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        if (response.ok) {
+          dialogElement.close();
+        } else {
+          alert('Error submitting form. Please try again.');
+        }
+      } catch (error) {
+        alert('Network error. Please try again.');
+      }
     });
   });
 </script>
