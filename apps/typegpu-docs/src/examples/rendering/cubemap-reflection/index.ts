@@ -315,8 +315,6 @@ function render() {
     .with(renderBindGroup)
     .with(textureBindGroup)
     .draw(vertexBuffer.dataType.elementCount);
-
-  root['~unstable'].flush();
 }
 
 function loop() {

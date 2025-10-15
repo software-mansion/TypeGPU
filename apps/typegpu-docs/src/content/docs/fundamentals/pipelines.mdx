@@ -325,9 +325,6 @@ It accepts the number of vertices and optionally the instance count, first verte
 After calling the method, the shader is set for execution immediately.
 
 Compute pipelines are executed using the `dispatchWorkgroups` method, which accepts the number of workgroups in each dimension.
-Unlike render pipelines, after running this method, the execution is not submitted to the GPU immediately.
-In order to do so, `root['~unstable'].flush()` needs to be run.
-However, that is usually not necessary, as it is done automatically when trying to read the result of computation.
 
 ### Drawing with `drawIndexed`
 
@@ -376,14 +373,14 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
-  
+
 const pipeline = root['~unstable']
   .withVertex(vertex, { color: vertexLayout.attrib })
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline()
   .withIndexBuffer(indexBuffer);
 
-  pipeline 
+  pipeline
     .with(vertexLayout, colorBuffer)
     .drawIndexed(6);
 ```
@@ -407,8 +404,6 @@ root['~unstable'].beginRenderPass(
     pass.draw(3);
   },
 );
-
-root['~unstable'].flush();
 ```
 
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.
