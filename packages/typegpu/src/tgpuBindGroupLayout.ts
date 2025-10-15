@@ -586,17 +586,12 @@ class TgpuBindGroupLayoutImpl<
         );
       }
 
-      if ('sampler' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.value as any)[key] = this.bound[key];
-      } else {
-        Object.defineProperty(this.value, key, {
-          get: () => {
-            // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-            return (this.bound[key] as any).value;
-          },
-        });
-      }
+      Object.defineProperty(this.value, key, {
+        get: () => {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          return (this.bound[key] as any).value;
+        },
+      });
 
       idx++;
     }
