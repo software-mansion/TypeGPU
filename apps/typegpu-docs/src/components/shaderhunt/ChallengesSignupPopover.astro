@@ -47,13 +47,11 @@
       const data = {
         name: formData.get('name'),
         email: formData.get('email'),
-        updatesAgree: formData.get('updates-agree') === 'on',
         newsletterAgree: formData.get('newsletter-agree') === 'on'
       };
-      console.log(data);
 
       try {
-        const response = await fetch('https://swmansion.dev/api/shaderhunt/waiting-list', {
+        const response = await fetch('https://swmansion.dev/api/shaderhunt/signin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
