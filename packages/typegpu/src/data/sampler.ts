@@ -113,7 +113,7 @@ export function sampler(): WgslSampler {
 
 export interface comparisonSampler {
   [$internal]: true;
-  type: 'comparison_sampler';
+  type: 'sampler_comparison';
 }
 
 export function comparisonSampler(): WgslComparisonSampler {

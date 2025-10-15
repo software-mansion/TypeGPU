@@ -114,7 +114,7 @@ export class TgpuLaidOutSamplerImpl<
   ) {
     this.#membership = membership;
     this.resourceType =
-      (schema.type === 'comparison_sampler'
+      (schema.type === 'sampler_comparison'
         ? 'sampler-comparison'
         : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
           : 'sampler';
@@ -189,7 +189,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     this.#props = props;
     this.#branch = branch;
     this.resourceType =
-      (schema.type === 'comparison_sampler'
+      (schema.type === 'sampler_comparison'
         ? 'sampler-comparison'
         : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
           : 'sampler';
@@ -216,7 +216,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     const id = ctx.getUniqueName(this);
 
     const { group, binding } = ctx.allocateFixedEntry(
-      this.schema.type === 'comparison_sampler'
+      this.schema.type === 'sampler_comparison'
         ? { sampler: 'comparison' }
         : { sampler: this.#filtering ? 'filtering' : 'non-filtering' },
       this,
