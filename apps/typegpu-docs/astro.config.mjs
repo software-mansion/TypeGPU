@@ -132,7 +132,7 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
-              label: 'TGSL',
+              label: 'JS Kernels',
               slug: 'fundamentals/tgsl',
               badge: { text: 'new' },
             },
