@@ -121,22 +121,22 @@ describe('add', () => {
   describe('in tgsl', () => {
     it('infers types when adding constants', () => {
       const int_int = () => {
-        'kernel';
+        'use gpu';
         1 + 2;
       };
 
       const float_float = () => {
-        'kernel';
+        'use gpu';
         1.1 + 2.3;
       };
 
       const int_float = () => {
-        'kernel';
+        'use gpu';
         1.1 + 2;
       };
 
       const float_int = () => {
-        'kernel';
+        'use gpu';
         1 + 2.3;
       };
 

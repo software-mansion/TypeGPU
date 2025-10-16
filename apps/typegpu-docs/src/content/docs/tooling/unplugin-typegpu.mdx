@@ -27,20 +27,20 @@ The package includes the following functionalities:
   ```
 
   However, if the implementation function, or the shell, is referenced via a variable, the plugin will not recognize it as TGSL,
-  thus to make it work, the function needs to be marked with a `"kernel"` directive.
+  thus to make it work, the function needs to be marked with a `'use gpu'` directive.
 
   ```ts
   const addFn = tgpu.fn([d.u32, d.u32], d.u32);
 
   const add = addFn((a, b) => {
-    'kernel';
+    'use gpu';
     return a + b;
   });
   ```
 
   ```ts
   const addImpl = (a, b) => {
-    'kernel';
+    'use gpu';
     return a + b;
   };
 
@@ -128,7 +128,7 @@ interface Options {
   autoNamingEnabled?: boolean;
 
   /**
-   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * Skipping files that don't contain 'typegpu', 'tgpu' or 'use gpu'.
    * In case this early pruning hinders transformation, you
    * can disable it.
    *
