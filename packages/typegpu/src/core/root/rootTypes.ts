@@ -6,6 +6,10 @@ import type {
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
+import type {
   AnyWgslData,
   U16,
   U32,
@@ -41,6 +45,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+} from '../sampler/sampler.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -768,6 +776,12 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
+
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler;
 
   /**
    * Causes all commands enqueued by pipelines to be

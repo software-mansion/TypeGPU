@@ -32,6 +32,7 @@ import type {
   WgslStorageTexture,
   WgslTexture,
 } from './texture.ts';
+import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -1525,6 +1526,8 @@ export const wgslTypeLiterals = [
   'texture_3d',
   'texture_storage_3d',
   'texture_external',
+  'sampler',
+  'sampler_comparison',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1642,7 +1645,9 @@ export type AnyWgslData =
   | Void
   | WgslTexture
   | WgslStorageTexture
-  | WgslExternalTexture;
+  | WgslExternalTexture
+  | WgslSampler
+  | WgslComparisonSampler;
 
 // #endregion
 
