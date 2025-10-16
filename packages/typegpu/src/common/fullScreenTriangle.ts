@@ -1,6 +1,6 @@
-import { builtin } from './builtin.ts';
-import { vertexFn } from './core/function/tgpuVertexFn.ts';
-import { vec2f } from './data/vector.ts';
+import { builtin } from '../builtin.ts';
+import { vertexFn } from '../core/function/tgpuVertexFn.ts';
+import { vec2f } from '../data/vector.ts';
 
 export const fullScreenTriangle = vertexFn({
   in: { vertexIndex: builtin.vertexIndex },

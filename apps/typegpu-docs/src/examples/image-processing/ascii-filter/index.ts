@@ -1,6 +1,7 @@
-import tgpu, { fullScreenTriangle, type TgpuBindGroup } from 'typegpu';
+import tgpu, { type TgpuBindGroup } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 

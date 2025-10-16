@@ -1,6 +1,7 @@
-import tgpu, { fullScreenTriangle } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { sdRoundedBox2d } from '@typegpu/sdf';
 
 const root = await tgpu.init();

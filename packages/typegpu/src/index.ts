@@ -95,7 +95,6 @@ export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
-export { fullScreenTriangle } from './fullScreenTriangle.ts';
 
 // types
 

@@ -1,5 +1,6 @@
-import tgpu, { fullScreenTriangle } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

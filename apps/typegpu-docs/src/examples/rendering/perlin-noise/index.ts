@@ -1,5 +1,6 @@
-import tgpu, { fullScreenTriangle } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { fullScreenTriangle } from 'typegpu/common';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 
