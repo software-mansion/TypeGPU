@@ -124,7 +124,7 @@ const randomizeFishPositionsOnGPU = root['~unstable'].prepareDispatch((x) => {
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsOnGPU.dispatch(p.fishAmount);
+  randomizeFishPositionsOnGPU.dispatchThreads(p.fishAmount);
   enqueuePresetChanges();
 };
 
@@ -256,7 +256,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   simulateAction
     .with(computeBindGroups[odd ? 1 : 0])
-    .dispatch(p.fishAmount);
+    .dispatchThreads(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({

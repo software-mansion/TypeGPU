@@ -16,7 +16,7 @@ async function test0d(): Promise<boolean> {
   root['~unstable'].prepareDispatch(() => {
     'use gpu';
     mutable.$ = 126;
-  }).dispatch();
+  }).dispatchThreads();
   const filled = await mutable.read();
   return isEqual(filled, 126);
 }
@@ -27,7 +27,7 @@ async function test1d(): Promise<boolean> {
   root['~unstable'].prepareDispatch((x) => {
     'use gpu';
     mutable.$[x] = x;
-  }).dispatch(...size);
+  }).dispatchThreads(...size);
   const filled = await mutable.read();
   return isEqual(filled, [0, 1, 2, 3, 4, 5, 6]);
 }
@@ -40,7 +40,7 @@ async function test2d(): Promise<boolean> {
   root['~unstable'].prepareDispatch((x, y) => {
     'use gpu';
     mutable.$[x][y] = d.vec2u(x, y);
-  }).dispatch(...size);
+  }).dispatchThreads(...size);
   const filled = await mutable.read();
   return isEqual(filled, [
     [d.vec2u(0, 0), d.vec2u(0, 1), d.vec2u(0, 2)],
@@ -59,7 +59,7 @@ async function test3d(): Promise<boolean> {
   root['~unstable'].prepareDispatch((x, y, z) => {
     'use gpu';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
-  }).dispatch(...size);
+  }).dispatchThreads(...size);
   const filled = await mutable.read();
   return isEqual(filled, [
     [[d.vec3u(0, 0, 0), d.vec3u(0, 0, 1)]],
@@ -72,7 +72,7 @@ async function testWorkgroupSize(): Promise<boolean> {
   root['~unstable'].prepareDispatch((x, y, z) => {
     'use gpu';
     std.atomicAdd(mutable.$, 1);
-  }).dispatch(4, 3, 2);
+  }).dispatchThreads(4, 3, 2);
   const filled = await mutable.read();
   return isEqual(filled, 4 * 3 * 2);
 }
@@ -85,9 +85,9 @@ async function testMultipleDispatches(): Promise<boolean> {
     'use gpu';
     mutable.$[x] *= 2;
   });
-  test.dispatch(6);
-  test.dispatch(2);
-  test.dispatch(4);
+  test.dispatchThreads(6);
+  test.dispatchThreads(2);
+  test.dispatchThreads(4);
   const filled = await mutable.read();
   return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }
@@ -114,8 +114,8 @@ async function testDifferentBindGroups(): Promise<boolean> {
     }
   });
 
-  test.with(bindGroup1).dispatch();
-  test.with(bindGroup2).dispatch();
+  test.with(bindGroup1).dispatchThreads();
+  test.with(bindGroup2).dispatchThreads();
 
   const filled1 = await buffer1.read();
   const filled2 = await buffer2.read();
@@ -131,8 +131,8 @@ async function testSlots(): Promise<boolean> {
     result.$ += valueSlot.$;
   };
 
-  root['~unstable'].prepareDispatch(main).dispatch(); // add 1
-  root['~unstable'].with(valueSlot, 3).prepareDispatch(main).dispatch(); // add 3
+  root['~unstable'].prepareDispatch(main).dispatchThreads(); // add 1
+  root['~unstable'].with(valueSlot, 3).prepareDispatch(main).dispatchThreads(); // add 3
 
   return await result.read() === 4;
 }

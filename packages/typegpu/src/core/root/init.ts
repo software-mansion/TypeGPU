@@ -177,7 +177,7 @@ export class PreparedDispatchImpl<TArgs extends number[]>
    * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
    * this method takes in the number of threads to run in each dimension.
    */
-  dispatch(...threads: TArgs): void {
+  dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(
       vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)),
