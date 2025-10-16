@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
@@ -106,7 +106,7 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-prepareDispatch(root, (x) => {
+root['~unstable'].prepareDispatch((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -359,7 +359,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
 });
@@ -433,7 +433,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     const texCoord = pos.div(resolution);
 
     const sampleValue = std
-      .textureSampleLevel(renderLayout.$.state, sampler, texCoord, 0)
+      .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
       .x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);

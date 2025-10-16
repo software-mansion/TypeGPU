@@ -35,7 +35,7 @@ let texture = root['~unstable'].createTexture({
 texture.copyFrom(sourceTex);
 texture.generateMipmaps();
 
-const filteringSampler = tgpu['~unstable'].sampler({
+const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

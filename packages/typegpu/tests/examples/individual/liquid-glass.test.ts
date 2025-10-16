@@ -105,11 +105,11 @@ describe('liquid-glass example', () => {
 
       @group(0) @binding(3) var sampler_11: sampler;
 
-      fn sampleWithChromaticAberration_12(tex: texture_2d<f32>, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
+      fn sampleWithChromaticAberration_12(tex: texture_2d<f32>, sampler2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
         for (var i = 0; (i < 3); i++) {
           var channelOffset = (dir * ((f32(i) - 1) * offset));
-          samples[i] = textureSampleBias(tex, sampler_11, (uv - channelOffset), blur).xyz;
+          samples[i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).xyz;
         }
         return vec3f(samples[0].x, samples[1].y, samples[2].z);
       }
@@ -136,7 +136,7 @@ describe('liquid-glass example', () => {
         var featherUV = (paramsUniform_5.edgeFeather / f32(max(texDim.x, texDim.y)));
         var weights = calculateWeights_9(sdfDist, paramsUniform_5.start, paramsUniform_5.end, featherUV);
         var blurSample = textureSampleBias(sampledView_8, sampler_11, _arg_0.uv, paramsUniform_5.blur);
-        var refractedSample = sampleWithChromaticAberration_12(sampledView_8, (_arg_0.uv + (dir * (paramsUniform_5.refractionStrength * normalizedDist))), (paramsUniform_5.chromaticStrength * normalizedDist), dir, (paramsUniform_5.blur * paramsUniform_5.edgeBlurMultiplier));
+        var refractedSample = sampleWithChromaticAberration_12(sampledView_8, sampler_11, (_arg_0.uv + (dir * (paramsUniform_5.refractionStrength * normalizedDist))), (paramsUniform_5.chromaticStrength * normalizedDist), dir, (paramsUniform_5.blur * paramsUniform_5.edgeBlurMultiplier));
         var normalSample = textureSampleLevel(sampledView_8, sampler_11, _arg_0.uv, 0);
         var tint = TintParams_13(paramsUniform_5.tintColor, paramsUniform_5.tintStrength);
         var tintedBlur = applyTint_14(blurSample.xyz, tint);
