@@ -23,12 +23,12 @@ const timeAccess = tgpu['~unstable'].accessor(d.f32);
 const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
 const exponentialSharpen = (n: number, sharpness: number): number => {
-  'kernel';
+  'use gpu';
   return sign(n) * pow(abs(n), 1 - sharpness);
 };
 
 const tanhSharpen = (n: number, sharpness: number): number => {
-  'kernel';
+  'use gpu';
   return tanh(n * (1 + sharpness * 10));
 };
 
@@ -114,7 +114,7 @@ function draw(timestamp: number) {
   time.write(timestamp * 0.0002 % DEPTH);
 
   renderPipelines[activeSharpenFn]
-    .with(dynamicLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',

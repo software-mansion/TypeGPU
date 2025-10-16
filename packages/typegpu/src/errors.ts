@@ -3,7 +3,7 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
-import { getName, isKernel } from './shared/meta.ts';
+import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
@@ -51,7 +51,9 @@ export class ResolutionError extends Error {
     public readonly trace: unknown[],
   ) {
     let entries = trace.map((ancestor) =>
-      `- ${isKernel(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`
+      `- ${
+        hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor
+      }`
     );
 
     // Showing only the root and leaf nodes.
@@ -161,7 +163,7 @@ export class MissingBindGroupsError extends Error {
     super(
       `Missing bind groups for layouts: '${
         [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(layout, bindGroup).(...)`,
+      }'. Please provide it using pipeline.with(bindGroup).(...)`,
     );
 
     // Set the prototype explicitly.
