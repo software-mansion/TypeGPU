@@ -44,7 +44,7 @@ export function setupMonacoEditor(monaco: Monaco) {
     entries(SANDBOX_MODULES),
     map(([key, moduleDef]) => {
       if ('reroute' in moduleDef.typeDef) {
-        return [key, moduleDef.typeDef.reroute] as const;
+        return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
       }
       return null;
     }),
