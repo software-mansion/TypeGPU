@@ -47,10 +47,9 @@
       dialogElement?.showModal();
      });
 
-    // Handle dialog close to go back in history
     dialogElement.addEventListener('close', () => {
       if (window.location.hash === '#challenges-signup') {
-        history.back();
+        window.location.hash = '';
       }
     });
 
