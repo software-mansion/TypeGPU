@@ -69,17 +69,21 @@ function useExample(
 export function ExampleView({ example }: Props) {
   const { tsFiles, tsImport, htmlFile } = example;
 
+  const filePaths = tsFiles.map((file) => file.path);
+  const entryFile = filePaths.find((path) =>
+    path.startsWith('index.ts')
+  ) as string;
+
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState(entryFile);
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
-    'index.ts',
-    ...filePaths.filter((name) => name !== 'index.ts'),
+    entryFile,
+    ...filePaths.filter((name) => name !== entryFile),
     'index.html',
   ];
 
