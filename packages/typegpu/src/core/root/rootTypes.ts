@@ -90,7 +90,7 @@ export interface PreparedDispatch<TArgs extends number[]> {
    * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
    * this method takes in the number of threads to run in each dimension.
    */
-  dispatch(...args: TArgs): void;
+  dispatchThreads(...args: TArgs): void;
 }
 
 export interface WithCompute {
