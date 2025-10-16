@@ -1,9 +1,9 @@
-import {
-  prepareDispatch,
-  type StorageFlag,
-  type TgpuBuffer,
-  type TgpuRoot,
-  type TgpuTexture,
+import type {
+  StorageFlag,
+  TgpuBuffer,
+  TgpuRoot,
+  TgpuTexture,
+  TgpuUniform,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -15,7 +15,7 @@ export const BoundingBox = d.struct({
   segmentIndex: d.i32,
 });
 
-const BEZIER_TEXTURE_SIZE = [1920, 1080] as const;
+const BEZIER_TEXTURE_SIZE = [2 ** 10, 2 ** 10] as const;
 
 export class Slider {
   #root: TgpuRoot;
@@ -28,7 +28,7 @@ export class Slider {
   #yOffset: number;
   #boundingBoxes: d.Infer<typeof BoundingBox>[];
   #computeBezierTexture: ReturnType<
-    typeof prepareDispatch<[x: number, y: number]>
+    TgpuRoot['~unstable']['prepareDispatch']
   >;
 
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
@@ -43,6 +43,7 @@ export class Slider {
       format: 'rgba8unorm';
     }>
     & StorageFlag;
+  endCapUniform: TgpuUniform<d.Vec4f>;
 
   readonly n: number;
   readonly totalLength: number;
@@ -144,6 +145,8 @@ export class Slider {
       })
       .$usage('storage');
 
+    this.endCapUniform = this.#root.createUniform(d.vec4f, d.vec4f(0, 0, 0, 0));
+
     const bezierWriteView = this.bezierTexture.createView(
       d.textureStorage2d('rgba8unorm', 'write-only'),
     );
@@ -158,33 +161,79 @@ export class Slider {
 
     this.bbox = [top, right, bottom, left];
 
-    this.#computeBezierTexture = prepareDispatch(this.#root, (x, y) => {
-      'kernel';
-      const size = std.textureDimensions(bezierWriteView.$);
-      const pixelUV = d.vec2f(x + 0.5, y + 0.5).div(d.vec2f(size));
+    this.#computeBezierTexture = this.#root['~unstable'].prepareDispatch(
+      (x, y) => {
+        'use gpu';
+        const size = std.textureDimensions(bezierWriteView.$);
+        const pixelUV = d.vec2f(x + 0.5, y + 0.5).div(d.vec2f(size));
 
-      const sliderPos = d.vec2f(
-        left + pixelUV.x * (right - left),
-        top - pixelUV.y * (top - bottom),
-      );
+        const sliderPos = d.vec2f(
+          left + pixelUV.x * (right - left),
+          top - pixelUV.y * (top - bottom),
+        );
 
-      let minDist = d.f32(1e10);
+        let minDist = d.f32(1e10);
+        let closestSegment = d.i32(0);
+        let closestT = d.f32(0);
 
-      for (let i = 0; i < pointsView.$.length - 1; i++) {
-        const A = pointsView.$[i];
-        const B = pointsView.$[i + 1];
-        const C = controlPointsView.$[i];
-        const d = sdBezier(sliderPos, A, C, B);
+        for (let i = 0; i < pointsView.$.length - 1; i++) {
+          const A = pointsView.$[i];
+          const B = pointsView.$[i + 1];
+          const C = controlPointsView.$[i];
+          const dist = sdBezier(sliderPos, A, C, B);
 
-        minDist = std.min(minDist, d);
-      }
+          if (dist < minDist) {
+            minDist = dist;
+            closestSegment = i;
 
-      std.textureStore(
-        bezierWriteView.$,
-        d.vec2u(x, y),
-        d.vec4f(minDist, 0, 0, 1),
-      );
-    });
+            const AB = B.sub(A);
+            const AP = sliderPos.sub(A);
+            const ABLength = std.length(AB);
+
+            if (ABLength > 0.0) {
+              closestT = std.clamp(
+                std.dot(AP, AB) / (ABLength * ABLength),
+                0.0,
+                1.0,
+              );
+            } else {
+              closestT = 0.0;
+            }
+          }
+        }
+
+        const overallProgress = (d.f32(closestSegment) + closestT) /
+          d.f32(pointsView.$.length - 1);
+
+        const len = pointsView.$.length;
+        const secondLastPoint = pointsView.$[len - 2];
+        const lastPoint = pointsView.$[len - 1];
+
+        const angle = std.atan2(
+          lastPoint.y - secondLastPoint.y,
+          lastPoint.x - secondLastPoint.x,
+        );
+        const cosA = std.cos(angle);
+        const sinA = std.sin(angle);
+
+        let capP = sliderPos.sub(secondLastPoint);
+        capP = d.vec2f(
+          cosA * capP.x + sinA * capP.y,
+          -sinA * capP.x + cosA * capP.y,
+        );
+
+        let capIndicator = d.f32(0.0);
+        if (overallProgress > 0.95) {
+          capIndicator = 1.0;
+        }
+
+        std.textureStore(
+          bezierWriteView.$,
+          d.vec2u(x, y),
+          d.vec4f(minDist, capIndicator, overallProgress, 1),
+        );
+      },
+    );
   }
 
   get boundingBoxes() {
@@ -484,5 +533,12 @@ export class Slider {
     this.controlPointsBuffer.write(this.#controlPoints);
     this.normalsBuffer.write(this.#normals);
     this.boundingBoxesBuffer.write(this.#boundingBoxes);
+
+    const len = this.#pos.length;
+    const secondLast = this.#pos[len - 2];
+    const last = this.#pos[len - 1];
+    this.endCapUniform.write(
+      d.vec4f(secondLast.x, secondLast.y, last.x, last.y),
+    );
   }
 }

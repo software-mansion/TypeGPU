@@ -64,7 +64,7 @@ export const sdLine = tgpu.fn([vec2f, vec2f, vec2f], f32)((p, a, b) => {
 });
 
 const dot2 = (v: v2f) => {
-  'kernel';
+  'use gpu';
   return dot(v, v);
 };
 
@@ -122,7 +122,7 @@ export const sdBezier = tgpu.fn([vec2f, vec2f, vec2f, vec2f], f32)(
 );
 
 const cro = (a: v2f, b: v2f) => {
-  'kernel';
+  'use gpu';
   return a.x * b.y - a.y * b.x;
 };
 

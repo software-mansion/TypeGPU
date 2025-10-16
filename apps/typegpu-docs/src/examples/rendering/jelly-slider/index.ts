@@ -52,9 +52,6 @@ const slider = new Slider(
   NUM_POINTS,
   -0.03,
 );
-const sliderStorage = slider.pointsBuffer.as('readonly');
-const controlPointsStorage = slider.controlPointsBuffer.as('readonly');
-const normalsStorage = slider.normalsBuffer.as('readonly');
 const boundingBoxesStorage = slider.boundingBoxesBuffer.as('readonly');
 const bezierTexture = slider.bezierTexture.createView(
   d.textureStorage2d('rgba8unorm', 'read-only'),
@@ -97,7 +94,7 @@ function createBackgroundDistTexture() {
 
 let backgroundDistTexture = createBackgroundDistTexture();
 
-const filteringSampler = tgpu['~unstable'].sampler({
+const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -155,10 +152,6 @@ const lightUniform = root.createUniform(DirectionalLight, {
   color: d.vec3f(1, 1, 1),
 });
 
-const lineInfos = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
-const controlPoints = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
-const normals = tgpu.workgroupVar(d.arrayOf(d.vec2f, NUM_POINTS));
-
 const ObjectType = {
   SLIDER: 1,
   BACKGROUND: 2,
@@ -167,14 +160,13 @@ const ObjectType = {
 const HitInfo = d.struct({
   distance: d.f32,
   objectType: d.i32,
-  segmentIndex: d.i32,
-  segmentT: d.f32,
+  t: d.f32,
 });
 
 const LineInfo = d.struct({
-  closestSegIndex: d.i32,
   t: d.f32,
   distance: d.f32,
+  capIndicator: d.f32,
 });
 
 const BoxIntersection = d.struct({
@@ -188,12 +180,8 @@ const MarchingResult = d.struct({
   hitPos: d.vec3f,
 });
 
-const sdInflatedPolyline2D = (p: d.v2f, segmentIndex: number) => {
-  'kernel';
-  const i = segmentIndex + 1;
-  const a = lineInfos.$[i - 1];
-  const b = lineInfos.$[i];
-
+const sdInflatedPolyline2D = (p: d.v2f) => {
+  'use gpu';
   const left = d.f32(bezierBbox[3]);
   const right = d.f32(bezierBbox[1]);
   const bottom = d.f32(bezierBbox[2]);
@@ -214,58 +202,62 @@ const sdInflatedPolyline2D = (p: d.v2f, segmentIndex: number) => {
 
   const sampledColor = std.textureLoad(bezierTexture.$, pixelCoord);
   const segUnsigned = sampledColor.x;
-
-  // Approximate t by projecting onto line segment a->b
-  const ab = b.sub(a);
-  const ap = p.sub(a);
-  const closestT = std.saturate(std.dot(ap, ab) / std.dot(ab, ab));
+  const capIndicator = sampledColor.y;
+  const progress = sampledColor.z;
 
   return LineInfo({
-    closestSegIndex: i - 1,
-    t: closestT,
+    t: progress,
     distance: segUnsigned,
+    capIndicator: capIndicator,
   });
 };
 
-const sliderSdf3D = (position: d.v3f, segmentIndex: number) => {
-  'kernel';
-  const poly2D = sdInflatedPolyline2D(position.xy, segmentIndex);
-  const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
-    LINE_RADIUS;
+const sliderSdf3D = (position: d.v3f) => {
+  'use gpu';
+  const poly2D = sdInflatedPolyline2D(position.xy);
 
-  const len = lineInfos.$.length;
-  const secondLastPoint = lineInfos.$[len - 2];
-  const lastPoint = lineInfos.$[len - 1];
+  let finalDist = d.f32(0.0);
+  if (poly2D.capIndicator > 0.5) {
+    const endCap = slider.endCapUniform.$;
+    const secondLastPoint = d.vec2f(endCap.x, endCap.y);
+    const lastPoint = d.vec2f(endCap.z, endCap.w);
 
-  const angle = std.atan2(
-    lastPoint.y - secondLastPoint.y,
-    lastPoint.x - secondLastPoint.x,
-  );
-  const rot = d.mat2x2f(
-    std.cos(angle),
-    -std.sin(angle),
-    std.sin(angle),
-    std.cos(angle),
-  );
+    const angle = std.atan2(
+      lastPoint.y - secondLastPoint.y,
+      lastPoint.x - secondLastPoint.x,
+    );
+    const rot = d.mat2x2f(
+      std.cos(angle),
+      -std.sin(angle),
+      std.sin(angle),
+      std.cos(angle),
+    );
 
-  let pieP = position.sub(d.vec3f(secondLastPoint, 0));
-  pieP = d.vec3f(rot.mul(pieP.xy), pieP.z);
-  const hmm = sdf.sdPie(pieP.zx, d.vec2f(1, 0), LINE_HALF_THICK);
-  const extrudeEnd = sdf.opExtrudeY(
-    pieP,
-    hmm,
-    0.001,
-  ) - LINE_RADIUS;
+    let pieP = position.sub(d.vec3f(secondLastPoint, 0));
+    pieP = d.vec3f(rot.mul(pieP.xy), pieP.z);
+    const hmm = sdf.sdPie(pieP.zx, d.vec2f(1, 0), LINE_HALF_THICK);
+    const extrudeEnd = sdf.opExtrudeY(
+      pieP,
+      hmm,
+      0.001,
+    ) - LINE_RADIUS;
+
+    finalDist = extrudeEnd;
+  } else {
+    const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
+      LINE_RADIUS;
+    finalDist = body;
+  }
 
   return LineInfo({
-    closestSegIndex: poly2D.closestSegIndex,
     t: poly2D.t,
-    distance: sdf.opUnion(body, extrudeEnd),
+    distance: finalDist,
+    capIndicator: poly2D.capIndicator,
   });
 };
 
 const getMainSceneDist = (position: d.v3f) => {
-  'kernel';
+  'use gpu';
   return sdf.opSmoothDifference(
     sdf.sdPlane(position, d.vec3f(0, 1, 0), 0),
     sdf.opExtrudeY(
@@ -278,35 +270,35 @@ const getMainSceneDist = (position: d.v3f) => {
 };
 
 const sliderApproxDist = (position: d.v3f) => {
-  'kernel';
-  let dmin = d.f32(1e9);
+  'use gpu';
+  const left = d.f32(bezierBbox[3]);
+  const right = d.f32(bezierBbox[1]);
+  const bottom = d.f32(bezierBbox[2]);
+  const top = d.f32(bezierBbox[0]);
 
-  for (let i = 1; i < lineInfos.$.length - 1; i++) {
-    const a = lineInfos.$[i - 1];
-    const b = lineInfos.$[i];
-
-    const dist2D = sdf.sdLine(position.xy, a, b);
-
-    const dist3D = sdf.opExtrudeZ(position, dist2D, LINE_HALF_THICK) -
-      LINE_RADIUS;
-    dmin = std.min(dmin, dist3D);
+  const p = position.xy;
+  if (p.x < left || p.x > right || p.y < bottom || p.y > top) {
+    return 1e9;
   }
 
-  return dmin;
+  const poly2D = sdInflatedPolyline2D(p);
+  const dist3D = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
+    LINE_RADIUS;
+
+  return dist3D;
 };
 
-const getSceneDist = (position: d.v3f, segmentIndex: number) => {
-  'kernel';
+const getSceneDist = (position: d.v3f) => {
+  'use gpu';
   const mainScene = getMainSceneDist(position);
-  const poly3D = sliderSdf3D(position, segmentIndex);
+  const poly3D = sliderSdf3D(position);
 
   const hitInfo = HitInfo();
 
   if (poly3D.distance < mainScene) {
     hitInfo.distance = poly3D.distance;
     hitInfo.objectType = ObjectType.SLIDER;
-    hitInfo.segmentIndex = poly3D.closestSegIndex;
-    hitInfo.segmentT = poly3D.t;
+    hitInfo.t = poly3D.t;
   } else {
     hitInfo.distance = mainScene;
     hitInfo.objectType = ObjectType.BACKGROUND;
@@ -315,32 +307,29 @@ const getSceneDist = (position: d.v3f, segmentIndex: number) => {
 };
 
 const getSceneDistForAO = (position: d.v3f) => {
-  'kernel';
+  'use gpu';
   const mainScene = getMainSceneDist(position);
   const sliderApprox = sliderApproxDist(position);
   return std.min(mainScene, sliderApprox);
 };
 
-const getNormal = (position: d.v3f, segmentIndex: number) => {
-  'kernel';
-  const epsilon = 0.01;
+const getNormal = (position: d.v3f) => {
+  'use gpu';
+  const epsilon = 0.005;
   const xOffset = d.vec3f(epsilon, 0, 0);
   const yOffset = d.vec3f(0, epsilon, 0);
   const zOffset = d.vec3f(0, 0, epsilon);
-  const normalX =
-    getSceneDist(std.add(position, xOffset), segmentIndex).distance -
-    getSceneDist(std.sub(position, xOffset), segmentIndex).distance;
-  const normalY =
-    getSceneDist(std.add(position, yOffset), segmentIndex).distance -
-    getSceneDist(std.sub(position, yOffset), segmentIndex).distance;
-  const normalZ =
-    getSceneDist(std.add(position, zOffset), segmentIndex).distance -
-    getSceneDist(std.sub(position, zOffset), segmentIndex).distance;
+  const normalX = getSceneDist(std.add(position, xOffset)).distance -
+    getSceneDist(std.sub(position, xOffset)).distance;
+  const normalY = getSceneDist(std.add(position, yOffset)).distance -
+    getSceneDist(std.sub(position, yOffset)).distance;
+  const normalZ = getSceneDist(std.add(position, zOffset)).distance -
+    getSceneDist(std.sub(position, zOffset)).distance;
   return std.normalize(d.vec3f(normalX, normalY, normalZ));
 };
 
 const getNormalMain = (position: d.v3f) => {
-  'kernel';
+  'use gpu';
   const epsilon = 0.0001;
   const xOffset = d.vec3f(epsilon, 0, 0);
   const yOffset = d.vec3f(0, epsilon, 0);
@@ -355,7 +344,7 @@ const getNormalMain = (position: d.v3f) => {
 };
 
 const calculateAO = (position: d.v3f, normal: d.v3f) => {
-  'kernel';
+  'use gpu';
   let totalOcclusion = d.f32(0.0);
   let sampleWeight = d.f32(1.0);
   const stepDistance = AO_RADIUS / AO_STEPS;
@@ -380,13 +369,13 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
 };
 
 const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
-  'kernel';
+  'use gpu';
   const r0 = std.pow((ior1 - ior2) / (ior1 + ior2), 2.0);
   return r0 + (1.0 - r0) * std.pow(1.0 - cosTheta, 5.0);
 };
 
 const beerLambert = (sigma: d.v3f, dist: number) => {
-  'kernel';
+  'use gpu';
   return std.exp(std.mul(sigma, -dist));
 };
 
@@ -395,7 +384,7 @@ const calculateLighting = (
   normal: d.v3f,
   rayOrigin: d.v3f,
 ) => {
-  'kernel';
+  'use gpu';
   const lightDir = std.mul(lightUniform.$.direction, -1.0);
   const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
@@ -430,7 +419,7 @@ const intersectBox = (
   boxMin: d.v3f,
   boxMax: d.v3f,
 ) => {
-  'kernel';
+  'use gpu';
   const invDir = d.vec3f(1.0).div(rayDirection);
 
   const t1 = std.sub(boxMin, rayOrigin).mul(invDir);
@@ -451,7 +440,7 @@ const intersectBox = (
 };
 
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
-  'kernel';
+  'use gpu';
   let distanceFromOrigin = d.f32();
   let hit = d.f32();
 
@@ -525,7 +514,7 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
 });
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
-  'kernel';
+  'use gpu';
   let totalSteps = d.u32();
   const boxCount = boundingBoxesStorage.$.length;
 
@@ -578,7 +567,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
         std.mul(rayDirection, boxDistanceFromOrigin),
       );
 
-      const hitInfo = getSceneDist(currentPosition, segIdx);
+      const hitInfo = getSceneDist(currentPosition);
       boxDistanceFromOrigin += hitInfo.distance;
       totalSteps++;
       boxSteps++;
@@ -593,12 +582,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
             rayOrigin,
             std.mul(rayDirection, boxDistanceFromOrigin),
           );
-          const normal = getNormal(hitPosition, segIdx);
+          const normal = getNormal(hitPosition);
           const lightDir = std.mul(lightUniform.$.direction, -1.0);
           const litColor = calculateLighting(hitPosition, normal, rayOrigin);
 
           if (hitInfo.objectType === ObjectType.SLIDER) {
-            const N = getNormal(hitPosition, segIdx);
+            const N = getNormal(hitPosition);
             const I = rayDirection;
             const cosi = std.min(
               1.0,
@@ -629,7 +618,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
               let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
               let insideLen = d.f32();
               for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
-                const dIn = sliderSdf3D(p, segIdx).distance;
+                const dIn = sliderSdf3D(p).distance;
                 const step = std.max(SURF_DIST, std.abs(dIn));
                 p = std.add(p, std.mul(refrDir, step));
                 insideLen += step;
@@ -638,9 +627,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
               const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
               const env = rayMarchNoJelly(exitPos, refrDir);
 
-              const totalSegments = lineInfos.$.length - 2;
-              const progress = (hitInfo.segmentIndex + hitInfo.segmentT) /
-                totalSegments;
+              const progress = hitInfo.t;
 
               const T = beerLambert(
                 JELLY_ABSORB.mul(progress ** 2),
@@ -715,15 +702,6 @@ const raymarchFn = tgpu['~unstable'].computeFn({
     lid: d.builtin.localInvocationId,
   },
 })(({ gid, lid }) => {
-  const localIndex = lid.y * 16 + lid.x;
-  if (localIndex < sliderStorage.$.length) {
-    lineInfos.$[localIndex] = sliderStorage.$[localIndex];
-    controlPoints.$[localIndex] = controlPointsStorage.$[localIndex];
-    normals.$[localIndex] = normalsStorage.$[localIndex];
-  }
-
-  std.workgroupBarrier();
-
   const dimensions = std.textureDimensions(rayMarchLayout.$.currentTexture);
   randf.seed2(d.vec2f(gid.xy).div(d.vec2f(dimensions)));
 
@@ -848,7 +826,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 })((input) => {
   return std.textureSample(
     sampleLayout.$.currentTexture,
-    filteringSampler,
+    filteringSampler.$,
     input.uv,
   );
 });
@@ -951,6 +929,24 @@ function render(timestamp: number) {
 
   requestAnimationFrame(render);
 }
+
+function handleResize() {
+  [width, height] = [
+    canvas.width * qualityScale,
+    canvas.height * qualityScale,
+  ];
+  camera.updateProjection(Math.PI / 4, width, height);
+  textures = createTextures();
+  backgroundDistTexture = createBackgroundDistTexture();
+  resolvedTextures = createResolvedTextures();
+  frameCount = 0;
+}
+
+const resizeObserver = new ResizeObserver(() => {
+  handleResize();
+});
+resizeObserver.observe(canvas);
+
 requestAnimationFrame(render);
 
 // #region Example controls and cleanup
@@ -975,16 +971,7 @@ export const controls = {
       };
 
       qualityScale = qualityMap[value] || 0.5;
-      [width, height] = [
-        canvas.width * qualityScale,
-        canvas.height * qualityScale,
-      ];
-
-      camera.updateProjection(Math.PI / 4, width / height);
-      textures = createTextures();
-      backgroundDistTexture = createBackgroundDistTexture();
-      resolvedTextures = createResolvedTextures();
-      frameCount = 0;
+      handleResize();
     },
   },
   'Light dir': {
@@ -1001,6 +988,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  resizeObserver.disconnect();
   root.destroy();
 }
 

@@ -115,8 +115,23 @@ export class CameraController {
     });
   }
 
-  updateProjection(fov: number, aspect: number, near = 0.1, far = 100) {
-    this.baseProj = m.mat4.perspective(fov, aspect, near, far, d.mat4x4f());
+  updateProjection(
+    fov: number,
+    width: number,
+    height: number,
+    near = 0.1,
+    far = 100,
+  ) {
+    this.width = width;
+    this.height = height;
+
+    this.baseProj = m.mat4.perspective(
+      fov,
+      width / height,
+      near,
+      far,
+      d.mat4x4f(),
+    );
     this.baseProjInv = m.mat4.invert(this.baseProj, d.mat4x4f());
 
     this.uniform.writePartial({
