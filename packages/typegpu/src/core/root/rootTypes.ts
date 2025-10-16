@@ -220,7 +220,7 @@ export interface WithBinding {
    *   console.log('Hello, GPU!');
    * });
    *
-   * action.dispatch();
+   * action.dispatchThreads();
    * ```
    *
    * @example
@@ -232,7 +232,7 @@ export interface WithBinding {
    *   console.log('I am the', x, 'thread');
    * });
    *
-   * action.dispatch(12); // executing 12 threads
+   * action.dispatchThreads(12); // executing 12 threads
    * ```
    */
   prepareDispatch<TArgs extends number[]>(

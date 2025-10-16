@@ -496,17 +496,17 @@ function makePipelines(
 
   return {
     init() {
-      initWorldAction.dispatch(gridSize, gridSize);
+      initWorldAction.dispatchThreads(gridSize, gridSize);
     },
 
     applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
       obstacles.write(bufferData);
-      moveObstaclesAction.dispatch();
+      moveObstaclesAction.dispatchThreads();
       prevObstacles.write(bufferData);
     },
 
     compute() {
-      simulateAction.dispatch(gridSize, gridSize);
+      simulateAction.dispatchThreads(gridSize, gridSize);
     },
 
     render() {

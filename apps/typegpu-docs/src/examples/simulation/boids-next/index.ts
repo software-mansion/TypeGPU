@@ -270,7 +270,7 @@ function frame() {
 
   simulateAction
     .with(computeBindGroups[even ? 0 : 1])
-    .dispatch(triangleAmount);
+    .dispatchThreads(triangleAmount);
 
   renderPipeline
     .withColorAttachment({

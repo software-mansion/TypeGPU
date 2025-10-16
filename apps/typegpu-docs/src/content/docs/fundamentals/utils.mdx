@@ -21,9 +21,9 @@ const doubleUp = root['~unstable'].prepareDispatch((x) => {
   data.$[x] *= 2;
 });
 
-doubleUp.dispatch(8);
-doubleUp.dispatch(8);
-doubleUp.dispatch(4);
+doubleUp.dispatchThreads(8);
+doubleUp.dispatchThreads(8);
+doubleUp.dispatchThreads(4);
 
 // the command encoder will queue the read after `doubleUp`
 console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
@@ -55,7 +55,7 @@ root['~unstable'].prepareDispatch((x, y) => {
   'use gpu';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
-}).dispatch(1024, 512);
+}).dispatchThreads(1024, 512);
 // callback will be called for x in range 0..1023 and y in range 0..511
 
 // (optional) read values in JS
@@ -89,8 +89,8 @@ const test = root['~unstable'].prepareDispatch((x) => {
   layout.$.buffer[x] *= 2;
 });
 
-test.with(bindGroup1).dispatch(3);
-test.with(bindGroup2).dispatch(4);
+test.with(bindGroup1).dispatchThreads(3);
+test.with(bindGroup2).dispatchThreads(4);
 
 console.log(await buffer1.read()); // [2, 4, 6];
 console.log(await buffer2.read()); // [4, 8, 16, 32];
@@ -135,8 +135,8 @@ const compute = root['~unstable'].prepareDispatch(() => {
   console.log('Call number', callCountMutable.$);
 });
 
-compute.dispatch();
-compute.dispatch();
+compute.dispatchThreads();
+compute.dispatchThreads();
 
 // Eventually...
 // "[GPU] Call number 1"

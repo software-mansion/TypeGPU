@@ -53,21 +53,21 @@ export const controls = {
       root['~unstable'].prepareDispatch(() => {
         'use gpu';
         console.log(d.u32(321));
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
       root['~unstable'].prepareDispatch(() => {
         'use gpu';
         console.log(1, d.vec3u(2, 3, 4), 5, 6);
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'String literals': {
     onButtonClick: () =>
       root['~unstable'].prepareDispatch(() => {
         'use gpu';
         console.log(2, 'plus', 3, 'equals', 5);
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Two logs': {
     onButtonClick: () =>
@@ -75,7 +75,7 @@ export const controls = {
         'use gpu';
         console.log('First log.');
         console.log('Second log.');
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Different types': {
     onButtonClick: () =>
@@ -119,7 +119,7 @@ export const controls = {
         } else {
           console.log("The 'shader-f16' flag is not enabled.");
         }
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Compound types': {
     onButtonClick: () => {
@@ -144,7 +144,7 @@ export const controls = {
 
         const complexArray = ComplexArray([[3, 4], [5, 6], [7, 8]]);
         console.log(complexArray);
-      }).dispatch();
+      }).dispatchThreads();
     },
   },
   'Two threads': {
@@ -152,7 +152,7 @@ export const controls = {
       root['~unstable'].prepareDispatch((x) => {
         'use gpu';
         console.log('Log from thread', x);
-      }).dispatch(2),
+      }).dispatchThreads(2),
   },
   '100 dispatches': {
     onButtonClick: async () => {
@@ -163,7 +163,7 @@ export const controls = {
       });
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
-        test.dispatch();
+        test.dispatchThreads();
       }
     },
   },
@@ -177,9 +177,9 @@ export const controls = {
         }
       });
       logCountUniform.write(3);
-      test.dispatch();
+      test.dispatchThreads();
       logCountUniform.write(1);
-      test.dispatch();
+      test.dispatchThreads();
     },
   },
   'Render pipeline': {
@@ -235,7 +235,7 @@ export const controls = {
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);
         console.log('Log 3 from thread', x);
-      }).dispatch(16),
+      }).dispatchThreads(16),
   },
 };
 
