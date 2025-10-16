@@ -52,10 +52,7 @@ const slider = new Slider(
   NUM_POINTS,
   -0.03,
 );
-const boundingBoxesStorage = slider.boundingBoxesBuffer.as('readonly');
-const bezierTexture = slider.bezierTexture.createView(
-  d.textureStorage2d('rgba8unorm', 'read-only'),
-);
+const bezierTexture = slider.bezierTexture.createView();
 const bezierBbox = slider.bbox;
 
 let qualityScale = 0.5;
@@ -69,7 +66,7 @@ function createTextures() {
     const texture = root['~unstable'].createTexture({
       size: [width, height],
       format: 'rgba8unorm',
-    }).$usage('storage', 'sampled');
+    }).$usage('storage', 'sampled', 'render');
 
     return {
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
@@ -106,9 +103,6 @@ const backgroundDistLayout = tgpu.bindGroupLayout({
 });
 
 const rayMarchLayout = tgpu.bindGroupLayout({
-  currentTexture: {
-    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
-  },
   backgroundDistTexture: {
     storageTexture: d.textureStorage2d('r32float', 'read-only'),
   },
@@ -175,11 +169,6 @@ const BoxIntersection = d.struct({
   tMax: d.f32,
 });
 
-const MarchingResult = d.struct({
-  color: d.vec4f,
-  hitPos: d.vec3f,
-});
-
 const sdInflatedPolyline2D = (p: d.v2f) => {
   'use gpu';
   const left = d.f32(bezierBbox[3]);
@@ -193,14 +182,12 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
   );
   const clampedUV = std.saturate(uv);
 
-  // Convert UV to pixel coordinates and sample the bezier distance texture
-  const texSize = std.textureDimensions(bezierTexture.$);
-  const pixelCoord = d.vec2u(
-    d.u32(clampedUV.x * d.f32(texSize.x - 1)),
-    d.u32(clampedUV.y * d.f32(texSize.y - 1)),
+  const sampledColor = std.textureSampleLevel(
+    bezierTexture.$,
+    filteringSampler.$,
+    clampedUV,
+    0,
   );
-
-  const sampledColor = std.textureLoad(bezierTexture.$, pixelCoord);
   const segUnsigned = sampledColor.x;
   const capIndicator = sampledColor.y;
   const progress = sampledColor.z;
@@ -315,7 +302,7 @@ const getSceneDistForAO = (position: d.v3f) => {
 
 const getNormal = (position: d.v3f) => {
   'use gpu';
-  const epsilon = 0.005;
+  const epsilon = 0.01;
   const xOffset = d.vec3f(epsilon, 0, 0);
   const yOffset = d.vec3f(0, epsilon, 0);
   const zOffset = d.vec3f(0, 0, epsilon);
@@ -350,7 +337,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
   const stepDistance = AO_RADIUS / AO_STEPS;
 
   for (let i = 1; i <= AO_STEPS; i++) {
-    const sampleHeight = stepDistance * i;
+    const sampleHeight = stepDistance * d.f32(i);
     const samplePosition = std.add(position, std.mul(normal, sampleHeight));
     const distanceToSurface = getSceneDistForAO(samplePosition) - AO_BIAS;
     const occlusionContribution = std.max(
@@ -516,167 +503,29 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
   'use gpu';
   let totalSteps = d.u32();
-  const boxCount = boundingBoxesStorage.$.length;
 
   const backgroundHitDist = std.textureLoad(
     rayMarchLayout.$.backgroundDistTexture,
     pixelCoord,
   ).x;
 
-  // Track closest hit across all boxes
-  let closestHitDist = d.f32(MAX_DIST);
-  let closestHitResult = MarchingResult();
-  let foundHit = d.bool(false);
+  const left = d.f32(bezierBbox[3]);
+  const right = d.f32(bezierBbox[1]);
+  const bottom = d.f32(bezierBbox[2]);
+  const top = d.f32(bezierBbox[0]);
+  const zDepth = d.f32(0.18);
 
-  // March all intersected boxes and keep closest hit
-  for (let boxIdx = 0; boxIdx < boxCount; boxIdx++) {
-    const bbox = boundingBoxesStorage.$[boxIdx];
-    const intersection = intersectBox(
-      rayOrigin,
-      rayDirection,
-      bbox.min,
-      bbox.max,
-    );
+  const sliderMin = d.vec3f(left, bottom, -zDepth);
+  const sliderMax = d.vec3f(right, top, zDepth);
 
-    if (!intersection.hit) {
-      continue;
-    }
+  const intersection = intersectBox(
+    rayOrigin,
+    rayDirection,
+    sliderMin,
+    sliderMax,
+  );
 
-    // Skip this box if background is hit before it
-    if (backgroundHitDist < intersection.tMin) {
-      continue;
-    }
-
-    // March this box
-    let boxDistanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
-    const maxMarchDist = std.min(
-      intersection.tMax + 5 * SURF_DIST,
-      backgroundHitDist,
-    );
-
-    const segIdx = bbox.segmentIndex;
-    let boxSteps = d.u32(0);
-
-    for (let i = 0; i < MAX_STEPS; i++) {
-      if (totalSteps >= MAX_STEPS || boxSteps >= 32) {
-        break;
-      }
-
-      const currentPosition = std.add(
-        rayOrigin,
-        std.mul(rayDirection, boxDistanceFromOrigin),
-      );
-
-      const hitInfo = getSceneDist(currentPosition);
-      boxDistanceFromOrigin += hitInfo.distance;
-      totalSteps++;
-      boxSteps++;
-
-      if (hitInfo.distance < SURF_DIST) {
-        // Found a hit - check if it's closer than previous hits
-        if (boxDistanceFromOrigin < closestHitDist) {
-          closestHitDist = boxDistanceFromOrigin;
-          foundHit = true;
-
-          const hitPosition = std.add(
-            rayOrigin,
-            std.mul(rayDirection, boxDistanceFromOrigin),
-          );
-          const normal = getNormal(hitPosition);
-          const lightDir = std.mul(lightUniform.$.direction, -1.0);
-          const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-
-          if (hitInfo.objectType === ObjectType.SLIDER) {
-            const N = getNormal(hitPosition);
-            const I = rayDirection;
-            const cosi = std.min(
-              1.0,
-              std.max(0.0, std.dot(std.mul(I, -1.0), N)),
-            );
-            const F = fresnelSchlick(cosi, 1.0, JELLY_IOR);
-
-            // Reflection
-            const reflDir = std.reflect(I, N);
-            const reflOrigin = std.add(
-              hitPosition,
-              std.mul(N, SURF_DIST * 2.0),
-            );
-            const reflection = rayMarchNoJelly(reflOrigin, reflDir);
-
-            // Refraction
-            const eta = 1.0 / JELLY_IOR;
-            const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
-            let refractedColor = d.vec3f(0.0, 0.0, 0.0);
-            if (k > 0.0) {
-              const refrDir = std.normalize(
-                std.add(
-                  std.mul(I, eta),
-                  std.mul(N, eta * cosi - std.sqrt(k)),
-                ),
-              );
-              // March inside jelly to exit
-              let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
-              let insideLen = d.f32();
-              for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
-                const dIn = sliderSdf3D(p).distance;
-                const step = std.max(SURF_DIST, std.abs(dIn));
-                p = std.add(p, std.mul(refrDir, step));
-                insideLen += step;
-                if (dIn >= 0.0) break; // exited
-              }
-              const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
-              const env = rayMarchNoJelly(exitPos, refrDir);
-
-              const progress = hitInfo.t;
-
-              const T = beerLambert(
-                JELLY_ABSORB.mul(progress ** 2),
-                insideLen,
-              );
-              // Subtle forward-scatter glow
-              const forward = std.max(0.0, std.dot(lightDir, refrDir));
-              const scatter = std.mul(
-                JELLY_SCATTER_TINT,
-                JELLY_SCATTER_STRENGTH * forward * progress,
-              );
-              refractedColor = std.add(std.mul(env, T), scatter);
-            }
-
-            const jelly = std.add(
-              std.mul(reflection, F),
-              std.mul(refractedColor, 1.0 - F),
-            );
-
-            closestHitResult = MarchingResult({
-              color: d.vec4f(jelly, 1.0),
-              hitPos: hitPosition,
-            });
-          } else {
-            const ao = calculateAO(hitPosition, normal);
-            const finalColor = std.mul(litColor, ao);
-
-            closestHitResult = MarchingResult({
-              color: d.vec4f(finalColor, 1.0),
-              hitPos: hitPosition,
-            });
-          }
-        }
-        break; // Found hit in this box, move to next box
-      }
-
-      if (boxDistanceFromOrigin > maxMarchDist) {
-        break;
-      }
-    }
-  }
-
-  // Return closest hit if we found one
-  if (foundHit) {
-    return closestHitResult;
-  }
-
-  // If we didn't hit jelly but we hit the background, render it properly
-  if (backgroundHitDist < MAX_DIST) {
+  if (!intersection.hit || backgroundHitDist < intersection.tMin) {
     const hitPosition = std.add(
       rayOrigin,
       std.mul(rayDirection, backgroundHitDist),
@@ -686,29 +535,137 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
     const ao = calculateAO(hitPosition, normal);
     const finalColor = std.mul(litColor, ao);
 
-    return MarchingResult({
-      color: d.vec4f(finalColor, 1.0),
-      hitPos: hitPosition,
-    });
+    return d.vec4f(finalColor, 1.0);
   }
 
-  return MarchingResult();
+  let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
+  const maxMarchDist = backgroundHitDist;
+
+  for (let i = 0; i < MAX_STEPS; i++) {
+    if (totalSteps >= MAX_STEPS) {
+      break;
+    }
+
+    const currentPosition = std.add(
+      rayOrigin,
+      std.mul(rayDirection, distanceFromOrigin),
+    );
+
+    const hitInfo = getSceneDist(currentPosition);
+    distanceFromOrigin += hitInfo.distance;
+    totalSteps++;
+
+    if (hitInfo.distance < SURF_DIST) {
+      const hitPosition = std.add(
+        rayOrigin,
+        std.mul(rayDirection, distanceFromOrigin),
+      );
+      const normal = getNormal(hitPosition);
+      const lightDir = std.mul(lightUniform.$.direction, -1.0);
+      const litColor = calculateLighting(hitPosition, normal, rayOrigin);
+
+      if (!(hitInfo.objectType === ObjectType.SLIDER)) {
+        // we hit the background
+        const ao = calculateAO(hitPosition, normal);
+        const finalColor = std.mul(litColor, ao);
+
+        return d.vec4f(finalColor, 1.0);
+      }
+
+      const N = getNormal(hitPosition);
+      const I = rayDirection;
+      const cosi = std.min(
+        1.0,
+        std.max(0.0, std.dot(std.mul(I, -1.0), N)),
+      );
+      const F = fresnelSchlick(cosi, d.f32(1.0), d.f32(JELLY_IOR));
+
+      // Reflection
+      const reflDir = std.reflect(I, N);
+      const reflOrigin = std.add(
+        hitPosition,
+        std.mul(N, SURF_DIST * 2.0),
+      );
+      const reflection = rayMarchNoJelly(reflOrigin, reflDir);
+
+      // Refraction
+      const eta = 1.0 / JELLY_IOR;
+      const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+      let refractedColor = d.vec3f(0.0, 0.0, 0.0);
+      if (k > 0.0) {
+        const refrDir = std.normalize(
+          std.add(
+            std.mul(I, eta),
+            std.mul(N, eta * cosi - std.sqrt(k)),
+          ),
+        );
+        // March inside jelly to exit
+        let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
+        let insideLen = d.f32();
+        for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
+          const dIn = sliderSdf3D(p).distance;
+          const step = std.max(SURF_DIST, std.abs(dIn));
+          p = std.add(p, std.mul(refrDir, step));
+          insideLen += step;
+          if (dIn >= 0.0) break; // exited
+        }
+        const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
+        const env = rayMarchNoJelly(exitPos, refrDir);
+
+        const progress = hitInfo.t;
+
+        const T = beerLambert(
+          JELLY_ABSORB.mul(progress ** 2),
+          insideLen,
+        );
+
+        // Subtle forward-scatter glow
+        const forward = std.max(0.0, std.dot(lightDir, refrDir));
+        const scatter = std.mul(
+          JELLY_SCATTER_TINT,
+          JELLY_SCATTER_STRENGTH * forward * progress,
+        );
+        refractedColor = std.add(std.mul(env, T), scatter);
+      }
+
+      const jelly = std.add(
+        std.mul(reflection, F),
+        std.mul(refractedColor, 1.0 - F),
+      );
+
+      return d.vec4f(jelly, 1.0);
+    }
+
+    if (distanceFromOrigin > maxMarchDist) {
+      break;
+    }
+  }
+
+  // If we didn't hit jelly but we hit the background, render it properly
+  const hitPosition = std.add(
+    rayOrigin,
+    std.mul(rayDirection, backgroundHitDist),
+  );
+  const normal = getNormalMain(hitPosition);
+  const litColor = calculateLighting(hitPosition, normal, rayOrigin);
+  const ao = calculateAO(hitPosition, normal);
+  const finalColor = std.mul(litColor, ao);
+
+  return d.vec4f(finalColor, 1.0);
 };
 
-const raymarchFn = tgpu['~unstable'].computeFn({
-  workgroupSize: [16, 16],
+const raymarchFn = tgpu['~unstable'].fragmentFn({
   in: {
-    gid: d.builtin.globalInvocationId,
-    lid: d.builtin.localInvocationId,
+    uv: d.vec2f,
   },
-})(({ gid, lid }) => {
-  const dimensions = std.textureDimensions(rayMarchLayout.$.currentTexture);
-  randf.seed2(d.vec2f(gid.xy).div(d.vec2f(dimensions)));
+  out: d.vec4f,
+})(({ uv }) => {
+  const dimensions = std.textureDimensions(
+    rayMarchLayout.$.backgroundDistTexture,
+  );
+  randf.seed2(uv);
 
-  const u = (gid.x / dimensions.x) * 2.0 - 1.0;
-  const v = 1.0 - (gid.y / dimensions.y) * 2.0;
-
-  const clipPos = d.vec4f(u, v, -1.0, 1.0);
+  const clipPos = d.vec4f(uv.x * 2 - 1, -(uv.y * 2 - 1), -1.0, 1.0);
 
   const invView = cameraUniform.$.viewInv;
   const invProj = cameraUniform.$.projInv;
@@ -719,15 +676,12 @@ const raymarchFn = tgpu['~unstable'].computeFn({
   const worldPos = std.mul(invView, viewPosNormalized);
 
   const rayOrigin = invView.columns[3].xyz;
-
   const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
 
-  const hitInfo = rayMarch(rayOrigin, rayDir, d.vec2u(gid.x, gid.y));
-
-  std.textureStore(
-    rayMarchLayout.$.currentTexture,
-    d.vec2u(gid.x, gid.y),
-    hitInfo.color,
+  return rayMarch(
+    rayOrigin,
+    rayDir,
+    d.vec2u(uv.mul(d.vec2f(dimensions))),
   );
 });
 
@@ -793,20 +747,6 @@ const taaResolveFn = tgpu['~unstable'].computeFn({
   );
 });
 
-const backgroundDistPipeline = root['~unstable']
-  .withCompute(backgroundDistFn)
-  .createPipeline();
-
-const computePipeline = root['~unstable']
-  .withCompute(raymarchFn)
-  .createPipeline().withPerformanceCallback((s, e) => {
-    console.log(`${Number(e - s) / 1_000_000} ms`);
-  });
-
-const taaResolvePipeline = root['~unstable']
-  .withCompute(taaResolveFn)
-  .createPipeline();
-
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
@@ -830,6 +770,31 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     input.uv,
   );
 });
+
+const backgroundDistPipeline = root['~unstable']
+  .withCompute(backgroundDistFn)
+  .createPipeline()
+  .withPerformanceCallback((start, end) => {
+    const elapsed = Number(end - start) / 1e6;
+    console.log(`Background dist time: ${elapsed.toFixed(2)} ms`);
+  });
+
+const rayMarchPipeline = root['~unstable']
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(raymarchFn, { format: 'rgba8unorm' })
+  .createPipeline()
+  .withPerformanceCallback((start, end) => {
+    const elapsed = Number(end - start) / 1e6;
+    console.log(`Raymarch time: ${elapsed.toFixed(2)} ms`);
+  });
+
+const taaResolvePipeline = root['~unstable']
+  .withCompute(taaResolveFn)
+  .createPipeline()
+  .withPerformanceCallback((start, end) => {
+    const elapsed = Number(end - start) / 1e6;
+    console.log(`TAA resolve time: ${elapsed.toFixed(2)} ms`);
+  });
 
 const eventHandler = new EventHandler(canvas);
 
@@ -871,9 +836,7 @@ function render(timestamp: number) {
   const currentFrame = frameCount % 2;
   const previousFrame = 1 - currentFrame;
 
-  // First pass: Compute background distances with jittered camera
   backgroundDistPipeline.with(
-    backgroundDistLayout,
     root.createBindGroup(backgroundDistLayout, {
       distanceTexture: backgroundDistTexture.write,
     }),
@@ -882,21 +845,17 @@ function render(timestamp: number) {
     Math.ceil(height / 16),
   );
 
-  // Second pass: Ray march to current texture
-  computePipeline.with(
-    rayMarchLayout,
+  rayMarchPipeline.with(
     root.createBindGroup(rayMarchLayout, {
-      currentTexture: textures[currentFrame].write,
       backgroundDistTexture: backgroundDistTexture.read,
     }),
-  ).dispatchWorkgroups(
-    Math.ceil(width / 16),
-    Math.ceil(height / 16),
-  );
+  ).withColorAttachment({
+    view: root.unwrap(textures[currentFrame].sampled),
+    loadOp: 'clear',
+    storeOp: 'store',
+  }).draw(3);
 
-  // Third pass: TAA resolve
   taaResolvePipeline.with(
-    taaResolveLayout,
     root.createBindGroup(taaResolveLayout, {
       currentTexture: textures[currentFrame].sampled,
       historyTexture: frameCount === 1
@@ -917,7 +876,6 @@ function render(timestamp: number) {
       storeOp: 'store',
     })
     .with(
-      sampleLayout,
       root.createBindGroup(
         sampleLayout,
         {
@@ -967,7 +925,7 @@ export const controls = {
         'Low': 0.5,
         'Medium': 0.7,
         'High': 0.85,
-        'Ultra': 1.0,
+        'Ultra': 4.0,
       };
 
       qualityScale = qualityMap[value] || 0.5;

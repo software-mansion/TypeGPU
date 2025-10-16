@@ -1,4 +1,5 @@
 import type {
+  SampledFlag,
   StorageFlag,
   TgpuBuffer,
   TgpuRoot,
@@ -9,13 +10,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { sdBezier } from '@typegpu/sdf';
 
-export const BoundingBox = d.struct({
-  min: d.vec3f,
-  max: d.vec3f,
-  segmentIndex: d.i32,
-});
-
-const BEZIER_TEXTURE_SIZE = [2 ** 10, 2 ** 10] as const;
+const BEZIER_TEXTURE_SIZE = [256, 128] as const;
 
 export class Slider {
   #root: TgpuRoot;
@@ -26,7 +21,6 @@ export class Slider {
   #targetX: number;
   #controlPoints: d.v2f[];
   #yOffset: number;
-  #boundingBoxes: d.Infer<typeof BoundingBox>[];
   #computeBezierTexture: ReturnType<
     TgpuRoot['~unstable']['prepareDispatch']
   >;
@@ -34,14 +28,12 @@ export class Slider {
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   controlPointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   normalsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
-  boundingBoxesBuffer:
-    & TgpuBuffer<d.WgslArray<typeof BoundingBox>>
-    & StorageFlag;
   bezierTexture:
     & TgpuTexture<{
       size: typeof BEZIER_TEXTURE_SIZE;
-      format: 'rgba8unorm';
+      format: 'rgba16float';
     }>
+    & SampledFlag
     & StorageFlag;
   endCapUniform: TgpuUniform<d.Vec4f>;
 
@@ -88,12 +80,6 @@ export class Slider {
     this.#prev = new Array(this.n);
     this.#invMass = new Float32Array(this.n);
 
-    this.#boundingBoxes = new Array(this.n - 1).fill(0).map(() => ({
-      min: d.vec3f(0, 0, 0),
-      max: d.vec3f(0, 0, 0),
-      segmentIndex: 0,
-    }));
-
     for (let i = 0; i < this.n; i++) {
       const t = i / (this.n - 1);
       const x = start[0] * (1 - t) + end[0] * t;
@@ -131,24 +117,17 @@ export class Slider {
       )
       .$usage('storage');
 
-    this.boundingBoxesBuffer = this.#root
-      .createBuffer(
-        d.arrayOf(BoundingBox, this.n - 1),
-        this.#boundingBoxes,
-      )
-      .$usage('storage');
-
     this.bezierTexture = this.#root['~unstable']
       .createTexture({
         size: BEZIER_TEXTURE_SIZE,
-        format: 'rgba8unorm',
+        format: 'rgba16float',
       })
-      .$usage('storage');
+      .$usage('sampled', 'storage', 'render');
 
     this.endCapUniform = this.#root.createUniform(d.vec4f, d.vec4f(0, 0, 0, 0));
 
     const bezierWriteView = this.bezierTexture.createView(
-      d.textureStorage2d('rgba8unorm', 'write-only'),
+      d.textureStorage2d('rgba16float', 'write-only'),
     );
     const pointsView = this.pointsBuffer.as('readonly');
     const controlPointsView = this.controlPointsBuffer.as('readonly');
@@ -165,7 +144,7 @@ export class Slider {
       (x, y) => {
         'use gpu';
         const size = std.textureDimensions(bezierWriteView.$);
-        const pixelUV = d.vec2f(x + 0.5, y + 0.5).div(d.vec2f(size));
+        const pixelUV = d.vec2f(x, y).add(0.5).div(d.vec2f(size));
 
         const sliderPos = d.vec2f(
           left + pixelUV.x * (right - left),
@@ -222,10 +201,7 @@ export class Slider {
           -sinA * capP.x + cosA * capP.y,
         );
 
-        let capIndicator = d.f32(0.0);
-        if (overallProgress > 0.95) {
-          capIndicator = 1.0;
-        }
+        const capIndicator = std.select(0.0, 1.0, overallProgress > 0.95);
 
         std.textureStore(
           bezierWriteView.$,
@@ -234,10 +210,6 @@ export class Slider {
         );
       },
     );
-  }
-
-  get boundingBoxes() {
-    return this.#boundingBoxes;
   }
 
   setDragX(x: number) {
@@ -263,7 +235,6 @@ export class Slider {
 
     this.#computeNormals();
     this.#computeControlPoints();
-    this.#computeBoundingBoxes();
     this.#updateGPUBuffer();
     this.#computeBezierTexture.dispatch(...BEZIER_TEXTURE_SIZE);
   }
@@ -482,57 +453,10 @@ export class Slider {
     }
   }
 
-  #computeBoundingBoxes() {
-    const thickness = 0.07;
-    const zDepth = 0.18;
-
-    // Compute bounding box for each segment individually
-    for (let i = 0; i < this.n - 1; i++) {
-      const p0 = this.#pos[i];
-      const p1 = this.#pos[i + 1];
-      const cp = this.#controlPoints[i];
-
-      let minX = Math.min(p0.x, p1.x);
-      let maxX = Math.max(p0.x, p1.x);
-      let minY = Math.min(p0.y, p1.y);
-      let maxY = Math.max(p0.y, p1.y);
-
-      // Check bezier extrema
-      const denom_x = p0.x - 2 * cp.x + p1.x;
-      if (Math.abs(denom_x) > 1e-6) {
-        const t_x = (p0.x - cp.x) / denom_x;
-        if (t_x > 0 && t_x < 1) {
-          const extrema_x = (1 - t_x) * (1 - t_x) * p0.x +
-            2 * (1 - t_x) * t_x * cp.x + t_x * t_x * p1.x;
-          minX = Math.min(minX, extrema_x);
-          maxX = Math.max(maxX, extrema_x);
-        }
-      }
-
-      const denom_y = p0.y - 2 * cp.y + p1.y;
-      if (Math.abs(denom_y) > 1e-6) {
-        const t_y = (p0.y - cp.y) / denom_y;
-        if (t_y > 0 && t_y < 1) {
-          const extrema_y = (1 - t_y) * (1 - t_y) * p0.y +
-            2 * (1 - t_y) * t_y * cp.y + t_y * t_y * p1.y;
-          minY = Math.min(minY, extrema_y);
-          maxY = Math.max(maxY, extrema_y);
-        }
-      }
-
-      this.#boundingBoxes[i] = {
-        min: d.vec3f(minX - thickness, minY - thickness, -zDepth),
-        max: d.vec3f(maxX + thickness, maxY + thickness, zDepth),
-        segmentIndex: i,
-      };
-    }
-  }
-
   #updateGPUBuffer() {
     this.pointsBuffer.write(this.#pos);
     this.controlPointsBuffer.write(this.#controlPoints);
     this.normalsBuffer.write(this.#normals);
-    this.boundingBoxesBuffer.write(this.#boundingBoxes);
 
     const len = this.#pos.length;
     const secondLast = this.#pos[len - 2];
