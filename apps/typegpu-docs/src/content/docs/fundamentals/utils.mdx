@@ -6,7 +6,7 @@ description: A list of various utilities provided by TypeGPU.
 ## *prepareDispatch*
 
 The `prepareDispatch` function streamlines running simple computations on the GPU.
-Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with dispatch method that executes the pipeline.
+Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with a `dispatchThreads` method that executes the pipeline.
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
