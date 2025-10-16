@@ -41,7 +41,7 @@ the same on the CPU and GPU.
 There are three main ways to use TypeGPU functions.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 const root = await tgpu.init();
 
@@ -51,27 +51,27 @@ const neighborhood = (a: number, r: number) => {
 };
 
 // ---cut---
-// #1) Can be called in JS
-//
-const range = neighborhood(1, 0.2);
-//    ^?
-
-// #2) Executed on the GPU
-//
 const main = () => {
   'use gpu';
   // Call from another function
-  neighborhood(1.1, 0.5);
+  return neighborhood(1.1, 0.5);
 };
-// Dispatching a compute shader!
-prepareDispatch(root, main).dispatch();
 
-// #3) Used to generate WGSL
-//
+// #1) Can be called in JS
+const range = main();
+//    ^?
+
+// #2) Used to generate WGSL
 const wgsl = tgpu.resolve({ externals: { main } });
+//    ^?
+
+// #3) Executed on the GPU (generates WGSL underneath)
+root['~unstable']
+  .prepareDispatch(main)
+  .dispatchThreads();
 ````
 
-The contents of the `wgsl` variable would resemble the following:
+The contents of the `wgsl` variable would contain the following:
 
 ```wgsl
 // Generated WGSL
@@ -79,10 +79,11 @@ fn neighborhood(a: f32, r: f32) -> vec2f {
   return vec2f(a - r, a + r);
 }
 
-@compute @workgroup_size(1, 1, 1)
-fn main() {
-  neighborhood(1.1, 0.5);
+fn main() -> vec2f {
+  return neighborhood(1.1, 0.5);
 }
+
+// ...
 ````
 
 You can already notice a few things about TypeGPU functions:
@@ -123,12 +124,62 @@ const neighborhood = (a: number, r: number) => {
 const main = () => {
   'use gpu';
   // A very easy case, just floating point literals, so f32 by default
-  neighborhood(1.1, 0.5);
+  return neighborhood(1.1, 0.5);
 };
 ```
 
 TypeGPU then propagates those types into the function body and analyses the types returned by the function.
 If it cannot unify them into a single type, it will throw an error.
+
+### Polymorphism
+
+For each set of input types, TypeGPU generates a specialized version of the function.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+// ---cut---
+const main = () => {
+  'use gpu';
+  const a = neighborhood(0, 1);
+  // We can also use casts to coerce values into a specific type.
+  const b = neighborhood(d.u32(1), d.f16(5.25));
+};
+```
+
+```wgsl
+// WGSL
+fn neighborhood(a: i32, r: i32) -> vec2f {
+  return vec2f(f32(a - r), f32(a + r));
+}
+
+fn neighborhood2(a: u32, r: f16) -> vec2f {
+  return vec2f(f32(f16(a) - r), f32(f16(a) + r));
+}
+
+fn main() {
+  var a = neighborhood(0, 1);
+  var b = neighborhood2(1, 5.25);
+}
+```
+
+You can limit the types that a function can accept by using wrapping it in a shell.
+
+### Generics
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+// ---cut---
+const double = <T extends d.v2f | d.v3f | d.v4f>(a: T): T => {
+  'use gpu';
+  return std.mul(a, a);
+};
+```
 
 ## Bruh
 
