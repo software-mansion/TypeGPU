@@ -36,7 +36,7 @@ const sectionId = "interactive-code-section";
         >
             <CodeButton
                 title="As a puzzle piece"
-                message="Pick and choose the APIs you need, and plug them into your code however you want."
+                message="Pick and choose the APIs, then plug them into your code however you want."
                 icon={as_a_puzzle_piece}
             />
         </div>
@@ -52,7 +52,7 @@ const sectionId = "interactive-code-section";
     </div>
 
     {/* CodePen */}
-    <div class="relative px-4 w-full codepen-container">
+    <div class="relative w-full codepen-container">
         <CodePen
             code={`export interface TgpuComputePipeline
   extends TgpuNamable, SelfResolvable, Timeable {
@@ -84,24 +84,65 @@ export function INTERNAL_createComputePipeline(
             language="typescript"
         />
         <CodePen
-            code={`// Define a compute function with typed parameters
-const computeFn = tgpu.computeFunction(
-  (data: tgpu.Buffer<Float32Array>, factor: number) => {
-    // WGSL code using 'data' and 'factor'
-  }
-);
+            code={`export function INTERNAL_createComputePipeline(
+    branch: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    entryFn: TgpuComputeFn,
+  ) {
+    return new TgpuComputePipelineImpl(
+      new ComputePipelineCore(branch, slotBindings, entryFn),
+      {},
+    );
+    export interface TgpuComputePipeline
+    extends TgpuNamable, SelfResolvable, Timeable {
+    readonly [$internal]: ComputePipelineInternals;
+    readonly resourceType: 'compute-pipeline';
+
+
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup,
+  ): TgpuComputePipeline;
+
+  dispatchWorkgroups(
+    x: number,
+    y?: number | undefined,
+    z?: number | undefined,
+  ): void;
+}
+
 }`}
             language="typescript"
         />
         <CodePen
             code={`// Create a buffer with a specific data type
-const buffer = tgpu.buffer(new Float32Array([1.0, 2.0
-, 3.0]));
-// The buffer is now typed as TgpuBuffer<Float32Array>
-const bindGroupLayout = tgpu.bindGroupLayout({
-  myBuffer: tgpu.binding(tgpu.BindingType.StorageBuffer, tgpu.ShaderStage.Compute),
-  mySampler: tgpu.binding(tgpu.BindingType.Sampler, tgpu.ShaderStage.Compute),
-});
+export function INTERNAL_createComputePipeline(
+    branch: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    entryFn: TgpuComputeFn,
+  ) {
+    return new TgpuComputePipelineImpl(
+      new ComputePipelineCore(branch, slotBindings, entryFn),
+      {},
+    );
+    with(
+        bindGroupLayout: TgpuBindGroupLayout,
+        bindGroup: TgpuBindGroup,
+        ): TgpuComputePipeline;
+        
+        dispatchWorkgroups(
+      x: number,
+      y?: number | undefined,
+      z?: number | undefined,
+    ): void;
+    export interface TgpuComputePipeline
+    extends TgpuNamable, SelfResolvable, Timeable {
+    readonly [$internal]: ComputePipelineInternals;
+    readonly resourceType: 'compute-pipeline';
+
+
+}
+
       }`}
             language="typescript"
         />

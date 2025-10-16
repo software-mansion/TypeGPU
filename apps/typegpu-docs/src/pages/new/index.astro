@@ -8,7 +8,7 @@ import DarkModeIconSvg from "../../assets/moon.svg";
 import Illustration from "../../assets/illustration.svg";
 import SwmLogoSvg from "../../assets/typegpu-logo-light.svg";
 import SwmLogomarkSvg from "../../assets/swm-logomark.svg";
-import TypeGPULogoLight from "../../assets/typegpu-logo-light.svg";
+import TypeGPULogoLight from "../../assets/typegpu-logomark-light.svg";
 import TypeGPULogomarkMonolight from "../../assets/typegpu-logomark-monolight.svg";
 import FeatureCard from "../../components/FeatureCard.astro";
 import FooterLink from "../../components/FooterLink.astro";
@@ -27,6 +27,7 @@ import CodeButton from "../../components/CodeButton.astro";
 import CodeShowcase from "../../components/CodeShowcase.astro";
 import TgpuExamples from "../../components/TgpuExamples.astro";
 import Backlog from "../../components/Backlog.astro";
+import Videos from "../../components/Videos.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -36,9 +37,14 @@ import Backlog from "../../components/Backlog.astro";
     >
       <a href="https://swmansion.com" target="_blank" rel="noreferrer">
         <Image
+          src={TypeGPULogoLight}
+          class="block md:hidden w-auto h-14"
+          alt="Software Mansion Logo (Mobile)"
+        />
+        <Image
           src={SwmLogoSvg}
-          class="w-auto h-14"
-          alt="Software Mansion Logo"
+          class="hidden md:block w-auto h-14"
+          alt="Software Mansion Logo (Desktop)"
         />
       </a>
 
@@ -88,12 +94,12 @@ import Backlog from "../../components/Backlog.astro";
 
   {/* Hero Section */}
   <section class="flex flex-col items-center mx-auto lg:px-72 lg:max-w-340">
-    <div class="grid grid-rows-2">
+    <div class="flex flex-col">
       <div class="font-extrabold text-blue-900 text-7xl">
         Type
         <GradientTitle title="GPU" />
       </div>
-      <div class="text-blue-950 text-6xl text-pretty">
+      <div class="text-blue-950 text-xl text-pretty">
         A modular and open-ended toolkit for WebGPU, with advanced type
         interface and ability to write shaders in TypeScript.
         <!-- <br class="hidden sm:block" /> -->
@@ -129,55 +135,37 @@ import Backlog from "../../components/Backlog.astro";
 
   {/* Videos */}
   <div class="mx-auto lg:px-72 lg:max-w-340">
-    <div class="my-12">
-      <h2 class="font-normal text-blue-950 text-4xl center">
-        Get to know TypeGPU
-      </h2>
-      <p class="text-blue-900 text-2xl text-pretty">
-        Dive into guides, tutorials, and videos to see how TypeGPU can change
-        the way you work with GPU rendering and computing.
-      </p>
-    </div>
-    <!-- just a placeholder -->
-    <iframe
-      width="560"
-      height="315"
-      src="https://www.youtube.com/embed/71TO3OIgStM?si=ba_B11dRWZDAH12o"
-      title="YouTube video player"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allowfullscreen></iframe>
+    <Videos />
   </div>
-
-  {/* Backlog */}
-  <div class="mx-auto lg:px-72 lg:max-w-340">
-    <div class="my-12">
-      <h2 class="font-normal text-blue-950 text-4xl center">
-        What's around the corner?
-      </h2>
-      <p class="text-blue-900 text-2xl text-pretty">
-        Our journey toward end-to-end type safety involves several
-        interoperating primitives – explore our live board to see what features
-        are coming next.
-      </p>
-    </div>
-    <Backlog />
-  </div>
-
-  {/* Call to Action Section */}
-  <section
-    class="flex flex-col items-center gap-16 mx-auto lg:px-72 lg:max-w-340"
-  >
-    <div
-      class="flex flex-row items-center gap-3 font-bold text-blue-950 text-7xl"
-    >
-      Ready to try out
-      <GradientTitle title="TypeGPU" />
-      ?
-    </div>
-    <GetStartedButton />
-  </section>
 </PageLayout>
+
+{/* Backlog */}
+<div class="mx-auto lg:px-72 lg:max-w-340">
+  <div class="my-12">
+    <h2 class="font-normal text-blue-950 text-4xl center">
+      What's around the corner?
+    </h2>
+    <p class="text-blue-900 text-2xl text-pretty">
+      Our journey toward end-to-end type safety involves several interoperating
+      primitives – explore our live board to see what features are coming next.
+    </p>
+  </div>
+  <Backlog />
+</div>
+
+{/* Call to Action Section */}
+<section
+  class="flex flex-col items-center gap-16 mx-auto lg:px-72 lg:max-w-340"
+>
+  <div
+    class="flex flex-row items-center gap-3 font-bold text-blue-950 text-7xl"
+  >
+    Ready to try out
+    <GradientTitle title="TypeGPU" />
+    ?
+  </div>
+  <GetStartedButton />
+</section>
 
 {/* Footer Section */}
 <footer

@@ -57,12 +57,10 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     }
 
     let cancelled = false;
-
     (async () => {
       try {
         setIsLoading(true);
         setError(undefined);
-
         if (!isGPUSupported) {
           throw new Error('WebGPU is not enabled/supported in this browser.');
         }

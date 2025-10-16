@@ -9,10 +9,10 @@ const { title, message, icon } = Astro.props as Props;
 ---
 
 <div
-  class="flex flex-col items-start p-8 border-2 border-accent-600/30 max-w-sm aspect-square bg-accent-50"
+  class="flex flex-col items-start p-8 border-2 border-accent-600/30 max-w-sm bg-accent-50"
 >
+<!-- this is shit -->
   <div class="flex justify-center items-center mb-6 w-16 h-16 bg-accent-600">
-    <!-- this is shit -->
     {icon && <img src={icon.src} alt="Icon" class="w-8 h-8" />}
   </div>
 

@@ -4,6 +4,7 @@ import CausticsGif from "../assets/hero/caustics_bg.gif";
 import RayMarchingGif from "../assets/hero/ray_march_bg.gif";
 import PerlinGif from "../assets/hero/perlin_noise_bg.gif";
 import FishGif from "../assets/hero/fish_bg.gif";
+import ReflectionGif from "../assets/hero/reflection_bg.png";
 
 import HoverExampleIsland from "./HoverExampleIsland";
 
@@ -13,7 +14,7 @@ const galleryItems = [
 		exampleKey: "rendering--caustics",
 	},
 	{
-		asset: PerlinGif,
+		asset: ReflectionGif,
 		exampleKey: "rendering--cubemap-reflection",
 	},
 	{
@@ -43,7 +44,7 @@ const galleryItems = [
 				<Image
 					src={item.asset}
 					alt="TypeGPU Example"
-					class="w-full h-full object-contain group-hover:scale-105 transition duration-300 ease-out"
+					class="w-full h-full object-contain transition duration-300 ease-out"
 				/>
 
 				<div class="absolute inset-0 flex justify-center items-center opacity-0 group-hover:opacity-100 transition duration-300 ease-out pointer-events-none">
