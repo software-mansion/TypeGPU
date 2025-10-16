@@ -17,29 +17,27 @@ describe('fluid double buffering example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct mainInitWorld_Input_1 {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      fn coordsToIndex_2(x: i32, y: i32) -> i32 {
+      fn coordsToIndex_3(x: i32, y: i32) -> i32 {
         return (x + (y * 256));
       }
 
-      fn isValidCoord_4(x: i32, y: i32) -> bool {
+      fn isValidCoord_5(x: i32, y: i32) -> bool {
         return ((((x < 256) && (x >= 0)) && (y < 256)) && (y >= 0));
       }
 
-      struct BoxObstacle_7 {
+      struct BoxObstacle_8 {
         center: vec2i,
         size: vec2i,
         enabled: u32,
       }
 
-      @group(0) @binding(0) var<storage, read> obstacles_6: array<BoxObstacle_7, 4>;
+      @group(0) @binding(1) var<storage, read> obstacles_7: array<BoxObstacle_8, 4>;
 
-      fn isInsideObstacle_5(x: i32, y: i32) -> bool {
+      fn isInsideObstacle_6(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_6[obsIdx];
+          var obs = obstacles_7[obsIdx];
           if ((obs.enabled == 0)) {
             continue;
           }
@@ -54,24 +52,24 @@ describe('fluid double buffering example', () => {
         return false;
       }
 
-      fn isValidFlowOut_3(x: i32, y: i32) -> bool {
-        if (!isValidCoord_4(x, y)) {
+      fn isValidFlowOut_4(x: i32, y: i32) -> bool {
+        if (!isValidCoord_5(x, y)) {
           return false;
         }
-        if (isInsideObstacle_5(x, y)) {
+        if (isInsideObstacle_6(x, y)) {
           return false;
         }
         return true;
       }
 
-      @group(0) @binding(1) var<storage, read_write> gridBetaBuffer_8: array<vec4f, 1048576>;
+      @group(0) @binding(2) var<storage, read_write> gridBetaBuffer_9: array<vec4f, 1048576>;
 
-      @compute @workgroup_size(1) fn mainInitWorld_0(input: mainInitWorld_Input_1) {
-        var x = i32(input.gid.x);
-        var y = i32(input.gid.y);
-        var index = coordsToIndex_2(x, y);
+      fn wrappedCallback_2(xu: u32, yu: u32, _arg_2: u32) {
+        var x = i32(xu);
+        var y = i32(yu);
+        var index = coordsToIndex_3(x, y);
         var value = vec4f();
-        if (!isValidFlowOut_3(x, y)) {
+        if (!isValidFlowOut_4(x, y)) {
           value = vec4f();
         }
         else {
@@ -80,50 +78,59 @@ describe('fluid double buffering example', () => {
             value = vec4f(0, 0, (10 + (depth * 10)), 0);
           }
         }
-        gridBetaBuffer_8[index] = value;
+        gridBetaBuffer_9[index] = value;
       }
 
-      struct mainCompute_Input_1 {
-        @builtin(global_invocation_id) gid: vec3u,
+      struct mainCompute_Input_10 {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      fn coordsToIndex_2(x: i32, y: i32) -> i32 {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute_0(in: mainCompute_Input_10)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      fn coordsToIndex_3(x: i32, y: i32) -> i32 {
         return (x + (y * 256));
       }
 
-      @group(0) @binding(0) var<uniform> time_3: f32;
+      @group(0) @binding(1) var<uniform> time_4: f32;
 
-      var<private> seed_6: vec2f;
+      var<private> seed_7: vec2f;
 
-      fn seed2_5(value: vec2f) {
-        seed_6 = value;
+      fn seed2_6(value: vec2f) {
+        seed_7 = value;
       }
 
-      fn randSeed2_4(seed: vec2f) {
-        seed2_5(seed);
+      fn randSeed2_5(seed: vec2f) {
+        seed2_6(seed);
       }
 
-      @group(0) @binding(1) var<storage, read> gridBetaBuffer_8: array<vec4f, 1048576>;
+      @group(0) @binding(2) var<storage, read> gridBetaBuffer_9: array<vec4f, 1048576>;
 
-      fn getCell_7(x: i32, y: i32) -> vec4f {
-        return gridBetaBuffer_8[coordsToIndex_2(x, y)];
+      fn getCell_8(x: i32, y: i32) -> vec4f {
+        return gridBetaBuffer_9[coordsToIndex_3(x, y)];
       }
 
-      fn isValidCoord_11(x: i32, y: i32) -> bool {
+      fn isValidCoord_12(x: i32, y: i32) -> bool {
         return ((((x < 256) && (x >= 0)) && (y < 256)) && (y >= 0));
       }
 
-      struct BoxObstacle_14 {
+      struct BoxObstacle_15 {
         center: vec2i,
         size: vec2i,
         enabled: u32,
       }
 
-      @group(0) @binding(2) var<storage, read> obstacles_13: array<BoxObstacle_14, 4>;
+      @group(0) @binding(3) var<storage, read> obstacles_14: array<BoxObstacle_15, 4>;
 
-      fn isInsideObstacle_12(x: i32, y: i32) -> bool {
+      fn isInsideObstacle_13(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_13[obsIdx];
+          var obs = obstacles_14[obsIdx];
           if ((obs.enabled == 0)) {
             continue;
           }
@@ -138,40 +145,40 @@ describe('fluid double buffering example', () => {
         return false;
       }
 
-      fn isValidFlowOut_10(x: i32, y: i32) -> bool {
-        if (!isValidCoord_11(x, y)) {
+      fn isValidFlowOut_11(x: i32, y: i32) -> bool {
+        if (!isValidCoord_12(x, y)) {
           return false;
         }
-        if (isInsideObstacle_12(x, y)) {
+        if (isInsideObstacle_13(x, y)) {
           return false;
         }
         return true;
       }
 
-      fn item_16() -> f32 {
-        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
-        seed_6.x = fract((cos(a) * 136.8168));
-        seed_6.y = fract((cos(b) * 534.7645));
-        return seed_6.y;
+      fn item_17() -> f32 {
+        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
+        seed_7.x = fract((cos(a) * 136.8168));
+        seed_7.y = fract((cos(b) * 534.7645));
+        return seed_7.y;
       }
 
-      fn randFloat01_15() -> f32 {
-        return item_16();
+      fn randFloat01_16() -> f32 {
+        return item_17();
       }
 
-      fn computeVelocity_9(x: i32, y: i32) -> vec2f {
+      fn computeVelocity_10(x: i32, y: i32) -> vec2f {
         var gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
-        var cell = getCell_7(x, y);
+        var cell = getCell_8(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         for (var i = 0; (i < 4); i++) {
           var offset = neighborOffsets[i];
-          var neighborDensity = getCell_7((x + offset.x), (y + offset.y));
+          var neighborDensity = getCell_8((x + offset.x), (y + offset.y));
           var cost = (neighborDensity.z + (f32(offset.y) * gravityCost));
-          if (!isValidFlowOut_10((x + offset.x), (y + offset.y))) {
+          if (!isValidFlowOut_11((x + offset.x), (y + offset.y))) {
             continue;
           }
           if ((cost == leastCost)) {
@@ -186,17 +193,17 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        var leastCostDir = dirChoices[u32((randFloat01_15() * f32(dirChoiceCount)))];
+        var leastCostDir = dirChoices[u32((randFloat01_16() * f32(dirChoiceCount)))];
         return leastCostDir;
       }
 
-      fn flowFromCell_17(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
-        if (!isValidCoord_11(x, y)) {
+      fn flowFromCell_18(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
+        if (!isValidCoord_12(x, y)) {
           return 0;
         }
-        var src = getCell_7(x, y);
+        var src = getCell_8(x, y);
         var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
-        var dest = getCell_7(destPos.x, destPos.y);
+        var dest = getCell_8(destPos.x, destPos.y);
         var diff = (src.z - dest.z);
         var outFlow = min(max(0.01, (0.3 + (diff * 0.1))), src.z);
         if ((length(src.xy) < 0.5)) {
@@ -211,86 +218,95 @@ describe('fluid double buffering example', () => {
         return 0;
       }
 
-      struct item_20 {
+      struct item_21 {
         center: vec2f,
         radius: f32,
         intensity: f32,
       }
 
-      @group(0) @binding(3) var<uniform> sourceParams_19: item_20;
+      @group(0) @binding(4) var<uniform> sourceParams_20: item_21;
 
-      fn getMinimumInFlow_18(x: i32, y: i32) -> f32 {
+      fn getMinimumInFlow_19(x: i32, y: i32) -> f32 {
         var gridSizeF = 256f;
-        var sourceRadius2 = max(1, (sourceParams_19.radius * gridSizeF));
-        var sourcePos = vec2f((sourceParams_19.center.x * gridSizeF), (sourceParams_19.center.y * gridSizeF));
+        var sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
+        var sourcePos = vec2f((sourceParams_20.center.x * gridSizeF), (sourceParams_20.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
-          return sourceParams_19.intensity;
+          return sourceParams_20.intensity;
         }
         return 0;
       }
 
-      @group(0) @binding(4) var<storage, read_write> gridAlphaBuffer_21: array<vec4f, 1048576>;
+      @group(0) @binding(5) var<storage, read_write> gridAlphaBuffer_22: array<vec4f, 1048576>;
 
-      @compute @workgroup_size(8, 8) fn mainCompute_0(input: mainCompute_Input_1) {
-        var x = i32(input.gid.x);
-        var y = i32(input.gid.y);
-        var index = coordsToIndex_2(x, y);
-        randSeed2_4(vec2f(f32(index), time_3));
-        var next = getCell_7(x, y);
-        var nextVelocity = computeVelocity_9(x, y);
+      fn simulate_2(xu: u32, yu: u32, _arg_2: u32) {
+        var x = i32(xu);
+        var y = i32(yu);
+        var index = coordsToIndex_3(x, y);
+        randSeed2_5(vec2f(f32(index), time_4));
+        var next = getCell_8(x, y);
+        var nextVelocity = computeVelocity_10(x, y);
         next.x = nextVelocity.x;
         next.y = nextVelocity.y;
-        next.z = flowFromCell_17(x, y, x, y);
-        next.z += flowFromCell_17(x, y, x, (y + 1));
-        next.z += flowFromCell_17(x, y, x, (y - 1));
-        next.z += flowFromCell_17(x, y, (x + 1), y);
-        next.z += flowFromCell_17(x, y, (x - 1), y);
-        var minInflow = getMinimumInFlow_18(x, y);
+        next.z = flowFromCell_18(x, y, x, y);
+        next.z += flowFromCell_18(x, y, x, (y + 1));
+        next.z += flowFromCell_18(x, y, x, (y - 1));
+        next.z += flowFromCell_18(x, y, (x + 1), y);
+        next.z += flowFromCell_18(x, y, (x - 1), y);
+        var minInflow = getMinimumInFlow_19(x, y);
         next.z = max(minInflow, next.z);
-        gridAlphaBuffer_21[index] = next;
+        gridAlphaBuffer_22[index] = next;
       }
 
-      struct mainCompute_Input_1 {
-        @builtin(global_invocation_id) gid: vec3u,
+      struct mainCompute_Input_23 {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      fn coordsToIndex_2(x: i32, y: i32) -> i32 {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute_0(in: mainCompute_Input_23)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        simulate_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      fn coordsToIndex_3(x: i32, y: i32) -> i32 {
         return (x + (y * 256));
       }
 
-      @group(0) @binding(0) var<uniform> time_3: f32;
+      @group(0) @binding(1) var<uniform> time_4: f32;
 
-      var<private> seed_6: vec2f;
+      var<private> seed_7: vec2f;
 
-      fn seed2_5(value: vec2f) {
-        seed_6 = value;
+      fn seed2_6(value: vec2f) {
+        seed_7 = value;
       }
 
-      fn randSeed2_4(seed: vec2f) {
-        seed2_5(seed);
+      fn randSeed2_5(seed: vec2f) {
+        seed2_6(seed);
       }
 
-      @group(0) @binding(1) var<storage, read> gridAlphaBuffer_8: array<vec4f, 1048576>;
+      @group(0) @binding(2) var<storage, read> gridAlphaBuffer_9: array<vec4f, 1048576>;
 
-      fn getCell_7(x: i32, y: i32) -> vec4f {
-        return gridAlphaBuffer_8[coordsToIndex_2(x, y)];
+      fn getCell_8(x: i32, y: i32) -> vec4f {
+        return gridAlphaBuffer_9[coordsToIndex_3(x, y)];
       }
 
-      fn isValidCoord_11(x: i32, y: i32) -> bool {
+      fn isValidCoord_12(x: i32, y: i32) -> bool {
         return ((((x < 256) && (x >= 0)) && (y < 256)) && (y >= 0));
       }
 
-      struct BoxObstacle_14 {
+      struct BoxObstacle_15 {
         center: vec2i,
         size: vec2i,
         enabled: u32,
       }
 
-      @group(0) @binding(2) var<storage, read> obstacles_13: array<BoxObstacle_14, 4>;
+      @group(0) @binding(3) var<storage, read> obstacles_14: array<BoxObstacle_15, 4>;
 
-      fn isInsideObstacle_12(x: i32, y: i32) -> bool {
+      fn isInsideObstacle_13(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_13[obsIdx];
+          var obs = obstacles_14[obsIdx];
           if ((obs.enabled == 0)) {
             continue;
           }
@@ -305,40 +321,40 @@ describe('fluid double buffering example', () => {
         return false;
       }
 
-      fn isValidFlowOut_10(x: i32, y: i32) -> bool {
-        if (!isValidCoord_11(x, y)) {
+      fn isValidFlowOut_11(x: i32, y: i32) -> bool {
+        if (!isValidCoord_12(x, y)) {
           return false;
         }
-        if (isInsideObstacle_12(x, y)) {
+        if (isInsideObstacle_13(x, y)) {
           return false;
         }
         return true;
       }
 
-      fn item_16() -> f32 {
-        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
-        seed_6.x = fract((cos(a) * 136.8168));
-        seed_6.y = fract((cos(b) * 534.7645));
-        return seed_6.y;
+      fn item_17() -> f32 {
+        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
+        seed_7.x = fract((cos(a) * 136.8168));
+        seed_7.y = fract((cos(b) * 534.7645));
+        return seed_7.y;
       }
 
-      fn randFloat01_15() -> f32 {
-        return item_16();
+      fn randFloat01_16() -> f32 {
+        return item_17();
       }
 
-      fn computeVelocity_9(x: i32, y: i32) -> vec2f {
+      fn computeVelocity_10(x: i32, y: i32) -> vec2f {
         var gravityCost = 0.5;
         var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
-        var cell = getCell_7(x, y);
+        var cell = getCell_8(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         for (var i = 0; (i < 4); i++) {
           var offset = neighborOffsets[i];
-          var neighborDensity = getCell_7((x + offset.x), (y + offset.y));
+          var neighborDensity = getCell_8((x + offset.x), (y + offset.y));
           var cost = (neighborDensity.z + (f32(offset.y) * gravityCost));
-          if (!isValidFlowOut_10((x + offset.x), (y + offset.y))) {
+          if (!isValidFlowOut_11((x + offset.x), (y + offset.y))) {
             continue;
           }
           if ((cost == leastCost)) {
@@ -353,17 +369,17 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        var leastCostDir = dirChoices[u32((randFloat01_15() * f32(dirChoiceCount)))];
+        var leastCostDir = dirChoices[u32((randFloat01_16() * f32(dirChoiceCount)))];
         return leastCostDir;
       }
 
-      fn flowFromCell_17(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
-        if (!isValidCoord_11(x, y)) {
+      fn flowFromCell_18(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
+        if (!isValidCoord_12(x, y)) {
           return 0;
         }
-        var src = getCell_7(x, y);
+        var src = getCell_8(x, y);
         var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
-        var dest = getCell_7(destPos.x, destPos.y);
+        var dest = getCell_8(destPos.x, destPos.y);
         var diff = (src.z - dest.z);
         var outFlow = min(max(0.01, (0.3 + (diff * 0.1))), src.z);
         if ((length(src.xy) < 0.5)) {
@@ -378,81 +394,88 @@ describe('fluid double buffering example', () => {
         return 0;
       }
 
-      struct item_20 {
+      struct item_21 {
         center: vec2f,
         radius: f32,
         intensity: f32,
       }
 
-      @group(0) @binding(3) var<uniform> sourceParams_19: item_20;
+      @group(0) @binding(4) var<uniform> sourceParams_20: item_21;
 
-      fn getMinimumInFlow_18(x: i32, y: i32) -> f32 {
+      fn getMinimumInFlow_19(x: i32, y: i32) -> f32 {
         var gridSizeF = 256f;
-        var sourceRadius2 = max(1, (sourceParams_19.radius * gridSizeF));
-        var sourcePos = vec2f((sourceParams_19.center.x * gridSizeF), (sourceParams_19.center.y * gridSizeF));
+        var sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
+        var sourcePos = vec2f((sourceParams_20.center.x * gridSizeF), (sourceParams_20.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
-          return sourceParams_19.intensity;
+          return sourceParams_20.intensity;
         }
         return 0;
       }
 
-      @group(0) @binding(4) var<storage, read_write> gridBetaBuffer_21: array<vec4f, 1048576>;
+      @group(0) @binding(5) var<storage, read_write> gridBetaBuffer_22: array<vec4f, 1048576>;
 
-      @compute @workgroup_size(8, 8) fn mainCompute_0(input: mainCompute_Input_1) {
-        var x = i32(input.gid.x);
-        var y = i32(input.gid.y);
-        var index = coordsToIndex_2(x, y);
-        randSeed2_4(vec2f(f32(index), time_3));
-        var next = getCell_7(x, y);
-        var nextVelocity = computeVelocity_9(x, y);
+      fn simulate_2(xu: u32, yu: u32, _arg_2: u32) {
+        var x = i32(xu);
+        var y = i32(yu);
+        var index = coordsToIndex_3(x, y);
+        randSeed2_5(vec2f(f32(index), time_4));
+        var next = getCell_8(x, y);
+        var nextVelocity = computeVelocity_10(x, y);
         next.x = nextVelocity.x;
         next.y = nextVelocity.y;
-        next.z = flowFromCell_17(x, y, x, y);
-        next.z += flowFromCell_17(x, y, x, (y + 1));
-        next.z += flowFromCell_17(x, y, x, (y - 1));
-        next.z += flowFromCell_17(x, y, (x + 1), y);
-        next.z += flowFromCell_17(x, y, (x - 1), y);
-        var minInflow = getMinimumInFlow_18(x, y);
+        next.z = flowFromCell_18(x, y, x, y);
+        next.z += flowFromCell_18(x, y, x, (y + 1));
+        next.z += flowFromCell_18(x, y, x, (y - 1));
+        next.z += flowFromCell_18(x, y, (x + 1), y);
+        next.z += flowFromCell_18(x, y, (x - 1), y);
+        var minInflow = getMinimumInFlow_19(x, y);
         next.z = max(minInflow, next.z);
-        gridBetaBuffer_21[index] = next;
+        gridBetaBuffer_22[index] = next;
       }
 
-      struct vertexMain_Input_1 {
-        @builtin(vertex_index) idx: u32,
+      struct mainCompute_Input_23 {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      struct vertexMain_Output_2 {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute_0(in: mainCompute_Input_23)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        simulate_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      struct vertexMain_Output_1 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertexMain_0(input: vertexMain_Input_1) -> vertexMain_Output_2 {
+      struct vertexMain_Input_2 {
+        @builtin(vertex_index) idx: u32,
+      }
+
+      @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
         var pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1, -1));
         var uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
-        return vertexMain_Output_2(vec4f(pos[input.idx].x, pos[input.idx].y, 0, 1), uv[input.idx]);
+        return vertexMain_Output_1(vec4f(pos[input.idx].x, pos[input.idx].y, 0, 1), uv[input.idx]);
       }
 
-      struct fragmentMain_Input_4 {
-        @location(0) uv: vec2f,
-      }
-
-      fn coordsToIndex_5(x: i32, y: i32) -> i32 {
+      fn coordsToIndex_4(x: i32, y: i32) -> i32 {
         return (x + (y * 256));
       }
 
-      @group(0) @binding(0) var<storage, read> gridAlphaBuffer_6: array<vec4f, 1048576>;
+      @group(0) @binding(0) var<storage, read> gridAlphaBuffer_5: array<vec4f, 1048576>;
 
-      struct BoxObstacle_9 {
+      struct BoxObstacle_8 {
         center: vec2i,
         size: vec2i,
         enabled: u32,
       }
 
-      @group(0) @binding(1) var<storage, read> obstacles_8: array<BoxObstacle_9, 4>;
+      @group(0) @binding(1) var<storage, read> obstacles_7: array<BoxObstacle_8, 4>;
 
-      fn isInsideObstacle_7(x: i32, y: i32) -> bool {
+      fn isInsideObstacle_6(x: i32, y: i32) -> bool {
         for (var obsIdx = 0; (obsIdx < 4); obsIdx++) {
-          var obs = obstacles_8[obsIdx];
+          var obs = obstacles_7[obsIdx];
           if ((obs.enabled == 0)) {
             continue;
           }
@@ -467,11 +490,15 @@ describe('fluid double buffering example', () => {
         return false;
       }
 
-      @fragment fn fragmentMain_3(input: fragmentMain_Input_4) -> @location(0) vec4f {
+      struct fragmentMain_Input_9 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentMain_3(input: fragmentMain_Input_9) -> @location(0) vec4f {
         var x = i32((input.uv.x * 256));
         var y = i32((input.uv.y * 256));
-        var index = coordsToIndex_5(x, y);
-        var cell = gridAlphaBuffer_6[index];
+        var index = coordsToIndex_4(x, y);
+        var cell = gridAlphaBuffer_5[index];
         var density = max(0, cell.z);
         var obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
         var background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
@@ -481,7 +508,7 @@ describe('fluid double buffering example', () => {
         var firstThreshold = 2f;
         var secondThreshold = 10f;
         var thirdThreshold = 20f;
-        if (isInsideObstacle_7(x, y)) {
+        if (isInsideObstacle_6(x, y)) {
           return obstacleColor;
         }
         if ((density <= 0)) {

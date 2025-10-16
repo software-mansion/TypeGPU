@@ -5,79 +5,6 @@ import * as std from 'typegpu/std';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
-  const cos = std.cos(angle);
-  const sin = std.sin(angle);
-  return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
-});
-
-const getRotationFromVelocity = tgpu.fn([d.vec2f], d.f32)((velocity) => {
-  return -std.atan2(velocity.x, velocity.y);
-});
-
-const TriangleData = d.struct({
-  position: d.vec2f,
-  velocity: d.vec2f,
-});
-
-const renderLayout = tgpu.bindGroupLayout({
-  colorPalette: { uniform: d.vec3f },
-});
-
-const VertexOutput = {
-  position: d.builtin.position,
-  color: d.vec4f,
-};
-
-const mainVert = tgpu['~unstable'].vertexFn({
-  in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
-  out: VertexOutput,
-})((input) => {
-  const angle = getRotationFromVelocity(input.velocity);
-  const rotated = rotate(input.v, angle);
-
-  const pos = d.vec4f(
-    rotated.x + input.center.x,
-    rotated.y + input.center.y,
-    0.0,
-    1.0,
-  );
-
-  const color = d.vec4f(
-    std.sin(angle + renderLayout.$.colorPalette.x) * 0.45 + 0.45,
-    std.sin(angle + renderLayout.$.colorPalette.y) * 0.45 + 0.45,
-    std.sin(angle + renderLayout.$.colorPalette.z) * 0.45 + 0.45,
-    1.0,
-  );
-
-  return { position: pos, color };
-});
-
-const mainFrag = tgpu['~unstable'].fragmentFn({
-  in: VertexOutput,
-  out: d.vec4f,
-})((input) => {
-  return input.color;
-});
-
-const Params = d.struct({
-  separationDistance: d.f32,
-  separationStrength: d.f32,
-  alignmentDistance: d.f32,
-  alignmentStrength: d.f32,
-  cohesionDistance: d.f32,
-  cohesionStrength: d.f32,
-});
-
-type Params = d.Infer<typeof Params>;
-
-const colorPresets = {
-  plumTree: d.vec3f(1.0, 2.0, 1.0),
-  jeans: d.vec3f(2.0, 1.5, 1.0),
-  greyscale: d.vec3f(0, 0, 0),
-  hotcold: d.vec3f(0, 3.14, 3.14),
-};
-
 const presets = {
   default: {
     separationDistance: 0.05,
@@ -121,11 +48,73 @@ const presets = {
   },
 } as const;
 
+const colorPresets = {
+  plumTree: d.vec3f(1.0, 2.0, 1.0),
+  jeans: d.vec3f(2.0, 1.5, 1.0),
+  greyscale: d.vec3f(0, 0, 0),
+  hotcold: d.vec3f(0, 3.14, 3.14),
+};
+
+const rotate = (v: d.v2f, angle: number) => {
+  'use gpu';
+  const cos = std.cos(angle);
+  const sin = std.sin(angle);
+  return d.vec2f(v.x * cos - v.y * sin, v.x * sin + v.y * cos);
+};
+
+const getRotationFromVelocity = (velocity: d.v2f) => {
+  'use gpu';
+  return -std.atan2(velocity.x, velocity.y);
+};
+
+type Params = d.Infer<typeof Params>;
+const Params = d.struct({
+  separationDistance: d.f32,
+  separationStrength: d.f32,
+  alignmentDistance: d.f32,
+  alignmentStrength: d.f32,
+  cohesionDistance: d.f32,
+  cohesionStrength: d.f32,
+});
+
+const TriangleData = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+});
+
+const root = await tgpu.init();
+
+const colorPalette = root.createUniform(d.vec3f);
+
+const VertexOutput = {
+  position: d.builtin.position,
+  color: d.vec4f,
+};
+
+const mainVert = tgpu['~unstable'].vertexFn({
+  in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+  out: VertexOutput,
+})((input) => {
+  const angle = getRotationFromVelocity(input.velocity);
+  const rotated = rotate(input.v, angle);
+  const pos = d.vec4f(rotated.add(input.center), 0, 1);
+
+  const color = d.vec4f(
+    std.sin(colorPalette.$.add(angle)).mul(0.45).add(0.45),
+    1,
+  );
+
+  return { position: pos, color };
+});
+
+const mainFrag = tgpu['~unstable'].fragmentFn({
+  in: VertexOutput,
+  out: d.vec4f,
+})((input) => input.color);
+
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const root = await tgpu.init();
 
 context.configure({
   device: root.device,
@@ -161,10 +150,6 @@ const randomizePositions = () => {
 };
 randomizePositions();
 
-const colorPaletteBuffer = root
-  .createBuffer(d.vec3f, colorPresets.jeans)
-  .$usage('uniform');
-
 const TriangleDataArray = d.arrayOf(TriangleData);
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
@@ -192,11 +177,8 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
 
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
-const mainCompute = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [1],
-})((input) => {
-  const index = input.gid.x;
+const simulate = (index: number) => {
+  'use gpu';
   const instanceInfo = currentTrianglePos.value[index];
   let separation = d.vec2f();
   let alignment = d.vec2f();
@@ -265,17 +247,9 @@ const mainCompute = tgpu['~unstable'].computeFn({
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
   nextTrianglePos.value[index] = instanceInfo;
-});
+};
 
-const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
-
-const renderBindGroups = [0, 1].map(() =>
-  root.createBindGroup(renderLayout, {
-    colorPalette: colorPaletteBuffer,
-  })
-);
+const simulateAction = root['~unstable'].prepareDispatch(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
@@ -294,9 +268,9 @@ function frame() {
 
   even = !even;
 
-  computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
-    .dispatchWorkgroups(triangleAmount);
+  simulateAction
+    .with(computeBindGroups[even ? 0 : 1])
+    .dispatch(triangleAmount);
 
   renderPipeline
     .withColorAttachment({
@@ -306,7 +280,6 @@ function frame() {
       storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
-    .with(renderLayout, renderBindGroups[even ? 1 : 0])
     .draw(3, triangleAmount);
 
   requestAnimationFrame(frame);
@@ -342,19 +315,19 @@ export const controls = {
   },
 
   '🟪🟩': {
-    onButtonClick: () => colorPaletteBuffer.write(colorPresets.plumTree),
+    onButtonClick: () => colorPalette.write(colorPresets.plumTree),
   },
 
   '🟦🟫': {
-    onButtonClick: () => colorPaletteBuffer.write(colorPresets.jeans),
+    onButtonClick: () => colorPalette.write(colorPresets.jeans),
   },
 
   '⬛⬜': {
-    onButtonClick: () => colorPaletteBuffer.write(colorPresets.greyscale),
+    onButtonClick: () => colorPalette.write(colorPresets.greyscale),
   },
 
   '🟥🟦': {
-    onButtonClick: () => colorPaletteBuffer.write(colorPresets.hotcold),
+    onButtonClick: () => colorPalette.write(colorPresets.hotcold),
   },
 };
 

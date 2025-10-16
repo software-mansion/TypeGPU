@@ -1,5 +1,6 @@
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
@@ -10,11 +11,10 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
+import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl, parse, parseResolved } from '../utils/parseResolved.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-import { namespace } from '../../src/core/resolve/namespace.ts';
+import { asWgsl } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -39,7 +39,7 @@ describe('wgslGenerator', () => {
 
   it('creates a simple return statement', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       return true;
     };
 
@@ -52,13 +52,17 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
       const gen = wgslGenerator.functionDefinition(parsedBody);
-      expect(parse(gen)).toBe(parse('{return true;}'));
+      expect(gen).toMatchInlineSnapshot(`
+        "{
+          return true;
+        }"
+      `);
     });
   });
 
   it('creates a function body', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let a = 12;
       a += 21;
       return a;
@@ -73,7 +77,13 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
       const gen = wgslGenerator.functionDefinition(parsedBody);
-      expect(parse(gen)).toBe(parse('{var a = 12;a += 21;return a;}'));
+      expect(gen).toMatchInlineSnapshot(`
+        "{
+          var a = 12;
+          a += 21;
+          return a;
+        }"
+      `);
     });
   });
 
@@ -92,7 +102,7 @@ describe('wgslGenerator', () => {
     } as const;
 
     const main = () => {
-      'kernel';
+      'use gpu';
       const intLiteral = 12;
       const floatLiteral = 12.5;
       const scientificLiteral = 12e10;
@@ -334,7 +344,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for for statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       for (let i = 0; i < 10; i += 1) {
         // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
         continue;
@@ -352,14 +362,18 @@ describe('wgslGenerator', () => {
       () => wgslGenerator.functionDefinition(parsed),
     );
 
-    expect(parse(gen)).toBe(
-      parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
-    );
+    expect(gen).toMatchInlineSnapshot(`
+      "{
+        for (var i = 0; (i < 10); i += 1) {
+          continue;
+        }
+      }"
+    `);
   });
 
   it('creates correct code for for statements with outside init', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
         // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
@@ -378,14 +392,19 @@ describe('wgslGenerator', () => {
       () => wgslGenerator.functionDefinition(parsed),
     );
 
-    expect(parse(gen)).toBe(
-      parse('{var i = 0;for(;(i < 10);i += 1){continue;}}'),
-    );
+    expect(gen).toMatchInlineSnapshot(`
+      "{
+        var i = 0;
+        for (; (i < 10); i += 1) {
+          continue;
+        }
+      }"
+    `);
   });
 
   it('creates correct code for while statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       while (i < 10) {
         i += 1;
@@ -402,7 +421,14 @@ describe('wgslGenerator', () => {
       () => wgslGenerator.functionDefinition(parsed),
     );
 
-    expect(parse(gen)).toBe(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+    expect(gen).toMatchInlineSnapshot(`
+      "{
+        var i = 0;
+        while ((i < 10)) {
+          i += 1;
+        }
+      }"
+    `);
   });
 
   it('creates correct resources for derived values and slots', () => {
@@ -410,12 +436,11 @@ describe('wgslGenerator', () => {
       return derivedV4u.value;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> vec4u {
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> vec4u {
         return vec4u(44, 88, 132, 176);
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -580,9 +605,8 @@ describe('wgslGenerator', () => {
       return (arr[1] as { x: number; y: number }).y;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      struct TestStruct {
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "struct TestStruct {
         x: u32,
         y: f32,
       }
@@ -590,8 +614,8 @@ describe('wgslGenerator', () => {
       fn testFn() -> f32 {
         var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
         return arr[1].y;
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -632,13 +656,12 @@ describe('wgslGenerator', () => {
       return (arr[1] as d.v2f).y;
     });
 
-    expect(parseResolved({ testFn })).toBe(
-      parse(`
-      fn testFn() -> f32 {
+    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      "fn testFn() -> f32 {
         var arr = array<vec2f, 2>(vec2f(44, 88), vec2f(88, 176));
         return arr[1].y;
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
@@ -667,9 +690,8 @@ describe('wgslGenerator', () => {
       return fnOne().y.x;
     });
 
-    expect(parseResolved({ fnTwo })).toBe(
-      parse(`
-      struct TestStruct {
+    expect(asWgsl(fnTwo)).toMatchInlineSnapshot(`
+      "struct TestStruct {
         x: u32,
         y: vec3f,
       }
@@ -680,8 +702,8 @@ describe('wgslGenerator', () => {
 
       fn fnTwo() -> f32 {
         return fnOne().y.x;
-      }`),
-    );
+      }"
+    `);
 
     const astInfo = getMetaData(
       fnTwo[$internal].implementation as (...args: unknown[]) => unknown,
@@ -823,7 +845,7 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
       for (let i = 0; i < 10; i += 1) continue;
     };
@@ -836,9 +858,13 @@ describe('wgslGenerator', () => {
         ),
     );
 
-    expect(parse(gen)).toBe(
-      parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
-    );
+    expect(gen).toMatchInlineSnapshot(`
+      "{
+        for (var i = 0; (i < 10); i += 1) {
+          continue;
+        }
+      }"
+    `);
   });
 
   it('generates correct code for while loops with single statements', () => {
@@ -847,14 +873,14 @@ describe('wgslGenerator', () => {
       while (i < 10) i += 1;
     });
 
-    expect(parseResolved({ main })).toBe(parse(`
-      fn main() {
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
         var i = 0;
-        while((i < 10)){
+        while ((i < 10)) {
           i += 1;
         }
-      }
-    `));
+      }"
+    `);
   });
 
   it('throws error when incorrectly initializing function', () => {
@@ -867,13 +893,12 @@ describe('wgslGenerator', () => {
       return internalTestFn([1, 23, 3]);
     });
 
-    expect(() => parseResolved({ cleantestFn: testFn }))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:testFn
-        - internalTestFn: Cannot convert value of type 'array' to type 'vec2f']
-      `);
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn
+      - internalTestFn: Cannot convert value of type 'array' to type 'vec2f']
+    `);
   });
 
   it('throws error when initializing translate4 function', () => {
@@ -882,7 +907,7 @@ describe('wgslGenerator', () => {
       return std.translate4();
     });
 
-    expect(() => parseResolved({ testFn })).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
@@ -897,13 +922,12 @@ describe('wgslGenerator', () => {
       return d.mat4x4f();
     });
 
-    expect(() => parseResolved({ testFn }))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:testFn
-        - vec4f: Cannot convert value of type 'array' to type 'f32']
-      `);
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn
+      - vec4f: Cannot convert value of type 'array' to type 'f32']
+    `);
   });
 
   it('generates correct code for pointer value assignment', () => {
@@ -912,12 +936,119 @@ describe('wgslGenerator', () => {
       val += 1;
     });
 
-    expect(parseResolved({ increment })).toBe(
-      parse(`
-      fn increment(val: ptr<function, f32>) {
+    expect(asWgsl(increment)).toMatchInlineSnapshot(`
+      "fn increment(val: ptr<function, f32>) {
         *val += 1;
-      }`),
-    );
+      }"
+    `);
+  });
+
+  it('renames variables that would result in invalid WGSL', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      const notAKeyword = 0;
+      const struct = 1;
+      return struct;
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var notAKeyword = 0;
+        var struct_1 = 1;
+        return struct_1;
+      }"
+    `);
+  });
+
+  it('renames parameters that would result in invalid WGSL', () => {
+    const main = tgpu.fn([d.i32, d.i32], d.i32)((n, macro) => {
+      return n + macro;
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main(n: i32, macro_1: i32) -> i32 {
+        return (n + macro_1);
+      }"
+    `);
+  });
+
+  it('throws when struct prop has whitespace in name', () => {
+    const TestStruct = d.struct({ 'my prop': d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => asWgsl(main))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+  });
+
+  it('throws when struct prop uses a reserved word', () => {
+    const TestStruct = d.struct({ struct: d.f32 });
+    const main = tgpu.fn([])(() => {
+      const instance = TestStruct();
+    });
+
+    expect(() => asWgsl(main))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main
+        - struct:TestStruct: Property key 'struct' is a reserved WGSL word. Choose a different name.]
+      `);
+  });
+
+  it('throws when an identifier starts with underscores', () => {
+    const main1 = tgpu.fn([])(() => {
+      const _ = 1;
+    });
+
+    const main2 = tgpu.fn([])(() => {
+      const __my_var = 1;
+    });
+
+    expect(() => asWgsl(main1))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+    expect(() => asWgsl(main2))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
+      `);
+  });
+
+  it('does not cause identifier clashes when renaming variables', () => {
+    const main = tgpu.fn([])(() => {
+      const mut = 1;
+      const mut_1 = 2;
+      const mut_1_2 = 2;
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main() {
+        var mut_1 = 1;
+        var mut_1_1 = 2;
+        var mut_1_2 = 2;
+      }"
+    `);
+  });
+
+  it('does not cause identifier clashes when renaming parameters', () => {
+    const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {
+    });
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn main(extern_1: u32, extern_1_1: u32) {
+
+      }"
+    `);
   });
 
   it('generates correct code for pow expression', () => {
@@ -998,8 +1129,8 @@ describe('wgslGenerator', () => {
   });
 
   it('resolves when accessing matrix elements through .columns', () => {
-    const matrix = tgpu['~unstable'].workgroupVar(d.mat4x4f);
-    const index = tgpu['~unstable'].workgroupVar(d.u32);
+    const matrix = tgpu.workgroupVar(d.mat4x4f);
+    const index = tgpu.workgroupVar(d.u32);
 
     const testFn = tgpu.fn([])(() => {
       const element = matrix.$.columns[index.$];

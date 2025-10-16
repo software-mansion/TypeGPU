@@ -11,10 +11,11 @@ import {
   earlyPruneRegex,
   embedJSON,
   gatherTgpuAliases,
+  getFunctionName,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  useGpuDirective,
 } from './common.ts';
 
 type FunctionNode =
@@ -23,12 +24,12 @@ type FunctionNode =
   | acorn.FunctionExpression
   | acorn.ArrowFunctionExpression;
 
-function containsKernelDirective(node: FunctionNode): boolean {
+function containsUseGpuDirective(node: FunctionNode): boolean {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
       if (
         statement.type === 'ExpressionStatement' &&
-        statement.directive === kernelDirective
+        statement.directive === useGpuDirective
       ) {
         return true;
       }
@@ -37,7 +38,7 @@ function containsKernelDirective(node: FunctionNode): boolean {
   return false;
 }
 
-function removeKernelDirective(node: FunctionNode) {
+function removeUseGpuDirective(node: FunctionNode) {
   const cloned = structuredClone(node);
 
   if (cloned.body.type === 'BlockStatement') {
@@ -45,7 +46,7 @@ function removeKernelDirective(node: FunctionNode) {
       (statement) =>
         !(
           statement.type === 'ExpressionStatement' &&
-          statement.directive === kernelDirective
+          statement.directive === useGpuDirective
         ),
     );
   }
@@ -132,6 +133,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
           walk(ast, {
             enter(_node, _parent, prop, index) {
               const node = _node as acorn.AnyNode;
+              const parent = _parent as acorn.AnyNode;
 
               performExpressionNaming(ctx, node, (node, name) => {
                 wrapInAutoName(magicString, node, name);
@@ -151,7 +153,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                       implementation.type === 'ArrowFunctionExpression')
                   ) {
                     tgslFunctionDefs.push({
-                      def: removeKernelDirective(implementation),
+                      def: removeUseGpuDirective(implementation),
                     });
                     this.skip();
                   }
@@ -163,17 +165,10 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
                 node.type === 'FunctionExpression' ||
                 node.type === 'FunctionDeclaration'
               ) {
-                if (containsKernelDirective(node)) {
+                if (containsUseGpuDirective(node)) {
                   tgslFunctionDefs.push({
-                    def: removeKernelDirective(node),
-                    name: node.type === 'FunctionDeclaration' ||
-                        node.type === 'FunctionExpression'
-                      ? node.id?.name
-                      : _parent?.type === 'VariableDeclarator'
-                      ? _parent.id.type === 'Identifier'
-                        ? _parent.id.name
-                        : undefined
-                      : undefined,
+                    def: removeUseGpuDirective(node),
+                    name: getFunctionName(node, parent),
                   });
                   this.skip();
                 }
@@ -198,6 +193,7 @@ const typegpu: UnpluginInstance<Options, false> = createUnplugin(
 
             const metadata = `{
               v: ${FORMAT_VERSION},
+              name: ${name ? `"${name}"` : 'undefined'},
               ast: ${embedJSON({ params, body, externalNames })},
               get externals() { return {${externalNames.join(', ')}}; },
             }`;

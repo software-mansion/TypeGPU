@@ -5,7 +5,7 @@ import * as std from 'typegpu/std';
 const root = await tgpu.init();
 
 const layout = tgpu.bindGroupLayout({
-  externalTexture: { externalTexture: {} },
+  externalTexture: { externalTexture: d.textureExternal() },
 });
 
 const charsetExtended = root.createUniform(d.u32);
@@ -15,7 +15,7 @@ const glyphSize = root.createUniform(d.u32, 8);
 const uvTransformBuffer = root
   .createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const shaderSampler = tgpu['~unstable'].sampler({
+const shaderSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -78,7 +78,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const color = std.textureSampleBaseClampToEdge(
     layout.$.externalTexture,
-    shaderSampler,
+    shaderSampler.$,
     blockCoord,
   );
 
@@ -194,7 +194,7 @@ if (navigator.mediaDevices.getUserMedia) {
 
 let bindGroup:
   | TgpuBindGroup<{
-    externalTexture: { externalTexture: Record<string, never> };
+    externalTexture: { externalTexture: d.WgslExternalTexture };
   }>
   | undefined;
 
@@ -234,7 +234,7 @@ function processVideoFrame(
   }
 
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',

@@ -5,10 +5,6 @@ import { version } from '../../package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
 /**
- * A value's data type as seen by the WGSL generator
- */
-export const $wgslDataType = Symbol(`typegpu:${version}:$wgslDataType`);
-/**
  * The getter to the value of this resource, accessible on the GPU
  */
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);
@@ -19,17 +15,11 @@ export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
 export const $providing = Symbol(`typegpu:${version}:$providing`);
 
 /**
- * Marks objects that represent values at runtime GPU execution time), and don't have an inherent value
- * at comp-time (resolution time).
- * @example
- * readonly [$runtimeResource]: true
+ * Objects can provide the snippet that represents them.
  */
-export const $runtimeResource = Symbol(`typegpu:${version}:$runtimeResource`);
+export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
 
-export function isRuntimeResource(value: unknown): boolean {
-  return !!(value as { readonly [$runtimeResource]?: boolean | undefined })
-    ?.[$runtimeResource];
-}
+export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 
 //
 // Type tokens
@@ -78,3 +68,9 @@ export const $validVertexSchema = Symbol(
 export const $invalidSchemaReason = Symbol(
   `typegpu:${version}:$invalidSchemaReason`,
 );
+
+export function isMarkedInternal(
+  value: unknown,
+): value is { [$internal]: Record<string, unknown> | true } {
+  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
+}

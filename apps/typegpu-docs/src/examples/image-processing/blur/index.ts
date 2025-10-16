@@ -3,134 +3,10 @@
 
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-
-const tileDim = 128;
-const batch = [4, 4];
-
-const Settings = d.struct({
-  filterDim: d.i32,
-  blockDim: d.u32,
-});
-
-const uniformLayout = tgpu.bindGroupLayout({
-  settings: { uniform: Settings },
-  sampling: { sampler: 'filtering' },
-});
-
-const ioLayout = tgpu.bindGroupLayout({
-  flip: { uniform: d.u32 },
-  inTexture: { texture: 'float' },
-  outTexture: { storageTexture: 'rgba8unorm' },
-});
-
-const renderLayout = tgpu.bindGroupLayout({
-  texture: { texture: 'float' },
-  sampling: { sampler: 'filtering' },
-});
-
-const computeShaderCode = /* wgsl */ `
-
-var<workgroup> tile: array<array<vec3f, 128>, 4>;
-
-@compute @workgroup_size(32, 1)
-fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
-  let filterOffset = (settings.filterDim - 1) / 2;
-  let dims = vec2i(textureDimensions(inTexture, 0));
-  let baseIndex = vec2i(wid.xy * vec2(settings.blockDim, 4) +
-                            lid.xy * vec2(4, 1))
-                  - vec2(filterOffset, 0);
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var loadIndex = baseIndex + vec2(c, r);
-      if (flip != 0) {
-        loadIndex = loadIndex.yx;
-      }
-
-      tile[r][4 * lid.x + u32(c)] = textureSampleLevel(
-        inTexture,
-        sampling,
-        (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
-        0.0
-      ).rgb;
-    }
-  }
-
-  workgroupBarrier();
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var writeIndex = baseIndex + vec2(c, r);
-      if (flip != 0) {
-        writeIndex = writeIndex.yx;
-      }
-
-      let center = i32(4 * lid.x) + c;
-      if (center >= filterOffset &&
-          center < 128 - filterOffset &&
-          all(writeIndex < dims)) {
-        var acc = vec3(0.0, 0.0, 0.0);
-        for (var f = 0; f < settings.filterDim; f++) {
-          var i = center + f - filterOffset;
-          acc = acc + (1.0 / f32(settings.filterDim)) * tile[r][i];
-        }
-        textureStore(outTexture, writeIndex, vec4(acc, 1.0));
-      }
-    }
-  }
-}`;
-
-const VertexOutput = d.struct({
-  position: d.builtin.position,
-  uv: d.location(0, d.vec2f),
-});
-
-const renderShaderCode = /* wgsl */ `
-
-@vertex
-fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
-  const pos = array(
-    vec2( 1.0,  1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0, -1.0),
-    vec2( 1.0,  1.0),
-    vec2(-1.0, -1.0),
-    vec2(-1.0,  1.0),
-  );
-
-  const uv = array(
-    vec2(1.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(0.0, 0.0),
-  );
-
-  var output: VertexOutput;
-  output.position = vec4(pos[index], 0.0, 1.0);
-  output.uv = uv[index];
-  return output;
-}
-
-@fragment
-fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  return textureSample(texture, sampling, uv);
-}`;
+import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 const device = root.device;
-
-const settings = {
-  filterDim: 2,
-  iterations: 1,
-  get blockDim() {
-    return tileDim - (this.filterDim - 1);
-  },
-};
-
-const settingsBuffer = root.createBuffer(Settings).$usage('uniform');
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
@@ -139,25 +15,34 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 context.configure({
   device,
   format: presentationFormat,
-  alphaMode: 'premultiplied',
 });
 
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
-
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
+
+const settings = {
+  filterDim: 3,
+  iterations: 1,
+  get blockDim() {
+    return 128 - (this.filterDim) + 1;
+  },
+};
+
+const Settings = d.struct({
+  filterDim: d.i32,
+  blockDim: d.u32,
+});
+
+const settingsUniform = root.createUniform(Settings);
+
 const imageTexture = root['~unstable']
   .createTexture({
     size: [srcWidth, srcHeight],
     format: 'rgba8unorm',
   })
   .$usage('sampled', 'render');
-
-device.queue.copyExternalImageToTexture(
-  { source: imageBitmap },
-  { texture: root.unwrap(imageTexture) },
-  [imageBitmap.width, imageBitmap.height],
-);
+imageTexture.write(imageBitmap);
 
 const textures = [0, 1].map(() => {
   return root['~unstable']
@@ -167,33 +52,104 @@ const textures = [0, 1].map(() => {
     })
     .$usage('sampled', 'storage');
 });
+const renderView = textures[1].createView(d.texture2d(d.f32));
 
-const sampler = device.createSampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const computePipeline = device.createComputePipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(uniformLayout), root.unwrap(ioLayout)],
-  }),
-  compute: {
-    module: device.createShaderModule({
-      code: tgpu.resolve({
-        template: computeShaderCode,
-        externals: {
-          ...uniformLayout.bound,
-          ...ioLayout.bound,
-        },
-      }),
-    }),
-  },
+const ioLayout = tgpu.bindGroupLayout({
+  flip: { uniform: d.u32 },
+  inTexture: { texture: d.texture2d(d.f32) },
+  outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
 });
 
-const uniformBindGroup = root.createBindGroup(uniformLayout, {
-  settings: settingsBuffer,
-  sampling: sampler,
+const tileData = tgpu['~unstable'].workgroupVar(
+  d.arrayOf(d.arrayOf(d.vec3f, 128), 4),
+);
+
+const computeFn = tgpu['~unstable'].computeFn({
+  in: {
+    wid: d.builtin.workgroupId,
+    lid: d.builtin.localInvocationId,
+  },
+  workgroupSize: [32, 1, 1],
+})(({ wid, lid }) => {
+  const settings = settingsUniform.$;
+  const filterOffset = d.i32((settings.filterDim - 1) / 2);
+  const dims = d.vec2i(std.textureDimensions(ioLayout.$.inTexture));
+  const baseIndex = d.vec2i(
+    wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
+  ).sub(d.vec2i(filterOffset, 0));
+
+  // Load a tile of pixels into shared memory
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      let loadIndex = baseIndex.add(d.vec2i(c, r));
+      if (ioLayout.$.flip !== 0) {
+        loadIndex = loadIndex.yx;
+      }
+
+      tileData.$[r][lid.x * 4 + d.u32(c)] = std.textureSampleLevel(
+        ioLayout.$.inTexture,
+        sampler.$,
+        d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
+        0,
+      ).xyz;
+    }
+  }
+
+  std.workgroupBarrier();
+
+  // Apply the horizontal blur filter and write to the output texture
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      let writeIndex = baseIndex.add(d.vec2i(c, r));
+      if (ioLayout.$.flip !== 0) {
+        writeIndex = writeIndex.yx;
+      }
+
+      const center = d.i32(4 * lid.x) + c;
+      if (
+        center >= filterOffset &&
+        center < 128 - filterOffset &&
+        std.all(std.lt(writeIndex, dims))
+      ) {
+        let acc = d.vec3f();
+        for (let f = 0; f < settings.filterDim; f++) {
+          const i = center + f - filterOffset;
+          acc = acc.add(tileData.$[r][i].mul(1 / settings.filterDim));
+        }
+        std.textureStore(ioLayout.$.outTexture, writeIndex, d.vec4f(acc, 1));
+      }
+    }
+  }
 });
+
+const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
+
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+    uv: uv[input.vertexIndex],
+  };
+});
+
+const renderFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) =>
+  std.textureSample(
+    renderView.$,
+    sampler.$,
+    input.uv,
+  )
+);
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
@@ -216,93 +172,48 @@ const ioBindGroups = [
   }),
 ];
 
-const renderBindGroup = root.createBindGroup(renderLayout, {
-  texture: textures[1],
-  sampling: sampler,
-});
+const computePipeline = root['~unstable']
+  .withCompute(computeFn)
+  .createPipeline();
 
-const renderPassDescriptor: GPURenderPassDescriptor = {
-  colorAttachments: [
-    {
-      view: undefined as unknown as GPUTextureView,
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    },
-  ],
-};
-
-const renderShaderModule = device.createShaderModule({
-  code: tgpu.resolve({
-    template: renderShaderCode,
-    externals: { VertexOutput, ...renderLayout.bound },
-  }),
-});
-
-const renderPipeline = device.createRenderPipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(renderLayout)],
-  }),
-  vertex: {
-    module: renderShaderModule,
-  },
-  fragment: {
-    module: renderShaderModule,
-    targets: [{ format: presentationFormat }],
-  },
-});
-
-function runCompute(encoder: GPUCommandEncoder, ioIndex: number) {
-  const computePass = encoder.beginComputePass();
-  computePass.setPipeline(computePipeline);
-  computePass.setBindGroup(0, root.unwrap(uniformBindGroup));
-  computePass.setBindGroup(1, root.unwrap(ioBindGroups[ioIndex]));
-  computePass.dispatchWorkgroups(
-    Math.ceil(srcWidth / settings.blockDim),
-    Math.ceil(srcHeight / batch[1]),
-  );
-  computePass.end();
-}
+const renderPipeline = root['~unstable']
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(renderFragment, { format: presentationFormat })
+  .createPipeline();
 
 function render() {
-  settingsBuffer.write({
+  settingsUniform.write({
     filterDim: settings.filterDim,
     blockDim: settings.blockDim,
   });
 
-  const encoder = device.createCommandEncoder();
+  const indices = [0, 1, ...Array(settings.iterations - 1).fill([2, 1]).flat()];
 
-  runCompute(encoder, 0);
-  runCompute(encoder, 1);
-
-  for (let i = 0; i < settings.iterations - 1; i++) {
-    runCompute(encoder, 2);
-    runCompute(encoder, 1);
+  for (const i of indices) {
+    computePipeline
+      .with(ioLayout, ioBindGroups[i])
+      .dispatchWorkgroups(
+        Math.ceil(srcWidth / settings.blockDim),
+        Math.ceil(srcHeight / 4),
+      );
   }
 
-  // Updating the target render texture
-  (
-    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
-  )[0].view = context.getCurrentTexture().createView();
-
-  const passEncoder = encoder.beginRenderPass(renderPassDescriptor);
-  passEncoder.setPipeline(renderPipeline);
-  passEncoder.setBindGroup(0, root.unwrap(renderBindGroup));
-  passEncoder.draw(6);
-  passEncoder.end();
-
-  device.queue.submit([encoder.finish()]);
+  renderPipeline.withColorAttachment({
+    view: context.getCurrentTexture().createView(),
+    loadOp: 'clear',
+    storeOp: 'store',
+  }).draw(3);
+  root['~unstable'].flush();
 }
-
-setTimeout(() => render(), 100);
+render();
 
 // #region Example controls & Cleanup
 
 export const controls = {
   'filter size': {
-    initial: 2,
-    min: 2,
-    max: 40,
+    initial: 3,
+    min: 3,
+    max: 41,
     step: 2,
     onSliderChange(newValue: number) {
       settings.filterDim = newValue;
