@@ -200,7 +200,7 @@ export function accessProp(
       propType,
       /* ref */ isRef(target) && isNaturallyRef(propType)
         ? target.ref
-        : target.ref === 'constant'
+        : target.ref === 'constant' || target.ref === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -228,7 +228,9 @@ export function accessProp(
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
-      /* ref */ target.ref === 'constant' ? 'constant' : 'runtime',
+      /* ref */ target.ref === 'constant' || target.ref === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
     );
   }
 
@@ -262,7 +264,7 @@ export function accessIndex(
       elementType,
       /* ref */ isRef(target) && isNaturallyRef(elementType)
         ? target.ref
-        : target.ref === 'constant'
+        : target.ref === 'constant' || target.ref === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -276,7 +278,9 @@ export function accessIndex(
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* ref */ target.ref === 'constant' ? 'constant' : 'runtime',
+      /* ref */ target.ref === 'constant' || target.ref === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
     );
   }
 

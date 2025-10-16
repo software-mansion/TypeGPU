@@ -141,18 +141,26 @@ ${this.ctx.pre}}`;
   }
 
   public blockVariable(
+    varType: 'var' | 'let' | 'const',
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
     ref: RefSpace,
   ): Snippet {
+    let varRef: RefSpace = 'runtime';
+    if (ref === 'constant-ref') {
+      // Even types that aren't naturally referential (like vectors or structs) should
+      // be treated as constant references when assigned to a const.
+      varRef = 'constant-ref';
+    } else if (wgsl.isNaturallyRef(dataType)) {
+      varRef = isSpaceRef(ref) ? ref : 'this-function';
+    } else if (ref === 'constant' && varType === 'const') {
+      varRef = 'constant';
+    }
+
     const snippet = snip(
       this.ctx.makeNameValid(id),
       dataType,
-      /* ref */ wgsl.isNaturallyRef(dataType)
-        ? isSpaceRef(ref) ? ref : 'this-function'
-        : ref === 'constant'
-        ? 'constant'
-        : 'runtime',
+      /* ref */ varRef,
     );
     this.ctx.defineVariable(id, snippet);
     return snippet;
@@ -238,12 +246,20 @@ ${this.ctx.pre}}`;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
-      if (exprType === NODE.assignmentExpr && isRef(rhsExpr)) {
-        throw new WgslTypeError(
-          `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
-            this.ctx.resolve(rhsExpr.dataType).value
-          }(${rhsStr})' instead.\n-----`,
-        );
+      if (exprType === NODE.assignmentExpr) {
+        if (convLhs.ref === 'constant' || convLhs.ref === 'constant-ref') {
+          throw new WgslTypeError(
+            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
+          );
+        }
+
+        if (isRef(rhsExpr)) {
+          throw new WgslTypeError(
+            `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
+              this.ctx.resolve(rhsExpr.dataType).value
+            }(${rhsStr})' instead.\n-----`,
+          );
+        }
       }
 
       return snip(
@@ -708,7 +724,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType = 'var';
+      let varType: 'var' | 'let' | 'const' = 'var';
       const [stmtType, rawId, rawValue] = statement;
       const eq = rawValue !== undefined ? this.expression(rawValue) : undefined;
 
@@ -744,9 +760,13 @@ ${this.ctx.pre}else ${alternate}`;
           );
         }
 
-        varType = 'let';
-        if (!wgsl.isPtr(dataType)) {
-          dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
+        if (eq.ref === 'constant-ref') {
+          varType = 'const';
+        } else {
+          varType = 'let';
+          if (!wgsl.isPtr(dataType)) {
+            dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
+          }
         }
       } else {
         // Non-referential
@@ -760,6 +780,7 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       const snippet = this.blockVariable(
+        varType,
         rawId,
         concretize(dataType),
         eq.ref,

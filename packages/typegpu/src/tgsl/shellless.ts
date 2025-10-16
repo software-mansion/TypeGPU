@@ -6,6 +6,7 @@ import type { AnyData } from '../data/dataTypes.ts';
 import { INTERNAL_createPtr } from '../data/ptr.ts';
 import { refSpaceToPtrParams, type Snippet } from '../data/snippet.ts';
 import { isPtr, type StorableData } from '../data/wgslTypes.ts';
+import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
@@ -51,6 +52,16 @@ export class ShelllessRepository {
       const ptrParams = s.ref in refSpaceToPtrParams
         ? refSpaceToPtrParams[s.ref as keyof typeof refSpaceToPtrParams]
         : undefined;
+
+      if (s.ref === 'constant-ref') {
+        // biome-ignore lint/style/noNonNullAssertion: it's there
+        const ctx = getResolutionCtx()!;
+        throw new Error(
+          `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${
+            ctx.resolve(type).value
+          }(...)'`,
+        );
+      }
 
       return ptrParams !== undefined && !isPtr(type)
         ? INTERNAL_createPtr(
