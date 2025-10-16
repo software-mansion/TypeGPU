@@ -4,5 +4,8 @@
   "version": "0.0.0",
   "scripts": {
     "resolution-complexity": "deno run --allow-net --allow-write measure.ts"
+  },
+  "dependencies": {
+    "arktype": "catalog:"
   }
 }
