@@ -74,8 +74,6 @@ export const tgpu = {
 };
 export default tgpu;
 
-export { prepareDispatch } from './prepareDispatch.ts';
-
 export {
   MissingBindGroupsError,
   MissingLinksError,
