@@ -15,7 +15,6 @@ import { namespace } from '../../src/core/resolve/namespace.ts';
  */
 export function asWgsl(...values: unknown[]): string {
   return tgpu.resolve({
-    // Arrays are objects with numeric keys if you thing about it hard enough
     externals: Object.fromEntries(
       values.map((v, i) => [`item_${i}`, v as Wgsl]),
     ),

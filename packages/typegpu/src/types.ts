@@ -47,6 +47,7 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import type { FunctionDefinitionOptions } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -74,7 +75,10 @@ export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
+export interface FnToShaderCodeOptions {
+  type: 'normal' | 'vertex' | 'fragment' | 'compute';
+  workgroupSize?: [number, number?, number?] | undefined;
+  id: string;
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   /**
@@ -82,8 +86,8 @@ export interface FnToWgslOptions {
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
-  body: Block;
   externalMap: Record<string, unknown>;
+  fnDefOptions: FunctionDefinitionOptions;
 }
 
 export type ItemLayer = {
@@ -273,9 +277,8 @@ export interface ResolutionCtx {
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
-    head: Wgsl;
-    body: Wgsl;
+  fnToShaderCode(options: FnToShaderCodeOptions): {
+    code: string;
     returnType: AnyData;
   };
 

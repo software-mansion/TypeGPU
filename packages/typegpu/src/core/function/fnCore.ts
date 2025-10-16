@@ -22,6 +22,7 @@ import {
 } from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
+import type { FunctionDefinitionExtra } from '../../tgsl/shaderGenerator.ts';
 
 export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
@@ -38,7 +39,7 @@ export interface FnCore {
 
 export function createFnCore(
   implementation: Implementation,
-  fnAttribute = '',
+  extra?: FunctionDefinitionExtra | undefined,
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
@@ -82,7 +83,7 @@ export function createFnCore(
         let header = '';
         let body = '';
 
-        if (fnAttribute !== '') {
+        if (extra && extra.type !== 'normal') {
           const input = isWgslStruct(argTypes[0])
             ? `(in: ${ctx.resolve(argTypes[0]).value})`
             : '()';
@@ -134,6 +135,13 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
+        const fnAttribute = extra?.type === 'vertex'
+          ? '@vertex\n'
+          : extra?.type === 'fragment'
+          ? '@fragment\n'
+          : extra?.type === 'compute'
+          ? `@compute @workgroup_size(${extra.workgroupSize.join(', ')})\n`
+          : '';
         ctx.addDeclaration(`${fnAttribute}fn ${id}${header}${body}`);
         return snip(id, returnType);
       }
@@ -170,7 +178,9 @@ export function createFnCore(
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
       if (
-        maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
+        maybeSecondArg && maybeSecondArg.type === 'i' &&
+        extra &&
+        extra.type !== 'normal'
       ) {
         applyExternals(
           externalMap,
@@ -218,7 +228,7 @@ export function createFnCore(
         }
       }
 
-      const { head, body, returnType: actualReturnType } = ctx.fnToWgsl({
+      const { code, returnType: actualReturnType } = ctx.fnToShaderCode({
         args,
         argAliases: Object.fromEntries(argAliases),
         returnType,
@@ -226,11 +236,7 @@ export function createFnCore(
         externalMap,
       });
 
-      ctx.addDeclaration(
-        `${fnAttribute}fn ${id}${ctx.resolve(head).value}${
-          ctx.resolve(body).value
-        }`,
-      );
+      ctx.addDeclaration(code);
 
       return snip(id, actualReturnType);
     },
