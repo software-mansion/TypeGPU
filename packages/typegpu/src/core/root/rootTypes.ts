@@ -78,6 +78,21 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // Public API
 // ----------
 
+export interface PreparedDispatch<TArgs extends number[]> {
+  /**
+   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs>;
+
+  /**
+   * Run the prepared dispatch.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
+   * this method takes in the number of threads to run in each dimension.
+   */
+  dispatch(...args: TArgs): void;
+}
+
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
@@ -188,6 +203,41 @@ export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
+
+  /**
+   * Creates a compute pipeline that executes the given callback. It can accept
+   * up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   * of the executing thread.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const action = root.prepareDispatch(() => {
+   *   'use gpu';
+   *   console.log('Hello, GPU!');
+   * });
+   *
+   * action.dispatch();
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const action = root.prepareDispatch((x) => {
+   *   'use gpu';
+   *   console.log('I am the', x, 'thread');
+   * });
+   *
+   * action.dispatch(12); // executing 12 threads
+   * ```
+   */
+  prepareDispatch<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): PreparedDispatch<TArgs>;
 
   withVertex<
     VertexIn extends VertexInConstrained,

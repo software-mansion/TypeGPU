@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -13,7 +13,7 @@ function isEqual(e1: unknown, e2: unknown): boolean {
 
 async function test0d(): Promise<boolean> {
   const mutable = root.createMutable(d.u32);
-  prepareDispatch(root, () => {
+  root['~unstable'].prepareDispatch(() => {
     'use gpu';
     mutable.$ = 126;
   }).dispatch();
@@ -24,7 +24,7 @@ async function test0d(): Promise<boolean> {
 async function test1d(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
-  prepareDispatch(root, (x) => {
+  root['~unstable'].prepareDispatch((x) => {
     'use gpu';
     mutable.$[x] = x;
   }).dispatch(...size);
@@ -37,7 +37,7 @@ async function test2d(): Promise<boolean> {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
-  prepareDispatch(root, (x, y) => {
+  root['~unstable'].prepareDispatch((x, y) => {
     'use gpu';
     mutable.$[x][y] = d.vec2u(x, y);
   }).dispatch(...size);
@@ -56,7 +56,7 @@ async function test3d(): Promise<boolean> {
       size[0],
     ),
   );
-  prepareDispatch(root, (x, y, z) => {
+  root['~unstable'].prepareDispatch((x, y, z) => {
     'use gpu';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
   }).dispatch(...size);
@@ -69,7 +69,7 @@ async function test3d(): Promise<boolean> {
 
 async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.atomic(d.u32));
-  prepareDispatch(root, (x, y, z) => {
+  root['~unstable'].prepareDispatch((x, y, z) => {
     'use gpu';
     std.atomicAdd(mutable.$, 1);
   }).dispatch(4, 3, 2);
@@ -81,7 +81,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
-  const test = prepareDispatch(root, (x: number) => {
+  const test = root['~unstable'].prepareDispatch((x: number) => {
     'use gpu';
     mutable.$[x] *= 2;
   });
@@ -107,7 +107,7 @@ async function testDifferentBindGroups(): Promise<boolean> {
     buffer: buffer2,
   });
 
-  const test = prepareDispatch(root, () => {
+  const test = root['~unstable'].prepareDispatch(() => {
     'use gpu';
     for (let i = d.u32(); i < std.arrayLength(layout.$.buffer); i++) {
       layout.$.buffer[i] *= 2;
@@ -122,6 +122,21 @@ async function testDifferentBindGroups(): Promise<boolean> {
   return isEqual(filled1, [2, 4, 6]) && isEqual(filled2, [4, 8, 16, 32]);
 }
 
+async function testSlots(): Promise<boolean> {
+  const result = root.createMutable(d.f32);
+  const valueSlot = tgpu.slot(1);
+
+  const main = () => {
+    'use gpu';
+    result.$ += valueSlot.$;
+  };
+
+  root['~unstable'].prepareDispatch(main).dispatch(); // add 1
+  root['~unstable'].with(valueSlot, 3).prepareDispatch(main).dispatch(); // add 3
+
+  return await result.read() === 4;
+}
+
 async function runTests(): Promise<boolean> {
   let result = true;
   result = await test0d() && result;
@@ -131,6 +146,7 @@ async function runTests(): Promise<boolean> {
   result = await testWorkgroupSize() && result;
   result = await testMultipleDispatches() && result;
   result = await testDifferentBindGroups() && result;
+  result = await testSlots() && result;
   return result;
 }
 

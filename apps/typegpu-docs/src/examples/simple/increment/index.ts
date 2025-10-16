@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
@@ -6,7 +6,7 @@ const root = await tgpu.init();
 const counter = root.createMutable(d.u32);
 
 // A 0-dimentional shader function
-const gpuIncrement = prepareDispatch(root, () => {
+const gpuIncrement = root['~unstable'].prepareDispatch(() => {
   'use gpu';
   counter.$ += 1;
 });
