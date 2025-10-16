@@ -13,7 +13,7 @@ const gpuIncrement = root['~unstable'].prepareDispatch(() => {
 
 async function increment() {
   // Dispatch and read the result
-  gpuIncrement.dispatch();
+  gpuIncrement.dispatchThreads();
   return await counter.read();
 }
 
