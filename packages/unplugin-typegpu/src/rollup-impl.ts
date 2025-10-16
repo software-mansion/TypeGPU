@@ -2,25 +2,84 @@ import type * as acorn from 'acorn';
 import defu from 'defu';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import {
-  assignMetadata,
-  containsUseGpuDirective,
   type Context,
   defaultOptions,
   earlyPruneRegex,
   embedJSON,
-  type FunctionNode,
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
   type Options,
   performExpressionNaming,
-  removeUseGpuDirective,
-  wrapInAutoName,
+  useGpuDirective,
 } from './common.ts';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 import { type Node, walk } from 'estree-walker';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { FORMAT_VERSION } from 'tinyest';
+
+export type FunctionNode =
+  | acorn.FunctionDeclaration
+  | acorn.AnonymousFunctionDeclaration
+  | acorn.FunctionExpression
+  | acorn.ArrowFunctionExpression;
+
+export function containsUseGpuDirective(node: FunctionNode): boolean {
+  if (node.body.type === 'BlockStatement') {
+    for (const statement of node.body.body) {
+      if (
+        statement.type === 'ExpressionStatement' &&
+        statement.directive === useGpuDirective
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function removeUseGpuDirective(node: FunctionNode) {
+  const cloned = structuredClone(node);
+
+  if (cloned.body.type === 'BlockStatement') {
+    cloned.body.body = cloned.body.body.filter(
+      (statement) =>
+        !(
+          statement.type === 'ExpressionStatement' &&
+          statement.directive === useGpuDirective
+        ),
+    );
+  }
+
+  return cloned;
+}
+
+export function assignMetadata(
+  magicString: MagicStringAST,
+  node: acorn.AnyNode,
+  metadata: string,
+) {
+  magicString.prependLeft(
+    node.start,
+    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
+  ).appendRight(
+    node.end,
+    `), ${metadata}) && $.f)({}))`,
+  );
+}
+
+export function wrapInAutoName(
+  magicString: MagicStringAST,
+  node: acorn.Node,
+  name: string,
+) {
+  magicString
+    .prependLeft(
+      node.start,
+      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
+    )
+    .appendRight(node.end, `, "${name}"))`);
+}
 
 export const rollUpImpl = (rawOptions: Options) => {
   const options = defu(rawOptions, defaultOptions);
