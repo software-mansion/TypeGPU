@@ -12,7 +12,7 @@ export interface UseRenderOptions {
   vertex?: () => void;
 
   /**
-   * A kernel function that runs per-pixel on the GPU.
+   * A TypeGPU function that runs per-pixel on the GPU.
    */
   fragment: (input: InferRecord<typeof DefaultVarying>) => d.v4f;
 }
