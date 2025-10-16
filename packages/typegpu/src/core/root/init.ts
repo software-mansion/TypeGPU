@@ -65,11 +65,19 @@ import {
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
+  INTERNAL_createComparisonSampler,
+  INTERNAL_createSampler,
   isComparisonSampler,
   isSampler,
   type TgpuComparisonSampler,
+  type TgpuFixedComparisonSampler,
+  type TgpuFixedSampler,
   type TgpuSampler,
 } from '../sampler/sampler.ts';
+import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
 import {
   isAccessor,
   type TgpuAccessor,
@@ -402,6 +410,16 @@ class TgpuRootImpl extends WithBindingImpl
     return texture as any;
   }
 
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler {
+    return INTERNAL_createSampler(props, this);
+  }
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler {
+    return INTERNAL_createComparisonSampler(props, this);
+  }
+
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
@@ -474,18 +492,11 @@ class TgpuRootImpl extends WithBindingImpl
       return resource.vertexLayout;
     }
 
-    if (isSampler(resource)) {
+    if (isSampler(resource) || isComparisonSampler(resource)) {
       if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap(this);
+        return resource[$internal].unwrap();
       }
       throw new Error('Cannot unwrap laid-out sampler.');
-    }
-
-    if (isComparisonSampler(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap(this);
-      }
-      throw new Error('Cannot unwrap laid-out comparison sampler.');
     }
 
     if (isQuerySet(resource)) {

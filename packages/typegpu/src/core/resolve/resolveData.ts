@@ -5,6 +5,7 @@ import {
   isLooseData,
   type Unstruct,
 } from '../../data/dataTypes.ts';
+import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
 import {
   accessModeMap,
   isWgslStorageTexture,
@@ -300,6 +301,10 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return data.type.startsWith('texture_depth')
       ? data.type
       : `${data.type}<${data.sampleType.type}>`;
+  }
+
+  if (isWgslComparisonSampler(data) || isWgslSampler(data)) {
+    return data.type;
   }
 
   assertExhaustive(data, 'resolveData');
