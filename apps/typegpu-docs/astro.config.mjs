@@ -46,7 +46,10 @@ export default defineConfig({
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
     optimizeDeps: {
-      exclude: ['@rolldown/browser'],
+      exclude: [
+        '@rolldown/browser',
+        'onnxruntime-web',
+      ],
     },
     // Allowing query params, for invalidation
     plugins: [
