@@ -63,11 +63,11 @@ describe('autonaming', () => {
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = tgpu['~unstable'].sampler({
+    const mySampler = root['~unstable'].createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = tgpu['~unstable'].comparisonSampler({
+    const myComparisonSampler = root['~unstable'].createComparisonSampler({
       compare: 'equal',
     });
 

@@ -164,8 +164,8 @@ const resourceConstructors: string[] = [
   // root['~unstable']
   'createPipeline',
   'createTexture',
-  'sampler',
-  'comparisonSampler',
+  'createSampler',
+  'createComparisonSampler',
 ];
 
 /**
