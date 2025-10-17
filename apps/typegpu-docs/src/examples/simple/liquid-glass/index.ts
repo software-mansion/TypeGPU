@@ -24,7 +24,7 @@ imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
 const sampledView = imageTexture.createView();
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
@@ -82,7 +82,7 @@ const calculateWeights = (
   end: number,
   featherUV: number,
 ) => {
-  'kernel';
+  'use gpu';
   const inside = 1 -
     std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
@@ -91,18 +91,19 @@ const calculateWeights = (
 };
 
 const applyTint = (color: d.v3f, tint: d.Infer<typeof TintParams>) => {
-  'kernel';
+  'use gpu';
   return std.mix(d.vec4f(color, 1), d.vec4f(tint.color, 1), tint.strength);
 };
 
 const sampleWithChromaticAberration = (
   tex: d.texture2d<d.F32>,
+  sampler: d.sampler,
   uv: d.v2f,
   offset: number,
   dir: d.v2f,
   blur: number,
 ) => {
-  'kernel';
+  'use gpu';
   const samples = d.arrayOf(d.vec3f, 3)();
   for (let i = 0; i < 3; i++) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
@@ -137,18 +138,19 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   const blurSample = std.textureSampleBias(
     sampledView.$,
-    sampler,
+    sampler.$,
     uv,
     paramsUniform.$.blur,
   );
   const refractedSample = sampleWithChromaticAberration(
     sampledView.$,
+    sampler.$,
     uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
     paramsUniform.$.chromaticStrength * normalizedDist,
     dir,
     paramsUniform.$.blur * paramsUniform.$.edgeBlurMultiplier,
   );
-  const normalSample = std.textureSampleLevel(sampledView.$, sampler, uv, 0);
+  const normalSample = std.textureSampleLevel(sampledView.$, sampler.$, uv, 0);
 
   const tint = TintParams({
     color: paramsUniform.$.tintColor,

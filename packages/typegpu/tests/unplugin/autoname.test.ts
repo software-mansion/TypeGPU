@@ -63,11 +63,11 @@ describe('autonaming', () => {
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = tgpu['~unstable'].sampler({
+    const mySampler = root['~unstable'].createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = tgpu['~unstable'].comparisonSampler({
+    const myComparisonSampler = root['~unstable'].createComparisonSampler({
       compare: 'equal',
     });
 
@@ -146,7 +146,7 @@ describe('autonaming', () => {
 
   it('names arrow functions', () => {
     const myFun = () => {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -160,7 +160,7 @@ describe('autonaming', () => {
   it('names function expression', () => {
     // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -173,7 +173,7 @@ describe('autonaming', () => {
 
   it('names function definition', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 
@@ -186,7 +186,7 @@ describe('autonaming', () => {
 
   it('shellless name carries over to WGSL', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 
