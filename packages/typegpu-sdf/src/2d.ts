@@ -152,14 +152,6 @@ export const sdBezierApprox = tgpu.fn(
   return length(d);
 });
 
-// float sdPie( in vec2 p, in vec2 c, in float r )
-// {
-//     p.x = abs(p.x);
-//     float l = length(p) - r;
-//     float m = length(p-c*clamp(dot(p,c),0.0,r)); // c=sin/cos of aperture
-//     return max(l,m*sign(c.y*p.x-c.x*p.y));
-// }
-
 export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((p, c, r) => {
   const p_w = p;
   p_w.x = abs(p.x);

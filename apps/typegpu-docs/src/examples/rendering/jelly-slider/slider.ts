@@ -132,11 +132,11 @@ export class Slider {
     const pointsView = this.pointsBuffer.as('readonly');
     const controlPointsView = this.controlPointsBuffer.as('readonly');
 
-    const padding = 0.3;
+    const padding = 0.01;
     const left = start.x - this.totalLength * padding;
-    const right = end.x + this.totalLength * padding;
+    const right = end.x + this.totalLength * padding * 10;
     const bottom = -0.3;
-    const top = 1;
+    const top = 0.65;
 
     this.bbox = [top, right, bottom, left];
 
@@ -155,12 +155,21 @@ export class Slider {
         let closestSegment = d.i32(0);
         let closestT = d.f32(0);
 
+        const epsilon = d.f32(0.03);
+        const xOffset = d.vec2f(epsilon, 0.0);
+        const yOffset = d.vec2f(0.0, epsilon);
+
+        let xPlusDist = d.f32(1e10);
+        let xMinusDist = d.f32(1e10);
+        let yPlusDist = d.f32(1e10);
+        let yMinusDist = d.f32(1e10);
+
         for (let i = 0; i < pointsView.$.length - 1; i++) {
           const A = pointsView.$[i];
           const B = pointsView.$[i + 1];
           const C = controlPointsView.$[i];
-          const dist = sdBezier(sliderPos, A, C, B);
 
+          const dist = sdBezier(sliderPos, A, C, B);
           if (dist < minDist) {
             minDist = dist;
             closestSegment = i;
@@ -179,34 +188,35 @@ export class Slider {
               closestT = 0.0;
             }
           }
+
+          xPlusDist = std.min(
+            xPlusDist,
+            sdBezier(sliderPos.add(xOffset), A, C, B),
+          );
+          xMinusDist = std.min(
+            xMinusDist,
+            sdBezier(sliderPos.sub(xOffset), A, C, B),
+          );
+          yPlusDist = std.min(
+            yPlusDist,
+            sdBezier(sliderPos.add(yOffset), A, C, B),
+          );
+          yMinusDist = std.min(
+            yMinusDist,
+            sdBezier(sliderPos.sub(yOffset), A, C, B),
+          );
         }
 
         const overallProgress = (d.f32(closestSegment) + closestT) /
           d.f32(pointsView.$.length - 1);
 
-        const len = pointsView.$.length;
-        const secondLastPoint = pointsView.$[len - 2];
-        const lastPoint = pointsView.$[len - 1];
-
-        const angle = std.atan2(
-          lastPoint.y - secondLastPoint.y,
-          lastPoint.x - secondLastPoint.x,
-        );
-        const cosA = std.cos(angle);
-        const sinA = std.sin(angle);
-
-        let capP = sliderPos.sub(secondLastPoint);
-        capP = d.vec2f(
-          cosA * capP.x + sinA * capP.y,
-          -sinA * capP.x + cosA * capP.y,
-        );
-
-        const capIndicator = std.select(0.0, 1.0, overallProgress > 0.95);
+        const normalX = (xPlusDist - xMinusDist) / (2.0 * epsilon);
+        const normalY = (yPlusDist - yMinusDist) / (2.0 * epsilon);
 
         std.textureStore(
           bezierWriteView.$,
           d.vec2u(x, y),
-          d.vec4f(minDist, capIndicator, overallProgress, 1),
+          d.vec4f(minDist, overallProgress, normalX, normalY),
         );
       },
     );
