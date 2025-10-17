@@ -1,7 +1,9 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { mainFrag, mainVert } from './render.ts';
 import {
+  externalTextureLayout,
   samplerSlot,
   textureLayout,
   uvTransformUniformSlot,
@@ -41,6 +43,40 @@ const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
+
+const downscaledTexture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'render');
+
+const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})`{
+  const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+  const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+  return Out(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+}`;
+
+const downscaleFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const col = std.textureSampleBaseClampToEdge(
+    externalTextureLayout.$.inputTexture,
+    samplerSlot.$,
+    uv,
+  );
+
+  return col;
+  // return d.vec4f(1, 1, 0, 1);
+});
+
+const downscalePipeline = root['~unstable']
+  .with(samplerSlot, sampler)
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(downscaleFragment, { format: 'rgba8unorm' })
+  .createPipeline();
 
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
@@ -104,6 +140,18 @@ function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
+  downscalePipeline
+    .withColorAttachment({
+      view: root.unwrap(downscaledTexture.createView()),
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .with(root.createBindGroup(externalTextureLayout, {
+      inputTexture: device.importExternalTexture({ source: video }),
+    }))
+    .draw(3);
+
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -111,12 +159,9 @@ function processVideoFrame(
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      textureLayout,
-      root.createBindGroup(textureLayout, {
-        inputTexture: device.importExternalTexture({ source: video }),
-      }),
-    )
+    .with(root.createBindGroup(textureLayout, {
+      inputTexture: downscaledTexture,
+    }))
     .draw(6);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);

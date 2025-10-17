@@ -1,7 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { samplerSlot, textureLayout, uvTransformUniformSlot } from './schemas';
+import {
+  externalTextureLayout,
+  samplerSlot,
+  textureLayout,
+  uvTransformUniformSlot,
+} from './schemas';
 
 const vertexPos = tgpu.const(d.arrayOf(d.vec2f, 6), [
   d.vec2f(1.0, 1.0),

@@ -1,8 +1,12 @@
 import tgpu, { type TgpuSampler, type TgpuUniform } from 'typegpu';
 import * as d from 'typegpu/data';
 
-export const textureLayout = tgpu.bindGroupLayout({
+export const externalTextureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
+});
+
+export const textureLayout = tgpu.bindGroupLayout({
+  inputTexture: { texture: d.texture2d() },
 });
 
 export const samplerSlot = tgpu.slot<TgpuSampler>();
