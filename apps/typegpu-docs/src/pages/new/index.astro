@@ -94,12 +94,12 @@ import Videos from "../../components/Videos.astro";
 
   {/* Hero Section */}
   <section class="flex flex-col items-center mx-auto lg:px-72 lg:max-w-340">
-    <div class="flex flex-col">
-      <div class="font-extrabold text-blue-900 text-7xl">
+    <div class="flex flex-col lg:px-0 px-6">
+      <div class="font-extrabold text-blue-900 lg:text-7xl text-3xl">
         Type
         <GradientTitle title="GPU" />
       </div>
-      <div class="text-blue-950 text-xl text-pretty">
+      <div class="text-blue-950 lg:text-6xl text-3xl text-pretty">
         A modular and open-ended toolkit for WebGPU, with advanced type
         interface and ability to write shaders in TypeScript.
         <!-- <br class="hidden sm:block" /> -->
@@ -115,12 +115,22 @@ import Videos from "../../components/Videos.astro";
   </section>
 
   {/* Code Showcase */}
-  <div class="mx-auto lg:px-72 lg:max-w-340">
+  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
+    <div class="mb-12">
+      {/* Section Title */}
+      <h2 class="font-normal text-blue-950 text-4xl center">
+        Ways to use TypeGPU
+      </h2>
+      <p class="text-blue-900 text-2xl text-pretty">
+        TypeGPU is a three-way toolkit that is easy for you to integrate
+        granularly and doesn't restrict you in what you can do.
+      </p>
+    </div>
     <CodeShowcase />
   </div>
 
   {/* TypeGPU examples */}
-  <div class="mx-auto lg:px-72 lg:max-w-340">
+  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
     <div class="my-12">
       <h2 class="font-normal text-blue-950 text-4xl center">
         Explore TypeGPU examples
@@ -134,13 +144,13 @@ import Videos from "../../components/Videos.astro";
   </div>
 
   {/* Videos */}
-  <div class="mx-auto lg:px-72 lg:max-w-340">
+  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
     <Videos />
   </div>
 </PageLayout>
 
 {/* Backlog */}
-<div class="mx-auto lg:px-72 lg:max-w-340">
+<div class="mx-auto lg:px-72 px-6 lg:max-w-340">
   <div class="my-12">
     <h2 class="font-normal text-blue-950 text-4xl center">
       What's around the corner?
@@ -155,15 +165,13 @@ import Videos from "../../components/Videos.astro";
 
 {/* Call to Action Section */}
 <section
-  class="flex flex-col items-center gap-16 mx-auto lg:px-72 lg:max-w-340"
+  class="flex flex-col items-center gap-16 mx-auto lg:px-72 px-6 lg:max-w-340"
 >
-  <div
-    class="flex flex-row items-center gap-3 font-bold text-blue-950 text-7xl"
+  <h2
+    class="text-center font-bold text-blue-950 text-3xl lg:text-7xl leading-tight"
   >
-    Ready to try out
-    <GradientTitle title="TypeGPU" />
-    ?
-  </div>
+    Ready to try out <GradientTitle title="TypeGPU" />?
+  </h2>
   <GetStartedButton />
 </section>
 
@@ -172,12 +180,11 @@ import Videos from "../../components/Videos.astro";
   class="flex flex-col items-center gap-10 md:gap-15 lg:gap-20 bg-gradient-to-b from-white mt-20 to-accent-50"
 >
   <div
-    class="flex flex-col items-center gap-12 mx-auto px-72 py-10 lg:max-w-340 text-blue-950"
+    class="flex flex-col items-center gap-12 mx-auto lg:px-72 px-6 py-10 lg:max-w-340 text-blue-950"
   >
-    <div class="font-bold text-7xl">
-      We are
-      <GradientTitle title="Software Mansion" />
-    </div>
+    <h2 class="text-center font-bold text-3xl lg:text-7xl leading-tight">
+      We are <GradientTitle title="Software Mansion" />
+    </h2>
     <div class="mb-4 text-2xl text-pretty">
       We’re a software company built around improving developer experience and
       bringing to life the innovative ideas of our clients. Do you have a
@@ -189,7 +196,7 @@ import Videos from "../../components/Videos.astro";
     />
 
     <div
-      class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white mx-auto px-4 py-8 w-full max-w-7xl text-center"
+      class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white py-8 w-full max-w-7xl text-center"
     >
       <a
         href="#"

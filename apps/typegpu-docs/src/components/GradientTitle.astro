@@ -6,18 +6,16 @@ interface Props {
 const { title } = Astro.props;
 ---
 
-<div class="inline-block">
-  <h1
-    class:list={[
-      "text-7xl font-bold",
-      "bg-gradient-to-r from-gradient-blue to-gradient-purple bg-position-[100%_100%] hover:bg-position-[50%_50%] ",
-      "bg-clip-text text-transparent",
-      "bg-[length:200%_auto] animate-gradient",
-    ]}
-  >
-    {title}
-  </h1>
-</div>
+<span
+  class:list={[
+    "inline-block lg:text-7xl text-3xl font-bold",
+    "bg-gradient-to-r from-gradient-blue to-gradient-purple bg-position-[100%_100%] hover:bg-position-[50%_50%]",
+    "bg-clip-text text-transparent",
+    "bg-[length:200%_auto] animate-gradient",
+  ]}
+>
+  {title}
+</span>
 
 <style>
   @keyframes gradient {
