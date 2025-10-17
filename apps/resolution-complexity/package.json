@@ -3,9 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "resolution-complexity": "deno run --allow-net --allow-write measure.ts"
+    "resolution-complexity": "deno run --allow-all index.ts"
   },
   "dependencies": {
-    "arktype": "catalog:"
+    "fs-extra": "^11.3.2",
+    "simple-git": "^3.28.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4"
   }
 }
