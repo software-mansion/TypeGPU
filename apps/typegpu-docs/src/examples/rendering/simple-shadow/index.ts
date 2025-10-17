@@ -65,7 +65,7 @@ function createShadowTextures(
     format: 'depth32float',
   }).$usage('render', 'sampled');
 
-  const comparisonSampler = tgpu['~unstable'].comparisonSampler({
+  const comparisonSampler = root['~unstable'].createComparisonSampler({
     compare: sampleCompare,
     magFilter: pcf ? 'linear' : 'nearest',
     minFilter: pcf ? 'linear' : 'nearest',

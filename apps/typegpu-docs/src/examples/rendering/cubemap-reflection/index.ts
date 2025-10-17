@@ -109,7 +109,7 @@ const texture = root['~unstable']
 await loadCubemap(texture, chosenCubemap);
 
 const cubemap = texture.createView(d.textureCube(d.f32));
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -218,7 +218,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   );
   const environmentColor = std.textureSample(
     cubemapBinding.$,
-    texSampler,
+    texSampler.$,
     reflectionVector,
   );
 
@@ -266,7 +266,7 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
 })((input) => {
   return std.textureSample(
     cubemapBinding.$,
-    texSampler,
+    texSampler.$,
     std.normalize(input.texCoord),
   );
 });
@@ -300,8 +300,8 @@ function render() {
       storeOp: 'store',
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
-    .with(renderLayout, renderBindGroup)
-    .with(textureLayout, textureBindGroup)
+    .with(renderBindGroup)
+    .with(textureBindGroup)
     .draw(cubeVertices.length);
 
   pipeline
@@ -312,8 +312,8 @@ function render() {
       storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
-    .with(renderLayout, renderBindGroup)
-    .with(textureLayout, textureBindGroup)
+    .with(renderBindGroup)
+    .with(textureBindGroup)
     .draw(vertexBuffer.dataType.elementCount);
 
   root['~unstable'].flush();

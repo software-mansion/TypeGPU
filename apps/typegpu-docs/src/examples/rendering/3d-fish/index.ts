@@ -1,9 +1,9 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
+import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { fragmentShader, vertexShader } from './render.ts';
@@ -98,8 +98,8 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
-  'kernel';
+const randomizeFishPositionsOnGPU = root['~unstable'].prepareDispatch((x) => {
+  'use gpu';
   randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
   const data = ModelData({
     position: d.vec3f(
@@ -124,7 +124,7 @@ const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsOnGPU.dispatch(p.fishAmount);
+  randomizeFishPositionsOnGPU.dispatchThreads(p.fishAmount);
   enqueuePresetChanges();
 };
 
@@ -198,9 +198,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline();
+const simulateAction = root['~unstable'].prepareDispatch(simulate);
 
 // bind groups
 
@@ -256,9 +254,9 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
+  simulateAction
+    .with(computeBindGroups[odd ? 1 : 0])
+    .dispatchThreads(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({
@@ -280,7 +278,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
     .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
+    .with(renderOceanFloorBindGroup)
     .draw(oceanFloorModel.polygonCount, 1);
 
   renderPipeline
@@ -303,7 +301,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
+    .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
   root['~unstable'].flush();
