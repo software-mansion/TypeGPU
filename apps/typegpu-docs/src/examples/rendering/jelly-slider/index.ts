@@ -169,16 +169,56 @@ const BoxIntersection = d.struct({
   tMax: d.f32,
 });
 
+const Ray = d.struct({
+  origin: d.vec3f,
+  direction: d.vec3f,
+});
+
+const SdfBbox = d.struct({
+  left: d.f32,
+  right: d.f32,
+  bottom: d.f32,
+  top: d.f32,
+});
+
+const getRay = (ndc: d.v2f) => {
+  'use gpu';
+  const clipPos = d.vec4f(ndc.x, ndc.y, -1.0, 1.0);
+
+  const invView = cameraUniform.$.viewInv;
+  const invProj = cameraUniform.$.projInv;
+
+  const viewPos = std.mul(invProj, clipPos);
+  const viewPosNormalized = d.vec4f(viewPos.xyz.div(viewPos.w), 1.0);
+
+  const worldPos = std.mul(invView, viewPosNormalized);
+
+  const rayOrigin = invView.columns[3].xyz;
+  const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
+
+  return Ray({
+    origin: rayOrigin,
+    direction: rayDir,
+  });
+};
+
+const getSliderBbox = () => {
+  'use gpu';
+  return SdfBbox({
+    left: d.f32(bezierBbox[3]),
+    right: d.f32(bezierBbox[1]),
+    bottom: d.f32(bezierBbox[2]),
+    top: d.f32(bezierBbox[0]),
+  });
+};
+
 const sdInflatedPolyline2D = (p: d.v2f) => {
   'use gpu';
-  const left = d.f32(bezierBbox[3]);
-  const right = d.f32(bezierBbox[1]);
-  const bottom = d.f32(bezierBbox[2]);
-  const top = d.f32(bezierBbox[0]);
+  const bbox = getSliderBbox();
 
   const uv = d.vec2f(
-    (p.x - left) / (right - left),
-    (top - p.y) / (top - bottom),
+    (p.x - bbox.left) / (bbox.right - bbox.left),
+    (bbox.top - p.y) / (bbox.top - bbox.bottom),
   );
   const clampedUV = std.saturate(uv);
 
@@ -196,50 +236,6 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
     t: progress,
     distance: segUnsigned,
     normal: normal,
-  });
-};
-
-const sliderSdf3D = (position: d.v3f) => {
-  'use gpu';
-  const poly2D = sdInflatedPolyline2D(position.xy);
-
-  let finalDist = d.f32(0.0);
-  if (poly2D.t > 0.94) {
-    const endCap = slider.endCapUniform.$;
-    const secondLastPoint = d.vec2f(endCap.x, endCap.y);
-    const lastPoint = d.vec2f(endCap.z, endCap.w);
-
-    const angle = std.atan2(
-      lastPoint.y - secondLastPoint.y,
-      lastPoint.x - secondLastPoint.x,
-    );
-    const rot = d.mat2x2f(
-      std.cos(angle),
-      -std.sin(angle),
-      std.sin(angle),
-      std.cos(angle),
-    );
-
-    let pieP = position.sub(d.vec3f(secondLastPoint, 0));
-    pieP = d.vec3f(rot.mul(pieP.xy), pieP.z);
-    const hmm = sdf.sdPie(pieP.zx, d.vec2f(1, 0), LINE_HALF_THICK);
-    const extrudeEnd = sdf.opExtrudeY(
-      pieP,
-      hmm,
-      0.001,
-    ) - LINE_RADIUS;
-
-    finalDist = extrudeEnd;
-  } else {
-    const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
-      LINE_RADIUS;
-    finalDist = body;
-  }
-
-  return LineInfo({
-    t: poly2D.t,
-    distance: finalDist,
-    normal: poly2D.normal,
   });
 };
 
@@ -271,6 +267,26 @@ const cap3D = (position: d.v3f) => {
   return extrudeEnd;
 };
 
+const sliderSdf3D = (position: d.v3f) => {
+  'use gpu';
+  const poly2D = sdInflatedPolyline2D(position.xy);
+
+  let finalDist = d.f32(0.0);
+  if (poly2D.t > 0.94) {
+    finalDist = cap3D(position);
+  } else {
+    const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
+      LINE_RADIUS;
+    finalDist = body;
+  }
+
+  return LineInfo({
+    t: poly2D.t,
+    distance: finalDist,
+    normal: poly2D.normal,
+  });
+};
+
 const getMainSceneDist = (position: d.v3f) => {
   'use gpu';
   return sdf.opSmoothDifference(
@@ -286,13 +302,12 @@ const getMainSceneDist = (position: d.v3f) => {
 
 const sliderApproxDist = (position: d.v3f) => {
   'use gpu';
-  const left = d.f32(bezierBbox[3]);
-  const right = d.f32(bezierBbox[1]);
-  const bottom = d.f32(bezierBbox[2]);
-  const top = d.f32(bezierBbox[0]);
+  const bbox = getSliderBbox();
 
   const p = position.xy;
-  if (p.x < left || p.x > right || p.y < bottom || p.y > top) {
+  if (
+    p.x < bbox.left || p.x > bbox.right || p.y < bbox.bottom || p.y > bbox.top
+  ) {
     return 1e9;
   }
 
@@ -343,54 +358,84 @@ const getNormalCap = (position: d.v3f) => {
   return std.normalize(d.vec3f(normalX, normalY, normalZ));
 };
 
+const getNormalMain = (position: d.v3f) => {
+  'use gpu';
+  // if we are outside of the dip we can just return up
+  if (
+    std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02 ||
+    (std.abs(position.x) < 0.9 && std.abs(position.z) < 0.17)
+  ) {
+    return d.vec3f(0, 1, 0);
+  }
+  const epsilon = 0.0001;
+  const xOffset = d.vec3f(epsilon, 0, 0);
+  const yOffset = d.vec3f(0, epsilon, 0);
+  const zOffset = d.vec3f(0, 0, epsilon);
+  const normalX = getMainSceneDist(std.add(position, xOffset)) -
+    getMainSceneDist(std.sub(position, xOffset));
+  const normalY = getMainSceneDist(std.add(position, yOffset)) -
+    getMainSceneDist(std.sub(position, yOffset));
+  const normalZ = getMainSceneDist(std.add(position, zOffset)) -
+    getMainSceneDist(std.sub(position, zOffset));
+  return std.normalize(d.vec3f(normalX, normalY, normalZ));
+};
+
+const getSliderNormal = (
+  position: d.v3f,
+  hitInfo: d.Infer<typeof HitInfo>,
+) => {
+  'use gpu';
+  const poly2D = sdInflatedPolyline2D(position.xy);
+  const gradient2D = poly2D.normal;
+
+  const threshold = LINE_HALF_THICK * 0.85;
+  const absZ = std.abs(position.z);
+  const zDistance = std.max(
+    0,
+    (absZ - threshold) * LINE_HALF_THICK / (LINE_HALF_THICK - threshold),
+  );
+  const edgeDistance = LINE_RADIUS - poly2D.distance;
+
+  const edgeContrib = 0.9;
+  const zContrib = 1.0 - edgeContrib;
+
+  const zDirection = std.sign(position.z);
+  const zAxisVector = d.vec3f(0, 0, zDirection);
+
+  const edgeBlendDistance = edgeContrib * LINE_RADIUS +
+    zContrib * LINE_HALF_THICK;
+
+  const blendFactor = std.smoothstep(
+    edgeBlendDistance,
+    0.0,
+    zDistance * zContrib + edgeDistance * edgeContrib,
+  );
+
+  const normal2D = d.vec3f(gradient2D.xy, 0);
+  const blendedNormal = std.mix(
+    zAxisVector,
+    normal2D,
+    blendFactor * 0.5 + 0.5,
+  );
+
+  let normal = std.normalize(blendedNormal);
+
+  if (hitInfo.t > 0.94) {
+    const ratio = (hitInfo.t - 0.94) / 0.02;
+    const fullNormal = getNormalCap(position);
+    normal = std.normalize(std.mix(normal, fullNormal, ratio));
+  }
+
+  return normal;
+};
+
 const getNormalOptimized = (
   position: d.v3f,
   hitInfo: d.Infer<typeof HitInfo>,
 ) => {
   'use gpu';
   if (hitInfo.objectType === ObjectType.SLIDER && hitInfo.t < 0.96) {
-    const poly2D = sdInflatedPolyline2D(position.xy);
-    const gradient2D = poly2D.normal;
-
-    const threshold = LINE_HALF_THICK * 0.85;
-    const absZ = std.abs(position.z);
-    const zDistance = std.max(
-      0,
-      (absZ - threshold) * LINE_HALF_THICK / (LINE_HALF_THICK - threshold),
-    );
-    const edgeDistance = LINE_RADIUS - poly2D.distance;
-
-    const edgeContrib = 0.9;
-    const zContrib = 1.0 - edgeContrib;
-
-    const zDirection = std.sign(position.z);
-    const zAxisVector = d.vec3f(0, 0, zDirection);
-
-    const edgeBlendDistance = edgeContrib * LINE_RADIUS +
-      zContrib * LINE_HALF_THICK;
-
-    const blendFactor = std.smoothstep(
-      edgeBlendDistance,
-      0.0,
-      zDistance * zContrib + edgeDistance * edgeContrib,
-    );
-
-    const normal2D = d.vec3f(gradient2D.xy, 0);
-    const blendedNormal = std.mix(
-      zAxisVector,
-      normal2D,
-      blendFactor * 0.5 + 0.5,
-    );
-
-    let normal = std.normalize(blendedNormal);
-
-    if (hitInfo.t > 0.94) {
-      const ratio = (hitInfo.t - 0.94) / 0.02;
-      const fullNormal = getNormalCap(position);
-      normal = std.normalize(std.mix(normal, fullNormal, ratio));
-    }
-
-    return normal;
+    return getSliderNormal(position, hitInfo);
   }
 
   return std.select(
@@ -400,19 +445,42 @@ const getNormalOptimized = (
   );
 };
 
+const intersectBox = (
+  rayOrigin: d.v3f,
+  rayDirection: d.v3f,
+  boxMin: d.v3f,
+  boxMax: d.v3f,
+) => {
+  'use gpu';
+  const invDir = d.vec3f(1.0).div(rayDirection);
+
+  const t1 = std.sub(boxMin, rayOrigin).mul(invDir);
+  const t2 = std.sub(boxMax, rayOrigin).mul(invDir);
+
+  const tMinVec = std.min(t1, t2);
+  const tMaxVec = std.max(t1, t2);
+
+  const tMin = std.max(std.max(tMinVec.x, tMinVec.y), tMinVec.z);
+  const tMax = std.min(std.min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
+
+  const result = BoxIntersection();
+  result.hit = tMax >= tMin && tMax >= 0.0;
+  result.tMin = tMin;
+  result.tMax = tMax;
+
+  return result;
+};
+
 const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   'use gpu';
   const newOrigin = position.add(std.mul(normal, SURF_DIST * 5.0));
   const newDir = std.mul(lightDir, 1.0);
 
-  const left = d.f32(bezierBbox[3]);
-  const right = d.f32(bezierBbox[1]);
-  const bottom = d.f32(bezierBbox[2]);
-  const top = d.f32(bezierBbox[0]);
+  const bbox = getSliderBbox();
   const zDepth = d.f32(0.21);
 
-  const sliderMin = d.vec3f(left, bottom, -zDepth);
-  const sliderMax = d.vec3f(right, top, zDepth);
+  const sliderMin = d.vec3f(bbox.left, bbox.bottom, -zDepth);
+  const sliderMax = d.vec3f(bbox.right, bbox.top, zDepth);
 
   // check box intersection
   const intersection = intersectBox(
@@ -446,28 +514,6 @@ const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   }
 
   return d.f32(0);
-};
-
-const getNormalMain = (position: d.v3f) => {
-  'use gpu';
-  // if we are outside of the dip we can just return up
-  if (
-    std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02 ||
-    (std.abs(position.x) < 0.9 && std.abs(position.z) < 0.17)
-  ) {
-    return d.vec3f(0, 1, 0);
-  }
-  const epsilon = 0.0001;
-  const xOffset = d.vec3f(epsilon, 0, 0);
-  const yOffset = d.vec3f(0, epsilon, 0);
-  const zOffset = d.vec3f(0, 0, epsilon);
-  const normalX = getMainSceneDist(std.add(position, xOffset)) -
-    getMainSceneDist(std.sub(position, xOffset));
-  const normalY = getMainSceneDist(std.add(position, yOffset)) -
-    getMainSceneDist(std.sub(position, yOffset));
-  const normalZ = getMainSceneDist(std.add(position, zOffset)) -
-    getMainSceneDist(std.sub(position, zOffset));
-  return std.normalize(d.vec3f(normalX, normalY, normalZ));
 };
 
 const calculateAO = (position: d.v3f, normal: d.v3f) => {
@@ -540,32 +586,6 @@ const calculateLighting = (
   return std.add(std.add(directionalLight, ambientLight), specular);
 };
 
-const intersectBox = (
-  rayOrigin: d.v3f,
-  rayDirection: d.v3f,
-  boxMin: d.v3f,
-  boxMax: d.v3f,
-) => {
-  'use gpu';
-  const invDir = d.vec3f(1.0).div(rayDirection);
-
-  const t1 = std.sub(boxMin, rayOrigin).mul(invDir);
-  const t2 = std.sub(boxMax, rayOrigin).mul(invDir);
-
-  const tMinVec = std.min(t1, t2);
-  const tMaxVec = std.max(t1, t2);
-
-  const tMin = std.max(std.max(tMinVec.x, tMinVec.y), tMinVec.z);
-  const tMax = std.min(std.min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
-
-  const result = BoxIntersection();
-  result.hit = tMax >= tMin && tMax >= 0.0;
-  result.tMin = tMin;
-  result.tMax = tMax;
-
-  return result;
-};
-
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'use gpu';
   let distanceFromOrigin = d.f32();
@@ -603,25 +623,13 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
 
   const u = (gid.x / dimensions.x) * 2.0 - 1.0;
   const v = 1.0 - (gid.y / dimensions.y) * 2.0;
-
-  const clipPos = d.vec4f(u, v, -1.0, 1.0);
-
-  const invView = cameraUniform.$.viewInv;
-  const invProj = cameraUniform.$.projInv;
-
-  const viewPos = std.mul(invProj, clipPos);
-  const viewPosNormalized = d.vec4f(viewPos.xyz.div(viewPos.w), 1.0);
-
-  const worldPos = std.mul(invView, viewPosNormalized);
-
-  const rayOrigin = invView.columns[3].xyz;
-  const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
+  const ray = getRay(d.vec2f(u, v));
 
   let tempDist = d.f32();
   let backgroundHitDist = d.f32(MAX_DIST);
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    const p = std.add(rayOrigin, std.mul(rayDir, tempDist));
+    const p = std.add(ray.origin, std.mul(ray.direction, tempDist));
     const hit = getMainSceneDist(p);
     tempDist += hit;
     if (hit < SURF_DIST) {
@@ -640,6 +648,35 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
   );
 });
 
+const applyAoAndShadow = (
+  litColor: d.v3f,
+  hitPosition: d.v3f,
+  normal: d.v3f,
+  lightDir: d.v3f,
+) => {
+  'use gpu';
+  const ao = calculateAO(hitPosition, normal);
+  const shadow = getShadow(hitPosition, normal, lightDir);
+  const finalColor = std.mul(litColor, ao).mul(1.0 - shadow);
+  return d.vec4f(finalColor, 1.0);
+};
+
+const renderBackground = (
+  rayOrigin: d.v3f,
+  rayDirection: d.v3f,
+  backgroundHitDist: number,
+) => {
+  'use gpu';
+  const hitPosition = std.add(
+    rayOrigin,
+    std.mul(rayDirection, backgroundHitDist),
+  );
+  const normal = getNormalMain(hitPosition);
+  const lightDir = std.mul(lightUniform.$.direction, -1.0);
+  const litColor = calculateLighting(hitPosition, normal, rayOrigin);
+  return applyAoAndShadow(litColor, hitPosition, normal, lightDir);
+};
+
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
   'use gpu';
   let totalSteps = d.u32();
@@ -649,14 +686,11 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
     pixelCoord,
   ).x;
 
-  const left = d.f32(bezierBbox[3]);
-  const right = d.f32(bezierBbox[1]);
-  const bottom = d.f32(bezierBbox[2]);
-  const top = d.f32(bezierBbox[0]);
+  const bbox = getSliderBbox();
   const zDepth = d.f32(0.25);
 
-  const sliderMin = d.vec3f(left, bottom, -zDepth);
-  const sliderMax = d.vec3f(right, top, zDepth);
+  const sliderMin = d.vec3f(bbox.left, bbox.bottom, -zDepth);
+  const sliderMax = d.vec3f(bbox.right, bbox.top, zDepth);
 
   const intersection = intersectBox(
     rayOrigin,
@@ -666,21 +700,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
   );
 
   if (!intersection.hit || backgroundHitDist < intersection.tMin) {
-    const hitPosition = std.add(
-      rayOrigin,
-      std.mul(rayDirection, backgroundHitDist),
-    );
-    const normal = getNormalMain(hitPosition);
-    const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-    const ao = calculateAO(hitPosition, normal);
-    const shadow = getShadow(
-      hitPosition,
-      normal,
-      std.mul(lightUniform.$.direction, -1.0),
-    );
-    const finalColor = std.mul(litColor, ao).mul(1.0 - shadow);
-
-    return d.vec4f(finalColor, 1.0);
+    return renderBackground(rayOrigin, rayDirection, backgroundHitDist);
   }
 
   let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
@@ -710,11 +730,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       const litColor = calculateLighting(hitPosition, normal, rayOrigin);
 
       if (!(hitInfo.objectType === ObjectType.SLIDER)) {
-        const ao = calculateAO(hitPosition, normal);
-        const shadow = getShadow(hitPosition, normal, lightDir);
-        const finalColor = std.mul(litColor, ao).mul(1.0 - shadow);
-
-        return d.vec4f(finalColor, 1.0);
+        return applyAoAndShadow(litColor, hitPosition, normal, lightDir);
       }
 
       const N = getNormalOptimized(hitPosition, hitInfo);
@@ -787,21 +803,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
   }
 
   // If we didn't hit jelly but we hit the background, render it properly
-  const hitPosition = std.add(
-    rayOrigin,
-    std.mul(rayDirection, backgroundHitDist),
-  );
-  const normal = getNormalMain(hitPosition);
-  const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-  const ao = calculateAO(hitPosition, normal);
-  const shadow = getShadow(
-    hitPosition,
-    normal,
-    std.mul(lightUniform.$.direction, -1.0),
-  );
-  const finalColor = std.mul(litColor, ao).mul(1.0 - shadow);
-
-  return d.vec4f(finalColor, 1.0);
+  return renderBackground(rayOrigin, rayDirection, backgroundHitDist);
 };
 
 const raymarchFn = tgpu['~unstable'].fragmentFn({
@@ -815,22 +817,12 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   );
   randf.seed2(uv);
 
-  const clipPos = d.vec4f(uv.x * 2 - 1, -(uv.y * 2 - 1), -1.0, 1.0);
-
-  const invView = cameraUniform.$.viewInv;
-  const invProj = cameraUniform.$.projInv;
-
-  const viewPos = std.mul(invProj, clipPos);
-  const viewPosNormalized = d.vec4f(viewPos.xyz.div(viewPos.w), 1.0);
-
-  const worldPos = std.mul(invView, viewPosNormalized);
-
-  const rayOrigin = invView.columns[3].xyz;
-  const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
+  const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
+  const ray = getRay(ndc);
 
   return rayMarch(
-    rayOrigin,
-    rayDir,
+    ray.origin,
+    ray.direction,
     d.vec2u(uv.mul(d.vec2f(dimensions))),
   );
 });
