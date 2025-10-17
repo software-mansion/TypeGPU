@@ -114,6 +114,12 @@ importers:
         specifier: ^3.1.0
         version: 3.1.1
 
+  apps/resolution-complexity:
+    dependencies:
+      arktype:
+        specifier: 'catalog:'
+        version: 2.1.22
+
   apps/typegpu-docs:
     dependencies:
       '@astrojs/check':
