@@ -166,9 +166,9 @@ const renderPipeline = root['~unstable']
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
+const computePipeline = root['~unstable'].createComputePipeline({
+  compute: mainCompute,
+});
 
 // compute and draw
 

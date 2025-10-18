@@ -55,10 +55,9 @@ describe('autonaming', () => {
 
   it("autonames resources created using root['~unstable']", ({ root }) => {
     const myPipeline = root['~unstable']
-      .withCompute(
-        tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
-      )
-      .createPipeline();
+      .createComputePipeline({
+        compute: tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+      });
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',

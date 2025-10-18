@@ -62,6 +62,7 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
+  type TgpuComputePipelineDescriptor,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
@@ -211,6 +212,16 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
+  createComputePipeline(
+    descriptor: TgpuComputePipelineDescriptor,
+  ): TgpuComputePipeline {
+    return INTERNAL_createComputePipeline(
+      this._getRoot(),
+      this._slotBindings,
+      descriptor,
+    );
+  }
+
   createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => undefined,
   ): TgpuGuardedComputePipeline<TArgs> {
@@ -288,7 +299,7 @@ class WithComputeImpl implements WithCompute {
     return INTERNAL_createComputePipeline(
       this._root,
       this._slotBindings,
-      this._entryFn,
+      { compute: this._entryFn },
     );
   }
 }

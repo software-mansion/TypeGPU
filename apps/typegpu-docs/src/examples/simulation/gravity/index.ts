@@ -105,13 +105,11 @@ const dynamicResourcesBox = {
 
 // Pipelines
 const computeCollisionsPipeline = root['~unstable']
-  .withCompute(computeCollisionsShader)
-  .createPipeline();
+  .createComputePipeline({ compute: computeCollisionsShader });
 
 const computeGravityPipeline = root['~unstable']
   .with(timeAccess, time)
-  .withCompute(computeGravityShader)
-  .createPipeline();
+  .createComputePipeline({ compute: computeGravityShader });
 
 const skyBoxPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)

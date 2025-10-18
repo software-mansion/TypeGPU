@@ -62,7 +62,10 @@ import type {
   VertexInConstrained,
   VertexOutConstrained,
 } from '../function/tgpuVertexFn.ts';
-import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
+import type {
+  TgpuComputePipeline,
+  TgpuComputePipelineDescriptor,
+} from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
@@ -206,6 +209,10 @@ export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
+
+  createComputePipeline<Input extends IORecord<AnyComputeBuiltin>>(
+    descriptor: TgpuComputePipelineDescriptor<Input>,
+  ): TgpuComputePipeline;
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.

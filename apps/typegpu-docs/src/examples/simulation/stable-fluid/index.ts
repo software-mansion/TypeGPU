@@ -43,7 +43,9 @@ function createField(name: string) {
 }
 
 function createComputePipeline(fn: TgpuComputeFn) {
-  return root['~unstable'].withCompute(fn).createPipeline();
+  return root['~unstable'].createComputePipeline({
+    compute: fn,
+  });
 }
 
 function toGrid(x: number, y: number): [number, number] {
