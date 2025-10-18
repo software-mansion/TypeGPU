@@ -215,8 +215,8 @@ export interface WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
-  createComputePipeline<Input extends IORecord<AnyComputeBuiltin>>(
-    descriptor: TgpuComputePipelineDescriptor<Input>,
+  createComputePipeline<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+    descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
   ): TgpuComputePipeline;
 
   createRenderPipeline<
