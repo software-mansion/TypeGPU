@@ -27,6 +27,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
+    "@typegpu/concurrent-scan": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

@@ -1,0 +1,6 @@
+{
+  "title": "Concurrent Scan Test",
+  "category": "tests",
+  "tags": ["experimental"],
+  "dev": true
+}
