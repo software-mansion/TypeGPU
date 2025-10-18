@@ -1,5 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu from 'typegpu';
+import tgpu, { type AutoFragmentIn } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
@@ -10,6 +10,15 @@ import {
   renderBindGroupLayout as layout,
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
+
+type Varyings = {
+  worldPosition: d.v3f;
+  worldNormal: d.v3f;
+  variant: number;
+  textureUV: d.v2f;
+  applySeaFog: number; // 0/1
+  applySeaDesaturation: number; // 0/1
+};
 
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
@@ -93,10 +102,8 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const fragmentShader = tgpu['~unstable'].fragmentFn({
-  in: ModelVertexOutput,
-  out: d.vec4f,
-})((input) => {
+export const fragmentShader = (input: AutoFragmentIn<Varyings>) => {
+  'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
@@ -155,4 +162,4 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   }
 
   return d.vec4f(foggedColor.xyz, 1);
-});
+};

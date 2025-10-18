@@ -64,20 +64,15 @@ export function staticCache(options: {
   const memoryReadonly = memoryBuffer.as('readonly');
   const memoryMutable = memoryBuffer.as('mutable');
 
-  const mainCompute = tgpu['~unstable'].computeFn({
-    workgroupSize: [1, 1, 1],
-    in: { gid: d.builtin.globalInvocationId },
-  })((input) => {
-    const idx = input.gid.x + input.gid.y * size.x;
-
-    memoryMutable.$[idx] = computeJunctionGradient(d.vec2i(input.gid.xy));
-  });
-
   const computePipeline = root['~unstable']
-    .withCompute(mainCompute)
-    .createPipeline();
+    .createGuardedComputePipeline((x, y) => {
+      'use gpu';
+      const idx = x + y * size.x;
 
-  computePipeline.dispatchWorkgroups(size.x, size.y);
+      memoryMutable.$[idx] = computeJunctionGradient(d.vec2i(x, y));
+    });
+
+  computePipeline.dispatchThreads(size.x, size.y);
 
   const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
     const size_i = d.vec2i(size);

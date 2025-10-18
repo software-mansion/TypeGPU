@@ -73,14 +73,15 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   bias: biasUniform,
 });
 
-const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentFunction, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentFunction,
+  targets: { format: presentationFormat },
+});
 
 function render() {
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',

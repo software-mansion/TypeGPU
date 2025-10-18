@@ -5,15 +5,15 @@ const root = await tgpu.init();
 // Allocating memory for the counter
 const counter = root.createMutable(d.u32);
 
-// A 0-dimentional shader function
-const gpuIncrement = root['~unstable'].prepareDispatch(() => {
+// A 0-dimensional compute pipeline
+const incrementPipeline = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';
   counter.$ += 1;
 });
 
 async function increment() {
   // Dispatch and read the result
-  gpuIncrement.dispatchThreads();
+  incrementPipeline.dispatchThreads();
   return await counter.read();
 }
 

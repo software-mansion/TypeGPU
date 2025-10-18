@@ -160,17 +160,15 @@ export function dynamicCacheConfig<Prefix extends string>(
     memory: { storage: MemorySchema, access: 'mutable' },
   });
 
-  const mainCompute = tgpu['~unstable'].computeFn({
-    workgroupSize: [1, 1, 1],
-    in: { gid: d.builtin.globalInvocationId },
-  })((input) => {
+  const mainCompute = (x: number, y: number) => {
+    'use gpu';
     const size = computeLayout.$.size;
-    const idx = input.gid.x + input.gid.y * size.x;
+    const idx = x + y * size.x;
 
     computeLayout.$.memory[idx] = computeJunctionGradient(
-      d.vec2i(input.gid.xy),
+      d.vec2i(x, y),
     );
-  });
+  };
 
   const instance = (
     root: TgpuRoot,
@@ -184,8 +182,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       .$usage('uniform');
 
     const computePipeline = root['~unstable']
-      .withCompute(mainCompute)
-      .createPipeline();
+      .createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {
       const memory = root
@@ -199,7 +196,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
       computePipeline
         .with(computeBindGroup)
-        .dispatchWorkgroups(size.x, size.y);
+        .dispatchThreads(size.x, size.y);
 
       return memory;
     };

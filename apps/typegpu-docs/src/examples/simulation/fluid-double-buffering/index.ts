@@ -453,10 +453,10 @@ function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldAction = root['~unstable']
+  const initWorldPipeline = root['~unstable']
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
-    .prepareDispatch((xu, yu) => {
+    .createGuardedComputePipeline((xu, yu) => {
       'use gpu';
       const x = d.i32(xu);
       const y = d.i32(yu);
@@ -477,36 +477,39 @@ function makePipelines(
       outputGridSlot.$[index] = value;
     });
 
-  const simulateAction = root['~unstable']
+  const simulatePipeline = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
     .with(outputGridSlot, outputGridMutable)
-    .prepareDispatch(simulate);
+    .createGuardedComputePipeline(simulate);
 
-  const moveObstaclesAction = root['~unstable']
+  const moveObstaclesPipeline = root['~unstable']
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
-    .prepareDispatch(moveObstacles);
+    .createGuardedComputePipeline(moveObstacles);
 
   const renderPipeline = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
-    .withVertex(vertexMain, {})
-    .withFragment(fragmentMain, { format: presentationFormat })
-    .withPrimitive({ topology: 'triangle-strip' })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: vertexMain,
+      fragment: fragmentMain,
+      targets: { format: presentationFormat },
+
+      primitive: { topology: 'triangle-strip' },
+    });
 
   return {
     init() {
-      initWorldAction.dispatchThreads(gridSize, gridSize);
+      initWorldPipeline.dispatchThreads(gridSize, gridSize);
     },
 
     applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
       obstacles.write(bufferData);
-      moveObstaclesAction.dispatchThreads();
+      moveObstaclesPipeline.dispatchThreads();
       prevObstacles.write(bufferData);
     },
 
     compute() {
-      simulateAction.dispatchThreads(gridSize, gridSize);
+      simulatePipeline.dispatchThreads(gridSize, gridSize);
     },
 
     render() {

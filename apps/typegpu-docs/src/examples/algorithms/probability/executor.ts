@@ -101,8 +101,7 @@ export class Executor {
     if (!this.#pipelineCache.has(distribution)) {
       const pipeline = this.#root['~unstable']
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc)
-        .createPipeline();
+        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
 
@@ -117,8 +116,7 @@ export class Executor {
     if (!pipeline) {
       pipeline = this.#root['~unstable']
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-        .createPipeline();
+        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
 
