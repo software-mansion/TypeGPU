@@ -139,9 +139,9 @@ export function createFnCore(
         const fnAttribute = extra.type === 'vertex'
           ? '@vertex '
           : extra.type === 'fragment'
-          ? '@fragment\n'
+          ? '@fragment '
           : extra.type === 'compute'
-          ? `@compute @workgroup_size(${extra.workgroupSize?.join(', ')})\n`
+          ? `@compute @workgroup_size(${extra.workgroupSize?.join(', ')}) `
           : '';
         ctx.addDeclaration(`${fnAttribute}fn ${id}${header}${body}`);
         return snip(id, returnType, /* origin */ 'runtime');
