@@ -27,11 +27,27 @@ const DEV = import.meta.env.DEV;
 export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
+  server: {
+    // Required for '@rolldown/browser' to work in dev mode.
+    // Since the service worker is hosted on the /TypeGPU path,
+    // fetches from /@fs/ fail due to CORS. This fixes that.
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathJax],
   },
   vite: {
+    define: {
+      // Required for '@rolldown/browser' to work.
+      'process.env.NODE_DEBUG_NATIVE': '""',
+    },
+    optimizeDeps: {
+      exclude: ['@rolldown/browser'],
+    },
     // Allowing query params, for invalidation
     plugins: [
       wasm(),
@@ -48,6 +64,7 @@ export default defineConfig({
     ssr: {
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
+        '@rolldown/browser',
       ],
     },
   },

@@ -1,8 +1,6 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-export const workGroupSize = 256;
-
 export const fishAmount = 1024 * 8;
 export const fishModelScale = 0.07;
 
