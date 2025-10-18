@@ -3,27 +3,12 @@ import type { AnyData } from '../data/dataTypes.ts';
 import type { Snippet } from '../data/snippet.ts';
 import type { GenerationCtx } from './generationHelpers.ts';
 
-export interface FunctionHeaderOptions {
+export interface FunctionDefinitionExtra {
   type: 'normal' | 'vertex' | 'fragment' | 'compute';
   /**
    * Only applicable to 'compute' entry functions
    */
-  workgroupSize?: [number, number?, number?] | undefined;
-  id: string;
-  args: Snippet[];
-  returnType: AnyData;
-}
-
-export interface FunctionBodyOptions {
-  type: 'normal' | 'vertex' | 'fragment' | 'compute';
-  /**
-   * Only applicable to 'compute' entry functions
-   */
-  workgroupSize?: [number, number?, number?] | undefined;
-  id: string;
-  args: Snippet[];
-  returnType: AnyData | undefined;
-  bodyNode: Block;
+  workgroupSize?: number[] | undefined;
 }
 
 export interface ShaderGenerator {
@@ -33,6 +18,17 @@ export interface ShaderGenerator {
   typedExpression(expression: Expression, expectedType: AnyData): Snippet;
   expression(expression: Expression): Snippet;
   statement(statement: Statement): string;
-  functionHeader(options: FunctionHeaderOptions): string;
-  functionBody(options: FunctionBodyOptions): string;
+  functionHeader(options: ShaderGenerator.FunctionHeaderOptions): string;
+  functionBody(options: Block): string;
+}
+
+export namespace ShaderGenerator {
+  export interface FunctionHeaderOptions extends FunctionDefinitionExtra {
+    id: string;
+    args: Snippet[];
+    /**
+     * The return type of the function.
+     */
+    returnType: AnyData;
+  }
 }

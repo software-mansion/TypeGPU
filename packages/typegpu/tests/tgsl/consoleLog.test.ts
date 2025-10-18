@@ -265,7 +265,6 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {

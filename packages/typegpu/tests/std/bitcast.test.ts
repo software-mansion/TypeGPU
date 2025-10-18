@@ -140,15 +140,15 @@ describe('bitcast in shaders', () => {
     const fni32 = tgpu.fn([], d.i32)(() => std.bitcastU32toI32(d.u32(2 ** 31)));
 
     expect(asWgsl(fnf32)).toMatchInlineSnapshot(`
-    "fn fnf32() -> f32 {
-      return 1.7292023049768243e-42;
-    }"
-  `);
+      "fn fnf32() -> f32 {
+        return 1.7292023049768243e-42;
+      }"
+    `);
     expect(asWgsl(fni32)).toMatchInlineSnapshot(`
-    "fn fni32() -> i32 {
-      return -2147483648;
-    }"
-  `);
+      "fn fni32() -> i32 {
+        return -2147483648;
+      }"
+    `);
   });
 
   it('works for vectors', () => {
@@ -160,14 +160,14 @@ describe('bitcast in shaders', () => {
     );
 
     expect(asWgsl(fnvec4i)).toMatchInlineSnapshot(`
-    "fn fnvec4i() -> vec4i {
-      return vec4i(1, 2, 3, 4);
-    }"
-  `);
+      "fn fnvec4i() -> vec4i {
+        return vec4i(1, 2, 3, 4);
+      }"
+    `);
     expect(asWgsl(fnvec4f)).toMatchInlineSnapshot(`
-    "fn fnvec4f() -> vec4f {
-      return vec4f(1.401298464324817e-45, 2.802596928649634e-45, 4.203895392974451e-45, 5.605193857299268e-45);
-    }"
-  `);
+      "fn fnvec4f() -> vec4f {
+        return vec4f(1.401298464324817e-45, 2.802596928649634e-45, 4.203895392974451e-45, 5.605193857299268e-45);
+      }"
+    `);
   });
 });

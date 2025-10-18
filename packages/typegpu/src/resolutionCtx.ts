@@ -20,7 +20,6 @@ import {
   type TgpuDerived,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
-import { getAttributesString } from './data/attributes.ts';
 import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
@@ -456,7 +455,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       this.#shaderGenerator.initGenerator(this);
-      const body = this.#shaderGenerator.functionBody(options.body);
+      const body = this.#shaderGenerator.functionBody(options.bodyNode);
 
       let returnType = options.returnType;
       if (!returnType) {
@@ -481,11 +480,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         returnType = concretize(returnType);
       }
 
-      const header = this.#shaderGenerator.functionHeader(
-        this,
-        options.args,
+      const header = this.#shaderGenerator.functionHeader({
+        id: options.id,
+        args: options.args,
+        type: options.type,
+        workgroupSize: options.workgroupSize,
         returnType,
-      );
+      });
 
       return {
         code: `${header} ${body}`,

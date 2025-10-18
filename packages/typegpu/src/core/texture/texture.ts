@@ -493,7 +493,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
         texture: this[$internal].unwrap(),
         mipLevel,
       },
-      source,
+      source as GPUAllowSharedBufferSource,
       {
         bytesPerRow: this.#formatInfo.texelSize * mipWidth,
         rowsPerImage: mipHeight,

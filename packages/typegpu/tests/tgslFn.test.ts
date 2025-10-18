@@ -950,7 +950,7 @@ describe('tgsl fn when using plugin', () => {
       - call:foo
       - fn:foo
       - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
-      `);
+    `);
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
