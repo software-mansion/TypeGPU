@@ -124,6 +124,13 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
+        const fnAttribute = extra.type === 'vertex'
+          ? '@vertex '
+          : extra.type === 'fragment'
+          ? '@fragment '
+          : extra.type === 'compute'
+          ? `@compute @workgroup_size(${extra.workgroupSize?.join(', ')}) `
+          : '';
         ctx.addDeclaration(`${fnAttribute}fn ${id}${header}${body}`);
         return snip(id, returnType, /* origin */ 'runtime');
       }
@@ -177,16 +184,12 @@ export function createFnCore(
         );
       }
 
-      // generate wgsl string
+      // generate shader string
 
-      const { head, body, returnType: actualReturnType } = ctx.fnToWgsl({
-        functionType: fnAttribute.includes('@compute')
-          ? 'compute'
-          : fnAttribute.includes('@vertex')
-          ? 'vertex'
-          : fnAttribute.includes('@fragment')
-          ? 'fragment'
-          : 'normal',
+      const { code, returnType: actualReturnType } = ctx.fnToShaderCode({
+        type: extra.type,
+        workgroupSize: extra.workgroupSize,
+        id,
         argTypes,
         params: ast.params,
         returnType,

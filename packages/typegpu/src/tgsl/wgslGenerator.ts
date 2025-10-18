@@ -41,6 +41,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -179,7 +180,7 @@ class WgslGenerator implements ShaderGenerator {
     this.#ctx = ctx;
   }
 
-  private get ctx(): GenerationCtx {
+  public get ctx(): GenerationCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
@@ -760,7 +761,23 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
-  public functionDefinition(
+  public functionHeader(
+    options: ShaderGenerator.FunctionHeaderOptions,
+  ): string {
+    const argList = options.args
+      .map((arg) => `${arg.value}: ${this.ctx.resolve(arg.dataType).value}`)
+      .join(', ');
+
+    const returnType = options.returnType.type !== 'void'
+      ? `-> ${getAttributesString(options.returnType)}${
+        this.ctx.resolve(options.returnType).value
+      } `
+      : ``;
+
+    return `${options.id}(${argList}) ${returnType}`;
+  }
+
+  public functionBody(
     body: tinyest.Block,
   ): string {
     return this.block(body);

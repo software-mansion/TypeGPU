@@ -8,6 +8,7 @@ catalog:
 catalogs:
   build:
     tsup: ^8.5.0
+    tsdown: ^0.20.0-beta.3
     unbuild: ^3.5.0
     jiti: ^2.6.0
   types:
