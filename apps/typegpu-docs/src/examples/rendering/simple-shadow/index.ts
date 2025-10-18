@@ -249,36 +249,41 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 // Pipelines
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexInfo));
 
-const pipeline = root['~unstable']
-  .withVertex(mainVert, vertexLayout.attrib)
-  .withFragment(mainFrag, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: mainVert,
+  fragment: mainFrag,
+  targets: { format: presentationFormat },
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
-const shadowPipeline = root['~unstable']
-  .withVertex(shadowVert, vertexLayout.attrib)
-  .withDepthStencil({
+const shadowPipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: shadowVert,
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
     depthBias: 1,
     depthBiasSlopeScale: 4,
     depthBiasClamp: 0,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
 function updateLightDirection(dir: d.v3f) {
   currentLightDirection = dir;

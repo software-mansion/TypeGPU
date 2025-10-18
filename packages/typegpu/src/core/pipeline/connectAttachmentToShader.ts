@@ -13,9 +13,18 @@ function isColorAttachment(
 }
 
 export function connectAttachmentToShader(
-  shaderOutputLayout: FragmentOutConstrained,
+  shaderOutputLayout: FragmentOutConstrained | undefined,
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
+  // For shell-less entry functions, we determine the layout based on solely the attachment
+  if (!shaderOutputLayout) {
+    if (typeof attachment.loadOp === 'string') {
+      return [attachment as ColorAttachment];
+    }
+
+    return Object.values(attachment) as ColorAttachment[];
+  }
+
   if (isData(shaderOutputLayout)) {
     if (isBuiltin(shaderOutputLayout)) {
       return [];

@@ -447,18 +447,17 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
 const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
+  .createComputePipeline({ compute: updateAgents });
 
 const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+  .createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {

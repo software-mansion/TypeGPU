@@ -3,7 +3,6 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
   blurLayout,
-  drawWithMaskLayout,
   filterDim,
   flipAccess,
   generateMaskLayout,
@@ -97,50 +96,4 @@ export const computeFn = tgpu['~unstable'].computeFn({
       }
     }
   }
-});
-
-export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
-  out: d.vec4f,
-})((input) => {
-  const originalColor = std.textureSampleBaseClampToEdge(
-    drawWithMaskLayout.$.inputTexture,
-    drawWithMaskLayout.$.sampler,
-    input.uv,
-  );
-
-  let blurredColor = d.vec4f();
-  if (paramsAccess.$.useGaussian === 1) {
-    blurredColor = std.textureSampleBaseClampToEdge(
-      drawWithMaskLayout.$.inputBlurredTexture,
-      drawWithMaskLayout.$.sampler,
-      input.uv,
-    );
-  } else {
-    blurredColor = std.textureSampleBias(
-      drawWithMaskLayout.$.inputBlurredTexture,
-      drawWithMaskLayout.$.sampler,
-      input.uv,
-      paramsAccess.$.sampleBias,
-    );
-  }
-
-  const cropBounds = paramsAccess.$.cropBounds;
-  const uvMin = cropBounds.xy;
-  const uvMax = cropBounds.zw;
-  const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));
-  const sampledMask = std.textureSampleBaseClampToEdge(
-    drawWithMaskLayout.$.maskTexture,
-    drawWithMaskLayout.$.sampler,
-    maskUV,
-  ).x;
-
-  const inCropRegion = input.uv.x >= uvMin.x &&
-    input.uv.x <= uvMax.x &&
-    input.uv.y >= uvMin.y &&
-    input.uv.y <= uvMax.y;
-  // use mask only inside the crop region
-  const mask = std.select(0, sampledMask, inCropRegion);
-
-  return std.mix(blurredColor, originalColor, mask);
 });

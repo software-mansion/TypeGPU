@@ -56,12 +56,12 @@ describe('ascii filter example', () => {
 
       @group(0) @binding(5) var<uniform> displayMode: u32;
 
-      struct fragmentFn_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransformBuffer * (input.uv - 0.5)) + 0.5);
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+        var uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5)) + 0.5);
         var textureSize = vec2f(textureDimensions(externalTexture));
         var pix = (uv2 * textureSize);
         let cellSize = f32(glyphSize);

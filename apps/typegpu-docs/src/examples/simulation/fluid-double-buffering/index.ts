@@ -491,10 +491,13 @@ function makePipelines(
 
   const renderPipeline = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
-    .withVertex(vertexMain, {})
-    .withFragment(fragmentMain, { format: presentationFormat })
-    .withPrimitive({ topology: 'triangle-strip' })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: vertexMain,
+      fragment: fragmentMain,
+      targets: { format: presentationFormat },
+
+      primitive: { topology: 'triangle-strip' },
+    });
 
   return {
     init() {

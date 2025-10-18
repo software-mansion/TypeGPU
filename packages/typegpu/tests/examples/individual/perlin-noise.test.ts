@@ -17,54 +17,59 @@ describe('perlin noise example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      @group(1) @binding(0) var<uniform> size_1: vec4u;
+      @group(1) @binding(0) var<uniform> size_3: vec4u;
 
-      @group(1) @binding(1) var<storage, read_write> memory: array<vec3f>;
+      @group(1) @binding(1) var<storage, read_write> memory_4: array<vec3f>;
 
-      var<private> seed: vec2f;
+      var<private> seed_8: vec2f;
 
-      fn seed3(value: vec3f) {
-        seed = (value.xy + vec2f(value.z));
+      fn seed3_7(value: vec3f) {
+        seed_8 = (value.xy + vec2f(value.z));
       }
 
-      fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+      fn randSeed3_6(seed: vec3f) {
+        seed3_7(seed);
       }
 
-      fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+      fn item_10() -> f32 {
+        var a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
+        seed_8.x = fract((cos(a) * 136.8168));
+        seed_8.y = fract((cos(b) * 534.7645));
+        return seed_8.y;
       }
 
-      fn randOnUnitSphere() -> vec3f {
-        let z = ((2f * sample()) - 1f);
-        let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
-        let x = (cos(theta) * oneMinusZSq);
-        let y = (sin(theta) * oneMinusZSq);
+      fn randOnUnitSphere_9() -> vec3f {
+        var z = ((2 * item_10()) - 1);
+        var oneMinusZSq = sqrt((1 - (z * z)));
+        var theta = (6.283185307179586 * item_10());
+        var x = (cos(theta) * oneMinusZSq);
+        var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3 * vec3f(pos)));
-        return randOnUnitSphere();
+      fn computeJunctionGradient_5(pos: vec3i) -> vec3f {
+        randSeed3_6((1e-3 * vec3f(pos)));
+        return randOnUnitSphere_9();
       }
 
-      fn mainCompute_1(x: u32, y: u32, z: u32) {
-        let size = (&size_1);
-        let idx = ((x + (y * (*size).x)) + ((z * (*size).x) * (*size).y));
-        memory[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
+      fn mainCompute_2(x: u32, y: u32, z: u32) {
+        var size = size_3;
+        var idx = ((x + (y * size.x)) + ((z * size.x) * size.y));
+        memory_4[idx] = computeJunctionGradient_5(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
+      struct mainCompute_Input_11 {
         @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_11)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        mainCompute_2(in.id.x, in.id.y, in.id.z);
       }
 
       @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input)  {
