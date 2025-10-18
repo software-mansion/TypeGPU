@@ -176,10 +176,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+});
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({

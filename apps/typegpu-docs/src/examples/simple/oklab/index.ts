@@ -128,12 +128,11 @@ const bindGroup = root.createBindGroup(layout, {
   uniforms: uniformsBuffer,
 });
 
-let pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(mainFragment, {
-    format: presentationFormat,
-  })
-  .createPipeline();
+let pipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+});
 
 function setPipeline({
   outOfGamutPattern,
@@ -146,11 +145,11 @@ function setPipeline({
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
     .with(oklabGamutClipAlphaAccess, alphaFromUniforms)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-    })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    });
 }
 
 function draw() {

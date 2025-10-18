@@ -1,3 +1,4 @@
+import type { OmitBuiltins } from '../../builtin.ts';
 import type {
   IndexFlag,
   TgpuBuffer,
@@ -24,6 +25,11 @@ import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
+import {
+  Equal,
+  NullableToOptional,
+  UndefinedToOptional,
+} from '../../shared/utilityTypes.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroup,
@@ -41,14 +47,23 @@ import {
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
 import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
-import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type {
+  FragmentInConstrained,
+  FragmentOutConstrained,
+  TgpuFragmentFn,
+} from '../function/tgpuFragmentFn.ts';
+import type {
+  TgpuVertexFn,
+  VertexInConstrained,
+  VertexOutConstrained,
+} from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { isTexture, type TgpuTexture } from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import {
   isVertexLayout,
   type TgpuVertexLayout,
@@ -73,6 +88,61 @@ interface RenderPipelineInternals {
 // ----------
 // Public API
 // ----------
+
+export type TgpuPrimitiveState =
+  | GPUPrimitiveState
+  | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
+    stripIndexFormat?: U32 | U16;
+  }
+  | undefined;
+
+export type TgpuRenderPipelineDescriptorCommons = {
+  /**
+   * Describes the primitive-related properties of the pipeline.
+   */
+  primitive?: TgpuPrimitiveState | undefined;
+  /**
+   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
+   */
+  depthStencil?: GPUDepthStencilState | undefined;
+  /**
+   * Describes the multi-sampling properties of the pipeline.
+   */
+  multisample?: GPUMultisampleState | undefined;
+};
+
+export type TgpuRenderPipelineDescriptor<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+> =
+  & TgpuRenderPipelineDescriptorCommons
+  & UndefinedToOptional<{
+    vertex: TgpuVertexFn<
+      VertexIn,
+      VertexOut & OmitBuiltins<NoInfer<FragmentIn>>
+    >;
+    fragment: TgpuFragmentFn<FragmentIn, FragmentOut>;
+
+    // biome-ignore lint/complexity/noBannedTypes: we do use that type
+    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
+      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
+  }>;
+
+export type TgpuNoColorRenderPipelineDescriptor<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+> =
+  & TgpuRenderPipelineDescriptorCommons
+  & UndefinedToOptional<{
+    vertex: TgpuVertexFn<VertexIn, VertexOut>;
+
+    // biome-ignore lint/complexity/noBannedTypes: we do use that type
+    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
+      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+  }>;
 
 export interface HasIndexBuffer {
   readonly hasIndexBuffer: true;

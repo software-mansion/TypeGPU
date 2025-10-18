@@ -111,8 +111,17 @@ export type {
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
-export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+export type {
+  TgpuNoColorRenderPipelineDescriptor,
+  TgpuPrimitiveState,
+  TgpuRenderPipeline,
+  TgpuRenderPipelineDescriptor,
+  TgpuRenderPipelineDescriptorCommons,
+} from './core/pipeline/renderPipeline.ts';
+export type {
+  TgpuComputePipeline,
+  TgpuComputePipelineDescriptor,
+} from './core/pipeline/computePipeline.ts';
 export type {
   IndexFlag,
   TgpuBuffer,

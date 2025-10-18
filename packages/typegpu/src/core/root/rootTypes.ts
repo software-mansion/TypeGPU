@@ -68,7 +68,9 @@ import type {
 } from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
+  TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
+  TgpuRenderPipelineDescriptor,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
@@ -103,6 +105,9 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
+/**
+ * TODO: Remove if favor of createRenderPipeline's validation
+ */
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
@@ -213,6 +218,26 @@ export interface WithBinding {
   createComputePipeline<Input extends IORecord<AnyComputeBuiltin>>(
     descriptor: TgpuComputePipelineDescriptor<Input>,
   ): TgpuComputePipeline;
+
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+  >(
+    descriptor: TgpuNoColorRenderPipelineDescriptor<VertexIn, VertexOut>,
+  ): TgpuRenderPipeline<Void>;
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+    FragmentIn extends FragmentInConstrained,
+    FragmentOut extends FragmentOutConstrained,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor<
+      VertexIn,
+      VertexOut,
+      FragmentIn,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.

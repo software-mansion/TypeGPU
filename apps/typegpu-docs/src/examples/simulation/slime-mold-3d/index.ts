@@ -451,10 +451,11 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
 const computePipeline = root['~unstable']
   .createComputePipeline({ compute: updateAgents });

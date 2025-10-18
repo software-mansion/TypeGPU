@@ -339,17 +339,19 @@ function resetGameData() {
   });
 
   const renderPipeline = root['~unstable']
-    .withVertex(vertex, {
-      squareData: vertexLayout.attrib,
-      currentStateData: vertexInstanceLayout.attrib,
+    .createRenderPipeline({
+      attribs: {
+        squareData: vertexLayout.attrib,
+        currentStateData: vertexInstanceLayout.attrib,
+      },
+      vertex,
+      fragment,
+      targets: { format: presentationFormat },
+
+      primitive: {
+        topology: 'triangle-strip',
+      },
     })
-    .withFragment(fragment, {
-      format: presentationFormat,
-    })
-    .withPrimitive({
-      topology: 'triangle-strip',
-    })
-    .createPipeline()
     .with(vertexLayout, squareBuffer)
     .with(vertexInstanceLayout, currentStateBuffer);
 

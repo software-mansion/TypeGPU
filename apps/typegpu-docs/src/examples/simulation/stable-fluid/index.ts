@@ -147,13 +147,15 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
-  return root['~unstable']
-    .withVertex(renderFn, {})
-    .withFragment(fragmentFn, { format })
-    .withPrimitive({
+  return root['~unstable'].createRenderPipeline({
+    vertex: renderFn,
+    fragment: fragmentFn,
+    targets: { format },
+
+    primitive: {
       topology: 'triangle-strip',
-    })
-    .createPipeline();
+    },
+  });
 }
 
 const renderPipelineInk = createRenderPipeline(fragmentInkFn);
