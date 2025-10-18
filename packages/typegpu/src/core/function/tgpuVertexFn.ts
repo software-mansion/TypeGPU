@@ -16,6 +16,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -40,6 +41,11 @@ export type VertexOutConstrained = IORecord<
   | BaseIOData
   | Decorated<BaseIOData, (Location | Interpolate)[]>
   | AnyVertexOutputBuiltin
+>;
+
+export type VertexOutInferred = Record<
+  string,
+  InferGPU<BaseIOData> | InferGPU<AnyVertexOutputBuiltin>
 >;
 
 /**

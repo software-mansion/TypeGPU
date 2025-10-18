@@ -22,6 +22,10 @@ export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
     ctx: ResolutionCtx,
+    /**
+     * The argument types can be AutoStruct if they're determined based on usage
+     * (like in auto-entry functions).
+     */
     argTypes: BaseData[],
     /**
      * The return type of the function. If undefined, the type should be inferred
