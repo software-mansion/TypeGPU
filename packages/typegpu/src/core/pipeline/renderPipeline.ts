@@ -14,6 +14,7 @@ import {
   isWgslData,
   type U16,
   type U32,
+  v4f,
   Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -24,8 +25,13 @@ import {
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
+import type { InferGPURecord } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
-import type { Equal, UndefinedToOptional } from '../../shared/utilityTypes.ts';
+import type {
+  Assume,
+  Equal,
+  UndefinedToOptional,
+} from '../../shared/utilityTypes.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroup,
@@ -42,10 +48,16 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
-import type { IOData, IOLayout, IORecord } from '../function/fnTypes.ts';
+import type {
+  AnyAutoCustoms,
+  AutoFragmentIn,
+  AutoFragmentOut,
+} from '../function/autoIO.ts';
+import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
+  FragmentOutInferred,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
 import type {
@@ -94,7 +106,12 @@ export type TgpuPrimitiveState =
 
 export type TgpuRenderPipelineDescriptorCommons = {
   vertex: TgpuVertexFn;
-  fragment?: TgpuFragmentFn | undefined;
+  fragment?:
+    | TgpuFragmentFn
+    | ((
+      input: AutoFragmentIn<AnyAutoCustoms>,
+    ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>)
+    | undefined;
 
   attribs?: AnyVertexAttribs | undefined;
   targets?: AnyFragmentTargets | undefined;
@@ -119,7 +136,10 @@ export type TgpuRenderPipelineDescriptor<
   FragmentIn extends FragmentInConstrained = FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained = FragmentOutConstrained,
 > =
-  & TgpuRenderPipelineDescriptorCommons
+  & Omit<
+    TgpuRenderPipelineDescriptorCommons,
+    'vertex' | 'fragment' | 'attribs' | 'targets'
+  >
   & UndefinedToOptional<{
     vertex: TgpuVertexFn<
       VertexIn,
@@ -133,14 +153,44 @@ export type TgpuRenderPipelineDescriptor<
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
 
+export type TgpuRenderPipelineDescriptor__ShelllessFrag<
+  VertexIn extends VertexInConstrained = VertexInConstrained,
+  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+  FragmentOut extends FragmentOutInferred = FragmentOutInferred,
+> =
+  & Omit<
+    TgpuRenderPipelineDescriptorCommons,
+    'vertex' | 'fragment' | 'attribs' | 'targets'
+  >
+  & UndefinedToOptional<{
+    vertex: TgpuVertexFn<VertexIn, VertexOut>;
+    fragment: (
+      input: AutoFragmentIn<Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>>,
+    ) => AutoFragmentOut<FragmentOut>;
+
+    // biome-ignore lint/complexity/noBannedTypes: we do use that type
+    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
+      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
+  }>;
+
 export type TgpuNoColorRenderPipelineDescriptor<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > =
-  & TgpuRenderPipelineDescriptorCommons
+  & Omit<
+    TgpuRenderPipelineDescriptorCommons,
+    'vertex' | 'fragment' | 'attribs' | 'targets'
+  >
   & UndefinedToOptional<{
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
-    fragment?: undefined;
+    fragment?:
+      | ((
+        input: AutoFragmentIn<
+          Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>
+        >,
+      ) => undefined)
+      | undefined;
 
     // biome-ignore lint/complexity/noBannedTypes: we do use that type
     attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
@@ -160,7 +210,7 @@ export interface HasIndexBuffer {
   ): void;
 }
 
-export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
+export interface TgpuRenderPipeline<Output = unknown>
   extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
@@ -208,17 +258,19 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   ): void;
 }
 
-export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
-  ? GPUColorTargetState
+export type FragmentOutToTargets<T> = T extends
+  | undefined
+  | { readonly [$internal]: unknown; type: 'void' }
+  | Record<string, never> ? undefined
+  : T extends { readonly [$internal]: unknown } ? GPUColorTargetState
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: GPUColorTargetState }
-  : T extends { type: 'void' } ? Record<string, never>
-  : never;
+  : GPUColorTargetState;
 
-export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData
-  ? ColorAttachment
+export type FragmentOutToColorAttachment<T> = T extends
+  { readonly [$internal]: unknown } ? ColorAttachment
   : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
-  : never;
+  : ColorAttachment;
 
 export type AnyFragmentTargets =
   | GPUColorTargetState

@@ -73,6 +73,11 @@ export type Mutable<T> = {
 };
 
 /**
+ * Source: https://code.lol/post/programming/higher-kinded-types/
+ */
+export type Assume<T, U> = T extends U ? T : U;
+
+/**
  * Any typed array
  */
 export type TypedArray =

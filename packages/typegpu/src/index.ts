@@ -112,10 +112,8 @@ export type {
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type {
-  TgpuNoColorRenderPipelineDescriptor,
   TgpuPrimitiveState,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptor,
   TgpuRenderPipelineDescriptorCommons,
 } from './core/pipeline/renderPipeline.ts';
 export type {
@@ -182,6 +180,12 @@ export type {
   TgpuComputeFn,
   TgpuComputeFnShell,
 } from './core/function/tgpuComputeFn.ts';
+export type {
+  AutoFragmentIn,
+  AutoFragmentOut,
+  AutoVertexIn,
+  AutoVertexOut,
+} from './core/function/autoIO.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 export type { Namespace } from './core/resolve/namespace.ts';
 // Exported for being able to track use of these global extensions easier,
