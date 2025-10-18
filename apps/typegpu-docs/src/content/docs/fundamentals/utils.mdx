@@ -3,10 +3,10 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *prepareDispatch*
+## *root.createGuardedComputePipeline*
 
-The `prepareDispatch` function streamlines running simple computations on the GPU.
-Under the hood, it wraps the callback in a `TgpuFn`, creates a compute pipeline, and returns an object with a `dispatchThreads` method that executes the pipeline.
+The `root.createGuardedComputePipeline` method streamlines running simple computations on the GPU.
+Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range, and returns an object with a `dispatchThreads` method that executes the pipeline.
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
@@ -16,16 +16,17 @@ const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
 
-const doubleUp = root['~unstable'].prepareDispatch((x) => {
-  'use gpu';
-  data.$[x] *= 2;
-});
+const doubleUpPipeline = root['~unstable']
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    data.$[x] *= 2;
+  });
 
-doubleUp.dispatchThreads(8);
-doubleUp.dispatchThreads(8);
-doubleUp.dispatchThreads(4);
+doubleUpPipeline.dispatchThreads(8);
+doubleUpPipeline.dispatchThreads(8);
+doubleUpPipeline.dispatchThreads(4);
 
-// the command encoder will queue the read after `doubleUp`
+// the command encoder will queue the read after `doubleUpPipeline`
 console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
 ```
 
@@ -34,7 +35,7 @@ Remember to mark the callback with the `'use gpu'` directive to let TypeGPU know
 :::
 
 The callback can have up to three arguments (dimensions).
-`prepareDispatch` can simplify writing a pipeline helping reduce serialization overhead when initializing buffers with data.
+`createGuardedComputePipeline` can simplify writing a pipeline helping reduce serialization overhead when initializing buffers with data.
 Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
@@ -51,7 +52,7 @@ const waterLevelMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.f32, 512), 1024),
 );
 
-root['~unstable'].prepareDispatch((x, y) => {
+root['~unstable'].createGuardedComputePipeline((x, y) => {
   'use gpu';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
@@ -62,7 +63,7 @@ root['~unstable'].prepareDispatch((x, y) => {
 console.log(await waterLevelMutable.read());
 ```
 
-The result of `prepareDispatch` can have bind groups bound using the `with` method.
+The result of `createGuardedComputePipeline` can have bind groups bound using the `with` method.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -71,35 +72,35 @@ import * as std from 'typegpu/std';
 const root = await tgpu.init();
 // ---cut---
 const layout = tgpu.bindGroupLayout({
-  buffer: { storage: d.arrayOf(d.u32), access: 'mutable' },
+  values: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 const buffer1 = root
   .createBuffer(d.arrayOf(d.u32, 3), [1, 2, 3]).$usage('storage');
 const buffer2 = root
   .createBuffer(d.arrayOf(d.u32, 4), [2, 4, 8, 16]).$usage('storage');
 const bindGroup1 = root.createBindGroup(layout, {
-  buffer: buffer1,
+  values: buffer1,
 });
 const bindGroup2 = root.createBindGroup(layout, {
-  buffer: buffer2,
+  values: buffer2,
 });
 
-const test = root['~unstable'].prepareDispatch((x) => {
+const doubleUpPipeline = root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
-  layout.$.buffer[x] *= 2;
+  layout.$.values[x] *= 2;
 });
 
-test.with(bindGroup1).dispatchThreads(3);
-test.with(bindGroup2).dispatchThreads(4);
+doubleUpPipeline.with(bindGroup1).dispatchThreads(3);
+doubleUpPipeline.with(bindGroup2).dispatchThreads(4);
 
 console.log(await buffer1.read()); // [2, 4, 6];
 console.log(await buffer2.read()); // [4, 8, 16, 32];
 ```
 
-It is recommended NOT to use `prepareDispatch` for:
+It is recommended NOT to use guarded compute pipelines for:
 
 - More complex compute shaders.
-When using `prepareDispatch`, it is impossible to change workgroup sizes or to use [slots](/TypeGPU/fundamentals/slots).
+When using guarded compute pipelines, it is impossible to change workgroup sizes, or effectively utilize workgroup shared memory.
 For such cases, a manually created pipeline would be more suitable.
 
 - Small calls.
@@ -129,7 +130,7 @@ import * as d from 'typegpu/data';
 const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
-const compute = root['~unstable'].prepareDispatch(() => {
+const compute = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);

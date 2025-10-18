@@ -106,7 +106,7 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].prepareDispatch((x) => {
+root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
