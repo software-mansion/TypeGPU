@@ -86,7 +86,7 @@ const renderPipelineBase = root['~unstable']
   .with(gridSizeAccess, gridSize)
   .with(timeAccess, time)
   .with(sharpnessAccess, sharpness)
-  .pipe(perlinCacheConfig.inject(dynamicLayout.$));
+  .s(perlinCacheConfig.inject(dynamicLayout.$));
 
 const renderPipelines = {
   exponential: renderPipelineBase
