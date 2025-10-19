@@ -2,6 +2,7 @@ import type { Block, Expression, Statement } from 'tinyest';
 import type { AnyData } from '../data/dataTypes.ts';
 import type { Snippet } from '../data/snippet.ts';
 import type { GenerationCtx } from './generationHelpers.ts';
+import type { ResolutionCtx as $ResolutionCtx } from '../types.ts';
 
 export interface FunctionDefinitionExtra {
   type: 'normal' | 'vertex' | 'fragment' | 'compute';
@@ -23,6 +24,7 @@ export interface ShaderGenerator {
 }
 
 export namespace ShaderGenerator {
+  export type ResolutionCtx = $ResolutionCtx;
   export interface FunctionHeaderOptions extends FunctionDefinitionExtra {
     id: string;
     args: Snippet[];
