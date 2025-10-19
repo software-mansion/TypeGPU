@@ -343,41 +343,43 @@ const getSceneDistForAO = (position: d.v3f) => {
   return std.min(mainScene, sliderApprox);
 };
 
-const getNormalCap = (position: d.v3f) => {
+const sdfSlot = tgpu.slot<(pos: d.v3f) => number>();
+
+const getNormalFromSdf = tgpu.fn([d.vec3f, d.f32], d.vec3f)(
+  (position, epsilon) => {
+    'use gpu';
+    const xOffset = d.vec3f(epsilon, 0, 0);
+    const yOffset = d.vec3f(0, epsilon, 0);
+    const zOffset = d.vec3f(0, 0, epsilon);
+
+    const normalX = sdfSlot.$(position.add(xOffset)) -
+      sdfSlot.$(position.sub(xOffset));
+    const normalY = sdfSlot.$(position.add(yOffset)) -
+      sdfSlot.$(position.sub(yOffset));
+    const normalZ = sdfSlot.$(position.add(zOffset)) -
+      sdfSlot.$(position.sub(zOffset));
+
+    return std.normalize(d.vec3f(normalX, normalY, normalZ));
+  },
+);
+
+const getNormalCapSdf = getNormalFromSdf.with(sdfSlot, cap3D);
+const getNormalMainSdf = getNormalFromSdf.with(sdfSlot, getMainSceneDist);
+
+const getNormalCap = (pos: d.v3f) => {
   'use gpu';
-  const epsilon = 0.01;
-  const xOffset = d.vec3f(epsilon, 0, 0);
-  const yOffset = d.vec3f(0, epsilon, 0);
-  const zOffset = d.vec3f(0, 0, epsilon);
-  const normalX = cap3D(std.add(position, xOffset)) -
-    cap3D(std.sub(position, xOffset));
-  const normalY = cap3D(std.add(position, yOffset)) -
-    cap3D(std.sub(position, yOffset));
-  const normalZ = cap3D(std.add(position, zOffset)) -
-    cap3D(std.sub(position, zOffset));
-  return std.normalize(d.vec3f(normalX, normalY, normalZ));
+  return getNormalCapSdf(pos, 0.01);
 };
 
 const getNormalMain = (position: d.v3f) => {
   'use gpu';
-  // if we are outside of the dip we can just return up
   if (
     std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02 ||
     (std.abs(position.x) < 0.9 && std.abs(position.z) < 0.17)
   ) {
     return d.vec3f(0, 1, 0);
   }
-  const epsilon = 0.0001;
-  const xOffset = d.vec3f(epsilon, 0, 0);
-  const yOffset = d.vec3f(0, epsilon, 0);
-  const zOffset = d.vec3f(0, 0, epsilon);
-  const normalX = getMainSceneDist(std.add(position, xOffset)) -
-    getMainSceneDist(std.sub(position, xOffset));
-  const normalY = getMainSceneDist(std.add(position, yOffset)) -
-    getMainSceneDist(std.sub(position, yOffset));
-  const normalZ = getMainSceneDist(std.add(position, zOffset)) -
-    getMainSceneDist(std.sub(position, zOffset));
-  return std.normalize(d.vec3f(normalX, normalY, normalZ));
+  return getNormalMainSdf(position, 0.0001);
 };
 
 const getSliderNormal = (
@@ -429,7 +431,7 @@ const getSliderNormal = (
   return normal;
 };
 
-const getNormalOptimized = (
+const getNormal = (
   position: d.v3f,
   hitInfo: d.Infer<typeof HitInfo>,
 ) => {
@@ -482,7 +484,6 @@ const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   const sliderMin = d.vec3f(bbox.left, bbox.bottom, -zDepth);
   const sliderMax = d.vec3f(bbox.right, bbox.top, zDepth);
 
-  // check box intersection
   const intersection = intersectBox(
     newOrigin,
     newDir,
@@ -725,15 +726,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
         rayOrigin,
         std.mul(rayDirection, distanceFromOrigin),
       );
-      const normal = getNormalOptimized(hitPosition, hitInfo);
-      const lightDir = std.mul(lightUniform.$.direction, -1.0);
-      const litColor = calculateLighting(hitPosition, normal, rayOrigin);
 
       if (!(hitInfo.objectType === ObjectType.SLIDER)) {
-        return applyAoAndShadow(litColor, hitPosition, normal, lightDir);
+        break;
       }
 
-      const N = getNormalOptimized(hitPosition, hitInfo);
+      const N = getNormal(hitPosition, hitInfo);
       const I = rayDirection;
       const cosi = std.min(
         1.0,
@@ -780,6 +778,8 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
           insideLen,
         );
 
+        const lightDir = std.mul(lightUniform.$.direction, -1.0);
+
         // Subtle forward-scatter glow
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
         const scatter = std.mul(
@@ -802,7 +802,6 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
     }
   }
 
-  // If we didn't hit jelly but we hit the background, render it properly
   return renderBackground(rayOrigin, rayDirection, backgroundHitDist);
 };
 
@@ -915,28 +914,28 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
 const backgroundDistPipeline = root['~unstable']
   .withCompute(backgroundDistFn)
-  .createPipeline()
-  .withPerformanceCallback((start, end) => {
-    const elapsed = Number(end - start) / 1e6;
-    console.log(`Background dist time: ${elapsed.toFixed(2)} ms`);
-  });
+  .createPipeline();
+// .withPerformanceCallback((start, end) => {
+//   const elapsed = Number(end - start) / 1e6;
+//   console.log(`Background dist time: ${elapsed.toFixed(2)} ms`);
+// });
 
 const rayMarchPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
-  .createPipeline()
-  .withPerformanceCallback((start, end) => {
-    const elapsed = Number(end - start) / 1e6;
-    console.log(`Raymarch time: ${elapsed.toFixed(2)} ms`);
-  });
+  .createPipeline();
+// .withPerformanceCallback((start, end) => {
+//   const elapsed = Number(end - start) / 1e6;
+//   console.log(`Raymarch time: ${elapsed.toFixed(2)} ms`);
+// });
 
 const taaResolvePipeline = root['~unstable']
   .withCompute(taaResolveFn)
-  .createPipeline()
-  .withPerformanceCallback((start, end) => {
-    const elapsed = Number(end - start) / 1e6;
-    console.log(`TAA resolve time: ${elapsed.toFixed(2)} ms`);
-  });
+  .createPipeline();
+// .withPerformanceCallback((start, end) => {
+//   const elapsed = Number(end - start) / 1e6;
+//   console.log(`TAA resolve time: ${elapsed.toFixed(2)} ms`);
+// });
 
 const eventHandler = new EventHandler(canvas);
 
