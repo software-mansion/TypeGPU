@@ -14,10 +14,8 @@ import {
   AO_INTENSITY,
   AO_RADIUS,
   AO_STEPS,
-  JELLY_ABSORB,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
-  JELLY_SCATTER_TINT,
   LINE_HALF_THICK,
   LINE_RADIUS,
   MAX_DIST,
@@ -145,6 +143,11 @@ const lightUniform = root.createUniform(DirectionalLight, {
   direction: std.normalize(d.vec3f(0.19, -0.24, 0.75)),
   color: d.vec3f(1, 1, 1),
 });
+
+const jellyColorUniform = root.createUniform(
+  d.vec3f,
+  d.vec3f(1.0, 0.45, 0.075),
+);
 
 const ObjectType = {
   SLIDER: 1,
@@ -475,8 +478,10 @@ const intersectBox = (
 
 const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   'use gpu';
-  const newOrigin = position.add(std.mul(normal, SURF_DIST * 5.0));
-  const newDir = std.mul(lightDir, 1.0);
+  const newDir = std.normalize(lightDir);
+
+  const bias = 0.004;
+  const newOrigin = position.add(normal.mul(bias));
 
   const bbox = getSliderBbox();
   const zDepth = d.f32(0.21);
@@ -492,23 +497,23 @@ const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   );
 
   if (intersection.hit) {
-    let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
-    const maxMarchDist = intersection.tMax;
+    let t = std.max(0.0, intersection.tMin);
+    const maxT = intersection.tMax;
+
     for (let i = 0; i < MAX_STEPS; i++) {
-      const currentPosition = std.add(
-        newOrigin,
-        std.mul(newDir, distanceFromOrigin),
-      );
-      const hitInfo = getSceneDist(currentPosition);
-      distanceFromOrigin += hitInfo.distance;
+      const currPos = std.add(newOrigin, std.mul(newDir, t));
+      const hitInfo = getSceneDist(currPos);
+
       if (hitInfo.distance < SURF_DIST) {
         return std.select(
-          d.f32(0.7),
-          d.f32(0.2),
+          0.8,
+          0.3,
           hitInfo.objectType === ObjectType.SLIDER,
         );
       }
-      if (distanceFromOrigin > maxMarchDist) {
+
+      t += hitInfo.distance;
+      if (t > maxT) {
         break;
       }
     }
@@ -560,6 +565,10 @@ const calculateLighting = (
 ) => {
   'use gpu';
   const lightDir = std.mul(lightUniform.$.direction, -1.0);
+
+  const shadow = getShadow(hitPosition, normal, lightDir);
+  const visibility = 1.0 - shadow;
+
   const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
   const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
@@ -576,7 +585,7 @@ const calculateLighting = (
   const baseColor = d.vec3f(0.9, 0.9, 0.9);
   const directionalLight = std.mul(
     std.mul(baseColor, lightUniform.$.color),
-    diffuse,
+    diffuse * visibility,
   );
 
   const ambientLight = std.mul(
@@ -584,7 +593,9 @@ const calculateLighting = (
     AMBIENT_INTENSITY,
   );
 
-  return std.add(std.add(directionalLight, ambientLight), specular);
+  const finalSpecular = std.mul(specular, visibility);
+
+  return std.add(std.add(directionalLight, ambientLight), finalSpecular);
 };
 
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
@@ -649,16 +660,14 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
   );
 });
 
-const applyAoAndShadow = (
+const applyAO = (
   litColor: d.v3f,
   hitPosition: d.v3f,
   normal: d.v3f,
-  lightDir: d.v3f,
 ) => {
   'use gpu';
   const ao = calculateAO(hitPosition, normal);
-  const shadow = getShadow(hitPosition, normal, lightDir);
-  const finalColor = std.mul(litColor, ao).mul(1.0 - shadow);
+  const finalColor = std.mul(litColor, ao);
   return d.vec4f(finalColor, 1.0);
 };
 
@@ -673,9 +682,8 @@ const renderBackground = (
     std.mul(rayDirection, backgroundHitDist),
   );
   const normal = getNormalMain(hitPosition);
-  const lightDir = std.mul(lightUniform.$.direction, -1.0);
   const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-  return applyAoAndShadow(litColor, hitPosition, normal, lightDir);
+  return applyAO(litColor, hitPosition, normal);
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
@@ -773,8 +781,14 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
 
         const progress = hitInfo.t;
 
+        const jellyColor = jellyColorUniform.$;
+
+        const scatterTint = jellyColor.mul(1.5);
+        const density = d.f32(20.0);
+        const absorb = d.vec3f(1.0).sub(jellyColor).mul(density);
+
         const T = beerLambert(
-          JELLY_ABSORB.mul(progress ** 2),
+          absorb.mul(progress ** 2),
           insideLen,
         );
 
@@ -783,7 +797,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
         // Subtle forward-scatter glow
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
         const scatter = std.mul(
-          JELLY_SCATTER_TINT,
+          scatterTint,
           JELLY_SCATTER_STRENGTH * forward * progress,
         );
         refractedColor = std.add(std.mul(env, T), scatter);
@@ -1082,6 +1096,12 @@ export const controls = {
       lightUniform.writePartial({
         direction: std.normalize(d.vec3f(...v)),
       });
+    },
+  },
+  'Jelly Color': {
+    initial: [1.0, 0.45, 0.075],
+    onColorChange: (c: [number, number, number]) => {
+      jellyColorUniform.write(d.vec3f(...c));
     },
   },
 };
