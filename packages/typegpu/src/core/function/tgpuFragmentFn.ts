@@ -18,7 +18,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
-import { InferGPU } from '../../shared/repr.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';

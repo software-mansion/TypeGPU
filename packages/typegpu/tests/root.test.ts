@@ -215,10 +215,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexNotUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexNotUsing,
+        fragment: mainFragment,
+      });
 
       root.beginRenderPass(
         {
@@ -242,10 +242,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexUsing,
+        fragment: mainFragment,
+      });
 
       root.beginRenderPass(
         {
@@ -270,11 +270,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline()
-        .with(group);
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexUsing,
+        fragment: mainFragment,
+      }).with(group);
 
       root.beginRenderPass(
         {

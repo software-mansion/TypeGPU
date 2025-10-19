@@ -14,7 +14,6 @@ import type {
   BaseData,
   v3u,
   Vec3u,
-  Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
 import {
@@ -55,16 +54,8 @@ import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { fn, type TgpuFn } from '../function/tgpuFn.ts';
-import type {
-  FragmentInConstrained,
-  FragmentOutConstrained,
-  TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
-import type {
-  TgpuVertexFn,
-  VertexInConstrained,
-  VertexOutConstrained,
-} from '../function/tgpuVertexFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
@@ -73,10 +64,8 @@ import {
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  type TgpuNoColorRenderPipelineDescriptor,
   type TgpuPrimitiveState,
   type TgpuRenderPipeline,
-  type TgpuRenderPipelineDescriptor,
   type TgpuRenderPipelineDescriptorCommons,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
@@ -231,25 +220,6 @@ class WithBindingImpl implements WithBinding {
     );
   }
 
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-  >(
-    descriptor: TgpuNoColorRenderPipelineDescriptor<VertexIn, VertexOut>,
-  ): TgpuRenderPipeline<Void>;
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-    FragmentIn extends FragmentInConstrained,
-    FragmentOut extends FragmentOutConstrained,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor<
-      VertexIn,
-      VertexOut,
-      FragmentIn,
-      FragmentOut
-    >,
-  ): TgpuRenderPipeline<FragmentOut>;
   createRenderPipeline(
     descriptor: TgpuRenderPipelineDescriptorCommons,
   ): TgpuRenderPipeline {
