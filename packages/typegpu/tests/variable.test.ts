@@ -151,7 +151,7 @@ var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));
   it('should throw an error when trying to access variable outside of a function', () => {
     const x = tgpu.privateVar(d.u32, 2);
     expect(() => x.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
+      '[Error: TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`]',
     );
   });
 

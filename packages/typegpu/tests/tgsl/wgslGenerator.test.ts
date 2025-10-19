@@ -346,7 +346,7 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -376,7 +376,7 @@ describe('wgslGenerator', () => {
       'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -846,8 +846,10 @@ describe('wgslGenerator', () => {
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
       'use gpu';
-      // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
-      for (let i = 0; i < 10; i += 1) continue;
+      for (let i = 0; i < 10; i += 1) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
     };
 
     const gen = provideCtx(
@@ -932,7 +934,6 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for pointer value assignment', () => {
     const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
-      // biome-ignore  lint/style/noParameterAssign: go away
       val += 1;
     });
 

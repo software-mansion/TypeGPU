@@ -240,10 +240,10 @@ describe('TgpuBufferReadonly', () => {
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
     );
     expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
     );
   });
 

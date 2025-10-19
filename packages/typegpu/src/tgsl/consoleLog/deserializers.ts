@@ -180,7 +180,7 @@ export function logDataFromGPU(resources: LogResources) {
   dataBuffer.read().then((data) => {
     data
       .filter((e) => e.id)
-      .map(({ id, serializedData }) => {
+      .forEach(({ id, serializedData }) => {
         const argTypes = logIdToArgTypes.get(id) as (AnyWgslData | string)[];
         const result = deserializeAndStringify(
           new Uint32Array(serializedData),

@@ -219,8 +219,6 @@ export default function () {
     visitor: {
       Program(path, state) {
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const code: string | undefined = (state as any).file?.code;
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const options = defu((state as any).opts as Options, defaultOptions);
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const id: string | undefined = (state as any).filename;
