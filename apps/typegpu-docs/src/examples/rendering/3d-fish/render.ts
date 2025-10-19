@@ -11,6 +11,15 @@ import {
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
+type Varyings = {
+  worldPosition: d.v3f;
+  worldNormal: d.v3f;
+  variant: number;
+  textureUV: d.v2f;
+  applySeaFog: number; // 0/1
+  applySeaDesaturation: number; // 0/1
+};
+
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
@@ -97,6 +106,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
@@ -137,8 +147,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   let desaturatedColor = lightedColor;
   if (input.applySeaDesaturation === 1) {
-    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
-      3;
+    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
     const hsv = rgbToHsv(desaturatedColor);
     hsv.y += desaturationFactor / 2;
     hsv.z += desaturationFactor;

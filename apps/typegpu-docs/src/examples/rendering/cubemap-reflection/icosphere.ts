@@ -207,9 +207,9 @@ export class IcosphereGenerator {
       }
     });
 
-    this.pipeline = this.root['~unstable']
-      .withCompute(computeFn)
-      .createPipeline();
+    this.pipeline = this.root['~unstable'].createComputePipeline({
+      compute: computeFn,
+    });
   }
 
   createIcosphere(subdivisions: number, smooth: boolean): IcosphereBuffer {

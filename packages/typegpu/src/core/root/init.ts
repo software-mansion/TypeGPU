@@ -12,8 +12,6 @@ import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
   BaseData,
-  U16,
-  U32,
   v3u,
   Vec3u,
   WgslArray,
@@ -27,7 +25,6 @@ import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -62,12 +59,14 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
+  type TgpuComputePipelineDescriptor,
 } from '../pipeline/computePipeline.ts';
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  type RenderPipelineCoreOptions,
+  type TgpuPrimitiveState,
   type TgpuRenderPipeline,
+  type TgpuRenderPipelineDescriptorCommons,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
@@ -107,8 +106,8 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  PreparedDispatch,
   RenderPass,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -137,8 +136,8 @@ const workgroupSizeConfigs = [
   vec3u(8, 8, 4),
 ] as const;
 
-export class PreparedDispatchImpl<TArgs extends number[]>
-  implements PreparedDispatch<TArgs> {
+export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
+  implements TgpuGuardedComputePipeline<TArgs> {
   #root: ExperimentalTgpuRoot;
   #pipeline: TgpuComputePipeline;
   #sizeUniform: TgpuUniform<Vec3u>;
@@ -159,12 +158,8 @@ export class PreparedDispatchImpl<TArgs extends number[]>
     this.#lastSize = vec3u();
   }
 
-  /**
-   * Returns a new PreparedDispatch with the specified bind group bound.
-   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
-   */
-  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
-    return new PreparedDispatchImpl(
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this.#pipeline.with(bindGroup),
       this.#sizeUniform,
@@ -172,11 +167,6 @@ export class PreparedDispatchImpl<TArgs extends number[]>
     );
   }
 
-  /**
-   * Run the prepared dispatch.
-   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
-   * this method takes in the number of threads to run in each dimension.
-   */
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(
@@ -220,13 +210,35 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  prepareDispatch<TArgs extends number[]>(
+  createComputePipeline<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+    descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
+  ): TgpuComputePipeline {
+    return INTERNAL_createComputePipeline(
+      this._getRoot(),
+      this._slotBindings,
+      descriptor,
+    );
+  }
+
+  createRenderPipeline(
+    descriptor: TgpuRenderPipelineDescriptorCommons,
+  ): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline({
+      root: this._getRoot(),
+      slotBindings: this._slotBindings,
+      descriptor,
+    });
+  }
+
+  createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => undefined,
-  ): PreparedDispatch<TArgs> {
+  ): TgpuGuardedComputePipeline<TArgs> {
     const root = this._getRoot();
 
     if (callback.length >= 4) {
-      throw new Error('Dispatch only supports up to three dimensions.');
+      throw new Error(
+        'Guarded compute callback only supports up to three dimensions.',
+      );
     }
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
@@ -236,8 +248,8 @@ class WithBindingImpl implements WithBinding {
 
     const sizeUniform = root.createUniform(vec3u);
 
-    // raw WGSL instead of TGSL
-    // because we do not run unplugin before shipping typegpu package
+    // WGSL instead of JS because we do not run unplugin
+    // before shipping the typegpu package
     const mainCompute = computeFn({
       workgroupSize,
       in: { id: builtin.globalInvocationId },
@@ -248,25 +260,23 @@ class WithBindingImpl implements WithBinding {
   wrappedCallback(in.id.x, in.id.y, in.id.z);
 }`.$uses({ sizeUniform, wrappedCallback });
 
-    const pipeline = this
-      .withCompute(mainCompute)
-      .createPipeline();
+    const pipeline = this.createComputePipeline({ compute: mainCompute });
 
-    return new PreparedDispatchImpl(root, pipeline, sizeUniform, workgroupSize);
+    return new TgpuGuardedComputePipelineImpl(
+      root,
+      pipeline,
+      sizeUniform,
+      workgroupSize,
+    );
   }
 
   withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
-    return new WithVertexImpl({
-      branch: this._getRoot(),
-      primitiveState: undefined,
-      depthStencilState: undefined,
-      slotBindings: this._slotBindings,
-      vertexFn,
-      vertexAttribs: attribs as AnyVertexAttribs,
-      multisampleState: undefined,
+    return new WithVertexImpl(this._getRoot(), this._slotBindings, {
+      vertex: vertexFn,
+      attribs,
     });
   }
 
@@ -287,21 +297,32 @@ class WithComputeImpl implements WithCompute {
   ) {}
 
   createPipeline(): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(
-      this._root,
-      this._slotBindings,
-      this._entryFn,
-    );
+    return INTERNAL_createComputePipeline(this._root, this._slotBindings, {
+      compute: this._entryFn,
+    });
   }
 }
 
 class WithVertexImpl implements WithVertex {
+  readonly #root: ExperimentalTgpuRoot;
+  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
+  readonly #partialDescriptor: Omit<
+    TgpuRenderPipelineDescriptorCommons,
+    'fragment' | 'targets'
+  >;
+
   constructor(
-    private readonly _options: Omit<
-      RenderPipelineCoreOptions,
-      'fragmentFn' | 'targets'
+    root: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    partialDescriptor: Omit<
+      TgpuRenderPipelineDescriptorCommons,
+      'fragment' | 'targets'
     >,
-  ) {}
+  ) {
+    this.#root = root;
+    this.#slotBindings = slotBindings;
+    this.#partialDescriptor = partialDescriptor;
+  }
 
   withFragment(
     fragmentFn: TgpuFragmentFn | 'n/a',
@@ -311,73 +332,91 @@ class WithVertexImpl implements WithVertex {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
     invariant(typeof targets !== 'string', 'Just type mismatch validation');
 
-    return new WithFragmentImpl({
-      ...this._options,
-      fragmentFn,
+    return new WithFragmentImpl(this.#root, this.#slotBindings, {
+      ...this.#partialDescriptor,
+      fragment: fragmentFn,
       targets,
     });
   }
 
-  withPrimitive(
-    primitiveState:
-      | GPUPrimitiveState
-      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-        stripIndexFormat?: U32 | U16;
-      }
-      | undefined,
-  ): WithFragment {
-    return new WithVertexImpl({ ...this._options, primitiveState });
+  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
+    return new WithVertexImpl(this.#root, this.#slotBindings, {
+      ...this.#partialDescriptor,
+      primitive,
+    });
   }
 
   withDepthStencil(
-    depthStencilState: GPUDepthStencilState | undefined,
+    depthStencil: GPUDepthStencilState | undefined,
   ): WithFragment {
-    return new WithVertexImpl({ ...this._options, depthStencilState });
+    return new WithVertexImpl(this.#root, this.#slotBindings, {
+      ...this.#partialDescriptor,
+      depthStencil,
+    });
   }
 
   withMultisample(
-    multisampleState: GPUMultisampleState | undefined,
+    multisample: GPUMultisampleState | undefined,
   ): WithFragment {
-    return new WithVertexImpl({ ...this._options, multisampleState });
+    return new WithVertexImpl(this.#root, this.#slotBindings, {
+      ...this.#partialDescriptor,
+      multisample,
+    });
   }
 
   createPipeline(): TgpuRenderPipeline {
     return INTERNAL_createRenderPipeline({
-      ...this._options,
-      fragmentFn: null,
-      targets: null,
+      root: this.#root,
+      slotBindings: this.#slotBindings,
+      descriptor: this.#partialDescriptor,
     });
   }
 }
 
 class WithFragmentImpl implements WithFragment {
-  constructor(private readonly _options: RenderPipelineCoreOptions) {}
+  readonly #root: ExperimentalTgpuRoot;
+  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
+  readonly #descriptor: TgpuRenderPipelineDescriptorCommons;
 
-  withPrimitive(
-    primitiveState:
-      | GPUPrimitiveState
-      | Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-        stripIndexFormat?: U32 | U16;
-      }
-      | undefined,
-  ): WithFragment {
-    return new WithFragmentImpl({ ...this._options, primitiveState });
+  constructor(
+    root: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    descriptor: TgpuRenderPipelineDescriptorCommons,
+  ) {
+    this.#root = root;
+    this.#slotBindings = slotBindings;
+    this.#descriptor = descriptor;
+  }
+
+  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
+    return new WithFragmentImpl(this.#root, this.#slotBindings, {
+      ...this.#descriptor,
+      primitive,
+    });
   }
 
   withDepthStencil(
-    depthStencilState: GPUDepthStencilState | undefined,
+    depthStencil: GPUDepthStencilState | undefined,
   ): WithFragment {
-    return new WithFragmentImpl({ ...this._options, depthStencilState });
+    return new WithFragmentImpl(this.#root, this.#slotBindings, {
+      ...this.#descriptor,
+      depthStencil,
+    });
   }
 
-  withMultisample(
-    multisampleState: GPUMultisampleState | undefined,
-  ): WithFragment {
-    return new WithFragmentImpl({ ...this._options, multisampleState });
+  withMultisample(multisample: GPUMultisampleState | undefined): WithFragment {
+    return new WithFragmentImpl(this.#root, this.#slotBindings, {
+      ...this.#descriptor,
+      multisample,
+    });
   }
 
   createPipeline(): TgpuRenderPipeline {
-    return INTERNAL_createRenderPipeline(this._options);
+    return INTERNAL_createRenderPipeline({
+      root: this.#root,
+      slotBindings: this.#slotBindings,
+      descriptor: this.#descriptor,
+    });
   }
 }
 
@@ -799,7 +838,7 @@ class TgpuRootImpl extends WithBindingImpl
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?:
-    | GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }
+    | (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> })
     | undefined;
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;

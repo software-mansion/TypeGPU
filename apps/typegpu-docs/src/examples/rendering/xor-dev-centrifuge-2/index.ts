@@ -104,10 +104,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable']
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: vertexMain,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 let isRunning = true;
 

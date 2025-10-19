@@ -8,6 +8,7 @@ import type {
   Decorated,
   Interpolate,
   Location,
+  v4f,
   Vec4f,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
@@ -17,6 +18,7 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
@@ -46,6 +48,11 @@ export type FragmentOutConstrained = IOLayout<
   | Decorated<Vec4f, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
 >;
+
+export type FragmentOutInferred =
+  | undefined
+  | v4f
+  | Record<string, v4f | InferGPU<AnyFragmentOutputBuiltin>>;
 
 /**
  * Describes a fragment entry function signature (its arguments, return type and targets)

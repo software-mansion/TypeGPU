@@ -33,6 +33,8 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
   }[keyof T]
 >;
 
+export type Equal<T, U> = [T, U] extends [U, T] ? true : false;
+
 /**
  * Removes properties from record type that equal `Prop`
  */
@@ -53,12 +55,27 @@ export type NullableToOptional<T> =
     [K in keyof T as T[K] extends null ? never : K]: T[K];
   };
 
+export type UndefinedToOptional<T> =
+  & {
+    // Props where the value extends `undefined` -> make them optional
+    [K in keyof T as T[K] extends undefined ? K : never]?: T[K];
+  }
+  & {
+    // All other props remain unchanged
+    [K in keyof T as T[K] extends undefined ? never : K]: T[K];
+  };
+
 /**
  * The opposite of Readonly<T>
  */
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
+
+/**
+ * Source: https://code.lol/post/programming/higher-kinded-types/
+ */
+export type Assume<T, U> = T extends U ? T : U;
 
 /**
  * Any typed array

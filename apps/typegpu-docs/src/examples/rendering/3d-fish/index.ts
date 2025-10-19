@@ -98,33 +98,34 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsOnGPU = root['~unstable'].prepareDispatch((x) => {
-  'use gpu';
-  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
-  const data = ModelData({
-    position: d.vec3f(
-      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-    ),
-    direction: d.vec3f(
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-    ),
-    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-    variant: randf.sample(),
-    applySinWave: 1,
-    applySeaFog: 1,
-    applySeaDesaturation: 1,
+const randomizeFishPositionsPipeline = root['~unstable']
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+    const data = ModelData({
+      position: d.vec3f(
+        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+      ),
+      direction: d.vec3f(
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+      ),
+      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+      variant: randf.sample(),
+      applySinWave: 1,
+      applySeaFog: 1,
+      applySeaDesaturation: 1,
+    });
+    buffer0mutable.$[x] = data;
+    buffer1mutable.$[x] = data;
   });
-  buffer0mutable.$[x] = data;
-  buffer1mutable.$[x] = data;
-});
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsOnGPU.dispatchThreads(p.fishAmount);
+  randomizeFishPositionsPipeline.dispatchThreads(p.fishAmount);
   enqueuePresetChanges();
 };
 
@@ -181,16 +182,18 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, modelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  attribs: modelVertexLayout.attrib,
+  vertex: vertexShader,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -198,7 +201,8 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const simulateAction = root['~unstable'].prepareDispatch(simulate);
+const simulatePipeline = root['~unstable']
+  .createGuardedComputePipeline(simulate);
 
 // bind groups
 
@@ -254,7 +258,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  simulateAction
+  simulatePipeline
     .with(computeBindGroups[odd ? 1 : 0])
     .dispatchThreads(p.fishAmount);
 

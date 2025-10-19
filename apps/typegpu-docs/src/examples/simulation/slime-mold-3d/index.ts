@@ -106,7 +106,7 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].prepareDispatch((x) => {
+root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -451,18 +451,17 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
 const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
+  .createComputePipeline({ compute: updateAgents });
 
 const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+  .createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
@@ -487,14 +486,16 @@ function frame() {
 
   params.writePartial({ deltaTime });
 
-  blurPipeline.with(computeLayout, bindGroups[currentTexture])
+  blurPipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(resolution.x / BLUR_WORKGROUP_SIZE[0]),
       Math.ceil(resolution.y / BLUR_WORKGROUP_SIZE[1]),
       Math.ceil(resolution.z / BLUR_WORKGROUP_SIZE[2]),
     );
 
-  computePipeline.with(computeLayout, bindGroups[currentTexture])
+  computePipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE),
     );
@@ -505,10 +506,8 @@ function frame() {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      renderLayout,
-      renderBindGroups[1 - currentTexture],
-    ).draw(3);
+    .with(renderBindGroups[1 - currentTexture])
+    .draw(3);
 
   root['~unstable'].flush();
 
