@@ -85,7 +85,7 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // Public API
 // ----------
 
-export interface TgpuGuardedComputePipeline<TArgs extends number[]> {
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
   /**
    * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
