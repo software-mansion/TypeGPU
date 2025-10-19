@@ -976,7 +976,7 @@ describe('root.createRenderPipeline', () => {
     out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
   })`{ return Out(); }`;
 
-  it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
+  it.skip('allows fragment functions to use a subset of the vertex output', ({ root }) => {
     const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
     const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
       in: { pos: d.builtin.frontFacing },

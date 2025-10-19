@@ -1,5 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu, { type AutoFragmentIn } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
@@ -102,7 +102,10 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const fragmentShader = (input: AutoFragmentIn<Varyings>) => {
+export const fragmentShader = tgpu['~unstable'].fragmentFn({
+  in: ModelVertexOutput,
+  out: d.vec4f,
+})((input) => {
   'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
@@ -144,8 +147,7 @@ export const fragmentShader = (input: AutoFragmentIn<Varyings>) => {
 
   let desaturatedColor = lightedColor;
   if (input.applySeaDesaturation === 1) {
-    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
-      3;
+    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
     const hsv = rgbToHsv(desaturatedColor);
     hsv.y += desaturationFactor / 2;
     hsv.z += desaturationFactor;
@@ -162,4 +164,4 @@ export const fragmentShader = (input: AutoFragmentIn<Varyings>) => {
   }
 
   return d.vec4f(foggedColor.xyz, 1);
-};
+});
