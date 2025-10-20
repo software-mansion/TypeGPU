@@ -7,7 +7,7 @@ import type {
   RenderFlag,
   SampledFlag,
 } from '../src/core/texture/usageExtension.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { type TgpuRoot } from '../src/index.ts';
 import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
@@ -693,6 +693,23 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
             `[Error: generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.]`,
           );
       });
+    });
+  });
+
+  describe('non-parametrized TgpuTexture type', () => {
+    it('accepts any texture', () => {
+      const createTexture = (
+        root: TgpuRoot,
+        size: { width: number; height: number },
+      ): TgpuTexture => {
+        const texture = root['~unstable'].createTexture({
+          size: [size.width, size.height],
+          format: 'rgba8unorm',
+        });
+
+        // TODO: Fix this error
+        return texture;
+      };
     });
   });
 });
