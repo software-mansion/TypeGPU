@@ -1,12 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import {
-  downscaleLayout,
-  externalTextureLayout,
-  samplerSlot,
-  textureLayout,
-} from './schemas';
+import { downscaleLayout, samplerSlot, textureLayout } from './schemas';
 
 export const downscale = (x: number, y: number) => {
   'use gpu';

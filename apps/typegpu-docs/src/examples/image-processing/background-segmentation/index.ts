@@ -1,16 +1,16 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { downscale, mainFrag } from './fragments.ts';
 import {
   downscaleLayout,
-  externalTextureLayout,
   maskSlot,
   samplerSlot,
   textureLayout,
 } from './schemas.ts';
 import { fullScreenTriangle } from './common.ts';
 import { prepareSession } from './model.ts';
+
+// setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -33,10 +33,10 @@ const device = await adapter?.requestDevice({ label: 'my device' });
 if (!device) {
   throw new Error('Failed to initialize device.');
 }
+
 navigator.gpu.requestAdapter = async () => adapter;
 adapter!.requestDevice = async () => device;
 const root = await tgpu.initFromDevice({ device });
-
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -46,7 +46,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// webgpu
+// resources
 
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -58,10 +58,11 @@ const maskTexture = root['~unstable'].createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'render', 'storage');
 
-const downscaledBuffer = root.createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
+const modelInputBuffer = root
+  .createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
   .$usage('storage');
 
-const processedBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
+const modelOutputBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
 
 const generateMaskTextureFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f, pos: d.builtin.position },
@@ -70,7 +71,7 @@ const generateMaskTextureFragment = tgpu['~unstable'].fragmentFn({
   const x = d.u32(pos.x);
   const y = d.u32(pos.y);
 
-  return d.vec4f(processedBuffer.$[y * 256 + x]);
+  return d.vec4f(modelOutputBuffer.$[y * 256 + x]);
 });
 
 const generateMaskTexturePipeline = root['~unstable']
@@ -83,7 +84,7 @@ const downscalePipeline = root['~unstable'].prepareDispatch(downscale);
 
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
-  .with(maskSlot, processedBuffer)
+  .with(maskSlot, modelOutputBuffer)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
@@ -101,8 +102,8 @@ function onVideoChange(size: { width: number; height: number }) {
 // other
 
 const runSession = await prepareSession(
-  root.unwrap(downscaledBuffer),
-  root.unwrap(processedBuffer.buffer),
+  root.unwrap(modelInputBuffer),
+  root.unwrap(modelOutputBuffer.buffer),
 );
 
 let videoFrameCallbackId: number | undefined;
@@ -132,7 +133,7 @@ async function processVideoFrame(
   downscalePipeline
     .with(root.createBindGroup(downscaleLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
-      outputBuffer: downscaledBuffer,
+      outputBuffer: modelInputBuffer,
       sampler,
     }))
     .dispatchThreads(256, 256);
