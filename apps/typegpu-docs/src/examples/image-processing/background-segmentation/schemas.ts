@@ -1,10 +1,10 @@
-import tgpu, {
-  type TgpuMutable,
-  type TgpuSampler,
-  type TgpuTexture,
-  type TgpuUniform,
-} from 'typegpu';
+import tgpu, { type TgpuMutable, type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
+
+export const downscaleLayout = tgpu.bindGroupLayout({
+  inputTexture: { externalTexture: d.textureExternal() },
+  outputBuffer: { storage: d.arrayOf(d.f32), access: 'mutable' },
+});
 
 export const externalTextureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },

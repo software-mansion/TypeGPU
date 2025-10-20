@@ -1,8 +1,9 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { mainFrag } from './render.ts';
+import { downscaleFragment, mainFrag } from './fragments.ts';
 import {
+  downscaleLayout,
   externalTextureLayout,
   maskSlot,
   samplerSlot,
@@ -64,30 +65,10 @@ const maskTexture = root['~unstable'].createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'render', 'storage');
 
-const downscaledBuffer = root.createMutable(d.arrayOf(d.f32, 3 * 256 * 256));
+const downscaledBuffer = root.createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
+  .$usage('storage');
 
 const processedBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
-
-const downscaleFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f, pos: d.builtin.position },
-  out: d.vec4f,
-})(({ uv, pos }) => {
-  const col = std.textureSampleBaseClampToEdge(
-    externalTextureLayout.$.inputTexture,
-    samplerSlot.$,
-    uv,
-  );
-
-  const x = d.u32(pos.x);
-  const y = d.u32(pos.y);
-
-  downscaledBuffer.$[0 * 256 * 256 + y * 256 + x] = col.x;
-  downscaledBuffer.$[1 * 256 * 256 + y * 256 + x] = col.y;
-  downscaledBuffer.$[2 * 256 * 256 + y * 256 + x] = col.z;
-
-  return col;
-  // return d.vec4f(1, 1, 0, 1);
-});
 
 const generateMaskTextureFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f, pos: d.builtin.position },
@@ -131,7 +112,7 @@ function onVideoChange(size: { width: number; height: number }) {
 // other
 
 const runSession = await prepareSession(
-  root.unwrap(downscaledBuffer.buffer),
+  root.unwrap(downscaledBuffer),
   root.unwrap(processedBuffer.buffer),
 );
 
@@ -166,8 +147,9 @@ async function processVideoFrame(
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(root.createBindGroup(externalTextureLayout, {
+    .with(root.createBindGroup(downscaleLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
+      outputBuffer: downscaledBuffer,
     }))
     .draw(3);
 
