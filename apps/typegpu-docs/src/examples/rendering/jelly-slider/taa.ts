@@ -81,22 +81,22 @@ export function createTaaTextures(
 }
 
 export class TAAResolver {
-  private pipeline: TgpuComputePipeline;
-  private textures: ReturnType<typeof createTaaTextures>;
-  private root: TgpuRoot;
-  private width: number;
-  private height: number;
+  #pipeline: TgpuComputePipeline;
+  #textures: ReturnType<typeof createTaaTextures>;
+  #root: TgpuRoot;
+  #width: number;
+  #height: number;
 
   constructor(root: TgpuRoot, width: number, height: number) {
-    this.root = root;
-    this.width = width;
-    this.height = height;
+    this.#root = root;
+    this.#width = width;
+    this.#height = height;
 
-    this.pipeline = root['~unstable']
+    this.#pipeline = root['~unstable']
       .withCompute(taaResolveFn)
       .createPipeline();
 
-    this.textures = createTaaTextures(root, width, height);
+    this.#textures = createTaaTextures(root, width, height);
   }
 
   resolve(
@@ -106,29 +106,29 @@ export class TAAResolver {
   ) {
     const previousFrame = 1 - currentFrame;
 
-    this.pipeline.with(
-      this.root.createBindGroup(taaResolveLayout, {
+    this.#pipeline.with(
+      this.#root.createBindGroup(taaResolveLayout, {
         currentTexture,
         historyTexture: frameCount === 1
           ? currentTexture
-          : this.textures[previousFrame].sampled,
-        outputTexture: this.textures[currentFrame].write,
+          : this.#textures[previousFrame].sampled,
+        outputTexture: this.#textures[currentFrame].write,
       }),
     ).dispatchWorkgroups(
-      Math.ceil(this.width / 16),
-      Math.ceil(this.height / 16),
+      Math.ceil(this.#width / 16),
+      Math.ceil(this.#height / 16),
     );
 
-    return this.textures[currentFrame].sampled;
+    return this.#textures[currentFrame].sampled;
   }
 
   resize(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-    this.textures = createTaaTextures(this.root, width, height);
+    this.#width = width;
+    this.#height = height;
+    this.#textures = createTaaTextures(this.#root, width, height);
   }
 
   getResolvedTexture(frame: number) {
-    return this.textures[frame].sampled;
+    return this.#textures[frame].sampled;
   }
 }

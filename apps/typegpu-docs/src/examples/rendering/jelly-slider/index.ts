@@ -853,6 +853,24 @@ let lastTimeStamp = performance.now();
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
+function createBindGroups() {
+  return {
+    backgroundDist: root.createBindGroup(backgroundDistLayout, {
+      distanceTexture: backgroundDistTexture.write,
+    }),
+    rayMarch: root.createBindGroup(rayMarchLayout, {
+      backgroundDistTexture: backgroundDistTexture.read,
+    }),
+    render: [0, 1].map((frame) =>
+      root.createBindGroup(sampleLayout, {
+        currentTexture: taaResolver.getResolvedTexture(frame),
+      })
+    ),
+  };
+}
+
+let bindGroups = createBindGroups();
+
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
@@ -865,26 +883,18 @@ function render(timestamp: number) {
 
   const currentFrame = frameCount % 2;
 
-  backgroundDistPipeline.with(
-    root.createBindGroup(backgroundDistLayout, {
-      distanceTexture: backgroundDistTexture.write,
-    }),
-  ).dispatchWorkgroups(
+  backgroundDistPipeline.with(bindGroups.backgroundDist).dispatchWorkgroups(
     Math.ceil(width / 16),
     Math.ceil(height / 16),
   );
 
-  rayMarchPipeline.with(
-    root.createBindGroup(rayMarchLayout, {
-      backgroundDistTexture: backgroundDistTexture.read,
-    }),
-  ).withColorAttachment({
+  rayMarchPipeline.with(bindGroups.rayMarch).withColorAttachment({
     view: root.unwrap(textures[currentFrame].sampled),
     loadOp: 'clear',
     storeOp: 'store',
   }).draw(3);
 
-  const resolvedTexture = taaResolver.resolve(
+  taaResolver.resolve(
     textures[currentFrame].sampled,
     frameCount,
     currentFrame,
@@ -896,9 +906,7 @@ function render(timestamp: number) {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      root.createBindGroup(sampleLayout, { currentTexture: resolvedTexture }),
-    )
+    .with(bindGroups.render[currentFrame])
     .draw(3);
 
   requestAnimationFrame(render);
@@ -914,6 +922,8 @@ function handleResize() {
   backgroundDistTexture = createBackgroundDistTexture(root, width, height);
   taaResolver.resize(width, height);
   frameCount = 0;
+
+  bindGroups = createBindGroups();
 }
 
 const resizeObserver = new ResizeObserver(() => {
