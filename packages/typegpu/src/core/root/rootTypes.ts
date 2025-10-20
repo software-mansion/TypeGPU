@@ -6,6 +6,10 @@ import type {
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
+import type {
   AnyWgslData,
   U16,
   U32,
@@ -41,6 +45,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+} from '../sampler/sampler.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -69,6 +77,21 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // ----------
 // Public API
 // ----------
+
+export interface PreparedDispatch<TArgs extends number[]> {
+  /**
+   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs>;
+
+  /**
+   * Run the prepared dispatch.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
+   * this method takes in the number of threads to run in each dimension.
+   */
+  dispatchThreads(...args: TArgs): void;
+}
 
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
@@ -180,6 +203,41 @@ export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
+
+  /**
+   * Creates a compute pipeline that executes the given callback. It can accept
+   * up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   * of the executing thread.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const action = root.prepareDispatch(() => {
+   *   'use gpu';
+   *   console.log('Hello, GPU!');
+   * });
+   *
+   * action.dispatchThreads();
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const action = root.prepareDispatch((x) => {
+   *   'use gpu';
+   *   console.log('I am the', x, 'thread');
+   * });
+   *
+   * action.dispatchThreads(12); // executing 12 threads
+   * ```
+   */
+  prepareDispatch<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): PreparedDispatch<TArgs>;
 
   withVertex<
     VertexIn extends VertexInConstrained,
@@ -713,4 +771,10 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
+
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler;
 }

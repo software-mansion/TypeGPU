@@ -54,7 +54,7 @@ const textures = [0, 1].map(() => {
 });
 const renderView = textures[1].createView(d.texture2d(d.f32));
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -93,7 +93,7 @@ const computeFn = tgpu['~unstable'].computeFn({
 
       tileData.$[r][lid.x * 4 + d.u32(c)] = std.textureSampleLevel(
         ioLayout.$.inTexture,
-        sampler,
+        sampler.$,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
       ).xyz;
@@ -146,7 +146,7 @@ const renderFragment = tgpu['~unstable'].fragmentFn({
 })((input) =>
   std.textureSample(
     renderView.$,
-    sampler,
+    sampler.$,
     input.uv,
   )
 );
