@@ -193,8 +193,6 @@ export class PreparedDispatchImpl<TArgs extends number[]>
       workgroupCount.y,
       workgroupCount.z,
     );
-    // Yeah, i know we flush here... but it's only a matter of time!
-    this.#root.flush();
   }
 }
 
