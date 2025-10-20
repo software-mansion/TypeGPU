@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
   externalTextureLayout,
+  maskSlot,
   samplerSlot,
   textureLayout,
   uvTransformUniformSlot,
@@ -37,7 +38,7 @@ export const mainVert = tgpu['~unstable'].vertexFn({
 });
 
 export const mainFrag = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.location(0, d.vec2f) },
+  in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
   const uv2 = uvTransformUniformSlot.$.mul(input.uv.sub(0.5)).add(0.5);
@@ -47,5 +48,10 @@ export const mainFrag = tgpu['~unstable'].fragmentFn({
     uv2,
   );
 
-  return col;
+  const mask = std.textureSampleBaseClampToEdge(
+    textureLayout.$.maskTexture,
+    samplerSlot.$,
+    uv2,
+  );
+  return d.vec4f(col.xyz.mul(mask.x), 1);
 });

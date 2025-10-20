@@ -1,4 +1,9 @@
-import tgpu, { type TgpuSampler, type TgpuUniform } from 'typegpu';
+import tgpu, {
+  type TgpuMutable,
+  type TgpuSampler,
+  type TgpuTexture,
+  type TgpuUniform,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const externalTextureLayout = tgpu.bindGroupLayout({
@@ -7,7 +12,9 @@ export const externalTextureLayout = tgpu.bindGroupLayout({
 
 export const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { texture: d.texture2d() },
+  maskTexture: { texture: d.texture2d() },
 });
 
 export const samplerSlot = tgpu.slot<TgpuSampler>();
 export const uvTransformUniformSlot = tgpu.slot<TgpuUniform<d.Mat2x2f>>();
+export const maskSlot = tgpu.slot<TgpuMutable<d.WgslArray<d.F32>>>();

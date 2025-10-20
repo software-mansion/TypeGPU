@@ -4,10 +4,14 @@ import * as std from 'typegpu/std';
 import { mainFrag, mainVert } from './render.ts';
 import {
   externalTextureLayout,
+  maskSlot,
   samplerSlot,
   textureLayout,
   uvTransformUniformSlot,
 } from './schemas.ts';
+import * as ort from 'onnxruntime-web/webgpu';
+
+// code
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -25,8 +29,14 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const root = await tgpu.init();
-const device = root.device;
+const adapter = await navigator.gpu?.requestAdapter();
+const device = await adapter?.requestDevice({ label: 'my device' });
+if (!device) {
+  throw new Error('Failed to initialize device.');
+}
+navigator.gpu.requestAdapter = async () => adapter;
+adapter!.requestDevice = async () => device;
+const root = await tgpu.initFromDevice({ device });
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -36,6 +46,28 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
+
+// model
+
+// ort.env.webgpu.device = root.device; // https://github.com/microsoft/onnxruntime/issues/26107
+
+const weightsRaw = await fetch(
+  '/TypeGPU/assets/background-segmentation/model.data',
+);
+const weights = await weightsRaw.blob();
+
+const session = await ort.InferenceSession
+  .create('/TypeGPU/assets/background-segmentation/model.onnx', {
+    executionProviders: ['webgpu'],
+    externalData: [{
+      data: weights,
+      path: 'model.data',
+    }],
+  });
+
+console.log(session);
+
+// webgpu
 
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
@@ -49,6 +81,15 @@ const downscaledTexture = root['~unstable'].createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'render');
 
+const maskTexture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'render', 'storage');
+
+const downscaledBuffer = root.createMutable(d.arrayOf(d.f32, 3 * 256 * 256));
+
+const processedBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
+
 const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
@@ -59,18 +100,41 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
 }`;
 
 const downscaleFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
+  in: { uv: d.vec2f, pos: d.builtin.position },
   out: d.vec4f,
-})(({ uv }) => {
+})(({ uv, pos }) => {
   const col = std.textureSampleBaseClampToEdge(
     externalTextureLayout.$.inputTexture,
     samplerSlot.$,
     uv,
   );
 
+  const x = d.u32(pos.x);
+  const y = d.u32(pos.y);
+
+  downscaledBuffer.$[0 * 256 * 256 + y * 256 + x] = col.x;
+  downscaledBuffer.$[1 * 256 * 256 + y * 256 + x] = col.y;
+  downscaledBuffer.$[2 * 256 * 256 + y * 256 + x] = col.z;
+
   return col;
   // return d.vec4f(1, 1, 0, 1);
 });
+
+const generateMaskTextureFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f, pos: d.builtin.position },
+  out: d.vec4f,
+})(({ uv, pos }) => {
+  const x = d.u32(pos.x);
+  const y = d.u32(pos.y);
+
+  return d.vec4f(processedBuffer.$[y * 256 + x]);
+});
+
+const generateMaskTexturePipeline = root['~unstable']
+  .with(samplerSlot, sampler)
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(generateMaskTextureFragment, { format: 'rgba8unorm' })
+  .createPipeline();
 
 const downscalePipeline = root['~unstable']
   .with(samplerSlot, sampler)
@@ -81,6 +145,7 @@ const downscalePipeline = root['~unstable']
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
   .with(uvTransformUniformSlot, uvTransformUniform)
+  .with(maskSlot, processedBuffer)
   .withVertex(mainVert, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
@@ -94,6 +159,8 @@ function onVideoChange(size: { width: number; height: number }) {
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
+
+// other
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 function setUVTransformForIOS() {
@@ -119,7 +186,7 @@ if (isIOS) {
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined = undefined;
 
-function processVideoFrame(
+async function processVideoFrame(
   _: number,
   metadata: VideoFrameCallbackMetadata,
 ) {
@@ -148,8 +215,39 @@ function processVideoFrame(
       storeOp: 'store',
     })
     .with(root.createBindGroup(externalTextureLayout, {
-      inputTexture: device.importExternalTexture({ source: video }),
+      inputTexture: device!.importExternalTexture({ source: video }),
     }))
+    .draw(3);
+
+  root['~unstable'].flush();
+
+  const myPreAllocatedInputTensor = ort.Tensor.fromGpuBuffer(
+    root.unwrap(downscaledBuffer.buffer),
+    {
+      dataType: 'float32',
+      dims: [1, 3, 256, 256],
+    },
+  );
+
+  const myPreAllocatedOutputTensor = ort.Tensor.fromGpuBuffer(
+    root.unwrap(processedBuffer.buffer),
+    {
+      dataType: 'float32',
+      dims: [1, 1, 256, 256],
+    },
+  );
+
+  const feeds = { 'image': myPreAllocatedInputTensor };
+  const fetches = { 'mask': myPreAllocatedOutputTensor };
+  await session.run(feeds, fetches);
+
+  generateMaskTexturePipeline
+    .withColorAttachment({
+      view: root.unwrap(maskTexture.createView()),
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
     .draw(3);
 
   renderPipeline
@@ -161,10 +259,14 @@ function processVideoFrame(
     })
     .with(root.createBindGroup(textureLayout, {
       inputTexture: downscaledTexture,
+      maskTexture: maskTexture,
     }))
     .draw(6);
 
-  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
+  downscaledBuffer.read().then(console.log);
+  processedBuffer.read().then(console.log);
+
+  // videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
@@ -183,22 +285,3 @@ export function onCleanup() {
 }
 
 // #endregion
-
-import * as ort from 'onnxruntime-web/webgpu';
-
-const weightsRaw = await fetch(
-  '/TypeGPU/assets/background-segmentation/model.data',
-);
-const weights = await weightsRaw.blob();
-
-const session = await ort.InferenceSession
-  .create('/TypeGPU/assets/background-segmentation/model.onnx', {
-    executionProviders: ['webgpu'],
-    enableProfiling: true,
-    externalData: [{
-      data: weights,
-      path: 'model.data',
-    }],
-  });
-
-console.log(session);
