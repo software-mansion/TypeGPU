@@ -414,7 +414,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     );
 
     this.#device.queue.submit([commandEncoder.finish()]);
-    await this.#device.queue.onSubmittedWorkDone();
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
     const res = readData(

@@ -152,7 +152,6 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
         this.count * BigUint64Array.BYTES_PER_ELEMENT,
       );
       this.#device.queue.submit([commandEncoder.finish()]);
-      await this.#device.queue.onSubmittedWorkDone();
 
       const readBuffer = this[$internal].readBuffer;
       await readBuffer.mapAsync(GPUMapMode.READ);
