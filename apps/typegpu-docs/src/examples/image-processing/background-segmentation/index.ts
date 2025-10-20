@@ -32,13 +32,15 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 const adapter = await navigator.gpu?.requestAdapter();
-const device = await adapter?.requestDevice({ label: 'my device' });
-if (!device) {
+const device = await adapter?.requestDevice({
+  label: 'my device',
+}) as GPUDevice;
+if (!device || !adapter) {
   throw new Error('Failed to initialize device.');
 }
 
 navigator.gpu.requestAdapter = async () => adapter;
-adapter!.requestDevice = async () => device;
+adapter.requestDevice = async () => device;
 const root = await tgpu.initFromDevice({ device });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -103,7 +105,7 @@ function onVideoChange(size: { width: number; height: number }) {
 }
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined = undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 async function processVideoFrame(
   _: number,
@@ -128,7 +130,7 @@ async function processVideoFrame(
 
   prepareModelInputPipeline
     .with(root.createBindGroup(prepareModelInputLayout, {
-      inputTexture: device!.importExternalTexture({ source: video }),
+      inputTexture: device.importExternalTexture({ source: video }),
       outputBuffer: modelInputBuffer,
       sampler,
     }))
@@ -153,7 +155,7 @@ async function processVideoFrame(
       storeOp: 'store',
     })
     .with(root.createBindGroup(drawWithMaskLayout, {
-      inputTexture: device!.importExternalTexture({ source: video }),
+      inputTexture: device.importExternalTexture({ source: video }),
       maskTexture: maskTexture,
       sampler,
     }))

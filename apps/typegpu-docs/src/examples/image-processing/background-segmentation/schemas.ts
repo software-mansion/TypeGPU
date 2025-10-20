@@ -1,4 +1,4 @@
-import tgpu, { type TgpuMutable, type TgpuSampler } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const prepareModelInputLayout = tgpu.bindGroupLayout({

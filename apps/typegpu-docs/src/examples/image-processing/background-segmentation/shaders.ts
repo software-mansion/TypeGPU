@@ -5,7 +5,7 @@ import {
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
-} from './schemas';
+} from './schemas.ts';
 
 export const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
