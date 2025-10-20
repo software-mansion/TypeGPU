@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { downscaleFragment, mainFrag } from './fragments.ts';
+import { downscale, mainFrag } from './fragments.ts';
 import {
   downscaleLayout,
   externalTextureLayout,
@@ -48,17 +48,10 @@ context.configure({
 
 // webgpu
 
-const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
-
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
-
-const downscaledTexture = root['~unstable'].createTexture({
-  size: [256, 256],
-  format: 'rgba8unorm',
-}).$usage('sampled', 'render');
 
 const maskTexture = root['~unstable'].createTexture({
   size: [256, 256],
@@ -86,11 +79,7 @@ const generateMaskTexturePipeline = root['~unstable']
   .withFragment(generateMaskTextureFragment, { format: 'rgba8unorm' })
   .createPipeline();
 
-const downscalePipeline = root['~unstable']
-  .with(samplerSlot, sampler)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(downscaleFragment, { format: 'rgba8unorm' })
-  .createPipeline();
+const downscalePipeline = root['~unstable'].prepareDispatch(downscale);
 
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
@@ -141,17 +130,12 @@ async function processVideoFrame(
   }
 
   downscalePipeline
-    .withColorAttachment({
-      view: root.unwrap(downscaledTexture.createView()),
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
     .with(root.createBindGroup(downscaleLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
       outputBuffer: downscaledBuffer,
+      sampler,
     }))
-    .draw(3);
+    .dispatchThreads(256, 256);
 
   root['~unstable'].flush();
 
@@ -174,7 +158,7 @@ async function processVideoFrame(
       storeOp: 'store',
     })
     .with(root.createBindGroup(textureLayout, {
-      inputTexture: downscaledTexture,
+      inputTexture: device!.importExternalTexture({ source: video }),
       maskTexture: maskTexture,
     }))
     .draw(3);

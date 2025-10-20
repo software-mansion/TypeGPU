@@ -8,26 +8,18 @@ import {
   textureLayout,
 } from './schemas';
 
-export const downscaleFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f, pos: d.builtin.position },
-  out: d.vec4f,
-})(({ uv, pos }) => {
+export const downscale = (x: number, y: number) => {
+  'use gpu';
   const col = std.textureSampleBaseClampToEdge(
     downscaleLayout.$.inputTexture,
-    samplerSlot.$,
-    uv,
+    downscaleLayout.$.sampler,
+    d.vec2f(d.f32(x), d.f32(y)).div(255),
   );
-
-  const x = d.u32(pos.x);
-  const y = d.u32(pos.y);
 
   downscaleLayout.$.outputBuffer[0 * 256 * 256 + y * 256 + x] = col.x;
   downscaleLayout.$.outputBuffer[1 * 256 * 256 + y * 256 + x] = col.y;
   downscaleLayout.$.outputBuffer[2 * 256 * 256 + y * 256 + x] = col.z;
-
-  return col;
-  // return d.vec4f(1, 1, 0, 1);
-});
+};
 
 export const mainFrag = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
