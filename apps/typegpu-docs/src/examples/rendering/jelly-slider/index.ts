@@ -33,9 +33,10 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const root = await tgpu.init({
   device: {
-    requiredFeatures: ['timestamp-query'],
+    optionalFeatures: ['timestamp-query'],
   },
 });
+const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 context.configure({
   device: root.device,
   format: presentationFormat,
@@ -728,14 +729,14 @@ const renderBackground = (
   let highlights = d.f32(0.0);
 
   const highlightWidth = d.f32(1.1 + slider.endCapUniform.$.x / 2);
-  const highlightHeight = d.f32(0.5 + slider.endCapUniform.$.x / 3);
-  let offsetX = d.f32((0.8 - slider.endCapUniform.$.x) / 2);
+  const highlightHeight = d.f32(0.5 + (1 - slider.endCapUniform.$.x) / 3);
+  let offsetX = d.f32((1.1 - slider.endCapUniform.$.x) / 2);
   let offsetZ = d.f32();
 
   const lightDir = lightUniform.$.direction;
-  const causticScale = 0.15;
+  const causticScale = 0.1;
   offsetX += lightDir.x * causticScale;
-  offsetZ += std.abs(lightDir.z * causticScale);
+  offsetZ += lightDir.z * causticScale;
 
   if (
     std.abs(hitPosition.x + offsetX) < highlightWidth &&
@@ -1163,10 +1164,63 @@ requestAnimationFrame(render);
 
 // #region Example controls and cleanup
 
+async function autoSetQuaility() {
+  if (!hasTimestampQuery) {
+    return 0.5;
+  }
+
+  const targetFrameTime = 16.0;
+  const tolerance = 2.0;
+  let resolutionScale = 0.3;
+  let lastTimeMs = 0;
+
+  const measurePipeline = rayMarchPipeline
+    .withPerformanceCallback((start, end) => {
+      lastTimeMs = Number(end - start) / 1e6;
+    });
+
+  for (let i = 0; i < 8; i++) {
+    const testTexture = root['~unstable'].createTexture({
+      size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
+      format: 'rgba8unorm',
+    }).$usage('render');
+
+    measurePipeline
+      .withColorAttachment({
+        view: root.unwrap(testTexture).createView(),
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .with(
+        root.createBindGroup(rayMarchLayout, {
+          backgroundDistTexture: backgroundDistTexture.read,
+        }),
+      )
+      .draw(3);
+
+    await root.device.queue.onSubmittedWorkDone();
+    testTexture.destroy();
+
+    if (Math.abs(lastTimeMs - targetFrameTime) < tolerance) {
+      break;
+    }
+
+    const adjustment = lastTimeMs > targetFrameTime ? -0.1 : 0.1;
+    resolutionScale = Math.max(
+      0.3,
+      Math.min(1.0, resolutionScale + adjustment),
+    );
+  }
+
+  console.log(`Auto-selected quality scale: ${resolutionScale.toFixed(2)}`);
+  return resolutionScale;
+}
+
 export const controls = {
   'Quality': {
-    initial: 'Low',
+    initial: 'Auto',
     options: [
+      'Auto',
       'Very Low',
       'Low',
       'Medium',
@@ -1174,6 +1228,14 @@ export const controls = {
       'Ultra',
     ],
     onSelectChange: (value: string) => {
+      if (value === 'Auto') {
+        autoSetQuaility().then((scale) => {
+          qualityScale = scale;
+          handleResize();
+        });
+        return;
+      }
+
       const qualityMap: { [key: string]: number } = {
         'Very Low': 0.3,
         'Low': 0.5,
