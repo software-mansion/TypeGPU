@@ -11,6 +11,12 @@ export const prepareModelInputLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
+export const generateMaskLayout = tgpu.bindGroupLayout({
+  maskTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+  },
+});
+
 export const drawWithMaskLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
   maskTexture: { texture: d.texture2d() },

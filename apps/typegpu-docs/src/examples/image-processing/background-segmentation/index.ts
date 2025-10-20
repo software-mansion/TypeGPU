@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import {
   drawWithMaskFragment,
   fullScreenTriangle,
@@ -7,6 +8,7 @@ import {
 } from './shaders.ts';
 import {
   drawWithMaskLayout,
+  generateMaskLayout,
   maskSlot,
   prepareModelInputLayout,
   samplerSlot,
@@ -59,7 +61,10 @@ const sampler = root['~unstable'].createSampler({
 const maskTexture = root['~unstable'].createTexture({
   size: [256, 256],
   format: 'rgba8unorm',
+  dimension: '2d',
 }).$usage('sampled', 'render', 'storage');
+
+const maskTextureView = maskTexture.createView();
 
 const modelInputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
@@ -67,25 +72,19 @@ const modelInputBuffer = root
 
 const modelOutputBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
 
-const generateMaskTextureFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f, pos: d.builtin.position },
-  out: d.vec4f,
-})(({ uv, pos }) => {
-  const x = d.u32(pos.x);
-  const y = d.u32(pos.y);
-
-  return d.vec4f(modelOutputBuffer.$[y * 256 + x]);
+const generateMaskPipeline = root['~unstable'].prepareDispatch((x, y) => {
+  'use gpu';
+  const color = modelOutputBuffer.$[y * 256 + x];
+  std.textureStore(
+    generateMaskLayout.$.maskTexture,
+    d.vec2u(x, y),
+    d.vec4f(color),
+  );
 });
-
-const generateMaskTexturePipeline = root['~unstable']
-  .with(samplerSlot, sampler)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(generateMaskTextureFragment, { format: 'rgba8unorm' })
-  .createPipeline();
 
 const downscalePipeline = root['~unstable'].prepareDispatch(prepareModelInput);
 
-const renderPipeline = root['~unstable']
+const drawWithMaskPipeline = root['~unstable']
   .with(samplerSlot, sampler)
   .with(maskSlot, modelOutputBuffer)
   .withVertex(fullScreenTriangle, {})
@@ -145,16 +144,13 @@ async function processVideoFrame(
 
   await runSession();
 
-  generateMaskTexturePipeline
-    .withColorAttachment({
-      view: root.unwrap(maskTexture.createView()),
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  generateMaskPipeline
+    .with(root.createBindGroup(generateMaskLayout, {
+      maskTexture: maskTexture,
+    }))
+    .dispatchThreads(256, 256);
 
-  renderPipeline
+  drawWithMaskPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [1, 1, 1, 1],
