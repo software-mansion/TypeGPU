@@ -6,6 +6,7 @@ import {
   generateMaskLayout,
   prepareModelInputLayout,
 } from './schemas.ts';
+import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -24,14 +25,17 @@ export const prepareModelInput = (x: number, y: number) => {
     d.vec2f(d.f32(x), d.f32(y)).div(255),
   );
 
-  prepareModelInputLayout.$.outputBuffer[0 * 256 * 256 + y * 256 + x] = col.x;
-  prepareModelInputLayout.$.outputBuffer[1 * 256 * 256 + y * 256 + x] = col.y;
-  prepareModelInputLayout.$.outputBuffer[2 * 256 * 256 + y * 256 + x] = col.z;
+  prepareModelInputLayout.$
+    .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
+  prepareModelInputLayout.$
+    .outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.y;
+  prepareModelInputLayout.$
+    .outputBuffer[2 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.z;
 };
 
 export const generateMaskFromOutput = (x: number, y: number) => {
   'use gpu';
-  const color = generateMaskLayout.$.outputBuffer[y * 256 + x];
+  const color = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
   std.textureStore(
     generateMaskLayout.$.maskTexture,
     d.vec2u(x, y),
@@ -54,6 +58,9 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     drawWithMaskLayout.$.sampler,
     input.uv,
   ).x;
+
+  // return d.vec4f(mask, mask, mask, 1);
+
   if (mask < 0.2) {
     return d.vec4f(0, 0, 0, 1);
   }

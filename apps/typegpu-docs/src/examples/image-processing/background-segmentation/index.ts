@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { prepareSession } from './model.ts';
+import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
   drawWithMaskLayout,
   generateMaskLayout,
@@ -59,17 +59,17 @@ const sampler = root['~unstable'].createSampler({
 });
 
 const maskTexture = root['~unstable'].createTexture({
-  size: [256, 256],
+  size: [MODEL_WIDTH, MODEL_HEIGHT],
   format: 'rgba8unorm',
   dimension: '2d',
 }).$usage('sampled', 'render', 'storage');
 
 const modelInputBuffer = root
-  .createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
+  .createBuffer(d.arrayOf(d.f32, 3 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
 const modelOutputBuffer = root
-  .createBuffer(d.arrayOf(d.f32, 1 * 256 * 256))
+  .createBuffer(d.arrayOf(d.f32, 1 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
 // pipelines
@@ -134,7 +134,7 @@ async function processVideoFrame(
       outputBuffer: modelInputBuffer,
       sampler,
     }))
-    .dispatchThreads(256, 256);
+    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
   root['~unstable'].flush();
 
@@ -145,7 +145,7 @@ async function processVideoFrame(
       maskTexture: maskTexture,
       outputBuffer: modelOutputBuffer,
     }))
-    .dispatchThreads(256, 256);
+    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
   drawWithMaskPipeline
     .withColorAttachment({
