@@ -25,6 +25,7 @@ import {
   SPECULAR_POWER,
   SURF_DIST,
 } from './constants.ts';
+import { NumberProvider } from './numbers.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -52,6 +53,11 @@ const slider = new Slider(
 );
 const bezierTexture = slider.bezierTexture.createView();
 const bezierBbox = slider.bbox;
+
+const digitsProvider = new NumberProvider(root);
+const digitsTextureView = digitsProvider.digitTextureAtlas.createView(
+  d.texture2dArray(d.f32),
+);
 
 let qualityScale = 0.5;
 let [width, height] = [
@@ -145,8 +151,8 @@ const lightUniform = root.createUniform(DirectionalLight, {
 });
 
 const jellyColorUniform = root.createUniform(
-  d.vec3f,
-  d.vec3f(1.0, 0.45, 0.075),
+  d.vec4f,
+  d.vec4f(1.0, 0.45, 0.075, 1.0),
 );
 
 const ObjectType = {
@@ -613,12 +619,7 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   }
 
   if (distanceFromOrigin < MAX_DIST) {
-    const pos = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
-    const n = getNormalMain(pos);
-
-    const lit = calculateLighting(pos, n, rayOrigin);
-    const ao = calculateAO(pos, n);
-    return std.mul(lit, ao);
+    return renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
   }
   return d.vec3f();
 };
@@ -671,6 +672,42 @@ const applyAO = (
   return d.vec4f(finalColor, 1.0);
 };
 
+const renderPercentageOnGround = (
+  hitPosition: d.v3f,
+  center: d.v3f,
+  percentage: number,
+) => {
+  'use gpu';
+
+  const textWidth = 0.3;
+  const textHeight = 0.38;
+
+  if (
+    std.abs(hitPosition.x - center.x) > textWidth * 0.5 ||
+    std.abs(hitPosition.z - center.z) > textHeight * 0.5
+  ) {
+    return d.vec4f();
+  }
+
+  const localX = hitPosition.x - center.x;
+  const localZ = hitPosition.z - center.z;
+
+  const uvX = (localX + textWidth * 0.5) / textWidth;
+  const uvZ = (localZ + textHeight * 0.5) / textHeight;
+
+  if (uvX < 0.0 || uvX > 1.0 || uvZ < 0.0 || uvZ > 1.0) {
+    return d.vec4f();
+  }
+
+  return std.textureSampleLevel(
+    digitsTextureView.$,
+    filteringSampler.$,
+    d.vec2f(uvX, uvZ),
+    percentage,
+    0,
+  );
+};
+
 const renderBackground = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
@@ -681,9 +718,23 @@ const renderBackground = (
     rayOrigin,
     std.mul(rayDirection, backgroundHitDist),
   );
+
+  const percentageSample = renderPercentageOnGround(
+    hitPosition,
+    d.vec3f(0.75, 0.0, 0.0),
+    d.u32((slider.endCapUniform.$.x + 0.43) * 84),
+  );
+
   const normal = getNormalMain(hitPosition);
   const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-  return applyAO(litColor, hitPosition, normal);
+  const backgroundColor = applyAO(litColor, hitPosition, normal);
+
+  const textColor = std.saturate(litColor.mul(d.vec3f(1.3)));
+
+  return d.vec4f(
+    std.mix(backgroundColor.xyz, textColor, percentageSample.x),
+    1.0,
+  );
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
@@ -783,9 +834,9 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
 
         const jellyColor = jellyColorUniform.$;
 
-        const scatterTint = jellyColor.mul(1.5);
+        const scatterTint = jellyColor.xyz.mul(1.5);
         const density = d.f32(20.0);
-        const absorb = d.vec3f(1.0).sub(jellyColor).mul(density);
+        const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
         const T = beerLambert(
           absorb.mul(progress ** 2),
@@ -1101,7 +1152,7 @@ export const controls = {
   'Jelly Color': {
     initial: [1.0, 0.45, 0.075],
     onColorChange: (c: [number, number, number]) => {
-      jellyColorUniform.write(d.vec3f(...c));
+      jellyColorUniform.write(d.vec4f(...c, 1.0));
     },
   },
 };
