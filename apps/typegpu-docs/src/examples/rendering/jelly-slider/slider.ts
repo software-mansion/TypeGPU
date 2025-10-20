@@ -246,7 +246,7 @@ export class Slider {
     this.#computeNormals();
     this.#computeControlPoints();
     this.#updateGPUBuffer();
-    this.#computeBezierTexture.dispatch(...BEZIER_TEXTURE_SIZE);
+    this.#computeBezierTexture.dispatchThreads(...BEZIER_TEXTURE_SIZE);
   }
 
   #integrate(h: number, damp: number, compression: number) {
