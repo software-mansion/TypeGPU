@@ -725,6 +725,52 @@ const renderBackground = (
     d.u32((slider.endCapUniform.$.x + 0.43) * 84),
   );
 
+  let highlights = d.f32(0.0);
+
+  const highlightWidth = d.f32(1.1 + slider.endCapUniform.$.x / 2);
+  const highlightHeight = d.f32(0.5 + slider.endCapUniform.$.x / 3);
+  let offsetX = d.f32((0.8 - slider.endCapUniform.$.x) / 2);
+  let offsetZ = d.f32();
+
+  const lightDir = lightUniform.$.direction;
+  const causticScale = 0.15;
+  offsetX += lightDir.x * causticScale;
+  offsetZ += std.abs(lightDir.z * causticScale);
+
+  if (
+    std.abs(hitPosition.x + offsetX) < highlightWidth &&
+    std.abs(hitPosition.z + offsetZ) < highlightHeight
+  ) {
+    const uvX_orig = (hitPosition.x + offsetX + highlightWidth * 0.5) /
+      highlightWidth;
+    const uvZ_orig = (hitPosition.z + offsetZ + highlightHeight * 0.5) /
+      highlightHeight;
+
+    const lightDir = lightUniform.$.direction;
+    const angle = std.atan2(lightDir.z, lightDir.x) + 1.5708;
+    const cos_a = std.cos(angle);
+    const sin_a = std.sin(angle);
+    const rot = d.mat2x2f(cos_a, -sin_a, sin_a, cos_a);
+
+    const centeredUV = d.vec2f(uvX_orig - 0.5, uvZ_orig - 0.5);
+    const rotatedUV = rot.mul(centeredUV);
+    const finalUV = rotatedUV.add(d.vec2f(0.5));
+
+    const density = 1 - std.textureSampleLevel(
+      bezierTexture.$,
+      filteringSampler.$,
+      finalUV,
+      0,
+    ).x;
+
+    const fadeX = 1.0 - std.abs(finalUV.x - 0.5) * 2.0;
+    const fadeZ = 1.0 - std.abs(finalUV.y - 0.5) * 2.0;
+    const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ);
+
+    highlights = std.pow(density, 4) * edgeFade * 2 *
+      (1.2 - slider.endCapUniform.$.x);
+  }
+
   const normal = getNormalMain(hitPosition);
   const litColor = calculateLighting(hitPosition, normal, rayOrigin);
   const backgroundColor = applyAO(litColor, hitPosition, normal);
@@ -732,7 +778,9 @@ const renderBackground = (
   const textColor = std.saturate(litColor.mul(d.vec3f(1.3)));
 
   return d.vec4f(
-    std.mix(backgroundColor.xyz, textColor, percentageSample.x),
+    std.mix(backgroundColor.xyz, textColor, percentageSample.x).mul(
+      1.0 + highlights,
+    ),
     1.0,
   );
 };
