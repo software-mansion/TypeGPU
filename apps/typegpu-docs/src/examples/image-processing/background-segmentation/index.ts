@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { mainFrag, mainVert } from './render.ts';
+import { mainFrag } from './render.ts';
 import {
   externalTextureLayout,
   maskSlot,
@@ -9,9 +9,8 @@ import {
   textureLayout,
   uvTransformUniformSlot,
 } from './schemas.ts';
-import * as ort from 'onnxruntime-web/webgpu';
-
-// code
+import { fullScreenTriangle } from './common.ts';
+import { prepareSession } from './model.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
@@ -49,24 +48,6 @@ context.configure({
 
 // model
 
-// ort.env.webgpu.device = root.device; // https://github.com/microsoft/onnxruntime/issues/26107
-
-const weightsRaw = await fetch(
-  '/TypeGPU/assets/background-segmentation/model.data',
-);
-const weights = await weightsRaw.blob();
-
-const session = await ort.InferenceSession
-  .create('/TypeGPU/assets/background-segmentation/model.onnx', {
-    executionProviders: ['webgpu'],
-    externalData: [{
-      data: weights,
-      path: 'model.data',
-    }],
-  });
-
-console.log(session);
-
 // webgpu
 
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
@@ -89,15 +70,6 @@ const maskTexture = root['~unstable'].createTexture({
 const downscaledBuffer = root.createMutable(d.arrayOf(d.f32, 3 * 256 * 256));
 
 const processedBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
-
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})`{
-  const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-  const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-  return Out(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
-}`;
 
 const downscaleFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f, pos: d.builtin.position },
@@ -146,7 +118,7 @@ const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
   .with(uvTransformUniformSlot, uvTransformUniform)
   .with(maskSlot, processedBuffer)
-  .withVertex(mainVert, {})
+  .withVertex(fullScreenTriangle, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
 
@@ -182,6 +154,11 @@ if (isIOS) {
   setUVTransformForIOS();
   window.addEventListener('orientationchange', setUVTransformForIOS);
 }
+
+const runSession = await prepareSession(
+  root.unwrap(downscaledBuffer.buffer),
+  root.unwrap(processedBuffer.buffer),
+);
 
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined = undefined;
@@ -221,25 +198,7 @@ async function processVideoFrame(
 
   root['~unstable'].flush();
 
-  const myPreAllocatedInputTensor = ort.Tensor.fromGpuBuffer(
-    root.unwrap(downscaledBuffer.buffer),
-    {
-      dataType: 'float32',
-      dims: [1, 3, 256, 256],
-    },
-  );
-
-  const myPreAllocatedOutputTensor = ort.Tensor.fromGpuBuffer(
-    root.unwrap(processedBuffer.buffer),
-    {
-      dataType: 'float32',
-      dims: [1, 1, 256, 256],
-    },
-  );
-
-  const feeds = { 'image': myPreAllocatedInputTensor };
-  const fetches = { 'mask': myPreAllocatedOutputTensor };
-  await session.run(feeds, fetches);
+  await runSession();
 
   generateMaskTexturePipeline
     .withColorAttachment({
@@ -261,12 +220,9 @@ async function processVideoFrame(
       inputTexture: downscaledTexture,
       maskTexture: maskTexture,
     }))
-    .draw(6);
+    .draw(3);
 
-  downscaledBuffer.read().then(console.log);
-  processedBuffer.read().then(console.log);
-
-  // videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
+  videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
