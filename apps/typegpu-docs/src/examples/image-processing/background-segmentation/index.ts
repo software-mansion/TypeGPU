@@ -1,20 +1,17 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { prepareSession } from './model.ts';
+import {
+  drawWithMaskLayout,
+  generateMaskLayout,
+  prepareModelInputLayout,
+} from './schemas.ts';
 import {
   drawWithMaskFragment,
   fullScreenTriangle,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
-import {
-  drawWithMaskLayout,
-  generateMaskLayout,
-  maskSlot,
-  prepareModelInputLayout,
-  samplerSlot,
-} from './schemas.ts';
-import { prepareSession } from './model.ts';
 
 // setup
 
@@ -89,7 +86,6 @@ const generateMaskFromOutputPipeline = root['~unstable'].prepareDispatch(
 );
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(samplerSlot, sampler)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
@@ -159,6 +155,7 @@ async function processVideoFrame(
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
       maskTexture: maskTexture,
+      sampler,
     }))
     .draw(3);
 

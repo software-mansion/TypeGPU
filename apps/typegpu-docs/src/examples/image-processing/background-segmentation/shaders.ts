@@ -5,7 +5,6 @@ import {
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
-  samplerSlot,
 } from './schemas';
 
 export const fullScreenTriangle = tgpu['~unstable'].vertexFn({
@@ -46,13 +45,13 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
 })((input) => {
   const col = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
-    samplerSlot.$,
+    drawWithMaskLayout.$.sampler,
     input.uv,
   );
 
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
-    samplerSlot.$,
+    drawWithMaskLayout.$.sampler,
     input.uv,
   ).x;
   if (mask < 0.2) {

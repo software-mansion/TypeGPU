@@ -1,8 +1,4 @@
-import tgpu, {
-  type TgpuBuffer,
-  type TgpuMutable,
-  type TgpuSampler,
-} from 'typegpu';
+import tgpu, { type TgpuMutable, type TgpuSampler } from 'typegpu';
 import * as d from 'typegpu/data';
 
 export const prepareModelInputLayout = tgpu.bindGroupLayout({
@@ -21,7 +17,5 @@ export const generateMaskLayout = tgpu.bindGroupLayout({
 export const drawWithMaskLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
   maskTexture: { texture: d.texture2d() },
+  sampler: { sampler: 'filtering' },
 });
-
-export const samplerSlot = tgpu.slot<TgpuSampler>();
-export const maskSlot = tgpu.slot<TgpuMutable<d.WgslArray<d.F32>>>();
