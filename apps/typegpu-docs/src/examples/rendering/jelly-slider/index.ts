@@ -17,16 +17,16 @@ import {
   rayMarchLayout,
   sampleLayout,
   SdfBbox,
-  taaResolveLayout,
 } from './dataTypes.ts';
 import {
   beerLambert,
   createBackgroundDistTexture,
-  createResolvedTextures,
   createTextures,
   fresnelSchlick,
+  fullScreenTriangle,
   intersectBox,
 } from './utils.ts';
+import { TAAResolver } from './taa.ts';
 import {
   AMBIENT_COLOR,
   AMBIENT_INTENSITY,
@@ -823,77 +823,6 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   );
 });
 
-const taaResolveFn = tgpu['~unstable'].computeFn({
-  workgroupSize: [16, 16],
-  in: {
-    gid: d.builtin.globalInvocationId,
-  },
-})(({ gid }) => {
-  const currentColor = std.textureLoad(
-    taaResolveLayout.$.currentTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
-
-  const historyColor = std.textureLoad(
-    taaResolveLayout.$.historyTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
-
-  let minColor = d.vec3f(9999.0);
-  let maxColor = d.vec3f(-9999.0);
-
-  const dimensions = std.textureDimensions(taaResolveLayout.$.currentTexture);
-
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
-      const sampleCoord = d.vec2i(gid.xy).add(d.vec2i(x, y));
-      const clampedCoord = std.clamp(
-        sampleCoord,
-        d.vec2i(0, 0),
-        d.vec2i(dimensions.xy).sub(d.vec2i(1)),
-      );
-
-      const neighborColor = std.textureLoad(
-        taaResolveLayout.$.currentTexture,
-        clampedCoord,
-        0,
-      );
-
-      minColor = std.min(minColor, neighborColor.xyz);
-      maxColor = std.max(maxColor, neighborColor.xyz);
-    }
-  }
-
-  const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
-
-  const blendFactor = d.f32(0.9);
-  const resolvedColor = d.vec4f(
-    std.mix(currentColor.xyz, historyColorClamped, blendFactor),
-    1.0,
-  );
-
-  std.textureStore(
-    taaResolveLayout.$.outputTexture,
-    d.vec2u(gid.x, gid.y),
-    resolvedColor,
-  );
-});
-
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -914,10 +843,6 @@ const rayMarchPipeline = root['~unstable']
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
   .createPipeline();
 
-const taaResolvePipeline = root['~unstable']
-  .withCompute(taaResolveFn)
-  .createPipeline();
-
 const renderPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
   .withFragment(fragmentMain, { format: presentationFormat })
@@ -926,7 +851,7 @@ const renderPipeline = root['~unstable']
 const eventHandler = new EventHandler(canvas);
 let lastTimeStamp = performance.now();
 let frameCount = 0;
-let resolvedTextures = createResolvedTextures(root, width, height);
+const taaResolver = new TAAResolver(root, width, height);
 
 function render(timestamp: number) {
   frameCount++;
@@ -939,7 +864,6 @@ function render(timestamp: number) {
   slider.update(deltaTime);
 
   const currentFrame = frameCount % 2;
-  const previousFrame = 1 - currentFrame;
 
   backgroundDistPipeline.with(
     root.createBindGroup(backgroundDistLayout, {
@@ -960,17 +884,10 @@ function render(timestamp: number) {
     storeOp: 'store',
   }).draw(3);
 
-  taaResolvePipeline.with(
-    root.createBindGroup(taaResolveLayout, {
-      currentTexture: textures[currentFrame].sampled,
-      historyTexture: frameCount === 1
-        ? textures[currentFrame].sampled
-        : resolvedTextures[previousFrame].sampled,
-      outputTexture: resolvedTextures[currentFrame].write,
-    }),
-  ).dispatchWorkgroups(
-    Math.ceil(width / 16),
-    Math.ceil(height / 16),
+  const resolvedTexture = taaResolver.resolve(
+    textures[currentFrame].sampled,
+    frameCount,
+    currentFrame,
   );
 
   renderPipeline
@@ -980,12 +897,7 @@ function render(timestamp: number) {
       storeOp: 'store',
     })
     .with(
-      root.createBindGroup(
-        sampleLayout,
-        {
-          currentTexture: resolvedTextures[currentFrame].sampled,
-        },
-      ),
+      root.createBindGroup(sampleLayout, { currentTexture: resolvedTexture }),
     )
     .draw(3);
 
@@ -1000,7 +912,7 @@ function handleResize() {
   camera.updateProjection(Math.PI / 4, width, height);
   textures = createTextures(root, width, height);
   backgroundDistTexture = createBackgroundDistTexture(root, width, height);
-  resolvedTextures = createResolvedTextures(root, width, height);
+  taaResolver.resize(width, height);
   frameCount = 0;
 }
 

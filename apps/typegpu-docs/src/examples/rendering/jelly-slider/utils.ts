@@ -1,3 +1,4 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { BoxIntersection } from './dataTypes.ts';
@@ -74,20 +75,15 @@ export function createBackgroundDistTexture(
   };
 }
 
-export function createResolvedTextures(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
-  return [0, 1].map(() => {
-    const texture = root['~unstable'].createTexture({
-      size: [width, height],
-      format: 'rgba8unorm',
-    }).$usage('storage', 'sampled');
+export const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})((input) => {
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
 
-    return {
-      write: texture.createView(d.textureStorage2d('rgba8unorm')),
-      sampled: texture.createView(),
-    };
-  });
-}
+  return {
+    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
+    uv: uv[input.vertexIndex],
+  };
+});
