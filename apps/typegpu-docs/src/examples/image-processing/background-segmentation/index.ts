@@ -4,6 +4,7 @@ import * as std from 'typegpu/std';
 import {
   drawWithMaskFragment,
   fullScreenTriangle,
+  generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
 import {
@@ -64,32 +65,36 @@ const maskTexture = root['~unstable'].createTexture({
   dimension: '2d',
 }).$usage('sampled', 'render', 'storage');
 
-const maskTextureView = maskTexture.createView();
-
 const modelInputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 3 * 256 * 256))
   .$usage('storage');
 
-const modelOutputBuffer = root.createMutable(d.arrayOf(d.f32, 1 * 256 * 256));
+const modelOutputBuffer = root
+  .createBuffer(d.arrayOf(d.f32, 1 * 256 * 256))
+  .$usage('storage');
 
-const generateMaskPipeline = root['~unstable'].prepareDispatch((x, y) => {
-  'use gpu';
-  const color = modelOutputBuffer.$[y * 256 + x];
-  std.textureStore(
-    generateMaskLayout.$.maskTexture,
-    d.vec2u(x, y),
-    d.vec4f(color),
-  );
-});
+// pipelines
 
-const downscalePipeline = root['~unstable'].prepareDispatch(prepareModelInput);
+const prepareModelInputPipeline = root['~unstable'].prepareDispatch(
+  prepareModelInput,
+);
+
+const runSession = await prepareSession(
+  root.unwrap(modelInputBuffer),
+  root.unwrap(modelOutputBuffer),
+);
+
+const generateMaskFromOutputPipeline = root['~unstable'].prepareDispatch(
+  generateMaskFromOutput,
+);
 
 const drawWithMaskPipeline = root['~unstable']
   .with(samplerSlot, sampler)
-  .with(maskSlot, modelOutputBuffer)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
+
+// frame
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -100,13 +105,6 @@ function onVideoChange(size: { width: number; height: number }) {
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
-
-// other
-
-const runSession = await prepareSession(
-  root.unwrap(modelInputBuffer),
-  root.unwrap(modelOutputBuffer.buffer),
-);
 
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined = undefined;
@@ -132,7 +130,7 @@ async function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
-  downscalePipeline
+  prepareModelInputPipeline
     .with(root.createBindGroup(prepareModelInputLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
       outputBuffer: modelInputBuffer,
@@ -144,9 +142,10 @@ async function processVideoFrame(
 
   await runSession();
 
-  generateMaskPipeline
+  generateMaskFromOutputPipeline
     .with(root.createBindGroup(generateMaskLayout, {
       maskTexture: maskTexture,
+      outputBuffer: modelOutputBuffer,
     }))
     .dispatchThreads(256, 256);
 

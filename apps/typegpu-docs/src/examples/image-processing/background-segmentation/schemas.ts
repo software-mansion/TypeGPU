@@ -12,6 +12,7 @@ export const prepareModelInputLayout = tgpu.bindGroupLayout({
 });
 
 export const generateMaskLayout = tgpu.bindGroupLayout({
+  outputBuffer: { storage: d.arrayOf(d.f32), access: 'readonly' },
   maskTexture: {
     storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
   },

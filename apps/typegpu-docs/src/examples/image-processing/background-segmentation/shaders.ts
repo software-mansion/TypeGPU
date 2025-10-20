@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
   drawWithMaskLayout,
+  generateMaskLayout,
   prepareModelInputLayout,
   samplerSlot,
 } from './schemas';
@@ -27,6 +28,16 @@ export const prepareModelInput = (x: number, y: number) => {
   prepareModelInputLayout.$.outputBuffer[0 * 256 * 256 + y * 256 + x] = col.x;
   prepareModelInputLayout.$.outputBuffer[1 * 256 * 256 + y * 256 + x] = col.y;
   prepareModelInputLayout.$.outputBuffer[2 * 256 * 256 + y * 256 + x] = col.z;
+};
+
+export const generateMaskFromOutput = (x: number, y: number) => {
+  'use gpu';
+  const color = generateMaskLayout.$.outputBuffer[y * 256 + x];
+  std.textureStore(
+    generateMaskLayout.$.maskTexture,
+    d.vec2u(x, y),
+    d.vec4f(color),
+  );
 };
 
 export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
