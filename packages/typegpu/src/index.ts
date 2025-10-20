@@ -144,7 +144,12 @@ export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';
 export type { TgpuConst } from './core/constant/tgpuConstant.ts';
 export type { TgpuVar, VariableScope } from './core/variable/tgpuVariable.ts';
-export type { TgpuSampler } from './core/sampler/sampler.ts';
+export type {
+  TgpuComparisonSampler,
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+  TgpuSampler,
+} from './core/sampler/sampler.ts';
 export type { TgpuQuerySet } from './core/querySet/querySet.ts';
 export type {
   BindLayoutEntry,
