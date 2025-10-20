@@ -80,7 +80,7 @@ const pipeline = root['~unstable']
 
 function render() {
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',

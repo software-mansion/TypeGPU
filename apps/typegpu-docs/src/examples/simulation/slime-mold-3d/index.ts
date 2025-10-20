@@ -106,7 +106,7 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].prepareDispatch((x) => {
+root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -487,14 +487,16 @@ function frame() {
 
   params.writePartial({ deltaTime });
 
-  blurPipeline.with(computeLayout, bindGroups[currentTexture])
+  blurPipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(resolution.x / BLUR_WORKGROUP_SIZE[0]),
       Math.ceil(resolution.y / BLUR_WORKGROUP_SIZE[1]),
       Math.ceil(resolution.z / BLUR_WORKGROUP_SIZE[2]),
     );
 
-  computePipeline.with(computeLayout, bindGroups[currentTexture])
+  computePipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE),
     );
@@ -505,10 +507,8 @@ function frame() {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      renderLayout,
-      renderBindGroups[1 - currentTexture],
-    ).draw(3);
+    .with(renderBindGroups[1 - currentTexture])
+    .draw(3);
 
   root['~unstable'].flush();
 
