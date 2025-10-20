@@ -205,7 +205,9 @@ export interface Configurable {
 export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
-  ): WithCompute; /**
+  ): WithCompute;
+
+  /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.
    * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
    * thread id, where as regular pipelines do not and work in units of workgroups.
@@ -250,7 +252,6 @@ export interface WithBinding {
    * // [GPU] I am the 240 thread
    * ```
    */
-
   createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => void,
   ): TgpuGuardedComputePipeline<TArgs>;
