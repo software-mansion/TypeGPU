@@ -1,13 +1,16 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { downscale, mainFrag } from './fragments.ts';
 import {
-  downscaleLayout,
+  drawWithMaskFragment,
+  fullScreenTriangle,
+  prepareModelInput,
+} from './shaders.ts';
+import {
+  drawWithMaskLayout,
   maskSlot,
+  prepareModelInputLayout,
   samplerSlot,
-  textureLayout,
 } from './schemas.ts';
-import { fullScreenTriangle } from './common.ts';
 import { prepareSession } from './model.ts';
 
 // setup
@@ -80,13 +83,13 @@ const generateMaskTexturePipeline = root['~unstable']
   .withFragment(generateMaskTextureFragment, { format: 'rgba8unorm' })
   .createPipeline();
 
-const downscalePipeline = root['~unstable'].prepareDispatch(downscale);
+const downscalePipeline = root['~unstable'].prepareDispatch(prepareModelInput);
 
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
   .with(maskSlot, modelOutputBuffer)
   .withVertex(fullScreenTriangle, {})
-  .withFragment(mainFrag, { format: presentationFormat })
+  .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
 
 function onVideoChange(size: { width: number; height: number }) {
@@ -131,7 +134,7 @@ async function processVideoFrame(
   }
 
   downscalePipeline
-    .with(root.createBindGroup(downscaleLayout, {
+    .with(root.createBindGroup(prepareModelInputLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
       outputBuffer: modelInputBuffer,
       sampler,
@@ -158,7 +161,7 @@ async function processVideoFrame(
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(root.createBindGroup(textureLayout, {
+    .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device!.importExternalTexture({ source: video }),
       maskTexture: maskTexture,
     }))

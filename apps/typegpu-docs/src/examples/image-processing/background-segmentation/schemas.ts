@@ -5,13 +5,13 @@ import tgpu, {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 
-export const downscaleLayout = tgpu.bindGroupLayout({
+export const prepareModelInputLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
   outputBuffer: { storage: d.arrayOf(d.f32), access: 'mutable' },
   sampler: { sampler: 'filtering' },
 });
 
-export const textureLayout = tgpu.bindGroupLayout({
+export const drawWithMaskLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
   maskTexture: { texture: d.texture2d() },
 });
