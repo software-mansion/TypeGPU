@@ -1,24 +1,16 @@
 import * as ort from 'onnxruntime-web/webgpu';
 
-export const MODEL_WIDTH = 256;
-export const MODEL_HEIGHT = 256;
+export const MODEL_WIDTH = 320;
+export const MODEL_HEIGHT = 320;
 
 // AAA docs
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   // ort.env.webgpu.device = root.device; // see https://github.com/microsoft/onnxruntime/issues/26107
 
-  const weightsRaw = await fetch(
-    '/TypeGPU/assets/background-segmentation/model.data',
-  );
-  const weights = await weightsRaw.blob();
-
   const session = await ort.InferenceSession
-    .create('/TypeGPU/assets/background-segmentation/model.onnx', {
+    .create('/TypeGPU/assets/background-segmentation/silueta.onnx', {
       executionProviders: ['webgpu'],
-      externalData: [{
-        data: weights,
-        path: 'model.data',
-      }],
+      logVerbosityLevel: 3,
     });
 
   console.log(session);
@@ -33,7 +25,7 @@ export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
     dims: [1, 1, MODEL_HEIGHT, MODEL_WIDTH],
   });
 
-  const feeds = { 'image': myPreAllocatedInputTensor };
-  const fetches = { 'mask': myPreAllocatedOutputTensor };
+  const feeds = { 'input.1': myPreAllocatedInputTensor };
+  const fetches = { '1960': myPreAllocatedOutputTensor };
   return () => session.run(feeds, fetches);
 }
