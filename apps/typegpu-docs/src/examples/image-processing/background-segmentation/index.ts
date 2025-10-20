@@ -7,7 +7,6 @@ import {
   maskSlot,
   samplerSlot,
   textureLayout,
-  uvTransformUniformSlot,
 } from './schemas.ts';
 import { fullScreenTriangle } from './common.ts';
 import { prepareSession } from './model.ts';
@@ -45,8 +44,6 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
-
-// model
 
 // webgpu
 
@@ -116,7 +113,6 @@ const downscalePipeline = root['~unstable']
 
 const renderPipeline = root['~unstable']
   .with(samplerSlot, sampler)
-  .with(uvTransformUniformSlot, uvTransformUniform)
   .with(maskSlot, processedBuffer)
   .withVertex(fullScreenTriangle, {})
   .withFragment(mainFrag, { format: presentationFormat })
@@ -133,27 +129,6 @@ function onVideoChange(size: { width: number; height: number }) {
 }
 
 // other
-
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-function setUVTransformForIOS() {
-  const angle = screen.orientation.type;
-
-  let m = d.mat2x2f(1, 0, 0, 1);
-  if (angle === 'portrait-primary') {
-    m = d.mat2x2f(0, -1, 1, 0);
-  } else if (angle === 'portrait-secondary') {
-    m = d.mat2x2f(0, 1, -1, 0);
-  } else if (angle === 'landscape-primary') {
-    m = d.mat2x2f(-1, 0, 0, -1);
-  }
-
-  uvTransformUniform.write(m);
-}
-
-if (isIOS) {
-  setUVTransformForIOS();
-  window.addEventListener('orientationchange', setUVTransformForIOS);
-}
 
 const runSession = await prepareSession(
   root.unwrap(downscaledBuffer.buffer),

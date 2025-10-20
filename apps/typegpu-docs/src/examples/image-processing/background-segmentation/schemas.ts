@@ -16,5 +16,4 @@ export const textureLayout = tgpu.bindGroupLayout({
 });
 
 export const samplerSlot = tgpu.slot<TgpuSampler>();
-export const uvTransformUniformSlot = tgpu.slot<TgpuUniform<d.Mat2x2f>>();
 export const maskSlot = tgpu.slot<TgpuMutable<d.WgslArray<d.F32>>>();
