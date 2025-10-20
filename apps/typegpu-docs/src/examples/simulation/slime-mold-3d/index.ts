@@ -113,7 +113,7 @@ root['~unstable'].prepareDispatch((x) => {
   const center = resolution.div(2);
   const dir = std.normalize(center.sub(pos));
   agentsData.$[x] = Agent({ position: pos, direction: dir });
-}).dispatch(NUM_AGENTS);
+}).dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
   deltaTime: 0,
