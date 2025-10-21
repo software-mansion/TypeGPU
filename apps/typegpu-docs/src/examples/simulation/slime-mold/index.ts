@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
@@ -31,9 +31,9 @@ const Params = d.struct({
   evaporationRate: d.f32,
 });
 const defaultParams = {
-  moveSpeed: 30.0,
+  moveSpeed: 50.0,
   sensorAngle: 0.5,
-  sensorDistance: 9.0,
+  sensorDistance: 15.0,
   turnSpeed: 2.0,
   evaporationRate: 0.05,
 };
@@ -41,8 +41,8 @@ const defaultParams = {
 const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-prepareDispatch(root, (x) => {
-  'kernel';
+root['~unstable'].prepareDispatch((x) => {
+  'use gpu';
   randf.seed(x / NUM_AGENTS + 0.1);
   const pos = randf.inUnitCircle().mul(resolution.x / 2 - 10).add(
     resolution.div(2),
@@ -55,7 +55,7 @@ prepareDispatch(root, (x) => {
     position: pos,
     angle,
   });
-}).dispatch(NUM_AGENTS);
+}).dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, defaultParams);
 const deltaTime = root.createUniform(d.f32, 0.016);
@@ -79,7 +79,7 @@ const renderLayout = tgpu.bindGroupLayout({
 });
 
 const sense = (pos: d.v2f, angle: number, sensorAngleOffset: number) => {
-  'kernel';
+  'use gpu';
   const sensorAngle = angle + sensorAngleOffset;
   const sensorDir = d.vec2f(std.cos(sensorAngle), std.sin(sensorAngle));
   const sensorPos = pos.add(sensorDir.mul(params.$.sensorDistance));
@@ -220,7 +220,7 @@ const fullScreenTriangle = tgpu['~unstable'].vertexFn({
   };
 });
 
-const filteringSampler = tgpu['~unstable'].sampler({
+const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -229,7 +229,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  return std.textureSample(renderLayout.$.state, filteringSampler, uv);
+  return std.textureSample(renderLayout.$.state, filteringSampler.$, uv);
 });
 
 const renderPipeline = root['~unstable']
