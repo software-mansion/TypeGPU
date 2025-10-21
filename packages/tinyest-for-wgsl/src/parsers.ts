@@ -388,7 +388,7 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  // @ts-ignore <too much for typescript, it seems :/ >
+  // @ts-expect-error <too much for typescript, it seems :/ >
   return transpiler(ctx, node);
 }
 

@@ -125,7 +125,7 @@ const newInkTex = createField('addedInk');
 const forceTex = createField('force');
 const divergenceTex = createField('divergence');
 
-const linSampler = tgpu['~unstable'].sampler({
+const linSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
