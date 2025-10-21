@@ -1,8 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { sdRoundedBox2d } from '@typegpu/sdf';
-import { fullScreenTriangle } from './common.ts';
 
 const root = await tgpu.init();
 const device = root.device;

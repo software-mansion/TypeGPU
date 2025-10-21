@@ -9,7 +9,8 @@
     "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./data": "./src/data/index.ts",
-    "./std": "./src/std/index.ts"
+    "./std": "./src/std/index.ts",
+    "./common": "./src/common/index.ts"
   },
   "publishConfig": {
     "directory": "dist",
@@ -35,6 +36,12 @@
         "module": "./dist/std/index.js",
         "import": "./dist/std/index.js",
         "default": "./dist/std/index.cjs"
+      },
+      "./common": {
+        "types": "./dist/common/index.d.ts",
+        "module": "./dist/common/index.js",
+        "import": "./dist/common/index.js",
+        "default": "./dist/common/index.cjs"
       }
     }
   },
