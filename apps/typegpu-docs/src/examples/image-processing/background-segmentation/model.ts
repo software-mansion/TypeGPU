@@ -6,11 +6,13 @@ export const MODEL_HEIGHT = 320;
 // AAA docs
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   // ort.env.webgpu.device = root.device; // see https://github.com/microsoft/onnxruntime/issues/26107
+  ort.env.debug = true;
 
   const session = await ort.InferenceSession
     .create('/TypeGPU/assets/background-segmentation/silueta.onnx', {
       executionProviders: ['webgpu'],
-      logVerbosityLevel: 3,
+      graphOptimizationLevel: 'disabled',
+      enableGraphCapture: true,
     });
 
   console.log(session);

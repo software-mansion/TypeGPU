@@ -22,7 +22,7 @@ export const prepareModelInput = (x: number, y: number) => {
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
-    d.vec2f(d.f32(x), d.f32(y)).div(255),
+    d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT)),
   );
 
   prepareModelInputLayout.$
