@@ -141,7 +141,7 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
-    "@types/babel__traverse": "^7.20.7",
+    "@types/babel__traverse": "^7.28.0",
     "@types/bun": "^1.2.22",
     "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
