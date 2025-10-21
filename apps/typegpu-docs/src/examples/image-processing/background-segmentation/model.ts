@@ -9,10 +9,8 @@ export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   ort.env.debug = true;
 
   const session = await ort.InferenceSession
-    .create('/TypeGPU/assets/background-segmentation/silueta.onnx', {
+    .create('/TypeGPU/assets/background-segmentation/u2netp.onnx', {
       executionProviders: ['webgpu'],
-      graphOptimizationLevel: 'disabled',
-      enableGraphCapture: true,
     });
 
   console.log(session);
@@ -28,6 +26,6 @@ export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   });
 
   const feeds = { 'input.1': myPreAllocatedInputTensor };
-  const fetches = { '1960': myPreAllocatedOutputTensor };
+  const fetches = { '1959': myPreAllocatedOutputTensor };
   return () => session.run(feeds, fetches);
 }

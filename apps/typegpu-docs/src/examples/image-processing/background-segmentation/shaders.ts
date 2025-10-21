@@ -59,10 +59,5 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     input.uv,
   ).x;
 
-  // return d.vec4f(mask, mask, mask, 1);
-
-  if (mask < 0.2) {
-    return d.vec4f(0, 0, 0, 1);
-  }
-  return col;
+  return d.vec4f(col.xyz.mul(mask), 1);
 });
