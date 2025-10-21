@@ -385,7 +385,7 @@ const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
   'use gpu';
   const newDir = std.normalize(lightDir);
 
-  const bias = 0.004;
+  const bias = 0.005;
   const newOrigin = position.add(normal.mul(bias));
 
   const bbox = getSliderBbox();
@@ -916,7 +916,7 @@ async function autoSetQuaility() {
     return 0.5;
   }
 
-  const targetFrameTime = 16.0;
+  const targetFrameTime = 8.3;
   const tolerance = 2.0;
   let resolutionScale = 0.3;
   let lastTimeMs = 0;
@@ -988,7 +988,7 @@ export const controls = {
         'Low': 0.5,
         'Medium': 0.7,
         'High': 0.85,
-        'Ultra': 4.0,
+        'Ultra': 1.0,
       };
 
       qualityScale = qualityMap[value] || 0.5;
