@@ -245,11 +245,11 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
 
       for (const prop of canvas.style) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas.style[prop] = canvas.style[prop];
       }
       for (const attribute of canvas.attributes) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas[attribute.name] = attribute.value;
       }
       newCanvas.className = 'absolute w-full h-full';

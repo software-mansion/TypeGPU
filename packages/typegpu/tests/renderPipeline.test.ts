@@ -114,7 +114,7 @@ describe('TgpuRenderPipeline', () => {
     );
 
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
     );
   });
 
@@ -138,6 +138,36 @@ describe('TgpuRenderPipeline', () => {
       tgpu['~unstable'].fragmentFn({ out: {} }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+  });
+
+  it('type checks passed bind groups', ({ root }) => {
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      out: { bar: d.location(0, d.vec3f) },
+    })(() => ({
+      bar: d.vec3f(),
+    }));
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      in: { bar: d.location(0, d.vec3f) },
+      out: d.vec4f,
+    })(() => d.vec4f());
+    const renderPipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { format: 'r8unorm' })
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    renderPipeline.with(layout1, bindGroup1);
+    renderPipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => renderPipeline.with(layout1, bindGroup2));
   });
 
   describe('resolve', () => {
@@ -451,7 +481,7 @@ describe('TgpuRenderPipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const vertexFn = tgpu['~unstable'].vertexFn({
@@ -474,8 +504,36 @@ describe('TgpuRenderPipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
+    });
+
+    it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
+      const vertexFn = tgpu['~unstable'].vertexFn({
+        out: { pos: d.builtin.position },
+      })('');
+
+      const fragmentFn = tgpu['~unstable'].fragmentFn({
+        in: {},
+        out: {
+          fragColor: d.vec4f,
+          fragDepth: d.builtin.fragDepth,
+        },
+      })(() => {
+        return {
+          fragColor: d.vec4f(),
+          fragDepth: 0.0,
+        };
+      });
+
+      expect(() => {
+        root
+          .withVertex(vertexFn, {})
+          .withFragment(fragmentFn, { fragColor: { format: 'rgba8unorm' } })
+          .createPipeline();
+      }).not.toThrow(
+        "A color target by the name of 'fragDepth' was not provided to the shader.",
+      );
     });
   });
 
