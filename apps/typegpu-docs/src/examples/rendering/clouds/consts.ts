@@ -5,8 +5,8 @@ import tgpu, {
   type TgpuTextureView,
 } from 'typegpu';
 
-export const MAX_ITERATIONS = 120; // 50 - 200
-export const MARCH_SIZE = 0.05; // 0.05 - 0.15
+export const MAX_ITERATIONS = 50;
+export const FAR = 10;
 export const SUN_DIRECTION = d.vec3f(1.0, 0.0, 0.0); // [-1.0, -1.0, -1.0] - [1.0, 1.0, 1.0]
 export const ANGLE_DISTORTION = 1.0; // 0.1 - 3.0
 export const SUN_INTENSITY = 0.7; // 0.01 - 1.0

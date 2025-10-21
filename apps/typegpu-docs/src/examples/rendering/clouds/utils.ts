@@ -6,9 +6,9 @@ import {
   CLOUD_DENSITY,
   CLOUD_DETALIZATION,
   DARK,
+  FAR,
   FLIGHT_SPEED,
   LIGHT_ABSORPTION,
-  MARCH_SIZE,
   MAX_ITERATIONS,
   sampledViewSlot,
   samplerSlot,
@@ -28,10 +28,11 @@ export const raymarch = tgpu.fn(
   const hash = std.fract(
     std.sin(std.dot(rd.xy, d.vec2f(12.9898, 78.233))) * 43758.5453,
   );
+  const MARCH_SIZE = 1 / MAX_ITERATIONS;
   let depth = hash * MARCH_SIZE;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const p = std.add(ro, std.mul(rd, depth));
+    const p = std.add(ro, std.mul(rd, depth * FAR));
     const rawDensity = fractalBrownianMotion(p) - 1.5 + CLOUD_DENSITY * 2;
     const density = std.clamp(rawDensity, 0.0, 1.0);
 
