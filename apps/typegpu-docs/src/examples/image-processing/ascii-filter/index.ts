@@ -187,7 +187,7 @@ let bindGroup:
   | undefined;
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined = undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 function processVideoFrame(
   _: number,
