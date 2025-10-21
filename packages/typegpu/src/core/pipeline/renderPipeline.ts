@@ -8,6 +8,7 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { WgslTexture } from '../../data/texture.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -46,7 +47,12 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import { isTexture, type TgpuTexture } from '../texture/texture.ts';
+import {
+  isTexture,
+  isTextureView,
+  type TgpuTexture,
+  type TgpuTextureView,
+} from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import {
@@ -155,7 +161,10 @@ export interface ColorAttachment {
    * A {@link GPUTextureView} describing the texture subresource that will be output to for this
    * color attachment.
    */
-  view: (TgpuTexture & RenderFlag) | GPUTextureView;
+  view:
+    | (TgpuTexture & RenderFlag)
+    | GPUTextureView
+    | TgpuTextureView<WgslTexture>;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -503,6 +512,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           return {
             ...attachment,
             view: branch.unwrap(attachment.view).createView(),
+          };
+        }
+
+        if (isTextureView(attachment.view)) {
+          return {
+            ...attachment,
+            view: branch.unwrap(attachment.view),
           };
         }
 
