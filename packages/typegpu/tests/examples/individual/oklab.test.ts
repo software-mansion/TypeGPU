@@ -17,36 +17,32 @@ describe('oklab example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input_1 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output_2 {
+      "struct fullScreenTriangle_Output_1 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+      struct fullScreenTriangle_Input_2 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
         var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangle_Output_2(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
+        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
       }
 
-      struct mainFragment_Input_4 {
-        @location(0) uv: vec2f,
-      }
-
-      struct Uniforms_6 {
+      struct Uniforms_5 {
         hue: f32,
         alpha: f32,
       }
 
-      @group(0) @binding(0) var<uniform> uniforms_5: Uniforms_6;
+      @group(0) @binding(0) var<uniform> uniforms_4: Uniforms_5;
 
-      fn scaleView_7(pos: vec2f) -> vec2f {
+      fn scaleView_6(pos: vec2f) -> vec2f {
         return vec2f((0.3 * pos.x), (((pos.y * 1.2) + 1) * 0.5));
       }
 
-      fn oklabToLinearRgb_8(lab: vec3f) -> vec3f {
+      fn oklabToLinearRgb_7(lab: vec3f) -> vec3f {
         var l_ = ((lab.x + (0.3963377774 * lab.y)) + (0.2158037573 * lab.z));
         var m_ = ((lab.x - (0.1055613458 * lab.y)) - (0.0638541728 * lab.z));
         var s_ = ((lab.x - (0.0894841775 * lab.y)) - (1.291485548 * lab.z));
@@ -56,12 +52,7 @@ describe('oklab example', () => {
         return vec3f((((4.0767416621 * l) - (3.3077115913 * m)) + (0.2309699292 * s)), (((-1.2684380046 * l) + (2.6097574011 * m)) - (0.3413193965 * s)), (((-0.0041960863 * l) - (0.7034186147 * m)) + (1.707614701 * s)));
       }
 
-      struct LC_11 {
-        L: f32,
-        C: f32,
-      }
-
-      fn computeMaxSaturation_12(a: f32, b: f32) -> f32 {
+      fn computeMaxSaturation_10(a: f32, b: f32) -> f32 {
         var k0 = 0f;
         var k1 = 0f;
         var k2 = 0f;
@@ -127,20 +118,25 @@ describe('oklab example', () => {
         return S;
       }
 
-      fn cbrt_13(x: f32) -> f32 {
+      fn cbrt_11(x: f32) -> f32 {
         return (sign(x) * pow(abs(x), 0.3333333333333333));
       }
 
-      fn findCusp_10(a: f32, b: f32) -> LC_11 {
-        var S_cusp = computeMaxSaturation_12(a, b);
-        var rgb_at_max = oklabToLinearRgb_8(vec3f(1, (S_cusp * a), (S_cusp * b)));
-        var L_cusp = cbrt_13((1f / max(max(rgb_at_max.x, rgb_at_max.y), rgb_at_max.z)));
-        var C_cusp = (L_cusp * S_cusp);
-        return LC_11(L_cusp, C_cusp);
+      struct LC_12 {
+        L: f32,
+        C: f32,
       }
 
-      fn findGamutIntersection_14(a: f32, b: f32, L1: f32, C1: f32, L0: f32, cusp: LC_11) -> f32 {
-        var FLT_MAX = 3.4028234663852886e+38f;
+      fn findCusp_9(a: f32, b: f32) -> LC_12 {
+        var S_cusp = computeMaxSaturation_10(a, b);
+        var rgb_at_max = oklabToLinearRgb_7(vec3f(1, (S_cusp * a), (S_cusp * b)));
+        var L_cusp = cbrt_11((1f / max(max(rgb_at_max.x, rgb_at_max.y), rgb_at_max.z)));
+        var C_cusp = (L_cusp * S_cusp);
+        return LC_12(L_cusp, C_cusp);
+      }
+
+      fn findGamutIntersection_13(a: f32, b: f32, L1: f32, C1: f32, L0: f32, cusp: LC_12) -> f32 {
+        var FLT_MAX = 3.40282346e+38;
         var t = 0f;
         if (((((L1 - L0) * cusp.C) - ((cusp.L - L0) * C1)) <= 0)) {
           t = ((cusp.C * L0) / ((C1 * cusp.L) + (cusp.C * (L0 - L1))));
@@ -196,7 +192,7 @@ describe('oklab example', () => {
         return t;
       }
 
-      fn gamutClipAdaptiveL05_9(lab: vec3f) -> vec3f {
+      fn gamutClipAdaptiveL05_8(lab: vec3f) -> vec3f {
         var alpha = 0.2f;
         var L = lab.x;
         var eps = 1e-5;
@@ -206,34 +202,38 @@ describe('oklab example', () => {
         var Ld = (L - 0.5);
         var e1 = ((0.5 + abs(Ld)) + (alpha * C));
         var L0 = (0.5 * (1 + (sign(Ld) * (e1 - sqrt(max(0, ((e1 * e1) - (2 * abs(Ld)))))))));
-        var cusp = findCusp_10(a_, b_);
-        var t = clamp(findGamutIntersection_14(a_, b_, L, C, L0, cusp), 0, 1);
+        var cusp = findCusp_9(a_, b_);
+        var t = clamp(findGamutIntersection_13(a_, b_, L, C, L0, cusp), 0, 1);
         var L_clipped = mix(L0, L, t);
         var C_clipped = (t * C);
         return vec3f(L_clipped, (C_clipped * a_), (C_clipped * b_));
       }
 
-      fn linearToSrgb_16(linear: vec3f) -> vec3f {
+      fn linearToSrgb_15(linear: vec3f) -> vec3f {
         return select((12.92 * linear), ((1.055 * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
       }
 
-      fn oklabToRgb_15(lab: vec3f) -> vec3f {
-        return linearToSrgb_16(oklabToLinearRgb_8(gamutClipAdaptiveL05_9(lab)));
+      fn oklabToRgb_14(lab: vec3f) -> vec3f {
+        return linearToSrgb_15(oklabToLinearRgb_7(gamutClipAdaptiveL05_8(lab)));
       }
 
-      fn item_17(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
+      fn item_16(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
         return 1;
       }
 
-      @fragment fn mainFragment_3(input: mainFragment_Input_4) -> @location(0) vec4f {
-        var hue = uniforms_5.hue;
-        var pos = scaleView_7(input.uv);
+      struct mainFragment_Input_17 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn mainFragment_3(input: mainFragment_Input_17) -> @location(0) vec4f {
+        var hue = uniforms_4.hue;
+        var pos = scaleView_6(input.uv);
         var lab = vec3f(pos.y, (pos.x * vec2f(cos(hue), sin(hue))));
-        var rgb = oklabToLinearRgb_8(lab);
+        var rgb = oklabToLinearRgb_7(lab);
         var outOfGamut = (any((rgb < vec3f())) || any((rgb > vec3f(1))));
-        var clipLab = gamutClipAdaptiveL05_9(lab);
-        var color = oklabToRgb_15(lab);
-        var patternScaled = ((item_17(input.uv, clipLab) * 0.1) + 0.9);
+        var clipLab = gamutClipAdaptiveL05_8(lab);
+        var color = oklabToRgb_14(lab);
+        var patternScaled = ((item_16(input.uv, clipLab) * 0.1) + 0.9);
         return vec4f(select(color, (patternScaled * color), outOfGamut), 1);
       }"
     `);

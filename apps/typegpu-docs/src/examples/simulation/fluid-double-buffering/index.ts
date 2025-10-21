@@ -31,62 +31,67 @@ const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
 
-const isValidCoord = tgpu.fn([d.i32, d.i32], d.bool)((x, y) =>
-  x < gridSize && x >= 0 && y < gridSize && y >= 0
-);
+const isValidCoord = (x: number, y: number): boolean => {
+  'use gpu';
+  return x < gridSize && x >= 0 && y < gridSize && y >= 0;
+};
 
-const coordsToIndex = tgpu.fn([d.i32, d.i32], d.i32)((x, y) =>
-  x + y * gridSize
-);
+const coordsToIndex = (x: number, y: number) => {
+  'use gpu';
+  return x + y * gridSize;
+};
 
-const getCell = tgpu.fn([d.i32, d.i32], d.vec4f)((x, y) =>
-  inputGridSlot.$[coordsToIndex(x, y)]
-);
+const getCell = (x: number, y: number): d.v4f => {
+  'use gpu';
+  return inputGridSlot.$[coordsToIndex(x, y)];
+};
 
-const setCell = tgpu.fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
+const setCell = (x: number, y: number, value: d.v4f) => {
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index] = value;
-});
+};
 
-const setVelocity = tgpu.fn([d.i32, d.i32, d.vec2f])((x, y, velocity) => {
+const setVelocity = (x: number, y: number, velocity: d.v2f) => {
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].x = velocity.x;
   outputGridSlot.$[index].y = velocity.y;
-});
+};
 
-const addDensity = tgpu.fn([d.i32, d.i32, d.f32])((x, y, density) => {
+const addDensity = (x: number, y: number, density: number) => {
+  'use gpu';
   const index = coordsToIndex(x, y);
   outputGridSlot.$[index].z = inputGridSlot.$[index].z + density;
-});
+};
 
-const flowFromCell = tgpu.fn([d.i32, d.i32, d.i32, d.i32], d.f32)(
-  (myX, myY, x, y) => {
-    if (!isValidCoord(x, y)) {
-      return 0;
-    }
-    const src = getCell(x, y);
-
-    const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
-    const dest = getCell(destPos.x, destPos.y);
-    const diff = src.z - dest.z;
-    let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
-
-    if (std.length(src.xy) < 0.5) {
-      outFlow = 0;
-    }
-
-    if (myX === x && myY === y) {
-      // 'src.z - outFlow' is how much is left in the src
-      return src.z - outFlow;
-    }
-
-    if (destPos.x === myX && destPos.y === myY) {
-      return outFlow;
-    }
-
+const flowFromCell = (myX: number, myY: number, x: number, y: number) => {
+  'use gpu';
+  if (!isValidCoord(x, y)) {
     return 0;
-  },
-);
+  }
+  const src = getCell(x, y);
+
+  const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
+  const dest = getCell(destPos.x, destPos.y);
+  const diff = src.z - dest.z;
+  let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
+
+  if (std.length(src.xy) < 0.5) {
+    outFlow = 0;
+  }
+
+  if (myX === x && myY === y) {
+    // 'src.z - outFlow' is how much is left in the src
+    return src.z - outFlow;
+  }
+
+  if (destPos.x === myX && destPos.y === myY) {
+    return outFlow;
+  }
+
+  return 0;
+};
 
 const root = await tgpu.init();
 
@@ -96,7 +101,8 @@ const prevObstacles = root.createReadonly(BoxObstacleArray);
 const obstacles = root.createReadonly(BoxObstacleArray);
 const time = root.createUniform(d.f32);
 
-const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+const isInsideObstacle = (x: number, y: number): boolean => {
+  'use gpu';
   for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
     const obs = obstacles.$[obsIdx];
 
@@ -115,9 +121,10 @@ const isInsideObstacle = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
   }
 
   return false;
-});
+};
 
-const isValidFlowOut = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
+const isValidFlowOut = (x: number, y: number): boolean => {
+  'use gpu';
   if (!isValidCoord(x, y)) {
     return false;
   }
@@ -127,9 +134,10 @@ const isValidFlowOut = tgpu.fn([d.i32, d.i32], d.bool)((x, y) => {
   }
 
   return true;
-});
+};
 
-const computeVelocity = tgpu.fn([d.i32, d.i32], d.vec2f)((x, y) => {
+const computeVelocity = (x: number, y: number): d.v2f => {
+  'use gpu';
   const gravityCost = 0.5;
 
   const neighborOffsets = [
@@ -172,140 +180,116 @@ const computeVelocity = tgpu.fn([d.i32, d.i32], d.vec2f)((x, y) => {
   const leastCostDir =
     dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
   return leastCostDir;
-});
+};
 
-const mainInitWorld = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [1],
-})((input) => {
-  const x = d.i32(input.gid.x);
-  const y = d.i32(input.gid.y);
-  const index = coordsToIndex(x, y);
+const moveObstacles = () => {
+  'use gpu';
+  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+    const obs = prevObstacles.$[obsIdx];
+    const nextObs = obstacles.$[obsIdx];
 
-  let value = d.vec4f();
-
-  if (!isValidFlowOut(x, y)) {
-    value = d.vec4f();
-  } else {
-    // Ocean
-    if (y < d.i32(gridSize / 2)) {
-      const depth = 1 - d.f32(y) / (d.f32(gridSize) / 2);
-      value = d.vec4f(0, 0, 10 + depth * 10, 0);
+    if (obs.enabled === 0) {
+      continue;
     }
-  }
 
-  outputGridSlot.$[index] = value;
-});
+    const diff = std.sub(nextObs.center.xy, obs.center.xy);
 
-const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
-  () => {
-    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-      const obs = prevObstacles.$[obsIdx];
-      const nextObs = obstacles.$[obsIdx];
+    const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
+    const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
+    const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
+    const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
-      if (obs.enabled === 0) {
-        continue;
-      }
+    const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));
+    const nextMaxX = std.min(
+      gridSize,
+      nextObs.center.x + d.i32(obs.size.x / 2),
+    );
+    const nextMinY = std.max(
+      0,
+      nextObs.center.y - d.i32(obs.size.y / 2),
+    );
+    const nextMaxY = std.min(
+      gridSize,
+      nextObs.center.y + d.i32(obs.size.y / 2),
+    );
 
-      const diff = std.sub(nextObs.center.xy, obs.center.xy);
-
-      const minX = std.max(0, obs.center.x - d.i32(obs.size.x / 2));
-      const maxX = std.min(gridSize, obs.center.x + d.i32(obs.size.x / 2));
-      const minY = std.max(0, obs.center.y - d.i32(obs.size.y / 2));
-      const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
-
-      const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));
-      const nextMaxX = std.min(
-        gridSize,
-        nextObs.center.x + d.i32(obs.size.x / 2),
-      );
-      const nextMinY = std.max(
-        0,
-        nextObs.center.y - d.i32(obs.size.y / 2),
-      );
-      const nextMaxY = std.min(
-        gridSize,
-        nextObs.center.y + d.i32(obs.size.y / 2),
-      );
-
-      // does it move right
-      if (diff.x > 0) {
-        for (let y = minY; y <= maxY; y++) {
-          let rowDensity = d.f32(0);
-          for (let x = maxX; x <= nextMaxX; x++) {
-            const cell = getCell(x, y);
-            rowDensity += cell.z;
-            cell.z = 0;
-            setCell(x, y, cell);
-          }
-
-          addDensity(nextMaxX + 1, y, rowDensity);
+    // does it move right
+    if (diff.x > 0) {
+      for (let y = minY; y <= maxY; y++) {
+        let rowDensity = d.f32(0);
+        for (let x = maxX; x <= nextMaxX; x++) {
+          const cell = getCell(x, y);
+          rowDensity += cell.z;
+          cell.z = 0;
+          setCell(x, y, cell);
         }
+
+        addDensity(nextMaxX + 1, y, rowDensity);
       }
+    }
 
-      // does it move left
-      if (diff.x < 0) {
-        for (let y = minY; y <= maxY; y++) {
-          let rowDensity = d.f32(0);
-          for (let x = nextMinX; x < minX; x++) {
-            const cell = getCell(x, y);
-            rowDensity += cell.z;
-            cell.z = 0;
-            setCell(x, y, cell);
-          }
-
-          addDensity(nextMinX - 1, y, rowDensity);
+    // does it move left
+    if (diff.x < 0) {
+      for (let y = minY; y <= maxY; y++) {
+        let rowDensity = d.f32(0);
+        for (let x = nextMinX; x < minX; x++) {
+          const cell = getCell(x, y);
+          rowDensity += cell.z;
+          cell.z = 0;
+          setCell(x, y, cell);
         }
+
+        addDensity(nextMinX - 1, y, rowDensity);
       }
+    }
 
-      // does it move up
-      if (diff.y > 0) {
-        for (let x = minX; x <= maxX; x++) {
-          let colDensity = d.f32(0);
-          for (let y = maxY; y <= nextMaxY; y++) {
-            const cell = getCell(x, y);
-            colDensity += cell.z;
-            cell.z = 0;
-            setCell(x, y, cell);
-          }
-
-          addDensity(x, nextMaxY + 1, colDensity);
-        }
-      }
-
-      // does it move down
+    // does it move up
+    if (diff.y > 0) {
       for (let x = minX; x <= maxX; x++) {
         let colDensity = d.f32(0);
-        for (let y = nextMinY; y < minY; y++) {
+        for (let y = maxY; y <= nextMaxY; y++) {
           const cell = getCell(x, y);
           colDensity += cell.z;
           cell.z = 0;
           setCell(x, y, cell);
         }
 
-        addDensity(x, nextMinY - 1, colDensity);
-      }
-
-      // Recompute velocity around the obstacle so that no cells end up inside it on the next tick.
-
-      // left column
-      for (let y = nextMinY; y <= nextMaxY; y++) {
-        const newVel = computeVelocity(nextMinX - 1, y);
-        setVelocity(nextMinX - 1, y, newVel);
-      }
-
-      // right column
-      for (
-        let y = std.max(1, nextMinY);
-        y <= std.min(nextMaxY, gridSize - 2);
-        y++
-      ) {
-        const newVel = computeVelocity(nextMaxX + 2, y);
-        setVelocity(nextMaxX + 2, y, newVel);
+        addDensity(x, nextMaxY + 1, colDensity);
       }
     }
-  },
-);
+
+    // does it move down
+    for (let x = minX; x <= maxX; x++) {
+      let colDensity = d.f32(0);
+      for (let y = nextMinY; y < minY; y++) {
+        const cell = getCell(x, y);
+        colDensity += cell.z;
+        cell.z = 0;
+        setCell(x, y, cell);
+      }
+
+      addDensity(x, nextMinY - 1, colDensity);
+    }
+
+    // Recompute velocity around the obstacle so that no cells end up inside it on the next tick.
+
+    // left column
+    for (let y = nextMinY; y <= nextMaxY; y++) {
+      const newVel = computeVelocity(nextMinX - 1, y);
+      setVelocity(nextMinX - 1, y, newVel);
+    }
+
+    // right column
+    for (
+      let y = std.max(1, nextMinY);
+      y <= std.min(nextMaxY, gridSize - 2);
+      y++
+    ) {
+      const newVel = computeVelocity(nextMaxX + 2, y);
+      setVelocity(nextMaxX + 2, y, newVel);
+    }
+  }
+};
 
 let sourceIntensity = 0.1;
 let sourceRadius = 0.01;
@@ -316,7 +300,8 @@ const sourceParams = root.createUniform(d.struct({
   intensity: d.f32,
 }));
 
-const getMinimumInFlow = tgpu.fn([d.i32, d.i32], d.f32)((x, y) => {
+const getMinimumInFlow = (x: number, y: number): number => {
+  'use gpu';
   const gridSizeF = d.f32(gridSize);
   const sourceRadius = std.max(1, sourceParams.$.radius * gridSizeF);
   const sourcePos = d.vec2f(
@@ -329,14 +314,12 @@ const getMinimumInFlow = tgpu.fn([d.i32, d.i32], d.f32)((x, y) => {
   }
 
   return 0;
-});
+};
 
-const mainCompute = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [8, 8],
-})((input) => {
-  const x = d.i32(input.gid.x);
-  const y = d.i32(input.gid.y);
+const simulate = (xu: number, yu: number) => {
+  'use gpu';
+  const x = d.i32(xu);
+  const y = d.i32(yu);
   const index = coordsToIndex(x, y);
 
   randf.seed2(d.vec2f(d.f32(index), time.$));
@@ -358,7 +341,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
   next.z = std.max(minInflow, next.z);
 
   outputGridSlot.$[index] = next;
-});
+};
 
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
@@ -470,23 +453,39 @@ function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldPipeline = root['~unstable']
+  const initWorldAction = root['~unstable']
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
-    .withCompute(mainInitWorld)
-    .createPipeline();
+    .prepareDispatch((xu, yu) => {
+      'use gpu';
+      const x = d.i32(xu);
+      const y = d.i32(yu);
+      const index = coordsToIndex(x, y);
 
-  const computePipeline = root['~unstable']
+      let value = d.vec4f();
+
+      if (!isValidFlowOut(x, y)) {
+        value = d.vec4f();
+      } else {
+        // Ocean
+        if (y < d.i32(gridSize / 2)) {
+          const depth = 1 - d.f32(y) / (d.f32(gridSize) / 2);
+          value = d.vec4f(0, 0, 10 + depth * 10, 0);
+        }
+      }
+
+      outputGridSlot.$[index] = value;
+    });
+
+  const simulateAction = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
     .with(outputGridSlot, outputGridMutable)
-    .withCompute(mainCompute)
-    .createPipeline();
+    .prepareDispatch(simulate);
 
-  const moveObstaclesPipeline = root['~unstable']
+  const moveObstaclesAction = root['~unstable']
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
-    .withCompute(mainMoveObstacles)
-    .createPipeline();
+    .prepareDispatch(moveObstacles);
 
   const renderPipeline = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
@@ -497,20 +496,17 @@ function makePipelines(
 
   return {
     init() {
-      initWorldPipeline.dispatchWorkgroups(gridSize, gridSize);
+      initWorldAction.dispatchThreads(gridSize, gridSize);
     },
 
     applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
       obstacles.write(bufferData);
-      moveObstaclesPipeline.dispatchWorkgroups(1);
+      moveObstaclesAction.dispatchThreads();
       prevObstacles.write(bufferData);
     },
 
     compute() {
-      computePipeline.dispatchWorkgroups(
-        gridSize / mainCompute.shell.workgroupSize[0],
-        gridSize / mainCompute.shell.workgroupSize[1],
-      );
+      simulateAction.dispatchThreads(gridSize, gridSize);
     },
 
     render() {

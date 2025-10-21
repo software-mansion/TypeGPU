@@ -13,12 +13,14 @@ import {
 import { abstractInt, bool, u32 } from '../data/numeric.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { ResolutionError, WgslTypeError } from '../errors.ts';
+import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -33,7 +35,6 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -163,7 +164,9 @@ ${this.ctx.pre}}`;
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
   ): Snippet {
-    return this.ctx.defineVariable(id, dataType);
+    const snippet = snip(this.ctx.makeNameValid(id), dataType);
+    this.ctx.defineVariable(id, snippet);
+    return snippet;
   }
 
   public identifier(id: string): Snippet {
@@ -234,8 +237,8 @@ ${this.ctx.pre}}`;
         convertToCommonType([lhsExpr, rhsExpr], forcedType) ??
           [lhsExpr, rhsExpr];
 
-      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType);
-      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType);
+      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
+      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       return snip(
@@ -250,7 +253,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value);
+      const argStr = this.ctx.resolve(argExpr.value).value;
 
       return snip(`${argStr}${op}`, argExpr.dataType);
     }
@@ -259,7 +262,7 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value);
+      const argStr = this.ctx.resolve(argExpr.value).value;
 
       const type = operatorToType(argExpr.dataType, op);
       return snip(`${op}${argStr}`, type);
@@ -300,7 +303,7 @@ ${this.ctx.pre}}`;
 
       if (wgsl.isPtr(target.dataType)) {
         return snip(
-          `(*${this.ctx.resolve(target.value)}).${property}`,
+          `(*${this.ctx.resolve(target.value).value}).${property}`,
           getTypeForPropAccess(target.dataType.inner as AnyData, property),
         );
       }
@@ -308,7 +311,10 @@ ${this.ctx.pre}}`;
       if (wgsl.isWgslArray(target.dataType) && property === 'length') {
         if (target.dataType.elementCount === 0) {
           // Dynamically-sized array
-          return snip(`arrayLength(&${this.ctx.resolve(target.value)})`, u32);
+          return snip(
+            `arrayLength(&${this.ctx.resolve(target.value).value})`,
+            u32,
+          );
         }
 
         return snip(String(target.dataType.elementCount), abstractInt);
@@ -327,7 +333,7 @@ ${this.ctx.pre}}`;
       }
 
       return snip(
-        `${this.ctx.resolve(target.value)}.${property}`,
+        `${this.ctx.resolve(target.value).value}.${property}`,
         getTypeForPropAccess(target.dataType, property),
       );
     }
@@ -337,7 +343,8 @@ ${this.ctx.pre}}`;
       const [_, targetNode, propertyNode] = expression;
       const target = this.expression(targetNode);
       const property = this.expression(propertyNode);
-      const propertyStr = this.ctx.resolve(property.value, property.dataType);
+      const propertyStr =
+        this.ctx.resolve(property.value, property.dataType).value;
 
       if (target.value instanceof MatrixColumnsAccess) {
         return snip(
@@ -345,7 +352,7 @@ ${this.ctx.pre}}`;
           getTypeForIndexAccess(target.value.matrix.dataType as AnyData),
         );
       }
-      const targetStr = this.ctx.resolve(target.value, target.dataType);
+      const targetStr = this.ctx.resolve(target.value, target.dataType).value;
 
       if (target.dataType.type === 'unknown') {
         // No idea what the type is, so we act on the snippet's value and try to guess
@@ -412,7 +419,10 @@ ${this.ctx.pre}}`;
         // No arguments `Struct()`, resolve struct name and return.
         if (!argNodes[0]) {
           // the schema becomes the data type
-          return snip(`${this.ctx.resolve(callee.value)}()`, callee.value);
+          return snip(
+            `${this.ctx.resolve(callee.value).value}()`,
+            callee.value,
+          );
         }
 
         const arg = this.typedExpression(
@@ -422,7 +432,10 @@ ${this.ctx.pre}}`;
 
         // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
         // In both cases, we just let the argument resolve everything.
-        return snip(this.ctx.resolve(arg.value, callee.value), callee.value);
+        return snip(
+          this.ctx.resolve(arg.value, callee.value).value,
+          callee.value,
+        );
       }
 
       if (callee.value instanceof InfixDispatch) {
@@ -437,17 +450,30 @@ ${this.ctx.pre}}`;
       }
 
       if (!isMarkedInternal(callee.value)) {
+        const args = argNodes.map((arg) => this.expression(arg));
+        const shellless = this.ctx.shelllessRepo.get(
+          callee.value as (...args: never[]) => unknown,
+          args,
+        );
+        if (shellless) {
+          return this.ctx.withResetIndentLevel(() => {
+            const snippet = this.ctx.resolve(shellless);
+            return snip(stitch`${snippet.value}(${args})`, snippet.dataType);
+          });
+        }
+
         throw new Error(
-          `Function ${String(callee.value)} ${
-            getName(callee.value)
-          } has not been created using TypeGPU APIs. Did you mean to wrap the function with tgpu.fn(args, return)(...) ?`,
+          `Function '${
+            getName(callee.value) ?? String(callee.value)
+          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
         );
       }
 
       // Other, including tgsl functions, std and vector/matrix schema calls.
 
-      const argConversionHint = callee.value[$internal]
-        ?.argConversionHint as FnArgsConversionHint ?? 'keep';
+      const argConversionHint =
+        (callee.value[$internal] as Record<string, unknown>)
+          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
       try {
         let convertedArguments: Snippet[];
 
@@ -537,7 +563,7 @@ ${this.ctx.pre}}`;
       const convertedSnippets = convertStructValues(structType, entries);
 
       return snip(
-        stitch`${this.ctx.resolve(structType)}(${convertedSnippets})`,
+        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
       );
     }
@@ -585,7 +611,7 @@ ${this.ctx.pre}}`;
       }
 
       const arrayType = `array<${
-        this.ctx.resolve(elemType)
+        this.ctx.resolve(elemType).value
       }, ${values.length}>`;
 
       return snip(
@@ -619,7 +645,7 @@ ${this.ctx.pre}}`;
   ): string {
     if (typeof statement === 'string') {
       return `${this.ctx.pre}${
-        this.ctx.resolve(this.identifier(statement).value)
+        this.ctx.resolve(this.identifier(statement).value).value
       };`;
     }
 
@@ -631,10 +657,20 @@ ${this.ctx.pre}}`;
       const returnNode = statement[1];
 
       if (returnNode !== undefined) {
-        const returnSnippet = this.typedExpression(
-          returnNode,
-          this.ctx.topFunctionReturnType,
+        const expectedReturnType = this.ctx.topFunctionReturnType;
+        const returnSnippet = expectedReturnType
+          ? this.typedExpression(
+            returnNode,
+            expectedReturnType,
+          )
+          : this.expression(returnNode);
+
+        invariant(
+          returnSnippet.dataType.type !== 'unknown',
+          'Return type should be known',
         );
+
+        this.ctx.reportReturnType(returnSnippet.dataType);
         return stitch`${this.ctx.pre}return ${returnSnippet};`;
       }
 
@@ -685,12 +721,12 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      this.blockVariable(
+      const snippet = this.blockVariable(
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      const id = this.identifier(rawId);
-      return stitchWithExactTypes`${this.ctx.pre}var ${id} = ${eq};`;
+      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+        .value as string} = ${eq};`;
     }
 
     if (statement[0] === NODE.block) {
@@ -719,7 +755,7 @@ ${this.ctx.pre}else ${alternate}`;
     if (statement[0] === NODE.while) {
       const [_, condition, body] = statement;
       const condSnippet = this.typedExpression(condition, bool);
-      const conditionStr = this.ctx.resolve(condSnippet.value);
+      const conditionStr = this.ctx.resolve(condSnippet.value).value;
 
       const bodyStr = this.block(blockifySingleStatement(body));
       return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
@@ -734,7 +770,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     return `${this.ctx.pre}${
-      this.ctx.resolve(this.expression(statement).value)
+      this.ctx.resolve(this.expression(statement).value).value
     };`;
   }
 }

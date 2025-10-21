@@ -17,7 +17,7 @@ export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
  * "Particle System in WebGPU" by Benedikt Peter
  */
 export const BPETER: StatefulGenerator = (() => {
-  const seed = tgpu['~unstable'].privateVar(d.vec2f);
+  const seed = tgpu.privateVar(d.vec2f);
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
@@ -37,7 +37,7 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     sample: randomGeneratorShell(() => {
-      'kernel';
+      'use gpu';
       const a = dot(seed.value, d.vec2f(23.14077926, 232.61690225));
       const b = dot(seed.value, d.vec2f(54.47856553, 345.84153136));
       seed.value.x = fract(cos(a) * 136.8168);

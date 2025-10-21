@@ -8,7 +8,7 @@ This feature is under heavy development and is yet to reach stability.
 :::
 
 **TGSL (TypeGPU Shading Language)** is a subset of JavaScript used to define functions that run on the GPU via TypeGPU.
-It works by transpiling JavaScript into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest), 
+It works by transpiling JavaScript into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest),
 which is then used to generate equivalent WGSL.
 
 You can check the current state of supported JavaScript syntax in the [tinyest-for-wgsl repository](https://github.com/software-mansion/TypeGPU/blob/release/packages/tinyest-for-wgsl/src/parsers.ts).
@@ -86,19 +86,24 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 ```
 
-Sometimes, we are unable to recognize functions that are supposed to be TGSL. For that case, we have a *"kernel"* directive.
+:::note
+When using TGSL, you don't need to explicitly declare function externals with the `$uses` method.
+The [TypeGPU Build Plugin](/TypeGPU/tooling/unplugin-typegpu/) automatically extracts all external definitions from the function's AST.
+:::
+
+Sometimes, we are unable to recognize functions that are supposed to be TGSL. For that case, we have a *"use gpu"* directive.
 
 ```ts
 const patternFn = tgpu.fn([d.vec2f], d.f32);
 
 const patternCheckers = patternFn((uv) => {
-  'kernel';
+  'use gpu';
   const suv = floor(mul(20, uv));
   return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
 });
 
 const patternSolid = patternFn(() => {
-  'kernel';
+  'use gpu';
   return 1;
 });
 ```
@@ -107,7 +112,7 @@ const patternSolid = patternFn(() => {
 
 TGSL-implemented functions can be invoked on the CPU,
 as along as they do not use any GPU-exclusive functionalities,
-like buffers or textures (regardless of whether they are marked as *"kernel"* or not).
+like buffers or textures (regardless of whether they are marked with *"use gpu"* or not).
 
 Keep in mind that you cannot execute entry-point functions in JavaScript.
 
@@ -144,10 +149,10 @@ const bgColor = root.createUniform(d.vec4f, d.vec4f(0.114, 0.447, 0.941, 1));
 const fragmentTgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
   return bgColor.$;
 //               ^?
-}); 
+});
 
-const fragmentWgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`{ 
-  return bgColor; 
+const fragmentWgsl = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`{
+  return bgColor;
 }
 `.$uses({ bgColor });
 ```
@@ -171,12 +176,12 @@ const fn = tgpu.fn([d.ptrFn(d.vec3f)], d.vec3f)((ptr) => {
   ptr.x += 1;
 //^?
   return ptr;
-}); 
+});
 ```
 
 * **When to use TGSL instead of WGSL** --
 Writing the code using TGSL has a few significant advantages.
-It allows defining utils only once and using them both as a kernel and host functions,
+It allows defining utils only once and using them both as GPU and CPU functions,
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer UX.
 However, it sometimes might be better to choose WGSL for certain functions.
 Since JavaScript doesn't support operator overloading, functions including complex matrix operations can be more readable in WGSL.

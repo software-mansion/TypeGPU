@@ -1,6 +1,8 @@
 import tgpu, {
+  type RenderFlag,
   type TgpuBindGroup,
   type TgpuBuffer,
+  type TgpuTexture,
   type VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -194,33 +196,39 @@ const planeBindGroup = root.createBindGroup(layout, {
 
 // Textures
 
-let depthTexture: GPUTexture;
-let depthTextureView: GPUTextureView;
-let msaaTexture: GPUTexture;
-let msaaTextureView: GPUTextureView;
+let depthTexture:
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'depth24plus';
+    sampleCount: 4;
+  }>
+  & RenderFlag;
+let msaaTexture:
+  & TgpuTexture<{
+    size: [number, number];
+    format: typeof presentationFormat;
+    sampleCount: 4;
+  }>
+  & RenderFlag;
 
 function createDepthAndMsaaTextures() {
   if (depthTexture) {
     depthTexture.destroy();
   }
-  depthTexture = device.createTexture({
-    size: [canvas.width, canvas.height, 1],
+  depthTexture = root['~unstable'].createTexture({
+    size: [canvas.width, canvas.height],
     format: 'depth24plus',
     sampleCount: 4,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  depthTextureView = depthTexture.createView();
+  }).$usage('render');
 
   if (msaaTexture) {
     msaaTexture.destroy();
   }
-  msaaTexture = device.createTexture({
-    size: [canvas.width, canvas.height, 1],
+  msaaTexture = root['~unstable'].createTexture({
+    size: [canvas.width, canvas.height],
     format: presentationFormat,
     sampleCount: 4,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  msaaTextureView = msaaTexture.createView();
+  }).$usage('render');
 }
 createDepthAndMsaaTextures();
 
@@ -268,20 +276,20 @@ function drawObject(
 ) {
   pipeline
     .withColorAttachment({
-      view: msaaTextureView,
+      view: msaaTexture,
       resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
       loadOp: loadOp,
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
-      view: depthTextureView,
+      view: depthTexture,
       depthClearValue: 1,
       depthLoadOp: loadOp,
       depthStoreOp: 'store',
     })
     .with(vertexLayout, buffer)
-    .with(layout, group)
+    .with(group)
     .draw(vertexCount);
 }
 
