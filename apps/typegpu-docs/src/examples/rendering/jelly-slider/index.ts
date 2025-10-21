@@ -406,7 +406,7 @@ const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
     const maxT = intersection.tMax;
 
     for (let i = 0; i < MAX_STEPS; i++) {
-      const currPos = std.add(newOrigin, std.mul(newDir, t));
+      const currPos = newOrigin.add(newDir.mul(t));
       const hitInfo = getSceneDist(currPos);
 
       if (hitInfo.distance < SURF_DIST) {
@@ -435,7 +435,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
 
   for (let i = 1; i <= AO_STEPS; i++) {
     const sampleHeight = stepDistance * d.f32(i);
-    const samplePosition = std.add(position, std.mul(normal, sampleHeight));
+    const samplePosition = position.add(normal.mul(sampleHeight));
     const distanceToSurface = getSceneDistForAO(samplePosition) - AO_BIAS;
     const occlusionContribution = std.max(
       0.0,
@@ -458,38 +458,31 @@ const calculateLighting = (
   rayOrigin: d.v3f,
 ) => {
   'use gpu';
-  const lightDir = std.mul(lightUniform.$.direction, -1.0);
+  const lightDir = std.neg(lightUniform.$.direction);
 
   const shadow = getShadow(hitPosition, normal, lightDir);
   const visibility = 1.0 - shadow;
 
   const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
-  const viewDir = std.normalize(std.sub(rayOrigin, hitPosition));
-  const reflectDir = std.reflect(std.mul(lightDir, -1.0), normal);
-  const specularFactor = std.pow(
-    std.max(std.dot(viewDir, reflectDir), 0.0),
-    SPECULAR_POWER,
-  );
-  const specular = std.mul(
-    std.mul(lightUniform.$.color, specularFactor),
-    SPECULAR_INTENSITY,
+  const viewDir = std.normalize(rayOrigin.sub(hitPosition));
+  const reflectDir = std.reflect(std.neg(lightDir), normal);
+  const specularFactor = std.max(std.dot(viewDir, reflectDir), 0) **
+    SPECULAR_POWER;
+  const specular = lightUniform.$.color.mul(
+    specularFactor * SPECULAR_INTENSITY,
   );
 
-  const baseColor = d.vec3f(0.9, 0.9, 0.9);
-  const directionalLight = std.mul(
-    std.mul(baseColor, lightUniform.$.color),
-    diffuse * visibility,
-  );
+  const baseColor = d.vec3f(0.9);
 
-  const ambientLight = std.mul(
-    std.mul(baseColor, AMBIENT_COLOR),
-    AMBIENT_INTENSITY,
-  );
+  const directionalLight = baseColor
+    .mul(lightUniform.$.color)
+    .mul(diffuse * visibility);
+  const ambientLight = baseColor.mul(AMBIENT_COLOR).mul(AMBIENT_INTENSITY);
 
-  const finalSpecular = std.mul(specular, visibility);
+  const finalSpecular = specular.mul(visibility);
 
-  return std.add(std.add(directionalLight, ambientLight), finalSpecular);
+  return std.saturate(directionalLight.add(ambientLight).add(finalSpecular));
 };
 
 const applyAO = (
@@ -499,7 +492,7 @@ const applyAO = (
 ) => {
   'use gpu';
   const ao = calculateAO(hitPosition, normal);
-  const finalColor = std.mul(litColor, ao);
+  const finalColor = litColor.mul(ao);
   return d.vec4f(finalColor, 1.0);
 };
 
@@ -509,7 +502,7 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   let hit = d.f32();
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    const p = std.add(rayOrigin, std.mul(rayDirection, distanceFromOrigin));
+    const p = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
     hit = getMainSceneDist(p);
     distanceFromOrigin += hit;
     if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
@@ -565,10 +558,7 @@ const renderBackground = (
   backgroundHitDist: number,
 ) => {
   'use gpu';
-  const hitPosition = std.add(
-    rayOrigin,
-    std.mul(rayDirection, backgroundHitDist),
-  );
+  const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
 
   const percentageSample = renderPercentageOnGround(
     hitPosition,
@@ -618,8 +608,7 @@ const renderBackground = (
     const fadeZ = 1.0 - std.abs(finalUV.y - 0.5) * 2.0;
     const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ);
 
-    highlights = std.pow(density, 4) * edgeFade * 2 *
-      (1.2 - slider.endCapUniform.$.x);
+    highlights = density ** 4 * edgeFade * 2 * (1.2 - slider.endCapUniform.$.x);
   }
 
   const normal = getNormalMain(hitPosition);
@@ -670,20 +659,14 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       break;
     }
 
-    const currentPosition = std.add(
-      rayOrigin,
-      std.mul(rayDirection, distanceFromOrigin),
-    );
+    const currentPosition = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
 
     const hitInfo = getSceneDist(currentPosition);
     distanceFromOrigin += hitInfo.distance;
     totalSteps++;
 
     if (hitInfo.distance < SURF_DIST) {
-      const hitPosition = std.add(
-        rayOrigin,
-        std.mul(rayDirection, distanceFromOrigin),
-      );
+      const hitPosition = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
 
       if (!(hitInfo.objectType === ObjectType.SLIDER)) {
         break;
@@ -693,15 +676,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       const I = rayDirection;
       const cosi = std.min(
         1.0,
-        std.max(0.0, std.dot(std.mul(I, -1.0), N)),
+        std.max(0.0, std.dot(std.neg(I), N)),
       );
       const F = fresnelSchlick(cosi, d.f32(1.0), d.f32(JELLY_IOR));
 
       const reflDir = std.reflect(I, N);
-      const reflOrigin = std.add(
-        hitPosition,
-        std.mul(N, SURF_DIST * 2.0),
-      );
+      const reflOrigin = hitPosition.add(N.mul(SURF_DIST * 2.0));
       const reflection = rayMarchNoJelly(reflOrigin, reflDir);
 
       const eta = 1.0 / JELLY_IOR;
@@ -710,20 +690,20 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       if (k > 0.0) {
         const refrDir = std.normalize(
           std.add(
-            std.mul(I, eta),
-            std.mul(N, eta * cosi - std.sqrt(k)),
+            I.mul(eta),
+            N.mul(eta * cosi - std.sqrt(k)),
           ),
         );
-        let p = std.add(hitPosition, std.mul(refrDir, SURF_DIST * 2.0));
+        let p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         let insideLen = d.f32();
         for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
           const dIn = sliderSdf3D(p).distance;
           const step = std.max(SURF_DIST, std.abs(dIn));
-          p = std.add(p, std.mul(refrDir, step));
+          p = p.add(refrDir.mul(step));
           insideLen += step;
           if (dIn >= 0.0) break;
         }
-        const exitPos = std.add(p, std.mul(refrDir, SURF_DIST * 2.0));
+        const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
         const env = rayMarchNoJelly(exitPos, refrDir);
 
         const progress = hitInfo.t;
@@ -734,24 +714,20 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
         const density = d.f32(20.0);
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
-        const T = beerLambert(
-          absorb.mul(progress ** 2),
-          insideLen,
-        );
+        const T = beerLambert(absorb.mul(progress ** 2), insideLen);
 
-        const lightDir = std.mul(lightUniform.$.direction, -1.0);
+        const lightDir = std.neg(lightUniform.$.direction);
 
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
-        const scatter = std.mul(
-          scatterTint,
+        const scatter = scatterTint.mul(
           JELLY_SCATTER_STRENGTH * forward * progress,
         );
-        refractedColor = std.add(std.mul(env, T), scatter);
+        refractedColor = env.mul(T).add(scatter);
       }
 
       const jelly = std.add(
-        std.mul(reflection, F),
-        std.mul(refractedColor, 1.0 - F),
+        reflection.mul(F),
+        refractedColor.mul(1 - F),
       );
 
       return d.vec4f(jelly, 1.0);
@@ -783,7 +759,7 @@ const backgroundDistFn = tgpu['~unstable'].computeFn({
   let backgroundHitDist = d.f32(MAX_DIST);
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    const p = std.add(ray.origin, std.mul(ray.direction, tempDist));
+    const p = ray.origin.add(ray.direction.mul(tempDist));
     const hit = getMainSceneDist(p);
     tempDist += hit;
     if (hit < SURF_DIST) {
