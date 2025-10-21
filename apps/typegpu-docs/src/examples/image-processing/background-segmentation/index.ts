@@ -92,6 +92,43 @@ const drawWithMaskPipeline = root['~unstable']
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
 
+// recalculating mask
+
+let calculateMaskCallbackId: number | undefined;
+
+async function processCalculateMask() {
+  if (video.readyState < 2) {
+    calculateMaskCallbackId = video.requestVideoFrameCallback(
+      processCalculateMask,
+    );
+    return;
+  }
+
+  prepareModelInputPipeline
+    .with(root.createBindGroup(prepareModelInputLayout, {
+      inputTexture: device.importExternalTexture({ source: video }),
+      outputBuffer: modelInputBuffer,
+      sampler,
+    }))
+    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
+
+  root['~unstable'].flush();
+
+  await runSession();
+
+  generateMaskFromOutputPipeline
+    .with(root.createBindGroup(generateMaskLayout, {
+      maskTexture: maskTexture,
+      outputBuffer: modelOutputBuffer,
+    }))
+    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
+
+  calculateMaskCallbackId = video.requestVideoFrameCallback(
+    processCalculateMask,
+  );
+}
+calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
+
 // frame
 
 function onVideoChange(size: { width: number; height: number }) {
@@ -128,25 +165,6 @@ async function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
-  prepareModelInputPipeline
-    .with(root.createBindGroup(prepareModelInputLayout, {
-      inputTexture: device.importExternalTexture({ source: video }),
-      outputBuffer: modelInputBuffer,
-      sampler,
-    }))
-    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
-
-  root['~unstable'].flush();
-
-  await runSession();
-
-  generateMaskFromOutputPipeline
-    .with(root.createBindGroup(generateMaskLayout, {
-      maskTexture: maskTexture,
-      outputBuffer: modelOutputBuffer,
-    }))
-    .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
-
   drawWithMaskPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -170,6 +188,9 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
     video.cancelVideoFrameCallback(videoFrameCallbackId);
+  }
+  if (calculateMaskCallbackId !== undefined) {
+    video.cancelVideoFrameCallback(calculateMaskCallbackId);
   }
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
