@@ -59,19 +59,18 @@ export function createTextures(root: TgpuRoot, width: number, height: number) {
   });
 }
 
-export function createBackgroundDistTexture(
+export function createBackgroundTexture(
   root: TgpuRoot,
   width: number,
   height: number,
 ) {
   const texture = root['~unstable'].createTexture({
     size: [width, height],
-    format: 'r32float',
-  }).$usage('storage');
+    format: 'rgba16float',
+  }).$usage('sampled', 'render');
 
   return {
-    write: texture.createView(d.textureStorage2d('r32float')),
-    read: texture.createView(d.textureStorage2d('r32float', 'read-only')),
+    sampled: texture.createView(),
   };
 }
 

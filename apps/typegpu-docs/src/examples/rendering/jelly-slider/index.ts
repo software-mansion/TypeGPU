@@ -8,7 +8,6 @@ import { Slider } from './slider.ts';
 import { CameraController } from './camera.ts';
 import { EventHandler } from './events.ts';
 import {
-  backgroundDistLayout,
   DirectionalLight,
   HitInfo,
   LineInfo,
@@ -20,7 +19,7 @@ import {
 } from './dataTypes.ts';
 import {
   beerLambert,
-  createBackgroundDistTexture,
+  createBackgroundTexture,
   createTextures,
   fresnelSchlick,
   fullScreenTriangle,
@@ -39,7 +38,6 @@ import {
   LINE_HALF_THICK,
   LINE_RADIUS,
   MAX_DIST,
-  MAX_INTERNAL_STEPS,
   MAX_STEPS,
   SPECULAR_INTENSITY,
   SPECULAR_POWER,
@@ -87,7 +85,7 @@ let [width, height] = [
 ];
 
 let textures = createTextures(root, width, height);
-let backgroundDistTexture = createBackgroundDistTexture(root, width, height);
+let backgroundTexture = createBackgroundTexture(root, width, height);
 
 const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -282,18 +280,21 @@ const sdfSlot = tgpu.slot<(pos: d.v3f) => number>();
 const getNormalFromSdf = tgpu.fn([d.vec3f, d.f32], d.vec3f)(
   (position, epsilon) => {
     'use gpu';
-    const xOffset = d.vec3f(epsilon, 0, 0);
-    const yOffset = d.vec3f(0, epsilon, 0);
-    const zOffset = d.vec3f(0, 0, epsilon);
+    const k = d.vec3f(1, -1, 0);
 
-    const normalX = sdfSlot.$(position.add(xOffset)) -
-      sdfSlot.$(position.sub(xOffset));
-    const normalY = sdfSlot.$(position.add(yOffset)) -
-      sdfSlot.$(position.sub(yOffset));
-    const normalZ = sdfSlot.$(position.add(zOffset)) -
-      sdfSlot.$(position.sub(zOffset));
+    const offset1 = k.xyy.mul(epsilon);
+    const offset2 = k.yyx.mul(epsilon);
+    const offset3 = k.yxy.mul(epsilon);
+    const offset4 = k.xxx.mul(epsilon);
 
-    return std.normalize(d.vec3f(normalX, normalY, normalZ));
+    const sample1 = offset1.mul(sdfSlot.$(position.add(offset1)));
+    const sample2 = offset2.mul(sdfSlot.$(position.add(offset2)));
+    const sample3 = offset3.mul(sdfSlot.$(position.add(offset3)));
+    const sample4 = offset4.mul(sdfSlot.$(position.add(offset4)));
+
+    const gradient = sample1.add(sample2).add(sample3).add(sample4);
+
+    return std.normalize(gradient);
   },
 );
 
@@ -625,14 +626,24 @@ const renderBackground = (
   );
 };
 
-const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
+const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
   let totalSteps = d.u32();
 
-  const backgroundHitDist = std.textureLoad(
-    rayMarchLayout.$.backgroundDistTexture,
-    pixelCoord,
-  ).x;
+  let backgroundDist = d.f32();
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const p = rayOrigin.add(rayDirection.mul(backgroundDist));
+    const hit = getMainSceneDist(p);
+    backgroundDist += hit;
+    if (hit < SURF_DIST) {
+      break;
+    }
+  }
+  const background = renderBackground(
+    rayOrigin,
+    rayDirection,
+    backgroundDist,
+  );
 
   const bbox = getSliderBbox();
   const zDepth = d.f32(0.25);
@@ -647,12 +658,11 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
     sliderMax,
   );
 
-  if (!intersection.hit || backgroundHitDist < intersection.tMin) {
-    return renderBackground(rayOrigin, rayDirection, backgroundHitDist);
+  if (!intersection.hit) {
+    return background;
   }
 
   let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
-  const maxMarchDist = backgroundHitDist;
 
   for (let i = 0; i < MAX_STEPS; i++) {
     if (totalSteps >= MAX_STEPS) {
@@ -680,13 +690,11 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       );
       const F = fresnelSchlick(cosi, d.f32(1.0), d.f32(JELLY_IOR));
 
-      const reflDir = std.reflect(I, N);
-      const reflOrigin = hitPosition.add(N.mul(SURF_DIST * 2.0));
-      const reflection = rayMarchNoJelly(reflOrigin, reflDir);
+      const reflection = std.saturate(d.vec3f(hitPosition.y + 0.2));
 
       const eta = 1.0 / JELLY_IOR;
       const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
-      let refractedColor = d.vec3f(0.0, 0.0, 0.0);
+      let refractedColor = d.vec3f();
       if (k > 0.0) {
         const refrDir = std.normalize(
           std.add(
@@ -694,27 +702,18 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
             N.mul(eta * cosi - std.sqrt(k)),
           ),
         );
-        let p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
-        let insideLen = d.f32();
-        for (let i = 0; i < MAX_INTERNAL_STEPS; i++) {
-          const dIn = sliderSdf3D(p).distance;
-          const step = std.max(SURF_DIST, std.abs(dIn));
-          p = p.add(refrDir.mul(step));
-          insideLen += step;
-          if (dIn >= 0.0) break;
-        }
+        const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
+
         const env = rayMarchNoJelly(exitPos, refrDir);
-
         const progress = hitInfo.t;
-
         const jellyColor = jellyColorUniform.$;
 
         const scatterTint = jellyColor.xyz.mul(1.5);
         const density = d.f32(20.0);
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
-        const T = beerLambert(absorb.mul(progress ** 2), insideLen);
+        const T = beerLambert(absorb.mul(progress ** 2), 0.05);
 
         const lightDir = std.neg(lightUniform.$.direction);
 
@@ -733,50 +732,13 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, pixelCoord: d.v2u) => {
       return d.vec4f(jelly, 1.0);
     }
 
-    if (distanceFromOrigin > maxMarchDist) {
+    if (distanceFromOrigin > backgroundDist) {
       break;
     }
   }
 
-  return renderBackground(rayOrigin, rayDirection, backgroundHitDist);
+  return background;
 };
-
-const backgroundDistFn = tgpu['~unstable'].computeFn({
-  workgroupSize: [16, 16],
-  in: {
-    gid: d.builtin.globalInvocationId,
-  },
-})(({ gid }) => {
-  const dimensions = std.textureDimensions(
-    backgroundDistLayout.$.distanceTexture,
-  );
-
-  const u = (gid.x / dimensions.x) * 2.0 - 1.0;
-  const v = 1.0 - (gid.y / dimensions.y) * 2.0;
-  const ray = getRay(d.vec2f(u, v));
-
-  let tempDist = d.f32();
-  let backgroundHitDist = d.f32(MAX_DIST);
-
-  for (let i = 0; i < MAX_STEPS; i++) {
-    const p = ray.origin.add(ray.direction.mul(tempDist));
-    const hit = getMainSceneDist(p);
-    tempDist += hit;
-    if (hit < SURF_DIST) {
-      backgroundHitDist = tempDist;
-      break;
-    }
-    if (tempDist > MAX_DIST) {
-      break;
-    }
-  }
-
-  std.textureStore(
-    backgroundDistLayout.$.distanceTexture,
-    d.vec2u(gid.x, gid.y),
-    d.vec4f(backgroundHitDist, 0.0, 0.0, 0.0),
-  );
-});
 
 const raymarchFn = tgpu['~unstable'].fragmentFn({
   in: {
@@ -784,9 +746,6 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })(({ uv }) => {
-  const dimensions = std.textureDimensions(
-    rayMarchLayout.$.backgroundDistTexture,
-  );
   randf.seed2(uv);
 
   const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
@@ -795,7 +754,7 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   return rayMarch(
     ray.origin,
     ray.direction,
-    d.vec2u(uv.mul(d.vec2f(dimensions))),
+    uv,
   );
 });
 
@@ -809,10 +768,6 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     input.uv,
   );
 });
-
-const backgroundDistPipeline = root['~unstable']
-  .withCompute(backgroundDistFn)
-  .createPipeline();
 
 const rayMarchPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
@@ -831,11 +786,8 @@ const taaResolver = new TAAResolver(root, width, height);
 
 function createBindGroups() {
   return {
-    backgroundDist: root.createBindGroup(backgroundDistLayout, {
-      distanceTexture: backgroundDistTexture.write,
-    }),
     rayMarch: root.createBindGroup(rayMarchLayout, {
-      backgroundDistTexture: backgroundDistTexture.read,
+      backgroundTexture: backgroundTexture.sampled,
     }),
     render: [0, 1].map((frame) =>
       root.createBindGroup(sampleLayout, {
@@ -859,16 +811,13 @@ function render(timestamp: number) {
 
   const currentFrame = frameCount % 2;
 
-  backgroundDistPipeline.with(bindGroups.backgroundDist).dispatchWorkgroups(
-    Math.ceil(width / 16),
-    Math.ceil(height / 16),
-  );
-
-  rayMarchPipeline.with(bindGroups.rayMarch).withColorAttachment({
-    view: root.unwrap(textures[currentFrame].sampled),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  rayMarchPipeline
+    .withColorAttachment({
+      view: root.unwrap(textures[currentFrame].sampled),
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
 
   taaResolver.resolve(
     textures[currentFrame].sampled,
@@ -895,7 +844,7 @@ function handleResize() {
   ];
   camera.updateProjection(Math.PI / 4, width, height);
   textures = createTextures(root, width, height);
-  backgroundDistTexture = createBackgroundDistTexture(root, width, height);
+  backgroundTexture = createBackgroundTexture(root, width, height);
   taaResolver.resize(width, height);
   frameCount = 0;
 
@@ -940,7 +889,7 @@ async function autoSetQuaility() {
       })
       .with(
         root.createBindGroup(rayMarchLayout, {
-          backgroundDistTexture: backgroundDistTexture.read,
+          backgroundTexture: backgroundTexture.sampled,
         }),
       )
       .draw(3);

@@ -41,16 +41,8 @@ export const SdfBbox = d.struct({
   top: d.f32,
 });
 
-export const backgroundDistLayout = tgpu.bindGroupLayout({
-  distanceTexture: {
-    storageTexture: d.textureStorage2d('r32float', 'write-only'),
-  },
-});
-
 export const rayMarchLayout = tgpu.bindGroupLayout({
-  backgroundDistTexture: {
-    storageTexture: d.textureStorage2d('r32float', 'read-only'),
-  },
+  backgroundTexture: { texture: d.texture2d(d.f32) },
 });
 
 export const taaResolveLayout = tgpu.bindGroupLayout({

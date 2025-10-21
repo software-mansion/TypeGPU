@@ -16,7 +16,6 @@ export const JELLY_IOR = 1.42;
 export const JELLY_ABSORB = d.vec3f(1.6, 3.2, 6.0).mul(5);
 export const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.3, 0.05).mul(1.5);
 export const JELLY_SCATTER_STRENGTH = 1.3;
-export const MAX_INTERNAL_STEPS = 7;
 
 // Ambient occlusion constants
 export const AO_STEPS = 3;
