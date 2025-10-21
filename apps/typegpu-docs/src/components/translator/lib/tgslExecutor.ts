@@ -1,30 +1,39 @@
-import * as Babel from '@babel/standalone';
-import plugin from 'unplugin-typegpu/babel';
-
-function translateTGSL(
-  code: string,
-): string {
-  const result = Babel.transform(code, {
-    'presets': ['typescript'],
-    'filename': 'example.ts',
-    plugins: [plugin],
-  }).code;
-  return result || '';
-}
+import { mapValues, pipe } from 'remeda';
+import rolldownPlugin from 'unplugin-typegpu/rolldown-browser';
+import { bundle } from './rolldown.ts';
+import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
 
 const moduleImports = {
-  'typegpu': 'https://esm.sh/typegpu@latest/?bundle=false',
-  'typegpu/data': 'https://esm.sh/typegpu@latest/data/?bundle=false',
-  'typegpu/std': 'https://esm.sh/typegpu@latest/std/?bundle=false',
+  'typed-binary': 'https://esm.sh/typed-binary@latest',
 } as Record<string, string>;
 
 type TgslModule = Record<string, unknown>;
 
 async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
-  const translatedCode = translateTGSL(tgslCode);
+  const result = await bundle(
+    {
+      ...pipe(SANDBOX_MODULES, mapValues((val) => val.import)),
+      '/shader.ts': { content: tgslCode },
+      '/index.ts': {
+        content: `
+          import tgpu from 'typegpu';
+          import * as exports from './shader.ts';
+
+          const shaderCode = tgpu.resolve({ externals: exports });
+          export default shaderCode;
+        `,
+      },
+    },
+    ['./index.ts'],
+    {
+      plugins: [rolldownPlugin({})],
+      external: ['typed-binary'],
+    },
+  );
+
+  const translatedCode = result.output['index.js'];
 
   const importMap = { imports: moduleImports };
-
   const importMapScript = document.createElement('script');
   importMapScript.type = 'importmap';
   importMapScript.textContent = JSON.stringify(importMap);
@@ -34,7 +43,7 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
     const userBlob = new Blob([translatedCode], { type: 'text/javascript' });
     const userModuleUrl = URL.createObjectURL(userBlob);
 
-    const module = await import(userModuleUrl);
+    const module = await import(/* @vite-ignore */ userModuleUrl);
 
     URL.revokeObjectURL(userModuleUrl);
     return module;
@@ -45,17 +54,10 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
 
 export async function executeTgslCode(tgslCode: string): Promise<string> {
   try {
-    const exports = await executeTgslModule(tgslCode);
-
-    const tgpuModule = await import(
-      //@ts-expect-error
-      'https://esm.sh/typegpu@latest?bundle=false'
-    );
-
-    return tgpuModule.default.resolve({
-      externals: exports as Record<string, object>,
-    });
+    const shaderCode = await executeTgslModule(tgslCode);
+    return shaderCode.default as string;
   } catch (error) {
+    console.error(error);
     throw new Error(
       `Failed to execute TGSL code: ${
         error instanceof Error ? error.message : String(error)
