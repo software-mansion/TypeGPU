@@ -945,13 +945,16 @@ export const controls = {
     },
   },
   'Light dir': {
-    initial: d.vec3f(0.18, -0.30, 0.64),
-    min: d.vec3f(-1, -1, -1),
-    max: d.vec3f(1, 0, 1),
-    step: d.vec3f(0.01, 0.01, 0.01),
-    onVectorSliderChange: (v: [number, number, number]) => {
+    initial: 0,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (v: number) => {
+      const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
+      const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
+      const finalDir = std.normalize(std.mix(dir1, dir2, v));
       lightUniform.writePartial({
-        direction: std.normalize(d.vec3f(...v)),
+        direction: finalDir,
       });
     },
   },
