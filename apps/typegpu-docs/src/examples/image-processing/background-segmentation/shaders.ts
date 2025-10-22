@@ -2,8 +2,10 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
+  blockDim,
   blurLayout,
   drawWithMaskLayout,
+  filterDim,
   generateMaskLayout,
   prepareModelInputLayout,
 } from './schemas.ts';
@@ -49,11 +51,10 @@ export const computeFn = tgpu['~unstable'].computeFn({
   in: { wid: d.builtin.workgroupId, lid: d.builtin.localInvocationId },
   workgroupSize: [32, 1, 1],
 })(({ wid, lid }) => {
-  const settings = blurLayout.$.settings;
-  const filterOffset = d.i32((settings.filterDim - 1) / 2);
+  const filterOffset = d.i32((filterDim - 1) / 2);
   const dims = d.vec2i(std.textureDimensions(blurLayout.$.inTexture));
   const baseIndex = d.vec2i(
-    wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
+    wid.xy.mul(d.vec2u(blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
   ).sub(d.vec2i(filterOffset, 0));
 
   // Load a tile of pixels into shared memory
@@ -90,9 +91,9 @@ export const computeFn = tgpu['~unstable'].computeFn({
         std.all(std.lt(writeIndex, dims))
       ) {
         let acc = d.vec3f();
-        for (let f = 0; f < settings.filterDim; f++) {
+        for (let f = 0; f < filterDim; f++) {
           const i = center + f - filterOffset;
-          acc = acc.add(tileData.$[r][i].mul(1 / settings.filterDim));
+          acc = acc.add(tileData.$[r][i].mul(1 / filterDim));
         }
         std.textureStore(blurLayout.$.outTexture, writeIndex, d.vec4f(acc, 1));
       }
@@ -104,22 +105,24 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
+  const uv = d.vec2f(1 - input.uv[0], input.uv[1]);
+
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   );
 
   const blurredColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputBlurredTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   );
 
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   ).x;
 
   return std.mix(blurredColor, originalColor, mask);

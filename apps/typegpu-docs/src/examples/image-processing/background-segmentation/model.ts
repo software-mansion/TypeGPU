@@ -5,15 +5,12 @@ export const MODEL_HEIGHT = 320;
 
 // AAA docs
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
-  // ort.env.webgpu.device = root.device; // see https://github.com/microsoft/onnxruntime/issues/26107
-  ort.env.debug = true;
+  // see https://github.com/microsoft/onnxruntime/issues/26107
 
   const session = await ort.InferenceSession
     .create('/TypeGPU/assets/background-segmentation/u2netp.onnx', {
       executionProviders: ['webgpu'],
     });
-
-  console.log(session);
 
   const myPreAllocatedInputTensor = ort.Tensor.fromGpuBuffer(input, {
     dataType: 'float32',

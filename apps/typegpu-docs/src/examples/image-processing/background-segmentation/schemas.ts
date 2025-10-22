@@ -3,21 +3,9 @@ import * as d from 'typegpu/data';
 
 // constants
 
-// AAA usuń to
-export const settings = {
-  filterDim: 25,
-  iterations: 1,
-  get blockDim() {
-    return 128 - (this.filterDim) + 1;
-  },
-};
-
-// schemas
-
-export const Settings = d.struct({
-  filterDim: d.i32,
-  blockDim: d.u32,
-});
+export const iterations = 10;
+export const filterDim = 25;
+export const blockDim = 128 - filterDim + 1;
 
 // layouts
 
@@ -39,7 +27,6 @@ export const blurLayout = tgpu.bindGroupLayout({
   inTexture: { texture: d.texture2d(d.f32) },
   outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
   sampler: { sampler: 'filtering' },
-  settings: { uniform: Settings },
 });
 
 export const drawWithMaskLayout = tgpu.bindGroupLayout({

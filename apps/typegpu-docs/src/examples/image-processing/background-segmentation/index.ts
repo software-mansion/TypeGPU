@@ -8,12 +8,11 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
+  blockDim,
   blurLayout,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
-  Settings,
-  settings,
 } from './schemas.ts';
 import {
   computeFn,
@@ -96,8 +95,6 @@ let blurBindGroups: TgpuBindGroup<(typeof blurLayout)['entries']>[];
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
-
-const settingsUniform = root.createBuffer(Settings, settings).$usage('uniform');
 
 // pipelines
 
@@ -183,14 +180,12 @@ function onVideoChange(size: { width: number; height: number }) {
       inTexture: blurredTextures[0],
       outTexture: blurredTextures[1],
       sampler,
-      settings: settingsUniform,
     }),
     root.createBindGroup(blurLayout, {
       flip: oneBuffer,
       inTexture: blurredTextures[1],
       outTexture: blurredTextures[0],
       sampler,
-      settings: settingsUniform,
     }),
   ];
 }
@@ -221,7 +216,7 @@ async function processVideoFrame(
     blurPipeline
       .with(blurBindGroups[i])
       .dispatchWorkgroups(
-        Math.ceil(frameWidth / settings.blockDim),
+        Math.ceil(frameWidth / blockDim),
         Math.ceil(frameHeight / 4),
       );
   }
