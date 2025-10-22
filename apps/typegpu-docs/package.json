@@ -52,7 +52,7 @@
     "remeda": "^2.21.2",
     "sharp": "^0.34.2",
     "starlight-blog": "^0.23.2",
-    "starlight-typedoc": "^0.19.0",
+    "starlight-typedoc": "^0.21.4",
     "tinybench": "^3.1.0",
     "typedoc": "^0.28.13",
     "typedoc-plugin-markdown": "^4.3.0",
