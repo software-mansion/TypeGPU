@@ -212,12 +212,18 @@ async function processVideoFrame(
 
   blurredTextures[0].write(video);
 
-  for (const i of [...Array(10).fill([0, 1]).flat()]) {
+  for (const _ of Array(10)) {
     blurPipeline
-      .with(blurBindGroups[i])
+      .with(blurBindGroups[0])
       .dispatchWorkgroups(
         Math.ceil(frameWidth / blockDim),
         Math.ceil(frameHeight / 4),
+      );
+    blurPipeline
+      .with(blurBindGroups[1])
+      .dispatchWorkgroups(
+        Math.ceil(frameHeight / blockDim),
+        Math.ceil(frameWidth / 4),
       );
   }
 
