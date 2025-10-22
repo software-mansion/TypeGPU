@@ -563,30 +563,33 @@ const renderBackground = (
 
   const percentageSample = renderPercentageOnGround(
     hitPosition,
-    d.vec3f(0.75, 0.0, 0.0),
+    d.vec3f(0.75, 0, 0),
     d.u32((slider.endCapUniform.$.x + 0.43) * 84),
   );
 
-  let highlights = d.f32(0.0);
+  let highlights = d.f32();
 
-  const highlightWidth = d.f32(1.1 + slider.endCapUniform.$.x / 2);
-  const highlightHeight = d.f32(0.5 + (1 - slider.endCapUniform.$.x) / 3);
-  let offsetX = d.f32((1.1 - slider.endCapUniform.$.x) / 2);
+  const highlightWidth = 1;
+  const highlightHeight = 0.3;
+  let offsetX = d.f32();
   let offsetZ = d.f32();
 
   const lightDir = lightUniform.$.direction;
   const causticScale = 0.1;
-  offsetX += lightDir.x * causticScale;
-  offsetZ += lightDir.z * causticScale;
+  offsetX -= lightDir.x * causticScale;
+  offsetZ -= lightDir.z * causticScale;
+
+  const endCapX = slider.endCapUniform.$.x;
+  const sliderStretch = (endCapX + 1) * 0.5;
 
   if (
     std.abs(hitPosition.x + offsetX) < highlightWidth &&
     std.abs(hitPosition.z + offsetZ) < highlightHeight
   ) {
-    const uvX_orig = (hitPosition.x + offsetX + highlightWidth * 0.5) /
-      highlightWidth;
-    const uvZ_orig = (hitPosition.z + offsetZ + highlightHeight * 0.5) /
-      highlightHeight;
+    const uvX_orig = (hitPosition.x + offsetX + highlightWidth * 2) /
+      highlightWidth * 0.5;
+    const uvZ_orig = (hitPosition.z + offsetZ + highlightHeight * 2) /
+      highlightHeight * 0.5;
 
     const lightDir = lightUniform.$.direction;
     const angle = std.atan2(lightDir.z, lightDir.x) + 1.5708;
@@ -596,20 +599,23 @@ const renderBackground = (
 
     const centeredUV = d.vec2f(uvX_orig - 0.5, uvZ_orig - 0.5);
     const rotatedUV = rot.mul(centeredUV);
-    const finalUV = rotatedUV.add(d.vec2f(0.5));
+    const finalUV = d.vec2f(
+      centeredUV.x,
+      0.9 - (1 - (1 - std.abs(centeredUV.y - 0.5) * 2) ** 4) * 0.2,
+    );
 
-    const density = 1 - std.textureSampleLevel(
-      bezierTexture.$,
-      filteringSampler.$,
-      finalUV,
+    const density = std.max(
       0,
-    ).x;
+      (std.textureSampleLevel(bezierTexture.$, filteringSampler.$, finalUV, 0)
+        .x - 0.1) * 4,
+    );
 
-    const fadeX = 1.0 - std.abs(finalUV.x - 0.5) * 2.0;
-    const fadeZ = 1.0 - std.abs(finalUV.y - 0.5) * 2.0;
-    const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ);
+    const fadeX = std.smoothstep(0, -0.2, hitPosition.x - endCapX);
+    const fadeZ = 1 - (std.abs(centeredUV.y - 0.5) * 2);
+    const fadeStretch = std.saturate(1 - sliderStretch);
+    const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ) * fadeStretch;
 
-    highlights = density ** 4 * edgeFade * 2 * (1.2 - slider.endCapUniform.$.x);
+    highlights = (1 - (1 - density ** 4)) * edgeFade * 5;
   }
 
   const normal = getNormalMain(hitPosition);
@@ -751,11 +757,13 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
   const ray = getRay(ndc);
 
-  return rayMarch(
+  const color = rayMarch(
     ray.origin,
     ray.direction,
     uv,
   );
+
+  return d.vec4f(std.tanh(color.xyz), 1);
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
