@@ -5,7 +5,7 @@ import './loadingSpinner.css';
 const { title, theme = 'light' } = Astro.props;
 ---
 
-<html data-theme={theme}>
+<html data-theme={theme} class={theme === 'dark' ? 'dark' : undefined}>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
@@ -69,6 +69,31 @@ const { title, theme = 'light' } = Astro.props;
         border: none;
       }
     </style>
+    <script is:inline>
+      (function () {
+        const storageKey = 'typegpu-theme';
+        const doc = document.documentElement;
+
+        const applyTheme = (theme) => {
+          doc.dataset.theme = theme;
+          doc.classList.toggle('dark', theme === 'dark');
+        };
+
+        let storedTheme = null;
+        try {
+          storedTheme = window.localStorage.getItem(storageKey);
+        } catch (error) {
+          storedTheme = null;
+        }
+
+        const systemPrefersDark =
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const themeToApply = storedTheme || doc.dataset.theme || (systemPrefersDark ? 'dark' : 'light');
+
+        applyTheme(themeToApply);
+      })();
+    </script>
   </head>
   <body>
     <slot />

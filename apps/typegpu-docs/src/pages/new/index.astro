@@ -28,134 +28,154 @@ import CodeShowcase from "../../components/CodeShowcase.astro";
 import TgpuExamples from "../../components/TgpuExamples.astro";
 import Backlog from "../../components/Backlog.astro";
 import Videos from "../../components/Videos.astro";
+import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
-  <main>
-    <header
-      class="flex justify-between items-center self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5 h-24 shrink-0"
-    >
-      <a href="https://swmansion.com" target="_blank" rel="noreferrer">
-        <Image
-          src={TypeGPULogoLight}
-          class="block md:hidden w-auto h-14"
-          alt="Software Mansion Logo (Mobile)"
-        />
-        <Image
-          src={SwmLogoSvg}
-          class="hidden md:block w-auto h-14"
-          alt="Software Mansion Logo (Desktop)"
-        />
-      </a>
+  <div
+    class="transition-colors duration-300 bg-white dark:bg-gray-900 text-blue-950 dark:text-gray-100"
+  >
+    <main class="transition-colors duration-300">
+      <header
+        class="flex justify-between items-center self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5 h-24 shrink-0 transition-colors duration-300 bg-white dark:bg-gray-900"
+      >
+        <a href="https://swmansion.com" target="_blank" rel="noreferrer">
+          <Image
+            src={TypeGPULogoLight}
+            class="block md:hidden w-auto h-14"
+            alt="Software Mansion Logo (Mobile)"
+          />
+          <Image
+            src={SwmLogoSvg}
+            class="hidden md:block w-auto h-14"
+            alt="Software Mansion Logo (Desktop)"
+          />
+        </a>
 
-      <div class="flex items-center gap-10 h-4">
-        <!-- Light / Dark -->
-        <div class="grid grid-cols-2 border">
-          <a class="place-items-center grid bg-blue-900 p-2">
-            <Image
-              src={LightModeIconSvg}
-              class="w-6 h-6 text-white"
-              alt="Light Mode"
-            />
+        <div
+          class="flex items-center gap-10 h-4 text-blue-900 dark:text-gray-100"
+        >
+          <!-- Light / Dark -->
+          <ThemeSwitcher />
+          <!-- Docs -->
+          <a
+            href="https://github.com/software-mansion/TypeGPU/getting-started"
+            target="_blank"
+            class="no-underline"
+            rel="noreferrer"
+          >
+            <p
+              class="text-blue-900 transition-colors duration-300 dark:text-gray-100"
+            >
+              Docs
+            </p>
           </a>
-
-          <a class="place-items-center grid bg-white p-2">
+          <!-- GitHub -->
+          <a
+            href="https://github.com/software-mansion/TypeGPU"
+            target="_blank"
+            rel="noreferrer"
+          >
             <Image
-              src={DarkModeIconSvg}
-              class="w-6 h-6 text-blue-900"
-              alt="Dark Mode"
+              src={GithubIconSvg}
+              class="opacity-75 fill-blue-900 dark:fill-gray-100 transition-colors duration-300 w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10"
+              alt="GitHub Logo"
             />
           </a>
         </div>
-        <!-- Docs -->
-        <a
-          href="https://github.com/software-mansion/TypeGPU/getting-started"
-          target="_blank"
-          class="no-underline"
-          rel="noreferrer"
+      </header>
+    </main>
+
+    {/* Hero Section */}
+    <section
+      class="flex flex-col items-center mx-auto lg:px-72 lg:max-w-340 md:max-w-214 max-w-138 transition-colors duration-300"
+    >
+      <div class="flex flex-col lg:px-0 px-6">
+        <div
+          class="font-extrabold text-blue-900 dark:text-gray-100 lg:text-7xl text-3xl"
         >
-          <p class="text-blue-900">Docs</p>
-        </a>
-        <!-- GitHub -->
-        <a
-          href="https://github.com/software-mansion/TypeGPU"
-          target="_blank"
-          rel="noreferrer"
+          Type
+          <GradientTitle title="GPU" />
+        </div>
+        <div
+          class="text-blue-950 dark:text-gray-200 lg:text-6xl text-3xl text-pretty"
         >
-          <Image
-            src={GithubIconSvg}
-            class="opacity-75 fill-blue-900 w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10"
-            alt="GitHub Logo"
-          />
-        </a>
+          A modular and open-ended toolkit for WebGPU, with advanced type
+          interface and ability to write shaders in TypeScript.
+          <!-- <br class="hidden sm:block" /> -->
+        </div>
+        <div class="flex sm:flex-row flex-col gap-4 my-20">
+          <GetStartedButton />
+          <a
+            class="box-border bg-white dark:bg-gray-800 shadow px-6 md:px-7 lg:px-8 py-4 md:py-5 lg:py-6 border border-accent-500 dark:border-gray-600 w-full sm:w-auto text-black/75 hover:text-black dark:text-gray-100 dark:hover:text-white text-base md:text-xl lg:text-2xl text-center no-underline transition-all"
+            href="/TypeGPU/examples">See examples</a
+          >
+        </div>
       </div>
-    </header>
-  </main>
+    </section>
 
-  {/* Hero Section */}
-  <section class="flex flex-col items-center mx-auto lg:px-72 lg:max-w-340">
-    <div class="flex flex-col lg:px-0 px-6">
-      <div class="font-extrabold text-blue-900 lg:text-7xl text-3xl">
-        Type
-        <GradientTitle title="GPU" />
-      </div>
-      <div class="text-blue-950 lg:text-6xl text-3xl text-pretty">
-        A modular and open-ended toolkit for WebGPU, with advanced type
-        interface and ability to write shaders in TypeScript.
-        <!-- <br class="hidden sm:block" /> -->
-      </div>
-      <div class="flex sm:flex-row flex-col gap-4 my-20">
-        <GetStartedButton />
-        <a
-          class="box-border bg-white shadow shadow-tameplum-20 hover:shadow-md px-6 md:px-7 lg:px-8 py-4 md:py-5 lg:py-6 border border-accent-500 w-full sm:w-auto text-black/75 hover:text-black text-base md:text-xl lg:text-2xl text-center no-underline transition-all"
-          href="/TypeGPU/examples">See examples</a
+    {/* Code Showcase */}
+    <div
+      class="mx-auto lg:px-72 px-6 lg:max-w-340 md:max-w-214 max-w-138 transition-colors duration-300"
+    >
+      <div class="mb-12">
+        {/* Section Title */}
+        <h2
+          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
         >
+          Ways to use TypeGPU
+        </h2>
+        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+          TypeGPU is a three-way toolkit that is easy for you to integrate
+          granularly and doesn't restrict you in what you can do.
+        </p>
       </div>
+      <CodeShowcase />
     </div>
-  </section>
 
-  {/* Code Showcase */}
-  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
-    <div class="mb-12">
-      {/* Section Title */}
-      <h2 class="font-normal text-blue-950 text-4xl center">
-        Ways to use TypeGPU
-      </h2>
-      <p class="text-blue-900 text-2xl text-pretty">
-        TypeGPU is a three-way toolkit that is easy for you to integrate
-        granularly and doesn't restrict you in what you can do.
-      </p>
+    {/* TypeGPU examples */}
+    <div
+      class="mx-auto lg:px-72 px-6 lg:max-w-340 md:max-w-214 max-w-138 transition-colors duration-300"
+    >
+      <div class="my-12">
+        <h2
+          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+        >
+          Explore TypeGPU examples
+        </h2>
+        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+          From interactive 3D apps to custom shaders and type-safe libraries,
+          TypeGPU gives you the tools to build anything WebGPU can do.
+        </p>
+      </div>
+      <TgpuExamples />
     </div>
-    <CodeShowcase />
-  </div>
 
-  {/* TypeGPU examples */}
-  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
-    <div class="my-12">
-      <h2 class="font-normal text-blue-950 text-4xl center">
-        Explore TypeGPU examples
-      </h2>
-      <p class="text-blue-900 text-2xl text-pretty">
-        From interactive 3D apps to custom shaders and type-safe libraries,
-        TypeGPU gives you the tools to build anything WebGPU can do.
-      </p>
+    {/* Videos */}
+    <div class="mx-auto lg:px-72 px-6 lg:max-w-340 md:max-w-214 max-w-138">
+      <div class="my-12">
+        <h2 class="font-normal text-blue-950 dark:text-white text-4xl center">
+          Get to know TypeGPU
+        </h2>
+        <p class="text-blue-900 dark:text-white text-2xl text-pretty">
+          Dive into guides, tutorials, and videos to see how TypeGPU can change
+          the way you work with GPU rendering and computing.
+        </p>
+      </div>
+      <Videos />
     </div>
-    <TgpuExamples />
-  </div>
-
-  {/* Videos */}
-  <div class="mx-auto lg:px-72 px-6 lg:max-w-340">
-    <Videos />
   </div>
 </PageLayout>
 
 {/* Backlog */}
-<div class="mx-auto lg:px-72 px-6 lg:max-w-340">
+<div
+  class="mx-auto lg:px-72 px-6 lg:max-w-340 md:max-w-214 max-w-138 transition-colors duration-300"
+>
   <div class="my-12">
-    <h2 class="font-normal text-blue-950 text-4xl center">
+    <h2 class="font-normal text-blue-950 dark:text-gray-100 text-4xl center">
       What's around the corner?
     </h2>
-    <p class="text-blue-900 text-2xl text-pretty">
+    <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
       Our journey toward end-to-end type safety involves several interoperating
       primitives – explore our live board to see what features are coming next.
     </p>
@@ -165,10 +185,10 @@ import Videos from "../../components/Videos.astro";
 
 {/* Call to Action Section */}
 <section
-  class="flex flex-col items-center gap-16 mx-auto lg:px-72 px-6 lg:max-w-340"
+  class="flex flex-col items-center gap-16 mx-auto lg:px-72 px-6 lg:max-w-340 md:max-w-214 max-w-138 transition-colors duration-300"
 >
   <h2
-    class="text-center font-bold text-blue-950 text-3xl lg:text-7xl leading-tight"
+    class="text-center font-bold text-blue-950 dark:text-gray-100 text-3xl lg:text-7xl leading-tight"
   >
     Ready to try out <GradientTitle title="TypeGPU" />?
   </h2>
@@ -177,15 +197,15 @@ import Videos from "../../components/Videos.astro";
 
 {/* Footer Section */}
 <footer
-  class="flex flex-col items-center gap-10 md:gap-15 lg:gap-20 bg-gradient-to-b from-white mt-20 to-accent-50"
+  class="flex flex-col items-center gap-10 md:gap-15 lg:gap-20 bg-gradient-to-b from-white mt-20 to-accent-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
 >
   <div
-    class="flex flex-col items-center gap-12 mx-auto lg:px-72 px-6 py-10 lg:max-w-340 text-blue-950"
+    class="flex flex-col items-center gap-12 mx-auto lg:px-72 px-6 py-10 lg:max-w-340 md:max-w-214 max-w-138 text-blue-950 dark:text-gray-100 transition-colors duration-300"
   >
     <h2 class="text-center font-bold text-3xl lg:text-7xl leading-tight">
       We are <GradientTitle title="Software Mansion" />
     </h2>
-    <div class="mb-4 text-2xl text-pretty">
+    <div class="mb-4 text-2xl text-pretty text-blue-900 dark:text-gray-300">
       We’re a software company built around improving developer experience and
       bringing to life the innovative ideas of our clients. Do you have a
       software project that we can help you with?
@@ -196,55 +216,57 @@ import Videos from "../../components/Videos.astro";
     />
 
     <div
-      class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white py-8 w-full max-w-7xl text-center"
+      class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white dark:bg-gray-800 py-8 w-full max-w-7xl text-center transition-colors duration-300"
     >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native Reanimated</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native Gesture Handler</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native Screens</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native SVG</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native Audio API</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >React Native ExecuTorch</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >TypeGPU</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >Radon IDE</a
       >
       <a
         href="#"
-        class="text-blue-950 no-underline transition-colors hover:text-accent-700"
+        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
         >BayoJajo</a
       >
     </div>
-    <div class="flex flex-col items-center gap-4 text-grayscale-100 pb-4">
+    <div
+      class="flex flex-col items-center gap-4 text-grayscale-100 dark:text-gray-400 pb-4 transition-colors duration-300"
+    >
       &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
       copyrights belong to their respective owners.
 
