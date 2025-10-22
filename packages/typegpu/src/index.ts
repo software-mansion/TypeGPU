@@ -100,6 +100,7 @@ export { isVariable } from './core/variable/tgpuVariable.ts';
 
 export type {
   Configurable,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   ValidateBufferSchema,
   ValidateStorageSchema,

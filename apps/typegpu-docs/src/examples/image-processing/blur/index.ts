@@ -179,7 +179,7 @@ function render() {
 
   for (const i of indices) {
     computePipeline
-      .with(ioLayout, ioBindGroups[i])
+      .with(ioBindGroups[i])
       .dispatchWorkgroups(
         Math.ceil(srcWidth / settings.blockDim),
         Math.ceil(srcHeight / 4),

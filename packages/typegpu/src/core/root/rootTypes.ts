@@ -78,17 +78,20 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // Public API
 // ----------
 
-export interface PreparedDispatch<TArgs extends number[]> {
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
   /**
-   * Returns a new PreparedDispatch with the specified bind group bound.
+   * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
    */
-  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs>;
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
 
   /**
-   * Run the prepared dispatch.
-   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
-   * this method takes in the number of threads to run in each dimension.
+   * Dispatches the pipeline.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`, this method takes in the
+   * number of threads to run in each dimension.
+   *
+   * Under the hood, the number of expected threads is sent as a uniform, and
+   * "guarded" by a bounds check.
    */
   dispatchThreads(...args: TArgs): void;
 }
@@ -205,39 +208,53 @@ export interface WithBinding {
   ): WithCompute;
 
   /**
-   * Creates a compute pipeline that executes the given callback. It can accept
-   * up to 3 parameters (x, y, z) which correspond to the global invocation ID
-   * of the executing thread.
+   * Creates a compute pipeline that executes the given callback in an exact number of threads.
+   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * thread id, where as regular pipelines do not and work in units of workgroups.
    *
-   * @param callback A function converted to WGSL and executed on the GPU. Its arguments correspond to the global invocation IDs.
+   * @param callback A function converted to WGSL and executed on the GPU.
+   *                 It can accept up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   *                 of the executing thread.
    *
    * @example
    * If no parameters are provided, the callback will be executed once, in a single thread.
    *
    * ```ts
-   * const action = root.prepareDispatch(() => {
-   *   'use gpu';
-   *   console.log('Hello, GPU!');
-   * });
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline(() => {
+   *     'use gpu';
+   *     console.log('Hello, GPU!');
+   *   });
    *
-   * action.dispatchThreads();
+   * fooPipeline.dispatchThreads();
+   * // [GPU] Hello, GPU!
    * ```
    *
    * @example
    * One parameter means n-threads will be executed in parallel.
    *
    * ```ts
-   * const action = root.prepareDispatch((x) => {
-   *   'use gpu';
-   *   console.log('I am the', x, 'thread');
-   * });
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline((x) => {
+   *     'use gpu';
+   *     if (x % 16 === 0) {
+   *       // Logging every 16th thread
+   *       console.log('I am the', x, 'thread');
+   *     }
+   *   });
    *
-   * action.dispatchThreads(12); // executing 12 threads
+   * // executing 512 threads
+   * fooPipeline.dispatchThreads(512);
+   * // [GPU] I am the 256 thread
+   * // [GPU] I am the 272 thread
+   * // ... (30 hidden logs)
+   * // [GPU] I am the 16 thread
+   * // [GPU] I am the 240 thread
    * ```
    */
-  prepareDispatch<TArgs extends number[]>(
+  createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => void,
-  ): PreparedDispatch<TArgs>;
+  ): TgpuGuardedComputePipeline<TArgs>;
 
   withVertex<
     VertexIn extends VertexInConstrained,

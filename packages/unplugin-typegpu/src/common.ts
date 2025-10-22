@@ -163,6 +163,7 @@ const resourceConstructors: string[] = [
   'createQuerySet',
   // root['~unstable']
   'createPipeline',
+  'createGuardedComputePipeline',
   'createTexture',
   'createSampler',
   'createComparisonSampler',
