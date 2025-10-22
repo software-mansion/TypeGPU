@@ -19,3 +19,15 @@ export const divInteger = (lhs: number, rhs: number) => {
   }
   return Math.trunc(lhs / rhs);
 };
+
+export function bitcastU32toF32Impl(n: number): number {
+  const dataView = new DataView(new ArrayBuffer(4));
+  dataView.setUint32(0, n, true);
+  return dataView.getFloat32(0, true);
+}
+
+export function bitcastU32toI32Impl(n: number): number {
+  const dataView = new DataView(new ArrayBuffer(4));
+  dataView.setUint32(0, n, true);
+  return dataView.getInt32(0, true);
+}

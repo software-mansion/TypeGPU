@@ -1,4 +1,4 @@
-import tgpu, { type TgpuTexture } from 'typegpu';
+import tgpu, { type SampledFlag, type TgpuTexture } from 'typegpu';
 import * as d from 'typegpu/data';
 
 type LUTData = {
@@ -24,9 +24,17 @@ const Adjustments = d.struct({
   saturation: d.f32,
 });
 
-let defaultLUTTexture: TgpuTexture;
-let currentLUTTexture: TgpuTexture;
-let imageTexture: TgpuTexture;
+let defaultLUTTexture:
+  & TgpuTexture<{ size: [1, 1, 1]; format: 'rgba16float'; dimension: '3d' }>
+  & SampledFlag;
+let currentLUTTexture:
+  & TgpuTexture<
+    { size: [number, number, number]; format: 'rgba16float'; dimension: '3d' }
+  >
+  & SampledFlag;
+let imageTexture:
+  & TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }>
+  & SampledFlag;
 
 const root = await tgpu.init();
 const device = root.device;
@@ -77,7 +85,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   let contrastColor = (exposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
   let contrastLuminance = (exposureLuminance - 0.5) * adjustments.contrast + 0.5;
   let contrastColorLuminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
-  
+
   let highlightShift = adjustments.highlights - 1.0;
   let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments.highlights >= 1.0);
   let highlightFactor = 1.0 + highlightBiased * 0.5 * contrastColorLuminance;
@@ -108,19 +116,14 @@ function render() {
   }
 
   const uniformLayout = tgpu.bindGroupLayout({
-    currentLUTTexture: {
-      texture: 'float',
-      dimension: '3d',
-      viewDimension: '3d',
-      sampleType: 'float',
-    },
+    currentLUTTexture: { texture: d.texture3d(d.f32) },
     lutSampler: { sampler: 'filtering' },
     lut: { uniform: LUTParams },
     adjustments: { uniform: Adjustments },
   });
 
   const renderLayout = tgpu.bindGroupLayout({
-    inTexture: { texture: 'float', dimension: '2d', sampleType: 'float' },
+    inTexture: { texture: d.texture2d(d.f32) },
     inSampler: { sampler: 'filtering' },
   });
 
@@ -138,16 +141,14 @@ function render() {
   });
 
   const uniformBindGroup = root.createBindGroup(uniformLayout, {
-    currentLUTTexture: root.unwrap(currentLUTTexture).createView({
-      dimension: '3d',
-    }),
+    currentLUTTexture: currentLUTTexture.createView(d.texture3d(d.f32)),
     lutSampler,
     lut: lutParamsBuffer,
     adjustments: adjustmentsBuffer,
   });
 
   const renderBindGroup = root.createBindGroup(renderLayout, {
-    inTexture: root.unwrap(imageTexture).createView(),
+    inTexture: imageTexture.createView(d.texture2d(d.f32)),
     inSampler: imageSampler,
   });
 

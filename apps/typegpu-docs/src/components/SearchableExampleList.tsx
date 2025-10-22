@@ -12,8 +12,8 @@ function ExamplesGrid({ examples }: { examples: Example[] }) {
   );
 }
 
-const DEV = globalThis.process.env.NODE_ENV === 'development';
-const TEST = globalThis.process.env.NODE_ENV === 'test';
+const DEV = process.env.NODE_ENV === 'development';
+const TEST = process.env.NODE_ENV === 'test';
 
 export function SearchableExampleList(
   { excludeTags = [], scrollContainerRef }: {

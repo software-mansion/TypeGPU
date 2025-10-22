@@ -3,7 +3,6 @@ import Editor, {
   type Monaco,
   type OnMount,
 } from '@monaco-editor/react';
-// biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
@@ -17,7 +16,7 @@ function handleEditorWillMount(monaco: Monaco) {
     entries(SANDBOX_MODULES),
     map(([key, moduleDef]) => {
       if ('reroute' in moduleDef.typeDef) {
-        return [key, moduleDef.typeDef.reroute] as const;
+        return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
       }
       return null;
     }),

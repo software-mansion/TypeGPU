@@ -7,7 +7,8 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
+import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -47,7 +48,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(() => pipeline.dispatchWorkgroups(1))
       .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
       );
   });
 
@@ -61,9 +62,35 @@ describe('TgpuComputePipeline', () => {
       .withCompute(main)
       .createPipeline();
 
-    expect(parseResolved({ computePipeline })).toStrictEqual(parse(`
-      @compute @workgroup_size(32) fn main() {}
-    `));
+    expect(asWgsl(computePipeline)).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(32) fn main() {
+
+      }"
+    `);
+  });
+
+  it('type checks passed bind groups', ({ root }) => {
+    const main = tgpu['~unstable']
+      .computeFn({ workgroupSize: [32] })(() => {
+        // do something
+      });
+    const computePipeline = root
+      .withCompute(main)
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    computePipeline.with(layout1, bindGroup1);
+    computePipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => computePipeline.with(layout1, bindGroup2));
   });
 
   describe('Performance Callbacks', () => {
@@ -137,7 +164,7 @@ describe('TgpuComputePipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
@@ -155,7 +182,7 @@ describe('TgpuComputePipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
     });
   });
@@ -321,12 +348,12 @@ describe('TgpuComputePipeline', () => {
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
         })
-        .with(layout, bindGroup);
+        .with(bindGroup);
 
       const pipeline2 = root
         .withCompute(entryFn)
         .createPipeline()
-        .with(layout, bindGroup)
+        .with(bindGroup)
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 2,
@@ -441,5 +468,93 @@ describe('TgpuComputePipeline', () => {
         },
       });
     });
+  });
+
+  it('enables language extensions when their corresponding feature is enabled', ({ root, device }) => {
+    Object.defineProperty(root, 'enabledFeatures', {
+      value: new Set<GPUFeatureName>(['shader-f16', 'subgroups']),
+      writable: true,
+    });
+
+    const fn = tgpu['~unstable'].computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })(({ gid }) => {
+      const a = d.arrayOf(d.f32, 3)();
+    });
+
+    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+
+    pipeline.dispatchWorkgroups(1);
+
+    expect(
+      (device.mock.createShaderModule.mock.calls[0] as {
+        label?: string;
+        code: string;
+      }[])[0]?.code,
+    ).toMatchInlineSnapshot(`
+      "enable f16;
+      enable subgroups;
+
+      struct fn_Input_1 {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+        var a = array<f32, 3>();
+      }"
+    `);
+  });
+
+  it('performs extension based pruning', ({ root, device }) => {
+    Object.defineProperty(root, 'enabledFeatures', {
+      value: new Set<GPUFeatureName>(['shader-f16', 'subgroups']),
+      writable: true,
+    });
+
+    const fn = tgpu['~unstable'].computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })(({ gid }) => {
+      const a = d.arrayOf(d.f16, 3)();
+      if (extensionEnabled('subgroups')) {
+        a[0] = gid.x;
+      }
+      if (extensionEnabled('f16')) {
+        a[1] = d.f16(1.0);
+      }
+      if (extensionEnabled('primitive_index')) {
+        a[2] = d.f16(2.0);
+      }
+    });
+
+    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+
+    pipeline.dispatchWorkgroups(1);
+
+    expect(
+      (device.mock.createShaderModule.mock.calls[0] as {
+        label?: string;
+        code: string;
+      }[])[0]?.code,
+    ).toMatchInlineSnapshot(`
+      "enable f16;
+      enable subgroups;
+
+      struct fn_Input_1 {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+        var a = array<f16, 3>();
+        {
+          a[0] = f16(_arg_0.gid.x);
+        }
+        {
+          a[1] = 1;
+        }
+
+      }"
+    `);
   });
 });

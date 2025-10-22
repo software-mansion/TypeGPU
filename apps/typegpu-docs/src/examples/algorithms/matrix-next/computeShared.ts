@@ -4,8 +4,8 @@ import * as std from 'typegpu/std';
 import { TILE_SIZE, WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';
 
-const tileA = tgpu['~unstable'].workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
-const tileB = tgpu['~unstable'].workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
+const tileA = tgpu.workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
+const tileB = tgpu.workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
 
 export const getIndex = tgpu.fn([d.u32, d.u32, d.u32], d.u32)(
   (row, col, columns) => {

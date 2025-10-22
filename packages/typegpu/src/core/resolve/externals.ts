@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, isNamable } from '../../shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -23,8 +23,11 @@ export function applyExternals(
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
-    if (isNamable(value) && getName(value) === undefined) {
-      value.$name(key);
+    if (
+      value && (typeof value === 'object' || typeof value === 'function') &&
+      getName(value) === undefined
+    ) {
+      setName(value, key);
     }
   }
 }
@@ -87,11 +90,23 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    if (isWgsl(external) || isLooseData(external)) {
-      return acc.replaceAll(
-        identifierRegex(externalName),
-        ctx.resolve(external),
+    const externalRegex = identifierRegex(externalName);
+    if (
+      wgsl &&
+      externalName !== 'Out' &&
+      externalName !== 'In' &&
+      !externalRegex.test(wgsl)
+    ) {
+      console.warn(
+        `The external '${externalName}' wasn't used in the resolved template.`,
       );
+      // continue anyway, we still might need to resolve the external
+    }
+
+    if (
+      isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)
+    ) {
+      return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
     if (external !== null && typeof external === 'object') {
@@ -104,9 +119,10 @@ export function replaceExternalsInWgsl(
             'g',
           ),
         ),
-      ].map((found) => found[1]) ?? [];
+      ].map((found) => found[1]);
+      const uniqueProperties = [...new Set(foundProperties)];
 
-      return foundProperties.reduce(
+      return uniqueProperties.reduce(
         (innerAcc: string, prop) =>
           prop && prop in external
             ? replaceExternalsInWgsl(
@@ -121,6 +137,10 @@ export function replaceExternalsInWgsl(
         acc,
       );
     }
+
+    console.warn(
+      `During resolution, the external '${externalName}' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+    );
 
     return acc;
   }, wgsl);

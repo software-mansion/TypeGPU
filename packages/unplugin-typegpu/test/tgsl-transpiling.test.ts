@@ -38,6 +38,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         counter.value.z += d.f32(input.num.x);
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
         get externals() {
           return {
@@ -75,6 +76,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
         get externals() {
           return {};
@@ -84,6 +86,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const y = 2 + 2;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
         get externals() {
           return {};
@@ -92,6 +95,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       const cx = 2;
       const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
         v: 1,
+        name: void 0,
         ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
         get externals() {
           return {
@@ -143,6 +147,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
         get externals() {
           return {};
@@ -154,6 +159,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true as boolean;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
         get externals() {
           return {};
@@ -165,6 +171,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true satisfies boolean;
       }, {
         v: 1,
+        name: void 0,
         ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
         get externals() {
           return {};
@@ -211,6 +218,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   counter.value.z += d.f32(input.num.x);
                   }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
                     get externals() { return {counter, d}; },
                   }) && $.f)({})));
@@ -242,6 +250,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
               }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -249,6 +258,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               }), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
                     get externals() { return {}; },
                   }) && $.f)({})));
@@ -256,6 +266,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const cx = 2;
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
                     v: 1,
+                    name: undefined,
                     ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
                     get externals() { return {cx}; },
                   }) && $.f)({})));

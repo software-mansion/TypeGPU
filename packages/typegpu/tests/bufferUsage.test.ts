@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { parse } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 import tgpu from '../src/index.ts';
 
@@ -19,23 +19,14 @@ describe('TgpuBufferUniform', () => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
     const uniform = buffer.as('uniform');
 
-    const resolved = tgpu.resolve({
-      template: `
-        fn m() {
-          let y = hello;
-        }`,
-      externals: { hello: uniform },
-      names: 'strict',
-    });
+    const main = tgpu.fn([])`() { let y = hello; }`
+      .$uses({ hello: uniform });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<uniform> param: f32;
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> param: f32;
 
-        fn m() {
-          let y = param;
-        }`),
-    );
+      fn main() { let y = param; }"
+    `);
   });
 
   it('resolves to buffer binding in tgsl functions', ({ root }) => {
@@ -46,19 +37,13 @@ describe('TgpuBufferUniform', () => {
       const x = uniform.value;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> param: f32;
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<uniform> param: f32;
-
-        fn func() {
-          var x = param;
-        }`),
-    );
+      fn func() {
+        var x = param;
+      }"
+    `);
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
@@ -75,25 +60,19 @@ describe('TgpuBufferUniform', () => {
       const velX = uniform.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<uniform> boid: Boid;
 
-        @group(0) @binding(0) var<uniform> boid: Boid;
-
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 });
 
@@ -109,23 +88,14 @@ describe('TgpuBufferMutable', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const mutable = buffer.as('mutable');
 
-    const resolved = tgpu.resolve({
-      template: `
-        fn m() {
-          let y = hello;
-        }`,
-      externals: { hello: mutable },
-      names: 'strict',
-    });
+    const main = tgpu.fn([])`() { let y = hello; }`
+      .$uses({ hello: mutable });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<storage, read_write> param: f32;
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> param: f32;
 
-        fn m() {
-          let y = param;
-        }`),
-    );
+      fn main() { let y = param; }"
+    `);
   });
 
   it('resolves to buffer binding in tgsl functions', ({ root }) => {
@@ -136,19 +106,13 @@ describe('TgpuBufferMutable', () => {
       const x = mutable.value;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> param: f32;
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<storage, read_write> param: f32;
-
-        fn func() {
-          var x = param;
-        }`),
-    );
+      fn func() {
+        var x = param;
+      }"
+    `);
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
@@ -167,25 +131,19 @@ describe('TgpuBufferMutable', () => {
       const velX = mutable.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
-        @group(0) @binding(0) var<storage, read_write> boid: Boid;
-
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   describe('simulate mode', () => {
@@ -220,23 +178,14 @@ describe('TgpuBufferReadonly', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const readonly = buffer.as('readonly');
 
-    const resolved = tgpu.resolve({
-      template: `
-        fn m() {
-          let y = hello;
-        }`,
-      externals: { hello: readonly },
-      names: 'strict',
-    });
+    const main = tgpu.fn([])`() { let y = hello; }`
+      .$uses({ hello: readonly });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<storage, read> param: f32;
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> param: f32;
 
-        fn m() {
-          let y = param;
-        }`),
-    );
+      fn main() { let y = param; }"
+    `);
   });
 
   it('resolves to buffer binding in TGSL functions', ({ root }) => {
@@ -247,19 +196,13 @@ describe('TgpuBufferReadonly', () => {
       const x = paramReadonly.value;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> paramBuffer: f32;
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        @group(0) @binding(0) var<storage, read> paramBuffer: f32;
-
-        fn func() {
-          var x = paramBuffer;
-        }`),
-    );
+      fn func() {
+        var x = paramBuffer;
+      }"
+    `);
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
@@ -277,25 +220,19 @@ describe('TgpuBufferReadonly', () => {
       const velX = boidReadonly.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      @group(0) @binding(0) var<storage, read> boid: Boid;
 
-        @group(0) @binding(0) var<storage, read> boid: Boid;
-
-        fn func() {
-          var pos = boid.pos;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = boid.pos;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   it('cannot be accessed via .$ or .value top-level', ({ root }) => {
@@ -303,10 +240,10 @@ describe('TgpuBufferReadonly', () => {
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
     );
     expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try \`.read()\`]',
+      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
     );
   });
 

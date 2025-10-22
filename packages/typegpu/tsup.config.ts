@@ -3,7 +3,12 @@ import { defineConfig } from 'tsup';
 
 const { inDevMode } = initBuildScript();
 
-const entry = ['src/index.ts', 'src/data/index.ts', 'src/std/index.ts'];
+const entry = [
+  'src/index.ts',
+  'src/data/index.ts',
+  'src/std/index.ts',
+  'src/common/index.ts',
+];
 
 // TODO: Consider stripping `invariant()` calls of their messages for a smaller bundle size.
 export default defineConfig({

@@ -34,7 +34,7 @@ import {
   renderBindGroupLayout,
   renderSkyBoxVertexLayout,
   renderVertexLayout,
-  skyBoxSlot,
+  skyBoxAccess,
   SkyBoxVertex,
   Time,
   timeAccess,
@@ -53,7 +53,7 @@ context.configure({
 
 // static resources (created on the example load)
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -73,7 +73,7 @@ const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
   .$usage('vertex');
 const skyBoxTexture = await loadSkyBox(root);
-const skyBox = skyBoxTexture.createView('sampled', { dimension: 'cube' });
+const skyBox = skyBoxTexture.createView(d.textureCube(d.f32));
 
 let celestialBodiesCount = 0;
 const { vertexBuffer: sphereVertexBuffer, vertexCount: sphereVertexCount } =
@@ -115,8 +115,8 @@ const computeGravityPipeline = root['~unstable']
 
 const skyBoxPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
-  .with(skyBoxSlot, skyBox)
   .with(cameraAccess, camera)
+  .with(skyBoxAccess, skyBox)
   .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
   .withFragment(skyBoxFragment, { format: presentationFormat })
   .createPipeline();
@@ -143,11 +143,11 @@ let depthTexture = root.device.createTexture({
 
 function render() {
   computeCollisionsPipeline
-    .with(computeLayout, dynamicResourcesBox.data.computeCollisionsBindGroup)
+    .with(dynamicResourcesBox.data.computeCollisionsBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   computeGravityPipeline
-    .with(computeLayout, dynamicResourcesBox.data.computeGravityBindGroup)
+    .with(dynamicResourcesBox.data.computeGravityBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
 
   skyBoxPipeline
@@ -174,7 +174,7 @@ function render() {
       depthStoreOp: 'store',
     })
     .with(renderVertexLayout, sphereVertexBuffer)
-    .with(renderBindGroupLayout, dynamicResourcesBox.data.renderBindGroup)
+    .with(dynamicResourcesBox.data.renderBindGroup)
     .draw(sphereVertexCount, celestialBodiesCount);
 }
 

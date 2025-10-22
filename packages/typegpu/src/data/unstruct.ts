@@ -1,7 +1,7 @@
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AnyData, Unstruct } from './dataTypes.ts';
-import { schemaCallWrapper } from './utils.ts';
+import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { BaseData } from './wgslTypes.ts';
 
 // ----------

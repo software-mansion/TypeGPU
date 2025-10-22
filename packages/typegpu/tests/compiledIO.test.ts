@@ -80,6 +80,85 @@ describe('buildWriter', () => {
       "
     `);
   });
+
+  it('should compile a writer for nested arrays', () => {
+    const nestedArray = d.arrayOf(d.arrayOf(d.u32, 3), 2);
+
+    const writer = buildWriter(nestedArray, 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 3; j++) {
+      output.setUint32(((offset + i * 12) + j * 4), value[i][j], littleEndian);
+      }
+      }
+      "
+    `);
+  });
+
+  it('should compile a writer for struct with nested arrays', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.arrayOf(d.vec2f, 2), 2),
+    });
+
+    const writer = buildWriter(struct, 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "output.setUint32((offset + 0), value.a, littleEndian);
+      for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 2; j++) {
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 0), value.b[i][j].x, littleEndian);
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 4), value.b[i][j].y, littleEndian);
+      }
+      }
+      "
+    `);
+  });
+
+  it('should compile a writer for deeply nested arrays', () => {
+    // The WGSL minimum maximum nesting depth of a composite type is 15
+    // https://www.w3.org/TR/WGSL/#limits
+    // deno-fmt-ignore
+    const veryDeeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2);
+
+    const writer = buildWriter(veryDeeplyNested, 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 2; j++) {
+      for (let k = 0; k < 2; k++) {
+      for (let i3 = 0; i3 < 2; i3++) {
+      for (let i4 = 0; i4 < 2; i4++) {
+      for (let i5 = 0; i5 < 2; i5++) {
+      for (let i6 = 0; i6 < 2; i6++) {
+      for (let i7 = 0; i7 < 2; i7++) {
+      for (let i8 = 0; i8 < 2; i8++) {
+      for (let i9 = 0; i9 < 2; i9++) {
+      for (let i10 = 0; i10 < 2; i10++) {
+      for (let i11 = 0; i11 < 2; i11++) {
+      for (let i12 = 0; i12 < 2; i12++) {
+      for (let i13 = 0; i13 < 2; i13++) {
+      for (let i14 = 0; i14 < 2; i14++) {
+      output.setUint32((((((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64) + i11 * 32) + i12 * 16) + i13 * 8) + i14 * 4), value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13][i14], littleEndian);
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      "
+    `);
+  });
 });
 
 describe('createCompileInstructions', () => {
@@ -175,6 +254,146 @@ describe('createCompileInstructions', () => {
         i * 3 + 1,
         i * 3 + 2,
       ]);
+    }
+  });
+
+  it('should compile a writer for nested arrays', () => {
+    const nestedArray = d.arrayOf(d.arrayOf(d.u32, 3), 2);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(nestedArray)!;
+
+    const arr = new ArrayBuffer(sizeOf(nestedArray));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
+
+    expect([...new Uint32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Uint32Array(arr, 12, 3)]).toStrictEqual([4, 5, 6]);
+  });
+
+  it('should compile a writer for struct with nested arrays', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.arrayOf(d.vec2f, 2), 2),
+    });
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(struct)!;
+
+    const arr = new ArrayBuffer(sizeOf(struct));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, {
+      a: 42,
+      b: [
+        [d.vec2f(1, 2), d.vec2f(3, 4)],
+        [d.vec2f(5, 6), d.vec2f(7, 8)],
+      ],
+    });
+
+    expect(new Uint32Array(arr, 0, 1)[0]).toBe(42);
+    expect([...new Float32Array(arr, 8, 8)]).toStrictEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+    ]);
+  });
+
+  it('should compile a writer for deeply nested arrays', () => {
+    const deeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(deeplyNested)!;
+
+    const arr = new ArrayBuffer(sizeOf(deeplyNested));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [
+        [5, 6],
+        [7, 8],
+      ],
+    ]);
+
+    // First outer array element
+    expect([...new Uint32Array(arr, 0, 2)]).toStrictEqual([1, 2]);
+    expect([...new Uint32Array(arr, 8, 2)]).toStrictEqual([3, 4]);
+    // Second outer array element
+    expect([...new Uint32Array(arr, 16, 2)]).toStrictEqual([5, 6]);
+    expect([...new Uint32Array(arr, 24, 2)]).toStrictEqual([7, 8]);
+  });
+
+  it('should compile a writer for a nested array with element type which size is not equal to its alignment', () => {
+    const nestedArray = d.arrayOf(
+      d.arrayOf(d.arrayOf(d.arrayOf(d.vec3f, 2), 2), 2),
+      2,
+    );
+
+    expect(buildWriter(nestedArray, 'offset', 'value')).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 2; j++) {
+      for (let k = 0; k < 2; k++) {
+      for (let i3 = 0; i3 < 2; i3++) {
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 0), value[i][j][k][i3].x, littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 4), value[i][j][k][i3].y, littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 8), value[i][j][k][i3].z, littleEndian);
+      }
+      }
+      }
+      }
+      "
+    `);
+
+    // biome-ignore lint/style/noNonNullAssertion: <it's a test>
+    const writer = getCompiledWriterForSchema(nestedArray)!;
+
+    expect;
+
+    const arr = new ArrayBuffer(sizeOf(nestedArray));
+    const dataView = new DataView(arr);
+    writer(
+      dataView,
+      0,
+      Array.from(
+        { length: 2 },
+        (_, i) =>
+          Array.from(
+            { length: 2 },
+            (_, j) =>
+              Array.from({ length: 2 }, (_, k) =>
+                Array.from({ length: 2 }, (_, l) =>
+                  d.vec3f(i * 8 + j * 4 + k * 2 + l, 0, 0))),
+          ),
+      ),
+    );
+
+    for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 2; j++) {
+        for (let k = 0; k < 2; k++) {
+          for (let l = 0; l < 2; l++) {
+            expect([
+              ...new Float32Array(
+                arr,
+                (i * 128) + (j * 64) + (k * 32) + (l * 16),
+                3,
+              ),
+            ]).toStrictEqual([i * 8 + j * 4 + k * 2 + l, 0, 0]);
+          }
+        }
+      }
     }
   });
 

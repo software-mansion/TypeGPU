@@ -1,8 +1,9 @@
+import { randf } from '@typegpu/noise';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
+import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { fragmentShader, vertexShader } from './render.ts';
@@ -11,7 +12,7 @@ import {
   computeBindGroupLayout,
   FishBehaviorParams,
   Line3,
-  type ModelData,
+  ModelData,
   ModelDataArray,
   modelVertexLayout,
   MouseRay,
@@ -94,29 +95,36 @@ function enqueuePresetChanges() {
   }, 300);
 }
 
+const buffer0mutable = fishDataBuffers[0].as('mutable');
+const buffer1mutable = fishDataBuffers[1].as('mutable');
+const seedUniform = root.createUniform(d.f32);
+const randomizeFishPositionsOnGPU = root['~unstable'].prepareDispatch((x) => {
+  'use gpu';
+  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+  const data = ModelData({
+    position: d.vec3f(
+      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+    ),
+    direction: d.vec3f(
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+    ),
+    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+    variant: randf.sample(),
+    applySinWave: 1,
+    applySeaFog: 1,
+    applySeaDesaturation: 1,
+  });
+  buffer0mutable.$[x] = data;
+  buffer1mutable.$[x] = data;
+});
+
 const randomizeFishPositions = () => {
-  const positions: d.Infer<typeof ModelData>[] = Array.from(
-    { length: p.fishAmount },
-    () => ({
-      position: d.vec3f(
-        Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-      ),
-      scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
-      variant: Math.random(),
-      applySinWave: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 1,
-    }),
-  );
-  fishDataBuffers[0].write(positions);
-  fishDataBuffers[1].write(positions);
+  seedUniform.write((performance.now() % 10000) / 10000);
+  randomizeFishPositionsOnGPU.dispatchThreads(p.fishAmount);
   enqueuePresetChanges();
 };
 
@@ -190,9 +198,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline();
+const simulateAction = root['~unstable'].prepareDispatch(simulate);
 
 // bind groups
 
@@ -248,9 +254,9 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
+  simulateAction
+    .with(computeBindGroups[odd ? 1 : 0])
+    .dispatchThreads(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({
@@ -272,7 +278,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
     .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
+    .with(renderOceanFloorBindGroup)
     .draw(oceanFloorModel.polygonCount, 1);
 
   renderPipeline
@@ -295,7 +301,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
+    .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
   root['~unstable'].flush();

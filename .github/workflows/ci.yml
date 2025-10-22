@@ -10,47 +10,8 @@ on:
       - checks_requested
 
 jobs:
-  check-circular-deps:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-
-      - name: Install dpdm
-        run: pnpm install -g dpdm
-
-      - name: Check circular dependencies
-        run: dpdm --exit-code circular:1 packages/**/index.ts -T
-
-  lint-and-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: biomejs/setup-biome@v2
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x # Run with latest stable Deno.
-      - name: Lint
-        run: biome ci --formatter-enabled=false --organize-imports-enabled=false .
-      - name: Check formatting
-        run: deno fmt --check
-
   build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,10 +26,10 @@ jobs:
         with:
           run_install: false
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: 'pnpm'
 
       - name: Install dependencies

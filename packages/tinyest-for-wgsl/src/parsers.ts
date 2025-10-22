@@ -52,12 +52,7 @@ const BINARY_OP_MAP = {
   get instanceof(): never {
     throw new Error('The `instanceof` operator is unsupported in TGSL.');
   },
-  get '**'(): never {
-    // TODO: Translate 'a ** b' into 'pow(a, b)'.
-    throw new Error(
-      'The `**` operator is unsupported in TGSL. Use std.pow() instead.',
-    );
-  },
+  '**': '**',
   get '|>'(): never {
     throw new Error('The `|>` operator is unsupported in TGSL.');
   },
@@ -86,7 +81,9 @@ const ASSIGNMENT_OP_MAP = {
   '|=': '|=',
   '^=': '^=',
   '&=': '&=',
-  '**=': '**=',
+  get '**='(): never {
+    throw new Error('The `**=` operator is unsupported in TGSL.');
+  },
   '||=': '||=',
   '&&=': '&&=',
   get '??='(): never {
@@ -210,11 +207,28 @@ const Transpilers: Partial<
     if (typeof node.value === 'string') {
       return [NODE.stringLiteral, node.value];
     }
-    return [NODE.numericLiteral, node.raw ?? ''];
+    if (node.regex) {
+      throw new Error(
+        'Regular expression literals are not representable in WGSL.',
+      );
+    }
+    if (node.bigint) {
+      console.warn(
+        'BigInt literals are represented as numbers - loss of precision may occur.',
+      );
+    }
+    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
   },
 
   NumericLiteral(ctx, node) {
     return [NODE.numericLiteral, String(node.value) ?? ''];
+  },
+
+  BigIntLiteral(ctx, node) {
+    console.warn(
+      'BigInt literals are represented as numbers - loss of precision may occur.',
+    );
+    return [NODE.numericLiteral, String(Number.parseInt(node.value))];
   },
 
   BooleanLiteral(ctx, node) {
@@ -374,7 +388,7 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  // @ts-ignore <too much for typescript, it seems :/ >
+  // @ts-expect-error <too much for typescript, it seems :/ >
   return transpiler(ctx, node);
 }
 

@@ -15,6 +15,8 @@ import {
   vec4u,
 } from '../../../src/data/index.ts';
 import { add } from '../../../src/std/index.ts';
+import { expectDataTypeOf } from '../../utils/parseResolved.ts';
+import { abstractFloat, abstractInt } from '../../../src/data/numeric.ts';
 
 describe('add', () => {
   it('computes sum of two vec2f', () => {
@@ -114,6 +116,35 @@ describe('add', () => {
         mat4x4f(-1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16),
       ),
     ).toEqual(mat4x4f(0, 4, 0, 8, 0, 12, 0, 16, 0, 20, 0, 24, 0, 28, 0, 32));
+  });
+
+  describe('in tgsl', () => {
+    it('infers types when adding constants', () => {
+      const int_int = () => {
+        'use gpu';
+        1 + 2;
+      };
+
+      const float_float = () => {
+        'use gpu';
+        1.1 + 2.3;
+      };
+
+      const int_float = () => {
+        'use gpu';
+        1.1 + 2;
+      };
+
+      const float_int = () => {
+        'use gpu';
+        1 + 2.3;
+      };
+
+      expectDataTypeOf(int_int).toBe(abstractInt);
+      expectDataTypeOf(float_float).toBe(abstractFloat);
+      expectDataTypeOf(int_float).toBe(abstractFloat);
+      expectDataTypeOf(float_int).toBe(abstractFloat);
+    });
   });
 });
 

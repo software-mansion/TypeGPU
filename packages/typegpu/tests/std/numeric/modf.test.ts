@@ -7,7 +7,7 @@ import type { v3h } from '../../../src/data/wgslTypes.ts';
 
 describe('modf', () => {
   it('gets inferred correctly', () => {
-    let err: Error | undefined = undefined;
+    let err: Error | undefined;
     try {
       const x = modf(1);
       expectTypeOf(x).toEqualTypeOf<{ fract: number; whole: number }>();
@@ -27,7 +27,7 @@ describe('modf', () => {
       err = error as Error;
     }
     expect(err).toMatchInlineSnapshot(
-      '[Error: CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
+      '[MissingCpuImplError: CPU implementation for modf not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
     );
   });
 });

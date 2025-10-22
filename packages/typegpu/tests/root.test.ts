@@ -60,7 +60,7 @@ describe('TgpuRoot', () => {
   });
 
   describe('.destroy', () => {
-    it('should call .destroy on all buffers created with it', ({ root }) => {
+    it('should call .destroy on the device it created', ({ root }) => {
       const buffer1 = root.createBuffer(d.f32);
       const buffer2 = root.createBuffer(d.i32);
       const buffer3 = root.createBuffer(d.u32);
@@ -71,9 +71,10 @@ describe('TgpuRoot', () => {
 
       root.destroy();
 
-      expect(buffer1DestroySpy).toHaveBeenCalledOnce();
-      expect(buffer2DestroySpy).toHaveBeenCalledOnce();
-      expect(buffer3DestroySpy).toHaveBeenCalledOnce();
+      expect(root.device.destroy).toHaveBeenCalledOnce();
+      expect(buffer1DestroySpy).not.toHaveBeenCalled();
+      expect(buffer2DestroySpy).not.toHaveBeenCalled();
+      expect(buffer3DestroySpy).not.toHaveBeenCalled();
     });
   });
 
@@ -273,7 +274,7 @@ describe('TgpuRoot', () => {
         .withVertex(mainVertexUsing, {})
         .withFragment(mainFragment, {})
         .createPipeline()
-        .with(layout, group);
+        .with(group);
 
       root.beginRenderPass(
         {

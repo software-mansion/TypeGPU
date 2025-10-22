@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
+    "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
     "fix": "biome lint --write . && deno fmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
@@ -27,13 +28,17 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
-  "keywords": ["webgpu", "wgpu", "wgsl"],
+  "keywords": [
+    "webgpu",
+    "wgpu",
+    "wgsl"
+  ],
   "bugs": {
     "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.2.5",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@vitest/browser": "^3.2.4",
     "@vitest/coverage-v8": "3.1.2",
@@ -47,11 +52,13 @@
     "vite-imagetools": "catalog:frontend",
     "vitest": "catalog:test"
   },
-  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@biomejs/biome",
+      "@rolldown/browser",
       "@tailwindcss/oxide",
+      "canvas",
       "esbuild",
       "msw",
       "sharp"
