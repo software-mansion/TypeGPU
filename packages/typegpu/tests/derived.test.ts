@@ -14,7 +14,7 @@ describe('TgpuDerived', () => {
     const b = tgpu['~unstable'].derived(() => double.$ + 2);
 
     const main = () => {
-      'kernel';
+      'use gpu';
       return a.$ + b.$;
     };
 
@@ -40,7 +40,7 @@ describe('TgpuDerived', () => {
     const c = getDouble.with(foo, 4);
 
     const main = () => {
-      'kernel';
+      'use gpu';
       a();
       b();
       c();
@@ -222,7 +222,7 @@ describe('TgpuDerived', () => {
     const fooHalf = foo.with(halfPrecisionSlot, true);
 
     const main = () => {
-      'kernel';
+      'use gpu';
       foo();
       fooHalf();
     };

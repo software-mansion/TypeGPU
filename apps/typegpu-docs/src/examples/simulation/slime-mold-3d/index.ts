@@ -1,6 +1,7 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
@@ -106,14 +107,14 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-prepareDispatch(root, (x) => {
-  'kernel';
+root['~unstable'].prepareDispatch((x) => {
+  'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
   const center = resolution.div(2);
   const dir = std.normalize(center.sub(pos));
   agentsData.$[x] = Agent({ position: pos, direction: dir });
-}).dispatch(NUM_AGENTS);
+}).dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
   deltaTime: 0,
@@ -158,7 +159,7 @@ const RayBoxResult = d.struct({
 });
 
 const getPerpendicular = (dir: d.v3f) => {
-  'kernel';
+  'use gpu';
   let axis = d.vec3f(1, 0, 0);
 
   // Find the axis that is least aligned
@@ -176,7 +177,7 @@ const getPerpendicular = (dir: d.v3f) => {
 };
 
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
-  'kernel';
+  'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
   const dimsf = d.vec3f(dims);
 
@@ -346,20 +347,7 @@ const blur = tgpu['~unstable'].computeFn({
   );
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
 });
@@ -371,7 +359,7 @@ const rayBoxIntersection = (
   boxMin: d.v3f,
   boxMax: d.v3f,
 ) => {
-  'kernel';
+  'use gpu';
   const invDir = d.vec3f(1).div(rayDir);
   const t0 = boxMin.sub(rayOrigin).mul(invDir);
   const t1 = boxMax.sub(rayOrigin).mul(invDir);
@@ -433,7 +421,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     const texCoord = pos.div(resolution);
 
     const sampleValue = std
-      .textureSampleLevel(renderLayout.$.state, sampler, texCoord, 0)
+      .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
       .x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);

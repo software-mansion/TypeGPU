@@ -37,7 +37,7 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     sample: randomGeneratorShell(() => {
-      'kernel';
+      'use gpu';
       const a = dot(seed.value, d.vec2f(23.14077926, 232.61690225));
       const b = dot(seed.value, d.vec2f(54.47856553, 345.84153136));
       seed.value.x = fract(cos(a) * 136.8168);
