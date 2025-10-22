@@ -36,8 +36,8 @@ catalogs:
       version: 3.2.4
   types:
     '@webgpu/types':
-      specifier: ^0.1.65
-      version: 0.1.65
+      specifier: ^0.1.66
+      version: 0.1.66
     typescript:
       specifier: ^5.8.2
       version: 5.8.3
@@ -63,7 +63,7 @@ importers:
         version: 3.1.2(@vitest/browser@3.2.4)(vitest@3.2.4)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       dpdm:
         specifier: ^3.14.0
         version: 3.14.0
@@ -287,7 +287,7 @@ importers:
         version: 2.1.0(vite@6.3.6(@types/node@24.7.0)(jiti@2.6.0)(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.1))
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       astro-vtbot:
         specifier: ^2.1.6
         version: 2.1.6
@@ -376,7 +376,7 @@ importers:
         version: 2.11.5
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       moo:
         specifier: ^0.5.2
         version: 0.5.2
@@ -450,7 +450,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       arktype:
         specifier: 'catalog:'
         version: 2.1.22
@@ -481,7 +481,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -503,7 +503,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -525,7 +525,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.65
+        version: 0.1.66
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -2651,8 +2651,8 @@ packages:
   '@vtbag/utensil-drawer@1.2.11':
     resolution: {integrity: sha512-ZopaB1qd8RCjfbVCpI+xgVAzFVe/b65SzQhKX8E6+TLdkq7Tp2+0z091W0Ro7C4QHXpfi7Y93cXSA+1DDYQOVA==}
 
-  '@webgpu/types@0.1.65':
-    resolution: {integrity: sha512-cYrHab4d6wuVvDW5tdsfI6/o6vcLMDe6w2Citd1oS51Xxu2ycLCnVo4fqwujfKWijrZMInTJIKcXxteoy21nVA==}
+  '@webgpu/types@0.1.66':
+    resolution: {integrity: sha512-YA2hLrwLpDsRueNDXIMqN9NTzD6bCDkuXbOSe0heS+f8YE8usA6Gbv1prj81pzVHrbaAma7zObnIC+I6/sXJgA==}
 
   '@xmldom/xmldom@0.9.8':
     resolution: {integrity: sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==}
@@ -8319,7 +8319,7 @@ snapshots:
 
   '@vtbag/utensil-drawer@1.2.11': {}
 
-  '@webgpu/types@0.1.65': {}
+  '@webgpu/types@0.1.66': {}
 
   '@xmldom/xmldom@0.9.8': {}
 
