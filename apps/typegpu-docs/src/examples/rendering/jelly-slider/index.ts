@@ -2,6 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
+import { fullScreenTriangle } from 'typegpu/common';
 
 import { randf } from '@typegpu/noise';
 import { Slider } from './slider.ts';
@@ -22,7 +23,6 @@ import {
   createBackgroundTexture,
   createTextures,
   fresnelSchlick,
-  fullScreenTriangle,
   intersectBox,
 } from './utils.ts';
 import { TAAResolver } from './taa.ts';
@@ -865,7 +865,7 @@ async function autoSetQuaility() {
     return 0.5;
   }
 
-  const targetFrameTime = 8.3;
+  const targetFrameTime = 5;
   const tolerance = 2.0;
   let resolutionScale = 0.3;
   let lastTimeMs = 0;

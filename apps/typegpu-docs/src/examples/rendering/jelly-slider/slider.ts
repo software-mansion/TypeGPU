@@ -51,7 +51,7 @@ export class Slider {
   bendingStrength = 0.1;
   archStrength = 2;
   endFlatCount = 1;
-  endFlatStiffness = 0.1;
+  endFlatStiffness = 0.05;
   bendingExponent = 1.2;
   archEdgeDeadzone = 0.01;
 

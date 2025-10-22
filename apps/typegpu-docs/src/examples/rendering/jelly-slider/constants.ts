@@ -19,8 +19,8 @@ export const JELLY_SCATTER_STRENGTH = 1.3;
 
 // Ambient occlusion constants
 export const AO_STEPS = 3;
-export const AO_RADIUS = 0.2;
-export const AO_INTENSITY = 0.8;
+export const AO_RADIUS = 0.1;
+export const AO_INTENSITY = 0.5;
 export const AO_BIAS = SURF_DIST * 5;
 
 // Line/slider constants
