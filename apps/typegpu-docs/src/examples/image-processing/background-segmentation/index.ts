@@ -17,10 +17,10 @@ import {
 import {
   computeFn,
   drawWithMaskFragment,
-  fullScreenTriangle,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
+import { fullScreenTriangle } from 'typegpu/common';
 
 // setup
 
