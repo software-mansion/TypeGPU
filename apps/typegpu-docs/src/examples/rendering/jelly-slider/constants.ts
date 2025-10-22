@@ -5,17 +5,18 @@ export const MAX_STEPS = 64;
 export const MAX_DIST = 10;
 export const SURF_DIST = 0.001;
 
+// Ground material constants
+export const GROUND_ALBEDO = d.vec3f(1);
+
 // Lighting constants
-export const AMBIENT_COLOR = d.vec3f(1);
-export const AMBIENT_INTENSITY = 0.2;
-export const SPECULAR_POWER = 32.0;
-export const SPECULAR_INTENSITY = 0.4;
+export const AMBIENT_COLOR = d.vec3f(0.6);
+export const AMBIENT_INTENSITY = 0.6;
+export const SPECULAR_POWER = 120.0;
+export const SPECULAR_INTENSITY = 0.6;
 
 // Jelly material constants
 export const JELLY_IOR = 1.42;
-export const JELLY_ABSORB = d.vec3f(1.6, 3.2, 6.0).mul(5);
-export const JELLY_SCATTER_TINT = d.vec3f(1.0, 0.3, 0.05).mul(1.5);
-export const JELLY_SCATTER_STRENGTH = 1.3;
+export const JELLY_SCATTER_STRENGTH = 3;
 
 // Ambient occlusion constants
 export const AO_STEPS = 3;

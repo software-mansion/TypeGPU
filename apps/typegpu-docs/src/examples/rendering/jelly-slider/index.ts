@@ -33,6 +33,7 @@ import {
   AO_INTENSITY,
   AO_RADIUS,
   AO_STEPS,
+  GROUND_ALBEDO,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
   LINE_HALF_THICK,
@@ -524,8 +525,8 @@ const renderPercentageOnGround = (
 ) => {
   'use gpu';
 
-  const textWidth = 0.3;
-  const textHeight = 0.38;
+  const textWidth = 0.38;
+  const textHeight = 0.33;
 
   if (
     std.abs(hitPosition.x - center.x) > textWidth * 0.5 ||
@@ -563,21 +564,21 @@ const renderBackground = (
 
   const percentageSample = renderPercentageOnGround(
     hitPosition,
-    d.vec3f(0.75, 0, 0),
+    d.vec3f(0.72, 0, 0),
     d.u32((slider.endCapUniform.$.x + 0.43) * 84),
   );
 
   let highlights = d.f32();
 
   const highlightWidth = 1;
-  const highlightHeight = 0.3;
+  const highlightHeight = 0.2;
   let offsetX = d.f32();
-  let offsetZ = d.f32();
+  let offsetZ = d.f32(0.05);
 
   const lightDir = lightUniform.$.direction;
-  const causticScale = 0.1;
+  const causticScale = 0.2;
   offsetX -= lightDir.x * causticScale;
-  offsetZ -= lightDir.z * causticScale;
+  offsetZ += lightDir.z * causticScale;
 
   const endCapX = slider.endCapUniform.$.x;
   const sliderStretch = (endCapX + 1) * 0.5;
@@ -591,38 +592,35 @@ const renderBackground = (
     const uvZ_orig = (hitPosition.z + offsetZ + highlightHeight * 2) /
       highlightHeight * 0.5;
 
-    const lightDir = lightUniform.$.direction;
-    const angle = std.atan2(lightDir.z, lightDir.x) + 1.5708;
-    const cos_a = std.cos(angle);
-    const sin_a = std.sin(angle);
-    const rot = d.mat2x2f(cos_a, -sin_a, sin_a, cos_a);
-
     const centeredUV = d.vec2f(uvX_orig - 0.5, uvZ_orig - 0.5);
-    const rotatedUV = rot.mul(centeredUV);
     const finalUV = d.vec2f(
       centeredUV.x,
-      0.9 - (1 - (1 - std.abs(centeredUV.y - 0.5) * 2) ** 4) * 0.2,
+      1 - ((std.abs(centeredUV.y - 0.5) * 2) ** 2) * 0.3,
     );
 
     const density = std.max(
       0,
       (std.textureSampleLevel(bezierTexture.$, filteringSampler.$, finalUV, 0)
-        .x - 0.1) * 4,
+        .x - 0.25) * 8,
     );
 
     const fadeX = std.smoothstep(0, -0.2, hitPosition.x - endCapX);
-    const fadeZ = 1 - (std.abs(centeredUV.y - 0.5) * 2);
+    const fadeZ = 1 - (std.abs(centeredUV.y - 0.5) * 2) ** 3;
     const fadeStretch = std.saturate(1 - sliderStretch);
     const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ) * fadeStretch;
 
-    highlights = (1 - (1 - density ** 4)) * edgeFade * 5;
+    highlights = density ** 3 * edgeFade * 3 * (1 + lightDir.z) / 1.5;
   }
 
   const normal = getNormalMain(hitPosition);
   const litColor = calculateLighting(hitPosition, normal, rayOrigin);
-  const backgroundColor = applyAO(litColor, hitPosition, normal);
+  const backgroundColor = applyAO(
+    GROUND_ALBEDO.mul(litColor),
+    hitPosition,
+    normal,
+  );
 
-  const textColor = std.saturate(litColor.mul(d.vec3f(1.3)));
+  const textColor = std.saturate(backgroundColor.xyz.mul(d.vec3f(0.5)));
 
   return d.vec4f(
     std.mix(backgroundColor.xyz, textColor, percentageSample.x).mul(
@@ -719,13 +717,13 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const density = d.f32(20.0);
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
-        const T = beerLambert(absorb.mul(progress ** 2), 0.05);
+        const T = beerLambert(absorb.mul(progress ** 2), 0.08);
 
         const lightDir = std.neg(lightUniform.$.direction);
 
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
         const scatter = scatterTint.mul(
-          JELLY_SCATTER_STRENGTH * forward * progress,
+          JELLY_SCATTER_STRENGTH * forward * progress ** 3,
         );
         refractedColor = env.mul(T).add(scatter);
       }
@@ -762,8 +760,7 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
     ray.direction,
     uv,
   );
-
-  return d.vec4f(std.tanh(color.xyz), 1);
+  return d.vec4f(std.tanh(color.xyz.mul(1.3)), 1);
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
