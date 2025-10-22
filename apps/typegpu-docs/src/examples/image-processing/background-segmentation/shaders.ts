@@ -2,6 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
+  blurLayout,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
@@ -43,12 +44,74 @@ export const generateMaskFromOutput = (x: number, y: number) => {
   );
 };
 
+const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec3f, 128), 4));
+export const computeFn = tgpu['~unstable'].computeFn({
+  in: { wid: d.builtin.workgroupId, lid: d.builtin.localInvocationId },
+  workgroupSize: [32, 1, 1],
+})(({ wid, lid }) => {
+  const settings = blurLayout.$.settings;
+  const filterOffset = d.i32((settings.filterDim - 1) / 2);
+  const dims = d.vec2i(std.textureDimensions(blurLayout.$.inTexture));
+  const baseIndex = d.vec2i(
+    wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
+  ).sub(d.vec2i(filterOffset, 0));
+
+  // Load a tile of pixels into shared memory
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      let loadIndex = baseIndex.add(d.vec2i(c, r));
+      if (blurLayout.$.flip !== 0) {
+        loadIndex = loadIndex.yx;
+      }
+
+      tileData.$[r][lid.x * 4 + d.u32(c)] = std.textureSampleLevel(
+        blurLayout.$.inTexture,
+        blurLayout.$.sampler,
+        d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
+        0,
+      ).xyz;
+    }
+  }
+
+  std.workgroupBarrier();
+
+  // Apply the horizontal blur filter and write to the output texture
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      let writeIndex = baseIndex.add(d.vec2i(c, r));
+      if (blurLayout.$.flip !== 0) {
+        writeIndex = writeIndex.yx;
+      }
+
+      const center = d.i32(4 * lid.x) + c;
+      if (
+        center >= filterOffset &&
+        center < 128 - filterOffset &&
+        std.all(std.lt(writeIndex, dims))
+      ) {
+        let acc = d.vec3f();
+        for (let f = 0; f < settings.filterDim; f++) {
+          const i = center + f - filterOffset;
+          acc = acc.add(tileData.$[r][i].mul(1 / settings.filterDim));
+        }
+        std.textureStore(blurLayout.$.outTexture, writeIndex, d.vec4f(acc, 1));
+      }
+    }
+  }
+});
+
 export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
-  const col = std.textureSampleBaseClampToEdge(
+  const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
+    drawWithMaskLayout.$.sampler,
+    input.uv,
+  );
+
+  const blurredColor = std.textureSampleBaseClampToEdge(
+    drawWithMaskLayout.$.inputBlurredTexture,
     drawWithMaskLayout.$.sampler,
     input.uv,
   );
@@ -59,5 +122,5 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     input.uv,
   ).x;
 
-  return d.vec4f(col.xyz.mul(mask), 1);
+  return std.mix(blurredColor, originalColor, mask);
 });

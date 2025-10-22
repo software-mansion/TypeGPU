@@ -10,6 +10,9 @@ export function getImageSourceDimensions(
   if ('displayWidth' in source && 'displayHeight' in source) {
     return { width: source.displayWidth, height: source.displayHeight };
   }
+  if ('videoWidth' in source && 'videoHeight' in source) {
+    return { width: source.videoWidth, height: source.videoHeight };
+  }
   return { width: source.width as number, height: source.height as number };
 }
 

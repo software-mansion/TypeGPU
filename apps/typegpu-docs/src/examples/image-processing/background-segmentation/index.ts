@@ -1,12 +1,22 @@
-import tgpu from 'typegpu';
+import tgpu, {
+  type RenderFlag,
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuBindGroup,
+  type TgpuTexture,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
+  blurLayout,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
+  Settings,
+  settings,
 } from './schemas.ts';
 import {
+  computeFn,
   drawWithMaskFragment,
   fullScreenTriangle,
   generateMaskFromOutput,
@@ -72,6 +82,23 @@ const modelOutputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 1 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
+let blurredTextures: (
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'rgba8unorm';
+  }>
+  & SampledFlag
+  & RenderFlag
+  & StorageFlag
+)[];
+
+let blurBindGroups: TgpuBindGroup<(typeof blurLayout)['entries']>[];
+
+const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
+const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
+
+const settingsUniform = root.createBuffer(Settings, settings).$usage('uniform');
+
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable'].prepareDispatch(
@@ -86,6 +113,10 @@ const runSession = await prepareSession(
 const generateMaskFromOutputPipeline = root['~unstable'].prepareDispatch(
   generateMaskFromOutput,
 );
+
+const blurPipeline = root['~unstable']
+  .withCompute(computeFn)
+  .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
@@ -139,10 +170,33 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+  blurredTextures = [0, 1].map(() =>
+    root['~unstable'].createTexture({
+      size: [size.width, size.height],
+      format: 'rgba8unorm',
+      dimension: '2d',
+    }).$usage('sampled', 'render', 'storage')
+  );
+  blurBindGroups = [
+    root.createBindGroup(blurLayout, {
+      flip: zeroBuffer,
+      inTexture: blurredTextures[0],
+      outTexture: blurredTextures[1],
+      sampler,
+      settings: settingsUniform,
+    }),
+    root.createBindGroup(blurLayout, {
+      flip: oneBuffer,
+      inTexture: blurredTextures[1],
+      outTexture: blurredTextures[0],
+      sampler,
+      settings: settingsUniform,
+    }),
+  ];
 }
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined;
+let frameSize: { width: number; height: number } | undefined;
 
 async function processVideoFrame(
   _: number,
@@ -156,13 +210,20 @@ async function processVideoFrame(
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
-  if (
-    !lastFrameSize ||
-    lastFrameSize.width !== frameWidth ||
-    lastFrameSize.height !== frameHeight
-  ) {
-    lastFrameSize = { width: frameWidth, height: frameHeight };
-    onVideoChange(lastFrameSize);
+  if (!frameSize) {
+    frameSize = { width: frameWidth, height: frameHeight };
+    onVideoChange(frameSize);
+  }
+
+  blurredTextures[0].write(video);
+
+  for (const i of [...Array(10).fill([0, 1]).flat()]) {
+    blurPipeline
+      .with(blurBindGroups[i])
+      .dispatchWorkgroups(
+        Math.ceil(frameWidth / settings.blockDim),
+        Math.ceil(frameHeight / 4),
+      );
   }
 
   drawWithMaskPipeline
@@ -174,6 +235,7 @@ async function processVideoFrame(
     })
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device.importExternalTexture({ source: video }),
+      inputBlurredTexture: blurredTextures[1],
       maskTexture: maskTexture,
       sampler,
     }))
