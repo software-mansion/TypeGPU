@@ -454,7 +454,6 @@ function makePipelines(
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
   const initWorldAction = root['~unstable']
-    .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .prepareDispatch((xu, yu) => {
       'use gpu';
