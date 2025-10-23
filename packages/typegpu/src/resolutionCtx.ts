@@ -206,9 +206,9 @@ class ItemStateStackImpl implements ItemStateStack {
         layer.usedSlots.add(slot);
       } else if (layer?.type === 'slotBinding') {
         const boundValue = layer.bindingMap.get(slot);
-        layer.usedSet.add(slot);
 
         if (boundValue !== undefined) {
+          layer.usedSet.add(slot);
           return boundValue as T;
         }
       } else if (
