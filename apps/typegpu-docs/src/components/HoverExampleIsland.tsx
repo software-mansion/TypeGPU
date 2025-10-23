@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  PointerEvent as ReactPointerEvent,
+  TouchEvent as ReactTouchEvent,
+} from 'react';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import type { Example } from '../utils/examples/types.ts';
@@ -34,8 +38,10 @@ function resizeCanvases(container: HTMLElement) {
 }
 
 export default function HoverExampleIsland({ exampleKey }: Props) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<CleanupFn | undefined>(undefined);
+  const twoFingerActiveRef = useRef(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -47,6 +53,78 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       containerRef.current.innerHTML = '';
     }
   }, []);
+
+  const handlePointerEnter = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') {
+      setIsHovered(true);
+    }
+  };
+
+  const handlePointerLeave = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') {
+      setIsHovered(false);
+    }
+  };
+
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length >= 2) {
+      event.preventDefault();
+      twoFingerActiveRef.current = true;
+    }
+  };
+
+  const handleTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (twoFingerActiveRef.current) {
+      event.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 0) {
+      if (!twoFingerActiveRef.current) {
+        return;
+      }
+
+      twoFingerActiveRef.current = false;
+      setIsHovered((prev) => !prev);
+    }
+  };
+
+  const handleTouchCancel = () => {
+    twoFingerActiveRef.current = false;
+  };
+
+  useEffect(() => { // intersection observer
+    const element = rootRef.current;
+    if (!element) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) {
+        twoFingerActiveRef.current = false;
+        setIsHovered(false);
+      }
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => { // data hover overlay
+    const overlay = containerRef.current?.closest('[data-hover-overlay]');
+    if (!overlay) {
+      return;
+    }
+
+    if (isHovered) {
+      overlay.setAttribute('data-active', 'true');
+    } else {
+      overlay.removeAttribute('data-active');
+    }
+
+    return () => overlay.removeAttribute('data-active');
+  }, [isHovered]);
 
 
   useEffect(() => {
@@ -82,6 +160,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         cleanupRef.current = dispose;
       } catch (err) {
         console.error(err);
+        setError(err instanceof Error ? err.message : 'Failed to load example.');
         reset();
       } finally {
         if (!cancelled) {
@@ -98,8 +177,13 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
 
   return (
     <div
-      onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
+      ref={rootRef}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       className='w-full h-full overflow-hidden order'
     >
       {error ? (

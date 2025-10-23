@@ -48,7 +48,11 @@ const galleryItems = [
 <div class="gap-6 grid sm:grid-cols-2 xl:grid-cols-3">
 	{
 		galleryItems.map((item) => (
-			<div class="group relative aspect-square overflow-hidden">
+			<div
+				class="group relative aspect-square overflow-hidden"
+				data-example-card
+				style="touch-action: pan-x pan-y;"
+			>
 				<div class="bottom-1/40 inset-x-2 px-3 z-10 absolute flex items-center justify-between gap-3 bg-white h-16 text-blue-900">
 					<span class="truncate font-medium text-sm max-w-[70%]">
 						{item.title}
@@ -72,7 +76,10 @@ const galleryItems = [
 					class="w-full h-full object-contain transition duration-300 ease-out"
 				/>
 
-				<div class="absolute inset-0 flex justify-center items-center opacity-0 group-hover:opacity-100 transition duration-300 ease-out pointer-events-none">
+				<div
+					data-hover-overlay
+					class="absolute inset-0 flex justify-center items-center opacity-0 pointer-events-none transition duration-300 ease-out group-hover:opacity-100 group-hover:pointer-events-auto data-[active=true]:opacity-100 data-[active=true]:pointer-events-auto"
+				>
 					<div class="backdrop-blur w-full h-full pointer-events-auto">
 						<HoverExampleIsland
 							client:visible
