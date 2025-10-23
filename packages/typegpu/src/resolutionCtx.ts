@@ -93,6 +93,7 @@ export type ResolutionCtxImplOptions = {
 type SlotBindingLayer = {
   type: 'slotBinding';
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+  usedSet: WeakSet<TgpuSlot<unknown>>;
 };
 
 type BlockScopeLayer = {
@@ -141,11 +142,13 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
+      usedSet: new WeakSet(),
     });
   }
 
-  popSlotBindings() {
-    this.pop('slotBinding');
+  popSlotBindings(): WeakSet<TgpuSlot<unknown>> {
+    const slotBindings = this.pop('slotBinding') as SlotBindingLayer;
+    return slotBindings.usedSet;
   }
 
   pushFunctionScope(
@@ -188,10 +191,11 @@ class ItemStateStackImpl implements ItemStateStack {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
     }
 
-    this._stack.pop();
+    const poppedValue = this._stack.pop();
     if (type === 'item') {
       this._itemDepth--;
     }
+    return poppedValue;
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
@@ -202,6 +206,7 @@ class ItemStateStackImpl implements ItemStateStack {
         layer.usedSlots.add(slot);
       } else if (layer?.type === 'slotBinding') {
         const boundValue = layer.bindingMap.get(slot);
+        layer.usedSet.add(slot);
 
         if (boundValue !== undefined) {
           return boundValue as T;
@@ -521,11 +526,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  private usedSlots: WeakSet<TgpuSlot<unknown>> = new WeakSet();
   readSlot<T>(slot: TgpuSlot<T>): T {
     const value = this._itemStateStack.readSlot(slot);
 
-    this.usedSlots.add(slot);
     if (value === undefined) {
       throw new MissingSlotValueError(slot);
     }
@@ -539,9 +542,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      this._itemStateStack.popSlotBindings();
+      const usedSlots = this._itemStateStack.popSlotBindings();
       pairs.forEach((pair) => {
-        !this.usedSlots.has(pair[0]) && console.warn(
+        !usedSlots.has(pair[0]) && console.warn(
           `Slot '${getName(pair[0])}' with value '${
             pair[1]
           }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .`,
