@@ -371,9 +371,13 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() { return vec3f(); }`;
 
-    getColor.with(colorSlot, d.vec3f(0, 1, 0));
+    const main = getColor.with(colorSlot, d.vec3f(0, 1, 0));
 
-    expect(warnSpy).toHaveBeenCalledWith();
+    tgpu.resolve({ externals: { main } });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+    );
   });
 
   it('warns when the slot is unused in TGSL-implemented functions', () => {
@@ -385,9 +389,13 @@ describe('tgpu.slot', () => {
       return d.vec3f();
     });
 
-    getColor.with(colorSlot, d.vec3f(0, 1, 0));
+    const main = getColor.with(colorSlot, d.vec3f(0, 1, 0));
 
-    expect(warnSpy).toHaveBeenCalledWith();
+    tgpu.resolve({ externals: { main } });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+    );
   });
 
   it('warns when the slot is unused in WGSL-implemented pipeline', ({ root }) => {
@@ -400,12 +408,16 @@ describe('tgpu.slot', () => {
       in: { gid: d.builtin.globalInvocationId },
     })`{ }`;
 
-    root['~unstable']
+    const pipeline = root['~unstable']
       .with(colorSlot, d.vec3f(1, 0, 1))
       .withCompute(computeFn)
       .createPipeline();
 
-    expect(warnSpy).toHaveBeenCalledWith();
+    tgpu.resolve({ externals: { pipeline } });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+    );
   });
 
   it('warns when the slot is unused in TGSL-implemented pipeline', ({ root }) => {
@@ -418,10 +430,40 @@ describe('tgpu.slot', () => {
       in: { gid: d.builtin.globalInvocationId },
     })(() => {});
 
-    root['~unstable']
+    const pipeline = root['~unstable']
       .with(colorSlot, d.vec3f(1, 0, 1))
       .withCompute(computeFn)
       .createPipeline();
+
+    tgpu.resolve({ externals: { pipeline } });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+    );
+  });
+
+  it('distinguishes different slot usages', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const getColorUsingSlot = tgpu
+      .fn([], d.vec3f)(() => {
+        return colorSlot.$;
+      })
+      .with(colorSlot, d.vec3f(0, 1, 0));
+
+    const getColor = tgpu
+      .fn([], d.vec3f)(() => {
+        return d.vec3f();
+      })
+      .with(colorSlot, d.vec3f(2, 1, 0));
+
+    const main = tgpu.fn([])(() => {
+      getColorUsingSlot();
+      getColor();
+    });
+    tgpu.resolve({ externals: { main } });
 
     expect(warnSpy).toHaveBeenCalledWith();
   });

@@ -69,7 +69,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { getName, hasTinyestMetadata } from './shared/meta.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -521,9 +521,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
+  private usedSlots: WeakSet<TgpuSlot<unknown>> = new WeakSet();
   readSlot<T>(slot: TgpuSlot<T>): T {
     const value = this._itemStateStack.readSlot(slot);
 
+    this.usedSlots.add(slot);
     if (value === undefined) {
       throw new MissingSlotValueError(slot);
     }
@@ -538,6 +540,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     } finally {
       this._itemStateStack.popSlotBindings();
+      pairs.forEach((pair) => {
+        !this.usedSlots.has(pair[0]) && console.warn(
+          `Slot '${getName(pair[0])}' with value '${
+            pair[1]
+          }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .`,
+        );
+      });
     }
   }
 
