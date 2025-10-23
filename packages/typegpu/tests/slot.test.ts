@@ -376,7 +376,7 @@ describe('tgpu.slot', () => {
     tgpu.resolve({ externals: { main } });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.",
     );
   });
 
@@ -394,7 +394,7 @@ describe('tgpu.slot', () => {
     tgpu.resolve({ externals: { main } });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+      "Slot 'colorSlot' with value 'vec3f(0, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.",
     );
   });
 
@@ -416,7 +416,7 @@ describe('tgpu.slot', () => {
     tgpu.resolve({ externals: { pipeline } });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.",
     );
   });
 
@@ -438,7 +438,7 @@ describe('tgpu.slot', () => {
     tgpu.resolve({ externals: { pipeline } });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+      "Slot 'colorSlot' with value 'vec3f(1, 0, 1)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.",
     );
   });
 
@@ -466,7 +466,7 @@ describe('tgpu.slot', () => {
     tgpu.resolve({ externals: { main } });
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "Slot 'colorSlot' with value 'vec3f(2, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .",
+      "Slot 'colorSlot' with value 'vec3f(2, 1, 0)' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.",
     );
   });
 });

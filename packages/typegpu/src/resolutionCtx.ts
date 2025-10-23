@@ -547,7 +547,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         !usedSlots.has(pair[0]) && console.warn(
           `Slot '${getName(pair[0])}' with value '${
             pair[1]
-          }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared in the '$uses' array of the relevant .`,
+          }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.`,
         );
       });
     }
