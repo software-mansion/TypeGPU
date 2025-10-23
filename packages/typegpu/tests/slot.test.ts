@@ -1,7 +1,7 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
+import * as std from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 import { asWgsl } from './utils/parseResolved.ts';
 
@@ -362,5 +362,67 @@ describe('tgpu.slot', () => {
         return color;
       }"
     `);
+  });
+
+  it('warns when the slot is unused in WGSL-implemented functions', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const getColor = tgpu.fn([], d.vec3f)`() { return vec3f(); }`;
+
+    getColor.with(colorSlot, d.vec3f(0, 1, 0));
+
+    expect(warnSpy).toHaveBeenCalledWith();
+  });
+
+  it('warns when the slot is unused in TGSL-implemented functions', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const getColor = tgpu.fn([], d.vec3f)(() => {
+      return d.vec3f();
+    });
+
+    getColor.with(colorSlot, d.vec3f(0, 1, 0));
+
+    expect(warnSpy).toHaveBeenCalledWith();
+  });
+
+  it('warns when the slot is unused in WGSL-implemented pipeline', ({ root }) => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const computeFn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1, 1, 1],
+      in: { gid: d.builtin.globalInvocationId },
+    })`{ }`;
+
+    root['~unstable']
+      .with(colorSlot, d.vec3f(1, 0, 1))
+      .withCompute(computeFn)
+      .createPipeline();
+
+    expect(warnSpy).toHaveBeenCalledWith();
+  });
+
+  it('warns when the slot is unused in TGSL-implemented pipeline', ({ root }) => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const computeFn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1, 1, 1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {});
+
+    root['~unstable']
+      .with(colorSlot, d.vec3f(1, 0, 1))
+      .withCompute(computeFn)
+      .createPipeline();
+
+    expect(warnSpy).toHaveBeenCalledWith();
   });
 });
