@@ -27,7 +27,7 @@ export interface LogGeneratorOptions {
   logSizeLimit?: number;
   /**
    * The prefix attached to each log call.
-   * @default " GPU "
+   * @default ' GPU '
    */
   messagePrefix?: string;
 }
