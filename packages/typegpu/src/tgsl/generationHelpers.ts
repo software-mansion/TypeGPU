@@ -219,7 +219,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  generateLog(args: Snippet[]): Snippet;
+  generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
 

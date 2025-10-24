@@ -23,11 +23,13 @@ describe('console log example', () => {
         'Two threads',
         '100 dispatches',
         'Varying size logs',
+        'String interpolation',
+        'Different log functionalities',
         'Render pipeline',
         'Draw indexed',
         'Too many logs',
       ],
-      expectedCalls: 12,
+      expectedCalls: 14,
     }, device);
 
     // the resolution variant for when 'shader-f16' is not enabled
@@ -1235,6 +1237,248 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_13)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer_4: atomic<u32>;
+
+      struct SerializedLogData_6 {
+        id: u32,
+        serializedData: array<u32, 32>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
+
+      var<private> dataBlockIndex_7: u32;
+
+      var<private> dataByteIndex_8: u32;
+
+      fn nextByteIndex_11() -> u32{
+        let i = dataByteIndex_8;
+        dataByteIndex_8 = dataByteIndex_8 + 1u;
+        return i;
+      }
+
+      fn serializeI32_10(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
+      }
+
+      fn serializeF32_12(n: f32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
+      }
+
+      fn serializeVec4f_13(v: vec4f) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.x);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.y);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.z);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.w);
+      }
+
+      fn log1serializer_9(_arg_0: i32, _arg_1: f32, _arg_2: vec4f) {
+        serializeI32_10(_arg_0);
+        serializeF32_12(_arg_1);
+        serializeVec4f_13(_arg_2);
+      }
+
+      fn log1_3(_arg_0: i32, _arg_1: f32, _arg_2: vec4f) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 1;
+        dataByteIndex_8 = 0;
+
+        log1serializer_9(_arg_0, _arg_1, _arg_2);
+      }
+
+      fn serializeVec3f_16(v: vec3f) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.x);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.y);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.z);
+      }
+
+      fn log2serializer_15(_arg_0: vec3f, _arg_1: vec3f) {
+        serializeVec3f_16(_arg_0);
+        serializeVec3f_16(_arg_1);
+      }
+
+      fn log2_14(_arg_0: vec3f, _arg_1: vec3f) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 2;
+        dataByteIndex_8 = 0;
+
+        log2serializer_15(_arg_0, _arg_1);
+      }
+
+      fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+        log1_3(987, 1.26, vec4f(1, 2, 3, 4));
+        log2_14(vec3f(1, 2, 3), vec3f(1, 2, 3));
+      }
+
+      struct mainCompute_Input_17 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_17)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer_4: atomic<u32>;
+
+      struct SerializedLogData_6 {
+        id: u32,
+        serializedData: array<u32, 32>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
+
+      var<private> dataBlockIndex_7: u32;
+
+      var<private> dataByteIndex_8: u32;
+
+      fn log1serializer_9() {
+
+      }
+
+      fn log1_3() {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 1;
+        dataByteIndex_8 = 0;
+
+        log1serializer_9();
+      }
+
+      fn log2serializer_11() {
+
+      }
+
+      fn log2_10() {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 2;
+        dataByteIndex_8 = 0;
+
+        log2serializer_11();
+      }
+
+      fn nextByteIndex_15() -> u32{
+        let i = dataByteIndex_8;
+        dataByteIndex_8 = dataByteIndex_8 + 1u;
+        return i;
+      }
+
+      fn serializeI32_14(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_15()] = bitcast<u32>(n);
+      }
+
+      fn log3serializer_13(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log3_12(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 3;
+        dataByteIndex_8 = 0;
+
+        log3serializer_13(_arg_0);
+      }
+
+      fn log4serializer_17(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log4_16(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 4;
+        dataByteIndex_8 = 0;
+
+        log4serializer_17(_arg_0);
+      }
+
+      fn log5serializer_19(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log5_18(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 5;
+        dataByteIndex_8 = 0;
+
+        log5serializer_19(_arg_0);
+      }
+
+      fn log6serializer_21(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log6_20(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 6;
+        dataByteIndex_8 = 0;
+
+        log6serializer_21(_arg_0);
+      }
+
+      fn log7serializer_23(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log7_22(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 7;
+        dataByteIndex_8 = 0;
+
+        log7serializer_23(_arg_0);
+      }
+
+      fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+        log1_3();
+        log2_10();
+        log3_12(1);
+        log4_16(2);
+        log5_18(3);
+        log6_20(4);
+        log7_22(5);
+      }
+
+      struct mainCompute_Input_24 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_24)  {
         if (any(in.id >= sizeUniform_1)) {
           return;
         }

@@ -190,11 +190,12 @@ When using `console.log`, atomic operations are injected into the WGSL code to s
 This synchronization can introduce overhead and significantly impact shader performance.
 :::
 
+Other supported `console` functionalities include `console.debug`, `console.info`, `console.warn`, `console.error` and `console.clear`.
+
 There are some limitations (some of which we intend to alleviate in the future):
 
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
-- `console.log` currently does not support template literals and string substitutions.
-- Other `console` methods like `clear` or `warn` are not yet supported.
+- `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).

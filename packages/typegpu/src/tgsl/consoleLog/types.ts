@@ -27,7 +27,7 @@ export interface LogGeneratorOptions {
   logSizeLimit?: number;
   /**
    * The prefix attached to each log call.
-   * @default "%c GPU %c "
+   * @default ' GPU '
    */
   messagePrefix?: string;
 }
@@ -37,22 +37,42 @@ export type SerializedLogCallData = WgslStruct<{
   serializedData: WgslArray<U32>;
 }>;
 
+export interface LogMeta {
+  op: SupportedLogOps;
+  argTypes: (string | AnyWgslData)[];
+}
+
 /**
  * The resources required for logging within the TGSL console.
  *
  * @property indexBuffer - A buffer used for indexing log entries. Needs to be cleared after each dispatch/draw.
  * @property dataBuffer - A buffer containing an array of serialized log call data.
  * @property options - The configuration options for the LogGenerator.
- * @property logIdToArgTypes - A mapping from log identifiers to their corresponding argument types.
+ * @property logIdToMeta - A mapping from log identifiers to an object containing the corresponding log op and argument types.
  */
 export interface LogResources {
   indexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogGeneratorOptions>;
-  logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
+  logIdToMeta: Map<number, LogMeta>;
 }
 
 export interface LogGenerator {
-  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
+  generateLog(
+    ctx: GenerationCtx,
+    op: string,
+    args: Snippet[],
+  ): Snippet;
   get logResources(): LogResources | undefined;
 }
+
+export const supportedLogOps = [
+  'log',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'clear',
+] as const;
+
+export type SupportedLogOps = (typeof supportedLogOps)[number];

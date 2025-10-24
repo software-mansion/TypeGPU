@@ -259,7 +259,7 @@ export class MatrixColumnsAccess {
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor() {
+  constructor(readonly op: string) {
     setName(this, 'consoleLog');
   }
 }
