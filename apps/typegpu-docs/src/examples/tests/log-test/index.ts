@@ -182,6 +182,19 @@ export const controls = {
       test.dispatchThreads();
     },
   },
+  'Different log functionalities': {
+    onButtonClick: async () =>
+      root['~unstable'].prepareDispatch(() => {
+        'use gpu';
+        console.log('This message should be cleared.');
+        console.clear();
+        console.debug('debug');
+        console.info('info');
+        console.warn('warn');
+        console.error('error');
+        console.log('log');
+      }).dispatchThreads(),
+  },
   'Render pipeline': {
     onButtonClick: () => {
       const context = canvas.getContext('webgpu') as GPUCanvasContext;

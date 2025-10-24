@@ -77,7 +77,11 @@ export class LogGeneratorImpl implements LogGenerator {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
+  generateLog(
+    ctx: GenerationCtx,
+    op: keyof typeof console,
+    args: Snippet[],
+  ): Snippet {
     const concreteArgs = concretizeSnippets(args);
     const id = this.#firstUnusedId++;
 

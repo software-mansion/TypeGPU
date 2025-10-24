@@ -37,6 +37,11 @@ export type SerializedLogCallData = WgslStruct<{
   serializedData: WgslArray<U32>;
 }>;
 
+export interface LogMeta {
+  op: keyof typeof console;
+  argTypes: Map<number, (string | AnyWgslData)[]>;
+}
+
 /**
  * The resources required for logging within the TGSL console.
  *
@@ -53,6 +58,19 @@ export interface LogResources {
 }
 
 export interface LogGenerator {
-  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet;
+  generateLog(
+    ctx: GenerationCtx,
+    op: keyof typeof console,
+    args: Snippet[],
+  ): Snippet;
   get logResources(): LogResources | undefined;
 }
+
+export const supportedLogOps: Set<keyof typeof console> = new Set([
+  'log',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'clear',
+]);
