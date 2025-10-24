@@ -87,7 +87,6 @@ describe('TgpuQuerySet', () => {
       2 * BigUint64Array.BYTES_PER_ELEMENT,
     );
     expect(device.queue.submit).toHaveBeenCalled();
-    expect(device.queue.onSubmittedWorkDone).toHaveBeenCalled();
     expect(readBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ);
     expect(readBuffer.getMappedRange).toHaveBeenCalled();
     expect(readBuffer.unmap).toHaveBeenCalled();

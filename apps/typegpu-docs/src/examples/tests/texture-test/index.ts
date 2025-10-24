@@ -69,14 +69,14 @@ const pipeline = root['~unstable']
 
 function render() {
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
     .draw(3);
-  root['~unstable'].flush();
+
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
