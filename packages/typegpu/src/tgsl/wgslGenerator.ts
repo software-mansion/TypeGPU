@@ -35,6 +35,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -435,6 +436,12 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
+        );
+      }
+
+      if (callee.value === constant) {
+        throw new Error(
+          `Cannot define 'tgpu.const' inside TypeGPU functions. To address this, move the definition outside the TypeGPU function's scope.`,
         );
       }
 
