@@ -65,7 +65,6 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  SlotBindingLayer,
   StackLayer,
   Wgsl,
 } from './types.ts';
@@ -120,21 +119,12 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popItem() {
-    this.pop('item');
-  }
-
   pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
       usedSet: new WeakSet(),
     });
-  }
-
-  popSlotBindings(): WeakSet<TgpuSlot<unknown>> {
-    const slotBindings = this.pop('slotBinding') as SlotBindingLayer;
-    return slotBindings.usedSet;
   }
 
   pushFunctionScope(
@@ -156,10 +146,6 @@ class ItemStateStackImpl implements ItemStateStack {
     return scope;
   }
 
-  popFunctionScope() {
-    this.pop('functionScope');
-  }
-
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
@@ -167,11 +153,9 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popBlockScope() {
-    this.pop('blockScope');
-  }
-
-  pop(type?: (typeof this._stack)[number]['type']) {
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+  pop(type?: StackLayer['type']) {
     const layer = this._stack[this._stack.length - 1];
     if (!layer || (type && layer.type !== type)) {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
@@ -424,7 +408,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   popBlockScope() {
-    this._itemStateStack.popBlockScope();
+    this._itemStateStack.pop('blockScope');
   }
 
   generateLog(args: Snippet[]): Snippet {
@@ -478,7 +462,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         returnType,
       };
     } finally {
-      this._itemStateStack.popFunctionScope();
+      this._itemStateStack.pop('functionScope');
     }
   }
 
@@ -528,7 +512,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      const usedSlots = this._itemStateStack.popSlotBindings();
+      const usedSlots = this._itemStateStack.pop('slotBinding').usedSet;
       pairs.forEach((pair) => {
         if (!usedSlots.has(pair[0])) {
           console.warn(
@@ -624,7 +608,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [derived]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
@@ -695,7 +679,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [item]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
