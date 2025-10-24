@@ -112,7 +112,7 @@ export class LogGeneratorImpl implements LogGenerator {
         : e.dataType as AnyWgslData
     );
 
-    this.#logIdToMeta.set(id, { op, argTypes });
+    this.#logIdToMeta.set(id, { op: op as SupportedLogOps, argTypes });
 
     return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
   }
