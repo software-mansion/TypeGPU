@@ -76,5 +76,3 @@ export const supportedLogOps = [
 ] as const;
 
 export type SupportedLogOps = (typeof supportedLogOps)[number];
-
-// AAA handling i test na unsupported

@@ -88,7 +88,7 @@ export class LogGeneratorImpl implements LogGenerator {
     args: Snippet[],
   ): Snippet {
     if (!supportedLogOps.includes(op as SupportedLogOps)) {
-      console.warn(`Unsupported log method ${op} was used in TGSL.`);
+      console.warn(`Unsupported log method '${op}' was used in TGSL.`);
       return fallbackSnippet;
     }
 
