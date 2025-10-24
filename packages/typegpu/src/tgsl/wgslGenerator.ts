@@ -275,7 +275,7 @@ ${this.ctx.pre}}`;
 
       if (target.value === console) {
         return snip(
-          new ConsoleLog(property as keyof typeof console),
+          new ConsoleLog(property),
           UnknownData,
         );
       }

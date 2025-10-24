@@ -38,7 +38,7 @@ export type SerializedLogCallData = WgslStruct<{
 }>;
 
 export interface LogMeta {
-  op: keyof typeof console;
+  op: SupportedLogOps;
   argTypes: (string | AnyWgslData)[];
 }
 
@@ -60,17 +60,21 @@ export interface LogResources {
 export interface LogGenerator {
   generateLog(
     ctx: GenerationCtx,
-    op: keyof typeof console,
+    op: string,
     args: Snippet[],
   ): Snippet;
   get logResources(): LogResources | undefined;
 }
 
-export const supportedLogOps: Set<keyof typeof console> = new Set([
+export const supportedLogOps = [
   'log',
   'debug',
   'info',
   'warn',
   'error',
   'clear',
-]);
+] as const;
+
+export type SupportedLogOps = (typeof supportedLogOps)[number];
+
+// AAA handling i test na unsupported

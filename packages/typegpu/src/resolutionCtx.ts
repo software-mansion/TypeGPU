@@ -436,7 +436,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.popBlockScope();
   }
 
-  generateLog(op: keyof typeof console, args: Snippet[]): Snippet {
+  generateLog(op: string, args: Snippet[]): Snippet {
     return this.#logGenerator.generateLog(this, op, args);
   }
 

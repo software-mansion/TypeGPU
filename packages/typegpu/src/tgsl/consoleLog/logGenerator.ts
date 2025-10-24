@@ -20,12 +20,14 @@ import {
   type GenerationCtx,
 } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
-import type {
-  LogGenerator,
-  LogGeneratorOptions,
-  LogMeta,
-  LogResources,
-  SerializedLogCallData,
+import {
+  type LogGenerator,
+  type LogGeneratorOptions,
+  type LogMeta,
+  type LogResources,
+  type SerializedLogCallData,
+  type SupportedLogOps,
+  supportedLogOps,
 } from './types.ts';
 
 const defaultOptions: Required<LogGeneratorOptions> = {
@@ -33,6 +35,8 @@ const defaultOptions: Required<LogGeneratorOptions> = {
   logSizeLimit: 252,
   messagePrefix: ' GPU ',
 };
+
+const fallbackSnippet = snip('/* console.log() */', Void);
 
 export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
@@ -42,7 +46,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
-    return snip('/* console.log() */', Void);
+    return fallbackSnippet;
   }
 }
 
@@ -80,9 +84,14 @@ export class LogGeneratorImpl implements LogGenerator {
    */
   generateLog(
     ctx: GenerationCtx,
-    op: keyof typeof console,
+    op: string,
     args: Snippet[],
   ): Snippet {
+    if (!supportedLogOps.includes(op as SupportedLogOps)) {
+      console.warn(`Unsupported log method ${op} was used in TGSL.`);
+      return fallbackSnippet;
+    }
+
     const concreteArgs = concretizeSnippets(args);
     const id = this.#firstUnusedId++;
 
