@@ -23,6 +23,7 @@ import { createLoggingFunction } from './serializers.ts';
 import type {
   LogGenerator,
   LogGeneratorOptions,
+  LogMeta,
   LogResources,
   SerializedLogCallData,
 } from './types.ts';
@@ -48,6 +49,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
 export class LogGeneratorImpl implements LogGenerator {
   #options: Required<LogGeneratorOptions>;
   #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
+  #logIdToMeta: Map<number, LogMeta>;
   #firstUnusedId = 1;
   #indexBuffer: TgpuMutable<Atomic<U32>>;
   #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
@@ -55,6 +57,7 @@ export class LogGeneratorImpl implements LogGenerator {
   constructor(root: TgpuRoot) {
     this.#options = { ...defaultOptions, ...root[$internal].logOptions };
     this.#logIdToArgTypes = new Map();
+    this.#logIdToMeta = new Map();
 
     const SerializedLogData = struct({
       id: u32,
@@ -96,14 +99,14 @@ export class LogGeneratorImpl implements LogGenerator {
       this.#options,
     );
 
-    this.#logIdToArgTypes.set(
-      id,
-      concreteArgs.map((e) =>
-        e.dataType === UnknownData
-          ? (e.value as string)
-          : e.dataType as AnyWgslData
-      ),
+    const argTypes = concreteArgs.map((e) =>
+      e.dataType === UnknownData
+        ? (e.value as string)
+        : e.dataType as AnyWgslData
     );
+
+    this.#logIdToArgTypes.set(id, argTypes);
+    this.#logIdToMeta.set(id, { op, argTypes });
 
     return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
   }
@@ -114,6 +117,7 @@ export class LogGeneratorImpl implements LogGenerator {
       indexBuffer: this.#indexBuffer,
       options: this.#options,
       logIdToArgTypes: this.#logIdToArgTypes,
+      logIdToMeta: this.#logIdToMeta,
     };
   }
 }

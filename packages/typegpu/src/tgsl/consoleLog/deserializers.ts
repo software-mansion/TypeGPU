@@ -175,13 +175,15 @@ export function deserializeAndStringify(
  * - After processing, the index buffer and the data buffer are cleared.
  */
 export function logDataFromGPU(resources: LogResources) {
-  const { indexBuffer, dataBuffer, logIdToArgTypes, options } = resources;
+  const { indexBuffer, dataBuffer, logIdToArgTypes, logIdToMeta, options } =
+    resources;
 
   dataBuffer.read().then((data) => {
     data
       .filter((e) => e.id)
       .forEach(({ id, serializedData }) => {
-        const argTypes = logIdToArgTypes.get(id) as (AnyWgslData | string)[];
+        const argTypes = logIdToMeta.get(id)
+          ?.argTypes as (AnyWgslData | string)[];
         const result = deserializeAndStringify(
           new Uint32Array(serializedData),
           argTypes,

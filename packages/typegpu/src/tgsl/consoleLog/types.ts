@@ -39,7 +39,7 @@ export type SerializedLogCallData = WgslStruct<{
 
 export interface LogMeta {
   op: keyof typeof console;
-  argTypes: Map<number, (string | AnyWgslData)[]>;
+  argTypes: (string | AnyWgslData)[];
 }
 
 /**
@@ -49,12 +49,14 @@ export interface LogMeta {
  * @property dataBuffer - A buffer containing an array of serialized log call data.
  * @property options - The configuration options for the LogGenerator.
  * @property logIdToArgTypes - A mapping from log identifiers to their corresponding argument types.
+ * @property logIdToMeta - A mapping from log identifiers to an object containing the corresponding log op and argument types.
  */
 export interface LogResources {
   indexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogGeneratorOptions>;
   logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
+  logIdToMeta: Map<number, LogMeta>;
 }
 
 export interface LogGenerator {
