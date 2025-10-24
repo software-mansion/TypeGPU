@@ -71,7 +71,6 @@ describe('slime mold example', () => {
       @group(1) @binding(0) var oldState_1: texture_storage_2d<rgba8unorm, read>;
 
       struct Params_3 {
-        deltaTime: f32,
         moveSpeed: f32,
         sensorAngle: f32,
         sensorDistance: f32,
@@ -142,7 +141,6 @@ describe('slime mold example', () => {
       }
 
       struct Params_11 {
-        deltaTime: f32,
         moveSpeed: f32,
         sensorAngle: f32,
         sensorDistance: f32,
@@ -163,13 +161,15 @@ describe('slime mold example', () => {
         return ((color.x + color.y) + color.z);
       }
 
-      @group(1) @binding(1) var newState_12: texture_storage_2d<rgba8unorm, write>;
+      @group(0) @binding(2) var<uniform> deltaTime_12: f32;
 
-      struct updateAgents_Input_13 {
+      @group(1) @binding(1) var newState_13: texture_storage_2d<rgba8unorm, write>;
+
+      struct updateAgents_Input_14 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_13) {
+      @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_14) {
         if ((_arg_0.gid.x >= 200000)) {
           return;
         }
@@ -186,21 +186,21 @@ describe('slime mold example', () => {
         }
         else {
           if (((weightForward < weightLeft) && (weightForward < weightRight))) {
-            angle = (angle + ((((random * 2) - 1) * params_10.turnSpeed) * params_10.deltaTime));
+            angle = (angle + ((((random * 2) - 1) * params_10.turnSpeed) * deltaTime_12));
           }
           else {
             if ((weightRight > weightLeft)) {
-              angle = (angle - (params_10.turnSpeed * params_10.deltaTime));
+              angle = (angle - (params_10.turnSpeed * deltaTime_12));
             }
             else {
               if ((weightLeft > weightRight)) {
-                angle = (angle + (params_10.turnSpeed * params_10.deltaTime));
+                angle = (angle + (params_10.turnSpeed * deltaTime_12));
               }
             }
           }
         }
         var dir = vec2f(cos(angle), sin(angle));
-        var newPos = (agent.position + (dir * (params_10.moveSpeed * params_10.deltaTime)));
+        var newPos = (agent.position + (dir * (params_10.moveSpeed * deltaTime_12)));
         var dimsf = vec2f(dims);
         if (((((newPos.x < 0) || (newPos.x > dimsf.x)) || (newPos.y < 0)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - vec2f(1)));
@@ -215,7 +215,7 @@ describe('slime mold example', () => {
         agentsData_5[_arg_0.gid.x] = Agent_6(newPos, angle);
         var oldState = textureLoad(oldState_4, vec2u(newPos)).xyz;
         var newState = (oldState + vec3f(1));
-        textureStore(newState_12, vec2u(newPos), vec4f(newState, 1));
+        textureStore(newState_13, vec2u(newPos), vec4f(newState, 1));
       }
 
       struct fullScreenTriangle_Output_1 {
