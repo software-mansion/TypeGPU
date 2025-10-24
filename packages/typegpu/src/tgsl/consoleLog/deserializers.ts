@@ -27,7 +27,7 @@ import type { Infer } from '../../shared/repr.ts';
 import { niceStringify } from '../../shared/stringify.ts';
 import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
-import type { LogResources } from './types.ts';
+import type { LogMeta, LogResources } from './types.ts';
 
 const toF = (n: number | undefined) => bitcastU32toF32(n ?? 0);
 const toI = (n: number | undefined) => bitcastU32toI32(n ?? 0);
@@ -159,10 +159,9 @@ function deserializeCompound(
 export function deserializeAndStringify(
   serializedData: Uint32Array,
   argTypes: (AnyWgslData | string)[],
-): string {
+): string[] {
   return deserializeCompound(serializedData, argTypes)
-    .map(niceStringify)
-    .join(' ');
+    .map(niceStringify);
 }
 
 /**
@@ -181,17 +180,20 @@ export function logDataFromGPU(resources: LogResources) {
     data
       .filter((e) => e.id)
       .forEach(({ id, serializedData }) => {
-        const argTypes = logIdToMeta.get(id)
-          ?.argTypes as (AnyWgslData | string)[];
-        const result = deserializeAndStringify(
+        const { argTypes, op } = logIdToMeta.get(id) as LogMeta;
+        const results = deserializeAndStringify(
           new Uint32Array(serializedData),
           argTypes,
         );
-        console.log(
-          `${options.messagePrefix}${result}`,
+        if (results.length === 0) {
+          results.push('');
+        }
+        console[op](...[
+          `%c${options.messagePrefix}%c ${results[0]}`,
           'background: #936ff5; color: white;',
-          '',
-        );
+          'color: inherit; background: none',
+          ...results.slice(1),
+        ]);
       });
   });
 

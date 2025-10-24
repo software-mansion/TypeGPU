@@ -188,11 +188,16 @@ export const controls = {
         'use gpu';
         console.log('This message should be cleared.');
         console.clear();
-        console.debug('debug');
-        console.info('info');
-        console.warn('warn');
-        console.error('error');
-        console.log('log');
+        console.log('log:', 'this is a log message.');
+        console.debug('debug:', 'this is a debug message.');
+        console.info('info:', 'this is an info message.');
+        console.warn('warn:', 'this is a warn message.');
+        console.error('error:', 'this is an error message.');
+        console.warn(
+          'The values %d and %s were interpolated in this message.',
+          987,
+          d.vec4f(1, 2, 3, 4),
+        );
       }).dispatchThreads(),
   },
   'Render pipeline': {
