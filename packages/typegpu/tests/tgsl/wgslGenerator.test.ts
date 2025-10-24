@@ -1147,4 +1147,31 @@ describe('wgslGenerator', () => {
       }"
     `);
   });
+
+  it('throws a descriptive error when accessing an external array with a runtime known index', () => {
+    const myArray = [9, 8, 7, 6];
+
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      return myArray[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Unable to index a value of unknown type with index i. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a const inside TGSL', () => {
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      const myArray = tgpu.const(d.arrayOf(d.u32, 4), [9, 8, 7, 6]);
+      return myArray.$[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
+    `);
+  });
 });
