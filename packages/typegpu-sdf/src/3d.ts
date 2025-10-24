@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import { f32, vec3f } from 'typegpu/data';
-import { abs, add, dot, length, max, min, sub } from 'typegpu/std';
+import { abs, add, dot, length, max, min, saturate, sub } from 'typegpu/std';
 
 /**
  * Signed distance function for a sphere
@@ -60,6 +60,19 @@ export const sdBoxFrame3d = tgpu
   });
 
 /**
+ * Signed distance function for a 3D line segment
+ * @param p Point to evaluate
+ * @param a First endpoint of the line
+ * @param b Second endpoint of the line
+ */
+export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((p, a, b) => {
+  const pa = sub(p, a);
+  const ba = sub(b, a);
+  const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
+  return length(sub(pa, ba.mul(h)));
+});
+
+/**
  * Signed distance function for an infinite plane
  * @param p Point to evaluate
  * @param n Normal vector of the plane (must be normalized)
@@ -68,3 +81,18 @@ export const sdBoxFrame3d = tgpu
 export const sdPlane = tgpu.fn([vec3f, vec3f, f32], f32)((p, n, h) => {
   return dot(p, n) + h;
 });
+
+/**
+ * Signed distance function for a 3D capsule
+ * @param p Point to evaluate
+ * @param a First endpoint of the capsule segment
+ * @param b Second endpoint of the capsule segment
+ * @param radius Radius of the capsule
+ */
+export const sdCapsule = tgpu
+  .fn([vec3f, vec3f, vec3f, f32], f32)((p, a, b, radius) => {
+    const pa = sub(p, a);
+    const ba = sub(b, a);
+    const h = saturate(dot(pa, ba) / dot(ba, ba));
+    return length(sub(pa, ba.mul(h))) - radius;
+  });
