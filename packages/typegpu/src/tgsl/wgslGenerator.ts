@@ -367,7 +367,7 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+          `Unable to index a value of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
