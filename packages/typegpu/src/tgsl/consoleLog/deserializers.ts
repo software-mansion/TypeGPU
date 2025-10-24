@@ -175,8 +175,7 @@ export function deserializeAndStringify(
  * - After processing, the index buffer and the data buffer are cleared.
  */
 export function logDataFromGPU(resources: LogResources) {
-  const { indexBuffer, dataBuffer, logIdToArgTypes, logIdToMeta, options } =
-    resources;
+  const { indexBuffer, dataBuffer, logIdToMeta, options } = resources;
 
   dataBuffer.read().then((data) => {
     data

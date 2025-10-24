@@ -48,7 +48,6 @@ export class LogGeneratorNullImpl implements LogGenerator {
 
 export class LogGeneratorImpl implements LogGenerator {
   #options: Required<LogGeneratorOptions>;
-  #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   #logIdToMeta: Map<number, LogMeta>;
   #firstUnusedId = 1;
   #indexBuffer: TgpuMutable<Atomic<U32>>;
@@ -56,7 +55,6 @@ export class LogGeneratorImpl implements LogGenerator {
 
   constructor(root: TgpuRoot) {
     this.#options = { ...defaultOptions, ...root[$internal].logOptions };
-    this.#logIdToArgTypes = new Map();
     this.#logIdToMeta = new Map();
 
     const SerializedLogData = struct({
@@ -105,7 +103,6 @@ export class LogGeneratorImpl implements LogGenerator {
         : e.dataType as AnyWgslData
     );
 
-    this.#logIdToArgTypes.set(id, argTypes);
     this.#logIdToMeta.set(id, { op, argTypes });
 
     return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
@@ -116,7 +113,6 @@ export class LogGeneratorImpl implements LogGenerator {
       dataBuffer: this.#dataBuffer,
       indexBuffer: this.#indexBuffer,
       options: this.#options,
-      logIdToArgTypes: this.#logIdToArgTypes,
       logIdToMeta: this.#logIdToMeta,
     };
   }

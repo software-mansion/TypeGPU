@@ -48,14 +48,12 @@ export interface LogMeta {
  * @property indexBuffer - A buffer used for indexing log entries. Needs to be cleared after each dispatch/draw.
  * @property dataBuffer - A buffer containing an array of serialized log call data.
  * @property options - The configuration options for the LogGenerator.
- * @property logIdToArgTypes - A mapping from log identifiers to their corresponding argument types.
  * @property logIdToMeta - A mapping from log identifiers to an object containing the corresponding log op and argument types.
  */
 export interface LogResources {
   indexBuffer: TgpuMutable<Atomic<U32>>;
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
   options: Required<LogGeneratorOptions>;
-  logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
   logIdToMeta: Map<number, LogMeta>;
 }
 
