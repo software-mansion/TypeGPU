@@ -1171,7 +1171,7 @@ describe('wgslGenerator', () => {
     expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Cannot define 'tgpu.const' inside TypeGPU functions. To address this, move the definition outside the TypeGPU function's scope.]
+      - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
     `);
   });
 });

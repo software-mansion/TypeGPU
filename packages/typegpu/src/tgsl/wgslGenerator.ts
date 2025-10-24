@@ -441,7 +441,7 @@ ${this.ctx.pre}}`;
 
       if (callee.value === constant) {
         throw new Error(
-          `Cannot define 'tgpu.const' inside TypeGPU functions. To address this, move the definition outside the TypeGPU function's scope.`,
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
         );
       }
 
