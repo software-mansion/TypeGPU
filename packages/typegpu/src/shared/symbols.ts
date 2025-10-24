@@ -5,10 +5,6 @@ import { version } from '../../package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
 /**
- * A value's data type as seen by the WGSL generator
- */
-export const $wgslDataType = Symbol(`typegpu:${version}:$wgslDataType`);
-/**
  * The getter to the value of this resource, accessible on the GPU
  */
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);
@@ -17,6 +13,13 @@ export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
  * Marks an object with slot-value bindings
  */
 export const $providing = Symbol(`typegpu:${version}:$providing`);
+
+/**
+ * Objects can provide the snippet that represents them.
+ */
+export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
+
+export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 
 //
 // Type tokens
@@ -65,3 +68,9 @@ export const $validVertexSchema = Symbol(
 export const $invalidSchemaReason = Symbol(
   `typegpu:${version}:$invalidSchemaReason`,
 );
+
+export function isMarkedInternal(
+  value: unknown,
+): value is { [$internal]: Record<string, unknown> | true } {
+  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
+}

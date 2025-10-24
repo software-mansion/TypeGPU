@@ -4,7 +4,7 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -833,17 +833,14 @@ describe('v3f', () => {
         const three = d.vec3f(d.vec2f(1, 2), 12); // literal
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(`
-          fn main() {
-            var planarPosLocal = vec2f(1, 2);
-
-            var one = vec3f(1, 2, 12);
-            var two = vec3f(planarPosLocal, 12);
-            var three = vec3f(1, 2, 12);
-          }
-        `),
-      );
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() {
+          var planarPosLocal = vec2f(1, 2);
+          var one = vec3f(1, 2, 12);
+          var two = vec3f(planarPosLocal, 12);
+          var three = vec3f(1, 2, 12);
+        }"
+      `);
     });
   });
 
@@ -883,17 +880,14 @@ describe('v4f', () => {
         const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(`
-          fn main() {
-            var green = vec3f(0, 1, 0);
-
-            var one = vec4f(0.125, 0.25, 0.375, 1);
-            var two = vec4f(green, 1);
-            var three = vec4f(0, 0, 1, 1);
-          }
-        `),
-      );
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() {
+          var green = vec3f(0, 1, 0);
+          var one = vec4f(0.125, 0.25, 0.375, 1);
+          var two = vec4f(green, 1);
+          var three = vec4f(0, 0, 1, 1);
+        }"
+      `);
     });
   });
 
@@ -915,17 +909,14 @@ describe('v4f', () => {
         const three = d.vec4f(0.125, d.vec3f(0.25, 0.5, 0.75)); // literal
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(`
-        fn main() {
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() {
           var fooLocal = vec3f(0.25, 0.5, 0.75);
-
           var one = vec4f(0.25, 0.25, 0.5, 0.75);
           var two = vec4f(0.1, fooLocal);
           var three = vec4f(0.125, 0.25, 0.5, 0.75);
-        }
-      `),
-      );
+        }"
+      `);
     });
   });
 
@@ -935,11 +926,11 @@ describe('v4f', () => {
         return d.vec4f(1, 2, 3, 4).zyx;
       });
 
-      expect(parseResolved({ foo })).toEqual(parse(`
-        fn foo() -> vec3f {
+      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        "fn foo() -> vec3f {
           return vec3f(3, 2, 1);
-        }
-      `));
+        }"
+      `);
     });
   });
 
@@ -970,17 +961,14 @@ describe('v4b', () => {
         const three = d.vec4b(d.vec3b(false, false, true), true); // literal
       });
 
-      expect(parseResolved({ main })).toBe(
-        parse(`
-          fn main() {
-            var vecLocal = vec3<bool>(true, true, true);
-
-            var one = vec4<bool>(vec3<bool>(true, false, true), true);
-            var two = vec4<bool>(vecLocal, false);
-            var three = vec4<bool>(vec3<bool>(false, false, true), true);
-          }
-        `),
-      );
+      expect(asWgsl(main)).toMatchInlineSnapshot(`
+        "fn main() {
+          var vecLocal = vec3<bool>(true);
+          var one = vec4<bool>(true, false, true, true);
+          var two = vec4<bool>(vecLocal, false);
+          var three = vec4<bool>(false, false, true, true);
+        }"
+      `);
     });
   });
 });

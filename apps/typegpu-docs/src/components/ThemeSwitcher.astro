@@ -1,0 +1,63 @@
+---
+import { Image } from "astro:assets";
+import LightModeIconSvg from "../assets/sun.svg";
+import DarkModeIconSvg from "../assets/moon.svg";
+---
+
+<div
+  class="grid grid-cols-2 border border-blue-900/30 dark:border-gray-700 transition-colors duration-300 overflow-hidden"
+>
+  <button
+    type="button"
+    class="theme-toggle-btn cursor-pointer place-items-center grid p-2 transition duration-300 bg-blue-900 text-white dark:bg-blue-700"
+    data-theme-toggle="light"
+    aria-pressed="false"
+    aria-label="Switch to light theme"
+  >
+    <Image src={LightModeIconSvg} class="w-6 h-6" alt="Light Mode" />
+  </button>
+
+  <button
+    type="button"
+    class="theme-toggle-btn cursor-pointer place-items-center grid p-2 transition duration-300 bg-white text-blue-900 dark:bg-gray-800 dark:text-gray-100"
+    data-theme-toggle="dark"
+    aria-pressed="false"
+    aria-label="Switch to dark theme"
+  >
+    <Image src={DarkModeIconSvg} class="w-6 h-6" alt="Dark Mode" />
+  </button>
+</div>
+
+<script is:inline>
+  (() => {
+    const storageKey = "typegpu-theme";
+    const buttons = Array.from(document.querySelectorAll(".theme-toggle-btn"));
+
+    const applyTheme = (theme) => {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      buttons.forEach((btn) => {
+        const isActive = btn.dataset.themeToggle === theme;
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+    };
+
+    const persistTheme = (theme) => {
+      try {
+        window.localStorage.setItem(storageKey, theme);
+      } catch (error) {
+        console.error("Failed to persist theme preference:", error);
+      }
+    };
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetTheme = btn.dataset.themeToggle;
+        if (targetTheme === "light" || targetTheme === "dark") {
+          applyTheme(targetTheme);
+          persistTheme(targetTheme);
+        }
+      });
+    });
+  })();
+</script>

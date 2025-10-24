@@ -4,28 +4,27 @@ import type {
   VariableScope,
 } from '../src/core/variable/tgpuVariable.ts';
 import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
+import * as std from '../src/std/index.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {
-    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    const x = tgpu.privateVar(d.u32, 2);
     const fn1 = tgpu.fn([])`() {
-        let y = x;
-        return x;
-      }`
+      let y = x;
+      return x;
+    }`
       .$uses({ x });
 
-    expect(parseResolved({ fn1 })).toBe(
-      parse(`
-        var<private> x: u32 = 2;
-        fn fn1() {
-          let y = x;
-          return x;
-        }
-      `),
-    );
+    expect(asWgsl(fn1)).toMatchInlineSnapshot(`
+      "var<private> x: u32 = 2;
+
+      fn fn1() {
+            let y = x;
+            return x;
+          }"
+    `);
   });
 
   it('should properly resolve variables', () => {
@@ -33,70 +32,68 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      expect(parseResolved({ x: variable })).toBe(parse(expected));
+      expect(asWgsl(variable)).toBe(expected);
     }
 
     test(
-      tgpu['~unstable'].privateVar(d.u32, 2).$name('x'),
+      tgpu.privateVar(d.u32, 2).$name('x'),
       'var<private> x: u32 = 2;',
     );
     test(
-      tgpu['~unstable'].privateVar(d.f32, 1.5).$name('x'),
+      tgpu.privateVar(d.f32, 1.5).$name('x'),
       'var<private> x: f32 = 1.5;',
     );
     test(
-      tgpu['~unstable'].privateVar(d.u32).$name('x'),
+      tgpu.privateVar(d.u32).$name('x'),
       'var<private> x: u32;',
     );
     test(
-      tgpu['~unstable'].workgroupVar(d.f32).$name('x'),
+      tgpu.workgroupVar(d.f32).$name('x'),
       'var<workgroup> x: f32;',
     );
 
     test(
-      tgpu['~unstable'].privateVar(d.vec2u, d.vec2u(1, 2)).$name('x'),
+      tgpu.privateVar(d.vec2u, d.vec2u(1, 2)).$name('x'),
       'var<private> x: vec2u = vec2u(1, 2);',
     );
 
     test(
-      tgpu['~unstable'].privateVar(d.vec3f, d.vec3f()).$name('x'),
+      tgpu.privateVar(d.vec3f, d.vec3f()).$name('x'),
       'var<private> x: vec3f = vec3f();',
     );
 
     test(
-      tgpu['~unstable'].privateVar(d.arrayOf(d.u32, 2), [1, 2]).$name('x'),
+      tgpu.privateVar(d.arrayOf(d.u32, 2), [1, 2]).$name('x'),
       'var<private> x: array<u32, 2> = array<u32, 2>(1, 2);',
     );
 
     const s = d.struct({ x: d.u32, y: d.vec2i }).$name('s');
 
     test(
-      tgpu['~unstable'].privateVar(s, { x: 2, y: d.vec2i(1, 2) }).$name('x'),
-      `
-      struct s {
-        x: u32,
-        y: vec2i,
-      }
+      tgpu.privateVar(s, { x: 2, y: d.vec2i(1, 2) }).$name('x'),
+      `\
+struct s {
+  x: u32,
+  y: vec2i,
+}
 
-      var<private> x: s = s(2, vec2i(1, 2));`,
+var<private> x: s = s(2, vec2i(1, 2));`,
     );
 
     const a = d.arrayOf(s, 2);
 
     test(
-      tgpu['~unstable']
-        .privateVar(a, [
-          { x: 1, y: d.vec2i(2, 3) },
-          { x: 4, y: d.vec2i(5, 6) },
-        ])
-        .$name('x'),
-      `
-      struct s {
-        x: u32,
-        y: vec2i,
-      }
+      tgpu.privateVar(a, [
+        { x: 1, y: d.vec2i(2, 3) },
+        { x: 4, y: d.vec2i(5, 6) },
+      ]).$name('x'),
+      `\
+struct s {
+  x: u32,
+  y: vec2i,
+}
 
-      var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));`,
+var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));`,
     );
   });
 
@@ -106,7 +103,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       vel: d.vec3u,
     });
 
-    const boid = tgpu['~unstable'].privateVar(Boid, {
+    const boid = tgpu.privateVar(Boid, {
       pos: d.vec3f(1, 2, 3),
       vel: d.vec3u(4, 5, 6),
     });
@@ -117,61 +114,49 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       const velX = boid.value.vel.x;
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3u,
+      }
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Boid {
-          pos: vec3f,
-          vel: vec3u,
-        }
+      var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
 
-        var<private> boid: Boid = Boid(vec3f(1, 2, 3), vec3u(4, 5, 6));
-
-        fn func() {
-          var pos = boid;
-          var vel = boid.vel;
-          var velX = boid.vel.x;
-        }`),
-    );
+      fn func() {
+        var pos = boid;
+        var vel = boid.vel;
+        var velX = boid.vel.x;
+      }"
+    `);
   });
 
   it('supports atomic operations on workgroupVar atomics accessed via .$', () => {
-    const atomicCounter = tgpu['~unstable'].workgroupVar(d.atomic(d.u32));
+    const atomicCounter = tgpu.workgroupVar(d.atomic(d.u32));
 
     const func = tgpu.fn([])(() => {
       const oldValue = std.atomicAdd(atomicCounter.$, 1);
       const currentValue = std.atomicLoad(atomicCounter.$);
     });
 
-    const resolved = tgpu.resolve({
-      externals: { func },
-      names: 'strict',
-    });
+    expect(asWgsl(func)).toMatchInlineSnapshot(`
+      "var<workgroup> atomicCounter: atomic<u32>;
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        var<workgroup> atomicCounter: atomic<u32>;
-
-        fn func() {
-          var oldValue = atomicAdd(&atomicCounter, 1);
-          var currentValue = atomicLoad(&atomicCounter);
-        }`),
-    );
+      fn func() {
+        var oldValue = atomicAdd(&atomicCounter, 1);
+        var currentValue = atomicLoad(&atomicCounter);
+      }"
+    `);
   });
 
   it('should throw an error when trying to access variable outside of a function', () => {
-    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    const x = tgpu.privateVar(d.u32, 2);
     expect(() => x.$).toThrowErrorMatchingInlineSnapshot(
       '[Error: TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try \`tgpu.simulate()\`]',
     );
   });
 
   it('should throw an error when trying to access variable inside of a function top-level', () => {
-    const x = tgpu['~unstable'].privateVar(d.u32, 2);
+    const x = tgpu.privateVar(d.u32, 2);
     const foo = tgpu.fn([], d.f32)(() => {
       return x.$; // Accessing variable inside of a function
     });
@@ -183,7 +168,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
 
   describe('simulate mode', () => {
     it('simulates variable incrementing', () => {
-      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+      const counter = tgpu.privateVar(d.f32, 0);
 
       const result = tgpu['~unstable'].simulate(() => {
         counter.$ += 1;
@@ -196,7 +181,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
     });
 
     it('does not keep state between simulations', () => {
-      const counter = tgpu['~unstable'].privateVar(d.f32, 0);
+      const counter = tgpu.privateVar(d.f32, 0);
 
       const fn = () => ++counter.$;
 

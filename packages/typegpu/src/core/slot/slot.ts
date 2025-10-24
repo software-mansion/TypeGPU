@@ -2,7 +2,6 @@ import { getResolutionCtx } from '../../execMode.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
-import type { ResolutionCtx } from '../../types.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import type { TgpuSlot } from './slotTypes.ts';
 
@@ -37,17 +36,17 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
     return `slot:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T> {
-    return getGpuValueRecursively(ctx, ctx.unwrap(this));
-  }
-
-  get value(): GPUValueOf<T> {
+  get [$gpuValueOf](): GPUValueOf<T> {
     const ctx = getResolutionCtx();
     if (!ctx) {
       throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
     }
 
-    return this[$gpuValueOf](ctx);
+    return getGpuValueRecursively(ctx.unwrap(this));
+  }
+
+  get value(): GPUValueOf<T> {
+    return this[$gpuValueOf];
   }
 
   get $(): GPUValueOf<T> {

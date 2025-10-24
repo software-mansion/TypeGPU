@@ -21,9 +21,13 @@ export async function executeExample(
   };
 
   function addParameters(
-    options: Record<string, Labelless<ExampleControlParam>>,
+    options: Record<string, Labelless<ExampleControlParam> | false>,
   ) {
     for (const [label, value] of Object.entries(options)) {
+      if (!value) {
+        continue;
+      }
+
       const param = {
         ...value,
         label,
@@ -59,7 +63,9 @@ export async function executeExample(
 
   const entryExampleFile = await tsImport();
   const { controls, onCleanup } = entryExampleFile as {
-    controls?: Record<string, Labelless<ExampleControlParam>> | undefined;
+    controls?:
+      | Record<string, Labelless<ExampleControlParam> | false>
+      | undefined;
     onCleanup?: () => void;
   };
 

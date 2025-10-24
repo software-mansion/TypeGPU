@@ -1,17 +1,17 @@
 import { describe, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
-import type { GPUValueOf } from '../src/shared/repr.ts';
 import tgpu from '../src/index.ts';
+import type { GPUValueOf } from '../src/shared/repr.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('GPUValueOf', () => {
   it('extracts value of tgpu.privateVar', () => {
-    const foo = tgpu['~unstable'].privateVar(d.u32, 0);
+    const foo = tgpu.privateVar(d.u32, 0);
     expectTypeOf<GPUValueOf<typeof foo>>().toEqualTypeOf<number>();
   });
 
   it('extracts value of tgpu.const', () => {
-    const foo = tgpu['~unstable'].const(d.u32, 0);
+    const foo = tgpu.const(d.u32, 0);
     expectTypeOf<GPUValueOf<typeof foo>>().toEqualTypeOf<number>();
   });
 

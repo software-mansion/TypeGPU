@@ -3,7 +3,7 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
-import { getName } from './shared/meta.ts';
+import { getName, isKernel } from './shared/meta.ts';
 import { DEV } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
@@ -50,7 +50,9 @@ export class ResolutionError extends Error {
     public readonly cause: unknown,
     public readonly trace: unknown[],
   ) {
-    let entries = trace.map((ancestor) => `- ${ancestor}`);
+    let entries = trace.map((ancestor) =>
+      `- ${isKernel(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`
+    );
 
     // Showing only the root and leaf nodes.
     if (entries.length > 20) {

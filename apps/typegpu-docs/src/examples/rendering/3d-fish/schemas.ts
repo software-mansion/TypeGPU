@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 
 // schemas
 
+export type Line3 = d.Infer<typeof Line3>;
 export const Line3 = d.struct({
   /**
    * A point on the line
@@ -76,7 +77,7 @@ export const renderInstanceLayout = tgpu.vertexLayout(
 
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   modelData: { storage: ModelDataArray },
-  modelTexture: { texture: 'float' },
+  modelTexture: { texture: d.texture2d(d.f32) },
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
   currentTime: { uniform: d.f32 },
