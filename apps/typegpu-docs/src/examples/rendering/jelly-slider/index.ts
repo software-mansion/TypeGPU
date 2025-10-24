@@ -114,6 +114,9 @@ const jellyColorUniform = root.createUniform(
   d.vec4f(1.0, 0.45, 0.075, 1.0),
 );
 
+const randomUniform = root.createUniform(d.vec2f);
+const blurEnabledUniform = root.createUniform(d.u32);
+
 const getRay = (ndc: d.v2f) => {
   'use gpu';
   const clipPos = d.vec4f(ndc.x, ndc.y, -1.0, 1.0);
@@ -309,10 +312,7 @@ const getNormalCap = (pos: d.v3f) => {
 
 const getNormalMain = (position: d.v3f) => {
   'use gpu';
-  if (
-    std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02 ||
-    (std.abs(position.x) < 0.9 && std.abs(position.z) < 0.17)
-  ) {
+  if (std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02) {
     return d.vec3f(0, 1, 0);
   }
   return getNormalMainSdf(position, 0.0001);
@@ -503,17 +503,22 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   let distanceFromOrigin = d.f32();
   let hit = d.f32();
 
-  for (let i = 0; i < MAX_STEPS; i++) {
+  for (let i = 0; i < 6; i++) {
     const p = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
     hit = getMainSceneDist(p);
     distanceFromOrigin += hit;
-    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
+    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST * 10) {
       break;
     }
   }
 
   if (distanceFromOrigin < MAX_DIST) {
-    return renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
+    return renderBackground(
+      rayOrigin,
+      rayDirection,
+      distanceFromOrigin,
+      std.select(d.f32(), 0.87, blurEnabledUniform.$ === 1),
+    ).xyz;
   }
   return d.vec3f();
 };
@@ -558,6 +563,7 @@ const renderBackground = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
   backgroundHitDist: number,
+  offset: number,
 ) => {
   'use gpu';
   const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
@@ -612,12 +618,21 @@ const renderBackground = (
     highlights = density ** 3 * edgeFade * 3 * (1 + lightDir.z) / 1.5;
   }
 
-  const normal = getNormalMain(hitPosition);
-  const litColor = calculateLighting(hitPosition, normal, rayOrigin);
+  const originYBound = std.saturate(rayOrigin.y + 0.01);
+  const posOffset = hitPosition.add(
+    d.vec3f(0, 1, 0).mul(
+      offset *
+        (originYBound / (1.0 + originYBound)) *
+        (1 + randf.sample() / 2),
+    ),
+  );
+  const newNormal = getNormalMain(posOffset);
+
+  const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
   const backgroundColor = applyAO(
     GROUND_ALBEDO.mul(litColor),
-    hitPosition,
-    normal,
+    posOffset,
+    newNormal,
   );
 
   const textColor = std.saturate(backgroundColor.xyz.mul(d.vec3f(0.5)));
@@ -647,6 +662,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
     rayOrigin,
     rayDirection,
     backgroundDist,
+    d.f32(),
   );
 
   const bbox = getSliderBbox();
@@ -750,7 +766,7 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })(({ uv }) => {
-  randf.seed2(uv);
+  randf.seed2(randomUniform.$.mul(uv));
 
   const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
   const ray = getRay(ndc);
@@ -809,6 +825,10 @@ function render(timestamp: number) {
   camera.jitter();
   const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
   lastTimeStamp = timestamp;
+
+  randomUniform.write(
+    d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
+  );
 
   eventHandler.update();
   slider.setDragX(eventHandler.currentMouseX);
@@ -967,6 +987,12 @@ export const controls = {
     initial: [1.0, 0.45, 0.075],
     onColorChange: (c: [number, number, number]) => {
       jellyColorUniform.write(d.vec4f(...c, 1.0));
+    },
+  },
+  'Blur': {
+    initial: false,
+    onToggleChange: (v: boolean) => {
+      blurEnabledUniform.write(d.u32(v));
     },
   },
 };
