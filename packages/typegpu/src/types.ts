@@ -107,6 +107,23 @@ export type FunctionScopeLayer = {
   reportedReturnTypes: Set<AnyData>;
 };
 
+export type SlotBindingLayer = {
+  type: 'slotBinding';
+  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+  usedSet: WeakSet<TgpuSlot<unknown>>;
+};
+
+export type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, Snippet>;
+};
+
+export type StackLayer =
+  | ItemLayer
+  | SlotBindingLayer
+  | FunctionScopeLayer
+  | BlockScopeLayer;
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
