@@ -96,25 +96,22 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
-  // Mirror the video horizontally by flipping the X coordinate
-  const uv = d.vec2f(1 - input.uv[0], input.uv[1]);
-
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,
-    uv,
+    input.uv,
   );
 
   const blurredColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputBlurredTexture,
     drawWithMaskLayout.$.sampler,
-    uv,
+    input.uv,
   );
 
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
-    uv,
+    input.uv,
   ).x;
 
   return std.mix(blurredColor, originalColor, mask);
