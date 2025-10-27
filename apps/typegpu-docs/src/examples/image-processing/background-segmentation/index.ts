@@ -27,7 +27,7 @@ import {
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 const attributionPopup = document.getElementById(
-  'attributionPopup',
+  'attribution',
 ) as HTMLDivElement;
 
 if (navigator.mediaDevices.getUserMedia) {
@@ -154,7 +154,7 @@ async function processCalculateMask() {
 
   generateMaskFromOutputPipeline
     .with(root.createBindGroup(generateMaskLayout, {
-      maskTexture: maskTexture,
+      maskTexture,
       outputBuffer: modelOutputBuffer,
     }))
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
@@ -245,7 +245,7 @@ async function processVideoFrame(
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device.importExternalTexture({ source: video }),
       inputBlurredTexture: blurredTextures[0],
-      maskTexture: maskTexture,
+      maskTexture,
       sampler,
     }))
     .draw(3);
