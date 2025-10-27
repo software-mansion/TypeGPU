@@ -97,7 +97,8 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
-  const uv = uvTransformSlot.$.mul(input.uv.sub(0.5)).add(0.5);
+  let uv = uvTransformSlot.$.mul(input.uv.sub(0.5)).add(0.5);
+  // uv = d.vec2f(1 - uv.x, uv.y);
 
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,

@@ -228,7 +228,7 @@ function onVideoChange(size: { width: number; height: number }) {
 }
 
 let videoFrameCallbackId: number | undefined;
-let frameSize: { width: number; height: number } | undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 async function processVideoFrame(
   _: number,
@@ -242,12 +242,17 @@ async function processVideoFrame(
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
-  if (!frameSize) {
-    frameSize = { width: frameWidth, height: frameHeight };
-    onVideoChange(frameSize);
+  if (
+    !lastFrameSize ||
+    lastFrameSize.width !== frameWidth ||
+    lastFrameSize.height !== frameHeight
+  ) {
+    lastFrameSize = { width: frameWidth, height: frameHeight };
+    onVideoChange(lastFrameSize);
   }
 
   blurredTextures[0].write(video);
+  // blurredTextures[0].generateMipmaps();
 
   for (const _ of Array(iterations)) {
     blurPipeline
@@ -282,12 +287,13 @@ async function processVideoFrame(
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
+attributionPopup.style.opacity = '1';
 
 // #region Example controls & Cleanup
 
 export const controls = {
   'blur strength': {
-    initial: 10,
+    initial: iterations,
     min: 0,
     max: 20,
     step: 1,
