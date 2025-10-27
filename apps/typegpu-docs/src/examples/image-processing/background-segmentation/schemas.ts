@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuUniform } from 'typegpu';
 import * as d from 'typegpu/data';
 
 // constants
@@ -35,3 +35,7 @@ export const drawWithMaskLayout = tgpu.bindGroupLayout({
   maskTexture: { texture: d.texture2d() },
   sampler: { sampler: 'filtering' },
 });
+
+// slots
+
+export const uvTransformSlot = tgpu.slot<TgpuUniform<d.Mat2x2f>>();

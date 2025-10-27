@@ -14,6 +14,7 @@ import {
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
+  uvTransformSlot,
 } from './schemas.ts';
 import {
   computeFn,
@@ -89,6 +90,7 @@ const modelOutputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 1 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
+// AAA try to do this immediately
 let blurredTextures: (
   & TgpuTexture<{
     size: [number, number];
@@ -99,10 +101,14 @@ let blurredTextures: (
   & StorageFlag
 )[];
 
+// AAA this as well
 let blurBindGroups: TgpuBindGroup<(typeof blurLayout)['entries']>[];
+// AAA and other bind groups
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
+
+const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
 // pipelines
 
@@ -124,9 +130,32 @@ const blurPipeline = root['~unstable']
   .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
+  .with(uvTransformSlot, uvTransformUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
+
+// iOS
+
+if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+  function setUVTransformForIOS() {
+    const angle = screen.orientation.type;
+
+    let m = d.mat2x2f(1, 0, 0, 1);
+    if (angle === 'portrait-primary') {
+      m = d.mat2x2f(0, -1, 1, 0);
+    } else if (angle === 'portrait-secondary') {
+      m = d.mat2x2f(0, 1, -1, 0);
+    } else if (angle === 'landscape-primary') {
+      m = d.mat2x2f(-1, 0, 0, -1);
+    }
+
+    uvTransformUniform.write(m);
+  }
+
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
+}
 
 // recalculating mask
 

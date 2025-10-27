@@ -8,6 +8,7 @@ import {
   filterDim,
   generateMaskLayout,
   prepareModelInputLayout,
+  uvTransformSlot,
 } from './schemas.ts';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
@@ -96,22 +97,24 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
   out: d.vec4f,
 })((input) => {
+  const uv = uvTransformSlot.$.mul(input.uv.sub(0.5)).add(0.5);
+
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   );
 
   const blurredColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputBlurredTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   );
 
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   ).x;
 
   return std.mix(blurredColor, originalColor, mask);
