@@ -3,10 +3,24 @@ import * as ort from 'onnxruntime-web/webgpu';
 export const MODEL_WIDTH = 320;
 export const MODEL_HEIGHT = 320;
 
-// AAA docs
+/**
+ * Prepares an ONNX Runtime inference session for calculating background segmentation mask using the u2netp model.
+ *
+ * @param input - GPU buffer containing the input image data (an array of length MODEL_WIDTH * MODEL_HEIGHT * 3, filled with red, green and blue images one after another)
+ * @param output - GPU buffer that will receive the segmentation mask output (an array of length MODEL_WIDTH * MODEL_HEIGHT)
+ *
+ * @returns A session object with methods to run inference and release resources
+ *
+ * @see {@link https://github.com/microsoft/onnxruntime/issues/26107} - Related ONNX Runtime issue (the reason why we need to monkey patch the device instead of setting it in this function)
+ *
+ * @example
+ * ```typescript
+ * const { run, release } = await prepareSession(inputBuffer, outputBuffer);
+ * await run();
+ * release();
+ * ```
+ */
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
-  // see https://github.com/microsoft/onnxruntime/issues/26107
-
   const session = await ort.InferenceSession
     .create('/TypeGPU/assets/background-segmentation/u2netp.onnx', {
       executionProviders: ['webgpu'],

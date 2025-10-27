@@ -107,7 +107,7 @@ const prepareModelInputPipeline = root['~unstable'].prepareDispatch(
   prepareModelInput,
 );
 
-const { run: runSession, release: releaseSession } = await prepareSession(
+const session = await prepareSession(
   root.unwrap(modelInputBuffer),
   root.unwrap(modelOutputBuffer),
 );
@@ -147,7 +147,7 @@ async function processCalculateMask() {
 
   root['~unstable'].flush();
 
-  await runSession();
+  await session.run();
 
   generateMaskFromOutputPipeline
     .with(root.createBindGroup(generateMaskLayout, {
@@ -272,7 +272,7 @@ export function onCleanup() {
   if (calculateMaskCallbackId !== undefined) {
     video.cancelVideoFrameCallback(calculateMaskCallbackId);
   }
-  releaseSession();
+  session.release();
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
