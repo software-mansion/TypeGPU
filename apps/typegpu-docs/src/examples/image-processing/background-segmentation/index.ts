@@ -5,6 +5,7 @@ import tgpu, {
   type TgpuBindGroup,
   type TgpuTexture,
 } from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
@@ -20,7 +21,6 @@ import {
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
-import { fullScreenTriangle } from 'typegpu/common';
 
 // setup
 
@@ -42,12 +42,15 @@ if (navigator.mediaDevices.getUserMedia) {
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice({
-  label: 'my device',
+  label: `my device ${performance.now()}`,
 }) as GPUDevice;
 if (!device || !adapter) {
   throw new Error('Failed to initialize device.');
 }
 
+// monkey patching ONNX (setting device in the environment does nothing)
+const oldRequestAdapter = navigator.gpu.requestAdapter;
+const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = await tgpu.initFromDevice({ device });
@@ -104,7 +107,7 @@ const prepareModelInputPipeline = root['~unstable'].prepareDispatch(
   prepareModelInput,
 );
 
-const runSession = await prepareSession(
+const { run: runSession, release: releaseSession } = await prepareSession(
   root.unwrap(modelInputBuffer),
   root.unwrap(modelOutputBuffer),
 );
@@ -269,11 +272,17 @@ export function onCleanup() {
   if (calculateMaskCallbackId !== undefined) {
     video.cancelVideoFrameCallback(calculateMaskCallbackId);
   }
+  releaseSession();
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
     }
   }
+  navigator.gpu.requestAdapter = oldRequestAdapter;
+  if (adapter) {
+    adapter.requestDevice = oldRequestDevice;
+  }
+
   root.destroy();
 }
 

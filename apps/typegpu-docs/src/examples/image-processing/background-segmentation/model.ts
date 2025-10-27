@@ -24,5 +24,8 @@ export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
 
   const feeds = { 'input.1': myPreAllocatedInputTensor };
   const fetches = { '1959': myPreAllocatedOutputTensor };
-  return () => session.run(feeds, fetches);
+  return {
+    run: () => session.run(feeds, fetches),
+    release: () => session.release(),
+  };
 }
