@@ -26,7 +26,7 @@ export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
   if (b === 1) return a * 10 + b;
   const digits = std.ceil(std.log(b) / std.log(10));
   const result = std.pow(10, digits) * a + b;
-  const roundedResult = std.ceil(result - 0.4);
+  const roundedResult = std.round(result);
   return roundedResult;
 });
 
