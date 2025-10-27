@@ -62,6 +62,8 @@ context.configure({
 
 // resources
 
+let iterations = 10;
+
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -212,7 +214,7 @@ async function processVideoFrame(
 
   blurredTextures[0].write(video);
 
-  for (const _ of Array(10)) {
+  for (const _ of Array(iterations)) {
     blurPipeline
       .with(blurBindGroups[0])
       .dispatchWorkgroups(
@@ -236,7 +238,7 @@ async function processVideoFrame(
     })
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device.importExternalTexture({ source: video }),
-      inputBlurredTexture: blurredTextures[1],
+      inputBlurredTexture: blurredTextures[0],
       maskTexture: maskTexture,
       sampler,
     }))
@@ -247,6 +249,18 @@ async function processVideoFrame(
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
+
+export const controls = {
+  'blur strength': {
+    initial: 10,
+    min: 0,
+    max: 20,
+    step: 1,
+    onSliderChange(newValue: number) {
+      iterations = newValue;
+    },
+  },
+};
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
