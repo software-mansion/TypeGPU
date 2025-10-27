@@ -1,38 +1,11 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
-});
-
-const vertexPos = tgpu.const(d.arrayOf(d.vec2f, 6), [
-  d.vec2f(1.0, 1.0),
-  d.vec2f(1.0, -1.0),
-  d.vec2f(-1.0, -1.0),
-  d.vec2f(1.0, 1.0),
-  d.vec2f(-1.0, -1.0),
-  d.vec2f(-1.0, 1.0),
-]);
-
-const uv = tgpu.const(d.arrayOf(d.vec2f, 6), [
-  d.vec2f(1.0, 0.0),
-  d.vec2f(1.0, 1.0),
-  d.vec2f(0.0, 1.0),
-  d.vec2f(1.0, 0.0),
-  d.vec2f(0.0, 1.0),
-  d.vec2f(0.0, 0.0),
-]);
-
-const mainVert = tgpu['~unstable'].vertexFn({
-  in: { idx: d.builtin.vertexIndex },
-  out: { position: d.builtin.position, uv: d.location(0, d.vec2f) },
-})((input, Out) => {
-  const output = Out();
-  output.position = d.vec4f(vertexPos.$[input.idx], 0.0, 1.0);
-  output.uv = uv.$[input.idx];
-  return output;
 });
 
 const mainFrag = tgpu['~unstable'].fragmentFn({
@@ -42,7 +15,7 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
   const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
   let col = std.textureSampleBaseClampToEdge(
     textureLayout.$.inputTexture,
-    sampler,
+    sampler.$,
     uv2,
   );
   const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
@@ -61,6 +34,7 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
+const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -91,13 +65,13 @@ const thresholdBuffer = root.createUniform(d.f32, 0.5);
 const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {})
+  .withVertex(fullScreenTriangle, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
 
@@ -169,7 +143,9 @@ function processVideoFrame(
         inputTexture: device.importExternalTexture({ source: video }),
       }),
     )
-    .draw(6);
+    .draw(3);
+
+  spinner.style.display = 'none';
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
