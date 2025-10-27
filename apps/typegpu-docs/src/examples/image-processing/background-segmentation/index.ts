@@ -26,6 +26,9 @@ import {
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
+const attributionPopup = document.getElementById(
+  'attributionPopup',
+) as HTMLDivElement;
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -264,6 +267,15 @@ export const controls = {
     },
   },
 };
+
+const hideAttributionPopup = (e: Event) => {
+  if (e.target instanceof HTMLElement && e.target.tagName !== 'A') {
+    attributionPopup.style.opacity = '0';
+  }
+};
+
+attributionPopup.addEventListener('mousedown', hideAttributionPopup);
+attributionPopup.addEventListener('touchdown', hideAttributionPopup);
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
