@@ -514,4 +514,21 @@ describe('tgpu.slot', () => {
 
     expect(warnSpy).toHaveBeenCalledTimes(0);
   });
+
+  it('includes slot bindings in toString', () => {
+    const firstSlot = tgpu.slot<number>();
+    const secondSlot = tgpu.slot<number>();
+    const thirdSlot = tgpu.slot<number>();
+
+    const getSize = tgpu.fn([], d.f32)(() =>
+      firstSlot.$ + secondSlot.$ + thirdSlot.$
+    )
+      .with(firstSlot, 1)
+      .with(secondSlot, 2)
+      .with(thirdSlot, 3);
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
+    );
+  });
 });
