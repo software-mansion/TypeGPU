@@ -106,10 +106,11 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     uv,
   );
 
-  const blurredColor = std.textureSampleBaseClampToEdge(
+  const blurredColor = std.textureSampleBias(
     drawWithMaskLayout.$.inputBlurredTexture,
     drawWithMaskLayout.$.sampler,
     uv,
+    5,
   );
 
   const mask = std.textureSampleBaseClampToEdge(

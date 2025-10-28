@@ -9,7 +9,6 @@ import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
-  blockDim,
   blurLayout,
   drawWithMaskLayout,
   generateMaskLayout,
@@ -74,6 +73,7 @@ let iterations = 10;
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
+  mipmapFilter: 'linear',
 });
 
 const maskTexture = root['~unstable'].createTexture({
@@ -209,19 +209,26 @@ function onVideoChange(size: { width: number; height: number }) {
       size: [size.width, size.height],
       format: 'rgba8unorm',
       dimension: '2d',
+      mipLevelCount: 10,
     }).$usage('sampled', 'render', 'storage')
   );
   blurBindGroups = [
     root.createBindGroup(blurLayout, {
       flip: zeroBuffer,
       inTexture: blurredTextures[0],
-      outTexture: blurredTextures[1],
+      outTexture: blurredTextures[1].createView(
+        d.textureStorage2d('rgba8unorm', 'read-only'),
+        { mipLevelCount: 1 },
+      ),
       sampler,
     }),
     root.createBindGroup(blurLayout, {
       flip: oneBuffer,
       inTexture: blurredTextures[1],
-      outTexture: blurredTextures[0],
+      outTexture: blurredTextures[0].createView(
+        d.textureStorage2d('rgba8unorm', 'read-only'),
+        { mipLevelCount: 1 },
+      ),
       sampler,
     }),
   ];
@@ -251,23 +258,24 @@ async function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
+  // AAA check na subgroupy zeby byl ladniejszy error
   blurredTextures[0].write(video);
-  // blurredTextures[0].generateMipmaps();
+  blurredTextures[0].generateMipmaps();
 
-  for (const _ of Array(iterations)) {
-    blurPipeline
-      .with(blurBindGroups[0])
-      .dispatchWorkgroups(
-        Math.ceil(frameWidth / blockDim),
-        Math.ceil(frameHeight / 4),
-      );
-    blurPipeline
-      .with(blurBindGroups[1])
-      .dispatchWorkgroups(
-        Math.ceil(frameHeight / blockDim),
-        Math.ceil(frameWidth / 4),
-      );
-  }
+  // for (const _ of Array(iterations)) {
+  //   blurPipeline
+  //     .with(blurBindGroups[0])
+  //     .dispatchWorkgroups(
+  //       Math.ceil(frameWidth / blockDim),
+  //       Math.ceil(frameHeight / 4),
+  //     );
+  //   blurPipeline
+  //     .with(blurBindGroups[1])
+  //     .dispatchWorkgroups(
+  //       Math.ceil(frameHeight / blockDim),
+  //       Math.ceil(frameWidth / 4),
+  //     );
+  // }
 
   drawWithMaskPipeline
     .withColorAttachment({
