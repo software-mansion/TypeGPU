@@ -103,16 +103,14 @@ const modelOutputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 1 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
-// AAA try to do this immediately
-let blurredTextures: (
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba8unorm';
-  }>
-  & SampledFlag
-  & RenderFlag
-  & StorageFlag
-)[];
+const blurredTextures = [0, 1].map(() =>
+  root['~unstable'].createTexture({
+    size: [1280, 720],
+    format: 'rgba8unorm',
+    dimension: '2d',
+    mipLevelCount: 10,
+  }).$usage('sampled', 'render', 'storage')
+);
 
 // AAA this as well
 let blurBindGroups: TgpuBindGroup<(typeof blurLayout)['entries']>[];
@@ -154,7 +152,6 @@ const drawWithMaskPipeline = root['~unstable']
 
 // iOS
 
-// AAA remove this since it does not work anyway
 if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
   function setUVTransformForIOS() {
     const angle = screen.orientation.type;
@@ -222,14 +219,6 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-  blurredTextures = [0, 1].map(() =>
-    root['~unstable'].createTexture({
-      size: [size.width, size.height],
-      format: 'rgba8unorm',
-      dimension: '2d',
-      mipLevelCount: 10,
-    }).$usage('sampled', 'render', 'storage')
-  );
   blurBindGroups = [
     root.createBindGroup(blurLayout, {
       flip: zeroBuffer,
