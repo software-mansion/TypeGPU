@@ -1,4 +1,4 @@
-import type { Snippet } from '../../data/snippet.ts';
+import { isSnippet, type Snippet } from '../../data/snippet.ts';
 import { getResolutionCtx } from '../../execMode.ts';
 import type { ResolutionCtx } from '../../types.ts';
 
@@ -35,8 +35,8 @@ function internalStitch(
   const ctx = getResolutionCtx() as ResolutionCtx;
 
   function resolveSnippet(maybeSnippet: Snippet | string | number) {
-    return typeof maybeSnippet === 'object'
-      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType, exact)
+    return isSnippet(maybeSnippet)
+      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType, exact).value
       : maybeSnippet;
   }
 

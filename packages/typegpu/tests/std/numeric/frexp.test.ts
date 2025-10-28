@@ -7,7 +7,7 @@ import type { v3h } from '../../../src/data/wgslTypes.ts';
 
 describe('frexp', () => {
   it('gets inferred correctly', () => {
-    let err: Error | undefined = undefined;
+    let err: Error | undefined;
     try {
       const x = frexp(1);
       expectTypeOf(x).toEqualTypeOf<{ fract: number; exp: number }>();
@@ -27,7 +27,7 @@ describe('frexp', () => {
       err = error as Error;
     }
     expect(err).toMatchInlineSnapshot(
-      '[Error: CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
+      '[MissingCpuImplError: CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues]',
     );
   });
 });

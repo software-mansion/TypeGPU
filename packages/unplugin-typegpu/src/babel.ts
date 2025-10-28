@@ -2,6 +2,7 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
+import defu from 'defu';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import {
@@ -9,13 +10,13 @@ import {
   defaultOptions,
   embedJSON,
   gatherTgpuAliases,
+  getFunctionName,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  useGpuDirective,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
-import defu from 'defu';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -25,7 +26,7 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function containsKernelDirective(
+function containsUseGpuDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
@@ -35,7 +36,7 @@ function containsKernelDirective(
     'directives' in node.body ? (node.body?.directives ?? []) : []
   )
     .map((directive) => directive.value.value))
-    .includes(kernelDirective);
+    .includes(useGpuDirective);
 }
 
 function i(identifier: string): babel.Identifier {
@@ -44,13 +45,19 @@ function i(identifier: string): babel.Identifier {
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
+  parent: babel.Node | null,
 ): babel.CallExpression {
   const { params, body, externalNames } = transpileFn(node);
+  const maybeName = getFunctionName(node, parent);
 
   const metadata = types.objectExpression([
     types.objectProperty(
       i('v'),
       types.numericLiteral(FORMAT_VERSION),
+    ),
+    types.objectProperty(
+      i('name'),
+      maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
     ),
     types.objectProperty(
       i('ast'),
@@ -139,32 +146,39 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     ArrowFunctionExpression(path) {
-      if (containsKernelDirective(path.node)) {
-        path.replaceWith(functionToTranspiled(path.node));
+      const node = path.node;
+      const parent = path.parentPath.node;
+      if (containsUseGpuDirective(node)) {
+        path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
     },
 
     FunctionExpression(path) {
-      if (containsKernelDirective(path.node)) {
-        path.replaceWith(functionToTranspiled(path.node));
+      const node = path.node;
+      const parent = path.parentPath.node;
+      if (containsUseGpuDirective(node)) {
+        path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
     },
 
     FunctionDeclaration(path) {
       const node = path.node;
+      const parent = path.parentPath.node;
       const expression = types.functionExpression(
         node.id,
         node.params,
         node.body,
       );
 
-      if (containsKernelDirective(path.node) && node.id) {
-        const transpiled = functionToTranspiled(expression);
+      if (containsUseGpuDirective(path.node) && node.id) {
         path.replaceWith(
           types.variableDeclaration('const', [
-            types.variableDeclarator(node.id, transpiled),
+            types.variableDeclarator(
+              node.id,
+              functionToTranspiled(expression, parent),
+            ),
           ]),
         );
         path.skip();
@@ -184,6 +198,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         ) {
           const transpiled = functionToTranspiled(
             implementation,
+            null,
           ) as babel.CallExpression;
 
           path.replaceWith(
@@ -203,8 +218,6 @@ export default function () {
   return {
     visitor: {
       Program(path, state) {
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const code: string | undefined = (state as any).file?.code;
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const options = defu((state as any).opts as Options, defaultOptions);
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>

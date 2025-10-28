@@ -5,6 +5,14 @@ import {
   isLooseData,
   type Unstruct,
 } from '../../data/dataTypes.ts';
+import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
+import {
+  accessModeMap,
+  isWgslStorageTexture,
+  isWgslTexture,
+  type WgslExternalTexture,
+} from '../../data/texture.ts';
+
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
@@ -35,6 +43,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { isValidIdentifier } from '../../nameRegistry.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -68,6 +77,7 @@ const identityTypes = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'texture_external',
 ];
 
 type IdentityType =
@@ -93,7 +103,8 @@ type IdentityType =
   | Vec4b
   | Mat2x2f
   | Mat3x3f
-  | Mat4x4f;
+  | Mat4x4f
+  | WgslExternalTexture;
 
 function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
@@ -111,8 +122,13 @@ function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseData],
 ) {
+  if (!isValidIdentifier(key)) {
+    throw new Error(
+      `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
+    );
+  }
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData)
+    ctx.resolve(property as AnyWgslData).value
   },\n`;
 }
 
@@ -192,7 +208,7 @@ ${
  * ```
  */
 function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
-  const element = ctx.resolve(array.elementType as AnyWgslData);
+  const element = ctx.resolve(array.elementType as AnyWgslData).value;
 
   return array.elementCount === 0
     ? `array<${element}>`
@@ -204,7 +220,7 @@ function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
     isAttribute(disarray.elementType)
       ? formatToWGSLType[disarray.elementType.format]
       : (disarray.elementType as AnyWgslData),
-  );
+  ).value;
 
   return disarray.elementCount === 0
     ? `array<${element}>`
@@ -233,10 +249,10 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
         isAttribute(data.inner)
           ? formatToWGSLType[data.inner.format]
           : data.inner,
-      );
+      ).value;
     }
 
-    return ctx.resolve(formatToWGSLType[data.type]);
+    return ctx.resolve(formatToWGSLType[data.type]).value;
   }
 
   if (isIdentityType(data)) {
@@ -256,23 +272,39 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (data.type === 'decorated') {
-    return ctx.resolve(data.inner as AnyWgslData);
+    return ctx.resolve(data.inner as AnyWgslData).value;
   }
 
   if (data.type === 'ptr') {
     if (data.addressSpace === 'storage') {
-      return `ptr<storage, ${ctx.resolve(data.inner)}, ${
+      return `ptr<storage, ${ctx.resolve(data.inner).value}, ${
         data.access === 'read-write' ? 'read_write' : data.access
       }>`;
     }
-    return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
+    return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner).value}>`;
   }
 
   if (
-    data.type === 'abstractInt' || data.type === 'abstractFloat' ||
-    data.type === 'void' || data.type === 'u16'
+    data.type === 'abstractInt' ||
+    data.type === 'abstractFloat' ||
+    data.type === 'void' ||
+    data.type === 'u16'
   ) {
     throw new Error(`${data.type} has no representation in WGSL`);
+  }
+
+  if (isWgslStorageTexture(data)) {
+    return `${data.type}<${data.format}, ${accessModeMap[data.access]}>`;
+  }
+
+  if (isWgslTexture(data)) {
+    return data.type.startsWith('texture_depth')
+      ? data.type
+      : `${data.type}<${data.sampleType.type}>`;
+  }
+
+  if (isWgslComparisonSampler(data) || isWgslSampler(data)) {
+    return data.type;
   }
 
   assertExhaustive(data, 'resolveData');

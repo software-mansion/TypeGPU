@@ -25,9 +25,10 @@ import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh }
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
  */
-const safeTanh = tgpu.fn([d.f32], d.f32)((v) =>
-  select(tanh(v), sign(v), abs(v) > 10)
-);
+const safeTanh = (v: number) => {
+  'use gpu';
+  return select(tanh(v), sign(v), abs(v) > 10);
+};
 
 // Functions can still be written in WGSL, if that's what you prefer.
 // You can omit the argument and return types, and we'll generate them
