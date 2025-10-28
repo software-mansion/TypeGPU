@@ -531,4 +531,15 @@ describe('tgpu.slot', () => {
       `"fn:getSize[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
     );
   });
+
+  it('safe stringifies in toString', () => {
+    const slot = tgpu.slot<d.v4f>();
+
+    const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
+      .with(slot, d.vec4f(1, 2, 3, 4));
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
+    );
+  });
 });
