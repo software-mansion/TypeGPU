@@ -1,3 +1,10 @@
-export { useFrame } from './use-frame.ts';
-export { useRender } from './use-render.ts';
-export { useUniformValue } from './use-uniform-value.ts';
+export {
+  BindGroup,
+  Canvas,
+  Config,
+  Pass,
+  RenderPipeline,
+  VertexBuffer,
+  type VertexBufferProps,
+} from './components/index.ts';
+export { useFrame, useRoot, useUniform, useUniformRef } from './hooks/index.ts';

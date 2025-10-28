@@ -1,8 +1,8 @@
-import * as d from 'typegpu/data';
-import tgpu from 'typegpu';
-import { useRoot } from './root-context.tsx';
 import { useMemo, useRef } from 'react';
-import { useFrame } from './use-frame.ts';
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { useRoot } from './hooks/use-root.ts';
+import { useFrame } from './hooks/use-frame.ts';
 
 type InferRecord<T> = {
   [K in keyof T]: d.Infer<T[K]>;
