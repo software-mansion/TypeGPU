@@ -813,6 +813,7 @@ const attributionElement = document.getElementById(
 function dismissAttribution() {
   if (!attributionDismissed && attributionElement) {
     attributionElement.style.opacity = '0';
+    attributionElement.style.pointerEvents = 'none';
     attributionDismissed = true;
   }
 }
