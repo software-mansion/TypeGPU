@@ -112,6 +112,11 @@ const blurredTextures = [0, 1].map(() =>
   }).$usage('sampled', 'render', 'storage')
 );
 
+const generateMaskBindGroup = root.createBindGroup(generateMaskLayout, {
+  maskTexture,
+  outputBuffer: modelOutputBuffer,
+});
+
 const blurBindGroups = [
   root.createBindGroup(blurLayout, {
     flip: zeroBuffer,
@@ -132,7 +137,6 @@ const blurBindGroups = [
     sampler,
   }),
 ];
-// AAA and other bind groups
 
 // pipelines
 
@@ -208,10 +212,7 @@ async function processCalculateMask() {
   await session.run();
 
   generateMaskFromOutputPipeline
-    .with(root.createBindGroup(generateMaskLayout, {
-      maskTexture,
-      outputBuffer: modelOutputBuffer,
-    }))
+    .with(generateMaskBindGroup)
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
   calculateMaskCallbackId = video.requestVideoFrameCallback(
