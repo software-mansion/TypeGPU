@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { ioLayout } from '../schemas.ts';
+import { ioLayout } from '../../schemas.ts';
 
 export const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0.0, x));
 export const sigmoid = tgpu.fn([d.f32], d.f32)((x) =>

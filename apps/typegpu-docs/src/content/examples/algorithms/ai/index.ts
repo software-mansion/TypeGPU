@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { Inference, OnnxLoader } from '@typegpu/ai';
 import type { NetworkRunner } from '../../../../../../../packages/typegpu-ai/src/schemas';
-import { exampleKMNISTInput9 } from './KMNIST_example.ts';
+import { exampleKMNISTInput0, exampleKMNISTInput4, exampleKMNISTInput9 } from './KMNIST_example.ts';
 import { summarizeModel } from '../../../../../../../packages/typegpu-ai/src/onnx/onnxLoader.ts';
 
 const layout = tgpu.bindGroupLayout({

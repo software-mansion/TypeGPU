@@ -1,20 +1,13 @@
-import { tgpu, type TgpuRoot } from 'typegpu';
-import type { OnnxModel } from './onnx/types.ts';
+import { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import { validateLayerSizes } from './sizeMismatch.ts';
-import { Layer, PipelineCache } from './pipelineCache.ts';
-import { identity, relu } from './compute/activationFunctions.ts';
-import { nnCompute } from './compute/compute.ts';
-import {
-  type GpuLayer,
-  ioLayout,
-  type NetworkRunner,
-  weightsBiasesLayout,
-  workgroupSize,
-} from './schemas.ts';
+import type { OnnxModel } from './onnx/types.ts';
+import { PipelineCache } from './pipelineCache.ts';
+import { type NetworkRunner } from './schemas.ts';
+import { LGemm } from './layers/Gemm/gemm.ts';
+import { NNLayer } from './layers/gpuLayer.ts';
 
 export class Inference {
-  private layers: GpuLayer[] = [];
+  private layers: NNLayer[] = [];
 
   constructor(
     private readonly root: TgpuRoot,
@@ -27,142 +20,74 @@ export class Inference {
     for (const node of this.model.graph.nodes) {
       switch (node.opType) {
         case 'Flatten':
-          continue; 
+          continue;
         case 'Gemm': {
-          const weightTensor = this.model.tensorMap.get(
-            node.inputs[1] as string,
+          const layer = new LGemm(
+            this.root,
+            this.model.tensorMap.get(node.inputs[1]!)!,
+            this.model.tensorMap.get(node.inputs[2]!)!,
+            this.pipelineCache,
           );
-          const biasName = node.inputs[2] as string;
-          const biasTensor = biasName
-            ? this.model.tensorMap.get(biasName)
-            : undefined;
-          if (
-            !weightTensor || !biasTensor ||
-            !(weightTensor.data instanceof Float32Array) ||
-            !(biasTensor.data instanceof Float32Array) ||
-            weightTensor.dims.length !== 2 || biasTensor.dims.length !== 1
-          ) continue;
-
-          const weightsData = weightTensor.data as Float32Array;
-          const biasesData = biasTensor.data as Float32Array;
-          const result: GpuLayer = {
-            kind: 'Gemm',
-            inSize: weightsData.length / biasesData.length,
-            outSize: biasesData.length,
-            weights: weightsData,
-            biases: biasesData,
-            io: null as any, // to be filled in later
-            params: null as any, // to be filled in later
-            compute: nnCompute,
-            activation: { kind: 'relu', fn: relu },
-          };
-          this.layers.push(result);
-          maxBufferSize = Math.max(
-            maxBufferSize,
-            Math.max(weightsData.length / biasesData.length, biasesData.length),
-          );
-          break;
-        }
-        case 'Conv': {
-          break;
-        }
-        default:
-          continue; // activation node
-      }
-    }
-
-    const bufferA = this.root.createBuffer(d.arrayOf(d.f32, maxBufferSize))
-      .$usage('storage');
-    const bufferB = this.root.createBuffer(d.arrayOf(d.f32, maxBufferSize))
-      .$usage('storage');
-    let readBuf = bufferA;
-    let writeBuf = bufferB;
-
-    let prevOut: number | null = null;
-    for (let i = 0; i < this.layers.length; i++) {
-      const layer = this.layers[i]!;
-      switch (layer.kind) {
-        case 'Gemm': {
-          const { inSize, outSize } = validateLayerSizes(
-            layer.weights,
-            layer.biases,
-            i,
-            prevOut,
-          );
-          if (i === 0) prevOut = inSize; // initial input size tracking
-
-          const inLenBuf = this.root.createBuffer(d.u32, inSize).$usage(
-            'uniform',
-          );
-          const outLenBuf = this.root.createBuffer(d.u32, outSize).$usage(
-            'uniform',
-          );
-
-          layer.io = this.root.createBindGroup(ioLayout, {
-            input: readBuf,
-            output: writeBuf,
-            inLength: inLenBuf,
-            outLength: outLenBuf,
-          });
-          layer.params = this.root.createBindGroup(weightsBiasesLayout, {
-            weights: this.root.createBuffer(
-              d.arrayOf(d.f32, layer.weights.length),
-              [...layer.weights],
-            ).$usage('storage'),
-            biases: this.root.createBuffer(
-              d.arrayOf(d.f32, layer.biases.length),
-              [...layer.biases],
-            ).$usage('storage'),
-          });
-
-          prevOut = outSize;
-
-          // Ping-pong swap
-          if (i !== this.layers.length - 1) {
-            const tmp = readBuf;
-            readBuf = writeBuf;
-            writeBuf = tmp;
-          }
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
           break;
         }
         case 'Conv':
           continue;
         default:
-          throw new Error(`Unsupported layer kind: ${(layer as any).kind}`);
+          continue;
       }
     }
 
-    const run = async (input: number[] | Float32Array): Promise<number[]> => {
-      // Upload initial input to first read buffer (bufferA)
-      bufferA.write(Array.isArray(input) ? input : Array.from(input));
+    if (this.layers.length === 0) {
+      throw new Error('No supported layers found while creating the network');
+    }
 
-      for (const layer of this.layers) {
-        if (layer.kind === 'Gemm') {
-          const pipeline = this.pipelineCache.get({
-            kind: layer.kind,
-            compute: layer.compute,
-          }, layer.activation);
-          pipeline
-            .with(ioLayout, layer.io)
-            .with(weightsBiasesLayout, layer.params)
-            .dispatchWorkgroups(Math.ceil(layer.outSize / workgroupSize));
-          await this.root.device.queue.onSubmittedWorkDone();
-        } else if (layer.kind === 'Conv') {
-          continue;
+    const bufferCapacity = Math.max(1, maxBufferSize);
+    const bufferA = this.root.createBuffer(d.arrayOf(d.f32, bufferCapacity))
+      .$usage('storage');
+    const bufferB = this.root.createBuffer(d.arrayOf(d.f32, bufferCapacity))
+      .$usage('storage');
+
+
+    const run = async (input: number[] | Float32Array): Promise<number[]> => {
+      const firstLayer = this.layers[0]!;
+      const inputArray = Array.isArray(input) ? input : Array.from(input);
+
+      if (inputArray.length !== firstLayer.inSize) {
+        throw new Error(
+          `Input length ${inputArray.length} does not match network input size ${firstLayer.inSize}`,
+        );
+      }
+
+      bufferA.write(inputArray);
+
+      let readBuf = bufferA;
+      let writeBuf = bufferB;
+      let expectedInputSize = firstLayer.inSize;
+
+      for (let i = 0; i < this.layers.length; i++) {
+        const layer = this.layers[i]!;
+        if (layer.inSize !== expectedInputSize) {
+          throw new Error(
+            `Layer ${i} expected input size ${layer.inSize}, got ${expectedInputSize}`,
+          );
+        }
+
+        await layer.run(readBuf, writeBuf);
+        expectedInputSize = layer.outSize;
+
+        if (i !== this.layers.length - 1) {
+          const tmp = readBuf;
+          readBuf = writeBuf;
+          writeBuf = tmp;
         }
       }
 
-      // Determine final output buffer: if number of Gemm layers is odd, result ended in bufferB else bufferA
-      const finalBuffer =
-        (this.layers.filter((l) => l.kind === 'Gemm').length % 2 === 1)
-          ? bufferB
-          : bufferA;
+      const finalBuffer = writeBuf;
       const raw = await finalBuffer.read();
-      const last = this.layers[this.layers.length - 1];
-      let outSize: number;
-      if (last?.kind === 'Gemm') outSize = last.outSize;
-      else outSize = raw.length; // fallback
-      const slice = Array.from(raw.slice(0, outSize));
+      const lastLayer = this.layers[this.layers.length - 1]!;
+      const slice = Array.from(raw.slice(0, lastLayer.outSize));
       return softmax(slice);
     };
 

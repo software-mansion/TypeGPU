@@ -1,9 +1,9 @@
 import { TgpuComputePipeline } from '../../typegpu/src/core/pipeline/computePipeline';
 import { TgpuRoot } from '../../typegpu/src/core/root/rootTypes';
 import type { TgpuComputeFn, TgpuFn } from 'typegpu';
-import { nnCompute } from './compute/compute';
+import { GemmCompute } from './layers/Gemm/compute';
 import { activationFunctionSlot } from './schemas';
-import { relu } from './compute/activationFunctions';
+import { relu } from './layers/activations/activationFunctions';
 
 export type Layer =
   | { kind: 'Gemm'; compute: TgpuComputeFn }
