@@ -47,9 +47,18 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 const adapter = await navigator.gpu?.requestAdapter();
-const device = await adapter?.requestDevice({
-  label: `my device ${performance.now()}`,
-}) as GPUDevice;
+let device: GPUDevice;
+try {
+  device = await adapter?.requestDevice({
+    label: `my device ${performance.now()}`,
+    requiredFeatures: ['subgroups'],
+  }) as GPUDevice;
+} catch {
+  throw new Error(
+    'Subgroups are required for this example but are not available in your browser.',
+  );
+}
+
 if (!device || !adapter) {
   throw new Error('Failed to initialize device.');
 }
@@ -145,6 +154,7 @@ const drawWithMaskPipeline = root['~unstable']
 
 // iOS
 
+// AAA remove this since it does not work anyway
 if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
   function setUVTransformForIOS() {
     const angle = screen.orientation.type;
@@ -266,11 +276,10 @@ async function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
-  // AAA check na subgroupy zeby byl ladniejszy error
   blurredTextures[0].write(video);
 
   if (useGaussianBlur) {
-    for (const _ of Array(blurStrength)) {
+    for (const _ of Array(blurStrength * 2)) {
       blurPipeline
         .with(blurBindGroups[0])
         .dispatchWorkgroups(
