@@ -1,18 +1,17 @@
 import type React from 'react';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import { PassContext } from '../context/pass-context.tsx';
+import { useCallback, useEffect, useRef } from 'react';
 import type { RenderPass } from '../../../typegpu/src/core/root/rootTypes.ts'; // TODO: Expose it in typegpu
+import { PassContext } from '../context/pass-context.tsx';
 import { useCanvas } from '../hooks/use-canvas.ts';
+import { useRoot } from '../hooks/use-root.ts';
 
-export function Pass({ children }: { children: React.ReactNode }) {
-  const { root, context, addFrameCallback } = useCanvas();
+export function Pass(
+  { children }: { children: React.ReactNode; schedule: 'frame' },
+) {
+  const root = useRoot();
+  const ctx = useCanvas();
   const drawCalls = useRef(new Set<(pass: RenderPass) => void>()).current;
-  const [depthTexture, setDepthTexture] = useState<GPUTexture | null>(null);
+  const depthTextureRef = useRef<GPUTexture | null>(null);
 
   const addDrawCall = useCallback(
     (cb: (pass: RenderPass) => void) => {
@@ -23,8 +22,9 @@ export function Pass({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    const removeFrameCallback = addFrameCallback(() => {
-      const canvas = context.canvas as HTMLCanvasElement;
+    const removeFrameCallback = ctx.addFrameCallback(() => {
+      const canvas = ctx.context?.canvas as HTMLCanvasElement;
+      let depthTexture = depthTextureRef.current;
       if (
         !depthTexture ||
         depthTexture.width !== canvas.width ||
@@ -36,15 +36,15 @@ export function Pass({ children }: { children: React.ReactNode }) {
           format: 'depth24plus',
           usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
-        setDepthTexture(newDepthTexture);
-        return; // Skip frame to allow state update
+        depthTexture = depthTextureRef.current = newDepthTexture;
       }
 
       root['~unstable'].beginRenderPass(
         {
           colorAttachments: [
             {
-              view: context.getCurrentTexture().createView(),
+              view: ctx.context?.getCurrentTexture()
+                .createView() as GPUTextureView,
               clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
               loadOp: 'clear',
               storeOp: 'store',
@@ -58,16 +58,19 @@ export function Pass({ children }: { children: React.ReactNode }) {
           },
         },
         (pass) => {
-          drawCalls.forEach((draw) => draw(pass));
+          drawCalls.forEach((draw) => {
+            draw(pass);
+          });
         },
       );
     });
 
     return () => {
       removeFrameCallback();
-      depthTexture?.destroy();
+      depthTextureRef.current?.destroy();
+      depthTextureRef.current = null;
     };
-  }, [addFrameCallback, context, root, drawCalls, depthTexture]);
+  }, [ctx, root, drawCalls]);
 
   return (
     <PassContext.Provider value={{ addDrawCall }}>

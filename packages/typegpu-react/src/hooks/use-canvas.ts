@@ -1,5 +1,5 @@
-import { useContext } from "react";
-import { CanvasContext } from "../context/canvas-context.tsx";
+import { useContext } from 'react';
+import { CanvasContext } from '../context/canvas-context.ts';
 
 export const useCanvas = () => {
   const context = useContext(CanvasContext);

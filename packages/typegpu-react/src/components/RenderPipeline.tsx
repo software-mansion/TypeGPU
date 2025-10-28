@@ -1,21 +1,24 @@
 import type React from 'react';
-import {
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import tgpu from 'typegpu';
 import type * as d from 'typegpu/data';
 // TODO: Export these types in typegpu
-import type { VertexInConstrained, VertexOutConstrained } from '../../../typegpu/src/core/function/tgpuVertexFn.ts';
+import type {
+  VertexInConstrained,
+  VertexOutConstrained,
+} from '../../../typegpu/src/core/function/tgpuVertexFn.ts';
 import type { OmitBuiltins } from '../../../typegpu/src/builtin.ts';
-import type { FragmentInConstrained, FragmentOutConstrained } from '../../../typegpu/src/core/function/tgpuFragmentFn.ts';
+import type {
+  FragmentInConstrained,
+  FragmentOutConstrained,
+} from '../../../typegpu/src/core/function/tgpuFragmentFn.ts';
 import type { RenderPass } from '../../../typegpu/src/core/root/rootTypes.ts';
 import type { LayoutToAllowedAttribs } from '../../../typegpu/src/core/vertexLayout/vertexAttribute.ts';
 // TODO:
 import { usePass } from '../hooks/use-pass.ts';
 import { useCanvas } from '../hooks/use-canvas.ts';
-import { PipelineContext } from '../context/pipeline-context.tsx';
+import { PipelineContext } from '../context/pipeline-context.ts';
+import { useRoot } from '../hooks/use-root.ts';
 
 type InferRecord<T> = { [K in keyof T]: d.Infer<T[K]> };
 
@@ -63,8 +66,11 @@ export function RenderPipeline<
   vertexCount,
   instanceCount,
   children,
-}: RenderPipelineProps<VIn, VOut, FIn, FOut> & { fragmentIn?: OmitBuiltins<VOut> }) {
-  const { root } = useCanvas();
+}: RenderPipelineProps<VIn, VOut, FIn, FOut> & {
+  fragmentIn?: OmitBuiltins<VOut>;
+}) {
+  const root = useRoot();
+  const ctx = useCanvas();
   const { addDrawCall } = usePass();
   const drawCommand = useRef<(pass: RenderPass) => void>(() => {});
 
@@ -72,8 +78,14 @@ export function RenderPipeline<
   const fragmentRef = useRef(fragment.body);
 
   const pipeline = useMemo(() => {
-    const vertexFn = tgpu['~unstable'].vertexFn({ in: vertex.in, out: vertex.out })(vertexRef.current);
-    const fragmentFn = tgpu['~unstable'].fragmentFn({ in: fragment.in, out: fragment.out })(
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      in: vertex.in,
+      out: vertex.out,
+    })(vertexRef.current);
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      in: fragment.in,
+      out: fragment.out,
+    })(
       fragmentRef.current,
     );
 

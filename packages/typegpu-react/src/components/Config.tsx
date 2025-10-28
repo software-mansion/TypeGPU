@@ -1,9 +1,8 @@
-
 import type React from 'react';
 import { useMemo } from 'react';
 import type { Configurable, TgpuRenderPipeline, TgpuSlot } from 'typegpu';
-import { useRenderPipeline } from '../hooks/use-render-pipeline.ts';
 import { PipelineContext } from '../context/pipeline-context.ts';
+import { useRenderPipeline } from '../hooks/use-render-pipeline.ts';
 
 type Binding =
   | [slot: TgpuSlot<any>, value: any]

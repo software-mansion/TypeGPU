@@ -1,9 +1,7 @@
-import { createContext } from "react";
-import type { TgpuRoot } from "typegpu";
+import { createContext } from 'react';
 
 export interface CanvasContextValue {
-  root: TgpuRoot;
-  context: GPUCanvasContext;
+  readonly context: GPUCanvasContext | null;
   addFrameCallback: (cb: (time: number) => void) => () => void;
 }
 
