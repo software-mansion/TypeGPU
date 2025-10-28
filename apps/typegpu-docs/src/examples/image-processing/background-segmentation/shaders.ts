@@ -8,6 +8,8 @@ import {
   filterDim,
   generateMaskLayout,
   prepareModelInputLayout,
+  sampleBiasSlot,
+  useGaussianSlot,
   uvTransformSlot,
 } from './schemas.ts';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
@@ -106,12 +108,21 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     uv,
   );
 
-  const blurredColor = std.textureSampleBias(
-    drawWithMaskLayout.$.inputBlurredTexture,
-    drawWithMaskLayout.$.sampler,
-    uv,
-    5,
-  );
+  let blurredColor = d.vec4f();
+  if (useGaussianSlot.$ === 1) {
+    blurredColor = std.textureSampleBaseClampToEdge(
+      drawWithMaskLayout.$.inputBlurredTexture,
+      drawWithMaskLayout.$.sampler,
+      uv,
+    );
+  } else {
+    blurredColor = std.textureSampleBias(
+      drawWithMaskLayout.$.inputBlurredTexture,
+      drawWithMaskLayout.$.sampler,
+      uv,
+      sampleBiasSlot.$,
+    );
+  }
 
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,

@@ -9,10 +9,13 @@ import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
 import {
+  blockDim,
   blurLayout,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
+  sampleBiasSlot,
+  useGaussianSlot,
   uvTransformSlot,
 } from './schemas.ts';
 import {
@@ -68,7 +71,8 @@ context.configure({
 
 // resources
 
-let iterations = 10;
+let blurStrength = 5;
+let useGaussianBlur = false;
 
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -109,6 +113,8 @@ const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
 
 const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
+const useGaussianUniform = root.createUniform(d.u32, 0);
+const sampleBiasUniform = root.createUniform(d.f32, 0);
 
 // pipelines
 
@@ -130,6 +136,8 @@ const blurPipeline = root['~unstable']
   .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
+  .with(useGaussianSlot, useGaussianUniform)
+  .with(sampleBiasSlot, sampleBiasUniform)
   .with(uvTransformSlot, uvTransformUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
@@ -260,22 +268,25 @@ async function processVideoFrame(
 
   // AAA check na subgroupy zeby byl ladniejszy error
   blurredTextures[0].write(video);
-  blurredTextures[0].generateMipmaps();
 
-  // for (const _ of Array(iterations)) {
-  //   blurPipeline
-  //     .with(blurBindGroups[0])
-  //     .dispatchWorkgroups(
-  //       Math.ceil(frameWidth / blockDim),
-  //       Math.ceil(frameHeight / 4),
-  //     );
-  //   blurPipeline
-  //     .with(blurBindGroups[1])
-  //     .dispatchWorkgroups(
-  //       Math.ceil(frameHeight / blockDim),
-  //       Math.ceil(frameWidth / 4),
-  //     );
-  // }
+  if (useGaussianBlur) {
+    for (const _ of Array(blurStrength)) {
+      blurPipeline
+        .with(blurBindGroups[0])
+        .dispatchWorkgroups(
+          Math.ceil(frameWidth / blockDim),
+          Math.ceil(frameHeight / 4),
+        );
+      blurPipeline
+        .with(blurBindGroups[1])
+        .dispatchWorkgroups(
+          Math.ceil(frameHeight / blockDim),
+          Math.ceil(frameWidth / 4),
+        );
+    }
+  } else {
+    blurredTextures[0].generateMipmaps();
+  }
 
   drawWithMaskPipeline
     .withColorAttachment({
@@ -300,13 +311,22 @@ attributionPopup.style.opacity = '1';
 // #region Example controls & Cleanup
 
 export const controls = {
+  'blur type': {
+    initial: 'mipmaps',
+    options: ['mipmaps', 'gaussian'],
+    async onSelectChange(value: string) {
+      useGaussianBlur = value === 'gaussian';
+      useGaussianUniform.write(useGaussianBlur ? 1 : 0);
+    },
+  },
   'blur strength': {
-    initial: iterations,
+    initial: blurStrength,
     min: 0,
-    max: 20,
+    max: 10,
     step: 1,
     onSliderChange(newValue: number) {
-      iterations = newValue;
+      blurStrength = newValue;
+      sampleBiasUniform.write(blurStrength);
     },
   },
 };

@@ -39,3 +39,5 @@ export const drawWithMaskLayout = tgpu.bindGroupLayout({
 // slots
 
 export const uvTransformSlot = tgpu.slot<TgpuUniform<d.Mat2x2f>>();
+export const useGaussianSlot = tgpu.slot<TgpuUniform<d.U32>>();
+export const sampleBiasSlot = tgpu.slot<TgpuUniform<d.F32>>();
