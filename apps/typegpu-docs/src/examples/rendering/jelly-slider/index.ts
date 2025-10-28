@@ -805,6 +805,22 @@ let lastTimeStamp = performance.now();
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
+let attributionDismissed = false;
+const attributionElement = document.getElementById(
+  'attribution',
+) as HTMLDivElement;
+
+function dismissAttribution() {
+  if (!attributionDismissed && attributionElement) {
+    attributionElement.style.opacity = '0';
+    attributionDismissed = true;
+  }
+}
+
+canvas.addEventListener('mousedown', dismissAttribution, { once: true });
+canvas.addEventListener('touchstart', dismissAttribution, { once: true });
+canvas.addEventListener('wheel', dismissAttribution, { once: true });
+
 function createBindGroups() {
   return {
     rayMarch: root.createBindGroup(rayMarchLayout, {

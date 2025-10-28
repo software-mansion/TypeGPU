@@ -49,7 +49,39 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
 
   const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
 
-  const blendFactor = d.f32(0.9);
+  const uv = d.vec2f(gid.xy).div(d.vec2f(dimensions.xy));
+
+  const textRegionMinX = d.f32(0.71);
+  const textRegionMaxX = d.f32(0.85);
+  const textRegionMinY = d.f32(0.47);
+  const textRegionMaxY = d.f32(0.55);
+
+  const borderSize = d.f32(0.02);
+
+  const fadeInX = std.smoothstep(
+    textRegionMinX - borderSize,
+    textRegionMinX + borderSize,
+    uv.x,
+  );
+  const fadeOutX = d.f32(1.0) - (std.smoothstep(
+    textRegionMaxX - borderSize,
+    textRegionMaxX + borderSize,
+    uv.x,
+  ));
+  const fadeInY = std.smoothstep(
+    textRegionMinY - borderSize,
+    textRegionMinY + borderSize,
+    uv.y,
+  );
+  const fadeOutY = d.f32(1.0) - (std.smoothstep(
+    textRegionMaxY - borderSize,
+    textRegionMaxY + borderSize,
+    uv.y,
+  ));
+
+  const inTextRegion = fadeInX * fadeOutX * fadeInY * fadeOutY;
+  const blendFactor = std.mix(d.f32(0.9), d.f32(0.7), inTextRegion);
+
   const resolvedColor = d.vec4f(
     std.mix(currentColor.xyz, historyColorClamped, blendFactor),
     1.0,
