@@ -12,7 +12,7 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 export default defineConfig({
   plugins: [
     typegpu({ include: [/\.m?[jt]sx?/] }),
-    imagetools(),
+    /** @type {any} */ imagetools(),
   ] as Plugin[],
   server: {
     proxy: {

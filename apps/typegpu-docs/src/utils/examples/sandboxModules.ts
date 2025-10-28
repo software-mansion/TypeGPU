@@ -64,6 +64,21 @@ const allPackagesSrcFiles = pipe(
   fromEntries(),
 );
 
+const reactModules = pipe(
+  entries(
+    import.meta.glob(
+      '../../../node_modules/@types/react/**/*.d.ts',
+      {
+        query: 'raw',
+        eager: true,
+        import: 'default',
+      },
+    ) as Record<string, string>,
+  ),
+  map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
+  fromEntries(),
+);
+
 const mediacaptureModules = pipe(
   entries(
     import.meta.glob(
@@ -82,7 +97,11 @@ const mediacaptureModules = pipe(
 export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   ...allPackagesSrcFiles,
   ...mediacaptureModules,
+  ...reactModules,
 
+  'react': {
+    typeDef: { reroute: ['@types/react/index.d.ts'] },
+  },
   '@webgpu/types': {
     typeDef: { content: dtsWebGPU },
   },
@@ -114,5 +133,11 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/color': {
     import: { reroute: 'typegpu-color/src/index.ts' },
     typeDef: { reroute: 'typegpu-color/src/index.ts' },
+  },
+  '@typegpu/sdf': {
+    typeDef: { reroute: ['typegpu-sdf/src/index.ts'] },
+  },
+  '@typegpu/react': {
+    typeDef: { reroute: ['typegpu-react/src/index.ts'] },
   },
 };

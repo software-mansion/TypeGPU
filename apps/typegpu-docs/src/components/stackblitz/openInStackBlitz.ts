@@ -10,7 +10,12 @@ import typegpuNoisePackageJson from '@typegpu/noise/package.json' with {
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with {
   type: 'json',
 };
-import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
+import typegpuReactPackageJson from '@typegpu/react/package.json' with {
+  type: 'json',
+};
+import typegpuPackageJson from 'typegpu/package.json' with {
+  type: 'json',
+};
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
   type: 'json',
 };
@@ -130,6 +135,7 @@ ${example.htmlFile.content}
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",
       "@typegpu/sdf": "${typegpuSdfPackageJson.version}"
+      "@typegpu/react": "${typegpuReactPackageJson.version}"
     }
 }`,
         'vite.config.js': `\
