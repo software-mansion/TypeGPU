@@ -1,10 +1,4 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
-} from 'typegpu';
+import tgpu from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
@@ -83,6 +77,12 @@ context.configure({
 let blurStrength = 5;
 let useGaussianBlur = false;
 
+const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
+const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
+const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
+const useGaussianUniform = root.createUniform(d.u32, 0);
+const sampleBiasUniform = root.createUniform(d.f32, 0);
+
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -112,16 +112,27 @@ const blurredTextures = [0, 1].map(() =>
   }).$usage('sampled', 'render', 'storage')
 );
 
-// AAA this as well
-let blurBindGroups: TgpuBindGroup<(typeof blurLayout)['entries']>[];
+const blurBindGroups = [
+  root.createBindGroup(blurLayout, {
+    flip: zeroBuffer,
+    inTexture: blurredTextures[0],
+    outTexture: blurredTextures[1].createView(
+      d.textureStorage2d('rgba8unorm', 'read-only'),
+      { mipLevelCount: 1 },
+    ),
+    sampler,
+  }),
+  root.createBindGroup(blurLayout, {
+    flip: oneBuffer,
+    inTexture: blurredTextures[1],
+    outTexture: blurredTextures[0].createView(
+      d.textureStorage2d('rgba8unorm', 'read-only'),
+      { mipLevelCount: 1 },
+    ),
+    sampler,
+  }),
+];
 // AAA and other bind groups
-
-const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
-const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
-
-const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
-const useGaussianUniform = root.createUniform(d.u32, 0);
-const sampleBiasUniform = root.createUniform(d.f32, 0);
 
 // pipelines
 
@@ -219,26 +230,6 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
-  blurBindGroups = [
-    root.createBindGroup(blurLayout, {
-      flip: zeroBuffer,
-      inTexture: blurredTextures[0],
-      outTexture: blurredTextures[1].createView(
-        d.textureStorage2d('rgba8unorm', 'read-only'),
-        { mipLevelCount: 1 },
-      ),
-      sampler,
-    }),
-    root.createBindGroup(blurLayout, {
-      flip: oneBuffer,
-      inTexture: blurredTextures[1],
-      outTexture: blurredTextures[0].createView(
-        d.textureStorage2d('rgba8unorm', 'read-only'),
-        { mipLevelCount: 1 },
-      ),
-      sampler,
-    }),
-  ];
 }
 
 let videoFrameCallbackId: number | undefined;
