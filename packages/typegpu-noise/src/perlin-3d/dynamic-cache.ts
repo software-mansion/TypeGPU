@@ -148,12 +148,12 @@ export function dynamicCacheConfig<Prefix extends string>(
   });
 
   const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
-    const size = d.vec3i(cleanValuesSlot.value.size.xyz);
+    const size = d.vec3i(cleanValuesSlot.$.size.xyz);
     const x = (pos.x % size.x + size.x) % size.x;
     const y = (pos.y % size.y + size.y) % size.y;
     const z = (pos.z % size.z + size.z) % size.z;
 
-    return cleanValuesSlot.value
+    return cleanValuesSlot.$
       .memory[x + y * size.x + z * size.x * size.y] as d.v3f;
   });
 
@@ -162,19 +162,15 @@ export function dynamicCacheConfig<Prefix extends string>(
     memory: { storage: MemorySchema, access: 'mutable' },
   });
 
-  const mainCompute = tgpu['~unstable'].computeFn({
-    workgroupSize: [1, 1, 1],
-    in: { gid: d.builtin.globalInvocationId },
-  })((input) => {
+  const mainCompute = (x: number, y: number, z: number) => {
+    'use gpu';
     const size = computeLayout.$.size;
-    const idx = input.gid.x +
-      input.gid.y * size.x +
-      input.gid.z * size.x * size.y;
+    const idx = x +
+      y * size.x +
+      z * size.x * size.y;
 
-    computeLayout.$.memory[idx] = computeJunctionGradient(
-      d.vec3i(input.gid.xyz),
-    );
-  });
+    computeLayout.$.memory[idx] = computeJunctionGradient(d.vec3i(x, y, z));
+  };
 
   const instance = (
     root: TgpuRoot,
@@ -188,8 +184,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       .$usage('uniform');
 
     const computePipeline = root['~unstable']
-      .withCompute(mainCompute)
-      .createPipeline();
+      .createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {
       const memory = root
@@ -203,7 +198,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
       computePipeline
         .with(computeBindGroup)
-        .dispatchWorkgroups(size.x, size.y, size.z);
+        .dispatchThreads(size.x, size.y, size.z);
 
       return memory;
     };
