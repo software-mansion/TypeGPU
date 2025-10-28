@@ -66,7 +66,7 @@ if (body.firstChild) {
 }
 
 // Execute example
-// @ts-ignore
+// @ts-expect-error
 const example = await import('./src/index.ts');
 
 // Create example controls

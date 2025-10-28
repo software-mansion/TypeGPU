@@ -13,7 +13,7 @@ catalogs:
     jiti: ^2.6.0
   types:
     typescript: ^5.8.2
-    '@webgpu/types': ^0.1.65
+    '@webgpu/types': ^0.1.66
   test:
     vitest: ^3.2.4
   frontend:
