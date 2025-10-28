@@ -11,7 +11,7 @@ function App() {
 
   const { ref } = useRender({
     fragment: () => {
-      'kernel';
+      'use gpu';
       const t = time.$;
       const rgb = hsvToRgb(d.vec3f(t * 0.5, 1, 1));
       return d.vec4f(rgb, 1);

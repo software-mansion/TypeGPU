@@ -24,7 +24,7 @@ const App = (props: Props) => {
   const { ref } = useRender({
     // Runs each frame on the GPU 🌈
     fragment: ({ uv }) => {
-      'kernel';
+      'use gpu';
       return hsvToRgb(time.$, uv.x, uv.y) * color.$;
     },
   });
