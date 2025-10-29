@@ -1,6 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
@@ -106,7 +107,7 @@ const Params = d.struct({
 
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].prepareDispatch((x) => {
+root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -346,19 +347,6 @@ const blur = tgpu['~unstable'].computeFn({
   );
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 const sampler = root['~unstable'].createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
@@ -487,14 +475,16 @@ function frame() {
 
   params.writePartial({ deltaTime });
 
-  blurPipeline.with(computeLayout, bindGroups[currentTexture])
+  blurPipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(resolution.x / BLUR_WORKGROUP_SIZE[0]),
       Math.ceil(resolution.y / BLUR_WORKGROUP_SIZE[1]),
       Math.ceil(resolution.z / BLUR_WORKGROUP_SIZE[2]),
     );
 
-  computePipeline.with(computeLayout, bindGroups[currentTexture])
+  computePipeline
+    .with(bindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE),
     );
@@ -505,10 +495,8 @@ function frame() {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      renderLayout,
-      renderBindGroups[1 - currentTexture],
-    ).draw(3);
+    .with(renderBindGroups[1 - currentTexture])
+    .draw(3);
 
   root['~unstable'].flush();
 

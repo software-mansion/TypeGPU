@@ -407,19 +407,19 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
     this.e1 = this.castElement()(y ?? x);
   }
 
-  get [0]() {
+  get 0() {
     return this.e0;
   }
 
-  get [1]() {
+  get 1() {
     return this.e1;
   }
 
-  set [0](value: S) {
+  set 0(value: S) {
     this.e0 = this.castElement()(value);
   }
 
-  set [1](value: S) {
+  set 1(value: S) {
     this.e1 = this.castElement()(value);
   }
 
@@ -454,27 +454,27 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
     this.e2 = this.castElement()(z ?? x);
   }
 
-  get [0]() {
+  get 0() {
     return this.e0;
   }
 
-  get [1]() {
+  get 1() {
     return this.e1;
   }
 
-  get [2]() {
+  get 2() {
     return this.e2;
   }
 
-  set [0](value: S) {
+  set 0(value: S) {
     this.e0 = this.castElement()(value);
   }
 
-  set [1](value: S) {
+  set 1(value: S) {
     this.e1 = this.castElement()(value);
   }
 
-  set [2](value: S) {
+  set 2(value: S) {
     this.e2 = this.castElement()(value);
   }
 
@@ -519,35 +519,35 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
     this.e3 = this.castElement()(w ?? x);
   }
 
-  get [0]() {
+  get 0() {
     return this.e0;
   }
 
-  get [1]() {
+  get 1() {
     return this.e1;
   }
 
-  get [2]() {
+  get 2() {
     return this.e2;
   }
 
-  get [3]() {
+  get 3() {
     return this.e3;
   }
 
-  set [0](value: S) {
+  set 0(value: S) {
     this.e0 = this.castElement()(value);
   }
 
-  set [1](value: S) {
+  set 1(value: S) {
     this.e1 = this.castElement()(value);
   }
 
-  set [2](value: S) {
+  set 2(value: S) {
     this.e2 = this.castElement()(value);
   }
 
-  set [3](value: S) {
+  set 3(value: S) {
     this.e3 = this.castElement()(value);
   }
 

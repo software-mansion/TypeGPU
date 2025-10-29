@@ -1,6 +1,7 @@
 import tgpu, { type TgpuBindGroup } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 
@@ -43,19 +44,6 @@ const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   const a = d.u32(pos.x + 5 * pos.y);
   // Extract the bit at position 'a' from the character bitmap 'n'
   return d.f32((n >> a) & 1);
-});
-
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
 });
 
 /**
@@ -199,7 +187,7 @@ let bindGroup:
   | undefined;
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined = undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 function processVideoFrame(
   _: number,
