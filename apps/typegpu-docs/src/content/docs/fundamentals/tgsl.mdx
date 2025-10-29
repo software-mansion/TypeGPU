@@ -53,10 +53,11 @@ const dist = manhattanDistance(d.vec3f(1, 2, 3), d.vec3f(6, 5, 4));
 // #2) Executed on the GPU
 const root = await tgpu.init();
 
-(root, () => {
+const pipeline = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';
   manhattanDistance(d.vec3f(1, 2, 3), d.vec3f(6, 5, 4));
-}).dispatch();
+});
+pipeline.dispatchThreads();
 
 // #3) Used to generate WGSL
 const wgsl = tgpu.resolve({ externals: { manhattanDistance } });
