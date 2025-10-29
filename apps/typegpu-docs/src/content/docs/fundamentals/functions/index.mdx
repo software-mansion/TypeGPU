@@ -93,7 +93,7 @@ You can already notice a few things about TypeGPU functions:
 
 ### Code transformation
 
-To make this all work, we perform a small transformation to functions marked with `'use gpu'`, leaving all other code untouched. Every project's setup is different, and we want to as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
+To make this all work, we perform a small transformation to functions marked with `'use gpu'`, leaving all other code untouched. Every project's setup is different, and we want to be as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
 
 :::tip
 If you wish for all WGSL generation to happen at build time, combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/fundamentals/resolve).
@@ -178,6 +178,9 @@ fn main() {
 You can limit the types that a function can accept by using [wrapping it in a shell](#function-shells).
 
 ### Generics
+
+Since TypeScript types not taken into account when generating the shader code, there is no
+limitation on use of generic types.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -293,11 +296,20 @@ You can generally assume that all JavaScript syntax is supported, and in the occ
 descriptive error either at build time or at runtime (when compiling the shader).
 
 :::note
-Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be supported in the context of shaders, *rather to allow for shaders to be written in JavaScript*. This distinction means we won't support every JavaScript feature, only those that make sense in the context of graphics programming.
+Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be supported in the context of shaders, **rather to allow for shaders to be written in JavaScript**. This distinction means we won't support every JavaScript feature, only those that make sense in the context of graphics programming.
 :::
 
-`Math.*` functions can usually be swapped with functions exported from `typegpu/std`. Calling JavaScript functions that are not marked with `'use gpu'` is not allowed. An exception to that rule is [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
+* **Calling other functions** --
+Only functions marked with `'use gpu'` can be called from within a shader. An exception to that rule is [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
 of shaders in a familiar way.
+
+* **Operators** --
+JavaScript does not support operator overloading.
+This means that, while you can still use operators for numbers,
+you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices, or use a fluent interface (*abc.mul(xyz), ...*)
+
+* **Math.\*** --
+Utility functions on the `Math` object can't automatically run on the GPU, but can usually be swapped with functions exported from `typegpu/std`.
 
 ## Function shells
 
@@ -418,6 +430,17 @@ fn getGradientColor_0(ratio: f32) -> vec4f {
 
 Notice how `purple` was inlined in the final shader, and the reference to `get_blue` was replaced with
 the function's eventual name of `getBlue_1`.
+
+### When to use JavaScript / WGSL
+Writing shader code in JavaScript has a few significant advantages.
+It allows defining utilities once and using them both on the GPU and CPU,
+as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer experience.
+
+However, there are cases where WGSL might be more suitable.
+Since JavaScript doesn't support operator overloading, functions including complex matrix or vector operations can be more readable in WGSL.
+Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet.
+
+Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
 
 ## Entry functions
 
