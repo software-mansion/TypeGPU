@@ -62,7 +62,7 @@ const root = await tgpu.init();
 const threadCounter = tgpu.privateVar(d.u32, 0);
 
 const getNext = () => {
-  'kernel';
+  'use gpu';
   threadCounter.$ += 1;
   return [42, 418, 23][threadCounter.$];
 };
@@ -98,7 +98,7 @@ const boid = tgpu.const(Boid, {
 });
 
 const func = () => {
-  'kernel';
+  'use gpu';
   const pos = boid.$;
   const vel = boid.$.vel;
   const velX = boid.$.vel.x;

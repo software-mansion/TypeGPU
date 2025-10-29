@@ -33,12 +33,12 @@ behavior on the CPU and GPU, which unlocks many possibilities.
 There are three main ways to use kernels.
 
 ```ts twoslash
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 function manhattanDistance(a: d.v3f, b: d.v3f) {
-  'kernel';
+  'use gpu';
   const dx = std.abs(a.x - b.x);
   const dy = std.abs(a.y - b.y);
   const dz = std.abs(a.z - b.z);
@@ -52,8 +52,9 @@ const dist = manhattanDistance(d.vec3f(1, 2, 3), d.vec3f(6, 5, 4));
 
 // #2) Executed on the GPU
 const root = await tgpu.init();
-prepareDispatch(root, () => {
-  'kernel';
+
+(root, () => {
+  'use gpu';
   manhattanDistance(d.vec3f(1, 2, 3), d.vec3f(6, 5, 4));
 }).dispatch();
 
