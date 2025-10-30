@@ -184,7 +184,7 @@ export const controls = {
   },
   'String interpolation': {
     onButtonClick: async () =>
-      root['~unstable'].prepareDispatch(() => {
+      root['~unstable'].createGuardedComputePipeline(() => {
         'use gpu';
         console.log(
           'The values %d, %f and %s were interpolated in this message.',
@@ -202,7 +202,7 @@ export const controls = {
   },
   'Different log functionalities': {
     onButtonClick: async () =>
-      root['~unstable'].prepareDispatch(() => {
+      root['~unstable'].createGuardedComputePipeline(() => {
         'use gpu';
         console.log('This message should be cleared.');
         console.clear();
