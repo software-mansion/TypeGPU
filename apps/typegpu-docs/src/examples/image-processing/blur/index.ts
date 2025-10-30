@@ -4,6 +4,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -54,7 +55,7 @@ const textures = [0, 1].map(() => {
 });
 const renderView = textures[1].createView(d.texture2d(d.f32));
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -93,7 +94,7 @@ const computeFn = tgpu['~unstable'].computeFn({
 
       tileData.$[r][lid.x * 4 + d.u32(c)] = std.textureSampleLevel(
         ioLayout.$.inTexture,
-        sampler,
+        sampler.$,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
       ).xyz;
@@ -127,26 +128,13 @@ const computeFn = tgpu['~unstable'].computeFn({
   }
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 const renderFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) =>
   std.textureSample(
     renderView.$,
-    sampler,
+    sampler.$,
     input.uv,
   )
 );
@@ -191,7 +179,7 @@ function render() {
 
   for (const i of indices) {
     computePipeline
-      .with(ioLayout, ioBindGroups[i])
+      .with(ioBindGroups[i])
       .dispatchWorkgroups(
         Math.ceil(srcWidth / settings.blockDim),
         Math.ceil(srcHeight / 4),

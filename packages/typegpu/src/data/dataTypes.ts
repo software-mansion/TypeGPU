@@ -28,6 +28,7 @@ import type {
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
+import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -242,6 +243,8 @@ export type AnyConcreteData = Exclude<
   | WgslTexture
   | WgslStorageTexture
   | WgslExternalTexture
+  | WgslSampler
+  | WgslComparisonSampler
 >;
 
 export interface UnknownData {
@@ -271,7 +274,7 @@ export class MatrixColumnsAccess {
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor() {
+  constructor(readonly op: string) {
     setName(this, 'consoleLog');
   }
 }

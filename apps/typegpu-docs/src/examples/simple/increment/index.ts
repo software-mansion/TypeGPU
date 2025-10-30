@@ -1,19 +1,19 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // Allocating memory for the counter
 const counter = root.createMutable(d.u32);
 
-// A 0-dimentional shader function
-const gpuIncrement = prepareDispatch(root, () => {
+// A 0-dimensional compute pipeline
+const incrementPipeline = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';
   counter.$ += 1;
 });
 
 async function increment() {
   // Dispatch and read the result
-  gpuIncrement.dispatch();
+  incrementPipeline.dispatchThreads();
   return await counter.read();
 }
 

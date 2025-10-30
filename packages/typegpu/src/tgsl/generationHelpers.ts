@@ -319,6 +319,9 @@ export function accessIndex(
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
+  if (value >= 2 ** 63 || value < -(2 ** 63)) {
+    return snip(value, abstractFloat);
+  }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
@@ -371,7 +374,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  generateLog(args: Snippet[]): Snippet;
+  generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
 

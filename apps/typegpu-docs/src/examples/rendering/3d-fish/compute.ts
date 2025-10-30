@@ -1,15 +1,11 @@
-import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
 
-export const computeShader = tgpu['~unstable'].computeFn({
-  in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [p.workGroupSize],
-})((input) => {
-  const fishIndex = input.gid.x;
+export const simulate = (fishIndex: number) => {
+  'use gpu';
   const fishData = layout.$.currentFishData[fishIndex];
   let separation = d.vec3f();
   let alignment = d.vec3f();
@@ -105,4 +101,4 @@ export const computeShader = tgpu['~unstable'].computeFn({
   const nextFishData = layout.$.nextFishData[fishIndex];
   nextFishData.position = fishData.position.add(translation);
   nextFishData.direction = d.vec3f(direction);
-});
+};

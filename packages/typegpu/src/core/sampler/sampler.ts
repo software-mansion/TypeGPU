@@ -1,116 +1,56 @@
+import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
+import type { Infer } from '../../shared/repr.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $ownSnippet,
+  $repr,
+  $resolve,
+} from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type {
-  ResolutionCtx,
-  SelfResolvable,
-  WithOwnSnippet,
-} from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
+import {
+  comparisonSampler as wgslComparisonSampler,
+  sampler as wgslSampler,
+  type WgslComparisonSampler,
+  type WgslSampler,
+} from '../../data/sampler.ts';
+import { inCodegenMode } from '../../execMode.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 interface SamplerInternals {
-  readonly unwrap?: ((branch: Unwrapper) => GPUSampler) | undefined;
+  readonly unwrap?: (() => GPUSampler) | undefined;
 }
 
 // ----------
 // Public API
 // ----------
 
-export interface SamplerProps {
-  addressModeU?: GPUAddressMode;
-  addressModeV?: GPUAddressMode;
-  /**
-   * Specifies the address modes for the texture width, height, and depth
-   * coordinates, respectively.
-   */
-  addressModeW?: GPUAddressMode;
-  /**
-   * Specifies the sampling behavior when the sample footprint is smaller than or equal to one
-   * texel.
-   */
-  magFilter?: GPUFilterMode;
-  /**
-   * Specifies the sampling behavior when the sample footprint is larger than one texel.
-   */
-  minFilter?: GPUFilterMode;
-  /**
-   * Specifies behavior for sampling between mipmap levels.
-   */
-  mipmapFilter?: GPUMipmapFilterMode;
-  lodMinClamp?: number;
-  /**
-   * Specifies the minimum and maximum levels of detail, respectively, used internally when
-   * sampling a texture.
-   */
-  lodMaxClamp?: number;
-  /**
-   * Specifies the maximum anisotropy value clamp used by the sampler. Anisotropic filtering is
-   * enabled when {@link GPUSamplerDescriptor.maxAnisotropy} is > 1 and the implementation supports it.
-   * Anisotropic filtering improves the image quality of textures sampled at oblique viewing
-   * angles. Higher {@link GPUSamplerDescriptor.maxAnisotropy} values indicate the maximum ratio of
-   * anisotropy supported when filtering.
-   *
-   * Most implementations support {@link GPUSamplerDescriptor.maxAnisotropy} values in range
-   * between 1 and 16, inclusive. The used value of {@link GPUSamplerDescriptor.maxAnisotropy}
-   * will be clamped to the maximum value that the platform supports.
-   * The precise filtering behavior is implementation-dependent.
-   */
-  maxAnisotropy?: number;
-}
-
-export interface ComparisonSamplerProps {
-  compare: GPUCompareFunction;
-  addressModeU?: GPUAddressMode;
-  addressModeV?: GPUAddressMode;
-  /**
-   * Specifies the address modes for the texture width, height, and depth
-   * coordinates, respectively.
-   */
-  addressModeW?: GPUAddressMode;
-  /**
-   * Specifies the sampling behavior when the sample footprint is smaller than or equal to one
-   * texel.
-   */
-  magFilter?: GPUFilterMode;
-  /**
-   * Specifies the sampling behavior when the sample footprint is larger than one texel.
-   */
-  minFilter?: GPUFilterMode;
-  /**
-   * Specifies behavior for sampling between mipmap levels.
-   */
-  mipmapFilter?: GPUMipmapFilterMode;
-  lodMinClamp?: number;
-  /**
-   * Specifies the minimum and maximum levels of detail, respectively, used internally when
-   * sampling a texture.
-   */
-  lodMaxClamp?: number;
-  /**
-   * Specifies the maximum anisotropy value clamp used by the sampler. Anisotropic filtering is
-   * enabled when {@link GPUSamplerDescriptor.maxAnisotropy} is > 1 and the implementation supports it.
-   * Anisotropic filtering improves the image quality of textures sampled at oblique viewing
-   * angles. Higher {@link GPUSamplerDescriptor.maxAnisotropy} values indicate the maximum ratio of
-   * anisotropy supported when filtering.
-   *
-   * Most implementations support {@link GPUSamplerDescriptor.maxAnisotropy} values in range
-   * between 1 and 16, inclusive. The used value of {@link GPUSamplerDescriptor.maxAnisotropy}
-   * will be clamped to the maximum value that the platform supports.
-   * The precise filtering behavior is implementation-dependent.
-   */
-  maxAnisotropy?: number;
-}
-
 export interface TgpuSampler {
   readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler';
+  readonly schema: WgslSampler;
+
+  readonly [$gpuValueOf]: Infer<WgslSampler>;
+  value: Infer<WgslSampler>;
+  $: Infer<WgslSampler>;
 }
 
 export interface TgpuComparisonSampler {
   readonly [$internal]: SamplerInternals;
   readonly resourceType: 'sampler-comparison';
+  readonly schema: WgslComparisonSampler;
+
+  readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
+  value: Infer<WgslComparisonSampler>;
+  $: Infer<WgslComparisonSampler>;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
@@ -118,14 +58,26 @@ export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler, TgpuNamable {}
 
-export function sampler(props: SamplerProps): TgpuFixedSampler {
-  return new TgpuFixedSamplerImpl(props);
+export function INTERNAL_createSampler(
+  props: WgslSamplerProps,
+  branch: Unwrapper,
+): TgpuFixedSampler {
+  return new TgpuFixedSamplerImpl(
+    wgslSampler(),
+    props,
+    branch,
+  ) as TgpuFixedSampler;
 }
 
-export function comparisonSampler(
-  props: ComparisonSamplerProps,
+export function INTERNAL_createComparisonSampler(
+  props: WgslComparisonSamplerProps,
+  branch: Unwrapper,
 ): TgpuFixedComparisonSampler {
-  return new TgpuFixedComparisonSamplerImpl(props);
+  return new TgpuFixedSamplerImpl(
+    wgslComparisonSampler(),
+    props,
+    branch,
+  ) as TgpuFixedComparisonSampler;
 }
 
 export function isSampler(resource: unknown): resource is TgpuSampler {
@@ -144,31 +96,69 @@ export function isComparisonSampler(
 // Implementation
 // --------------
 
-export class TgpuLaidOutSamplerImpl
-  implements TgpuSampler, SelfResolvable, WithOwnSnippet {
-  public readonly [$internal]: SamplerInternals;
-  public readonly resourceType = 'sampler';
+export class TgpuLaidOutSamplerImpl<
+  T extends WgslSampler | WgslComparisonSampler,
+> implements SelfResolvable {
+  declare readonly [$repr]: Infer<T>;
+  public readonly [$internal]: SamplerInternals = { unwrap: undefined };
+  public readonly resourceType: T extends WgslComparisonSampler
+    ? 'sampler-comparison'
+    : 'sampler';
+  readonly #membership: LayoutMembership;
 
-  constructor(private readonly _membership: LayoutMembership) {
-    this[$internal] = {};
-    setName(this, _membership.key);
+  constructor(
+    readonly schema: T,
+    membership: LayoutMembership,
+  ) {
+    this.#membership = membership;
+    this.resourceType =
+      (schema.type === 'sampler_comparison'
+        ? 'sampler-comparison'
+        : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
+          : 'sampler';
+    setName(this, membership.key);
   }
-
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: sampler;`,
+      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
+        ctx.resolve(this.schema).value
+      };`,
     );
 
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ 'handle');
+    return snip(id, this.schema, /* ref */ 'handle');
+  }
+
+  get [$gpuValueOf](): Infer<T> {
+    const schema = this.schema;
+    return new Proxy(
+      {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, schema, /* ref */ 'handle');
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `${this.toString()}.$`,
+      },
+      valueProxyHandler,
+    ) as unknown as Infer<T>;
+  }
+
+  get $(): Infer<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+    );
+  }
+
+  get value(): Infer<T> {
+    return this.$;
   }
 
   toString() {
@@ -176,144 +166,101 @@ export class TgpuLaidOutSamplerImpl
   }
 }
 
-export class TgpuLaidOutComparisonSamplerImpl
-  implements TgpuComparisonSampler, SelfResolvable, WithOwnSnippet {
+class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
+  implements SelfResolvable, TgpuNamable {
+  declare readonly [$repr]: Infer<T>;
   public readonly [$internal]: SamplerInternals;
-  public readonly resourceType = 'sampler-comparison';
+  public readonly resourceType: T extends WgslComparisonSampler
+    ? 'sampler-comparison'
+    : 'sampler';
 
-  constructor(private readonly _membership: LayoutMembership) {
-    this[$internal] = {};
-    setName(this, _membership.key);
-  }
+  #filtering: boolean;
+  #sampler: GPUSampler | null = null;
+  #props: WgslSamplerProps | WgslComparisonSamplerProps;
+  #branch: Unwrapper;
 
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: sampler_comparison;`,
-    );
-
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ 'handle');
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-}
-
-class TgpuFixedSamplerImpl
-  implements TgpuFixedSampler, SelfResolvable, WithOwnSnippet {
-  public readonly [$internal]: SamplerInternals;
-  public readonly resourceType = 'sampler';
-
-  private _filtering: boolean;
-  private _sampler: GPUSampler | null = null;
-
-  constructor(private readonly _props: SamplerProps) {
+  constructor(
+    readonly schema: T,
+    props: WgslSamplerProps | WgslComparisonSamplerProps,
+    branch: Unwrapper,
+  ) {
+    this.#props = props;
+    this.#branch = branch;
+    this.resourceType =
+      (schema.type === 'sampler_comparison'
+        ? 'sampler-comparison'
+        : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
+          : 'sampler';
     this[$internal] = {
-      unwrap: (branch) => {
-        if (!this._sampler) {
-          this._sampler = branch.device.createSampler({
-            ...this._props,
+      unwrap: () => {
+        if (!this.#sampler) {
+          this.#sampler = this.#branch.device.createSampler({
+            ...this.#props,
             label: getName(this) ?? '<unnamed>',
           });
         }
 
-        return this._sampler;
+        return this.#sampler;
       },
     };
 
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
-    this._filtering = _props.minFilter === 'linear' ||
-      _props.magFilter === 'linear' ||
-      _props.mipmapFilter === 'linear';
+    this.#filtering = props.minFilter === 'linear' ||
+      props.magFilter === 'linear' ||
+      props.mipmapFilter === 'linear';
   }
-
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
 
     const { group, binding } = ctx.allocateFixedEntry(
+      this.schema.type === 'sampler_comparison'
+        ? { sampler: 'comparison' }
+        : { sampler: this.#filtering ? 'filtering' : 'non-filtering' },
+      this,
+    );
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${binding}) var ${id}: ${
+        ctx.resolve(this.schema).value
+      };`,
+    );
+
+    return snip(id, this.schema, /* ref */ 'handle');
+  }
+
+  get [$gpuValueOf](): Infer<T> {
+    const schema = this.schema;
+    return new Proxy(
       {
-        sampler: this._filtering ? 'filtering' : 'non-filtering',
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, schema, /* ref */ 'handle');
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `${this.toString()}.$`,
       },
-      this,
-    );
+      valueProxyHandler,
+    ) as unknown as Infer<T>;
+  }
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: sampler;`,
-    );
+  get $(): Infer<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
 
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ 'handle');
+    throw new Error(
+      'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+    );
+  }
+
+  get value(): Infer<T> {
+    return this.$;
   }
 
   $name(label: string) {
     setName(this, label);
     return this;
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-}
-
-class TgpuFixedComparisonSamplerImpl
-  implements TgpuFixedComparisonSampler, SelfResolvable, WithOwnSnippet {
-  public readonly [$internal]: SamplerInternals;
-  public readonly resourceType = 'sampler-comparison';
-
-  private _sampler: GPUSampler | null = null;
-
-  constructor(private readonly _props: ComparisonSamplerProps) {
-    this[$internal] = {
-      unwrap: (branch) => {
-        if (!this._sampler) {
-          this._sampler = branch.device.createSampler({
-            ...this._props,
-            label: getName(this) ?? '<unnamed>',
-          });
-        }
-
-        return this._sampler;
-      },
-    };
-  }
-
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-  [$ownSnippet] = snip(this, this as any, /* ref */ 'handle');
-
-  $name(label: string) {
-    setName(this, label);
-    return this;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
-    const { group, binding } = ctx.allocateFixedEntry(
-      { sampler: 'comparison' },
-      this,
-    );
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: sampler_comparison;`,
-    );
-
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper sampler schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have sampler schemas
-    return snip(id, this as any, /* ref */ 'handle');
   }
 
   toString() {

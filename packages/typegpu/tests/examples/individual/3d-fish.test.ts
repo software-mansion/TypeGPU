@@ -83,7 +83,9 @@ describe('3d fish example', () => {
         wrappedCallback_2(in.id.x, in.id.y, in.id.z);
       }
 
-      struct ModelData_2 {
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      struct ModelData_4 {
         position: vec3f,
         direction: vec3f,
         scale: f32,
@@ -93,9 +95,9 @@ describe('3d fish example', () => {
         applySeaDesaturation: u32,
       }
 
-      @group(0) @binding(0) var<storage, read> currentFishData_1: array<ModelData_2>;
+      @group(1) @binding(0) var<storage, read> currentFishData_3: array<ModelData_4>;
 
-      struct FishBehaviorParams_4 {
+      struct FishBehaviorParams_6 {
         separationDist: f32,
         separationStr: f32,
         alignmentDist: f32,
@@ -104,37 +106,32 @@ describe('3d fish example', () => {
         cohesionStr: f32,
       }
 
-      @group(0) @binding(4) var<uniform> fishBehavior_3: FishBehaviorParams_4;
+      @group(1) @binding(4) var<uniform> fishBehavior_5: FishBehaviorParams_6;
 
-      struct Line3_7 {
+      struct Line3_9 {
         origin: vec3f,
         dir: vec3f,
       }
 
-      struct MouseRay_6 {
+      struct MouseRay_8 {
         activated: u32,
-        line: Line3_7,
+        line: Line3_9,
       }
 
-      @group(0) @binding(2) var<uniform> mouseRay_5: MouseRay_6;
+      @group(1) @binding(2) var<uniform> mouseRay_7: MouseRay_8;
 
-      fn projectPointOnLine_8(point: ptr<storage, vec3f, read>, line: ptr<uniform, Line3_7>) -> vec3f {
+      fn projectPointOnLine_10(point: ptr<storage, vec3f, read>, line: ptr<uniform, Line3_9>) -> vec3f {
         var pointVector = ((*point) - (*line).origin);
         var projection = dot(pointVector, (*line).dir);
         return ((*line).origin + ((*line).dir * projection));
       }
 
-      @group(0) @binding(3) var<uniform> timePassed_9: f32;
+      @group(1) @binding(3) var<uniform> timePassed_11: f32;
 
-      @group(0) @binding(1) var<storage, read_write> nextFishData_10: array<ModelData_2>;
+      @group(1) @binding(1) var<storage, read_write> nextFishData_12: array<ModelData_4>;
 
-      struct computeShader_Input_11 {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(256) fn computeShader_0(input: computeShader_Input_11) {
-        var fishIndex = input.gid.x;
-        let fishData = (&currentFishData_1[fishIndex]);
+      fn simulate_2(fishIndex: u32, _arg_1: u32, _arg_2: u32) {
+        let fishData = (&currentFishData_3[fishIndex]);
         var separation = vec3f();
         var alignment = vec3f();
         var alignmentCount = 0;
@@ -146,16 +143,16 @@ describe('3d fish example', () => {
           if ((u32(i) == fishIndex)) {
             continue;
           }
-          let other = (&currentFishData_1[i]);
+          let other = (&currentFishData_3[i]);
           var dist = length(((*fishData).position - (*other).position));
-          if ((dist < fishBehavior_3.separationDist)) {
+          if ((dist < fishBehavior_5.separationDist)) {
             separation = (separation + ((*fishData).position - (*other).position));
           }
-          if ((dist < fishBehavior_3.alignmentDist)) {
+          if ((dist < fishBehavior_5.alignmentDist)) {
             alignment = (alignment + (*other).direction);
             alignmentCount = (alignmentCount + 1);
           }
-          if ((dist < fishBehavior_3.cohesionDist)) {
+          if ((dist < fishBehavior_5.cohesionDist)) {
             cohesion = (cohesion + (*other).position);
             cohesionCount = (cohesionCount + 1);
           }
@@ -181,24 +178,35 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
-        if ((mouseRay_5.activated == 1)) {
-          var proj = projectPointOnLine_8((&(*fishData).position), (&mouseRay_5.line));
+        if ((mouseRay_7.activated == 1)) {
+          var proj = projectPointOnLine_10((&(*fishData).position), (&mouseRay_7.line));
           var diff = ((*fishData).position - proj);
           const limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);
           rayRepulsion = (normalize(diff) * str);
         }
         var direction = (*fishData).direction;
-        direction = (direction + (separation * fishBehavior_3.separationStr));
-        direction = (direction + (alignment * fishBehavior_3.alignmentStr));
-        direction = (direction + (cohesion * fishBehavior_3.cohesionStr));
+        direction = (direction + (separation * fishBehavior_5.separationStr));
+        direction = (direction + (alignment * fishBehavior_5.alignmentStr));
+        direction = (direction + (cohesion * fishBehavior_5.cohesionStr));
         direction = (direction + (wallRepulsion * 1e-4));
         direction = (direction + (rayRepulsion * 5e-4));
         direction = (normalize(direction) * clamp(length((*fishData).direction), 0, 0.01));
-        var translation = (direction * (min(999, timePassed_9) / 8f));
-        let nextFishData = (&nextFishData_10[fishIndex]);
+        var translation = (direction * (min(999, timePassed_11) / 8f));
+        let nextFishData = (&nextFishData_12[fishIndex]);
         (*nextFishData).position = ((*fishData).position + translation);
         (*nextFishData).direction = direction;
+      }
+
+      struct mainCompute_Input_13 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_13)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        simulate_2(in.id.x, in.id.y, in.id.z);
       }
 
       struct ModelData_2 {

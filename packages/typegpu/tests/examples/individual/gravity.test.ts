@@ -148,7 +148,8 @@ describe('gravity example', () => {
       }
 
       struct Camera_2 {
-        position: vec3f,
+        position: vec4f,
+        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }
@@ -200,7 +201,8 @@ describe('gravity example', () => {
       }
 
       struct Camera_5 {
-        position: vec3f,
+        position: vec4f,
+        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }

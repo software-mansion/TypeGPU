@@ -936,9 +936,7 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (recursion)', () => {
-    // biome-ignore lint/style/useConst: bar has to be assigned later
     let bar: TgpuFn;
-    // biome-ignore lint/style/useConst: foo has to be assigned later
     let foo: TgpuFn;
     bar = tgpu.fn([], d.f32)(() => foo() + 2);
     foo = tgpu.fn([], d.f32)(() => bar() - 2);
@@ -953,13 +951,9 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
-    // biome-ignore lint/style/useConst: one has to be assigned later
     let one: TgpuFn;
-    // biome-ignore lint/style/useConst: fnSlot has to be assigned later
     let fnSlot: TgpuSlot<TgpuFn<() => d.F32>>;
-    // biome-ignore lint/style/useConst: three has to be assigned later
     let three: TgpuFn;
-    // biome-ignore lint/style/useConst: two has to be assigned later
     let two: TgpuFn;
     one = tgpu.fn([], d.f32)(() => two() + 2);
     fnSlot = tgpu.slot(tgpu.fn([], d.f32)(() => one() + 2).$name('inner'));
@@ -977,7 +971,6 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (when using derived)', () => {
-    // biome-ignore lint/style/useConst: one has to be assigned later
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);

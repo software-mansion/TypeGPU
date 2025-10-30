@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { struct } from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
@@ -63,11 +63,11 @@ describe('autonaming', () => {
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = tgpu['~unstable'].sampler({
+    const mySampler = root['~unstable'].createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = tgpu['~unstable'].comparisonSampler({
+    const myComparisonSampler = root['~unstable'].createComparisonSampler({
       compare: 'equal',
     });
 
@@ -126,7 +126,8 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    let layout = undefined;
+    // biome-ignore lint/style/useConst: it's a test
+    let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
         foo: { uniform: d.vec3f },
