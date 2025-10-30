@@ -1,8 +1,8 @@
-import type { TgpuRenderPipeline, TgpuRoot, TgpuUniform } from 'typegpu';
 import { randomGeneratorSlot } from '@typegpu/noise';
+import type { TgpuRenderPipeline, TgpuRoot, TgpuUniform } from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import type * as d from 'typegpu/data';
 
-import { fullScreenTriangleVertexShader } from './vertex.ts';
 import { bindFullScreenGridFSWithUniforms } from './fragment.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
 
@@ -15,7 +15,7 @@ export const preparePipeline = (
 ): TgpuRenderPipeline =>
   root['~unstable']
     .with(randomGeneratorSlot, getPRNG(prng))
-    .withVertex(fullScreenTriangleVertexShader, {})
+    .withVertex(fullScreenTriangle, {})
     .withFragment(
       bindFullScreenGridFSWithUniforms(gridSizeUniform, canvasRatioUniform),
       {

@@ -15,15 +15,15 @@ export const LCG: StatefulGenerator = (() => {
 
   return {
     seed: (value: number) => {
-      'kernel';
+      'use gpu';
       seed.$ = d.u32(value * std.pow(32, 3));
     },
     seed2: (value: d.v2f) => {
-      'kernel';
+      'use gpu';
       seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
     },
     sample: () => {
-      'kernel';
+      'use gpu';
       seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
       return u32To01Float(seed.$);
     },
