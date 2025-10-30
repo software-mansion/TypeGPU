@@ -148,9 +148,9 @@ For 3D textures or texture arrays, you can write multiple images:
 ```ts twoslash
 import tgpu from 'typegpu';
 const root = await tgpu.init();
-const imageBitmap1 = {} as ImageBitmap;
-const imageBitmap2 = {} as ImageBitmap;
-const imageBitmap3 = {} as ImageBitmap;
+declare const imageBitmap1: ImageBitmap;
+declare const imageBitmap2: ImageBitmap;
+declare const imageBitmap3: ImageBitmap;
 // ---cut---
 const texture3d = root['~unstable'].createTexture({
   size: [256, 256, 3],
@@ -219,7 +219,7 @@ TypeGPU provides automatic mipmap generation for textures:
 ```ts twoslash
 import tgpu from 'typegpu';
 const root = await tgpu.init();
-const imageBitmap = {} as ImageBitmap;
+declare const imageBitmap: ImageBitmap;
 // ---cut---
 const texture = root['~unstable'].createTexture({
   size: [256, 256],
