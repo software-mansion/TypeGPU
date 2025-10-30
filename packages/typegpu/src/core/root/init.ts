@@ -187,6 +187,14 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
     // Yeah, i know we flush here... but it's only a matter of time!
     this.#root.flush();
   }
+
+  get pipeline() {
+    return this.#pipeline;
+  }
+
+  get sizeUniform() {
+    return this.#sizeUniform;
+  }
 }
 
 class WithBindingImpl implements WithBinding {

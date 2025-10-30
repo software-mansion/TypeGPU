@@ -13,6 +13,7 @@ import type {
   AnyWgslData,
   U16,
   U32,
+  Vec3u,
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -94,6 +95,18 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
    * "guarded" by a bounds check.
    */
   dispatchThreads(...args: TArgs): void;
+
+  /**
+   * The underlying pipeline used during `dispatchThreads`.
+   */
+  pipeline: TgpuComputePipeline;
+
+  /**
+   * The buffer used to automatically pass the threads count to the underlying pipeline during `dispatchThreads`.
+   * In case of guarded pipelines that dispatch in less than 3 dimensions,
+   * the remaining values should be filled with 1.
+   */
+  sizeUniform: TgpuUniform<Vec3u>;
 }
 
 export interface WithCompute {

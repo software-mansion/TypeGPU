@@ -87,16 +87,38 @@ describe('resolve', () => {
   });
 
   it('can resolve a guarded compute pipeline', ({ root }) => {
-    const pipeline = root.createGuardedComputePipeline((x, y, z) => {
+    const pipelineGuard = root.createGuardedComputePipeline((x, y, z) => {
+      'use gpu';
       const myBoid = Boid({
         position: d.vec2f(0, 0),
         color: d.vec4f(x, y, z, 1),
       });
     });
 
-    expect(tgpu.resolve({ externals: { pipeline } })).toMatchInlineSnapshot(
-      `""`,
-    );
+    expect(tgpu.resolve({ externals: { pipeline: pipelineGuard.pipeline } }))
+      .toMatchInlineSnapshot(`
+        "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+        struct Boid_3 {
+          position: vec2f,
+          color: vec4f,
+        }
+
+        fn wrappedCallback_2(x: u32, y: u32, z: u32) {
+          var myBoid = Boid_3(vec2f(), vec4f(f32(x), f32(y), f32(z), 1));
+        }
+
+        struct mainCompute_Input_4 {
+          @builtin(global_invocation_id) id: vec3u,
+        }
+
+        @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_4)  {
+          if (any(in.id >= sizeUniform_1)) {
+            return;
+          }
+          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        }"
+      `);
   });
 
   it('throws when resolving multiple pipelines', ({ root }) => {
@@ -111,6 +133,8 @@ describe('resolve', () => {
 
     expect(() =>
       tgpu.resolve({ externals: { renderPipeline, computePipeline } })
-    ).toThrowErrorMatchingInlineSnapshot(`[Error: Found 2 pipelines but can only resolve one at a time.]`);
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found 2 pipelines but can only resolve one at a time.]`,
+    );
   });
 });
