@@ -3,13 +3,12 @@ title: Functions
 description: A guide on how to create and use the TypeGPU typed functions.
 ---
 
-:::note[Recommended reading]
-We assume that you are familiar with the following concepts:
-- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
-- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
+:::caution[May require unplugin-typegpu]
+To write TypeGPU functions in JavaScript/TypeScript, you need to install and configure [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu).
+If you're planning on only using WGSL, you can skip installing it.
 :::
 
-TypeGPU functions let you define shader logic in a modular and type-safe way.
+**TypeGPU functions** let you define shader logic in a modular and type-safe way.
 Their signatures are fully visible to TypeScript, enabling tooling and static checks.
 Dependencies, including GPU resources or other functions, are resolved automatically, with no duplication or name clashes.
 This also supports distributing shader logic across multiple modules or packages.
@@ -17,34 +16,354 @@ Imported functions from external sources are automatically resolved and embedded
 
 ## Defining a function
 
-In order to construct a TypeGPU function, you need to start by defining its shell, an object holding only the input and output types.
+:::note[WGSL enthusiasts!]
+Don't let the JavaScript scare you! TypeGPU functions can be implemented using either WGSL or JS, both being able to call one another.
+If you're planning on only using WGSL, you can skip right over to [Implementing functions in WGSL](#implementing-functions-in-wgsl),
+though we recommend reading through anyway.
+:::
+
+The simplest and most powerful way to define TypeGPU functions is to just place `'use gpu'` at the beginning of the function body.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+```
+
+The `'use gpu'` directive allows the function to be picked up by our dedicated build plugin -- [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu)
+and transformed into a format TypeGPU can understand. This doesn't alter the fact that the function is still callable from JavaScript, and behaves
+the same on the CPU and GPU.
+
+There are three main ways to use TypeGPU functions.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+
+// ---cut---
+const main = () => {
+  'use gpu';
+  // Call from another function
+  return neighborhood(1.1, 0.5);
+};
+
+// #1) Can be called in JS
+const range = main();
+//    ^?
+
+// #2) Used to generate WGSL
+const wgsl = tgpu.resolve({ externals: { main } });
+//    ^?
+
+// #3) Executed on the GPU (generates WGSL underneath)
+root['~unstable']
+  .createGuardedComputePipeline(main)
+  .dispatchThreads();
+````
+
+The contents of the `wgsl` variable would contain the following:
+
+```wgsl
+// Generated WGSL
+fn neighborhood(a: f32, r: f32) -> vec2f {
+  return vec2f(a - r, a + r);
+}
+
+fn main() -> vec2f {
+  return neighborhood(1.1, 0.5);
+}
+
+// ...
+````
+
+You can already notice a few things about TypeGPU functions:
+- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers.
+- TS types are properly inferred, feel free to hover over the variables to see their types.
+- The generated code closely matches your source code.
+
+### Code transformation
+
+To make this all work, we perform a small transformation to functions marked with `'use gpu'`, leaving all other code untouched. Every project's setup is different, and we want to be as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
+
+:::tip
+If you wish for all WGSL generation to happen at build time, combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/fundamentals/resolve).
+:::
+
+
+### Type inference
+
+Let's take a closer look at `neighborhood` versus the WGSL it generates.
+
+```ts
+// TS
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+```
+```wgsl
+// WGSL
+fn neighborhood(a: f32, r: f32) -> vec2f {
+  return vec2f(a - r, a + r);
+}
+```
+
+How does TypeGPU determine that `a` and `r` are of type `f32`, and that the return type is `vec2f`? You might think that we parse the TypeScript source file and use the types
+that the user provided in the function signature, **but that's not the case**.
+
+While generating WGSL, TypeGPU infers the type of each expression, which means it knows the types of values passed in at each call site.
+
+```ts twoslash "1.1, 0.5"
+import * as d from 'typegpu/data';
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+// ---cut---
+const main = () => {
+  'use gpu';
+  // A very easy case, just floating point literals, so f32 by default
+  return neighborhood(1.1, 0.5);
+};
+```
+
+TypeGPU then propagates those types into the function body and analyses the types returned by the function.
+If it cannot unify them into a single type, it will throw an error.
+
+### Polymorphism
+
+For each set of input types, TypeGPU generates a specialized version of the function.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+// ---cut---
+const main = () => {
+  'use gpu';
+  const a = neighborhood(0, 1);
+  // We can also use casts to coerce values into a specific type.
+  const b = neighborhood(d.u32(1), d.f16(5.25));
+};
+```
+
+```wgsl
+// WGSL
+fn neighborhood(a: i32, r: i32) -> vec2f {
+  return vec2f(f32(a - r), f32(a + r));
+}
+
+fn neighborhood2(a: u32, r: f16) -> vec2f {
+  return vec2f(f32(f16(a) - r), f32(f16(a) + r));
+}
+
+fn main() {
+  var a = neighborhood(0, 1);
+  var b = neighborhood2(1, 5.25);
+}
+```
+
+You can limit the types that a function can accept by using [wrapping it in a shell](#function-shells).
+
+### Generics
+
+Since TypeScript types not taken into account when generating the shader code, there is no
+limitation on use of generic types.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+// ---cut---
+const double = <T extends d.v2f | d.v3f | d.v4f>(a: T): T => {
+  'use gpu';
+  return std.mul(a, a);
+};
+```
+
+### Standard library
+
+TypeGPU provides a set of standard functions under `typegpu/std`, which you can use in your own TypeGPU functions. Our goal is for all functions to have matching
+behavior on the CPU and GPU, which unlocks many possibilities (shader unit testing, shared business logic, and more...).
+
+```ts twoslash
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+function manhattanDistance(a: d.v3f, b: d.v3f) {
+  'use gpu';
+  const dx = std.abs(a.x - b.x);
+  const dy = std.abs(a.y - b.y);
+  const dz = std.abs(a.z - b.z);
+
+  return std.max(dx, std.max(dy, dz));
+}
+```
+
+You can explore the set of standard functions in the [API Reference](/TypeGPU/api/typegpu/std/functions/abs/).
+
+### The outer scope
+
+Things from the outer scope can be referenced inside TypeGPU functions, and they'll be automatically included in the
+generated shader code.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+// ---cut---
+const from = d.vec3f(1, 0, 0);
+const to = d.vec3f(0, 1, 0);
+const constantMix = 0.5;
+
+const getColor = (t: number) => {
+  'use gpu';
+  if (t > 0.5) {
+    // Above a certain threshold, mix the colors with a constant value
+    return std.mix(from, to, constantMix);
+  }
+  return std.mix(from, to, t);
+};
+```
+The above generates the following WGSL:
+```wgsl
+fn getColor(t: f32) -> vec3f {
+  if (t > 0.5) {
+    return vec3f(0.5, 0.5, 0);
+  }
+  return mix(vec3f(1, 0, 0), vec3f(0, 1, 0), t);
+}
+```
+
+Notice how `from` and `to` are inlined, and how `std.mix(from, to, constantMix)` was precomputed. TypeGPU leverages the
+fact that these values are known at shader compilation time, and can be optimized away. All other instructions are kept as is,
+since they use values known only during shader execution.
+
+:::tip
+To avoid inlining, use [tgpu.const](/TypeGPU/fundamentals/variables#const-variables).
+:::
+
+After seeing this, you might be tempted to use this mechanism for sharing data between the CPU and GPU, or for defining
+global variables used across functions, but values referenced by TypeGPU functions *are assumed to be constant*.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const settings = {
+  speed: 1,
+};
+
+const pipeline = root['~unstable'].createGuardedComputePipeline(() => {
+  'use gpu';
+  const speed = settings.speed;
+  // ^ generates: var speed = 1;
+
+  // ...
+});
+
+pipeline.dispatchThreads();
+
+// 🚫🚫🚫 This is NOT allowed 🚫🚫🚫
+settings.speed = 1.5;
+
+// the shader doesn't get recompiled with the new value
+// of `speed`, so it's still 1.
+pipeline.dispatchThreads();
+```
+
+There are explicit mechanisms that allow you to achieve this:
+- [Use buffers to efficiently share data between the CPU and GPU](/TypeGPU/fundamentals/buffers)
+- [Use variables to share state between functions](/TypeGPU/fundamentals/variables)
+
+### Supported JavaScript functionality
+
+You can generally assume that all JavaScript syntax is supported, and in the occasion that it is not, we'll throw a
+descriptive error either at build time or at runtime (when compiling the shader).
+
+:::note
+Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be supported in the context of shaders, **rather to allow for shaders to be written in JavaScript**. This distinction means we won't support every JavaScript feature, only those that make sense in the context of graphics programming.
+:::
+
+* **Calling other functions** --
+Only functions marked with `'use gpu'` can be called from within a shader. An exception to that rule is [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
+of shaders in a familiar way.
+
+* **Operators** --
+JavaScript does not support operator overloading.
+This means that, while you can still use operators for numbers,
+you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices, or use a fluent interface (*abc.mul(xyz), ...*)
+
+* **Math.\*** --
+Utility functions on the `Math` object can't automatically run on the GPU, but can usually be swapped with functions exported from `typegpu/std`.
+
+## Function shells
+
+In order to limit a function's signature to specific types, you can wrap it in a *shell*, an object holding only the input and output types.
 The shell constructor `tgpu.fn` relies on [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas), objects that represent WGSL data types and assist in generating shader code at runtime.
 It accepts two arguments:
 
 - An array of schemas representing argument types,
 - (Optionally) a schema representing the return type.
 
-Then the actual WGSL implementation is passed in to a shell invocation using the tagged template literal.
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+// ---cut---
+const neighborhoodShell = tgpu.fn([d.f32, d.f32], d.vec2f);
 
-The following code defines a function that accepts one argument of type `f32` and returns a `vec4f`.
+// Works the same as `neighborhood`, but more strictly typed
+const neighborhoodF32 = neighborhoodShell(neighborhood);
+```
+
+Although you can define the function and shell separately, the most common way to use shells is immediately wrapping functions with them:
 
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-
-const getGradientColor = tgpu.fn(
-  [d.f32], 
-  d.vec4f
-) /* wgsl */`(ratio: f32) -> vec4f {
-  var purple = vec4f(0.769, 0.392, 1.0, 1);
-  var blue = vec4f(0.114, 0.447, 0.941, 1);
-  return mix(purple, blue, ratio);
-}`;
+// ---cut---
+const neighborhood = tgpu.fn([d.f32, d.f32], d.vec2f)((a, r) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+});
 ```
 
-:::tip
-If you're using Visual Studio Code, you can use [this extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+## Implementing functions in WGSL
+
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
+
+Instead of passing JavaScript functions to shells, you can pass WGSL code directly:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const neighborhood = tgpu.fn([d.f32, d.f32], d.vec2f)`(a: f32, r: f32) -> vec2f {
+  return vec2f(a - r, a + r);
+}`;
+```
 
 Since type information is already present in the shell, the WGSL header can be simplified to include only the argument names.
 
@@ -53,48 +372,75 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // ---cut---
-const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
-  var purple = vec4f(0.769, 0.392, 1.0, 1);
-  var blue = vec4f(0.114, 0.447, 0.941, 1);
-  return mix(purple, blue, ratio);
+const neighborhood = tgpu.fn([d.f32, d.f32], d.vec2f)`(a, r) {
+  return vec2f(a - r, a + r);
 }`;
 ```
 
-## External resources
 
-Functions can use external resources passed via the `$uses` method.
-Externals can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer usages, textures, samplers, slots, accessors etc.).
+:::tip
+If you're using Visual Studio Code, you can use [this extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to code fragments marked with `/* wgsl */` comments.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const neighborhood = tgpu.fn([d.f32, d.f32], d.vec2f)/* wgsl */`(a, r) {
+  return vec2f(a - r, a + r);
+}`;
+```
+:::
+
+### Including external resources
+
+Shelled WGSL functions can use external resources passed via the `$uses` method.
+*Externals* can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer usages, textures, samplers, slots, accessors etc.).
 
 ```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // ---cut---
-const getBlueFunction = tgpu.fn([], d.vec4f)`() {
-  return vec4f(0.114, 0.447, 0.941, 1); 
+const getBlue = tgpu.fn([], d.vec4f)`() {
+  return vec4f(0.114, 0.447, 0.941, 1);
 }`;
 
-// calling a schema to create a value on the JS side
-const purple = d.vec4f(0.769, 0.392, 1.0, 1); 
+// Calling a schema to create a value on the JS side
+const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
 const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
-  return mix(purple, getBlue(), ratio);;
+  return mix(purple, get_blue(), ratio);
 }
-`.$uses({ purple, getBlue: getBlueFunction });
+`.$uses({ purple, get_blue: getBlue });
 ```
 
-You can check yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
+You can see for yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
 // results of calling tgpu.resolve({ externals: { getGradientColor } })
-fn getBlueFunction_1() -> vec4f{
-  return vec4f(0.114, 0.447, 0.941, 1); 
+
+fn getBlue_1() -> vec4f{
+  return vec4f(0.114, 0.447, 0.941, 1);
 }
 
-fn getGradientColor_0(ratio: f32) -> vec4f{
-  return mix(vec4f(0.769, 0.392, 1, 1), getBlueFunction_1(), ratio);;
+fn getGradientColor_0(ratio: f32) -> vec4f {
+  return mix(vec4f(0.769, 0.392, 1, 1), getBlue_1(), ratio);
 }
 ```
+
+Notice how `purple` was inlined in the final shader, and the reference to `get_blue` was replaced with
+the function's eventual name of `getBlue_1`.
+
+### When to use JavaScript / WGSL
+Writing shader code in JavaScript has a few significant advantages.
+It allows defining utilities once and using them both on the GPU and CPU,
+as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer experience.
+
+However, there are cases where WGSL might be more suitable.
+Since JavaScript doesn't support operator overloading, functions including complex matrix or vector operations can be more readable in WGSL.
+Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet.
+
+Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
 
 ## Entry functions
 
@@ -113,9 +459,9 @@ Instead of annotating a `TgpuFn` with attributes, entry functions are defined us
 To describe the input and output of an entry point function, we use `IORecord`s, JavaScript objects that map argument names to their types.
 
 ```ts
-const vertexInput = { 
+const vertexInput = {
   idx: d.builtin.vertexIndex,
-  position: d.vec4f, 
+  position: d.vec4f,
   color: d.vec4f
 }
 ```
@@ -124,7 +470,7 @@ As you may note, builtin inter-stage inputs and outputs are available on the `d.
 and require no further type clarification.
 
 Another thing to note is that there is no need to specify locations of the arguments,
-as TypeGPU tries to assign locations automatically. 
+as TypeGPU tries to assign locations automatically.
 If you wish to, you can assign the locations manually with the `d.location` decorator.
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
@@ -132,7 +478,7 @@ In WGSL implementation, input and output structs of the given function can be re
 Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.
 
 :::note
-Schemas used in `d.struct` can be wrapped in `d.size` and `d.align` decorators, 
+Schemas used in `d.struct` can be wrapped in `d.size` and `d.align` decorators,
 corresponding to `@size` and `@align` WGSL attributes.
 
 Since TypeGPU wraps `IORecord`s into automatically generated structs, you can also use those decorators in `IOStruct`s.

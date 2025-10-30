@@ -132,11 +132,6 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
-              label: 'TGSL',
-              slug: 'fundamentals/tgsl',
-              badge: { text: 'new' },
-            },
-            {
               label: 'Pipelines',
               slug: 'fundamentals/pipelines',
               badge: { text: 'new' },

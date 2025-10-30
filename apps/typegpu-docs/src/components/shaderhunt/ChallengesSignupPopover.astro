@@ -36,10 +36,22 @@
       return;
     }
 
+    // Check if URL hash indicates popover should be open
+    if (window.location.hash === '#challenges-signup') {
+      dialogElement?.showModal();
+    }
+
     linkElement.addEventListener('click', (e) => {
       e.preventDefault();
+      window.location.hash = '#challenges-signup';
       dialogElement?.showModal();
      });
+
+    dialogElement.addEventListener('close', () => {
+      if (window.location.hash === '#challenges-signup') {
+        window.location.hash = '';
+      }
+    });
 
     formElement.addEventListener('submit', async (e) => {
       e.preventDefault();
