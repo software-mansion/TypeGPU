@@ -75,6 +75,7 @@ const bezierTexture = slider.bezierTexture.createView();
 const bezierBbox = slider.bbox;
 
 const digitsProvider = new NumberProvider(root);
+await digitsProvider.fillAtlas();
 const digitsTextureView = digitsProvider.digitTextureAtlas.createView(
   d.texture2dArray(d.f32),
 );
