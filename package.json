@@ -22,7 +22,7 @@
     "changes": "tgpu-dev-cli changes"
   },
   "engines": {
-    "node": ">=12.20.0"
+    "node": ">=22.20.0"
   },
   "repository": {
     "type": "git",

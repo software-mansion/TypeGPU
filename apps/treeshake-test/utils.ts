@@ -1,22 +1,26 @@
 import { build as esbuild } from 'esbuild';
+import { build as tsdown } from 'tsdown';
 import webpack from 'webpack';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { promisify } from 'node:util';
-import { execFile } from 'node:child_process';
 
-const execFileAsync = promisify(execFile);
+export type ResultRecord = {
+  exampleUrl: URL;
+  exampleFilename: string;
+  bundler: string;
+  size: number;
+};
 
 export async function bundleWithEsbuild(
-  entryPath: string,
-  outDir: string,
-): Promise<string> {
-  const entryFileName = path.basename(entryPath, '.ts');
-  const outPath = path.join(outDir, `${entryFileName}.esbuild.js`);
+  entryUrl: URL,
+  outDir: URL,
+): Promise<URL> {
+  const entryFileName = path.basename(entryUrl.pathname, '.ts');
+  const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
   await esbuild({
-    entryPoints: [entryPath],
+    entryPoints: [entryUrl.pathname],
     bundle: true,
-    outfile: outPath,
+    outfile: outPath.pathname,
     format: 'esm',
     minify: true,
     treeShaking: true,
@@ -25,19 +29,19 @@ export async function bundleWithEsbuild(
 }
 
 export async function bundleWithWebpack(
-  entryPath: string,
-  outDir: string,
-): Promise<string> {
-  const entryFileName = path.basename(entryPath, '.ts');
-  const outPath = path.join(outDir, `${entryFileName}.webpack.js`);
+  entryPath: URL,
+  outDir: URL,
+): Promise<URL> {
+  const entryFileName = path.basename(entryPath.pathname, '.ts');
+  const outPath = new URL(`./${entryFileName}.webpack.js`, outDir);
 
   return new Promise((resolve, reject) => {
     webpack(
       {
-        entry: entryPath,
+        entry: entryPath.pathname,
         output: {
-          path: path.dirname(outPath),
-          filename: path.basename(outPath),
+          path: path.dirname(outPath.pathname),
+          filename: path.basename(outPath.pathname),
         },
         module: {
           rules: [
@@ -77,83 +81,55 @@ export async function bundleWithWebpack(
 }
 
 export async function bundleWithTsdown(
-  entryPath: string,
-  outDir: string,
-): Promise<string> {
-  const entryFileName = path.basename(entryPath, '.ts');
-  const outPath = path.join(outDir, `${entryFileName}.tsdown.js`);
+  entryUrl: URL,
+  outDir: URL,
+): Promise<URL> {
+  const entryFileName = path.basename(entryUrl.pathname, '.ts');
+  const outPath = new URL(`./${entryFileName}.tsdown.js`, outDir);
 
   try {
-    console.log('Running tsdown with options...');
-
-    const { stdout, stderr } = await execFileAsync('npx', [
-      'tsdown',
-      entryPath,
-      '--out-dir',
-      outDir,
-      '--config',
-      'tsdown.config.ts',
-    ], {
-      cwd: process.cwd(),
+    await tsdown({
+      minify: true,
+      platform: 'neutral',
+      clean: false,
+      entry: {
+        [`${entryFileName}.tsdown`]: entryUrl.pathname,
+      },
     });
 
-    console.log('tsdown stdout:', stdout);
-    if (stderr) console.log('tsdown stderr:', stderr);
-
-    const files = await fs.readdir(outDir);
-    const tsdownFile = files.find((file) =>
-      file.includes(entryFileName) && file.endsWith('.js')
-    );
-    if (tsdownFile && tsdownFile !== `${entryFileName}.tsdown.js`) {
-      const actualOutPath = path.join(outDir, tsdownFile);
-      await fs.rename(actualOutPath, outPath);
-      return outPath;
-    }
-    if (tsdownFile) {
-      return path.join(outDir, tsdownFile);
-    }
-
-    throw new Error('tsdown output file not found');
+    return outPath;
   } catch (error) {
-    throw new Error(`tsdown bundling failed: ${error}`);
+    throw new Error(`tsdown bundling failed`, { cause: error });
   }
 }
 
-export async function getFileSize(filePath: string): Promise<number> {
+export async function getFileSize(filePath: URL): Promise<number> {
   const stats = await fs.stat(filePath);
   return stats.size;
 }
 
-export async function generateMarkdownReport(
-  results: { example: string; bundler: string; size: number }[],
-) {
-  const grouped: Record<string, { bundler: string; size: number }[]> = {};
-  for (const r of results) {
-    const arr = grouped[r.example] ?? [];
-    arr.push({ bundler: r.bundler, size: r.size });
-    grouped[r.example] = arr;
-  }
+export async function generateMarkdownReport(results: ResultRecord[]) {
+  const exampleUrls = [...new Set(results.map((r) => r.exampleUrl))];
+  const grouped = Object.groupBy(results, (r) => r.exampleFilename);
+  const snippetsMap = Object.fromEntries(
+    await Promise.all(
+      exampleUrls.map(async (exampleUrl) => {
+        const exampleName = path.basename(exampleUrl.pathname);
+        return [exampleName, await fs.readFile(exampleUrl, 'utf8')] as const;
+      }),
+    ),
+  );
 
   let report = '# Bundler Efficiency Report\n\n';
 
-  for (const example of Object.keys(grouped)) {
-    const rows = grouped[example] ?? [];
+  for (const [exampleFilename, rows] of Object.entries(grouped)) {
     // Read snippet code
-    let snippet = '';
-    try {
-      const snippetPath = path.join(
-        'examples',
-        example + (example.endsWith('.ts') ? '' : '.ts'),
-      );
-      snippet = await fs.readFile(snippetPath, 'utf8');
-    } catch (e) {
-      snippet = '_Could not read example source._';
-    }
-    report += `## ${example}\n\n`;
+    const snippet = snippetsMap[exampleFilename] ?? '';
+    report += `## ${exampleFilename}\n\n`;
     report += `\`\`\`typescript\n${snippet.trim()}\n\`\`\`\n\n`;
     report += '| Bundler | Bundle Size (bytes) |\n';
     report += '|---------|---------------------|\n';
-    for (const row of rows) {
+    for (const row of rows ?? []) {
       report += `| \`${row.bundler}\` | ${row.size} |\n`;
     }
     report += '\n';
@@ -165,7 +141,7 @@ export async function generateMarkdownReport(
   report += '|--------------|-----------|---------------------|\n';
   for (const result of results) {
     report +=
-      `| \`${result.example}\` | \`${result.bundler}\` | ${result.size} |\n`;
+      `| \`${result.exampleFilename}\` | \`${result.bundler}\` | ${result.size} |\n`;
   }
 
   await fs.writeFile('results.md', report);
