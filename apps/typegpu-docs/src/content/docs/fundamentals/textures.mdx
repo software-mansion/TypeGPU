@@ -1,0 +1,371 @@
+---
+title: Textures
+description: A guide on how to use TypeGPU typed textures.
+---
+
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-textures.html" target="_blank" rel="noopener noreferrer">Textures</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-storage-textures.html" target="_blank" rel="noopener noreferrer">Storage Textures</a>
+:::
+
+In a similar fashion to buffers, textures provide a way to store and manage data on the GPU. They allow for both read and write access from WGSL shaders, and can also be sampled in the case of sampled textures. The main advantage of using textures over buffers is their optimized memory layout for spatial data, which can lead to better performance in certain scenarios as well as additional functionality such as filtering and mipmapping.
+
+TypeGPU textures serve as a wrapper that provides type safety and higher level utilities (such as automatic mipmap generation). They also allow - in a similar way to buffers - for fixed resource creation that can be used directly in shaders without the need for manual bind group management.
+
+Let's look at an example of creating and using a typed texture.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm' as const,
+}).$usage('sampled');
+
+const response = await fetch('path/to/image.png');
+const blob = await response.blob();
+const image = await createImageBitmap(blob);
+
+// Uploading image data to the texture (will be resampled if sizes differ)
+texture.write(image);
+
+// Creating a view to use in shader
+const sampledView = texture.createView();
+//    ^?
+```
+
+## Creating a texture
+
+Textures can be created using the `root['~unstable'].createTexture` method. It accepts a descriptor similar to vanilla `GPUTextureDescriptor`. If specified, the properties will be reflected in the created texture type - this will later help with static checks when creating views or binding the texture in a layout.
+
+```ts
+type TextureProps = {
+  size: readonly number[];
+  format: GPUTextureFormat;
+  viewFormats?: GPUTextureFormat[] | undefined;
+  dimension?: GPUTextureDimension | undefined;
+  mipLevelCount?: number | undefined;
+  sampleCount?: number | undefined;
+};
+```
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+//    ^?
+  size: [512, 512, 128],
+  format: 'rgba8unorm',
+  mipLevelCount: 4,
+  dimension: '3d',
+})
+```
+
+### Usage flags
+
+Similar to buffers, textures need usage flags to specify how they will be used. You can add usage flags using the `.$usage(...)` method.
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+})
+  .$usage('sampled') // Can be sampled in shaders
+  .$usage('storage') // Can be written or read to as storage texture
+  .$usage('render'); // Can be used as a render target
+```
+
+You can also add multiple flags at once:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'storage', 'render');
+```
+
+## Writing to a texture
+
+The `.write()` method provides multiple overloads for different data sources:
+
+```ts
+// Image sources (single or array)
+write(source: ExternalImageSource | ExternalImageSource[]): void
+
+// Raw binary data with optional mip level
+write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void
+```
+
+### Writing image data
+
+You can write various image sources to textures. `ExternalImageSource` includes:
+- `HTMLCanvasElement`
+- `HTMLImageElement`
+- `HTMLVideoElement`
+- `ImageBitmap`
+- `ImageData`
+- `OffscreenCanvas`
+- `VideoFrame`
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+// From an ImageBitmap
+const response = await fetch('path/to/image.png');
+const blob = await response.blob();
+const imageBitmap = await createImageBitmap(blob);
+texture.write(imageBitmap);
+
+// From an HTMLCanvasElement
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+// ... draw on canvas
+texture.write(canvas);
+```
+
+### Writing arrays of images
+
+For 3D textures or texture arrays, you can write multiple images:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+declare const imageBitmap1: ImageBitmap;
+declare const imageBitmap2: ImageBitmap;
+declare const imageBitmap3: ImageBitmap;
+// ---cut---
+const texture3d = root['~unstable'].createTexture({
+  size: [256, 256, 3],
+  format: 'rgba8unorm',
+  dimension: '3d',
+}).$usage('sampled');
+
+// Write array of images for each layer
+texture3d.write([imageBitmap1, imageBitmap2, imageBitmap3]);
+```
+
+### Writing raw binary data
+
+You can write raw binary data directly to textures using `ArrayBuffer`, typed arrays, or `DataView`:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [2, 2],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+// Using Uint8Array for RGBA data (4 pixels, 4 bytes each)
+const data = new Uint8Array([
+  255, 0, 0, 255,    // Red pixel
+  0, 255, 0, 255,    // Green pixel
+  0, 0, 255, 255,    // Blue pixel
+  255, 255, 0, 255,  // Yellow pixel
+]);
+texture.write(data);
+
+// Write to a specific mip level
+const mipData = new Uint8Array(4 * 128 * 128); // Data for 128x128
+texture.write(mipData, 1); // Write to mip level 1
+```
+
+:::tip
+If image dimensions don't match the texture size, the image will be automatically resampled to fit.
+:::
+
+You can also copy from another texture:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const sourceTexture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+const targetTexture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+targetTexture.copyFrom(sourceTexture);
+```
+
+### Mipmaps
+
+TypeGPU provides automatic mipmap generation for textures:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+declare const imageBitmap: ImageBitmap;
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+  mipLevelCount: 9, // log2(256) + 1
+}).$usage('sampled', 'render');
+
+texture.write(imageBitmap);
+texture.generateMipmaps(); // Generate all mip levels automatically
+```
+
+:::note
+The `generateMipmaps()` method requires both `'sampled'` and `'render'` usage flags, as TypeGPU runs a downsampling pipeline behind the scenes to generate the mip levels.
+:::
+
+## Texture views
+
+To create a view - which will also serve as fixed texture usage - you can use one of the available [texture schemas](/TypeGPU/fundamentals/data-schemas/#textures). You can pass it to the `.createView` method of the texture.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+const sampledView = texture.createView(d.texture2d(d.f32));
+// in this case the same as:
+// - texture.createView(d.texture2d()); (defaults to f32)
+// - texture.createView();              (defaults to texture2d<f32>)
+```
+
+:::tip
+If type information is available the view schema will be staticly checked against the texture properties.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}); // <-- missing .$usage('sampled')
+// @errors: 2769
+
+const sampledView = texture.createView(d.texture2d(d.f32));
+```
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [512, 512],
+  format: 'r32float',
+}).$usage('storage');
+// @errors: 2769
+
+const sampledView = texture.createView(d.textureStorage2d('rgba8unorm')); // <-- wrong format
+```
+:::
+
+## Samplers
+
+To sample textures in shaders, you'll often need a sampler that defines how the texture should be filtered and addressed. The `createSampler` method accepts the same descriptor as the vanilla WebGPU `GPUSamplerDescriptor`:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+  mipmapFilter: 'linear',
+  addressModeU: 'repeat',
+  addressModeV: 'repeat',
+});
+```
+
+The returned sampler object can be used like a fixed resource directly in shaders, or bound in a bind group for manual binding.
+
+## Binding textures
+
+Textures can be used in shaders through bind groups or as fixed resources, similar to buffers.
+
+### Manual binding
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const bindGroupLayout = tgpu.bindGroupLayout({
+  myTexture: { texture: d.texture2d() },
+  mySampler: { sampler: 'filtering' },
+});
+
+const bindGroup = root.createBindGroup(bindGroupLayout, {
+  myTexture: texture,
+  // views can also be used - as long as the schema matches
+  // myTexture: texture.createView(),
+  mySampler: sampler,
+});
+```
+
+### Using fixed resources
+
+For textures that remain consistent across operations, you can create fixed texture views:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+// Create a fixed sampled view
+const sampledView = texture.createView();
+
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const myShader = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  // Use the fixed texture view directly
+  return std.textureSample(sampledView.$, sampler.$, uv);
+});
+```
