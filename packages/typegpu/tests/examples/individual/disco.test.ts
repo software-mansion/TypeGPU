@@ -69,12 +69,12 @@ describe('disco example', () => {
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_9) -> @location(0) vec4f {
       {
           var aspectUv = aspectCorrected_4(_arg_0.uv);
-          var originalUv = aspectUv;
+          let originalUv = (&aspectUv);
           var accumulatedColor = vec3f();
           for (var iteration = 0; (iteration < 5); iteration++) {
             aspectUv = (fract((aspectUv * (1.3 * sin(time_6)))) - 0.5);
-            var radialLength = (length(aspectUv) * exp((-length(originalUv) * 2)));
-            var paletteColor = palette_7((length(originalUv) + (time_6 * 0.9)));
+            var radialLength = (length(aspectUv) * exp((-length((*originalUv)) * 2)));
+            var paletteColor = palette_7((length((*originalUv)) + (time_6 * 0.9)));
             radialLength = (sin(((radialLength * 8) + time_6)) / 8f);
             radialLength = abs(radialLength);
             radialLength = smoothstep(0, 0.1, radialLength);
