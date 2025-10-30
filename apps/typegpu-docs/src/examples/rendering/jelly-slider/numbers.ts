@@ -44,7 +44,7 @@ export class NumberProvider {
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'white';
 
-    const percentageImages = [];
+    const percentageImages: ImageBitmap[] = [];
 
     for (let i = 0; i <= 100; i++) {
       ctx.clearRect(0, 0, PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT);
@@ -58,9 +58,8 @@ export class NumberProvider {
       ctx.font = percentageFont;
       ctx.fillText(`%`, x, y + 10);
 
-      percentageImages.push(
-        ctx.getImageData(0, 0, PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT),
-      );
+      const bitmap = await createImageBitmap(canvas);
+      percentageImages.push(bitmap);
     }
 
     this.digitTextureAtlas.write(percentageImages);
