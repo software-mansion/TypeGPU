@@ -275,7 +275,10 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData);
+        return snip(
+          new ConsoleLog(property),
+          UnknownData,
+        );
       }
 
       if (
@@ -515,7 +518,7 @@ ${this.ctx.pre}}`;
         }
 
         if (callee.value instanceof ConsoleLog) {
-          return this.ctx.generateLog(convertedArguments);
+          return this.ctx.generateLog(callee.value.op, convertedArguments);
         }
 
         // Assuming that `callee` is callable

@@ -605,6 +605,38 @@ describe('wgslGenerator with console.log', () => {
       - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
+
+  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.trace();
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+        /* console.log() */;
+      }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported log method 'trace' was used in TGSL.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('deserializeAndStringify', () => {
@@ -613,7 +645,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = ['String literal'];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"String literal"`,
+      `
+      [
+        "String literal",
+      ]
+    `,
     );
   });
 
@@ -622,7 +658,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.u32];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"123"`,
+      `
+      [
+        "123",
+      ]
+    `,
     );
   });
 
@@ -631,7 +671,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+      ]
+    `,
     );
   });
 
@@ -640,7 +684,12 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u, d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3) vec3u(4, 5, 6)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+        "vec3u(4, 5, 6)",
+      ]
+    `,
     );
   });
 
@@ -654,7 +703,14 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"GID: vec3u(1, 2, 3) Result: 456"`,
+      `
+      [
+        "GID:",
+        "vec3u(1, 2, 3)",
+        "Result:",
+        "456",
+      ]
+    `,
     );
   });
 
@@ -663,7 +719,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.u32, 4)];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"[1, 2, 3, 4]"`,
+      `
+      [
+        "[1, 2, 3, 4]",
+      ]
+    `,
     );
   });
 
@@ -674,7 +734,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"[[1, 2], [3, 4]]"`,
+      `
+      [
+        "[[1, 2], [3, 4]]",
+      ]
+    `,
     );
   });
 
@@ -685,7 +749,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"{ vec: vec3u(1, 2, 3), num: 4 }"`,
+      `
+      [
+        "{ vec: vec3u(1, 2, 3), num: 4 }",
+      ]
+    `,
     );
   });
 
@@ -699,7 +767,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }"`,
+      `
+      [
+        "{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }",
+      ]
+    `,
     );
   });
 });
