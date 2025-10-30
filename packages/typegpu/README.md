@@ -8,7 +8,8 @@
 
 </div>
 
-**TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type inference and the ability to write shaders in TypeScript.
+**TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type
+inference and the ability to write shaders in TypeScript.
 
 ```ts
 const neighborhood = (a: number, r: number) => {
