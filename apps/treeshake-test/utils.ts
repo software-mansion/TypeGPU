@@ -109,12 +109,13 @@ export async function getFileSize(filePath: URL): Promise<number> {
 }
 
 export async function generateMarkdownReport(results: ResultRecord[]) {
-  const exampleUrls = [...new Set(results.map((r) => r.exampleUrl))];
   const grouped = Object.groupBy(results, (r) => r.exampleFilename);
+  const exampleNames = Object.keys(grouped);
   const snippetsMap = Object.fromEntries(
     await Promise.all(
-      exampleUrls.map(async (exampleUrl) => {
-        const exampleName = path.basename(exampleUrl.pathname);
+      exampleNames.map(async (exampleName) => {
+        const row = grouped[exampleName]![0]!;
+        const exampleUrl = row.exampleUrl;
         return [exampleName, await fs.readFile(exampleUrl, 'utf8')] as const;
       }),
     ),
