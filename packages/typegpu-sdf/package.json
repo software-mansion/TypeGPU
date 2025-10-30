@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/sdf",
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A set of Signed Distance Field functions for use in WebGPU/TypeGPU apps.",
   "exports": {
     ".": "./src/index.ts",
