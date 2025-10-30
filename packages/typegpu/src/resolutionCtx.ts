@@ -411,8 +411,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.pop('blockScope');
   }
 
-  generateLog(args: Snippet[]): Snippet {
-    return this.#logGenerator.generateLog(this, args);
+  generateLog(op: string, args: Snippet[]): Snippet {
+    return this.#logGenerator.generateLog(this, op, args);
   }
 
   get logResources(): LogResources | undefined {
