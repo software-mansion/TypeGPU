@@ -17,47 +17,56 @@ describe('vaporrave example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> memoryBuffer_1: array<vec3f, 343>;
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      var<private> seed_5: vec2f;
+      @group(0) @binding(1) var<storage, read_write> memoryBuffer_3: array<vec3f, 343>;
 
-      fn seed3_4(value: vec3f) {
-        seed_5 = (value.xy + vec2f(value.z));
+      var<private> seed_7: vec2f;
+
+      fn seed3_6(value: vec3f) {
+        seed_7 = (value.xy + vec2f(value.z));
       }
 
-      fn randSeed3_3(seed: vec3f) {
-        seed3_4(seed);
+      fn randSeed3_5(seed: vec3f) {
+        seed3_6(seed);
       }
 
-      fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
-        return seed_5.y;
+      fn item_9() -> f32 {
+        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
+        seed_7.x = fract((cos(a) * 136.8168));
+        seed_7.y = fract((cos(b) * 534.7645));
+        return seed_7.y;
       }
 
-      fn randOnUnitSphere_6() -> vec3f {
-        var z = ((2 * item_7()) - 1);
+      fn randOnUnitSphere_8() -> vec3f {
+        var z = ((2 * item_9()) - 1);
         var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_7());
+        var theta = (6.283185307179586 * item_9());
         var x = (cos(theta) * oneMinusZSq);
         var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      fn computeJunctionGradient_2(pos: vec3i) -> vec3f {
-        randSeed3_3((1e-3 * vec3f(pos)));
-        return randOnUnitSphere_6();
+      fn computeJunctionGradient_4(pos: vec3i) -> vec3f {
+        randSeed3_5((1e-3 * vec3f(pos)));
+        return randOnUnitSphere_8();
       }
 
-      struct mainCompute_Input_8 {
-        @builtin(global_invocation_id) gid: vec3u,
+      fn wrappedCallback_2(x: u32, y: u32, z: u32) {
+        var idx = ((x + (y * 7)) + ((z * 7) * 7));
+        memoryBuffer_3[idx] = computeJunctionGradient_4(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(input: mainCompute_Input_8) {
-        var idx = ((input.gid.x + (input.gid.y * 7)) + ((input.gid.z * 7) * 7));
-        memoryBuffer_1[idx] = computeJunctionGradient_2(vec3i(input.gid.xyz));
+      struct mainCompute_Input_10 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_10)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
       }
 
       struct vertexMain_Output_1 {
