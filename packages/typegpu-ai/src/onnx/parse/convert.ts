@@ -62,3 +62,19 @@ export function elementSize(dt: TensorDataType): number | null {
 export function dataTypeName(dt: TensorDataType): string {
   return TensorDataType[dt] ?? 'UNKNOWN';
 }
+
+
+
+
+export function bitsToFloat32(bits: number): number {
+  const float32Scratch = new ArrayBuffer(4);
+  const float32View = new DataView(float32Scratch);
+  float32View.setUint32(0, bits, true);
+  return float32View.getFloat32(0, true);
+}
+
+export function normalizeInt64(value: bigint): number | bigint {
+  const asNumber = Number(value);
+  return BigInt(asNumber) === value ? asNumber : value;
+}
+
