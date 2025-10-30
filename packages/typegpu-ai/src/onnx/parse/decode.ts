@@ -3,12 +3,13 @@ import {
   type DecodedModel,
   type Graph,
   type Node,
+  type NodeAttribute,
   type OnnxLoadOptions,
   type OnnxModel,
   type Tensor,
   TensorDataType,
   type ValueInfo,
-  type WireType,
+  WireType,
 } from '../types.ts';
 import { bfloat16ToFloat32, elementSize, float16ToFloat32 } from './convert.ts';
 import { readDoubleFromFixed64, readFloatFromVarint } from './io.ts';
@@ -132,7 +133,7 @@ function decodeGraph(
 
 function decodeNode(
   bytes: Uint8Array,
-  _options: Required<OnnxLoadOptions>,
+  options: Required<OnnxLoadOptions>,
 ): Node {
   const r = new ProtobuffReader(bytes);
   const node: Node = {
@@ -158,13 +159,13 @@ function decodeNode(
         node.opType = r.string();
         break;
       case 5:
-        node.domain = r.string();
+        node.attributes.push(decodeAttribute(r.bytes(), options));
         break;
       case 6:
-        node.attributes.push(decodeAttribute(r.bytes()));
+        node.doc = r.string();
         break;
       case 7:
-        node.doc = r.string();
+        node.domain = r.string();
         break;
       default:
         r.skip(tag.wireType as WireType);
@@ -173,45 +174,221 @@ function decodeNode(
   return node;
 }
 
-function decodeAttribute(bytes: Uint8Array): any { // simplified; full coverage omitted
+const ATTRIBUTE_TYPE_NAMES: Record<number, string> = {
+  0: 'UNDEFINED',
+  1: 'FLOAT',
+  2: 'INT',
+  3: 'STRING',
+  4: 'TENSOR',
+  5: 'GRAPH',
+  6: 'FLOATS',
+  7: 'INTS',
+  8: 'STRINGS',
+  9: 'TENSORS',
+  10: 'GRAPHS',
+  11: 'SPARSE_TENSOR',
+  12: 'SPARSE_TENSORS',
+  13: 'TYPE_PROTO',
+  14: 'TYPE_PROTOS',
+};
+
+const float32Scratch = new ArrayBuffer(4);
+const float32View = new DataView(float32Scratch);
+
+function bitsToFloat32(bits: number): number {
+  float32View.setUint32(0, bits, true);
+  return float32View.getFloat32(0, true);
+}
+
+function normalizeInt64(value: bigint): number | bigint {
+  const asNumber = Number(value);
+  return BigInt(asNumber) === value ? asNumber : value;
+}
+
+function readFloat32Values(
+  r: ProtobuffReader,
+  wireType: WireType,
+): number[] {
+  if (wireType === WireType.LengthDelimited) {
+    const data = r.bytes();
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const result: number[] = [];
+    for (let offset = 0; offset + 4 <= data.byteLength; offset += 4) {
+      result.push(dv.getFloat32(offset, true));
+    }
+    return result;
+  }
+  if (wireType === WireType.Bit32) {
+    return [bitsToFloat32(r.fixed32())];
+  }
+  return [];
+}
+
+function readInt64Values(
+  r: ProtobuffReader,
+  wireType: WireType,
+): (number | bigint)[] {
+  if (wireType === WireType.LengthDelimited) {
+    const data = r.bytes();
+    const rr = new ProtobuffReader(data);
+    const values: (number | bigint)[] = [];
+    while (!rr.eof()) {
+      values.push(normalizeInt64(rr.varintBig()));
+    }
+    return values;
+  }
+  if (wireType === WireType.Varint) {
+    return [normalizeInt64(r.varintBig())];
+  }
+  return [];
+}
+
+function decodeAttribute(
+  bytes: Uint8Array,
+  options: Required<OnnxLoadOptions>,
+): NodeAttribute {
   const r = new ProtobuffReader(bytes);
-  let name = '';
-  let type = '';
-  let value: unknown = undefined;
-  console.log('Decoding attribute...', bytes, r);
+  const attr: NodeAttribute = {
+    name: '',
+    type: 'UNDEFINED',
+    value: undefined,
+  };
+
+  let doc: string | undefined;
+  let refAttrName: string | undefined;
+  let typeId: number | undefined;
+
+  let floatScalar: number | undefined;
+  let intScalar: number | bigint | undefined;
+  let stringScalar: string | undefined;
+  let tensorScalar: Tensor | undefined;
+  let graphScalar: Graph | undefined;
+  let sparseTensorScalar: Uint8Array | undefined;
+  let typeProtoScalar: Uint8Array | undefined;
+
+  const floatList: number[] = [];
+  const intList: (number | bigint)[] = [];
+  const stringList: string[] = [];
+  const tensorList: Tensor[] = [];
+  const graphList: Graph[] = [];
+  const sparseTensorList: Uint8Array[] = [];
+  const typeProtoList: Uint8Array[] = [];
+
   while (!r.eof()) {
     const tag = r.tag();
     if (!tag) break;
     switch (tag.fieldNumber) {
       case 1:
-        name = r.string();
-        break; // name
+        attr.name = r.string();
+        break;
       case 2:
-        type = r.string();
-        break; // ref_attr_name (rare)
+        floatScalar = bitsToFloat32(r.fixed32());
+        break;
       case 3:
-        value = r.varint();
-        break; // t (TensorProto) not handled
+        intScalar = normalizeInt64(r.varintBig());
+        break;
       case 4:
-        value = r.varint();
-        break; // graph (GraphProto) unsupported
+        stringScalar = r.string();
+        break;
       case 5:
-        value = r.varint();
-        break; // floats? (float) -> actually f (float, wire type 5) but simplified
+        tensorScalar = decodeTensor(r.bytes(), options);
+        break;
       case 6:
-        value = r.varint();
-        break; // ints? simplified
+        graphScalar = decodeGraph(r.bytes(), options, new Map());
+        break;
       case 7:
-        value = r.string();
-        break; // string
+        floatList.push(...readFloat32Values(r, tag.wireType as WireType));
+        break;
       case 8:
-        value = r.varint();
-        break; // tensors? (TensorProto)
+        intList.push(...readInt64Values(r, tag.wireType as WireType));
+        break;
+      case 9:
+        stringList.push(r.string());
+        break;
+      case 10:
+        tensorList.push(decodeTensor(r.bytes(), options));
+        break;
+      case 11:
+        graphList.push(decodeGraph(r.bytes(), options, new Map()));
+        break;
+      case 13:
+        doc = r.string();
+        break;
+      case 14:
+        typeProtoScalar = r.bytes();
+        break;
+      case 15:
+        typeProtoList.push(r.bytes());
+        break;
+      case 20:
+        typeId = r.varint();
+        break;
+      case 21:
+        refAttrName = r.string();
+        break;
+      case 22:
+        sparseTensorScalar = r.bytes();
+        break;
+      case 23:
+        sparseTensorList.push(r.bytes());
+        break;
       default:
         r.skip(tag.wireType as WireType);
     }
   }
-  return { name, type, value };
+
+  if (typeId !== undefined) {
+    attr.type = ATTRIBUTE_TYPE_NAMES[typeId] ?? attr.type;
+  }
+
+  if (floatList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'FLOATS' : attr.type;
+    attr.value = floatList;
+  } else if (intList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'INTS' : attr.type;
+    attr.value = intList;
+  } else if (stringList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'STRINGS' : attr.type;
+    attr.value = stringList;
+  } else if (tensorList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'TENSORS' : attr.type;
+    attr.value = tensorList;
+  } else if (graphList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'GRAPHS' : attr.type;
+    attr.value = graphList;
+  } else if (sparseTensorList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'SPARSE_TENSORS' : attr.type;
+    attr.value = sparseTensorList;
+  } else if (typeProtoList.length) {
+    attr.type = attr.type === 'UNDEFINED' ? 'TYPE_PROTOS' : attr.type;
+    attr.value = typeProtoList;
+  } else if (floatScalar !== undefined) {
+    attr.type = attr.type === 'UNDEFINED' ? 'FLOAT' : attr.type;
+    attr.value = floatScalar;
+  } else if (intScalar !== undefined) {
+    attr.type = attr.type === 'UNDEFINED' ? 'INT' : attr.type;
+    attr.value = intScalar;
+  } else if (stringScalar !== undefined) {
+    attr.type = attr.type === 'UNDEFINED' ? 'STRING' : attr.type;
+    attr.value = stringScalar;
+  } else if (tensorScalar) {
+    attr.type = attr.type === 'UNDEFINED' ? 'TENSOR' : attr.type;
+    attr.value = tensorScalar;
+  } else if (graphScalar) {
+    attr.type = attr.type === 'UNDEFINED' ? 'GRAPH' : attr.type;
+    attr.value = graphScalar;
+  } else if (sparseTensorScalar) {
+    attr.type = attr.type === 'UNDEFINED' ? 'SPARSE_TENSOR' : attr.type;
+    attr.value = sparseTensorScalar;
+  } else if (typeProtoScalar) {
+    attr.type = attr.type === 'UNDEFINED' ? 'TYPE_PROTO' : attr.type;
+    attr.value = typeProtoScalar;
+  }
+
+  if (doc) attr.doc = doc;
+  if (refAttrName) attr.refAttrName = refAttrName;
+
+  return attr;
 }
 
 function decodeValueInfo(

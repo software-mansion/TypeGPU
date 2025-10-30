@@ -60,9 +60,10 @@ export interface ValueInfo {
 
 export interface NodeAttribute {
   name: string;
-  type: string; // simplified
-  // value kept raw (number | string | Tensor | number[] ... ) depending on attr type
+  type: string; // simplified - value kept raw
   value: unknown;
+  doc?: string;
+  refAttrName?: string;
 }
 
 export interface Node {

@@ -1,9 +1,9 @@
 // Complete ONNX loader (no external onnx/protobuf libs) that parses the
 // model protobuf and exposes graph, nodes and tensor buffers.
 
-import { dataTypeName } from './decode/convert.ts';
-import { decodeModel } from './decode/decode.ts';
-import { fetchOrRead } from './decode/io.ts';
+import { dataTypeName } from './parse/convert.ts';
+import { decodeModel } from './parse/decode.ts';
+import { fetchOrRead } from './parse/io.ts';
 import {
   defaultLoadOptions,
   type Node,
