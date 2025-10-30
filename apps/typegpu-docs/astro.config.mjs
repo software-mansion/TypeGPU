@@ -141,6 +141,11 @@ export default defineConfig({
               slug: 'fundamentals/buffers',
             },
             {
+              label: 'Textures',
+              slug: 'fundamentals/textures',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Variables',
               slug: 'fundamentals/variables',
               badge: { text: 'new' },
