@@ -102,7 +102,7 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
   pipeline: TgpuComputePipeline;
 
   /**
-   * The buffer used to automatically pass the threads count to the underlying pipeline during `dispatchThreads`.
+   * The buffer used to automatically pass the thread count to the underlying pipeline during `dispatchThreads`.
    * In case of guarded pipelines that dispatch in less than 3 dimensions,
    * the remaining values should be filled with 1.
    */
