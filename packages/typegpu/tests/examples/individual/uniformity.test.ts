@@ -20,18 +20,20 @@ describe('uniformity test example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangleVertexShader_Output_1 {
+      "struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangleVertexShader_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex fn fullScreenTriangleVertexShader_0(input: fullScreenTriangleVertexShader_Input_2) -> fullScreenTriangleVertexShader_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangleVertexShader_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> canvasRatioUniform_4: f32;
@@ -71,18 +73,20 @@ describe('uniformity test example', () => {
         return vec4f(vec3f(randFloat01_9()), 1);
       }
 
-      struct fullScreenTriangleVertexShader_Output_1 {
+      struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangleVertexShader_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex fn fullScreenTriangleVertexShader_0(input: fullScreenTriangleVertexShader_Input_2) -> fullScreenTriangleVertexShader_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangleVertexShader_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> canvasRatioUniform_4: f32;
