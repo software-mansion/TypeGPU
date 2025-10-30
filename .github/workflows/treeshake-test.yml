@@ -7,8 +7,16 @@ jobs:
   treeshake-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          path: pr-branch
+
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          path: target-branch
+          ref: ${{ github.base_ref }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -20,15 +28,61 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
+          cache-dependency-path: |
+            pr-branch/pnpm-lock.yaml
+            target-branch/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
         run: pnpm install
 
-      - name: Run tree-shake test
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install
+
+      - name: Run tree-shake test on PR branch
+        working-directory: pr-branch
         run: pnpm --filter treeshake-test test
 
-      - name: Upload results table as artifact
+      - name: Run tree-shake test on target branch
+        working-directory: target-branch
+        run: pnpm --filter treeshake-test test
+
+      - name: Compare results
+        run: |
+          node pr-branch/apps/treeshake-test/compare-results.mjs \
+            pr-branch/apps/treeshake-test/results.json \
+            target-branch/apps/treeshake-test/results.json \
+            > comparison.md
+
+      - name: Upload PR results
         uses: actions/upload-artifact@v4
         with:
-          name: treeshake-table
-          path: ./apps/treeshake-test/results.md
+          name: pr-results
+          path: pr-branch/apps/treeshake-test/results.json
+
+      - name: Upload target results
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-results
+          path: target-branch/apps/treeshake-test/results.json
+
+      - name: Upload comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: comparison
+          path: comparison.md
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comparison = fs.readFileSync('comparison.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## 📊 Bundle Size Comparison\n\n' + comparison
+            });

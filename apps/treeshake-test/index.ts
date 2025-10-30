@@ -3,7 +3,6 @@ import {
   bundleWithEsbuild,
   bundleWithTsdown,
   bundleWithWebpack,
-  generateMarkdownReport,
   getFileSize,
   type ResultRecord,
 } from './utils.ts';
@@ -51,13 +50,17 @@ async function main() {
     process.exit(1);
   }
 
-  await generateMarkdownReport(
-    (results as PromiseFulfilledResult<ResultRecord>[]).map((result) =>
-      result.value
-    ),
+  const successfulResults = (
+    results as PromiseFulfilledResult<ResultRecord>[]
+  ).map((result) => result.value);
+
+  // Save results as JSON
+  await fs.writeFile(
+    'results.json',
+    JSON.stringify(successfulResults, null, 2),
   );
 
-  console.log('\nMeasurement complete. Results saved to results.md');
+  console.log('\nMeasurement complete. Results saved to results.json');
 }
 
 await main();
