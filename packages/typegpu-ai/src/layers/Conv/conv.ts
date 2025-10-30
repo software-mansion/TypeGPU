@@ -1,0 +1,123 @@
+import {
+  type StorageFlag,
+  type TgpuBuffer,
+  type TgpuRoot,
+  TgpuBindGroup,
+} from 'typegpu';
+import * as d from 'typegpu/data';
+import { NNLayer } from '../gpuLayer';
+import { PipelineCache } from '../../pipelineCache.ts';
+import { conv2dCompute } from './compute.ts';
+import { convWeightsLayout, ioLayout, workgroupSize } from '../../schemas.ts';
+import type { Layer } from '../../pipelineCache.ts';
+import { relu } from '../activations/activationFunctions.ts';
+
+export interface ConvDimensions {
+  inputChannels: number;
+  inputHeight: number;
+  inputWidth: number;
+  kernelHeight: number;
+  kernelWidth: number;
+  strideH: number;
+  strideW: number;
+  padH: number;
+  padW: number;
+  outputChannels: number;
+  outputHeight: number;
+  outputWidth: number;
+}
+
+
+export class LConv implements NNLayer {
+  public readonly inSize: number;
+  public readonly outSize: number;
+  public readonly activation: string | undefined;
+
+  private readonly paramsBindGroup: TgpuBindGroup;
+
+  constructor(
+    private readonly root: TgpuRoot,
+    private readonly pipelineCache: PipelineCache,
+    kernelWeights: Float32Array,
+    biasVector: Float32Array,
+    dims: ConvDimensions,
+    activation?: string,
+  ) {
+    console.log('japierdole');
+    this.activation = activation ?? 'identity';
+
+    const expectedWeights = dims.outputChannels * dims.inputChannels *
+      dims.kernelHeight * dims.kernelWidth;
+    if (kernelWeights.length !== expectedWeights) {
+      throw new Error(
+        `Convolution weights mismatch: expected ${expectedWeights}, got ${kernelWeights.length}`,
+      );
+    }
+    if (biasVector.length !== dims.outputChannels) {
+      throw new Error(
+        `Convolution biases mismatch: expected ${dims.outputChannels}, got ${biasVector.length}`,
+      );
+    }
+
+    this.inSize = dims.inputChannels * dims.inputHeight * dims.inputWidth;
+    this.outSize = dims.outputChannels * dims.outputHeight * dims.outputWidth;
+
+    const kernelWeightsBuffer = this.root.createBuffer(
+      d.arrayOf(d.f32, kernelWeights.length),
+      Array.from(kernelWeights),
+    ).$usage('storage');
+
+    const biasesBuffer = this.root.createBuffer(
+      d.arrayOf(d.f32, biasVector.length),
+      Array.from(biasVector),
+    ).$usage('storage');
+
+    const dimsArray = [
+      dims.inputChannels,
+      dims.outputChannels,
+      dims.inputHeight,
+      dims.inputWidth,
+      dims.kernelHeight,
+      dims.kernelWidth,
+      dims.strideH,
+      dims.strideW,
+      dims.padH,
+      dims.padW,
+      dims.outputHeight,
+      dims.outputWidth,
+    ];
+    console.log('Conv dims array:', dimsArray);
+
+    const dimsBuffer = this.root.createBuffer(
+      d.arrayOf(d.u32, dimsArray.length),
+      dimsArray,
+    ).$usage('storage');
+
+    this.paramsBindGroup = this.root.createBindGroup(convWeightsLayout, {
+      weights: kernelWeightsBuffer,
+      biases: biasesBuffer,
+      dims: dimsBuffer,
+    });
+  }
+
+  async run(
+    input: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+    output: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  ): Promise<void> {
+    const ioBindGroup = this.root.createBindGroup(ioLayout, {
+      input,
+      output,
+      inLength: this.root.createBuffer(d.u32, this.inSize).$usage('uniform'),
+      outLength: this.root.createBuffer(d.u32, this.outSize).$usage('uniform'),
+    });
+
+    const pipeline = this.pipelineCache.get({ kind: 'Conv', compute: conv2dCompute }, { kind: 'relu', fn: relu });
+
+    pipeline
+      .with(ioLayout, ioBindGroup)
+      .with(convWeightsLayout, this.paramsBindGroup)
+      .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
+
+    await this.root.device.queue.onSubmittedWorkDone();
+  }
+}

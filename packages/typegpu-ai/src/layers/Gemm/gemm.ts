@@ -25,7 +25,7 @@ export class LGemm implements NNLayer {
   public readonly inSize: number;
   public readonly outSize: number;
   public readonly activation: string | undefined;
-  private readonly WeightsBiasesBindGroup: TgpuBindGroup;
+  private readonly paramsBindGroup: TgpuBindGroup;
 
   constructor(
     private readonly root: TgpuRoot,
@@ -57,7 +57,7 @@ export class LGemm implements NNLayer {
     this.outSize = biasesData.length;
 
 
-    this.WeightsBiasesBindGroup = root.createBindGroup(weightsBiasesLayout, {
+    this.paramsBindGroup = root.createBindGroup(weightsBiasesLayout, {
       weights: root.createBuffer(
         d.arrayOf(d.f32, weightsData.length),
         Array.from(weightsData),
@@ -86,7 +86,7 @@ export class LGemm implements NNLayer {
     );
     pipeline
       .with(ioLayout, ioBindGroup)
-      .with(weightsBiasesLayout, this.WeightsBiasesBindGroup)
+      .with(weightsBiasesLayout, this.paramsBindGroup)
       .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
     await this.root.device.queue.onSubmittedWorkDone();

@@ -9,8 +9,8 @@ const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
 });
 
-const MODEL_PATH = '/TypeGPU/assets/ai/kmnist2137.onnx';
-// const MODEL_PATH = '/TypeGPU/assets/ai/mnist_cnn.onnx';
+// const MODEL_PATH = '/TypeGPU/assets/ai/kmnist2137.onnx';
+const MODEL_PATH = '/TypeGPU/assets/ai/mnist_cnn.onnx';
 const root = await tgpu.init();
 
 let network: NetworkRunner | undefined;

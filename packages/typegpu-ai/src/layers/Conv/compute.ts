@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { activationFunctionSlot, convWeightsLayout, ioLayout, calculateIndex, workgroupSize } from '../schemas.ts';
+import { activationFunctionSlot, convWeightsLayout, ioLayout, calculateIndex, workgroupSize } from '../../schemas.ts';
 
 // Convolution compute kernel.
 // Assumes N=1 (batch size 1), standard 2D convolution without dilation.
@@ -19,9 +19,7 @@ export const conv2dCompute = tgpu['~unstable'].computeFn({
   },
 })(({ gid, nwg }) => {
   const linearIndex = calculateIndex(gid, nwg);
-  const outLen = ioLayout.$.outLength; // total output elements
-  if (linearIndex >= outLen) return;
-
+  if (linearIndex >= ioLayout.$.outLength) return;
   const inC = convWeightsLayout.$.dims[d.u32(0)] as number;
   const outC = convWeightsLayout.$.dims[d.u32(1)] as number;
   const inH = convWeightsLayout.$.dims[d.u32(2)] as number;
@@ -42,7 +40,7 @@ export const conv2dCompute = tgpu['~unstable'].computeFn({
   const oc = (tmp - oh) / outH;
 
   let sum = d.f32(0);
-  // Iterate over input channels and kernel window
+
   for (let ic = d.u32(0); ic < inC; ic = ic + d.u32(1)) {
     for (let kh = d.u32(0); kh < kH; kh = kh + d.u32(1)) {
       for (let kw = d.u32(0); kw < kW; kw = kw + d.u32(1)) {

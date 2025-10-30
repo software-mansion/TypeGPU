@@ -5,6 +5,7 @@ import { PipelineCache } from './pipelineCache.ts';
 import { type NetworkRunner } from './schemas.ts';
 import { LGemm } from './layers/Gemm/gemm.ts';
 import { NNLayer } from './layers/gpuLayer.ts';
+import { LConv } from './layers/Conv/conv.ts';
 
 export class Inference {
   private layers: NNLayer[] = [];
@@ -13,7 +14,7 @@ export class Inference {
     private readonly root: TgpuRoot,
     public readonly model: OnnxModel,
     private readonly pipelineCache = new PipelineCache(root),
-  ) {}
+  ) { }
 
   createNetwork(): NetworkRunner {
     let maxBufferSize = 0;
@@ -33,7 +34,39 @@ export class Inference {
           break;
         }
         case 'Conv':
-          continue;
+          {
+            console.log('Processing Conv node:', node);
+            const layer = new LConv(
+              this.root,
+              this.pipelineCache,
+              this.model.tensorMap.get(node.inputs[1]!)!.data as Float32Array,
+              this.model.tensorMap.get(node.inputs[2]!)!.data as Float32Array,
+
+              {
+                inputChannels: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[1]),
+                inputHeight: Number(this.model.tensorMap.get(node.inputs[0]!)!.dims[2]),
+                inputWidth: Number(this.model.tensorMap.get(node.inputs[0]!)!.dims[3]),
+                kernelHeight: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[2]),
+                kernelWidth: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[3]),
+                strideH: 1,
+                strideW: 1,
+                padH: 0,
+                padW: 0,
+                outputChannels: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[0]),
+                outputHeight: Number(this.model.tensorMap.get(node.outputs[0]!)!.dims[2]),
+                outputWidth: Number(this.model.tensorMap.get(node.outputs[0]!)!.dims[3]),
+              },
+              'relu',
+            );
+
+            this.layers.push(layer);
+            console.log('Pghwdp');
+
+            maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+            console.log('Added Conv layer:', layer);
+            break;
+
+          }
         default:
           continue;
       }

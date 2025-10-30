@@ -178,6 +178,7 @@ function decodeAttribute(bytes: Uint8Array): any { // simplified; full coverage 
   let name = '';
   let type = '';
   let value: unknown = undefined;
+  console.log('Decoding attribute...', bytes, r);
   while (!r.eof()) {
     const tag = r.tag();
     if (!tag) break;
