@@ -11,10 +11,10 @@ import {
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import {
-  isRef,
+  isEphemeralOrigin,
+  isEphemeralSnippet,
   isSnippet,
-  isSpaceRef,
-  type RefSpace,
+  type Origin,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
@@ -144,23 +144,23 @@ ${this.ctx.pre}}`;
     varType: 'var' | 'let' | 'const',
     id: string,
     dataType: wgsl.AnyWgslData | UnknownData,
-    ref: RefSpace,
+    origin: Origin,
   ): Snippet {
-    let varRef: RefSpace = 'runtime';
-    if (ref === 'constant-ref') {
+    let varOrigin: Origin = 'runtime';
+    if (origin === 'constant-ref') {
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
-      varRef = 'constant-ref';
-    } else if (wgsl.isNaturallyRef(dataType)) {
-      varRef = isSpaceRef(ref) ? ref : 'this-function';
-    } else if (ref === 'constant' && varType === 'const') {
-      varRef = 'constant';
+      varOrigin = 'constant-ref';
+    } else if (!wgsl.isNaturallyEphemeral(dataType)) {
+      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
+    } else if (origin === 'constant' && varType === 'const') {
+      varOrigin = 'constant';
     }
 
     const snippet = snip(
       this.ctx.makeNameValid(id),
       dataType,
-      /* ref */ varRef,
+      /* origin */ varOrigin,
     );
     this.ctx.defineVariable(id, snippet);
     return snippet;
@@ -247,13 +247,15 @@ ${this.ctx.pre}}`;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
-        if (convLhs.ref === 'constant' || convLhs.ref === 'constant-ref') {
+        if (
+          convLhs.origin === 'constant' || convLhs.origin === 'constant-ref'
+        ) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
           );
         }
 
-        if (isRef(rhsExpr)) {
+        if (!isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
               this.ctx.resolve(rhsExpr.dataType).value
@@ -659,8 +661,8 @@ ${this.ctx.pre}}`;
 
         if (
           !expectedReturnType &&
-          isRef(returnSnippet) &&
-          returnSnippet.ref !== 'this-function'
+          !isEphemeralSnippet(returnSnippet) &&
+          returnSnippet.origin !== 'this-function'
         ) {
           const str = this.ctx.resolve(
             returnSnippet.value,
@@ -743,7 +745,7 @@ ${this.ctx.pre}else ${alternate}`;
       let dataType = eq.dataType as wgsl.AnyWgslData;
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (isRef(eq)) {
+      if (!isEphemeralSnippet(eq)) {
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
@@ -760,7 +762,7 @@ ${this.ctx.pre}else ${alternate}`;
           );
         }
 
-        if (eq.ref === 'constant-ref') {
+        if (eq.origin === 'constant-ref') {
           varType = 'const';
         } else {
           varType = 'let';
@@ -772,8 +774,8 @@ ${this.ctx.pre}else ${alternate}`;
         // Non-referential
         if (
           stmtType === NODE.const &&
-          !wgsl.isNaturallyRef(dataType) &&
-          eq.ref === 'constant'
+          wgsl.isNaturallyEphemeral(dataType) &&
+          eq.origin === 'constant'
         ) {
           varType = 'const';
         }
@@ -783,7 +785,7 @@ ${this.ctx.pre}else ${alternate}`;
         varType,
         rawId,
         concretize(dataType),
-        eq.ref,
+        eq.origin,
       );
       return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;

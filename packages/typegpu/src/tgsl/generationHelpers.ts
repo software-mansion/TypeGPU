@@ -17,7 +17,12 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { isRef, isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isEphemeralSnippet,
+  isSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -41,7 +46,7 @@ import {
   type I32,
   isMat,
   isMatInstance,
-  isNaturallyRef,
+  isNaturallyEphemeral,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -159,7 +164,7 @@ export function accessProp(
         infixOperators[propName as InfixOperator][$internal].gpuImpl,
       ),
       UnknownData,
-      /* ref */ target.ref,
+      /* origin */ target.origin,
     );
   }
 
@@ -184,7 +189,7 @@ export function accessProp(
     return snip(
       new MatrixColumnsAccess(target),
       UnknownData,
-      /* ref */ target.ref,
+      /* origin */ target.origin,
     );
   }
 
@@ -198,9 +203,9 @@ export function accessProp(
     return snip(
       stitch`${target}.${propName}`,
       propType,
-      /* ref */ isRef(target) && isNaturallyRef(propType)
-        ? target.ref
-        : target.ref === 'constant' || target.ref === 'constant-ref'
+      /* origin */ isEphemeralSnippet(target) && isNaturallyEphemeral(propType)
+        ? target.origin
+        : target.origin === 'constant' || target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -228,7 +233,8 @@ export function accessProp(
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
-      /* ref */ target.ref === 'constant' || target.ref === 'constant-ref'
+      /* origin */ target.origin === 'constant' ||
+          target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -262,9 +268,10 @@ export function accessIndex(
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
-      /* ref */ isRef(target) && isNaturallyRef(elementType)
-        ? target.ref
-        : target.ref === 'constant' || target.ref === 'constant-ref'
+      /* origin */ isEphemeralSnippet(target) &&
+          isNaturallyEphemeral(elementType)
+        ? target.origin
+        : target.origin === 'constant' || target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -278,7 +285,8 @@ export function accessIndex(
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* ref */ target.ref === 'constant' || target.ref === 'constant-ref'
+      /* origin */ target.origin === 'constant' ||
+          target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -293,7 +301,7 @@ export function accessIndex(
     return snip(
       stitch`${target.value.matrix}[${index}]`,
       propType,
-      /* ref */ target.ref,
+      /* origin */ target.origin,
     );
   }
 
@@ -320,7 +328,7 @@ export function accessIndex(
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
-    return snip(value, abstractFloat);
+    return snip(value, abstractFloat, /* ref */ 'constant');
   }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
@@ -352,7 +360,7 @@ export function concretizeSnippets(args: Snippet[]): Snippet[] {
     snip(
       snippet.value,
       concretize(snippet.dataType as AnyWgslData),
-      /* ref */ snippet.ref,
+      /* origin */ snippet.origin,
     )
   );
 }
@@ -401,7 +409,7 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, kindToSchema[value.kind], /* ref */ 'constant');
+    return snip(value, kindToSchema[value.kind], /* origin */ 'constant');
   }
 
   if (
@@ -410,7 +418,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* ref */ 'constant');
+    return snip(value, UnknownData, /* origin */ 'constant');
   }
 
   if (typeof value === 'number') {
@@ -418,8 +426,8 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool, /* ref */ 'constant');
+    return snip(value, bool, /* origin */ 'constant');
   }
 
-  return snip(value, UnknownData, /* ref */ 'constant');
+  return snip(value, UnknownData, /* origin */ 'constant');
 }

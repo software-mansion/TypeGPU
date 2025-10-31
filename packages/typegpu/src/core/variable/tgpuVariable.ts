@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { isNaturallyRef } from '../../data/wgslTypes.ts';
+import { isNaturallyEphemeral } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -107,7 +107,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     return snip(
       id,
       this.#dataType,
-      /* ref */ isNaturallyRef(this.#dataType) ? this.#scope : 'runtime',
+      isNaturallyEphemeral(this.#dataType) ? 'runtime' : this.#scope,
     );
   }
 
@@ -122,7 +122,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const ref = isNaturallyRef(dataType) ? this.#scope : 'runtime';
+    const ref = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
 
     return new Proxy({
       [$internal]: true,

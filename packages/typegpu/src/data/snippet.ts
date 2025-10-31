@@ -3,7 +3,7 @@ import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { isNumericSchema } from './wgslTypes.ts';
 
-export type RefSpace =
+export type Origin =
   | 'uniform'
   | 'readonly' // equivalent to ptr<storage, ..., read>
   | 'mutable' // equivalent to ptr<storage, ..., read-write>
@@ -19,19 +19,19 @@ export type RefSpace =
   // not a ref to anything, known at pipeline creation time
   // (not to be confused with 'comptime')
   // note that this doesn't automatically mean the value can be stored in a `const`
-  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in TGSL)
+  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in JS shaders)
   | 'constant'
   | 'constant-ref';
 
-export function isSpaceRef(space: RefSpace) {
-  return space !== 'runtime' && space !== 'constant';
+export function isEphemeralOrigin(space: Origin) {
+  return space === 'runtime' || space !== 'constant';
 }
 
-export function isRef(snippet: Snippet) {
-  return isSpaceRef(snippet.ref);
+export function isEphemeralSnippet(snippet: Snippet) {
+  return isEphemeralOrigin(snippet.origin);
 }
 
-export const refSpaceToPtrParams = {
+export const originToPtrParams = {
   uniform: { space: 'uniform', access: 'read' },
   readonly: { space: 'storage', access: 'read' },
   mutable: { space: 'storage', access: 'read-write' },
@@ -48,7 +48,7 @@ export interface Snippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData | UnknownData;
-  readonly ref: RefSpace;
+  readonly origin: Origin;
 }
 
 export interface ResolvedSnippet {
@@ -58,7 +58,7 @@ export interface ResolvedSnippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData;
-  readonly ref: RefSpace;
+  readonly origin: Origin;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
@@ -67,7 +67,7 @@ class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
     readonly dataType: AnyData | UnknownData,
-    readonly ref: RefSpace,
+    readonly origin: Origin,
   ) {}
 }
 
@@ -82,17 +82,17 @@ export function isSnippetNumeric(snippet: Snippet) {
 export function snip(
   value: string,
   dataType: AnyData,
-  ref: RefSpace,
+  origin: Origin,
 ): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
-  ref: RefSpace,
+  origin: Origin,
 ): Snippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
-  ref: RefSpace,
+  origin: Origin,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -103,6 +103,6 @@ export function snip(
     value,
     // We don't care about attributes in snippet land, so we discard that information.
     undecorate(dataType as AnyData),
-    ref,
+    origin,
   );
 }

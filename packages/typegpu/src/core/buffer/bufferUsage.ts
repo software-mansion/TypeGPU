@@ -4,7 +4,7 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
-  isNaturallyRef,
+  isNaturallyEphemeral,
 } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
@@ -133,7 +133,7 @@ class TgpuFixedBufferImpl<
     return snip(
       id,
       dataType,
-      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
     );
   }
 
@@ -151,7 +151,7 @@ class TgpuFixedBufferImpl<
         return snip(
           this,
           dataType,
-          /* ref */ isNaturallyRef(dataType) ? usage : 'runtime',
+          isNaturallyEphemeral(dataType) ? 'runtime' : usage,
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
@@ -262,7 +262,7 @@ export class TgpuLaidOutBufferImpl<
     return snip(
       id,
       dataType,
-      /* ref */ isNaturallyRef(dataType) ? this.usage : 'runtime',
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
     );
   }
 
@@ -280,7 +280,7 @@ export class TgpuLaidOutBufferImpl<
         return snip(
           this,
           schema,
-          /* ref */ isNaturallyRef(schema) ? usage : 'runtime',
+          isNaturallyEphemeral(schema) ? 'runtime' : usage,
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),

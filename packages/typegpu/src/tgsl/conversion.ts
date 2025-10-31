@@ -233,16 +233,16 @@ function applyActionToSnippet(
       snippet.value,
       targetType,
       // if it was a ref, then it's still a ref
-      /* ref */ snippet.ref,
+      /* origin */ snippet.origin,
     );
   }
 
   switch (action.action) {
     case 'ref':
-      return snip(stitch`(&${snippet})`, targetType, /* ref */ snippet.ref);
+      return snip(stitch`(&${snippet})`, targetType, snippet.origin);
     case 'deref':
       // Dereferencing a pointer does not return a copy of the value, it's still a reference.
-      return snip(stitch`(*${snippet})`, targetType, /* ref */ snippet.ref);
+      return snip(stitch`(*${snippet})`, targetType, snippet.origin);
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
       return (targetType as unknown as (val: Snippet) => Snippet)(snippet);
@@ -319,15 +319,15 @@ export function tryConvertSnippet(
   verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType, /* ref */ snippet.ref);
+    return snip(snippet.value, targetDataType, snippet.origin);
   }
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
     return snip(
-      stitch`${snip(snippet.value, targetDataType, /* ref */ snippet.ref)}`,
+      stitch`${snip(snippet.value, targetDataType, snippet.origin)}`,
       targetDataType,
-      /* ref */ snippet.ref,
+      snippet.origin,
     );
   }
 

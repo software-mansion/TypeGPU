@@ -128,7 +128,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return snip(
       ctx.resolve(snippet.value, snippet.dataType).value,
       snippet.dataType as T,
-      snippet.ref,
+      snippet.origin,
     );
   }
 }

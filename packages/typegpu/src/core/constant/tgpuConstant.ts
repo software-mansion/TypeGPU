@@ -1,5 +1,8 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type AnyWgslData, isNaturallyRef } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  isNaturallyEphemeral,
+} from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -98,7 +101,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return snip(
       id,
       this.dataType,
-      /* ref */ isNaturallyRef(this.dataType) ? 'constant-ref' : 'constant',
+      isNaturallyEphemeral(this.dataType) ? 'constant' : 'constant-ref',
     );
   }
 
@@ -115,7 +118,7 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
         return snip(
           this,
           dataType,
-          /* ref */ isNaturallyRef(dataType) ? 'constant-ref' : 'constant',
+          isNaturallyEphemeral(dataType) ? 'constant' : 'constant-ref',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),

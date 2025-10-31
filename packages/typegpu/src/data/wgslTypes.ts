@@ -1904,7 +1904,7 @@ export function isHalfPrecisionSchema(
   );
 }
 
-const valueTypes = [
+const ephemeralTypes = [
   'abstractInt',
   'abstractFloat',
   'f32',
@@ -1915,11 +1915,13 @@ const valueTypes = [
 ];
 
 /**
- * Returns true for schemas that are naturally referential in JS.
+ * Returns true for schemas that are not naturally referential in JS (primitives).
  * @param schema
  * @returns
  */
-export function isNaturallyRef(schema: unknown): boolean {
-  return isMarkedInternal(schema) &&
-    !valueTypes.includes((schema as BaseData)?.type);
+export function isNaturallyEphemeral(schema: unknown): boolean {
+  return (
+    !isMarkedInternal(schema) ||
+    ephemeralTypes.includes((schema as BaseData)?.type)
+  );
 }

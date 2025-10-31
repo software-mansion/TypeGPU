@@ -4,7 +4,7 @@ import {
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
 import { INTERNAL_createPtr } from '../data/ptr.ts';
-import { refSpaceToPtrParams, type Snippet } from '../data/snippet.ts';
+import { originToPtrParams, type Snippet } from '../data/snippet.ts';
 import { isPtr, type StorableData } from '../data/wgslTypes.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
@@ -49,11 +49,11 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s) => {
       const type = concretize(s.dataType as AnyData);
-      const ptrParams = s.ref in refSpaceToPtrParams
-        ? refSpaceToPtrParams[s.ref as keyof typeof refSpaceToPtrParams]
+      const ptrParams = s.origin in originToPtrParams
+        ? originToPtrParams[s.origin as keyof typeof originToPtrParams]
         : undefined;
 
-      if (s.ref === 'constant-ref') {
+      if (s.origin === 'constant-ref') {
         // biome-ignore lint/style/noNonNullAssertion: it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
