@@ -136,7 +136,7 @@ describe('oklab example', () => {
       }
 
       fn findGamutIntersection_13(a: f32, b: f32, L1: f32, C1: f32, L0: f32, cusp: LC_12) -> f32 {
-        let FLT_MAX = (&3.40282346e+38);
+        const FLT_MAX = 3.40282346e+38;
         var t = 0f;
         if (((((L1 - L0) * cusp.C) - ((cusp.L - L0) * C1)) <= 0)) {
           t = ((cusp.C * L0) / ((C1 * cusp.L) + (cusp.C * (L0 - L1))));
@@ -182,9 +182,9 @@ describe('oklab example', () => {
               var b22 = (((-0.0041960863 * ldt2) - (0.7034186147 * mdt2)) + (1.707614701 * sdt2));
               var u_b = (b1 / ((b1 * b1) - ((0.5 * b2) * b22)));
               var t_b = (-b2 * u_b);
-              t_r = select((*FLT_MAX), t_r, (u_r >= 0));
-              t_g = select((*FLT_MAX), t_g, (u_g >= 0));
-              t_b = select((*FLT_MAX), t_b, (u_b >= 0));
+              t_r = select(FLT_MAX, t_r, (u_r >= 0));
+              t_g = select(FLT_MAX, t_g, (u_g >= 0));
+              t_b = select(FLT_MAX, t_b, (u_b >= 0));
               t += min(t_r, min(t_g, t_b));
             }
           }

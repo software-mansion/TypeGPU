@@ -150,10 +150,10 @@ describe('slime mold example', () => {
 
       @group(0) @binding(1) var<uniform> params_10: Params_11;
 
-      fn sense_9(pos: ptr<storage, vec2f, read_write>, angle: f32, sensorAngleOffset: f32) -> f32 {
+      fn sense_9(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
         var sensorAngle = (angle + sensorAngleOffset);
         var sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
-        var sensorPos = ((*pos) + (sensorDir * params_10.sensorDistance));
+        var sensorPos = (pos + (sensorDir * params_10.sensorDistance));
         var dims = textureDimensions(oldState_4);
         var dimsf = vec2f(dims);
         var sensorPosInt = vec2u(clamp(sensorPos, vec2f(), (dimsf - vec2f(1))));
@@ -177,9 +177,9 @@ describe('slime mold example', () => {
         var dims = textureDimensions(oldState_4);
         let agent = (&agentsData_5[_arg_0.gid.x]);
         var random = randFloat01_7();
-        var weightForward = sense_9((&(*agent).position), (*agent).angle, 0);
-        var weightLeft = sense_9((&(*agent).position), (*agent).angle, params_10.sensorAngle);
-        var weightRight = sense_9((&(*agent).position), (*agent).angle, -params_10.sensorAngle);
+        var weightForward = sense_9((*agent).position, (*agent).angle, 0);
+        var weightLeft = sense_9((*agent).position, (*agent).angle, params_10.sensorAngle);
+        var weightRight = sense_9((*agent).position, (*agent).angle, -params_10.sensorAngle);
         var angle = (*agent).angle;
         if (((weightForward > weightLeft) && (weightForward > weightRight))) {
 

@@ -46,31 +46,31 @@ describe('generationHelpers', () => {
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
       expect(numericLiteralToSnippet(1)).toEqual(
-        snip(1, abstractInt, /* ref */ 'constant'),
+        snip(1, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(1.1)).toEqual(
-        snip(1.1, abstractFloat, /* ref */ 'constant'),
+        snip(1.1, abstractFloat, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractInt, /* ref */ 'constant'),
+        snip(1e10, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
-        snip(0.5, abstractFloat, /* ref */ 'constant'),
+        snip(0.5, abstractFloat, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(-45)).toEqual(
-        snip(-45, abstractInt, /* ref */ 'constant'),
+        snip(-45, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0x1A)).toEqual(
-        snip(0x1A, abstractInt, /* ref */ 'constant'),
+        snip(0x1A, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0b101)).toEqual(
-        snip(5, abstractInt, /* ref */ 'constant'),
+        snip(5, abstractInt, /* origin */ 'constant'),
       );
     });
   });
@@ -82,33 +82,33 @@ describe('generationHelpers', () => {
     });
 
     it('should return struct property types', () => {
-      const target = snip('foo', MyStruct, 'this-function');
+      const target = snip('foo', MyStruct, 'function');
       expect(accessProp(target, 'foo')).toStrictEqual(
-        snip('foo.foo', f32, /* ref */ 'runtime'),
+        snip('foo.foo', f32, /* origin */ 'runtime'),
       );
       expect(accessProp(target, 'bar')).toStrictEqual(
-        snip('foo.bar', vec3f, /* ref */ 'this-function'),
+        snip('foo.bar', vec3f, /* origin */ 'function'),
       );
       expect(accessProp(target, 'notfound')).toStrictEqual(undefined);
     });
 
     it('should return swizzle types on vectors', () => {
-      const target = snip('foo', vec4f, 'this-function');
+      const target = snip('foo', vec4f, 'function');
 
       expect(accessProp(target, 'x')).toStrictEqual(
-        snip('foo.x', f32, /* ref */ 'runtime'),
+        snip('foo.x', f32, /* origin */ 'runtime'),
       );
       expect(accessProp(target, 'yz')).toStrictEqual(
-        snip('foo.yz', vec2f, /* ref */ 'runtime'),
+        snip('foo.yz', vec2f, /* origin */ 'runtime'),
       );
       expect(accessProp(target, 'xyzw')).toStrictEqual(
-        snip('foo.xyzw', vec4f, /* ref */ 'runtime'),
+        snip('foo.xyzw', vec4f, /* origin */ 'runtime'),
       );
     });
 
     it('should return undefined when applied to primitives or invalid', () => {
-      const target1 = snip('foo', u32, /* ref */ 'runtime');
-      const target2 = snip('foo', bool, /* ref */ 'runtime');
+      const target1 = snip('foo', u32, /* origin */ 'runtime');
+      const target2 = snip('foo', bool, /* origin */ 'runtime');
       expect(accessProp(target1, 'x')).toBe(undefined);
       expect(accessProp(target2, 'x')).toBe(undefined);
     });
@@ -116,18 +116,18 @@ describe('generationHelpers', () => {
 
   describe('accessIndex', () => {
     const arr = arrayOf(f32, 2);
-    const index = snip('0', u32, /* ref */ 'runtime');
+    const index = snip('0', u32, /* origin */ 'runtime');
 
     it('returns element type for arrays', () => {
-      const target = snip('foo', arr, /* ref */ 'runtime');
+      const target = snip('foo', arr, /* origin */ 'runtime');
       expect(accessIndex(target, index)).toStrictEqual(
         snip('foo[0]', f32, 'runtime'),
       );
     });
 
     it('returns vector component', () => {
-      const target1 = snip('foo', vec2i, /* ref */ 'runtime');
-      const target2 = snip('foo', vec4h, /* ref */ 'runtime');
+      const target1 = snip('foo', vec2i, /* origin */ 'runtime');
+      const target2 = snip('foo', vec4h, /* origin */ 'runtime');
       expect(accessIndex(target1, index)).toStrictEqual(
         snip('foo[0]', i32, 'runtime'),
       );
@@ -138,15 +138,15 @@ describe('generationHelpers', () => {
 
     it('returns matrix column type', () => {
       const target1 = accessProp(
-        snip('foo', mat2x2f, /* ref */ 'runtime'),
+        snip('foo', mat2x2f, /* origin */ 'runtime'),
         'columns',
       );
       const target2 = accessProp(
-        snip('foo', mat3x3f, /* ref */ 'runtime'),
+        snip('foo', mat3x3f, /* origin */ 'runtime'),
         'columns',
       );
       const target3 = accessProp(
-        snip('foo', mat4x4f, /* ref */ 'runtime'),
+        snip('foo', mat4x4f, /* origin */ 'runtime'),
         'columns',
       );
       expect(target1 && accessIndex(target1, index)).toStrictEqual(
@@ -161,7 +161,7 @@ describe('generationHelpers', () => {
     });
 
     it('returns undefined otherwise', () => {
-      const target = snip('foo', f32, /* ref */ 'runtime');
+      const target = snip('foo', f32, /* origin */ 'runtime');
       expect(accessIndex(target, index)).toBe(undefined);
     });
   });
@@ -171,37 +171,37 @@ describe('generationHelpers', () => {
 
     it('coerces JS numbers', () => {
       expect(coerceToSnippet(1)).toEqual(
-        snip(1, abstractInt, /* ref */ 'constant'),
+        snip(1, abstractInt, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(2.5)).toEqual(
-        snip(2.5, abstractFloat, /* ref */ 'constant'),
+        snip(2.5, abstractFloat, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(-10)).toEqual(
-        snip(-10, abstractInt, /* ref */ 'constant'),
+        snip(-10, abstractInt, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(0.0)).toEqual(
-        snip(0, abstractInt, /* ref */ 'constant'),
+        snip(0, abstractInt, /* origin */ 'constant'),
       );
     });
 
     it('coerces JS booleans', () => {
       expect(coerceToSnippet(true)).toEqual(
-        snip(true, bool, /* ref */ 'constant'),
+        snip(true, bool, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(false)).toEqual(
-        snip(false, bool, /* ref */ 'constant'),
+        snip(false, bool, /* origin */ 'constant'),
       );
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
       expect(coerceToSnippet(f32)).toEqual(
-        snip(f32, UnknownData, /* ref */ 'constant'),
+        snip(f32, UnknownData, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(vec3i)).toEqual(
-        snip(vec3i, UnknownData, /* ref */ 'constant'),
+        snip(vec3i, UnknownData, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(arr)).toEqual(
-        snip(arr, UnknownData, /* ref */ 'constant'),
+        snip(arr, UnknownData, /* origin */ 'constant'),
       );
     });
 
@@ -227,20 +227,20 @@ describe('generationHelpers', () => {
 
     it('returns UnknownData for other types', () => {
       expect(coerceToSnippet('foo')).toEqual(
-        snip('foo', UnknownData, /* ref */ 'constant'),
+        snip('foo', UnknownData, /* origin */ 'constant'),
       );
       expect(coerceToSnippet({})).toEqual(
-        snip({}, UnknownData, /* ref */ 'constant'),
+        snip({}, UnknownData, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(null)).toEqual(
-        snip(null, UnknownData, /* ref */ 'constant'),
+        snip(null, UnknownData, /* origin */ 'constant'),
       );
       expect(coerceToSnippet(undefined)).toEqual(
-        snip(undefined, UnknownData, /* ref */ 'constant'),
+        snip(undefined, UnknownData, /* origin */ 'constant'),
       );
       const fn = () => {};
       expect(coerceToSnippet(fn)).toEqual(
-        snip(fn, UnknownData, /* ref */ 'constant'),
+        snip(fn, UnknownData, /* origin */ 'constant'),
       );
     });
   });

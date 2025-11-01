@@ -271,7 +271,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as unknown as AnyData;
+    const schema = this.dataType as AnyData;
     const usage = this.usage;
 
     return new Proxy({

@@ -196,7 +196,11 @@ export function createFnCore(
         // of the argument based on the argument's referentiality.
         // In other words, if we pass a reference to a function, it's typed as a pointer,
         // otherwise it's typed as a value.
-        const ref = isPtr(argType) ? 'function' : 'runtime';
+        const ref = isPtr(argType)
+          ? argType.addressSpace === 'storage'
+            ? argType.access === 'read' ? 'readonly' : 'mutable'
+            : argType.addressSpace
+          : 'argument';
 
         switch (astParam?.type) {
           case FuncParameterType.identifier: {

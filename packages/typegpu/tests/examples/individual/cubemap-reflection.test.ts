@@ -29,21 +29,21 @@ describe('cubemap reflection example', () => {
 
       @group(0) @binding(0) var<storage, read> prevVertices_1: array<ComputeVertex_2>;
 
-      fn unpackVec2u_3(packed: ptr<storage, vec2u, read>) -> vec4f {
-        var xy = unpack2x16float((*packed).x);
-        var zw = unpack2x16float((*packed).y);
+      fn unpackVec2u_3(packed: vec2u) -> vec4f {
+        var xy = unpack2x16float(packed.x);
+        var zw = unpack2x16float(packed.y);
         return vec4f(xy, zw);
       }
 
-      fn calculateMidpoint_4(v1: ptr<function, vec4f>, v2: ptr<function, vec4f>) -> vec4f {
-        return vec4f((0.5 * ((*v1).xyz + (*v2).xyz)), 1);
+      fn calculateMidpoint_4(v1: vec4f, v2: vec4f) -> vec4f {
+        return vec4f((0.5 * (v1.xyz + v2.xyz)), 1);
       }
 
       @group(0) @binding(2) var<uniform> smoothFlag_5: u32;
 
-      fn getAverageNormal_6(v1: ptr<function, vec4f>, v2: ptr<function, vec4f>, v3: ptr<function, vec4f>) -> vec4f {
-        var edge1 = ((*v2).xyz - (*v1).xyz);
-        var edge2 = ((*v3).xyz - (*v1).xyz);
+      fn getAverageNormal_6(v1: vec4f, v2: vec4f, v3: vec4f) -> vec4f {
+        var edge1 = (v2.xyz - v1.xyz);
+        var edge2 = (v3.xyz - v1.xyz);
         return normalize(vec4f(cross(edge1, edge2), 0));
       }
 
@@ -55,23 +55,29 @@ describe('cubemap reflection example', () => {
         return vec2u(xy, zw);
       }
 
-      struct computeFn_Input_9 {
+      fn packVec2u_9(toPack: vec4f) -> vec2u {
+        var xy = pack2x16float(toPack.xy);
+        var zw = pack2x16float(toPack.zw);
+        return vec2u(xy, zw);
+      }
+
+      struct computeFn_Input_10 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_9) {
+      @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_10) {
         var triangleCount = u32((f32(arrayLength(&prevVertices_1)) / 3f));
         var triangleIndex = (input.gid.x + (input.gid.y * 65535));
         if ((triangleIndex >= triangleCount)) {
           return;
         }
         var baseIndexPrev = (triangleIndex * 3);
-        var v1 = unpackVec2u_3((&prevVertices_1[baseIndexPrev].position));
-        var v2 = unpackVec2u_3((&prevVertices_1[(baseIndexPrev + 1)].position));
-        var v3 = unpackVec2u_3((&prevVertices_1[(baseIndexPrev + 2)].position));
-        var v12 = vec4f(normalize(calculateMidpoint_4((&v1), (&v2)).xyz), 1);
-        var v23 = vec4f(normalize(calculateMidpoint_4((&v2), (&v3)).xyz), 1);
-        var v31 = vec4f(normalize(calculateMidpoint_4((&v3), (&v1)).xyz), 1);
+        var v1 = unpackVec2u_3(prevVertices_1[baseIndexPrev].position);
+        var v2 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 1)].position);
+        var v3 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 2)].position);
+        var v12 = vec4f(normalize(calculateMidpoint_4(v1, v2).xyz), 1);
+        var v23 = vec4f(normalize(calculateMidpoint_4(v2, v3).xyz), 1);
+        var v31 = vec4f(normalize(calculateMidpoint_4(v3, v1).xyz), 1);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         var baseIndexNext = (triangleIndex * 12);
         for (var i = 0u; (i < 12); i++) {
@@ -79,12 +85,12 @@ describe('cubemap reflection example', () => {
           var triBase = (i - (i % 3));
           var normal = (*reprojectedVertex);
           if ((smoothFlag_5 == 0)) {
-            normal = getAverageNormal_6((&newVertices[triBase]), (&newVertices[(triBase + 1)]), (&newVertices[(triBase + 2)]));
+            normal = getAverageNormal_6(newVertices[triBase], newVertices[(triBase + 1)], newVertices[(triBase + 2)]);
           }
           var outIndex = (baseIndexNext + i);
           let nextVertex = (&nextVertices_7[outIndex]);
           (*nextVertex).position = packVec2u_8(reprojectedVertex);
-          (*nextVertex).normal = packVec2u_8((&normal));
+          (*nextVertex).normal = packVec2u_9(normal);
           nextVertices_7[outIndex] = (*nextVertex);
         }
       }

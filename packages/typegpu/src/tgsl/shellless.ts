@@ -3,9 +3,7 @@ import {
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
-import { INTERNAL_createPtr } from '../data/ptr.ts';
-import { originToPtrParams, type Snippet } from '../data/snippet.ts';
-import { isPtr, type StorableData } from '../data/wgslTypes.ts';
+import type { Snippet } from '../data/snippet.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
@@ -49,9 +47,6 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s) => {
       const type = concretize(s.dataType as AnyData);
-      const ptrParams = s.origin in originToPtrParams
-        ? originToPtrParams[s.origin as keyof typeof originToPtrParams]
-        : undefined;
 
       if (s.origin === 'constant-ref') {
         // biome-ignore lint/style/noNonNullAssertion: it's there
@@ -63,13 +58,7 @@ export class ShelllessRepository {
         );
       }
 
-      return ptrParams !== undefined && !isPtr(type)
-        ? INTERNAL_createPtr(
-          ptrParams.space,
-          type as StorableData,
-          ptrParams.access,
-        )
-        : type;
+      return type;
     });
 
     let cache = this.cache.get(fn);

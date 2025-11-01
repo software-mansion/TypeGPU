@@ -645,9 +645,9 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves a function with a pointer parameter', () => {
     const addOnes = tgpu.fn([d.ptrStorage(d.vec3f, 'read-write')])((ptr) => {
-      ptr.x += 1;
-      ptr.y += 1;
-      ptr.z += 1;
+      ptr.$.x += 1;
+      ptr.$.y += 1;
+      ptr.$.z += 1;
     });
 
     expect(asWgsl(addOnes)).toMatchInlineSnapshot(`
@@ -658,10 +658,11 @@ describe('TGSL tgpu.fn function', () => {
       }"
     `);
 
-    const callAddOnes = tgpu.fn([])(() => {
-      const someVec = d.vec3f(1, 2, 3);
+    const callAddOnes = () => {
+      'use gpu';
+      const someVec = d.ref(d.vec3f(1, 2, 3));
       addOnes(someVec);
-    });
+    };
 
     expect(asWgsl(callAddOnes)).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {

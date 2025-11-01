@@ -229,6 +229,38 @@ describe('TgpuBindGroupLayout', () => {
       fn main() { textureLoad(fooTexture); }"
     `);
   });
+
+  it('takes a pointer to layout.$... if assigned to a const variable', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const layout = tgpu.bindGroupLayout({
+      boids: { storage: d.arrayOf(Boid), access: 'mutable' },
+    });
+
+    const getFirst = () => {
+      'use gpu';
+      const boids = layout.$.boids;
+      // biome-ignore lint/style/noNonNullAssertion: it's definitely there
+      return Boid(boids[0]!);
+    };
+
+    expect(asWgsl(getFirst)).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> boids: array<Boid>;
+
+      fn getFirst() -> Boid {
+        let boids = (&boids);
+        return (*boids)[0];
+      }"
+    `);
+  });
 });
 
 describe('TgpuBindGroup', () => {

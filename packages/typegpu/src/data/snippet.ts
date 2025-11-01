@@ -11,9 +11,11 @@ export type Origin =
   | 'private'
   | 'function'
   | 'handle'
-  // more specific version of 'function', telling us that the ref is
-  // to a value defined in the function
-  | 'this-function'
+  // is an argument (or part of an argument) given to the
+  // function we're resolving. This includes primitives, to
+  // catch cases where we update an argument's primitive member
+  // prop, e.g.: `vec.x += 1;`
+  | 'argument'
   // not a ref to anything, known at runtime
   | 'runtime'
   // not a ref to anything, known at pipeline creation time
@@ -24,7 +26,7 @@ export type Origin =
   | 'constant-ref';
 
 export function isEphemeralOrigin(space: Origin) {
-  return space === 'runtime' || space !== 'constant';
+  return space === 'runtime' || space === 'constant' || space === 'argument';
 }
 
 export function isEphemeralSnippet(snippet: Snippet) {
@@ -38,8 +40,8 @@ export const originToPtrParams = {
   workgroup: { space: 'workgroup', access: 'read-write' },
   private: { space: 'private', access: 'read-write' },
   function: { space: 'function', access: 'read-write' },
-  'this-function': { space: 'function', access: 'read-write' },
 } as const;
+export type OriginToPtrParams = typeof originToPtrParams;
 
 export interface Snippet {
   readonly value: unknown;

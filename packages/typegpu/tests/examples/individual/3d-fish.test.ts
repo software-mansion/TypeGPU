@@ -120,10 +120,10 @@ describe('3d fish example', () => {
 
       @group(1) @binding(2) var<uniform> mouseRay_7: MouseRay_8;
 
-      fn projectPointOnLine_10(point: ptr<storage, vec3f, read>, line: ptr<uniform, Line3_9>) -> vec3f {
-        var pointVector = ((*point) - (*line).origin);
-        var projection = dot(pointVector, (*line).dir);
-        return ((*line).origin + ((*line).dir * projection));
+      fn projectPointOnLine_10(point: vec3f, line: Line3_9) -> vec3f {
+        var pointVector = (point - line.origin);
+        var projection = dot(pointVector, line.dir);
+        return (line.origin + (line.dir * projection));
       }
 
       @group(1) @binding(3) var<uniform> timePassed_11: f32;
@@ -179,7 +179,7 @@ describe('3d fish example', () => {
           }
         }
         if ((mouseRay_7.activated == 1)) {
-          var proj = projectPointOnLine_10((&(*fishData).position), (&mouseRay_7.line));
+          var proj = projectPointOnLine_10((*fishData).position, mouseRay_7.line);
           var diff = ((*fishData).position - proj);
           const limit = 0.9;
           var str = (pow(2, clamp((limit - length(diff)), 0, limit)) - 1);

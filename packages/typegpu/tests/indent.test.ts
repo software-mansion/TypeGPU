@@ -258,12 +258,13 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
-      if (particle.velocity.x > 0) {
-        particle.position = std.add(particle.position, particle.velocity);
+      const newParticle = Particle(particle);
+      if (newParticle.velocity.x > 0) {
+        newParticle.position = newParticle.position.add(newParticle.velocity);
       } else {
-        particle.position = std.add(particle.position, gravity);
+        newParticle.position = newParticle.position.add(gravity);
       }
-      return particle;
+      return newParticle;
     });
 
     const code = tgpu.resolve({ externals: { updateParticle } });
@@ -274,13 +275,14 @@ describe('indents', () => {
       }
 
       fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
-        if ((particle.velocity.x > 0)) {
-          particle.position = (particle.position + particle.velocity);
+        var newParticle = particle;
+        if ((newParticle.velocity.x > 0)) {
+          newParticle.position = (newParticle.position + newParticle.velocity);
         }
         else {
-          particle.position = (particle.position + gravity);
+          newParticle.position = (newParticle.position + gravity);
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });
@@ -295,15 +297,18 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
+      const newParticle = Particle(particle);
       let iterations = 0;
       while (iterations < 10) {
-        particle.position = std.add(particle.position, particle.velocity);
+        newParticle.position = newParticle.position.add(
+          newParticle.velocity,
+        );
         iterations += 1;
-        while (particle.position.x < 0) {
-          particle.position = std.add(particle.position, gravity);
+        while (newParticle.position.x < 0) {
+          newParticle.position = newParticle.position.add(gravity);
         }
       }
-      return particle;
+      return newParticle;
     });
 
     const code = tgpu.resolve({ externals: { updateParticle } });
@@ -314,15 +319,16 @@ describe('indents', () => {
       }
 
       fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
+        var newParticle = particle;
         var iterations = 0;
         while ((iterations < 10)) {
-          particle.position = (particle.position + particle.velocity);
+          newParticle.position = (newParticle.position + newParticle.velocity);
           iterations += 1;
-          while ((particle.position.x < 0)) {
-            particle.position = (particle.position + gravity);
+          while ((newParticle.position.x < 0)) {
+            newParticle.position = (newParticle.position + gravity);
           }
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });

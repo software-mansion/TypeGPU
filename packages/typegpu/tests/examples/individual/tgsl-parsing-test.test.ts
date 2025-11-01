@@ -162,54 +162,61 @@ describe('tgsl parsing test example', () => {
         return s;
       }
 
-      fn modifyVecFn_12(ptr: ptr<function, vec2f>) {
-        (*ptr).x += 1;
-      }
-
-      struct SimpleStruct_13 {
-        vec: vec2f,
-      }
-
-      fn modifyStructFn_14(ptr: ptr<function, SimpleStruct_13>) {
-        (*ptr).vec.x += 1;
-      }
-
-      var<private> privateNum_15: u32;
-
-      fn modifyNumPrivate_16(ptr: ptr<private, u32>) {
+      fn modifyNumFn_12(ptr: ptr<function, u32>) {
         (*ptr) += 1;
       }
 
-      var<private> privateVec_17: vec2f;
-
-      fn modifyVecPrivate_18(ptr: ptr<private, vec2f>) {
+      fn modifyVecFn_13(ptr: ptr<function, vec2f>) {
         (*ptr).x += 1;
       }
 
-      var<private> privateStruct_19: SimpleStruct_13;
+      struct SimpleStruct_14 {
+        vec: vec2f,
+      }
 
-      fn modifyStructPrivate_20(ptr: ptr<private, SimpleStruct_13>) {
+      fn modifyStructFn_15(ptr: ptr<function, SimpleStruct_14>) {
+        (*ptr).vec.x += 1;
+      }
+
+      var<private> privateNum_16: u32;
+
+      fn modifyNumPrivate_17(ptr: ptr<private, u32>) {
+        (*ptr) += 1;
+      }
+
+      var<private> privateVec_18: vec2f;
+
+      fn modifyVecPrivate_19(ptr: ptr<private, vec2f>) {
+        (*ptr).x += 1;
+      }
+
+      var<private> privateStruct_20: SimpleStruct_14;
+
+      fn modifyStructPrivate_21(ptr: ptr<private, SimpleStruct_14>) {
         (*ptr).vec.x += 1;
       }
 
       fn pointersTest_11() -> bool {
         var s = true;
+        var num = 0u;
+        modifyNumFn_12((&num));
+        s = (s && (num == 1));
         var vec = vec2f();
-        modifyVecFn_12((&vec));
+        modifyVecFn_13((&vec));
         s = (s && all(vec == vec2f(1, 0)));
-        var myStruct = SimpleStruct_13();
-        modifyStructFn_14((&myStruct));
+        var myStruct = SimpleStruct_14();
+        modifyStructFn_15((&myStruct));
         s = (s && all(myStruct.vec == vec2f(1, 0)));
-        modifyNumPrivate_16((&privateNum_15));
-        s = (s && (privateNum_15 == 1));
-        modifyVecPrivate_18((&privateVec_17));
-        s = (s && all(privateVec_17 == vec2f(1, 0)));
-        modifyStructPrivate_20((&privateStruct_19));
-        s = (s && all(privateStruct_19.vec == vec2f(1, 0)));
+        modifyNumPrivate_17(privateNum_16);
+        s = (s && (privateNum_16 == 1));
+        modifyVecPrivate_19(privateVec_18);
+        s = (s && all(privateVec_18 == vec2f(1, 0)));
+        modifyStructPrivate_21(privateStruct_20);
+        s = (s && all(privateStruct_20.vec == vec2f(1, 0)));
         return s;
       }
 
-      @group(0) @binding(0) var<storage, read_write> result_21: i32;
+      @group(0) @binding(0) var<storage, read_write> result_22: i32;
 
       @compute @workgroup_size(1) fn computeRunTests_0() {
         var s = true;
@@ -219,10 +226,10 @@ describe('tgsl parsing test example', () => {
         s = (s && arrayAndStructConstructorsTest_8());
         s = (s && pointersTest_11());
         if (s) {
-          result_21 = 1;
+          result_22 = 1;
         }
         else {
-          result_21 = 0;
+          result_22 = 0;
         }
       }"
     `);

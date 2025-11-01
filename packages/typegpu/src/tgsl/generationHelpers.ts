@@ -47,6 +47,7 @@ import {
   isMat,
   isMatInstance,
   isNaturallyEphemeral,
+  isPtr,
   isVec,
   isVecInstance,
   isWgslArray,
@@ -61,6 +62,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { $internal } from '../shared/symbols.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import { derefSnippet } from './conversion.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -203,12 +205,28 @@ export function accessProp(
     return snip(
       stitch`${target}.${propName}`,
       propType,
-      /* origin */ isEphemeralSnippet(target) && isNaturallyEphemeral(propType)
+      /* origin */ target.origin === 'argument'
+        ? 'argument'
+        : !isEphemeralSnippet(target) &&
+            !isNaturallyEphemeral(propType)
         ? target.origin
         : target.origin === 'constant' || target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
+  }
+
+  if (isPtr(target.dataType)) {
+    const derefed = derefSnippet(target);
+
+    if (propName === '$') {
+      // Dereference pointer
+      return derefed;
+    }
+
+    // Sometimes values that are typed as pointers aren't instances of `d.ref`, so we
+    // allow access to member props as if it wasn't a pointer.
+    return accessProp(derefed, propName);
   }
 
   const propLength = propName.length;
@@ -233,8 +251,10 @@ export function accessProp(
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
-      /* origin */ target.origin === 'constant' ||
-          target.origin === 'constant-ref'
+      /* origin */ target.origin === 'argument' && propLength === 1
+        ? 'argument'
+        : target.origin === 'constant' ||
+            target.origin === 'constant-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -268,8 +288,8 @@ export function accessIndex(
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
-      /* origin */ isEphemeralSnippet(target) &&
-          isNaturallyEphemeral(elementType)
+      /* origin */ !isEphemeralSnippet(target) &&
+          !isNaturallyEphemeral(elementType)
         ? target.origin
         : target.origin === 'constant' || target.origin === 'constant-ref'
         ? 'constant'

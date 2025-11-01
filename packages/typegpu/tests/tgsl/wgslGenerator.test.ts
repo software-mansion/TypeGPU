@@ -332,7 +332,7 @@ describe('wgslGenerator', () => {
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('var', 'vec', d.vec4f, 'this-function');
+      wgslGenerator.blockVariable('var', 'vec', d.vec4f, 'function');
       const res3 = wgslGenerator.expression(
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
@@ -938,7 +938,7 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for pointer value assignment', () => {
     const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
-      val += 1;
+      val.$ += 1;
     });
 
     expect(asWgsl(increment)).toMatchInlineSnapshot(`

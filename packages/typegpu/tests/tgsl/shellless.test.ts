@@ -158,16 +158,16 @@ describe('shellless', () => {
     `);
   });
 
-  it('generates pointer type to handle references', () => {
-    const advance = (pos: d.v3f, vel: d.v3f) => {
+  it('handles refs and generates pointer arguments for them', () => {
+    const advance = (pos: d.ref<d.v3f>, vel: d.v3f) => {
       'use gpu';
-      pos.x += vel.x;
-      pos.y += vel.y;
-      pos.z += vel.z;
+      pos.$.x += vel.x;
+      pos.$.y += vel.y;
+      pos.$.z += vel.z;
     };
 
     const main = tgpu.fn([])(() => {
-      const pos = d.vec3f(0, 0, 0);
+      const pos = d.ref(d.vec3f(0, 0, 0));
       advance(pos, d.vec3f(1, 2, 3));
     });
 

@@ -32,6 +32,7 @@ import type {
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { ref } from './ref.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -1377,7 +1378,7 @@ export interface Ptr<
   readonly access: TAccess;
 
   // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<TInner>;
+  readonly [$repr]: ref<Infer<TInner>>;
   readonly [$invalidSchemaReason]: 'Pointers are not host-shareable';
   // ---
 }

@@ -42,6 +42,7 @@ import {
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
 import { ptrFn } from '../data/ptr.ts';
+import { RefOnGPU, RefOperator } from '../data/ref.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -140,6 +141,20 @@ ${this.ctx.pre}}`;
     }
   }
 
+  public refVariable(
+    id: string,
+    dataType: wgsl.StorableData,
+  ): string {
+    const varName = this.ctx.makeNameValid(id);
+    const snippet = snip(
+      new RefOperator(snip(varName, dataType, 'function')),
+      ptrFn(dataType),
+      'function',
+    );
+    this.ctx.defineVariable(id, snippet);
+    return varName;
+  }
+
   public blockVariable(
     varType: 'var' | 'let' | 'const',
     id: string,
@@ -152,7 +167,7 @@ ${this.ctx.pre}}`;
       // be treated as constant references when assigned to a const.
       varOrigin = 'constant-ref';
     } else if (!wgsl.isNaturallyEphemeral(dataType)) {
-      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
+      varOrigin = isEphemeralOrigin(origin) ? 'function' : origin;
     } else if (origin === 'constant' && varType === 'const') {
       varOrigin = 'constant';
     }
@@ -219,6 +234,12 @@ ${this.ctx.pre}}`;
       const lhsExpr = this.expression(lhs);
       const rhsExpr = this.expression(rhs);
 
+      if (rhsExpr.value instanceof RefOnGPU) {
+        throw new WgslTypeError(
+          stitch`Cannot assign a ref to an existing variable '${lhsExpr}', define a new variable instead.`,
+        );
+      }
+
       if (lhsExpr.dataType.type === 'unknown') {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
@@ -252,6 +273,12 @@ ${this.ctx.pre}}`;
         ) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
+          );
+        }
+
+        if (lhsExpr.origin === 'argument') {
+          throw new WgslTypeError(
+            `'${lhsStr} ${op} ${rhsStr}' is invalid, because non-pointer arguments cannot be mutated.`,
           );
         }
 
@@ -298,21 +325,16 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.memberAccess) {
       // Member Access
       const [_, targetNode, property] = expression;
-      let target = this.expression(targetNode);
+      const target = this.expression(targetNode);
 
       if (target.value === console) {
         return snip(new ConsoleLog(property), UnknownData, /* ref */ 'runtime');
       }
 
-      if (wgsl.isPtr(target.dataType)) {
-        // De-referencing the pointer
-        target = tryConvertSnippet(target, target.dataType.inner, false);
-      }
-
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
-          `Property '${property}' not found on type ${
+          stitch`Property '${property}' not found on value '${target}' of type ${
             this.ctx.resolve(target.dataType)
           }`,
         );
@@ -662,7 +684,7 @@ ${this.ctx.pre}}`;
         if (
           !expectedReturnType &&
           !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'this-function'
+          returnSnippet.origin !== 'function'
         ) {
           const str = this.ctx.resolve(
             returnSnippet.value,
@@ -742,7 +764,24 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      if (eq.value instanceof RefOnGPU) {
+        // We're assigning a newly created `d.ref()`
+        const refSnippet = eq.value.snippet;
+        const varName = this.refVariable(
+          rawId,
+          concretize(refSnippet.dataType as AnyData) as wgsl.StorableData,
+        );
+        return stitchWithExactTypes`${this.ctx.pre}var ${varName} = ${
+          tryConvertSnippet(
+            refSnippet,
+            refSnippet.dataType as wgsl.AnyWgslData,
+            false,
+          )
+        };`;
+      }
+
       let dataType = eq.dataType as wgsl.AnyWgslData;
+
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
       if (!isEphemeralSnippet(eq)) {
