@@ -1,34 +1,18 @@
 ---
 import { Image } from "astro:assets";
-import DiscordIconSvg from "../../assets/discord-icon.svg";
-import GiantTypeGPULogo from "../../assets/giant-typegpu.svg";
 import GithubIconSvg from "../../assets/github-icon.svg";
-import LightModeIconSvg from "../../assets/sun.svg";
-import DarkModeIconSvg from "../../assets/moon.svg";
-import Illustration from "../../assets/illustration.svg";
-import SwmLogoSvg from "../../assets/typegpu-logo-light.svg";
 import SwmLogomarkSvg from "../../assets/swm-logomark.svg";
+import SwmLogoSvg from "../../assets/typegpu-logo-light.svg";
+import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
 import TypeGPULogoLight from "../../assets/typegpu-logomark-light.svg";
-import TypeGPULogomarkMonolight from "../../assets/typegpu-logomark-monolight.svg";
-import FeatureCard from "../../components/FeatureCard.astro";
-import FooterLink from "../../components/FooterLink.astro";
-import GetStartedButton from "../../components/GetStartedButton.astro";
-import MilestoneBindGroupsBadge from "../../components/roadmap/MilestoneBindGroupsBadge.astro";
-import MilestoneBuffersBadge from "../../components/roadmap/MilestoneBuffersBadge.astro";
-import MilestoneCodeBadge from "../../components/roadmap/MilestoneCodeBadge.astro";
-import MilestoneFunctionsBadge from "../../components/roadmap/MilestoneFunctionsBadge.astro";
-import MilestoneLinkerBadge from "../../components/roadmap/MilestoneLinkerBadge.astro";
-import MilestonePipelinesBadge from "../../components/roadmap/MilestonePipelinesBadge.astro";
-import RoadMapStep from "../../components/roadmap/RoadMapStep.astro";
-import PageLayout from "../../layouts/PageLayout.astro";
-import GradientTitle from "../../components/GradientTitle.astro";
-import CodePen from "../../components/CodePen.astro";
-import CodeButton from "../../components/CodeButton.astro";
-import CodeShowcase from "../../components/CodeShowcase.astro";
-import TgpuExamples from "../../components/TgpuExamples.astro";
 import Backlog from "../../components/Backlog.astro";
-import Videos from "../../components/Videos.astro";
+import CodeShowcase from "../../components/CodeShowcase.astro";
+import GetStartedButton from "../../components/GetStartedButton.astro";
+import GradientTitle from "../../components/GradientTitle.astro";
+import TgpuExamples from "../../components/TgpuExamples.astro";
 import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
+import Videos from "../../components/Videos.astro";
+import PageLayout from "../../layouts/PageLayout.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -46,8 +30,13 @@ import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
             alt="Software Mansion Logo (Mobile)"
           />
           <Image
+            src={TypeGPULogoDark}
+            class="hidden dark:md:block w-auto h-14"
+            alt="Software Mansion Logo (Mobile)"
+          />
+          <Image
             src={SwmLogoSvg}
-            class="hidden md:block w-auto h-14"
+            class="dark:hidden md:block w-auto h-14"
             alt="Software Mansion Logo (Desktop)"
           />
         </a>
@@ -144,7 +133,7 @@ import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
         </h3>
         <a
           class="bg-position-[100%_100%] bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] p-[1px] w-full sm:w-auto bg-size-[200%_200%] no-underline"
-          href="/TypeGPU/examples"
+          href="/TypeGPU/blog"
         >
           <span
             class="box-border flex justify-center items-center bg-white dark:bg-gray-800 shadow px-4 md:px-5 lg:px-6 py-2 md:py-3 lg:py-4 text-blue-950/75 hover:text-black dark:hover:text-white dark:text-gray-100 text-base md:text-xl lg:text-2xl text-center"
@@ -296,5 +285,3 @@ import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
     </div>
   </div>
 </footer>
-
-<!-- remove FooterLink -->

@@ -8,9 +8,7 @@ import for_libraries from "../assets/hero/for_libraries.svg";
 const sectionId = "interactive-code-section";
 ---
 
-{/* Code Section */}
 <div class="flex flex-col" id={sectionId}>
-    {/* buttons */}
     <div
         class="relative -mx-4 w-[calc(100%+4rem)] self-center sm:static sm:mx-0 sm:w-full"
     >
@@ -47,7 +45,6 @@ const sectionId = "interactive-code-section";
         </div>
     </div>
 
-    {/* CodePen */}
     <div class="relative w-full codepen-container">
         <CodePen
             code={`export interface TgpuComputePipeline
@@ -158,14 +155,12 @@ export function INTERNAL_createComputePipeline(
 
 <script define:vars={{ sectionId }}>
     const section = document.getElementById(sectionId);
-
     const buttons = Array.from(
         section.querySelectorAll(".code-button-wrapper"),
     );
     const codePens = Array.from(
         section.querySelectorAll(".codepen-container > *"),
     );
-
     function showContent(indexToShow) {
         buttons.forEach((button, index) => {
             if (button instanceof HTMLElement) {

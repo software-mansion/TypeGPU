@@ -25,16 +25,15 @@ async function loadExample(exampleKey: string): Promise<Example> {
   return example;
 }
 
-
 function resizeCanvases(container: HTMLElement) {
-  container.querySelectorAll("canvas").forEach((canvas) => {
+  for (const canvas of container.querySelectorAll('canvas')) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr * 2;
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-  });
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+  }
 }
 
 export default function HoverExampleIsland({ exampleKey }: Props) {
@@ -126,7 +125,6 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     return () => overlay.removeAttribute('data-active');
   }, [isHovered]);
 
-
   useEffect(() => {
     if (!isHovered) {
       reset();
@@ -160,7 +158,9 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         cleanupRef.current = dispose;
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'Failed to load example.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load example.',
+        );
         reset();
       } finally {
         if (!cancelled) {
@@ -184,22 +184,24 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className='w-full h-full overflow-hidden order'
+      className='order h-full w-full overflow-hidden'
     >
-      {error ? (
-        <p className='font-medium text-white text-sm text-center'>
-          {error}
-        </p>
-      ) : (
-        <div className='flex justify-center items-center w-full h-full'>
-          {isLoading && (
-            <span className='font-medium text-white/60 text-xs text-center uppercase tracking-widest animate-pulse'>
-              Loading…
-            </span>
-          )}
-          <div ref={containerRef} className='w-full h-full' />
-        </div>
-      )}
+      {error
+        ? (
+          <p className='text-center font-medium text-sm text-white'>
+            {error}
+          </p>
+        )
+        : (
+          <div className='flex h-full w-full items-center justify-center'>
+            {isLoading && (
+              <span className='animate-pulse text-center font-medium text-white/60 text-xs uppercase tracking-widest'>
+                Loading…
+              </span>
+            )}
+            <div ref={containerRef} className='h-full w-full' />
+          </div>
+        )}
     </div>
   );
 }
