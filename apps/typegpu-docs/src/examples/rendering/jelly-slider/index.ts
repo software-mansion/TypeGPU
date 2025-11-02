@@ -402,9 +402,13 @@ const getNormal = (
   );
 };
 
-const getFakeLight = (
+const sqLength = (a: d.v3f) => {
+  'use gpu';
+  return std.dot(a, a);
+};
+
+const getFakeShadow = (
   position: d.v3f,
-  normal: d.v3f,
   lightDir: d.v3f,
 ): d.v3f => {
   'use gpu';
@@ -501,8 +505,7 @@ const calculateLighting = (
   'use gpu';
   const lightDir = std.neg(lightUniform.$.direction);
 
-  const fakeLight = getFakeLight(hitPosition, normal, lightDir);
-
+  const fakeShadow = getFakeShadow(hitPosition, lightDir);
   const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
   const viewDir = std.normalize(rayOrigin.sub(hitPosition));
@@ -518,10 +521,10 @@ const calculateLighting = (
   const directionalLight = baseColor
     .mul(lightUniform.$.color)
     .mul(diffuse)
-    .mul(fakeLight);
+    .mul(fakeShadow);
   const ambientLight = baseColor.mul(AMBIENT_COLOR).mul(AMBIENT_INTENSITY);
 
-  const finalSpecular = specular.mul(fakeLight);
+  const finalSpecular = specular.mul(fakeShadow);
 
   return std.saturate(directionalLight.add(ambientLight).add(finalSpecular));
 };
@@ -667,12 +670,22 @@ const renderBackground = (
   );
   const newNormal = getNormalMain(posOffset);
 
+  // Calculate fake bounce lighting
+  const jellyColor = jellyColorUniform.$;
+  const sqDist = sqLength(hitPosition.sub(d.vec3f(endCapX, 0, 0)));
+  const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
+  const sideBounceLight = jellyColor.xyz
+    .mul(1 / (sqDist * 40 + 1) * 0.3)
+    .mul(std.abs(newNormal.z));
+
   const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
   const backgroundColor = applyAO(
     GROUND_ALBEDO.mul(litColor),
     posOffset,
     newNormal,
-  );
+  )
+    .add(d.vec4f(bounceLight, 0))
+    .add(d.vec4f(sideBounceLight, 0));
 
   const textColor = std.saturate(backgroundColor.xyz.mul(d.vec3f(0.5)));
 
