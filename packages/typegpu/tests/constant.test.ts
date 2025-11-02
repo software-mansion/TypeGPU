@@ -9,7 +9,7 @@ describe('tgpu.const', () => {
     const fn1 = tgpu.fn([], d.u32)`() { return x; }`.$uses({ x });
 
     expect(asWgsl(fn1)).toMatchInlineSnapshot(`
-      "const x: u32 = 2;
+      "const x: u32 = 2u;
 
       fn fn1() -> u32{ return x; }"
     `);

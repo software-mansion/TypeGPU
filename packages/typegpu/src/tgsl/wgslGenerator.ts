@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -728,7 +728,7 @@ ${this.ctx.pre}else ${alternate}`;
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+      return stitch`${this.ctx.pre}var ${snippet
         .value as string} = ${eq};`;
     }
 

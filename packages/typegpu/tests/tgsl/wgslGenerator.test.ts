@@ -80,7 +80,7 @@ describe('wgslGenerator', () => {
       expect(gen).toMatchInlineSnapshot(`
         "{
           var a = 12;
-          a += 21;
+          a += 21i;
           return a;
         }"
       `);
@@ -364,7 +364,7 @@ describe('wgslGenerator', () => {
 
     expect(gen).toMatchInlineSnapshot(`
       "{
-        for (var i = 0; (i < 10); i += 1) {
+        for (var i = 0; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -395,7 +395,7 @@ describe('wgslGenerator', () => {
     expect(gen).toMatchInlineSnapshot(`
       "{
         var i = 0;
-        for (; (i < 10); i += 1) {
+        for (; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -424,8 +424,8 @@ describe('wgslGenerator', () => {
     expect(gen).toMatchInlineSnapshot(`
       "{
         var i = 0;
-        while ((i < 10)) {
-          i += 1;
+        while ((i < 10i)) {
+          i += 1i;
         }
       }"
     `);
@@ -516,7 +516,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
-        var arr = array<u32, 3>(1, 2, 3);
+        var arr = array<u32, 3>(1u, 2u, 3u);
         return arr[1];
       }"
     `);
@@ -612,7 +612,7 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() -> f32 {
-        var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
+        var arr = array<TestStruct, 2>(TestStruct(1u, 2f), TestStruct(3u, 4f));
         return arr[1].y;
       }"
     `);
@@ -697,7 +697,7 @@ describe('wgslGenerator', () => {
       }
 
       fn fnOne() -> TestStruct {
-        return TestStruct(1, vec3f(1, 2, 3));
+        return TestStruct(1u, vec3f(1, 2, 3));
       }
 
       fn fnTwo() -> f32 {
@@ -791,9 +791,9 @@ describe('wgslGenerator', () => {
     expect(asWgsl(main0)).toMatchInlineSnapshot(`
       "fn main0(cond: bool) -> u32 {
         if (cond) {
-          return 0;
+          return 0u;
         }
-        return 1;
+        return 1u;
       }"
     `);
   });
@@ -810,10 +810,10 @@ describe('wgslGenerator', () => {
       "fn main1(cond: bool) -> i32 {
         var y = 0;
         if (cond) {
-          y = 1;
+          y = 1i;
         }
         else {
-          y = 2;
+          y = 2i;
         }
         return y;
       }"
@@ -833,10 +833,10 @@ describe('wgslGenerator', () => {
       "fn main2(cond: bool) -> i32 {
         var y = 0;
         if (cond) {
-          y = 1;
+          y = 1i;
         }
         else {
-          y = 2;
+          y = 2i;
         }
         return y;
       }"
@@ -862,7 +862,7 @@ describe('wgslGenerator', () => {
 
     expect(gen).toMatchInlineSnapshot(`
       "{
-        for (var i = 0; (i < 10); i += 1) {
+        for (var i = 0; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -878,8 +878,8 @@ describe('wgslGenerator', () => {
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
         var i = 0;
-        while ((i < 10)) {
-          i += 1;
+        while ((i < 10i)) {
+          i += 1i;
         }
       }"
     `);
@@ -939,7 +939,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(increment)).toMatchInlineSnapshot(`
       "fn increment(val: ptr<function, f32>) {
-        *val += 1;
+        *val += 1f;
       }"
     `);
   });
