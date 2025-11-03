@@ -794,4 +794,11 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   createComparisonSampler(
     props: WgslComparisonSamplerProps,
   ): TgpuFixedComparisonSampler;
+
+  /**
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
+   */
+  flush(): void;
 }
