@@ -308,8 +308,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
-  root['~unstable'].flush();
-
   requestAnimationFrame(frame);
 }
 enqueuePresetChanges();
