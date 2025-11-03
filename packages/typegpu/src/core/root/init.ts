@@ -184,8 +184,6 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
       workgroupCount.y,
       workgroupCount.z,
     );
-    // Yeah, i know we flush here... but it's only a matter of time!
-    this.#root.flush();
   }
 }
 
@@ -394,8 +392,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -413,14 +409,6 @@ class TgpuRootImpl extends WithBindingImpl
     this[$internal] = {
       logOptions,
     };
-  }
-
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
-    }
-
-    return this._commandEncoder;
   }
 
   get enabledFeatures() {
@@ -632,7 +620,8 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -779,15 +768,11 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   flush() {
-    if (!this._commandEncoder) {
-      return;
-    }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
+    console.warn('flush() has been deprecated, and has no effect.');
   }
 }
 
