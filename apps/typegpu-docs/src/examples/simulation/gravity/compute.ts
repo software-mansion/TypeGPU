@@ -142,29 +142,28 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
     destroyed: computeLayout.$.inState[currentId].destroyed,
   });
 
-  if (current.destroyed === 1) {
-    return;
-  }
+  if (current.destroyed === 0) {
+    for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
+      const other = computeLayout.$.inState[i];
 
-  for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
-    const other = computeLayout.$.inState[i];
+      if (d.u32(i) === input.gid.x || other.destroyed === 1) {
+        continue;
+      }
 
-    if (d.u32(i) === input.gid.x || other.destroyed === 1) {
-      continue;
+      const dist = std.max(
+        radiusOf(current) + radiusOf(other),
+        std.distance(current.position, other.position),
+      );
+      const gravityForce = (current.mass * other.mass) / dist / dist;
+
+      const direction = std.normalize(other.position.sub(current.position));
+      current.velocity = current.velocity.add(
+        direction.mul((gravityForce / current.mass) * dt),
+      );
     }
 
-    const dist = std.max(
-      radiusOf(current) + radiusOf(other),
-      std.distance(current.position, other.position),
-    );
-    const gravityForce = (current.mass * other.mass) / dist / dist;
-
-    const direction = std.normalize(other.position.sub(current.position));
-    current.velocity = current.velocity.add(
-      direction.mul((gravityForce / current.mass) * dt),
-    );
+    current.position = current.position.add(current.velocity.mul(dt));
   }
 
-  current.position = current.position.add(current.velocity.mul(dt));
   computeLayout.$.outState[input.gid.x] = CelestialBody(current);
 });

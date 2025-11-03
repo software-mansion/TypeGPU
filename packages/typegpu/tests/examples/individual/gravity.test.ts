@@ -131,20 +131,19 @@ describe('gravity example', () => {
         let dt = (time_1.passed * time_1.multiplier);
         let currentId = input.gid.x;
         var current = CelestialBody_4(inState_3[currentId].destroyed, inState_3[currentId].position, inState_3[currentId].velocity, inState_3[currentId].mass, inState_3[currentId].radiusMultiplier, inState_3[currentId].collisionBehavior, inState_3[currentId].textureIndex, inState_3[currentId].ambientLightFactor);
-        if ((current.destroyed == 1)) {
-          return;
-        }
-        for (var i = 0; (i < celestialBodiesCount_5); i++) {
-          let other = (&inState_3[i]);
-          if (((u32(i) == input.gid.x) || ((*other).destroyed == 1))) {
-            continue;
+        if ((current.destroyed == 0)) {
+          for (var i = 0; (i < celestialBodiesCount_5); i++) {
+            let other = (&inState_3[i]);
+            if (((u32(i) == input.gid.x) || ((*other).destroyed == 1))) {
+              continue;
+            }
+            let dist = max((radiusOf_6(current) + radiusOf_6((*other))), distance(current.position, (*other).position));
+            let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
+            var direction = normalize(((*other).position - current.position));
+            current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
           }
-          let dist = max((radiusOf_6(current) + radiusOf_6((*other))), distance(current.position, (*other).position));
-          let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
-          var direction = normalize(((*other).position - current.position));
-          current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
+          current.position = (current.position + (current.velocity * dt));
         }
-        current.position = (current.position + (current.velocity * dt));
         outState_7[input.gid.x] = current;
       }
 
