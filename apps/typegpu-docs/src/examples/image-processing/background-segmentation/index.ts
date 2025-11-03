@@ -10,7 +10,6 @@ import {
   prepareModelInputLayout,
   sampleBiasSlot,
   useGaussianSlot,
-  uvTransformSlot,
 } from './schemas.ts';
 import {
   computeFn,
@@ -52,7 +51,7 @@ if (!device || !adapter) {
   throw new Error('Failed to initialize device.');
 }
 
-// monkey patching ONNX (setting device in the environment does nothing)
+// monkey patching ONNX: https://github.com/microsoft/onnxruntime/issues/26107
 const oldRequestAdapter = navigator.gpu.requestAdapter;
 const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
@@ -74,7 +73,6 @@ let useGaussianBlur = false;
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
-const uvTransformUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 const useGaussianUniform = root.createUniform(d.u32, 0);
 const sampleBiasUniform = root.createUniform(d.f32, 0);
 
@@ -135,18 +133,20 @@ const blurBindGroups = [
 
 // pipelines
 
-const prepareModelInputPipeline = root['~unstable'].prepareDispatch(
-  prepareModelInput,
-);
+const prepareModelInputPipeline = root['~unstable']
+  .createGuardedComputePipeline(
+    prepareModelInput,
+  );
 
 const session = await prepareSession(
   root.unwrap(modelInputBuffer),
   root.unwrap(modelOutputBuffer),
 );
 
-const generateMaskFromOutputPipeline = root['~unstable'].prepareDispatch(
-  generateMaskFromOutput,
-);
+const generateMaskFromOutputPipeline = root['~unstable']
+  .createGuardedComputePipeline(
+    generateMaskFromOutput,
+  );
 
 const blurPipeline = root['~unstable']
   .withCompute(computeFn)
@@ -155,32 +155,9 @@ const blurPipeline = root['~unstable']
 const drawWithMaskPipeline = root['~unstable']
   .with(useGaussianSlot, useGaussianUniform)
   .with(sampleBiasSlot, sampleBiasUniform)
-  .with(uvTransformSlot, uvTransformUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
-
-// iOS
-
-if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-  function setUVTransformForIOS() {
-    const angle = screen.orientation.type;
-
-    let m = d.mat2x2f(1, 0, 0, 1);
-    if (angle === 'portrait-primary') {
-      m = d.mat2x2f(0, -1, 1, 0);
-    } else if (angle === 'portrait-secondary') {
-      m = d.mat2x2f(0, 1, -1, 0);
-    } else if (angle === 'landscape-primary') {
-      m = d.mat2x2f(-1, 0, 0, -1);
-    }
-
-    uvTransformUniform.write(m);
-  }
-
-  setUVTransformForIOS();
-  window.addEventListener('orientationchange', setUVTransformForIOS);
-}
 
 // recalculating mask
 
@@ -201,8 +178,6 @@ async function processCalculateMask() {
       sampler,
     }))
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
-
-  root['~unstable'].flush();
 
   await session.run();
 
