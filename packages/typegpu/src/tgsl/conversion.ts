@@ -9,8 +9,6 @@ import {
   type F32,
   type I32,
   isMat,
-  isNaturallyEphemeral,
-  isPtr,
   isVec,
   type U32,
   type WgslStruct,
