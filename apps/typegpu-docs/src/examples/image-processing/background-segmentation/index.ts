@@ -19,6 +19,11 @@ import {
   prepareModelInput,
 } from './shaders.ts';
 
+// We need to wait for issue to close: https://github.com/microsoft/onnxruntime/issues/26480
+if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+  throw new Error('Unfortunately, ONNX does not work on Safari or iOS yet.');
+}
+
 // setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -41,17 +46,7 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 const adapter = await navigator.gpu?.requestAdapter();
-let device: GPUDevice;
-try {
-  device = await adapter?.requestDevice({
-    label: `my device ${performance.now()}`,
-    requiredFeatures: ['subgroups'],
-  }) as GPUDevice;
-} catch {
-  throw new Error(
-    'Subgroups are required for this example but are not available in your browser.',
-  );
-}
+const device = await adapter?.requestDevice() as GPUDevice;
 
 if (!device || !adapter) {
   throw new Error('Failed to initialize device.');
