@@ -47,10 +47,12 @@ describe('gravity example', () => {
       }
 
       fn isSmaller_5(currentId: u32, otherId: u32) -> bool {
-        if ((inState_1[currentId].mass < inState_1[otherId].mass)) {
+        let current = (&inState_1[currentId]);
+        let other = (&inState_1[otherId]);
+        if (((*current).mass < (*other).mass)) {
           return true;
         }
-        if ((inState_1[currentId].mass == inState_1[otherId].mass)) {
+        if (((*current).mass == (*other).mass)) {
           return (currentId < otherId);
         }
         return false;
@@ -64,19 +66,22 @@ describe('gravity example', () => {
 
       @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
         let currentId = input.gid.x;
-        var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
+        var current = inState_1[currentId];
         if ((current.destroyed == 0)) {
-          for (var i = 0; (i < celestialBodiesCount_3); i++) {
-            let otherId = u32(i);
-            var other = CelestialBody_2(inState_1[otherId].destroyed, inState_1[otherId].position, inState_1[otherId].velocity, inState_1[otherId].mass, inState_1[otherId].radiusMultiplier, inState_1[otherId].collisionBehavior, inState_1[otherId].textureIndex, inState_1[otherId].ambientLightFactor);
-            if ((((((u32(i) == input.gid.x) || (other.destroyed == 1)) || (current.collisionBehavior == 0)) || (other.collisionBehavior == 0)) || (distance(current.position, other.position) >= (radiusOf_4(current) + radiusOf_4(other))))) {
+          for (var otherId = 0u; (otherId < u32(celestialBodiesCount_3)); otherId++) {
+            let other = (&inState_1[otherId]);
+            if ((((((otherId == currentId) || ((*other).destroyed == 1)) || (current.collisionBehavior == 0)) || ((*other).collisionBehavior == 0)) || (distance(current.position, (*other).position) >= (radiusOf_4(current) + radiusOf_4((*other)))))) {
               continue;
             }
-            if (((current.collisionBehavior == 1) && (other.collisionBehavior == 1))) {
+            if (((current.collisionBehavior == 1) && ((*other).collisionBehavior == 1))) {
               if (isSmaller_5(currentId, otherId)) {
-                current.position = (other.position + ((radiusOf_4(current) + radiusOf_4(other)) * normalize((current.position - other.position))));
+                var dir = normalize((current.position - (*other).position));
+                current.position = ((*other).position + (dir * (radiusOf_4(current) + radiusOf_4((*other)))));
               }
-              current.velocity = (0.99 * (current.velocity - (((((2 * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2)) * (current.position - other.position))));
+              var posDiff = (current.position - (*other).position);
+              var velDiff = (current.velocity - (*other).velocity);
+              let posDiffFactor = ((((2 * (*other).mass) / (current.mass + (*other).mass)) * dot(velDiff, posDiff)) / dot(posDiff, posDiff));
+              current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99);
             }
             else {
               let isCurrentAbsorbed = ((current.collisionBehavior == 1) || ((current.collisionBehavior == 2) && isSmaller_5(currentId, otherId)));
@@ -85,14 +90,14 @@ describe('gravity example', () => {
               }
               else {
                 let m1 = current.mass;
-                let m2 = other.mass;
-                current.velocity = (((m1 / (m1 + m2)) * current.velocity) + ((m2 / (m1 + m2)) * other.velocity));
+                let m2 = (*other).mass;
+                current.velocity = ((current.velocity * (m1 / (m1 + m2))) + ((*other).velocity * (m2 / (m1 + m2))));
                 current.mass = (m1 + m2);
               }
             }
           }
         }
-        outState_6[input.gid.x] = current;
+        outState_6[currentId] = current;
       }
 
       struct Time_2 {
@@ -130,11 +135,11 @@ describe('gravity example', () => {
       @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
         let dt = (time_1.passed * time_1.multiplier);
         let currentId = input.gid.x;
-        var current = CelestialBody_4(inState_3[currentId].destroyed, inState_3[currentId].position, inState_3[currentId].velocity, inState_3[currentId].mass, inState_3[currentId].radiusMultiplier, inState_3[currentId].collisionBehavior, inState_3[currentId].textureIndex, inState_3[currentId].ambientLightFactor);
+        var current = inState_3[currentId];
         if ((current.destroyed == 0)) {
-          for (var i = 0; (i < celestialBodiesCount_5); i++) {
-            let other = (&inState_3[i]);
-            if (((u32(i) == input.gid.x) || ((*other).destroyed == 1))) {
+          for (var otherId = 0u; (otherId < u32(celestialBodiesCount_5)); otherId++) {
+            let other = (&inState_3[otherId]);
+            if (((otherId == currentId) || ((*other).destroyed == 1))) {
               continue;
             }
             let dist = max((radiusOf_6(current) + radiusOf_6((*other))), distance(current.position, (*other).position));
@@ -144,7 +149,7 @@ describe('gravity example', () => {
           }
           current.position = (current.position + (current.velocity * dt));
         }
-        outState_7[input.gid.x] = current;
+        outState_7[currentId] = current;
       }
 
       struct Camera_2 {
@@ -227,11 +232,11 @@ describe('gravity example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_7) -> mainVertex_Output_6 {
-        var currentBody = CelestialBody_2(celestialBodies_1[input.instanceIndex].destroyed, celestialBodies_1[input.instanceIndex].position, celestialBodies_1[input.instanceIndex].velocity, celestialBodies_1[input.instanceIndex].mass, celestialBodies_1[input.instanceIndex].radiusMultiplier, celestialBodies_1[input.instanceIndex].collisionBehavior, celestialBodies_1[input.instanceIndex].textureIndex, celestialBodies_1[input.instanceIndex].ambientLightFactor);
-        var worldPosition = ((radiusOf_3(currentBody) * input.position.xyz) + currentBody.position);
+        let currentBody = (&celestialBodies_1[input.instanceIndex]);
+        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf_3((*currentBody))));
         let camera = (&camera_4);
-        var positionOnCanvas = ((*camera).projection * ((*camera).view * vec4f(worldPosition, 1)));
-        return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, currentBody.textureIndex, currentBody.destroyed, currentBody.ambientLightFactor);
+        var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1));
+        return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
       @group(1) @binding(0) var celestialBodyTextures_9: texture_2d_array<f32>;
@@ -256,11 +261,11 @@ describe('gravity example', () => {
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
         var textureColor = textureSample(celestialBodyTextures_9, sampler_10, input.uv, input.sphereTextureIndex).xyz;
-        var ambient = (input.ambientLightFactor * (textureColor * lightColor));
+        var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
         var normal = input.normals;
         var lightDirection = normalize((lightSource_11 - input.worldPosition));
         let cosTheta = dot(normal, lightDirection);
-        var diffuse = (max(0, cosTheta) * (textureColor * lightColor));
+        var diffuse = ((textureColor * lightColor) * max(0, cosTheta));
         var litColor = (ambient + diffuse);
         return vec4f(litColor.xyz, 1);
       }"

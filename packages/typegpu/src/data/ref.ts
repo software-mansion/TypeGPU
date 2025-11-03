@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
 import { $internal, $isRef, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -8,6 +8,7 @@ import { UnknownData } from './dataTypes.ts';
 import type { DualFn } from './dualFn.ts';
 import { INTERNAL_createPtr } from './ptr.ts';
 import {
+  isEphemeralSnippet,
   type OriginToPtrParams,
   originToPtrParams,
   type ResolvedSnippet,
@@ -34,6 +35,11 @@ export interface ref<T> {
 // TODO: Restrict calls to this function only from within TypeGPU functions
 export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   const gpuImpl = (value: Snippet) => {
+    if (!isEphemeralSnippet(value)) {
+      throw new WgslTypeError(
+        `Can't create refs from references. Copy the value first by wrapping it in its schema.`,
+      );
+    }
     return snip(new RefOnGPU(value), UnknownData, /* origin */ 'runtime');
   };
 

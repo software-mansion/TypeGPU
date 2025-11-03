@@ -9,18 +9,17 @@ const { none, bounce, merge } = collisionBehaviors;
 
 // tiebreaker function for merges and bounces
 const isSmaller = tgpu.fn([d.u32, d.u32], d.bool)((currentId, otherId) => {
-  if (
-    computeLayout.$.inState[currentId].mass <
-      computeLayout.$.inState[otherId].mass
-  ) {
+  const current = computeLayout.$.inState[currentId];
+  const other = computeLayout.$.inState[otherId];
+
+  if (current.mass < other.mass) {
     return true;
   }
-  if (
-    computeLayout.$.inState[currentId].mass ===
-      computeLayout.$.inState[otherId].mass
-  ) {
+
+  if (current.mass === other.mass) {
     return currentId < otherId;
   }
+
   return false;
 });
 
@@ -29,35 +28,18 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   const currentId = input.gid.x;
-  // TODO: replace it with struct copy when Chromium is fixed
-  const current = CelestialBody({
-    position: computeLayout.$.inState[currentId].position,
-    velocity: computeLayout.$.inState[currentId].velocity,
-    mass: computeLayout.$.inState[currentId].mass,
-    collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
-    textureIndex: computeLayout.$.inState[currentId].textureIndex,
-    radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
-    ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
-    destroyed: computeLayout.$.inState[currentId].destroyed,
-  });
+  const current = CelestialBody(computeLayout.$.inState[currentId]);
 
   if (current.destroyed === 0) {
-    for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
-      const otherId = d.u32(i);
-      // TODO: replace it with struct copy when Chromium is fixed
-      const other = CelestialBody({
-        position: computeLayout.$.inState[otherId].position,
-        velocity: computeLayout.$.inState[otherId].velocity,
-        mass: computeLayout.$.inState[otherId].mass,
-        collisionBehavior: computeLayout.$.inState[otherId].collisionBehavior,
-        textureIndex: computeLayout.$.inState[otherId].textureIndex,
-        radiusMultiplier: computeLayout.$.inState[otherId].radiusMultiplier,
-        ambientLightFactor: computeLayout.$.inState[otherId].ambientLightFactor,
-        destroyed: computeLayout.$.inState[otherId].destroyed,
-      });
+    for (
+      let otherId = d.u32(0);
+      otherId < d.u32(computeLayout.$.celestialBodiesCount);
+      otherId++
+    ) {
+      const other = computeLayout.$.inState[otherId];
       // no collision occurs...
       if (
-        d.u32(i) === input.gid.x || // ...with itself
+        otherId === currentId || // ...with itself
         other.destroyed === 1 || // ...when other is destroyed
         current.collisionBehavior === none || // ...when current behavior is none
         other.collisionBehavior === none || // ...when other behavior is none
@@ -75,30 +57,20 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         // bounce occurs
         // push the smaller object outside
         if (isSmaller(currentId, otherId)) {
-          current.position = std.add(
-            other.position,
-            std.mul(
-              radiusOf(current) + radiusOf(other),
-              std.normalize(std.sub(current.position, other.position)),
-            ),
-          );
+          const dir = std.normalize(current.position.sub(other.position));
+          current.position = other.position
+            .add(dir.mul(radiusOf(current) + radiusOf(other)));
         }
+
         // bounce with tiny damping
-        current.velocity = std.mul(
-          0.99,
-          std.sub(
-            current.velocity,
-            std.mul(
-              (((2 * other.mass) / (current.mass + other.mass)) *
-                std.dot(
-                  std.sub(current.velocity, other.velocity),
-                  std.sub(current.position, other.position),
-                )) /
-                std.pow(std.distance(current.position, other.position), 2),
-              std.sub(current.position, other.position),
-            ),
-          ),
-        );
+        const posDiff = current.position.sub(other.position);
+        const velDiff = current.velocity.sub(other.velocity);
+        const posDiffFactor =
+          (((2 * other.mass) / (current.mass + other.mass)) *
+            std.dot(velDiff, posDiff)) / std.dot(posDiff, posDiff);
+
+        current.velocity = current.velocity
+          .sub(posDiff.mul(posDiffFactor)).mul(0.99);
       } else {
         // merge occurs
         const isCurrentAbsorbed = current.collisionBehavior === bounce ||
@@ -112,8 +84,8 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
           const m1 = current.mass;
           const m2 = other.mass;
           current.velocity = std.add(
-            std.mul(m1 / (m1 + m2), current.velocity),
-            std.mul(m2 / (m1 + m2), other.velocity),
+            current.velocity.mul(m1 / (m1 + m2)),
+            other.velocity.mul(m2 / (m1 + m2)),
           );
           current.mass = m1 + m2;
         }
@@ -121,7 +93,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
     }
   }
 
-  computeLayout.$.outState[input.gid.x] = CelestialBody(current);
+  computeLayout.$.outState[currentId] = CelestialBody(current);
 });
 
 export const computeGravityShader = tgpu['~unstable'].computeFn({
@@ -130,23 +102,17 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
 })((input) => {
   const dt = timeAccess.$.passed * timeAccess.$.multiplier;
   const currentId = input.gid.x;
-  // TODO: replace it with struct copy when Chromium is fixed
-  const current = CelestialBody({
-    position: computeLayout.$.inState[currentId].position,
-    velocity: computeLayout.$.inState[currentId].velocity,
-    mass: computeLayout.$.inState[currentId].mass,
-    collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
-    textureIndex: computeLayout.$.inState[currentId].textureIndex,
-    radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
-    ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
-    destroyed: computeLayout.$.inState[currentId].destroyed,
-  });
+  const current = CelestialBody(computeLayout.$.inState[currentId]);
 
   if (current.destroyed === 0) {
-    for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
-      const other = computeLayout.$.inState[i];
+    for (
+      let otherId = d.u32(0);
+      otherId < d.u32(computeLayout.$.celestialBodiesCount);
+      otherId++
+    ) {
+      const other = computeLayout.$.inState[otherId];
 
-      if (d.u32(i) === input.gid.x || other.destroyed === 1) {
+      if (otherId === currentId || other.destroyed === 1) {
         continue;
       }
 
@@ -165,5 +131,5 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
     current.position = current.position.add(current.velocity.mul(dt));
   }
 
-  computeLayout.$.outState[input.gid.x] = CelestialBody(current);
+  computeLayout.$.outState[currentId] = CelestialBody(current);
 });
