@@ -1,14 +1,15 @@
+import { sdBezier } from '@typegpu/sdf';
 import type {
   SampledFlag,
   StorageFlag,
   TgpuBuffer,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   TgpuTexture,
   TgpuUniform,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { sdBezier } from '@typegpu/sdf';
 
 const BEZIER_TEXTURE_SIZE = [256, 128] as const;
 
@@ -21,9 +22,7 @@ export class Slider {
   #targetX: number;
   #controlPoints: d.v2f[];
   #yOffset: number;
-  #computeBezierTexture: ReturnType<
-    TgpuRoot['~unstable']['prepareDispatch']
-  >;
+  #computeBezierPipeline: TgpuGuardedComputePipeline;
 
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   controlPointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
@@ -83,7 +82,7 @@ export class Slider {
     for (let i = 0; i < this.n; i++) {
       const t = i / (this.n - 1);
       const x = start[0] * (1 - t) + end[0] * t;
-      const y = (start[1] * (1 - t) + end[1] * t) + this.#yOffset;
+      const y = start[1] * (1 - t) + end[1] * t + this.#yOffset;
       this.#pos[i] = d.vec2f(x, y);
       this.#prev[i] = d.vec2f(x, y);
       this.#normals[i] = d.vec2f(0, 1);
@@ -91,30 +90,21 @@ export class Slider {
       if (i < this.n - 1) {
         const t2 = (i + 0.5) / (this.n - 1);
         const cx = start[0] * (1 - t2) + end[0] * t2;
-        const cy = (start[1] * (1 - t2) + end[1] * t2) + this.#yOffset;
+        const cy = start[1] * (1 - t2) + end[1] * t2 + this.#yOffset;
         this.#controlPoints[i] = d.vec2f(cx, cy);
       }
     }
 
     this.pointsBuffer = this.#root
-      .createBuffer(
-        d.arrayOf(d.vec2f, this.n),
-        this.#pos,
-      )
+      .createBuffer(d.arrayOf(d.vec2f, this.n), this.#pos)
       .$usage('storage');
 
     this.controlPointsBuffer = this.#root
-      .createBuffer(
-        d.arrayOf(d.vec2f, this.n - 1),
-        this.#controlPoints,
-      )
+      .createBuffer(d.arrayOf(d.vec2f, this.n - 1), this.#controlPoints)
       .$usage('storage');
 
     this.normalsBuffer = this.#root
-      .createBuffer(
-        d.arrayOf(d.vec2f, this.n),
-        this.#normals,
-      )
+      .createBuffer(d.arrayOf(d.vec2f, this.n), this.#normals)
       .$usage('storage');
 
     this.bezierTexture = this.#root['~unstable']
@@ -140,8 +130,8 @@ export class Slider {
 
     this.bbox = [top, right, bottom, left];
 
-    this.#computeBezierTexture = this.#root['~unstable'].prepareDispatch(
-      (x, y) => {
+    this.#computeBezierPipeline = this.#root['~unstable']
+      .createGuardedComputePipeline((x, y) => {
         'use gpu';
         const size = std.textureDimensions(bezierWriteView.$);
         const pixelUV = d.vec2f(x, y).add(0.5).div(d.vec2f(size));
@@ -218,8 +208,7 @@ export class Slider {
           d.vec2u(x, y),
           d.vec4f(minDist, overallProgress, normalX, normalY),
         );
-      },
-    );
+      });
   }
 
   setDragX(x: number) {
@@ -246,7 +235,7 @@ export class Slider {
     this.#computeNormals();
     this.#computeControlPoints();
     this.#updateGPUBuffer();
-    this.#computeBezierTexture.dispatchThreads(...BEZIER_TEXTURE_SIZE);
+    this.#computeBezierPipeline.dispatchThreads(...BEZIER_TEXTURE_SIZE);
   }
 
   #integrate(h: number, damp: number, compression: number) {
@@ -328,10 +317,7 @@ export class Slider {
 
       // Re-pin endpoints
       this.#pos[0] = d.vec2f(this.anchor[0], this.anchor[1] + this.#yOffset);
-      this.#pos[this.n - 1] = d.vec2f(
-        this.#targetX,
-        0.08 + this.#yOffset,
-      );
+      this.#pos[this.n - 1] = d.vec2f(this.#targetX, 0.08 + this.#yOffset);
     }
   }
 
@@ -421,20 +407,14 @@ export class Slider {
       const nB = this.#normals[i + 1];
 
       if (i === 0 || i === this.n - 2) {
-        this.#controlPoints[i] = d.vec2f(
-          (A.x + B.x) * 0.5,
-          (A.y + B.y) * 0.5,
-        );
+        this.#controlPoints[i] = d.vec2f((A.x + B.x) * 0.5, (A.y + B.y) * 0.5);
         continue;
       }
 
       if (std.dot(nA, nB) > 0.99) {
         // Nearly parallel normals; midpoint fallback prevents explosions.
         // tiny offset opposite to the normal (any of them)
-        this.#controlPoints[i] = d.vec2f(
-          (A.x + B.x) * 0.5,
-          (A.y + B.y) * 0.5,
-        );
+        this.#controlPoints[i] = d.vec2f((A.x + B.x) * 0.5, (A.y + B.y) * 0.5);
         continue;
       }
 
@@ -448,10 +428,7 @@ export class Slider {
 
       if (Math.abs(denom) <= 1e-6) {
         // Nearly parallel tangents; midpoint fallback prevents explosions.
-        this.#controlPoints[i] = d.vec2f(
-          (A.x + B.x) * 0.5,
-          (A.y + B.y) * 0.5,
-        );
+        this.#controlPoints[i] = d.vec2f((A.x + B.x) * 0.5, (A.y + B.y) * 0.5);
         continue;
       }
 

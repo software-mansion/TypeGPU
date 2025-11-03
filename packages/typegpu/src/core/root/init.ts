@@ -107,8 +107,8 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  PreparedDispatch,
   RenderPass,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -137,8 +137,8 @@ const workgroupSizeConfigs = [
   vec3u(8, 8, 4),
 ] as const;
 
-export class PreparedDispatchImpl<TArgs extends number[]>
-  implements PreparedDispatch<TArgs> {
+export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
+  implements TgpuGuardedComputePipeline<TArgs> {
   #root: ExperimentalTgpuRoot;
   #pipeline: TgpuComputePipeline;
   #sizeUniform: TgpuUniform<Vec3u>;
@@ -159,12 +159,8 @@ export class PreparedDispatchImpl<TArgs extends number[]>
     this.#lastSize = vec3u();
   }
 
-  /**
-   * Returns a new PreparedDispatch with the specified bind group bound.
-   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
-   */
-  with(bindGroup: TgpuBindGroup): PreparedDispatch<TArgs> {
-    return new PreparedDispatchImpl(
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this.#pipeline.with(bindGroup),
       this.#sizeUniform,
@@ -172,11 +168,6 @@ export class PreparedDispatchImpl<TArgs extends number[]>
     );
   }
 
-  /**
-   * Run the prepared dispatch.
-   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`,
-   * this method takes in the number of threads to run in each dimension.
-   */
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(
@@ -193,8 +184,6 @@ export class PreparedDispatchImpl<TArgs extends number[]>
       workgroupCount.y,
       workgroupCount.z,
     );
-    // Yeah, i know we flush here... but it's only a matter of time!
-    this.#root.flush();
   }
 }
 
@@ -220,13 +209,15 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  prepareDispatch<TArgs extends number[]>(
+  createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => undefined,
-  ): PreparedDispatch<TArgs> {
+  ): TgpuGuardedComputePipeline<TArgs> {
     const root = this._getRoot();
 
     if (callback.length >= 4) {
-      throw new Error('Dispatch only supports up to three dimensions.');
+      throw new Error(
+        'Guarded compute callback only supports up to three dimensions.',
+      );
     }
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
@@ -236,8 +227,8 @@ class WithBindingImpl implements WithBinding {
 
     const sizeUniform = root.createUniform(vec3u);
 
-    // raw WGSL instead of TGSL
-    // because we do not run unplugin before shipping typegpu package
+    // WGSL instead of JS because we do not run unplugin
+    // before shipping the typegpu package
     const mainCompute = computeFn({
       workgroupSize,
       in: { id: builtin.globalInvocationId },
@@ -252,7 +243,12 @@ class WithBindingImpl implements WithBinding {
       .withCompute(mainCompute)
       .createPipeline();
 
-    return new PreparedDispatchImpl(root, pipeline, sizeUniform, workgroupSize);
+    return new TgpuGuardedComputePipelineImpl(
+      root,
+      pipeline,
+      sizeUniform,
+      workgroupSize,
+    );
   }
 
   withVertex<VertexIn extends IOLayout>(
@@ -396,8 +392,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -415,14 +409,6 @@ class TgpuRootImpl extends WithBindingImpl
     this[$internal] = {
       logOptions,
     };
-  }
-
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
-    }
-
-    return this._commandEncoder;
   }
 
   get enabledFeatures() {
@@ -634,7 +620,8 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -781,15 +768,11 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   flush() {
-    if (!this._commandEncoder) {
-      return;
-    }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
+    console.warn('flush() has been deprecated, and has no effect.');
   }
 }
 

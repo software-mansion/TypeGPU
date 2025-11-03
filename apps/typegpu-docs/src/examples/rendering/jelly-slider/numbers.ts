@@ -21,11 +21,15 @@ export class NumberProvider {
       size: [PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT, PERCENTAGE_COUNT],
       format: 'rgba8unorm',
     }).$usage('sampled', 'render');
-
-    this.#fillAtlas();
   }
 
-  #fillAtlas() {
+  async fillAtlas() {
+    // Ensure the font is loaded before drawing
+    await Promise.all([
+      document.fonts.load('180px "Reddit Mono"'),
+      document.fonts.load('140px "JetBrains Mono"'),
+    ]);
+
     const canvas = document.createElement('canvas');
     canvas.width = PERCENTAGE_WIDTH;
     canvas.height = PERCENTAGE_HEIGHT;
@@ -34,26 +38,28 @@ export class NumberProvider {
       throw new Error('Failed to get 2D context');
     }
 
-    ctx.font =
-      '160px "SF Mono", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace';
+    const regularFont = '180px "Reddit Mono", monospace';
+    const percentageFont = '140px "JetBrains Mono", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = 'white';
 
-    const percentageImages = [];
+    const percentageImages: ImageBitmap[] = [];
 
     for (let i = 0; i <= 100; i++) {
       ctx.clearRect(0, 0, PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT);
 
-      const text = `${i}%`;
       const x = PERCENTAGE_WIDTH - 20;
       const y = PERCENTAGE_HEIGHT / 2;
 
-      ctx.fillText(text, x, y);
+      ctx.font = regularFont;
+      ctx.fillText(`${i} `, x, y);
 
-      percentageImages.push(
-        ctx.getImageData(0, 0, PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT),
-      );
+      ctx.font = percentageFont;
+      ctx.fillText(`%`, x, y + 10);
+
+      const bitmap = await createImageBitmap(canvas);
+      percentageImages.push(bitmap);
     }
 
     this.digitTextureAtlas.write(percentageImages);

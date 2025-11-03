@@ -11,7 +11,7 @@ export const GROUND_ALBEDO = d.vec3f(1);
 // Lighting constants
 export const AMBIENT_COLOR = d.vec3f(0.6);
 export const AMBIENT_INTENSITY = 0.6;
-export const SPECULAR_POWER = 120.0;
+export const SPECULAR_POWER = 10;
 export const SPECULAR_INTENSITY = 0.6;
 
 // Jelly material constants
