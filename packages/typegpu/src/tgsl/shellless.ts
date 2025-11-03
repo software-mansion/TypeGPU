@@ -4,6 +4,7 @@ import {
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
 import type { Snippet } from '../data/snippet.ts';
+import { isPtr } from '../data/wgslTypes.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
@@ -15,6 +16,7 @@ function shallowEqualSchemas(a: AnyData, b: AnyData): boolean {
   if (a.type === 'ptr' && b.type === 'ptr') {
     return a.access === b.access &&
       a.addressSpace === b.addressSpace &&
+      a.implicit === b.implicit &&
       shallowEqualSchemas(a.inner, b.inner);
   }
   if (a.type === 'array' && b.type === 'array') {
@@ -46,7 +48,7 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s) => {
-      const type = concretize(s.dataType as AnyData);
+      let type = concretize(s.dataType as AnyData);
 
       if (s.origin === 'constant-ref') {
         // biome-ignore lint/style/noNonNullAssertion: it's there
@@ -56,6 +58,18 @@ export class ShelllessRepository {
             ctx.resolve(type).value
           }(...)'`,
         );
+      }
+
+      if (isPtr(type) && type.implicit) {
+        // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),// then we dereference the pointer before passing it to the function. The main reason for this,
+        // is that in TypeScript, the type of the function accepts a value, not the value wrapped in
+        // d.ref<> (so it's not considered mutable from the perspective of the function)
+
+        // Example:
+        // const foo = layout.$.boids;
+        // bar(foo)
+        //     ^^^
+        type = type.inner;
       }
 
       return type;

@@ -1,4 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
+import { invariant } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
 import { $internal, $isRef, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -13,7 +14,12 @@ import {
   snip,
   type Snippet,
 } from './snippet.ts';
-import { type Ptr, type StorableData } from './wgslTypes.ts';
+import {
+  isNaturallyEphemeral,
+  isPtr,
+  type Ptr,
+  type StorableData,
+} from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -120,4 +126,18 @@ export class RefOperator implements SelfResolvable {
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
   }
+}
+
+export function derefSnippet(snippet: Snippet): Snippet {
+  invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
+
+  const innerType = snippet.dataType.inner;
+  // Dereferencing a pointer does not return a copy of the value, it's still a reference.
+  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
+
+  if (snippet.value instanceof RefOperator) {
+    return snip(stitch`${snippet.value.snippet}`, innerType, origin);
+  }
+
+  return snip(stitch`(*${snippet})`, innerType, origin);
 }

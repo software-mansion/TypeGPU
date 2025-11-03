@@ -41,7 +41,7 @@ import {
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
-import { ptrFn } from '../data/ptr.ts';
+import { INTERNAL_createPtr, ptrFn } from '../data/ptr.ts';
 import { RefOnGPU, RefOperator } from '../data/ref.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -345,18 +345,13 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.indexAccess) {
       // Index Access
       const [_, targetNode, propertyNode] = expression;
-      let target = this.expression(targetNode);
+      const target = this.expression(targetNode);
       const inProperty = this.expression(propertyNode);
       const property = convertToCommonType(
         [inProperty],
         [u32, i32],
         /* verbose */ false,
       )?.[0] ?? inProperty;
-
-      if (wgsl.isPtr(target.dataType)) {
-        // De-referencing the pointer
-        target = tryConvertSnippet(target, target.dataType.inner, false);
-      }
 
       const accessed = accessIndex(target, property);
       if (!accessed) {
@@ -764,6 +759,8 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      let origin = eq.origin;
+
       if (eq.value instanceof RefOnGPU) {
         // We're assigning a newly created `d.ref()`
         const refSnippet = eq.value.snippet;
@@ -808,6 +805,17 @@ ${this.ctx.pre}else ${alternate}`;
           if (!wgsl.isPtr(dataType)) {
             dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
           }
+
+          if (!(eq.value instanceof RefOperator)) {
+            // If what we're assigning is something preceded by `&`, then it's a value
+            // created using `d.ref()`. Otherwise, it's an implicit pointer
+            dataType = INTERNAL_createPtr(
+              dataType.addressSpace,
+              dataType.inner,
+              dataType.access,
+              /* implicit */ true,
+            );
+          }
         }
       } else {
         // Non-referential
@@ -824,7 +832,7 @@ ${this.ctx.pre}else ${alternate}`;
         varType,
         rawId,
         concretize(dataType),
-        eq.origin,
+        origin,
       );
       return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;

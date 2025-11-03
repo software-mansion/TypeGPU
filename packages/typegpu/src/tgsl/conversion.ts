@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
-import { RefOperator } from '../data/ref.ts';
+import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -224,20 +224,6 @@ export function getBestConversion(
   }
 
   return undefined;
-}
-
-export function derefSnippet(snippet: Snippet): Snippet {
-  invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
-
-  const innerType = snippet.dataType.inner;
-  // Dereferencing a pointer does not return a copy of the value, it's still a reference.
-  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
-
-  if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, origin);
-  }
-
-  return snip(stitch`(*${snippet})`, innerType, origin);
 }
 
 function applyActionToSnippet(

@@ -62,7 +62,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { $internal } from '../shared/symbols.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { derefSnippet } from './conversion.ts';
+import { derefSnippet } from '../data/ref.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -310,6 +310,12 @@ export function accessIndex(
         ? 'constant'
         : 'runtime',
     );
+  }
+
+  if (isPtr(target.dataType)) {
+    // Sometimes values that are typed as pointers aren't instances of `d.ref`, so we
+    // allow indexing as if it wasn't a pointer.
+    return accessIndex(derefSnippet(target), index);
   }
 
   // matrix.columns

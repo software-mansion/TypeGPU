@@ -128,14 +128,14 @@ describe('ray-marching example', () => {
         return vec3f((cos((t * speed)) * radius), (height + (sin((t * speed)) * radius)), 4);
       }
 
-      fn softShadow_18(ro: ptr<function, vec3f>, rd: ptr<function, vec3f>, minT: f32, maxT: f32, k: f32) -> f32 {
+      fn softShadow_18(ro: vec3f, rd: vec3f, minT: f32, maxT: f32, k: f32) -> f32 {
         var res = 1f;
         var t = minT;
         for (var i = 0; (i < 100); i++) {
           if ((t >= maxT)) {
             break;
           }
-          var h = getSceneDist_7(((*ro) + ((*rd) * t))).dist;
+          var h = getSceneDist_7((ro + (rd * t))).dist;
           if ((h < 1e-3)) {
             return 0;
           }
@@ -164,7 +164,7 @@ describe('ray-marching example', () => {
         let shadowRo = (&p);
         let shadowRd = (&l);
         var shadowDist = length((lightPos - p));
-        var shadow = softShadow_18(shadowRo, shadowRd, 0.1, shadowDist, 16);
+        var shadow = softShadow_18((*shadowRo), (*shadowRd), 0.1, shadowDist, 16);
         var litColor = (march.color * diff);
         var finalColor = mix((litColor * 0.5), litColor, shadow);
         return mix(vec4f(finalColor, 1), vec4f(0.699999988079071, 0.800000011920929, 0.8999999761581421, 1), fog);

@@ -46,6 +46,7 @@ export function INTERNAL_createPtr<
   addressSpace: TAddressSpace,
   inner: TInner,
   access: TAccess,
+  implicit: boolean = false,
 ): Ptr<TAddressSpace, TInner, TAccess> {
   return {
     [$internal]: true,
@@ -53,6 +54,7 @@ export function INTERNAL_createPtr<
     addressSpace,
     inner,
     access,
+    implicit,
     toString: () => `ptr<${addressSpace}, ${inner}, ${access}>`,
   } as Ptr<TAddressSpace, TInner, TAccess>;
 }

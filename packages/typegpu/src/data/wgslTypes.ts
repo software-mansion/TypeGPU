@@ -1376,6 +1376,7 @@ export interface Ptr<
   readonly inner: TInner;
   readonly addressSpace: TAddr;
   readonly access: TAccess;
+  readonly implicit: boolean;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: ref<Infer<TInner>>;

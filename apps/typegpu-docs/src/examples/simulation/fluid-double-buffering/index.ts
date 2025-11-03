@@ -179,7 +179,7 @@ const computeVelocity = (x: number, y: number): d.v2f => {
 
   const leastCostDir =
     dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
-  return leastCostDir;
+  return d.vec2f(leastCostDir);
 };
 
 const moveObstacles = () => {

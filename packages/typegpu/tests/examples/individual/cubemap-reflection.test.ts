@@ -49,23 +49,17 @@ describe('cubemap reflection example', () => {
 
       @group(0) @binding(1) var<storage, read_write> nextVertices_7: array<ComputeVertex_2>;
 
-      fn packVec2u_8(toPack: ptr<function, vec4f>) -> vec2u {
-        var xy = pack2x16float((*toPack).xy);
-        var zw = pack2x16float((*toPack).zw);
-        return vec2u(xy, zw);
-      }
-
-      fn packVec2u_9(toPack: vec4f) -> vec2u {
+      fn packVec2u_8(toPack: vec4f) -> vec2u {
         var xy = pack2x16float(toPack.xy);
         var zw = pack2x16float(toPack.zw);
         return vec2u(xy, zw);
       }
 
-      struct computeFn_Input_10 {
+      struct computeFn_Input_9 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_10) {
+      @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_9) {
         var triangleCount = u32((f32(arrayLength(&prevVertices_1)) / 3f));
         var triangleIndex = (input.gid.x + (input.gid.y * 65535));
         if ((triangleIndex >= triangleCount)) {
@@ -89,8 +83,8 @@ describe('cubemap reflection example', () => {
           }
           var outIndex = (baseIndexNext + i);
           let nextVertex = (&nextVertices_7[outIndex]);
-          (*nextVertex).position = packVec2u_8(reprojectedVertex);
-          (*nextVertex).normal = packVec2u_9(normal);
+          (*nextVertex).position = packVec2u_8((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u_8(normal);
           nextVertices_7[outIndex] = (*nextVertex);
         }
       }
