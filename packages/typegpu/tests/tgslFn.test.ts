@@ -162,8 +162,8 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var vi = f32(input.vi);
-        var ii = f32(input.ii);
+        let vi = f32(input.vi);
+        let ii = f32(input.ii);
         var color = input.color;
         return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
       }"
@@ -300,7 +300,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
-        var index = input.gid.x;
+        let index = input.gid.x;
         const iterationF = 0f;
         const sign = 0;
         var change = vec4f();
@@ -327,7 +327,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
-        var index = _arg_0.gid.x;
+        let index = _arg_0.gid.x;
         const iterationF = 0f;
         const sign = 0;
         var change = vec4f();

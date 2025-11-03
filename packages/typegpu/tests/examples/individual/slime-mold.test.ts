@@ -30,16 +30,16 @@ describe('slime mold example', () => {
       }
 
       fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
         seed_5.x = fract((cos(a) * 136.8168));
         seed_5.y = fract((cos(b) * 534.7645));
         return seed_5.y;
       }
 
       fn randInUnitCircle_6() -> vec2f {
-        var radius = sqrt(item_7());
-        var angle = (item_7() * 6.283185307179586);
+        let radius = sqrt(item_7());
+        let angle = (item_7() * 6.283185307179586);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -53,7 +53,7 @@ describe('slime mold example', () => {
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed_3(((f32(x) / 2e+5f) + 0.1));
         var pos = ((randInUnitCircle_6() * 140) + vec2f(150, 75));
-        var angle = atan2((75 - pos.y), (150 - pos.x));
+        let angle = atan2((75 - pos.y), (150 - pos.x));
         agentsData_8[x] = Agent_9(pos, angle);
       }
 
@@ -129,8 +129,8 @@ describe('slime mold example', () => {
       @group(0) @binding(0) var<storage, read_write> agentsData_5: array<Agent_6, 200000>;
 
       fn item_8() -> f32 {
-        var a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
         seed_3.x = fract((cos(a) * 136.8168));
         seed_3.y = fract((cos(b) * 534.7645));
         return seed_3.y;
@@ -151,7 +151,7 @@ describe('slime mold example', () => {
       @group(0) @binding(1) var<uniform> params_10: Params_11;
 
       fn sense_9(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
-        var sensorAngle = (angle + sensorAngleOffset);
+        let sensorAngle = (angle + sensorAngleOffset);
         var sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
         var sensorPos = (pos + (sensorDir * params_10.sensorDistance));
         var dims = textureDimensions(oldState_4);
@@ -176,10 +176,10 @@ describe('slime mold example', () => {
         randSeed_1(((f32(_arg_0.gid.x) / 2e+5f) + 0.1));
         var dims = textureDimensions(oldState_4);
         let agent = (&agentsData_5[_arg_0.gid.x]);
-        var random = randFloat01_7();
-        var weightForward = sense_9((*agent).position, (*agent).angle, 0);
-        var weightLeft = sense_9((*agent).position, (*agent).angle, params_10.sensorAngle);
-        var weightRight = sense_9((*agent).position, (*agent).angle, -params_10.sensorAngle);
+        let random = randFloat01_7();
+        let weightForward = sense_9((*agent).position, (*agent).angle, 0);
+        let weightLeft = sense_9((*agent).position, (*agent).angle, params_10.sensorAngle);
+        let weightRight = sense_9((*agent).position, (*agent).angle, -(params_10.sensorAngle));
         var angle = (*agent).angle;
         if (((weightForward > weightLeft) && (weightForward > weightRight))) {
 
@@ -208,7 +208,7 @@ describe('slime mold example', () => {
             angle = (3.141592653589793 - angle);
           }
           if (((newPos.y <= 0) || (newPos.y >= (dimsf.y - 1)))) {
-            angle = -angle;
+            angle = -(angle);
           }
           angle += ((random - 0.5) * 0.1);
         }
@@ -228,7 +228,7 @@ describe('slime mold example', () => {
       }
 
       @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
         return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
       }

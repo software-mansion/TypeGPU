@@ -319,9 +319,9 @@ describe('tgpu.slot', () => {
         var pos = vec3f(1, 2, 3);
         const posX = 1f;
         let vel = (&boid.vel);
-        var velX = boid.vel.x;
+        let velX = boid.vel.x;
         let vel_ = (&boid.vel);
-        var velX_ = boid.vel.x;
+        let velX_ = boid.vel.x;
         var color = getColor();
       }"
     `);

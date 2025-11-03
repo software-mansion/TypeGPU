@@ -152,9 +152,9 @@ describe('TgpuDerived', () => {
         var pos = vec3f(2, 4, 6);
         const posX = 2f;
         let vel = (&boid.vel);
-        var velX = boid.vel.x;
+        let velX = boid.vel.x;
         let vel_ = (&boid.vel);
-        var velX_ = boid.vel.x;
+        let velX_ = boid.vel.x;
       }"
     `);
   });

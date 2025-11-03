@@ -94,7 +94,7 @@ describe('shellless', () => {
       }
 
       fn main() -> f32 {
-        var x = someFn(1, 2);
+        let x = someFn(1, 2);
         return x;
       }"
     `);

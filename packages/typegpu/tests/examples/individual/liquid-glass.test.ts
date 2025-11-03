@@ -98,9 +98,9 @@ describe('liquid-glass example', () => {
       }
 
       fn calculateWeights_9(sdfDist: f32, start: f32, end: f32, featherUV: f32) -> Weights_10 {
-        var inside = (1 - smoothstep((start - featherUV), (start + featherUV), sdfDist));
-        var outside = smoothstep((end - featherUV), (end + featherUV), sdfDist);
-        var ring = max(0, ((1 - inside) - outside));
+        let inside = (1 - smoothstep((start - featherUV), (start + featherUV), sdfDist));
+        let outside = smoothstep((end - featherUV), (end + featherUV), sdfDist);
+        let ring = max(0, ((1 - inside) - outside));
         return Weights_10(inside, ring, outside);
       }
 
@@ -130,11 +130,11 @@ describe('liquid-glass example', () => {
 
       @fragment fn fragmentShader_3(_arg_0: fragmentShader_Input_15) -> @location(0) vec4f {
         var posInBoxSpace = (_arg_0.uv - mousePosUniform_4);
-        var sdfDist = sdRoundedBox2d_7(posInBoxSpace, paramsUniform_5.rectDims, paramsUniform_5.radius);
+        let sdfDist = sdRoundedBox2d_7(posInBoxSpace, paramsUniform_5.rectDims, paramsUniform_5.radius);
         var dir = normalize((posInBoxSpace * paramsUniform_5.rectDims.yx));
-        var normalizedDist = ((sdfDist - paramsUniform_5.start) / (paramsUniform_5.end - paramsUniform_5.start));
+        let normalizedDist = ((sdfDist - paramsUniform_5.start) / (paramsUniform_5.end - paramsUniform_5.start));
         var texDim = textureDimensions(sampledView_8, 0);
-        var featherUV = (paramsUniform_5.edgeFeather / f32(max(texDim.x, texDim.y)));
+        let featherUV = (paramsUniform_5.edgeFeather / f32(max(texDim.x, texDim.y)));
         var weights = calculateWeights_9(sdfDist, paramsUniform_5.start, paramsUniform_5.end, featherUV);
         var blurSample = textureSampleBias(sampledView_8, sampler_11, _arg_0.uv, paramsUniform_5.blur);
         var refractedSample = sampleWithChromaticAberration_12(sampledView_8, sampler_11, (_arg_0.uv + (dir * (paramsUniform_5.refractionStrength * normalizedDist))), (paramsUniform_5.chromaticStrength * normalizedDist), dir, (paramsUniform_5.blur * paramsUniform_5.edgeBlurMultiplier));

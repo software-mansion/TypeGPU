@@ -51,7 +51,7 @@ describe('boids next example', () => {
             continue;
           }
           let other = (&currentTrianglePos_3[i]);
-          var dist = distance(instanceInfo.position, (*other).position);
+          let dist = distance(instanceInfo.position, (*other).position);
           if ((dist < paramsBuffer_5.separationDistance)) {
             separation = (separation + (instanceInfo.position - (*other).position));
           }
@@ -77,15 +77,15 @@ describe('boids next example', () => {
         instanceInfo.velocity = (instanceInfo.velocity + velocity);
         instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
         if ((instanceInfo.position.x > 1.03)) {
-          instanceInfo.position.x = (-1 - 0.03);
+          instanceInfo.position.x = -1.03;
         }
         if ((instanceInfo.position.y > 1.03)) {
-          instanceInfo.position.y = (-1 - 0.03);
+          instanceInfo.position.y = -1.03;
         }
-        if ((instanceInfo.position.x < (-1 - 0.03))) {
+        if ((instanceInfo.position.x < -1.03)) {
           instanceInfo.position.x = 1.03;
         }
-        if ((instanceInfo.position.y < (-1 - 0.03))) {
+        if ((instanceInfo.position.y < -1.03)) {
           instanceInfo.position.y = 1.03;
         }
         instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
@@ -104,12 +104,12 @@ describe('boids next example', () => {
       }
 
       fn getRotationFromVelocity_1(velocity: vec2f) -> f32 {
-        return -atan2(velocity.x, velocity.y);
+        return -(atan2(velocity.x, velocity.y));
       }
 
       fn rotate_2(v: vec2f, angle: f32) -> vec2f {
-        var cos = cos(angle);
-        var sin = sin(angle);
+        let cos = cos(angle);
+        let sin = sin(angle);
         return vec2f(((v.x * cos) - (v.y * sin)), ((v.x * sin) + (v.y * cos)));
       }
 
@@ -127,7 +127,7 @@ describe('boids next example', () => {
       }
 
       @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
-        var angle = getRotationFromVelocity_1(input.velocity);
+        let angle = getRotationFromVelocity_1(input.velocity);
         var rotated = rotate_2(input.v, angle);
         var pos = vec4f((rotated + input.center), 0, 1);
         var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1);

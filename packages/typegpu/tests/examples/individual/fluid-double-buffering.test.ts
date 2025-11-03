@@ -41,10 +41,10 @@ describe('fluid double buffering example', () => {
           if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
-          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
-          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
-          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+          let minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          let maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          let minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          let maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -65,16 +65,16 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(2) var<storage, read_write> gridBetaBuffer_9: array<vec4f, 1048576>;
 
       fn wrappedCallback_2(xu: u32, yu: u32, _arg_2: u32) {
-        var x = i32(xu);
-        var y = i32(yu);
-        var index = coordsToIndex_3(x, y);
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex_3(x, y);
         var value = vec4f();
         if (!isValidFlowOut_4(x, y)) {
           value = vec4f();
         }
         else {
           if ((y < 128)) {
-            var depth = (1 - (f32(y) / 128f));
+            let depth = (1 - (f32(y) / 128f));
             value = vec4f(0, 0, (10 + (depth * 10)), 0);
           }
         }
@@ -134,10 +134,10 @@ describe('fluid double buffering example', () => {
           if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
-          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
-          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
-          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+          let minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          let maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          let minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          let maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -156,8 +156,8 @@ describe('fluid double buffering example', () => {
       }
 
       fn item_17() -> f32 {
-        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
         seed_7.x = fract((cos(a) * 136.8168));
         seed_7.y = fract((cos(b) * 534.7645));
         return seed_7.y;
@@ -177,7 +177,7 @@ describe('fluid double buffering example', () => {
         for (var i = 0; (i < 4); i++) {
           let offset = (&neighborOffsets[i]);
           var neighborDensity = getCell_8((x + (*offset).x), (y + (*offset).y));
-          var cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
+          let cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
           if (!isValidFlowOut_11((x + (*offset).x), (y + (*offset).y))) {
             continue;
           }
@@ -204,7 +204,7 @@ describe('fluid double buffering example', () => {
         var src = getCell_8(x, y);
         var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
         var dest = getCell_8(destPos.x, destPos.y);
-        var diff = (src.z - dest.z);
+        let diff = (src.z - dest.z);
         var outFlow = min(max(0.01, (0.3 + (diff * 0.1))), src.z);
         if ((length(src.xy) < 0.5)) {
           outFlow = 0;
@@ -228,7 +228,7 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow_19(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        var sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
+        let sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams_20.center.x * gridSizeF), (sourceParams_20.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
           return sourceParams_20.intensity;
@@ -239,9 +239,9 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(5) var<storage, read_write> gridAlphaBuffer_22: array<vec4f, 1048576>;
 
       fn simulate_2(xu: u32, yu: u32, _arg_2: u32) {
-        var x = i32(xu);
-        var y = i32(yu);
-        var index = coordsToIndex_3(x, y);
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex_3(x, y);
         randSeed2_5(vec2f(f32(index), time_4));
         var next = getCell_8(x, y);
         var nextVelocity = computeVelocity_10(x, y);
@@ -252,7 +252,7 @@ describe('fluid double buffering example', () => {
         next.z += flowFromCell_18(x, y, x, (y - 1));
         next.z += flowFromCell_18(x, y, (x + 1), y);
         next.z += flowFromCell_18(x, y, (x - 1), y);
-        var minInflow = getMinimumInFlow_19(x, y);
+        let minInflow = getMinimumInFlow_19(x, y);
         next.z = max(minInflow, next.z);
         gridAlphaBuffer_22[index] = next;
       }
@@ -310,10 +310,10 @@ describe('fluid double buffering example', () => {
           if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
-          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
-          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
-          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+          let minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          let maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          let minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          let maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -332,8 +332,8 @@ describe('fluid double buffering example', () => {
       }
 
       fn item_17() -> f32 {
-        var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
         seed_7.x = fract((cos(a) * 136.8168));
         seed_7.y = fract((cos(b) * 534.7645));
         return seed_7.y;
@@ -353,7 +353,7 @@ describe('fluid double buffering example', () => {
         for (var i = 0; (i < 4); i++) {
           let offset = (&neighborOffsets[i]);
           var neighborDensity = getCell_8((x + (*offset).x), (y + (*offset).y));
-          var cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
+          let cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
           if (!isValidFlowOut_11((x + (*offset).x), (y + (*offset).y))) {
             continue;
           }
@@ -380,7 +380,7 @@ describe('fluid double buffering example', () => {
         var src = getCell_8(x, y);
         var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
         var dest = getCell_8(destPos.x, destPos.y);
-        var diff = (src.z - dest.z);
+        let diff = (src.z - dest.z);
         var outFlow = min(max(0.01, (0.3 + (diff * 0.1))), src.z);
         if ((length(src.xy) < 0.5)) {
           outFlow = 0;
@@ -404,7 +404,7 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow_19(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        var sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
+        let sourceRadius2 = max(1, (sourceParams_20.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams_20.center.x * gridSizeF), (sourceParams_20.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
           return sourceParams_20.intensity;
@@ -415,9 +415,9 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(5) var<storage, read_write> gridBetaBuffer_22: array<vec4f, 1048576>;
 
       fn simulate_2(xu: u32, yu: u32, _arg_2: u32) {
-        var x = i32(xu);
-        var y = i32(yu);
-        var index = coordsToIndex_3(x, y);
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex_3(x, y);
         randSeed2_5(vec2f(f32(index), time_4));
         var next = getCell_8(x, y);
         var nextVelocity = computeVelocity_10(x, y);
@@ -428,7 +428,7 @@ describe('fluid double buffering example', () => {
         next.z += flowFromCell_18(x, y, x, (y - 1));
         next.z += flowFromCell_18(x, y, (x + 1), y);
         next.z += flowFromCell_18(x, y, (x - 1), y);
-        var minInflow = getMinimumInFlow_19(x, y);
+        let minInflow = getMinimumInFlow_19(x, y);
         next.z = max(minInflow, next.z);
         gridBetaBuffer_22[index] = next;
       }
@@ -454,7 +454,7 @@ describe('fluid double buffering example', () => {
       }
 
       @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1, -1));
+        var pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
         var uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
         return vertexMain_Output_1(vec4f(pos[input.idx].x, pos[input.idx].y, 0, 1), uv[input.idx]);
       }
@@ -479,10 +479,10 @@ describe('fluid double buffering example', () => {
           if (((*obs).enabled == 0)) {
             continue;
           }
-          var minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
-          var maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
-          var minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
-          var maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+          let minX = max(0, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+          let maxX = min(256, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+          let minY = max(0, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+          let maxY = min(256, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
           if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
             return true;
           }
@@ -495,11 +495,11 @@ describe('fluid double buffering example', () => {
       }
 
       @fragment fn fragmentMain_3(input: fragmentMain_Input_9) -> @location(0) vec4f {
-        var x = i32((input.uv.x * 256));
-        var y = i32((input.uv.y * 256));
-        var index = coordsToIndex_4(x, y);
+        let x = i32((input.uv.x * 256));
+        let y = i32((input.uv.y * 256));
+        let index = coordsToIndex_4(x, y);
         let cell = (&gridAlphaBuffer_5[index]);
-        var density = max(0, (*cell).z);
+        let density = max(0, (*cell).z);
         var obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
         var background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
         var firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
@@ -515,7 +515,7 @@ describe('fluid double buffering example', () => {
           return background;
         }
         if ((density <= firstThreshold)) {
-          var t = (1 - pow((1 - (density / firstThreshold)), 2));
+          let t = (1 - pow((1 - (density / firstThreshold)), 2));
           return mix(background, firstColor, t);
         }
         if ((density <= secondThreshold)) {

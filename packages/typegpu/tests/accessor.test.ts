@@ -139,8 +139,8 @@ describe('tgpu.accessor', () => {
         let color2 = (&redUniform);
         var color3 = getColor();
         const colorX = 1f;
-        var color2X = redUniform.x;
-        var color3X = getColor().x;
+        let color2X = redUniform.x;
+        let color3X = getColor().x;
       }"
     `);
   });

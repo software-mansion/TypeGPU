@@ -43,7 +43,7 @@ describe('blur example', () => {
 
       @compute @workgroup_size(32, 1, 1) fn computeFn_0(_arg_0: computeFn_Input_8) {
         let settings2 = (&settingsUniform_1);
-        var filterOffset = i32((f32(((*settings2).filterDim - 1)) / 2f));
+        let filterOffset = i32((f32(((*settings2).filterDim - 1)) / 2f));
         var dims = vec2i(textureDimensions(inTexture_3));
         var baseIndex = (vec2i(((_arg_0.wid.xy * vec2u((*settings2).blockDim, 4)) + (_arg_0.lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0));
         for (var r = 0; (r < 4); r++) {
@@ -62,11 +62,11 @@ describe('blur example', () => {
             if ((flip_4 != 0)) {
               writeIndex = writeIndex.yx;
             }
-            var center = (i32((4 * _arg_0.lid.x)) + c);
+            let center = (i32((4 * _arg_0.lid.x)) + c);
             if ((((center >= filterOffset) && (center < (128 - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings2).filterDim); f++) {
-                var i = ((center + f) - filterOffset);
+                let i = ((center + f) - filterOffset);
                 acc = (acc + (tileData_5[r][i] * (1f / f32((*settings2).filterDim))));
               }
               textureStore(outTexture_7, writeIndex, vec4f(acc, 1));

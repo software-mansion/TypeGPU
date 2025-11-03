@@ -27,7 +27,7 @@ describe('xor dev runner example', () => {
       }
 
       @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
       }
 
@@ -44,7 +44,7 @@ describe('xor dev runner example', () => {
       }
 
       fn rotateXZ_9(angle: f32) -> mat3x3f {
-        return mat3x3f(vec3f(cos(angle), 0, sin(angle)), vec3f(0, 1, 0), vec3f(-sin(angle), 0, cos(angle)));
+        return mat3x3f(vec3f(cos(angle), 0, sin(angle)), vec3f(0, 1, 0), vec3f(-(sin(angle)), 0, cos(angle)));
       }
 
       @group(0) @binding(4) var<uniform> shift_10: f32;
@@ -71,7 +71,7 @@ describe('xor dev runner example', () => {
           var prox = p.y;
           for (var i = 40.1; (i > 0.01); i *= 0.2) {
             q = ((i * 0.9) - abs((mod_8(q, (i + i)) - i)));
-            var minQ = min(min(q.x, q.y), q.z);
+            let minQ = min(min(q.x, q.y), q.z);
             prox = max(prox, minQ);
             q = (q * rotateXZ_9(shift_10));
           }

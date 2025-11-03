@@ -47,10 +47,10 @@ describe('tgsl parsing test example', () => {
         s = (s && true);
         s = (s && !false);
         s = (s && true);
-        s = (s && all((vec3f(1, -1, 0) < vec3f(1, 1, -1)) == vec3<bool>(false, true, false)));
-        s = (s && all((vec3f(1, -1, 0) <= vec3f(1, 1, -1)) == vec3<bool>(true, true, false)));
-        s = (s && all((vec3f(1, -1, 0) > vec3f(1, 1, -1)) == vec3<bool>(false, false, true)));
-        s = (s && all((vec3f(1, -1, 0) >= vec3f(1, 1, -1)) == vec3<bool>(true, false, true)));
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
         s = (s && true);
         s = (s && true);
         s = (s && true);
@@ -58,8 +58,8 @@ describe('tgsl parsing test example', () => {
         s = (s && !false);
         s = (s && true);
         s = (s && !false);
-        s = (s && all(select(vec2i(-1, -2), vec2i(1, 2), true) == vec2i(1, 2)));
-        s = (s && all(select(vec4i(-1, -2, -3, -4), vec4i(1, 2, 3, 4), vec4<bool>(true, true, false, false)) == vec4i(1, 2, -3, -4)));
+        s = (s && true);
+        s = (s && true);
         var vec = vec3<bool>(true, false, true);
         s = (s && all(!(vec) == negate_2(vec)));
         var inputStruct = Schema_3(vec2<bool>(false, true), vec4<bool>(false, true, false, true), vec3<bool>(true, true, false), true);
@@ -104,7 +104,7 @@ describe('tgsl parsing test example', () => {
         s = (s && true);
         s = (s && all(abs(((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10)) - vec2f(62, 84)) <= (((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10)) - ((mat2x2f(1, 2, 3, 4) * 2) * vec2f(1, 10))) + 0.01));
         s = (s && all(abs(((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1) - vec2f(-21, -43)) <= (((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1) - ((vec2f(1, 10) * mat2x2f(1, 2, 3, 4)) * -1)) + 0.01));
-        s = (s && all(abs(((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4)) - vec2f(-21, -43)) <= (((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4)) - ((vec2f(1, 10) * -1) * mat2x2f(1, 2, 3, 4))) + 0.01));
+        s = (s && all(abs((vec2f(-1, -10) * mat2x2f(1, 2, 3, 4)) - vec2f(-21, -43)) <= ((vec2f(-1, -10) * mat2x2f(1, 2, 3, 4)) - (vec2f(-1, -10) * mat2x2f(1, 2, 3, 4))) + 0.01));
         s = (s && all((((((vec3f(1, 10, 100) * mat3x3f(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5)) * -1) * mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9)) * -1) * mat3x3f(2, 0, 0, 0, 2, 0, 0, 0, 2)) == vec3f(321, 654, 987)));
         s = (s && all((getVec_7() * getVec_7()) == vec3f(1, 4, 9)));
         s = (s && true);

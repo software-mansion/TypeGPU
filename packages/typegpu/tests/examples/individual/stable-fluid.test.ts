@@ -44,7 +44,7 @@ describe('stable-fluid example', () => {
           return;
         }
         var velocity = textureLoad(src_1, pixelPos, 0);
-        var timeStep = simParams_3.dt;
+        let timeStep = simParams_3.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity.xy));
         var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - 0.5));
         var normalizedPos = ((clampedPos + 0.5) / vec2f(texSize.xy));
@@ -84,10 +84,10 @@ describe('stable-fluid example', () => {
         var upVal = textureLoad(in_1, neighbors[1], 0);
         var rightVal = textureLoad(in_1, neighbors[2], 0);
         var downVal = textureLoad(in_1, neighbors[3], 0);
-        var timeStep = simParams_3.dt;
-        var viscosity = simParams_3.viscosity;
-        var diffuseRate = (viscosity * timeStep);
-        var blendFactor = (1f / (4 + diffuseRate));
+        let timeStep = simParams_3.dt;
+        let viscosity = simParams_3.viscosity;
+        let diffuseRate = (viscosity * timeStep);
+        let blendFactor = (1f / (4 + diffuseRate));
         var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (diffuseRate * centerVal)));
         textureStore(out_5, pixelPos, diffusedVal);
       }
@@ -116,7 +116,7 @@ describe('stable-fluid example', () => {
         var upVel = textureLoad(vel_1, neighbors[1], 0);
         var rightVel = textureLoad(vel_1, neighbors[2], 0);
         var downVel = textureLoad(vel_1, neighbors[3], 0);
-        var divergence = (0.5 * ((rightVel.x - leftVel.x) + (downVel.y - upVel.y)));
+        let divergence = (0.5 * ((rightVel.x - leftVel.x) + (downVel.y - upVel.y)));
         textureStore(div_3, pixelPos, vec4f(divergence, 0, 0, 1));
       }
 
@@ -146,8 +146,8 @@ describe('stable-fluid example', () => {
         var upPressure = textureLoad(x_1, neighbors[1], 0);
         var rightPressure = textureLoad(x_1, neighbors[2], 0);
         var downPressure = textureLoad(x_1, neighbors[3], 0);
-        var divergence = textureLoad(b_3, pixelPos, 0).x;
-        var newPressure = (0.25 * ((((leftPressure.x + rightPressure.x) + upPressure.x) + downPressure.x) - divergence));
+        let divergence = textureLoad(b_3, pixelPos, 0).x;
+        let newPressure = (0.25 * ((((leftPressure.x + rightPressure.x) + upPressure.x) + downPressure.x) - divergence));
         textureStore(out_4, pixelPos, vec4f(newPressure, 0, 0, 1));
       }
 
@@ -206,7 +206,7 @@ describe('stable-fluid example', () => {
         var texSize = textureDimensions(src_1);
         var pixelPos = input.gid.xy;
         var velocity = textureLoad(vel_2, pixelPos, 0).xy;
-        var timeStep = simParams_3.dt;
+        let timeStep = simParams_3.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity));
         var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - vec2f(0.5)));
         var normalizedPos = ((clampedPos + vec2f(0.5)) / vec2f(texSize.xy));
@@ -224,7 +224,7 @@ describe('stable-fluid example', () => {
       }
 
       @vertex fn renderFn_0(input: renderFn_Input_2) -> renderFn_Output_1 {
-        var vertices = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
         return renderFn_Output_1(vec4f(vertices[input.idx], 0, 1), texCoords[input.idx]);
       }
@@ -241,15 +241,15 @@ describe('stable-fluid example', () => {
 
       @fragment fn fragmentImageFn_3(input: fragmentImageFn_Input_7) -> @location(0) vec4f {
         const pixelStep = 0.001953125f;
-        var leftSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x - pixelStep), input.uv.y)).x;
-        var rightSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x + pixelStep), input.uv.y)).x;
-        var upSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y + pixelStep))).x;
-        var downSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y - pixelStep))).x;
-        var gradientX = (rightSample - leftSample);
-        var gradientY = (upSample - downSample);
+        let leftSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x - pixelStep), input.uv.y)).x;
+        let rightSample = textureSample(result_4, linSampler_5, vec2f((input.uv.x + pixelStep), input.uv.y)).x;
+        let upSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y + pixelStep))).x;
+        let downSample = textureSample(result_4, linSampler_5, vec2f(input.uv.x, (input.uv.y - pixelStep))).x;
+        let gradientX = (rightSample - leftSample);
+        let gradientY = (upSample - downSample);
         const distortStrength = 0.8;
         var distortVector = vec2f(gradientX, gradientY);
-        var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -distortStrength)));
+        var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
         var outputColor = textureSample(background_6, linSampler_5, vec2f(distortedUV.x, (1 - distortedUV.y)));
         return vec4f(outputColor.xyz, 1);
       }"

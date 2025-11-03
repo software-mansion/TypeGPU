@@ -25,7 +25,7 @@ import { isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
+import { add, div, mul, neg, sub } from '../std/operators.ts';
 import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
@@ -98,7 +98,13 @@ function operatorToType<
   return lhs;
 }
 
-const opCodeToCodegen = {
+const unaryOpCodeToCodegen = {
+  '-': neg[$internal].gpuImpl,
+} satisfies Partial<
+  Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
+>;
+
+const binaryOpCodeToCodegen = {
   '+': add[$internal].gpuImpl,
   '-': sub[$internal].gpuImpl,
   '*': mul[$internal].gpuImpl,
@@ -250,7 +256,8 @@ ${this.ctx.pre}}`;
         );
       }
 
-      const codegen = opCodeToCodegen[op as keyof typeof opCodeToCodegen];
+      const codegen =
+        binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
       if (codegen) {
         return codegen(lhsExpr, rhsExpr);
       }
@@ -315,6 +322,13 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
+
+      const codegen =
+        unaryOpCodeToCodegen[op as keyof typeof unaryOpCodeToCodegen];
+      if (codegen) {
+        return codegen(argExpr);
+      }
+
       const argStr = this.ctx.resolve(argExpr.value).value;
 
       const type = operatorToType(argExpr.dataType, op);
@@ -759,8 +773,6 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      let origin = eq.origin;
-
       if (eq.value instanceof RefOnGPU) {
         // We're assigning a newly created `d.ref()`
         const refSnippet = eq.value.snippet;
@@ -821,10 +833,9 @@ ${this.ctx.pre}else ${alternate}`;
         // Non-referential
         if (
           stmtType === NODE.const &&
-          wgsl.isNaturallyEphemeral(dataType) &&
-          eq.origin === 'constant'
+          wgsl.isNaturallyEphemeral(dataType)
         ) {
-          varType = 'const';
+          varType = eq.origin === 'constant' ? 'const' : 'let';
         }
       }
 
@@ -832,7 +843,7 @@ ${this.ctx.pre}else ${alternate}`;
         varType,
         rawId,
         concretize(dataType),
-        origin,
+        eq.origin,
       );
       return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;

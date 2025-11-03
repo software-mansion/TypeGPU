@@ -1067,7 +1067,7 @@ describe('wgslGenerator', () => {
       "fn power() {
         const a = 10f;
         const b = 3f;
-        var n = pow(a, b);
+        let n = pow(a, b);
       }"
     `);
   });
@@ -1096,7 +1096,7 @@ describe('wgslGenerator', () => {
       "fn power() {
         const a = 3u;
         const b = 5i;
-        var m = pow(f32(a), f32(b));
+        let m = pow(f32(a), f32(b));
       }"
     `);
   });
@@ -1127,8 +1127,8 @@ describe('wgslGenerator', () => {
       "fn testFn() {
         var matrix = mat4x4f();
         let column = (&matrix[1]);
-        var element = (*column)[0];
-        var directElement = matrix[1][0];
+        let element = (*column)[0];
+        let directElement = matrix[1][0];
       }"
     `);
   });

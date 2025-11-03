@@ -27,7 +27,7 @@ describe('ray-marching example', () => {
       }
 
       @vertex fn vertexMain_0(_arg_0: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
         return vertexMain_Output_1(vec4f(pos[_arg_0.idx], 0, 1), uv[_arg_0.idx]);
       }
@@ -46,17 +46,17 @@ describe('ray-marching example', () => {
       fn sdBoxFrame3d_10(p: vec3f, size: vec3f, thickness: f32) -> f32 {
         var p1 = (abs(p) - size);
         var q = (abs((p1 + thickness)) - vec3f(thickness));
-        var d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0));
-        var d2 = (length(max(vec3f(q.x, p1.y, q.z), vec3f())) + min(max(q.x, max(p1.y, q.z)), 0));
-        var d3 = (length(max(vec3f(q.x, q.y, p1.z), vec3f())) + min(max(q.x, max(q.y, p1.z)), 0));
+        let d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0));
+        let d2 = (length(max(vec3f(q.x, p1.y, q.z), vec3f())) + min(max(q.x, max(p1.y, q.z)), 0));
+        let d3 = (length(max(vec3f(q.x, q.y, p1.z), vec3f())) + min(max(q.x, max(q.y, p1.z)), 0));
         return min(min(d1, d2), d3);
       }
 
       fn smoothShapeUnion_11(a: Shape_6, b: Shape_6, k: f32) -> Shape_6 {
-        var h = (max((k - abs((a.dist - b.dist))), 0) / k);
-        var m = (h * h);
-        var dist = (min(a.dist, b.dist) - ((m * k) * 0.25));
-        var weight = (m + select(0, (1 - m), (a.dist > b.dist)));
+        let h = (max((k - abs((a.dist - b.dist))), 0) / k);
+        let m = (h * h);
+        let dist = (min(a.dist, b.dist) - ((m * k) * 0.25));
+        let weight = (m + select(0, (1 - m), (a.dist > b.dist)));
         var color = mix(a.color, b.color, weight);
         return Shape_6(color, dist);
       }
@@ -64,8 +64,8 @@ describe('ray-marching example', () => {
       fn getMorphingShape_8(p: vec3f, t: f32) -> Shape_6 {
         var center = vec3f(0, 2, 6);
         var localP = (p - center);
-        var rotMatZ = mat4x4f(cos(-t), sin(-t), 0, 0, -sin(-t), cos(-t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-        var rotMatX = mat4x4f(1, 0, 0, 0, 0, cos((-t * 0.6)), sin((-t * 0.6)), 0, 0, -sin((-t * 0.6)), cos((-t * 0.6)), 0, 0, 0, 0, 1);
+        var rotMatZ = mat4x4f(cos(-(t)), sin(-(t)), 0, 0, -sin(-(t)), cos(-(t)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        var rotMatX = mat4x4f(1, 0, 0, 0, 0, cos((-(t) * 0.6)), sin((-(t) * 0.6)), 0, 0, -sin((-(t) * 0.6)), cos((-(t) * 0.6)), 0, 0, 0, 0, 1);
         var rotatedP = (rotMatZ * (rotMatX * vec4f(localP, 1))).xyz;
         var boxSize = vec3f(0.699999988079071);
         var sphere1Offset = vec3f((cos((t * 2)) * 0.8), (sin((t * 3)) * 0.3), (sin((t * 2)) * 0.8));
@@ -115,7 +115,7 @@ describe('ray-marching example', () => {
       }
 
       fn getNormal_16(p: vec3f) -> vec3f {
-        var dist = getSceneDist_7(p).dist;
+        let dist = getSceneDist_7(p).dist;
         const e = 0.01;
         var n = vec3f((getSceneDist_7((p + vec3f(e, 0, 0))).dist - dist), (getSceneDist_7((p + vec3f(0, e, 0))).dist - dist), (getSceneDist_7((p + vec3f(0, 0, e))).dist - dist));
         return normalize(n);
@@ -135,7 +135,7 @@ describe('ray-marching example', () => {
           if ((t >= maxT)) {
             break;
           }
-          var h = getSceneDist_7((ro + (rd * t))).dist;
+          let h = getSceneDist_7((ro + (rd * t))).dist;
           if ((h < 1e-3)) {
             return 0;
           }
@@ -155,16 +155,16 @@ describe('ray-marching example', () => {
         var ro = vec3f(0, 2, 3);
         var rd = normalize(vec3f(uv.x, uv.y, 1));
         var march = rayMarch_5(ro, rd);
-        var fog = pow(min((march.dist / 30f), 1), 0.7);
+        let fog = pow(min((march.dist / 30f), 1), 0.7);
         var p = (ro + (rd * march.dist));
         var n = getNormal_16(p);
         var lightPos = getOrbitingLightPos_17(time_12);
         var l = normalize((lightPos - p));
-        var diff = max(dot(n, l), 0);
+        let diff = max(dot(n, l), 0);
         let shadowRo = (&p);
         let shadowRd = (&l);
-        var shadowDist = length((lightPos - p));
-        var shadow = softShadow_18((*shadowRo), (*shadowRd), 0.1, shadowDist, 16);
+        let shadowDist = length((lightPos - p));
+        let shadow = softShadow_18((*shadowRo), (*shadowRd), 0.1, shadowDist, 16);
         var litColor = (march.color * diff);
         var finalColor = mix((litColor * 0.5), litColor, shadow);
         return mix(vec4f(finalColor, 1), vec4f(0.699999988079071, 0.800000011920929, 0.8999999761581421, 1), fog);

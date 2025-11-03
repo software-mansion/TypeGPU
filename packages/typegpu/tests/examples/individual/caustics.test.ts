@@ -27,7 +27,7 @@ describe('caustics example', () => {
       }
 
       @vertex fn mainVertex_0(_arg_0: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(0, 0.800000011920929), vec2f(-0.8, -0.8), vec2f(0.8, -0.8));
+        var pos = array<vec2f, 3>(vec2f(0, 0.800000011920929), vec2f(-0.800000011920929), vec2f(0.800000011920929, -0.800000011920929));
         var uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
         return mainVertex_Output_1(vec4f(pos[_arg_0.vertexIndex], 0, 1), uv[_arg_0.vertexIndex]);
       }
@@ -37,7 +37,7 @@ describe('caustics example', () => {
       fn tilePattern_5(uv: vec2f) -> f32 {
         var tiledUv = fract(uv);
         var proximity = abs(((tiledUv * 2) - 1));
-        var maxProximity = max(proximity.x, proximity.y);
+        let maxProximity = max(proximity.x, proximity.y);
         return saturate((pow((1 - maxProximity), 0.6) * 5));
       }
 
@@ -54,19 +54,19 @@ describe('caustics example', () => {
       }
 
       fn item_15() -> f32 {
-        var a = dot(seed_13, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_13, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_13, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_13, vec2f(54.47856521606445, 345.8415222167969));
         seed_13.x = fract((cos(a) * 136.8168));
         seed_13.y = fract((cos(b) * 534.7645));
         return seed_13.y;
       }
 
       fn randOnUnitSphere_14() -> vec3f {
-        var z = ((2 * item_15()) - 1);
-        var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_15());
-        var x = (cos(theta) * oneMinusZSq);
-        var y = (sin(theta) * oneMinusZSq);
+        let z = ((2 * item_15()) - 1);
+        let oneMinusZSq = sqrt((1 - (z * z)));
+        let theta = (6.283185307179586 * item_15());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
@@ -87,34 +87,34 @@ describe('caustics example', () => {
 
       fn sample_8(pos: vec3f) -> f32 {
         var minJunction = floor(pos);
-        var xyz = dotProdGrid_9(pos, minJunction);
-        var xyZ = dotProdGrid_9(pos, (minJunction + vec3f(0, 0, 1)));
-        var xYz = dotProdGrid_9(pos, (minJunction + vec3f(0, 1, 0)));
-        var xYZ = dotProdGrid_9(pos, (minJunction + vec3f(0, 1, 1)));
-        var Xyz = dotProdGrid_9(pos, (minJunction + vec3f(1, 0, 0)));
-        var XyZ = dotProdGrid_9(pos, (minJunction + vec3f(1, 0, 1)));
-        var XYz = dotProdGrid_9(pos, (minJunction + vec3f(1, 1, 0)));
-        var XYZ = dotProdGrid_9(pos, (minJunction + vec3f(1)));
+        let xyz = dotProdGrid_9(pos, minJunction);
+        let xyZ = dotProdGrid_9(pos, (minJunction + vec3f(0, 0, 1)));
+        let xYz = dotProdGrid_9(pos, (minJunction + vec3f(0, 1, 0)));
+        let xYZ = dotProdGrid_9(pos, (minJunction + vec3f(0, 1, 1)));
+        let Xyz = dotProdGrid_9(pos, (minJunction + vec3f(1, 0, 0)));
+        let XyZ = dotProdGrid_9(pos, (minJunction + vec3f(1, 0, 1)));
+        let XYz = dotProdGrid_9(pos, (minJunction + vec3f(1, 1, 0)));
+        let XYZ = dotProdGrid_9(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
         var smoothPartial = quinticInterpolationImpl_16(partial);
-        var xy = mix(xyz, xyZ, smoothPartial.z);
-        var xY = mix(xYz, xYZ, smoothPartial.z);
-        var Xy = mix(Xyz, XyZ, smoothPartial.z);
-        var XY = mix(XYz, XYZ, smoothPartial.z);
-        var x = mix(xy, xY, smoothPartial.y);
-        var X = mix(Xy, XY, smoothPartial.y);
+        let xy = mix(xyz, xyZ, smoothPartial.z);
+        let xY = mix(xYz, xYZ, smoothPartial.z);
+        let Xy = mix(Xyz, XyZ, smoothPartial.z);
+        let XY = mix(XYz, XYZ, smoothPartial.z);
+        let x = mix(xy, xY, smoothPartial.y);
+        let X = mix(Xy, XY, smoothPartial.y);
         return mix(x, X, smoothPartial.x);
       }
 
       fn caustics_7(uv: vec2f, time2: f32, profile: vec3f) -> vec3f {
-        var distortion = sample_8(vec3f((uv * 0.5), (time2 * 0.2)));
+        let distortion = sample_8(vec3f((uv * 0.5), (time2 * 0.2)));
         var uv2 = (uv + distortion);
-        var noise = abs(sample_8(vec3f((uv2 * 5), time2)));
+        let noise = abs(sample_8(vec3f((uv2 * 5), time2)));
         return pow(vec3f((1 - noise)), profile);
       }
 
       fn rotateXY_17(angle2: f32) -> mat2x2f {
-        return mat2x2f(vec2f(cos(angle2), sin(angle2)), vec2f(-sin(angle2), cos(angle2)));
+        return mat2x2f(vec2f(cos(angle2), sin(angle2)), vec2f(-(sin(angle2)), cos(angle2)));
       }
 
       struct mainFragment_Input_18 {
@@ -122,19 +122,19 @@ describe('caustics example', () => {
       }
 
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_18) -> @location(0) vec4f {
-        var skewMat = mat2x2f(vec2f(0.9800665974617004, 0.19866932928562164), vec2f(((-0.19866933079506122 * 10) + (_arg_0.uv.x * 3)), 4.900332889206208));
+        var skewMat = mat2x2f(vec2f(0.9800665974617004, 0.19866932928562164), vec2f((-1.9866933079506122 + (_arg_0.uv.x * 3)), 4.900332889206208));
         var skewedUv = (skewMat * _arg_0.uv);
-        var tile = tilePattern_5((skewedUv * tileDensity_4));
+        let tile = tilePattern_5((skewedUv * tileDensity_4));
         var albedo = mix(vec3f(0.10000000149011612), vec3f(1), tile);
         var cuv = vec2f(((_arg_0.uv.x * (pow((_arg_0.uv.y * 1.5), 3) + 0.1)) * 5), (pow((((_arg_0.uv.y * 1.5) + 0.1) * 1.5), 3) * 1));
         var c1 = (caustics_7(cuv, (time_6 * 0.2), vec3f(4, 4, 1)) * vec3f(0.4000000059604645, 0.6499999761581421, 1));
         var c2 = (caustics_7((cuv * 2), (time_6 * 0.4), vec3f(16, 1, 4)) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5));
         var blendCoord = vec3f((_arg_0.uv * vec2f(5, 10)), ((time_6 * 0.2) + 5));
-        var blend = saturate((sample_8(blendCoord) + 0.3));
+        let blend = saturate((sample_8(blendCoord) + 0.3));
         var noFogColor = (albedo * mix(vec3f(0.20000000298023224, 0.5, 1), (c1 + c2), blend));
-        var fog = min((pow(_arg_0.uv.y, 0.5) * 1.2), 1);
+        let fog = min((pow(_arg_0.uv.y, 0.5) * 1.2), 1);
         var godRayUv = ((rotateXY_17(-0.3) * _arg_0.uv) * vec2f(15, 3));
-        var godRayFactor = pow(_arg_0.uv.y, 1);
+        let godRayFactor = pow(_arg_0.uv.y, 1);
         var godRay1 = ((sample_8(vec3f(godRayUv, (time_6 * 0.5))) + 1) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * godRayFactor));
         var godRay2 = ((sample_8(vec3f((godRayUv * 2), (time_6 * 0.3))) + 1) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * (godRayFactor * 0.4)));
         var godRays = (godRay1 + godRay2);

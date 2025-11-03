@@ -19,12 +19,12 @@ describe('wgsl resolution example', () => {
 
     expect(wgslElement.innerText).toMatchInlineSnapshot(`
       "fn get_rotation_from_velocity_util_1(velocity: vec2f) -> f32 {
-        return -atan2(velocity.x, velocity.y);
+        return -(atan2(velocity.x, velocity.y));
       }
 
       fn rotate_util_2(v: vec2f, angle: f32) -> vec2f {
-        var cos = cos(angle);
-        var sin = sin(angle);
+        let cos = cos(angle);
+        let sin = sin(angle);
         return vec2f(((v.x * cos) - (v.y * sin)), ((v.x * sin) + (v.y * cos)));
       }
 
@@ -42,7 +42,7 @@ describe('wgsl resolution example', () => {
       }
 
       @vertex fn vertex_shader_0(input: vertex_shader_Input_5) -> vertex_shader_Output_4 {
-        var angle = get_rotation_from_velocity_util_1(input.velocity);
+        let angle = get_rotation_from_velocity_util_1(input.velocity);
         var rotated = rotate_util_2(input.v, angle);
         var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
         var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.z)) * 0.45) + 0.45), 1);
@@ -83,7 +83,7 @@ describe('wgsl resolution example', () => {
       }
 
       @compute @workgroup_size(1) fn compute_shader_8(input: compute_shader_Input_14) {
-        var index = input.gid.x;
+        let index = input.gid.x;
         let instanceInfo = (&currentTrianglePos_9[index]);
         var separation = vec2f();
         var alignment = vec2f();
@@ -95,7 +95,7 @@ describe('wgsl resolution example', () => {
             continue;
           }
           let other = (&currentTrianglePos_9[i]);
-          var dist = distance((*instanceInfo).position, (*other).position);
+          let dist = distance((*instanceInfo).position, (*other).position);
           if ((dist < paramsBuffer_11.separationDistance)) {
             separation = (separation + ((*instanceInfo).position - (*other).position));
           }
@@ -121,15 +121,15 @@ describe('wgsl resolution example', () => {
         (*instanceInfo).velocity = ((*instanceInfo).velocity + velocity);
         (*instanceInfo).velocity = (clamp(length((*instanceInfo).velocity), 0, 0.01) * normalize((*instanceInfo).velocity));
         if (((*instanceInfo).position.x > 1.03)) {
-          (*instanceInfo).position.x = (-1 - 0.03);
+          (*instanceInfo).position.x = -1.03;
         }
         if (((*instanceInfo).position.y > 1.03)) {
-          (*instanceInfo).position.y = (-1 - 0.03);
+          (*instanceInfo).position.y = -1.03;
         }
-        if (((*instanceInfo).position.x < (-1 - 0.03))) {
+        if (((*instanceInfo).position.x < -1.03)) {
           (*instanceInfo).position.x = 1.03;
         }
-        if (((*instanceInfo).position.y < (-1 - 0.03))) {
+        if (((*instanceInfo).position.y < -1.03)) {
           (*instanceInfo).position.y = 1.03;
         }
         (*instanceInfo).position = ((*instanceInfo).position + (*instanceInfo).velocity);

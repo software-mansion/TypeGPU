@@ -30,8 +30,8 @@ describe('slime mold 3d example', () => {
       }
 
       fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
         seed_5.x = fract((cos(a) * 136.8168));
         seed_5.y = fract((cos(b) * 534.7645));
         return seed_5.y;
@@ -42,13 +42,13 @@ describe('slime mold 3d example', () => {
       }
 
       fn randNormal_8(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586 * randUniformExclusive_9());
-        var R = sqrt((-2 * log(randUniformExclusive_9())));
+        let theta = (6.283185307179586 * randUniformExclusive_9());
+        let R = sqrt((-2 * log(randUniformExclusive_9())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
       fn randInUnitSphere_6() -> vec3f {
-        var u = item_7();
+        let u = item_7();
         var v = vec3f(randNormal_8(0, 1), randNormal_8(0, 1), randNormal_8(0, 1));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33));
@@ -112,15 +112,15 @@ describe('slime mold 3d example', () => {
               var samplePos = (vec3i(_arg_0.gid.xyz) + vec3i(offsetX, offsetY, offsetZ));
               var dimsi = vec3i(dims);
               if (((((((samplePos.x >= 0) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0)) && (samplePos.y < dimsi.y)) && (samplePos.z >= 0)) && (samplePos.z < dimsi.z))) {
-                var value = textureLoad(oldState_1, vec3u(samplePos)).x;
+                let value = textureLoad(oldState_1, vec3u(samplePos)).x;
                 sum = (sum + value);
                 count = (count + 1);
               }
             }
           }
         }
-        var blurred = (sum / count);
-        var newValue = saturate((blurred - params_2.evaporationRate));
+        let blurred = (sum / count);
+        let newValue = saturate((blurred - params_2.evaporationRate));
         textureStore(newState_4, _arg_0.gid.xyz, vec4f(newValue, 0, 0, 1));
       }
 
@@ -144,8 +144,8 @@ describe('slime mold 3d example', () => {
       @group(0) @binding(0) var<storage, read_write> agentsData_5: array<Agent_6, 800000>;
 
       fn item_8() -> f32 {
-        var a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
         seed_3.x = fract((cos(a) * 136.8168));
         seed_3.y = fract((cos(b) * 534.7645));
         return seed_3.y;
@@ -157,9 +157,9 @@ describe('slime mold 3d example', () => {
 
       fn getPerpendicular_10(dir: vec3f) -> vec3f {
         var axis = vec3f(1, 0, 0);
-        var absX = abs(dir.x);
-        var absY = abs(dir.y);
-        var absZ = abs(dir.z);
+        let absX = abs(dir.x);
+        let absY = abs(dir.y);
+        let absZ = abs(dir.z);
         if (((absY <= absX) && (absY <= absZ))) {
           axis = vec3f(0, 1, 0);
         }
@@ -196,12 +196,12 @@ describe('slime mold 3d example', () => {
         var perp2 = cross(direction, perp1);
         const numSamples = 8;
         for (var i = 0; (i < numSamples); i++) {
-          var theta = (((f32(i) / f32(numSamples)) * 2) * 3.141592653589793);
+          let theta = (((f32(i) / f32(numSamples)) * 2) * 3.141592653589793);
           var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
           var sensorDir = normalize((direction + (coneOffset * sin(params_11.sensorAngle))));
           var sensorPos = (pos + (sensorDir * params_11.sensorDistance));
           var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
-          var weight = textureLoad(oldState_4, sensorPosInt).x;
+          let weight = textureLoad(oldState_4, sensorPosInt).x;
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
         }
@@ -213,13 +213,13 @@ describe('slime mold 3d example', () => {
       }
 
       fn randNormal_16(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586 * randUniformExclusive_17());
-        var R = sqrt((-2 * log(randUniformExclusive_17())));
+        let theta = (6.283185307179586 * randUniformExclusive_17());
+        let R = sqrt((-2 * log(randUniformExclusive_17())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
       fn randInUnitSphere_15() -> vec3f {
-        var u = item_8();
+        let u = item_8();
         var v = vec3f(randNormal_16(0, 1), randNormal_16(0, 1), randNormal_16(0, 1));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33));
@@ -227,7 +227,7 @@ describe('slime mold 3d example', () => {
 
       fn randInUnitHemisphere_14(normal: vec3f) -> vec3f {
         var value = randInUnitSphere_15();
-        var alignment = dot(normal, value);
+        let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
 
@@ -245,7 +245,7 @@ describe('slime mold 3d example', () => {
         var dims = textureDimensions(oldState_4);
         var dimsf = vec3f(dims);
         let agent = (&agentsData_5[_arg_0.gid.x]);
-        var random = randFloat01_7();
+        let random = randFloat01_7();
         var direction = normalize((*agent).direction);
         var senseResult = sense3D_9((*agent).position, direction);
         if ((senseResult.totalWeight > 0.01)) {
@@ -290,8 +290,8 @@ describe('slime mold 3d example', () => {
           direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
         }
         agentsData_5[_arg_0.gid.x] = Agent_6(newPos, direction);
-        var oldState = textureLoad(oldState_4, vec3u(newPos)).x;
-        var newState = (oldState + 1);
+        let oldState = textureLoad(oldState_4, vec3u(newPos)).x;
+        let newState = (oldState + 1);
         textureStore(newState_18, vec3u(newPos), vec4f(newState, 0, 0, 1));
       }
 
@@ -331,9 +331,9 @@ describe('slime mold 3d example', () => {
         var t1 = ((boxMax - rayOrigin) * invDir);
         var tmin = min(t0, t1);
         var tmax = max(t0, t1);
-        var tNear = max(max(tmin.x, tmin.y), tmin.z);
-        var tFar = min(min(tmax.x, tmax.y), tmax.z);
-        var hit = ((tFar >= tNear) && (tFar >= 0));
+        let tNear = max(max(tmin.x, tmin.y), tmin.z);
+        let tFar = min(min(tmax.x, tmax.y), tmax.z);
+        let hit = ((tFar >= tNear) && (tFar >= 0));
         return RayBoxResult_7(tNear, tFar, hit);
       }
 
@@ -360,10 +360,10 @@ describe('slime mold 3d example', () => {
         if (!isect.hit) {
           return vec4f();
         }
-        var tStart = max(isect.tNear, 0);
-        var tEnd = isect.tFar;
+        let tStart = max(isect.tNear, 0);
+        let tEnd = isect.tFar;
         const numSteps = 128;
-        var stepSize = ((tEnd - tStart) / f32(numSteps));
+        let stepSize = ((tEnd - tStart) / f32(numSteps));
         const thresholdLo = 0.05999999865889549f;
         const thresholdHi = 0.25f;
         const gamma = 1.399999976158142f;
@@ -376,18 +376,18 @@ describe('slime mold 3d example', () => {
           if ((transmittance <= TMin)) {
             break;
           }
-          var t = (tStart + ((f32(i) + 0.5) * stepSize));
+          let t = (tStart + ((f32(i) + 0.5) * stepSize));
           var pos = (rayOrigin + (rayDir * t));
           var texCoord = (pos / vec3f(256));
-          var sampleValue = textureSampleLevel(state_8, sampler_9, texCoord, 0).x;
-          var d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
-          var density = pow(d0, gamma);
-          var alphaSrc = (1 - exp(((-sigmaT * density) * stepSize)));
+          let sampleValue = textureSampleLevel(state_8, sampler_9, texCoord, 0).x;
+          let d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
+          let density = pow(d0, gamma);
+          let alphaSrc = (1 - exp(((-(sigmaT) * density) * stepSize)));
           var contrib = (albedo * alphaSrc);
           accum = (accum + (contrib * transmittance));
           transmittance = (transmittance * (1 - alphaSrc));
         }
-        var alpha = (1 - transmittance);
+        let alpha = (1 - transmittance);
         return vec4f(accum, alpha);
       }"
     `);

@@ -63,11 +63,11 @@ describe('gravity example', () => {
       }
 
       @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
-        var currentId = input.gid.x;
+        let currentId = input.gid.x;
         var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_3); i++) {
-            var otherId = u32(i);
+            let otherId = u32(i);
             var other = CelestialBody_2(inState_1[otherId].destroyed, inState_1[otherId].position, inState_1[otherId].velocity, inState_1[otherId].mass, inState_1[otherId].radiusMultiplier, inState_1[otherId].collisionBehavior, inState_1[otherId].textureIndex, inState_1[otherId].ambientLightFactor);
             if ((((((u32(i) == input.gid.x) || (other.destroyed == 1)) || (current.collisionBehavior == 0)) || (other.collisionBehavior == 0)) || (distance(current.position, other.position) >= (radiusOf_4(current) + radiusOf_4(other))))) {
               continue;
@@ -79,13 +79,13 @@ describe('gravity example', () => {
               current.velocity = (0.99 * (current.velocity - (((((2 * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2)) * (current.position - other.position))));
             }
             else {
-              var isCurrentAbsorbed = ((current.collisionBehavior == 1) || ((current.collisionBehavior == 2) && isSmaller_5(currentId, otherId)));
+              let isCurrentAbsorbed = ((current.collisionBehavior == 1) || ((current.collisionBehavior == 2) && isSmaller_5(currentId, otherId)));
               if (isCurrentAbsorbed) {
                 current.destroyed = 1;
               }
               else {
-                var m1 = current.mass;
-                var m2 = other.mass;
+                let m1 = current.mass;
+                let m2 = other.mass;
                 current.velocity = (((m1 / (m1 + m2)) * current.velocity) + ((m2 / (m1 + m2)) * other.velocity));
                 current.mass = (m1 + m2);
               }
@@ -129,7 +129,7 @@ describe('gravity example', () => {
 
       @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
         var current = CelestialBody_2(inState_1[input.gid.x].destroyed, inState_1[input.gid.x].position, inState_1[input.gid.x].velocity, inState_1[input.gid.x].mass, inState_1[input.gid.x].radiusMultiplier, inState_1[input.gid.x].collisionBehavior, inState_1[input.gid.x].textureIndex, inState_1[input.gid.x].ambientLightFactor);
-        var dt = (time_3.passed * time_3.multiplier);
+        let dt = (time_3.passed * time_3.multiplier);
         let updatedCurrent = (&current);
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_5); i++) {
@@ -137,8 +137,8 @@ describe('gravity example', () => {
             if (((u32(i) == input.gid.x) || (other.destroyed == 1))) {
               continue;
             }
-            var dist = max((radiusOf_6(current) + radiusOf_6(other)), distance(current.position, other.position));
-            var gravityForce = (((current.mass * other.mass) / dist) / dist);
+            let dist = max((radiusOf_6(current) + radiusOf_6(other)), distance(current.position, other.position));
+            let gravityForce = (((current.mass * other.mass) / dist) / dist);
             var direction = normalize((other.position - current.position));
             (*updatedCurrent).velocity = ((*updatedCurrent).velocity + (((gravityForce / current.mass) * dt) * direction));
           }
@@ -259,7 +259,7 @@ describe('gravity example', () => {
         var ambient = (input.ambientLightFactor * (textureColor * lightColor));
         var normal = input.normals;
         var lightDirection = normalize((lightSource_11 - input.worldPosition));
-        var cosTheta = dot(normal, lightDirection);
+        let cosTheta = dot(normal, lightDirection);
         var diffuse = (max(0, cosTheta) * (textureColor * lightColor));
         var litColor = (ambient + diffuse);
         return vec4f(litColor.xyz, 1);

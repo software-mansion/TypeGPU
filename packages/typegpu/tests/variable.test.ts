@@ -125,7 +125,7 @@ var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));
       fn func() {
         let pos = (&boid);
         let vel = (&boid.vel);
-        var velX = boid.vel.x;
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -142,8 +142,8 @@ var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));
       "var<workgroup> atomicCounter: atomic<u32>;
 
       fn func() {
-        var oldValue = atomicAdd(&atomicCounter, 1);
-        var currentValue = atomicLoad(&atomicCounter);
+        let oldValue = atomicAdd(&atomicCounter, 1);
+        let currentValue = atomicLoad(&atomicCounter);
       }"
     `);
   });

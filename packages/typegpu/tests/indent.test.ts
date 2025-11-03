@@ -231,7 +231,7 @@ describe('indents', () => {
       }
 
       fn updateParticle_7(particle: Particle_5, gravity: vec3f, deltaTime: f32) -> Particle_5 {
-        var density = getDensityAt_8(particle.physics.position);
+        let density = getDensityAt_8(particle.physics.position);
         var force = (gravity * density);
         var newVelocity = (particle.physics.velocity + (force * deltaTime));
         var newPosition = (particle.physics.position + (newVelocity * deltaTime));

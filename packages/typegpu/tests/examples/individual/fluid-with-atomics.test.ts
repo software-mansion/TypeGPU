@@ -20,8 +20,8 @@ describe('fluid with atomics example', () => {
       "@group(0) @binding(0) var<uniform> size_6: vec2u;
 
       fn getIndex_5(x: u32, y: u32) -> u32 {
-        var h = size_6.y;
-        var w = size_6.x;
+        let h = size_6.y;
+        let w = size_6.x;
         return (((y % h) * w) + (x % w));
       }
 
@@ -48,9 +48,9 @@ describe('fluid with atomics example', () => {
       const MAX_WATER_LEVEL_12: u32 = 16777215;
 
       fn persistFlags_11(x: u32, y: u32) {
-        var cell = getCell_4(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var flags = (cell >> 24);
+        let cell = getCell_4(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let flags = (cell >> 24);
         updateCell_8(x, y, ((flags << 24) | waterLevel));
       }
 
@@ -63,9 +63,9 @@ describe('fluid with atomics example', () => {
       }
 
       fn addToCell_14(x: u32, y: u32, value: u32) {
-        var cell = getCellNext_15(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL_12);
+        let cell = getCellNext_15(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL_12);
         atomicAdd(&nextState_9[getIndex_5(x, y)], (newWaterLevel - waterLevel));
       }
 
@@ -78,9 +78,9 @@ describe('fluid with atomics example', () => {
       }
 
       fn subtractFromCell_18(x: u32, y: u32, value: u32) {
-        var cell = getCellNext_15(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var newWaterLevel = max((waterLevel - min(value, waterLevel)), 0);
+        let cell = getCellNext_15(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let newWaterLevel = max((waterLevel - min(value, waterLevel)), 0);
         atomicSub(&nextState_9[getIndex_5(x, y)], (waterLevel - newWaterLevel));
       }
 
@@ -115,7 +115,7 @@ describe('fluid with atomics example', () => {
       const MAX_PRESSURE_21: u32 = 12;
 
       fn getStableStateBelow_19(upper: u32, lower: u32) -> u32 {
-        var totalMass = (upper + lower);
+        let totalMass = (upper + lower);
         if ((totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED_20)) {
           return totalMass;
         }
@@ -136,11 +136,11 @@ describe('fluid with atomics example', () => {
           return;
         }
         if (!isWall_10(x, (y - 1))) {
-          var waterLevelBelow = getWaterLevel_17(x, (y - 1));
-          var stable = getStableStateBelow_19(remainingWater, waterLevelBelow);
+          let waterLevelBelow = getWaterLevel_17(x, (y - 1));
+          let stable = getStableStateBelow_19(remainingWater, waterLevelBelow);
           if ((waterLevelBelow < stable)) {
-            var change = (stable - waterLevelBelow);
-            var flow = min(change, viscosity_22);
+            let change = (stable - waterLevelBelow);
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
             addToCell_14(x, (y - 1), flow);
             remainingWater -= flow;
@@ -149,12 +149,12 @@ describe('fluid with atomics example', () => {
         if ((remainingWater == 0)) {
           return;
         }
-        var waterLevelBefore = remainingWater;
+        let waterLevelBefore = remainingWater;
         if (!isWall_10((x - 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x - 1), y)));
+          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x - 1), y)));
           if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
-            var flow = min(change, viscosity_22);
+            let change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
             addToCell_14((x - 1), y, flow);
             remainingWater -= flow;
@@ -164,10 +164,10 @@ describe('fluid with atomics example', () => {
           return;
         }
         if (!isWall_10((x + 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x + 1), y)));
+          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x + 1), y)));
           if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
-            var flow = min(change, viscosity_22);
+            let change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
             addToCell_14((x + 1), y, flow);
             remainingWater -= flow;
@@ -177,9 +177,9 @@ describe('fluid with atomics example', () => {
           return;
         }
         if (!isWall_10(x, (y + 1))) {
-          var stable = getStableStateBelow_19(getWaterLevel_17(x, (y + 1)), remainingWater);
+          let stable = getStableStateBelow_19(getWaterLevel_17(x, (y + 1)), remainingWater);
           if ((stable < remainingWater)) {
-            var flow = min((remainingWater - stable), viscosity_22);
+            let flow = min((remainingWater - stable), viscosity_22);
             subtractFromCell_18(x, y, flow);
             addToCell_14(x, (y + 1), flow);
             remainingWater -= flow;
@@ -209,14 +209,14 @@ describe('fluid with atomics example', () => {
       }
 
       @vertex fn vertex_0(input: vertex_Input_3) -> vertex_Output_2 {
-        var w = size_1.x;
-        var h = size_1.y;
-        var gridX = (input.idx % w);
-        var gridY = u32((f32(input.idx) / f32(w)));
-        var maxDim = max(w, h);
-        var x = (((2 * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
-        var y = (((2 * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
-        var cellFlags = (input.currentStateData >> 24);
+        let w = size_1.x;
+        let h = size_1.y;
+        let gridX = (input.idx % w);
+        let gridY = u32((f32(input.idx) / f32(w)));
+        let maxDim = max(w, h);
+        let x = (((2 * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
+        let y = (((2 * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
+        let cellFlags = (input.currentStateData >> 24);
         var cell = f32((input.currentStateData & 16777215));
         if ((cellFlags == 1)) {
           cell = -1;
@@ -244,11 +244,11 @@ describe('fluid with atomics example', () => {
         if ((input.cell == -3)) {
           return vec4f(1, 0, 0, 1);
         }
-        var normalized = min((input.cell / 255f), 1);
+        let normalized = min((input.cell / 255f), 1);
         if ((normalized == 0)) {
           return vec4f();
         }
-        var res = (1f / (1 + exp((-(normalized - 0.2) * 10))));
+        let res = (1f / (1 + exp((-((normalized - 0.2)) * 10))));
         return vec4f(0, 0, res, res);
       }"
     `);
