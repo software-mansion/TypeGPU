@@ -175,6 +175,33 @@ class PrefixScanComputer {
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
  *                       GPU dispatch has been submitted; useful for measuring execution time.
  * @returns The `buffer` instance which contains the scanned values.
+ *
+ * @example
+ * ```typescript
+ * const root = await tgpu.init();
+ * const buffer = root
+ *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
+ *   .$usage('storage');
+ *
+ * // using an std function
+  const calcResult = prefixScan(
+    root,
+    inputBuffer,
+    { operation: std.add, identityElement: 0 },
+  );
+ *
+ * // using a custom tgpu.fn
+ * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
+ *
+  const calcResult = prefixScan(
+    root,
+    inputBuffer,
+    {
+      operation: multiply,
+      identityElement: 1,
+    },
+  );
+ * ```
  */
 export function prefixScan(
   root: TgpuRoot,
@@ -207,6 +234,33 @@ export function prefixScan(
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
  *                       GPU dispatch has been submitted; useful for measuring execution time.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
+ * 
+ *  * @example
+ * ```typescript
+ * const root = await tgpu.init();
+ * const buffer = root
+ *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
+ *   .$usage('storage');
+ *
+ * // using an std function
+  const calcResult = scan(
+    root,
+    inputBuffer,
+    { operation: std.add, identityElement: 0 },
+  );
+ *
+ * // using a custom tgpu.fn
+ * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
+ *
+  const calcResult = scan(
+    root,
+    inputBuffer,
+    {
+      operation: multiply,
+      identityElement: 1,
+    },
+  );
+ * ```
  */
 export function scan(
   root: TgpuRoot,
