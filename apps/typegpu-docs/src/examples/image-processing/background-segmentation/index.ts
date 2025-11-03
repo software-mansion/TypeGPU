@@ -1,4 +1,10 @@
-import tgpu from 'typegpu';
+import tgpu, {
+  type RenderFlag,
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuBindGroup,
+  type TgpuTexture,
+} from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
@@ -96,40 +102,23 @@ const modelOutputBuffer = root
   .createBuffer(d.arrayOf(d.f32, 1 * MODEL_WIDTH * MODEL_HEIGHT))
   .$usage('storage');
 
-const blurredTextures = [0, 1].map(() =>
-  root['~unstable'].createTexture({
-    size: [1280, 720],
-    format: 'rgba8unorm',
-    dimension: '2d',
-    mipLevelCount: 10,
-  }).$usage('sampled', 'render', 'storage')
-);
+let blurredTextures: (
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'rgba8unorm';
+    mipLevelCount: 10;
+  }>
+  & StorageFlag
+  & SampledFlag
+  & RenderFlag
+)[];
 
 const generateMaskBindGroup = root.createBindGroup(generateMaskLayout, {
   maskTexture,
   outputBuffer: modelOutputBuffer,
 });
 
-const blurBindGroups = [
-  root.createBindGroup(blurLayout, {
-    flip: zeroBuffer,
-    inTexture: blurredTextures[0],
-    outTexture: blurredTextures[1].createView(
-      d.textureStorage2d('rgba8unorm', 'read-only'),
-      { mipLevelCount: 1 },
-    ),
-    sampler,
-  }),
-  root.createBindGroup(blurLayout, {
-    flip: oneBuffer,
-    inTexture: blurredTextures[1],
-    outTexture: blurredTextures[0].createView(
-      d.textureStorage2d('rgba8unorm', 'read-only'),
-      { mipLevelCount: 1 },
-    ),
-    sampler,
-  }),
-];
+let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 
 // pipelines
 
@@ -201,6 +190,34 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+  blurredTextures = [0, 1].map(() =>
+    root['~unstable'].createTexture({
+      size: [size.width, size.height],
+      format: 'rgba8unorm',
+      dimension: '2d',
+      mipLevelCount: 10,
+    }).$usage('sampled', 'render', 'storage')
+  );
+  blurBindGroups = [
+    root.createBindGroup(blurLayout, {
+      flip: zeroBuffer,
+      inTexture: blurredTextures[0],
+      outTexture: blurredTextures[1].createView(
+        d.textureStorage2d('rgba8unorm', 'read-only'),
+        { mipLevelCount: 1 },
+      ),
+      sampler,
+    }),
+    root.createBindGroup(blurLayout, {
+      flip: oneBuffer,
+      inTexture: blurredTextures[1],
+      outTexture: blurredTextures[0].createView(
+        d.textureStorage2d('rgba8unorm', 'read-only'),
+        { mipLevelCount: 1 },
+      ),
+      sampler,
+    }),
+  ];
 }
 
 let videoFrameCallbackId: number | undefined;
