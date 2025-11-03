@@ -66,7 +66,7 @@ const ioLayout = tgpu.bindGroupLayout({
   outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
 });
 
-const tileData = tgpu['~unstable'].workgroupVar(
+const tileData = tgpu.workgroupVar(
   d.arrayOf(d.arrayOf(d.vec3f, 128), 4),
 );
 
@@ -191,7 +191,6 @@ function render() {
     loadOp: 'clear',
     storeOp: 'store',
   }).draw(3);
-  root['~unstable'].flush();
 }
 render();
 

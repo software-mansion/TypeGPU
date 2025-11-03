@@ -750,11 +750,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -801,8 +796,9 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   ): TgpuFixedComparisonSampler;
 
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }
