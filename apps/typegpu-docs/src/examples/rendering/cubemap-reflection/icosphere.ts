@@ -199,11 +199,8 @@ export class IcosphereGenerator {
 
         const outIndex = baseIndexNext + i;
         const nextVertex = nextVertices.$[outIndex];
-
         nextVertex.position = packVec2u(reprojectedVertex);
         nextVertex.normal = packVec2u(normal);
-
-        nextVertices.$[outIndex] = ComputeVertex(nextVertex);
       }
     });
 

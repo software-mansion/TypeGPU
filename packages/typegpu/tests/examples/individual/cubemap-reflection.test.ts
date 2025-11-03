@@ -85,7 +85,6 @@ describe('cubemap reflection example', () => {
           let nextVertex = (&nextVertices_7[outIndex]);
           (*nextVertex).position = packVec2u_8((*reprojectedVertex));
           (*nextVertex).normal = packVec2u_8(normal);
-          nextVertices_7[outIndex] = (*nextVertex);
         }
       }
 

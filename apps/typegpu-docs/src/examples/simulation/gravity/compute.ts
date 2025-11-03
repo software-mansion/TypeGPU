@@ -29,17 +29,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   const currentId = input.gid.x;
-  // TODO: replace it with struct copy when Chromium is fixed
-  const current = CelestialBody({
-    position: computeLayout.$.inState[currentId].position,
-    velocity: computeLayout.$.inState[currentId].velocity,
-    mass: computeLayout.$.inState[currentId].mass,
-    collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
-    textureIndex: computeLayout.$.inState[currentId].textureIndex,
-    radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
-    ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
-    destroyed: computeLayout.$.inState[currentId].destroyed,
-  });
+  const current = CelestialBody(computeLayout.$.inState[currentId]);
 
   if (current.destroyed === 0) {
     for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
@@ -128,58 +118,33 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {
-  // TODO: replace it with struct copy when Chromium is fixed
-  const current = CelestialBody({
-    position: computeLayout.$.inState[input.gid.x].position,
-    velocity: computeLayout.$.inState[input.gid.x].velocity,
-    mass: computeLayout.$.inState[input.gid.x].mass,
-    collisionBehavior: computeLayout.$.inState[input.gid.x].collisionBehavior,
-    textureIndex: computeLayout.$.inState[input.gid.x].textureIndex,
-    radiusMultiplier: computeLayout.$.inState[input.gid.x].radiusMultiplier,
-    ambientLightFactor: computeLayout.$.inState[input.gid.x].ambientLightFactor,
-    destroyed: computeLayout.$.inState[input.gid.x].destroyed,
-  });
+  const current = computeLayout.$.inState[input.gid.x];
+  const newCurrent = computeLayout.$.outState[input.gid.x];
   const dt = timeAccess.$.passed * timeAccess.$.multiplier;
 
-  const updatedCurrent = current;
-  if (current.destroyed === 0) {
-    for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
-      // TODO: replace it with struct copy when Chromium is fixed
-      const other = CelestialBody({
-        position: computeLayout.$.inState[i].position,
-        velocity: computeLayout.$.inState[i].velocity,
-        mass: computeLayout.$.inState[i].mass,
-        collisionBehavior: computeLayout.$.inState[i].collisionBehavior,
-        textureIndex: computeLayout.$.inState[i].textureIndex,
-        radiusMultiplier: computeLayout.$.inState[i].radiusMultiplier,
-        ambientLightFactor: computeLayout.$.inState[i].ambientLightFactor,
-        destroyed: computeLayout.$.inState[i].destroyed,
-      });
+  if (current.destroyed === 1) {
+    return;
+  }
 
-      if (d.u32(i) === input.gid.x || other.destroyed === 1) {
-        continue;
-      }
+  newCurrent.velocity = d.vec3f(current.velocity);
+  for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
+    const other = computeLayout.$.inState[i];
 
-      const dist = std.max(
-        radiusOf(current) + radiusOf(other),
-        std.distance(current.position, other.position),
-      );
-      const gravityForce = (current.mass * other.mass) / dist / dist;
-
-      const direction = std.normalize(
-        std.sub(other.position, current.position),
-      );
-      updatedCurrent.velocity = std.add(
-        updatedCurrent.velocity,
-        std.mul((gravityForce / current.mass) * dt, direction),
-      );
+    if (d.u32(i) === input.gid.x || other.destroyed === 1) {
+      continue;
     }
 
-    updatedCurrent.position = std.add(
-      updatedCurrent.position,
-      std.mul(dt, updatedCurrent.velocity),
+    const dist = std.max(
+      radiusOf(current) + radiusOf(other),
+      std.distance(current.position, other.position),
+    );
+    const gravityForce = (current.mass * other.mass) / dist / dist;
+
+    const direction = std.normalize(other.position.sub(current.position));
+    newCurrent.velocity = newCurrent.velocity.add(
+      direction.mul((gravityForce / current.mass) * dt),
     );
   }
 
-  computeLayout.$.outState[input.gid.x] = CelestialBody(updatedCurrent);
+  newCurrent.position = current.position.add(newCurrent.velocity.mul(dt));
 });

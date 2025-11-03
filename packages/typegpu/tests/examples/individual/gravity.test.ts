@@ -64,7 +64,7 @@ describe('gravity example', () => {
 
       @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
         let currentId = input.gid.x;
-        var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
+        var current = inState_1[currentId];
         if ((current.destroyed == 0)) {
           for (var i = 0; (i < celestialBodiesCount_3); i++) {
             let otherId = u32(i);
@@ -108,43 +108,44 @@ describe('gravity example', () => {
 
       @group(1) @binding(1) var<storage, read> inState_1: array<CelestialBody_2>;
 
-      struct Time_4 {
+      @group(1) @binding(2) var<storage, read_write> outState_3: array<CelestialBody_2>;
+
+      struct Time_5 {
         passed: f32,
         multiplier: f32,
       }
 
-      @group(0) @binding(0) var<uniform> time_3: Time_4;
+      @group(0) @binding(0) var<uniform> time_4: Time_5;
 
-      @group(1) @binding(0) var<uniform> celestialBodiesCount_5: i32;
+      @group(1) @binding(0) var<uniform> celestialBodiesCount_6: i32;
 
-      fn radiusOf_6(body: CelestialBody_2) -> f32 {
+      fn radiusOf_7(body: CelestialBody_2) -> f32 {
         return (pow(((body.mass * 0.75) / 3.141592653589793f), 0.333) * body.radiusMultiplier);
       }
-
-      @group(1) @binding(2) var<storage, read_write> outState_7: array<CelestialBody_2>;
 
       struct computeGravityShader_Input_8 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
       @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
-        var current = CelestialBody_2(inState_1[input.gid.x].destroyed, inState_1[input.gid.x].position, inState_1[input.gid.x].velocity, inState_1[input.gid.x].mass, inState_1[input.gid.x].radiusMultiplier, inState_1[input.gid.x].collisionBehavior, inState_1[input.gid.x].textureIndex, inState_1[input.gid.x].ambientLightFactor);
-        let dt = (time_3.passed * time_3.multiplier);
-        let updatedCurrent = (&current);
-        if ((current.destroyed == 0)) {
-          for (var i = 0; (i < celestialBodiesCount_5); i++) {
-            var other = CelestialBody_2(inState_1[i].destroyed, inState_1[i].position, inState_1[i].velocity, inState_1[i].mass, inState_1[i].radiusMultiplier, inState_1[i].collisionBehavior, inState_1[i].textureIndex, inState_1[i].ambientLightFactor);
-            if (((u32(i) == input.gid.x) || (other.destroyed == 1))) {
-              continue;
-            }
-            let dist = max((radiusOf_6(current) + radiusOf_6(other)), distance(current.position, other.position));
-            let gravityForce = (((current.mass * other.mass) / dist) / dist);
-            var direction = normalize((other.position - current.position));
-            (*updatedCurrent).velocity = ((*updatedCurrent).velocity + (((gravityForce / current.mass) * dt) * direction));
-          }
-          (*updatedCurrent).position = ((*updatedCurrent).position + (dt * (*updatedCurrent).velocity));
+        let current = (&inState_1[input.gid.x]);
+        let newCurrent = (&outState_3[input.gid.x]);
+        let dt = (time_4.passed * time_4.multiplier);
+        if (((*current).destroyed == 1)) {
+          return;
         }
-        outState_7[input.gid.x] = (*updatedCurrent);
+        (*newCurrent).velocity = (*current).velocity;
+        for (var i = 0; (i < celestialBodiesCount_6); i++) {
+          let other = (&inState_1[i]);
+          if (((u32(i) == input.gid.x) || ((*other).destroyed == 1))) {
+            continue;
+          }
+          let dist = max((radiusOf_7((*current)) + radiusOf_7((*other))), distance((*current).position, (*other).position));
+          let gravityForce = ((((*current).mass * (*other).mass) / dist) / dist);
+          var direction = normalize(((*other).position - (*current).position));
+          (*newCurrent).velocity = ((*newCurrent).velocity + (direction * ((gravityForce / (*current).mass) * dt)));
+        }
+        (*newCurrent).position = ((*current).position + ((*newCurrent).velocity * dt));
       }
 
       struct Camera_2 {

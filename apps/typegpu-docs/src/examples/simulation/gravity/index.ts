@@ -222,6 +222,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   const computeBufferB = root
     .createBuffer(d.arrayOf(CelestialBody, celestialBodies.length))
     .$usage('storage');
+  computeBufferB.copyFrom(computeBufferA);
 
   const computeCollisionsBindGroup = root.createBindGroup(
     computeLayout,
