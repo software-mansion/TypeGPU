@@ -249,7 +249,8 @@ const simulate = (index: number) => {
   nextTrianglePos.value[index] = instanceInfo;
 };
 
-const simulateAction = root['~unstable'].prepareDispatch(simulate);
+const simulatePipeline = root['~unstable']
+  .createGuardedComputePipeline(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
@@ -268,7 +269,7 @@ function frame() {
 
   even = !even;
 
-  simulateAction
+  simulatePipeline
     .with(computeBindGroups[even ? 0 : 1])
     .dispatchThreads(triangleAmount);
 

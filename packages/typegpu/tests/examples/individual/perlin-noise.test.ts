@@ -17,64 +17,75 @@ describe('perlin noise example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> size_1: vec4u;
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
 
-      @group(0) @binding(1) var<storage, read_write> memory_2: array<vec3f>;
+      @group(1) @binding(0) var<uniform> size_3: vec4u;
 
-      var<private> seed_6: vec2f;
+      @group(1) @binding(1) var<storage, read_write> memory_4: array<vec3f>;
 
-      fn seed3_5(value: vec3f) {
-        seed_6 = (value.xy + vec2f(value.z));
+      var<private> seed_8: vec2f;
+
+      fn seed3_7(value: vec3f) {
+        seed_8 = (value.xy + vec2f(value.z));
       }
 
-      fn randSeed3_4(seed: vec3f) {
-        seed3_5(seed);
+      fn randSeed3_6(seed: vec3f) {
+        seed3_7(seed);
       }
 
-      fn item_8() -> f32 {
-        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
-        seed_6.x = fract((cos(a) * 136.8168));
-        seed_6.y = fract((cos(b) * 534.7645));
-        return seed_6.y;
+      fn item_10() -> f32 {
+        var a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
+        seed_8.x = fract((cos(a) * 136.8168));
+        seed_8.y = fract((cos(b) * 534.7645));
+        return seed_8.y;
       }
 
-      fn randOnUnitSphere_7() -> vec3f {
-        var z = ((2 * item_8()) - 1);
+      fn randOnUnitSphere_9() -> vec3f {
+        var z = ((2 * item_10()) - 1);
         var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_8());
+        var theta = (6.283185307179586 * item_10());
         var x = (cos(theta) * oneMinusZSq);
         var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      fn computeJunctionGradient_3(pos: vec3i) -> vec3f {
-        randSeed3_4((1e-3 * vec3f(pos)));
-        return randOnUnitSphere_7();
+      fn computeJunctionGradient_5(pos: vec3i) -> vec3f {
+        randSeed3_6((1e-3 * vec3f(pos)));
+        return randOnUnitSphere_9();
       }
 
-      struct mainCompute_Input_9 {
-        @builtin(global_invocation_id) gid: vec3u,
+      fn mainCompute_2(x: u32, y: u32, z: u32) {
+        var size = size_3;
+        var idx = ((x + (y * size.x)) + ((z * size.x) * size.y));
+        memory_4[idx] = computeJunctionGradient_5(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(input: mainCompute_Input_9) {
-        var size = size_1;
-        var idx = ((input.gid.x + (input.gid.y * size.x)) + ((input.gid.z * size.x) * size.y));
-        memory_2[idx] = computeJunctionGradient_3(vec3i(input.gid.xyz));
+      struct mainCompute_Input_11 {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      struct fullScreenTriangle_Output_1 {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_11)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        mainCompute_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), (0.5 * pos[input.vertexIndex]));
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> gridSize_4: f32;

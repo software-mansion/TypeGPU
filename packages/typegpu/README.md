@@ -8,12 +8,39 @@
 
 </div>
 
-**TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing
-resource management in a type-safe, declarative way.
+**TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type
+inference and the ability to write shaders in TypeScript.
 
-<div align="center">
-<video autoplay muted loop playsinline src="https://github.com/user-attachments/assets/5bca716d-477d-44a1-a839-5df0c8d9044c"></video>
-</div>
+```ts
+const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+
+//
+// #1) Can be called in JS
+//
+const range = neighborhood(1.1, 0.5);
+//    ^? d.v2f
+
+//
+// #2) Used to generate WGSL
+//
+const main = () => {
+  'use gpu';
+  return neighborhood(1.1, 0.5);
+};
+
+const wgsl = tgpu.resolve({ externals: { main } });
+//    ^? string
+
+//
+// #3) Executed on the GPU (generates WGSL underneath)
+//
+root['~unstable']
+  .createGuardedComputePipeline(main)
+  .dispatchThreads();
+```
 
 ## Documentation
 
