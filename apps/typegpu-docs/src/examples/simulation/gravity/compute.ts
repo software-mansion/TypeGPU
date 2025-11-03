@@ -29,7 +29,17 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   const currentId = input.gid.x;
-  const current = CelestialBody(computeLayout.$.inState[currentId]);
+  // TODO: replace it with struct copy when Chromium is fixed
+  const current = CelestialBody({
+    position: computeLayout.$.inState[currentId].position,
+    velocity: computeLayout.$.inState[currentId].velocity,
+    mass: computeLayout.$.inState[currentId].mass,
+    collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
+    textureIndex: computeLayout.$.inState[currentId].textureIndex,
+    radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
+    ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
+    destroyed: computeLayout.$.inState[currentId].destroyed,
+  });
 
   if (current.destroyed === 0) {
     for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
@@ -118,15 +128,24 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {
-  const current = computeLayout.$.inState[input.gid.x];
-  const newCurrent = computeLayout.$.outState[input.gid.x];
   const dt = timeAccess.$.passed * timeAccess.$.multiplier;
+  const currentId = input.gid.x;
+  // TODO: replace it with struct copy when Chromium is fixed
+  const current = CelestialBody({
+    position: computeLayout.$.inState[currentId].position,
+    velocity: computeLayout.$.inState[currentId].velocity,
+    mass: computeLayout.$.inState[currentId].mass,
+    collisionBehavior: computeLayout.$.inState[currentId].collisionBehavior,
+    textureIndex: computeLayout.$.inState[currentId].textureIndex,
+    radiusMultiplier: computeLayout.$.inState[currentId].radiusMultiplier,
+    ambientLightFactor: computeLayout.$.inState[currentId].ambientLightFactor,
+    destroyed: computeLayout.$.inState[currentId].destroyed,
+  });
 
   if (current.destroyed === 1) {
     return;
   }
 
-  newCurrent.velocity = d.vec3f(current.velocity);
   for (let i = 0; i < computeLayout.$.celestialBodiesCount; i++) {
     const other = computeLayout.$.inState[i];
 
@@ -141,10 +160,11 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
     const gravityForce = (current.mass * other.mass) / dist / dist;
 
     const direction = std.normalize(other.position.sub(current.position));
-    newCurrent.velocity = newCurrent.velocity.add(
+    current.velocity = current.velocity.add(
       direction.mul((gravityForce / current.mass) * dt),
     );
   }
 
-  newCurrent.position = current.position.add(newCurrent.velocity.mul(dt));
+  current.position = current.position.add(current.velocity.mul(dt));
+  computeLayout.$.outState[input.gid.x] = CelestialBody(current);
 });
