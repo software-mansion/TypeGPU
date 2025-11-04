@@ -3,18 +3,13 @@ import { Image } from "astro:assets";
 import ExternalOpenSvg from "../assets/externalopen.svg";
 import CausticsGif from "../assets/hero/caustics_bg.gif";
 import RayMarchingGif from "../assets/hero/ray_march_bg.gif";
-import PerlinGif from "../assets/hero/perlin_noise_bg.gif";
+import JellySliderGif from "../assets/hero/jelly_slider_bg.png";
 import FishGif from "../assets/hero/fish_bg.gif";
 import ReflectionGif from "../assets/hero/reflection_bg.png";
 
 import HoverExampleIsland from "./HoverExampleIsland";
 
 const galleryItems = [
-	{
-		asset: CausticsGif,
-		title: "Caustics",
-		exampleKey: "rendering--caustics",
-	},
 	{
 		asset: ReflectionGif,
 		title: "Reflection",
@@ -36,9 +31,14 @@ const galleryItems = [
 		exampleKey: "rendering--3d-fish",
 	},
 	{
-		asset: PerlinGif,
-		title: "Perlin Noise",
-		exampleKey: "rendering--perlin-noise",
+		asset: JellySliderGif,
+		title: "Jelly Slider",
+		exampleKey: "rendering--jelly-slider",
+	},
+	{
+		asset: CausticsGif,
+		title: "Caustics",
+		exampleKey: "rendering--caustics",
 	},
 ];
 ---
