@@ -125,13 +125,13 @@ const getRay = (ndc: d.v2f) => {
   const invView = cameraUniform.$.viewInv;
   const invProj = cameraUniform.$.projInv;
 
-  const viewPos = std.mul(invProj, clipPos);
+  const viewPos = invProj.mul(clipPos);
   const viewPosNormalized = d.vec4f(viewPos.xyz.div(viewPos.w), 1.0);
 
-  const worldPos = std.mul(invView, viewPosNormalized);
+  const worldPos = invView.mul(viewPosNormalized);
 
   const rayOrigin = invView.columns[3].xyz;
-  const rayDir = std.normalize(std.sub(worldPos.xyz, rayOrigin));
+  const rayDir = std.normalize(worldPos.xyz.sub(rayOrigin));
 
   return Ray({
     origin: rayOrigin,
@@ -224,16 +224,34 @@ const sliderSdf3D = (position: d.v3f) => {
   });
 };
 
+const GroundParams = {
+  groundThickness: 0.03,
+  groundRoundness: 0.02,
+};
+
+const rectangleCutoutDist = (position: d.v2f) => {
+  'use gpu';
+  const groundRoundness = GroundParams.groundRoundness;
+
+  return sdf.sdRoundedBox2d(
+    position,
+    d.vec2f(1 + groundRoundness, 0.2 + groundRoundness),
+    0.2 + groundRoundness,
+  );
+};
+
 const getMainSceneDist = (position: d.v3f) => {
   'use gpu';
-  return sdf.opSmoothDifference(
-    sdf.sdPlane(position, d.vec3f(0, 1, 0), 0),
+  const groundThickness = GroundParams.groundThickness;
+  const groundRoundness = GroundParams.groundRoundness;
+
+  return sdf.opUnion(
+    sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.06),
     sdf.opExtrudeY(
       position,
-      sdf.sdRoundedBox2d(position.xz, d.vec2f(1, 0.2), 0.2),
-      0.06,
-    ),
-    0.01,
+      -rectangleCutoutDist(position.xz),
+      groundThickness - groundRoundness,
+    ) - groundRoundness,
   );
 };
 
@@ -384,50 +402,74 @@ const getNormal = (
   );
 };
 
-const getShadow = (position: d.v3f, normal: d.v3f, lightDir: d.v3f) => {
+const sqLength = (a: d.v3f) => {
   'use gpu';
-  const newDir = std.normalize(lightDir);
+  return std.dot(a, a);
+};
 
-  const bias = 0.005;
-  const newOrigin = position.add(normal.mul(bias));
+const getFakeShadow = (
+  position: d.v3f,
+  lightDir: d.v3f,
+): d.v3f => {
+  'use gpu';
+  const jellyColor = jellyColorUniform.$;
+  const endCapX = slider.endCapUniform.$.x;
 
-  const bbox = getSliderBbox();
-  const zDepth = d.f32(0.21);
+  if (position.y < -GroundParams.groundThickness) {
+    // Applying darkening under the ground (the shadow cast by the upper ground layer)
+    const fadeSharpness = 30;
+    const inset = 0.02;
+    const cutout = rectangleCutoutDist(position.xz) + inset;
+    const edgeDarkening = std.saturate(1 - cutout * fadeSharpness);
 
-  const sliderMin = d.vec3f(bbox.left, bbox.bottom, -zDepth);
-  const sliderMax = d.vec3f(bbox.right, bbox.top, zDepth);
+    // Applying a slight gradient based on the light direction
+    const lightGradient = std.saturate(-position.z * 4 * lightDir.z + 1);
 
-  const intersection = intersectBox(
-    newOrigin,
-    newDir,
-    sliderMin,
-    sliderMax,
-  );
+    return d.vec3f(1).mul(edgeDarkening).mul(lightGradient * 0.5);
+  } else {
+    const finalUV = d.vec2f(
+      (position.x - position.z * lightDir.x * std.sign(lightDir.z)) *
+          0.5 + 0.5,
+      1 - (-position.z / lightDir.z * 0.5) - 0.2,
+    );
+    const data = std.textureSampleLevel(
+      bezierTexture.$,
+      filteringSampler.$,
+      finalUV,
+      0,
+    );
 
-  if (intersection.hit) {
-    let t = std.max(0.0, intersection.tMin);
-    const maxT = intersection.tMax;
+    // Normally it would be just data.y, but there transition is too sudden when the jelly is bunched up.
+    // To mitigate this, we transition into a position-based transition.
+    const jellySaturation = std.mix(
+      0,
+      data.y,
+      std.saturate(position.x * 1.5 + 1.1),
+    );
+    const shadowColor = std.mix(
+      d.vec3f(0, 0, 0),
+      jellyColor.xyz,
+      jellySaturation,
+    );
 
-    for (let i = 0; i < MAX_STEPS; i++) {
-      const currPos = newOrigin.add(newDir.mul(t));
-      const hitInfo = getSceneDist(currPos);
-
-      if (hitInfo.distance < SURF_DIST) {
-        return std.select(
-          0.8,
-          0.3,
-          hitInfo.objectType === ObjectType.SLIDER,
-        );
-      }
-
-      t += hitInfo.distance;
-      if (t > maxT) {
-        break;
-      }
-    }
+    const contrast = 20 * std.saturate(finalUV.y) * (0.8 + endCapX * 0.2);
+    const shadowOffset = -0.3;
+    const featherSharpness = 10;
+    const uvEdgeFeather = std.saturate(finalUV.x * featherSharpness) *
+      std.saturate((1 - finalUV.x) * featherSharpness) *
+      std.saturate((1 - finalUV.y) * featherSharpness) *
+      std.saturate(finalUV.y);
+    const influence = std.saturate((1 - lightDir.y) * 2) * uvEdgeFeather;
+    return std.mix(
+      d.vec3f(1),
+      std.mix(
+        shadowColor,
+        d.vec3f(1),
+        std.saturate(data.x * contrast + shadowOffset),
+      ),
+      influence,
+    );
   }
-
-  return d.f32(0);
 };
 
 const calculateAO = (position: d.v3f, normal: d.v3f) => {
@@ -463,9 +505,7 @@ const calculateLighting = (
   'use gpu';
   const lightDir = std.neg(lightUniform.$.direction);
 
-  const shadow = getShadow(hitPosition, normal, lightDir);
-  const visibility = 1.0 - shadow;
-
+  const fakeShadow = getFakeShadow(hitPosition, lightDir);
   const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
   const viewDir = std.normalize(rayOrigin.sub(hitPosition));
@@ -480,10 +520,11 @@ const calculateLighting = (
 
   const directionalLight = baseColor
     .mul(lightUniform.$.color)
-    .mul(diffuse * visibility);
+    .mul(diffuse)
+    .mul(fakeShadow);
   const ambientLight = baseColor.mul(AMBIENT_COLOR).mul(AMBIENT_INTENSITY);
 
-  const finalSpecular = specular.mul(visibility);
+  const finalSpecular = specular.mul(fakeShadow);
 
   return std.saturate(directionalLight.add(ambientLight).add(finalSpecular));
 };
@@ -629,12 +670,22 @@ const renderBackground = (
   );
   const newNormal = getNormalMain(posOffset);
 
+  // Calculate fake bounce lighting
+  const jellyColor = jellyColorUniform.$;
+  const sqDist = sqLength(hitPosition.sub(d.vec3f(endCapX, 0, 0)));
+  const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
+  const sideBounceLight = jellyColor.xyz
+    .mul(1 / (sqDist * 40 + 1) * 0.3)
+    .mul(std.abs(newNormal.z));
+
   const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
   const backgroundColor = applyAO(
     GROUND_ALBEDO.mul(litColor),
     posOffset,
     newNormal,
-  );
+  )
+    .add(d.vec4f(bounceLight, 0))
+    .add(d.vec4f(sideBounceLight, 0));
 
   const textColor = std.saturate(backgroundColor.xyz.mul(d.vec3f(0.5)));
 

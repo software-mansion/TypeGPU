@@ -76,7 +76,7 @@ function render() {
       storeOp: 'store',
     })
     .draw(3);
-  root['~unstable'].flush();
+
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);

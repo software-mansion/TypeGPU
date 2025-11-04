@@ -35,6 +35,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -370,7 +371,7 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+          `Unable to index a value of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -438,6 +439,12 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
+        );
+      }
+
+      if (callee.value === constant) {
+        throw new Error(
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
         );
       }
 
