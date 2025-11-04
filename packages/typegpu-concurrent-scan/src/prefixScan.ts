@@ -27,22 +27,19 @@ class PrefixScanComputer {
   #first = true;
   #timeCallback?:
     | ((timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void)
-    | undefined;
+    | undefined = undefined;
 
   constructor(
     private root: TgpuRoot,
     private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
-    timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
-  ) {
-    this.#timeCallback = timeCallback;
-    this.#querySet = root.createQuerySet('timestamp', 2);
-  }
+  ) {}
 
   updateTimeCallback(
     timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
   ): void {
     this.#timeCallback = timeCallback;
+    this.#querySet = this.root.createQuerySet('timestamp', 2);
   }
 
   private get scanPipeline(): TgpuComputePipeline {
@@ -88,16 +85,22 @@ class PrefixScanComputer {
         input: buffer,
         sums: finalSums,
       });
-      this.scanPipeline
-        .with(scanLayout, bg)
-        .withTimestampWrites({
-          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-          beginningOfPassWriteIndex: this.#first
-            ? 0
-            : (undefined as unknown as number),
-          endOfPassWriteIndex: 1,
-        })
-        .dispatchWorkgroups(1);
+      if (this.#timeCallback) {
+        this.scanPipeline
+          .with(scanLayout, bg)
+          .withTimestampWrites({
+            querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+            beginningOfPassWriteIndex: this.#first
+              ? 0
+              : (undefined as unknown as number),
+            endOfPassWriteIndex: 1,
+          })
+          .dispatchWorkgroups(1);
+      } else {
+        this.scanPipeline
+          .with(scanLayout, bg)
+          .dispatchWorkgroups(1);
+      }
 
       if (this.onlyGreatestElement) {
         return finalSums;
@@ -112,7 +115,7 @@ class PrefixScanComputer {
       input: buffer,
       sums: sumsBuffer,
     });
-    if (this.#first) {
+    if (this.#timeCallback && this.#first) {
       this.scanPipeline
         .with(scanLayout, scanBg)
         .withTimestampWrites({
@@ -138,13 +141,19 @@ class PrefixScanComputer {
       input: buffer,
       sums: sumsBuffer,
     });
-    this.addPipeline
-      .with(uniformAddLayout, addBg)
-      .withTimestampWrites({
-        querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-        endOfPassWriteIndex: 1,
-      })
-      .dispatchWorkgroups(numWorkgroups);
+    if (this.#timeCallback) {
+      this.addPipeline
+        .with(uniformAddLayout, addBg)
+        .withTimestampWrites({
+          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+          endOfPassWriteIndex: 1,
+        })
+        .dispatchWorkgroups(numWorkgroups);
+    } else {
+      this.addPipeline
+        .with(uniformAddLayout, addBg)
+        .dispatchWorkgroups(numWorkgroups);
+    }
     return buffer;
   }
 
@@ -234,7 +243,7 @@ export function prefixScan(
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
  *                       GPU dispatch has been submitted; useful for measuring execution time.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
- * 
+ *
  *  * @example
  * ```typescript
  * const root = await tgpu.init();
