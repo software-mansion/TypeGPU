@@ -51,12 +51,12 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
       if (s.value instanceof RefOperator) {
-        if (!s.value.ptrType) {
+        if (s.dataType.type === 'unknown') {
           throw new WgslTypeError(
             `d.ref() created with primitive types must be stored in a variable before use`,
           );
         }
-        return s.value.ptrType;
+        return s.dataType;
       }
 
       if (s.dataType.type === 'unknown') {

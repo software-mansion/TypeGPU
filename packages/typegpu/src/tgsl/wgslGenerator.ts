@@ -789,7 +789,7 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (eq.value instanceof RefOperator) {
         // We're assigning a newly created `d.ref()`
-        if (eq.value.ptrType) {
+        if (eq.dataType.type !== 'unknown') {
           throw new WgslTypeError(
             `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
           );

@@ -41,6 +41,15 @@ export interface ref<T> {
 // TODO: Restrict calls to this function only from within TypeGPU functions
 export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   const gpuImpl = (value: Snippet) => {
+    /**
+     * Pointer type only exists if the ref was created from a reference (buttery-butter).
+     *
+     * @example
+     * ```ts
+     * const life = ref(42); // created from a value
+     * const boid = ref(layout.$.boids[0]); // created from a reference
+     * ```
+     */
     const ptrType = createPtrFromOrigin(
       value.origin,
       value.dataType as StorableData,
@@ -116,35 +125,26 @@ export class RefOperator implements SelfResolvable {
   readonly [$internal]: true;
   readonly snippet: Snippet;
 
-  /**
-   * Pointer params only exist if the ref was created from a reference (buttery-butter).
-   *
-   * @example
-   * ```ts
-   * const life = ref(42); // created from a value
-   * const boid = ref(layout.$.boids[0]); // created from a reference
-   * ```
-   */
-  readonly ptrType: Ptr | undefined;
+  readonly #ptrType: Ptr | undefined;
 
   constructor(snippet: Snippet, ptrType: Ptr | undefined) {
     this[$internal] = true;
     this.snippet = snippet;
-    this.ptrType = ptrType;
+    this.#ptrType = ptrType;
   }
 
   get [$ownSnippet](): Snippet {
-    if (!this.ptrType) {
+    if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(this, this.ptrType, this.snippet.origin);
+    return snip(this, this.#ptrType, this.snippet.origin);
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    if (!this.ptrType) {
+    if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(stitch`(&${this.snippet})`, this.ptrType, this.snippet.origin);
+    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
   }
 }
 
