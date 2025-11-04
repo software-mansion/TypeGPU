@@ -39,7 +39,7 @@ describe('stable-fluid example', () => {
       @compute @workgroup_size(16, 16) fn advectFn_0(input: advectFn_Input_6) {
         var texSize = textureDimensions(src_1);
         var pixelPos = input.gid.xy;
-        if (((((pixelPos.x >= (texSize.x - 1)) || (pixelPos.y >= (texSize.y - 1))) || (pixelPos.x <= 0)) || (pixelPos.y <= 0))) {
+        if (((((pixelPos.x >= (texSize.x - 1u)) || (pixelPos.y >= (texSize.y - 1u))) || (pixelPos.x <= 0u)) || (pixelPos.y <= 0u))) {
           textureStore(dst_2, pixelPos, vec4f(0, 0, 0, 1));
           return;
         }
@@ -56,7 +56,7 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors_2(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4); i++) {
+        for (var i = 0; (i < 4i); i++) {
           adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
@@ -80,14 +80,14 @@ describe('stable-fluid example', () => {
         var texSize = vec2i(textureDimensions(in_1));
         var centerVal = textureLoad(in_1, pixelPos, 0);
         var neighbors = getNeighbors_2(pixelPos, texSize);
-        var leftVal = textureLoad(in_1, neighbors[0], 0);
-        var upVal = textureLoad(in_1, neighbors[1], 0);
-        var rightVal = textureLoad(in_1, neighbors[2], 0);
-        var downVal = textureLoad(in_1, neighbors[3], 0);
+        var leftVal = textureLoad(in_1, neighbors[0i], 0);
+        var upVal = textureLoad(in_1, neighbors[1i], 0);
+        var rightVal = textureLoad(in_1, neighbors[2i], 0);
+        var downVal = textureLoad(in_1, neighbors[3i], 0);
         let timeStep = simParams_3.dt;
         let viscosity = simParams_3.viscosity;
         let diffuseRate = (viscosity * timeStep);
-        let blendFactor = (1f / (4 + diffuseRate));
+        let blendFactor = (1f / (4f + diffuseRate));
         var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (diffuseRate * centerVal)));
         textureStore(out_5, pixelPos, diffusedVal);
       }
@@ -96,7 +96,7 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors_2(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4); i++) {
+        for (var i = 0; (i < 4i); i++) {
           adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
@@ -112,19 +112,19 @@ describe('stable-fluid example', () => {
         var pixelPos = vec2i(input.gid.xy);
         var texSize = vec2i(textureDimensions(vel_1));
         var neighbors = getNeighbors_2(pixelPos, texSize);
-        var leftVel = textureLoad(vel_1, neighbors[0], 0);
-        var upVel = textureLoad(vel_1, neighbors[1], 0);
-        var rightVel = textureLoad(vel_1, neighbors[2], 0);
-        var downVel = textureLoad(vel_1, neighbors[3], 0);
-        let divergence = (0.5 * ((rightVel.x - leftVel.x) + (downVel.y - upVel.y)));
-        textureStore(div_3, pixelPos, vec4f(divergence, 0, 0, 1));
+        var leftVel = textureLoad(vel_1, neighbors[0i], 0);
+        var upVel = textureLoad(vel_1, neighbors[1i], 0);
+        var rightVel = textureLoad(vel_1, neighbors[2i], 0);
+        var downVel = textureLoad(vel_1, neighbors[3i], 0);
+        let divergence = (0.5f * ((rightVel.x - leftVel.x) + (downVel.y - upVel.y)));
+        textureStore(div_3, pixelPos, vec4f(divergence, 0f, 0f, 1f));
       }
 
       @group(0) @binding(0) var x_1: texture_2d<f32>;
 
       fn getNeighbors_2(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4); i++) {
+        for (var i = 0; (i < 4i); i++) {
           adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
@@ -142,20 +142,20 @@ describe('stable-fluid example', () => {
         var pixelPos = vec2i(input.gid.xy);
         var texSize = vec2i(textureDimensions(x_1));
         var neighbors = getNeighbors_2(pixelPos, texSize);
-        var leftPressure = textureLoad(x_1, neighbors[0], 0);
-        var upPressure = textureLoad(x_1, neighbors[1], 0);
-        var rightPressure = textureLoad(x_1, neighbors[2], 0);
-        var downPressure = textureLoad(x_1, neighbors[3], 0);
+        var leftPressure = textureLoad(x_1, neighbors[0i], 0);
+        var upPressure = textureLoad(x_1, neighbors[1i], 0);
+        var rightPressure = textureLoad(x_1, neighbors[2i], 0);
+        var downPressure = textureLoad(x_1, neighbors[3i], 0);
         let divergence = textureLoad(b_3, pixelPos, 0).x;
-        let newPressure = (0.25 * ((((leftPressure.x + rightPressure.x) + upPressure.x) + downPressure.x) - divergence));
-        textureStore(out_4, pixelPos, vec4f(newPressure, 0, 0, 1));
+        let newPressure = (0.25f * ((((leftPressure.x + rightPressure.x) + upPressure.x) + downPressure.x) - divergence));
+        textureStore(out_4, pixelPos, vec4f(newPressure, 0f, 0f, 1f));
       }
 
       @group(0) @binding(0) var vel_1: texture_2d<f32>;
 
       fn getNeighbors_2(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4); i++) {
+        for (var i = 0; (i < 4i); i++) {
           adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
@@ -174,13 +174,13 @@ describe('stable-fluid example', () => {
         var texSize = vec2i(textureDimensions(vel_1));
         var velocity = textureLoad(vel_1, pixelPos, 0);
         var neighbors = getNeighbors_2(pixelPos, texSize);
-        var leftPressure = textureLoad(p_3, neighbors[0], 0);
-        var upPressure = textureLoad(p_3, neighbors[1], 0);
-        var rightPressure = textureLoad(p_3, neighbors[2], 0);
-        var downPressure = textureLoad(p_3, neighbors[3], 0);
-        var pressureGrad = vec2f((0.5 * (rightPressure.x - leftPressure.x)), (0.5 * (downPressure.x - upPressure.x)));
+        var leftPressure = textureLoad(p_3, neighbors[0i], 0);
+        var upPressure = textureLoad(p_3, neighbors[1i], 0);
+        var rightPressure = textureLoad(p_3, neighbors[2i], 0);
+        var downPressure = textureLoad(p_3, neighbors[3i], 0);
+        var pressureGrad = vec2f((0.5f * (rightPressure.x - leftPressure.x)), (0.5f * (downPressure.x - upPressure.x)));
         var projectedVel = (velocity.xy - pressureGrad);
-        textureStore(out_4, pixelPos, vec4f(projectedVel, 0, 1));
+        textureStore(out_4, pixelPos, vec4f(projectedVel, 0f, 1f));
       }
 
       @group(0) @binding(1) var src_1: texture_2d<f32>;
@@ -226,7 +226,7 @@ describe('stable-fluid example', () => {
       @vertex fn renderFn_0(input: renderFn_Input_2) -> renderFn_Output_1 {
         var vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output_1(vec4f(vertices[input.idx], 0, 1), texCoords[input.idx]);
+        return renderFn_Output_1(vec4f(vertices[input.idx], 0f, 1f), texCoords[input.idx]);
       }
 
       @group(0) @binding(0) var result_4: texture_2d<f32>;
@@ -250,8 +250,8 @@ describe('stable-fluid example', () => {
         const distortStrength = 0.8;
         var distortVector = vec2f(gradientX, gradientY);
         var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
-        var outputColor = textureSample(background_6, linSampler_5, vec2f(distortedUV.x, (1 - distortedUV.y)));
-        return vec4f(outputColor.xyz, 1);
+        var outputColor = textureSample(background_6, linSampler_5, vec2f(distortedUV.x, (1f - distortedUV.y)));
+        return vec4f(outputColor.xyz, 1f);
       }"
     `);
   });

@@ -27,7 +27,7 @@ describe('matrix(next) example', () => {
       @group(0) @binding(3) var<uniform> dimensions_1: MatrixInfo_2;
 
       fn getTileIndex_3(row: u32, col: u32) -> u32 {
-        return (col + (row * 16));
+        return (col + (row * 16u));
       }
 
       fn getIndex_4(row: u32, col: u32, columns: u32) -> u32 {
@@ -52,22 +52,22 @@ describe('matrix(next) example', () => {
 
       @compute @workgroup_size(16, 16) fn computeSharedMemory_0(input: computeSharedMemory_Input_10) {
         let dimensions = (&dimensions_1);
-        let numTiles = u32((f32((((*dimensions).firstColumnCount + 16) - 1)) / 16f));
-        let globalRow = ((input.wid.x * 16) + input.lid.x);
-        let globalCol = ((input.wid.y * 16) + input.lid.y);
+        let numTiles = u32((f32((((*dimensions).firstColumnCount + 16u) - 1u)) / 16f));
+        let globalRow = ((input.wid.x * 16u) + input.lid.x);
+        let globalCol = ((input.wid.y * 16u) + input.lid.y);
         let localRow = input.lid.x;
         let localCol = input.lid.y;
         let tileIdx = getTileIndex_3(localRow, localCol);
         var accumulatedResult = 0;
         for (var tileIndex = 0u; (tileIndex < numTiles); tileIndex++) {
-          let matrixACol = ((tileIndex * 16) + localCol);
+          let matrixACol = ((tileIndex * 16u) + localCol);
           var valueA = 0;
           if (((globalRow < (*dimensions).firstRowCount) && (matrixACol < (*dimensions).firstColumnCount))) {
             let indexA = getIndex_4(globalRow, matrixACol, (*dimensions).firstColumnCount);
             valueA = firstMatrix_5[indexA];
           }
           tileA_6[tileIdx] = valueA;
-          let matrixBRow = ((tileIndex * 16) + localRow);
+          let matrixBRow = ((tileIndex * 16u) + localRow);
           var valueB = 0;
           if (((matrixBRow < (*dimensions).firstColumnCount) && (globalCol < (*dimensions).secondColumnCount))) {
             let indexB = getIndex_4(matrixBRow, globalCol, (*dimensions).secondColumnCount);
@@ -75,7 +75,7 @@ describe('matrix(next) example', () => {
           }
           tileB_8[tileIdx] = valueB;
           workgroupBarrier();
-          let effectiveTileSize = min(16, ((*dimensions).firstColumnCount - (tileIndex * 16)));
+          let effectiveTileSize = min(16u, ((*dimensions).firstColumnCount - (tileIndex * 16u)));
           for (var k = 0u; (k < effectiveTileSize); k++) {
             let tileA_element = tileA_6[getTileIndex_3(localRow, k)];
             let tileB_element = tileB_8[getTileIndex_3(k, localCol)];

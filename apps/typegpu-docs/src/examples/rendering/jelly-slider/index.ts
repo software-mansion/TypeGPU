@@ -618,7 +618,7 @@ const renderBackground = (
 
   let highlights = d.f32();
 
-  const highlightWidth = 1;
+  const highlightWidth = d.f32(1);
   const highlightHeight = 0.2;
   let offsetX = d.f32();
   let offsetZ = d.f32(0.05);

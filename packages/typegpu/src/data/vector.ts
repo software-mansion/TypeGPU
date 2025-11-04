@@ -317,6 +317,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       returnType: schema as AnyData,
     }),
     normalImpl: cpuConstruct,
+    ignoreImplicitCastWarning: true,
     codegenImpl: (...args) => {
       if (args.length === 1 && args[0]?.dataType === schema) {
         // Already typed as the schema

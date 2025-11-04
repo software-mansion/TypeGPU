@@ -80,7 +80,7 @@ describe('wgslGenerator', () => {
       expect(gen).toMatchInlineSnapshot(`
         "{
           var a = 12;
-          a += 21;
+          a += 21i;
           return a;
         }"
       `);
@@ -368,7 +368,7 @@ describe('wgslGenerator', () => {
 
     expect(gen).toMatchInlineSnapshot(`
       "{
-        for (var i = 0; (i < 10); i += 1) {
+        for (var i = 0; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -399,7 +399,7 @@ describe('wgslGenerator', () => {
     expect(gen).toMatchInlineSnapshot(`
       "{
         var i = 0;
-        for (; (i < 10); i += 1) {
+        for (; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -428,8 +428,8 @@ describe('wgslGenerator', () => {
     expect(gen).toMatchInlineSnapshot(`
       "{
         var i = 0;
-        while ((i < 10)) {
-          i += 1;
+        while ((i < 10i)) {
+          i += 1i;
         }
       }"
     `);
@@ -520,8 +520,8 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
-        var arr = array<u32, 3>(1, 2, 3);
-        return arr[1];
+        var arr = array<u32, 3>(1u, 2u, 3u);
+        return arr[1i];
       }"
     `);
 
@@ -574,7 +574,7 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
         var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), vec2u(5, 6));
-        return arr[1].x;
+        return arr[1i].x;
       }"
     `);
   });
@@ -616,8 +616,8 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() -> f32 {
-        var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
-        return arr[1].y;
+        var arr = array<TestStruct, 2>(TestStruct(1u, 2f), TestStruct(3u, 4f));
+        return arr[1i].y;
       }"
     `);
 
@@ -663,7 +663,7 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() -> f32 {
         var arr = array<vec2f, 2>(vec2f(44, 88), vec2f(88, 176));
-        return arr[1].y;
+        return arr[1i].y;
       }"
     `);
 
@@ -701,7 +701,7 @@ describe('wgslGenerator', () => {
       }
 
       fn fnOne() -> TestStruct {
-        return TestStruct(1, vec3f(1, 2, 3));
+        return TestStruct(1u, vec3f(1, 2, 3));
       }
 
       fn fnTwo() -> f32 {
@@ -795,9 +795,9 @@ describe('wgslGenerator', () => {
     expect(asWgsl(main0)).toMatchInlineSnapshot(`
       "fn main0(cond: bool) -> u32 {
         if (cond) {
-          return 0;
+          return 0u;
         }
-        return 1;
+        return 1u;
       }"
     `);
   });
@@ -814,10 +814,10 @@ describe('wgslGenerator', () => {
       "fn main1(cond: bool) -> i32 {
         var y = 0;
         if (cond) {
-          y = 1;
+          y = 1i;
         }
         else {
-          y = 2;
+          y = 2i;
         }
         return y;
       }"
@@ -837,10 +837,10 @@ describe('wgslGenerator', () => {
       "fn main2(cond: bool) -> i32 {
         var y = 0;
         if (cond) {
-          y = 1;
+          y = 1i;
         }
         else {
-          y = 2;
+          y = 2i;
         }
         return y;
       }"
@@ -866,7 +866,7 @@ describe('wgslGenerator', () => {
 
     expect(gen).toMatchInlineSnapshot(`
       "{
-        for (var i = 0; (i < 10); i += 1) {
+        for (var i = 0; (i < 10i); i += 1i) {
           continue;
         }
       }"
@@ -882,8 +882,8 @@ describe('wgslGenerator', () => {
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
         var i = 0;
-        while ((i < 10)) {
-          i += 1;
+        while ((i < 10i)) {
+          i += 1i;
         }
       }"
     `);
@@ -943,7 +943,7 @@ describe('wgslGenerator', () => {
 
     expect(asWgsl(increment)).toMatchInlineSnapshot(`
       "fn increment(val: ptr<function, f32>) {
-        (*val) += 1;
+        (*val) += 1f;
       }"
     `);
   });
@@ -1126,9 +1126,9 @@ describe('wgslGenerator', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
         var matrix = mat4x4f();
-        let column = (&matrix[1]);
-        let element = (*column)[0];
-        let directElement = matrix[1][0];
+        let column = (&matrix[1i]);
+        let element = (*column)[0i];
+        let directElement = matrix[1i][0i];
       }"
     `);
   });
@@ -1149,6 +1149,33 @@ describe('wgslGenerator', () => {
       fn testFn() {
         let element = (&matrix[index]);
       }"
+    `);
+  });
+
+  it('throws a descriptive error when accessing an external array with a runtime known index', () => {
+    const myArray = [9, 8, 7, 6];
+
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      return myArray[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Value undefined (as json: undefined) is not resolvable to type u32]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a const inside TGSL', () => {
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      const myArray = tgpu.const(d.arrayOf(d.u32, 4), [9, 8, 7, 6]);
+      return myArray.$[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
     `);
   });
 });

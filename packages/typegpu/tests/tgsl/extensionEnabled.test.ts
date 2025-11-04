@@ -23,7 +23,7 @@ describe('extension based pruning', () => {
 
       fn someFn_0() -> f32 {
         {
-          return 6.599609375;
+          return 6.599609375f;
         }
       }"
     `);
@@ -35,7 +35,7 @@ describe('extension based pruning', () => {
     ).toMatchInlineSnapshot(`
       "fn someFn_0() -> f32 {
         {
-          return 16.5;
+          return 16.5f;
         }
       }"
     `);

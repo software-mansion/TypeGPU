@@ -56,7 +56,7 @@ describe('tgpu.accessor', () => {
       .with(multiplierAccess, 2);
 
     expect(asWgsl(getColor)).toMatchInlineSnapshot(
-      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2; }"`,
+      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2f; }"`,
     );
   });
 

@@ -257,7 +257,7 @@ describe('TgpuBindGroupLayout', () => {
 
       fn getFirst() -> Boid {
         let boids = (&boids);
-        return (*boids)[0];
+        return (*boids)[0i];
       }"
     `);
   });

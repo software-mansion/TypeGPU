@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -43,6 +43,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
 import { INTERNAL_createPtr, ptrFn } from '../data/ptr.ts';
 import { RefOnGPU, RefOperator } from '../data/ref.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -312,7 +313,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       // Result of an operation, so not a reference to anything
       return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ 'runtime');
@@ -329,7 +330,7 @@ ${this.ctx.pre}}`;
         return codegen(argExpr);
       }
 
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
@@ -374,7 +375,7 @@ ${this.ctx.pre}}`;
           this.ctx.resolve(property.value, property.dataType).value;
 
         throw new Error(
-          `Cannot index value ${targetStr} with index ${propertyStr}`,
+          `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -428,6 +429,12 @@ ${this.ctx.pre}}`;
           callee.value,
           // A new struct, so not a reference
           /* ref */ 'runtime',
+        );
+      }
+
+      if (callee.value === constant) {
+        throw new Error(
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
         );
       }
 
@@ -780,7 +787,7 @@ ${this.ctx.pre}else ${alternate}`;
           rawId,
           concretize(refSnippet.dataType as AnyData) as wgsl.StorableData,
         );
-        return stitchWithExactTypes`${this.ctx.pre}var ${varName} = ${
+        return stitch`${this.ctx.pre}var ${varName} = ${
           tryConvertSnippet(
             refSnippet,
             refSnippet.dataType as wgsl.AnyWgslData,
@@ -845,7 +852,7 @@ ${this.ctx.pre}else ${alternate}`;
         concretize(dataType),
         eq.origin,
       );
-      return stitchWithExactTypes`${this.ctx.pre}${varType} ${snippet
+      return stitch`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
     }
 

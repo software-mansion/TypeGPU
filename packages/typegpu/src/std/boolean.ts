@@ -340,7 +340,7 @@ export const select = dualImpl({
   name: 'select',
   signature: (...args) => {
     const [f, t, cond] = toStorables(args);
-    const [uf, ut] = unify<[AnyData, AnyData]>([f, t]) ?? [f, t];
+    const [uf, ut] = unify([f, t]) ?? [f, t] as const;
     return ({ argTypes: [uf, ut, cond], returnType: uf });
   },
   normalImpl: cpuSelect,

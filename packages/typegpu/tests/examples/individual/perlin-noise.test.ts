@@ -36,15 +36,15 @@ describe('perlin noise example', () => {
       fn item_10() -> f32 {
         let a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
-        seed_8.x = fract((cos(a) * 136.8168));
-        seed_8.y = fract((cos(b) * 534.7645));
+        seed_8.x = fract((cos(a) * 136.8168f));
+        seed_8.y = fract((cos(b) * 534.7645f));
         return seed_8.y;
       }
 
       fn randOnUnitSphere_9() -> vec3f {
-        let z = ((2 * item_10()) - 1);
-        let oneMinusZSq = sqrt((1 - (z * z)));
-        let theta = (6.283185307179586 * item_10());
+        let z = ((2f * item_10()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * item_10());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -136,7 +136,7 @@ describe('perlin noise example', () => {
       }
 
       fn exponentialSharpen_12(n: f32, sharpness2: f32) -> f32 {
-        return (sign(n) * pow(abs(n), (1 - sharpness2)));
+        return (sign(n) * pow(abs(n), (1f - sharpness2)));
       }
 
       @group(0) @binding(2) var<uniform> sharpness_13: f32;
@@ -149,10 +149,10 @@ describe('perlin noise example', () => {
         var uv = (gridSize_4 * input.uv);
         let n = sample_6(vec3f(uv, time_5));
         let sharp = exponentialSharpen_12(n, sharpness_13);
-        let n01 = ((sharp * 0.5) + 0.5);
+        let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);
         var light = vec3f(1, 0.30000001192092896, 0.5);
-        return vec4f(mix(dark, light, n01), 1);
+        return vec4f(mix(dark, light, n01), 1f);
       }"
     `);
   });
