@@ -498,7 +498,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
-  private setupRenderPass(): GPURenderPassEncoder {
+  private setupRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
     const memo = internals.core.unwrap();
     const { branch, fragmentFn } = internals.core.options;
@@ -548,7 +548,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     }
 
-    const pass = branch.commandEncoder.beginRenderPass(renderPassDescriptor);
+    const pass = encoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
@@ -597,24 +597,27 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstInstance?: number,
   ): void {
     const internals = this[$internal];
-    const pass = this.setupRenderPass();
-    const { logResources } = internals.core.unwrap();
     const { branch } = internals.core.options;
+    const { logResources } = internals.core.unwrap();
+
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-
     pass.end();
+
+    branch.device.queue.submit([commandEncoder.finish()]);
 
     if (logResources) {
       logDataFromGPU(logResources);
     }
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch.flush();
+      });
+    }
   }
 
   drawIndexed(
@@ -630,12 +633,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       throw new Error('No index buffer set for this render pipeline.');
     }
 
+    const { logResources } = internals.core.unwrap();
+    const { branch } = internals.core.options;
     const { buffer, indexFormat, offsetBytes, sizeBytes } =
       internals.priors.indexBuffer;
 
-    const pass = this.setupRenderPass();
-    const { logResources } = internals.core.unwrap();
-    const { branch } = internals.core.options;
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
     if (isGPUBuffer(buffer)) {
       pass.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
@@ -658,16 +662,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
+    branch.device.queue.submit([commandEncoder.finish()]);
+
     if (logResources) {
       logDataFromGPU(logResources);
     }
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch.flush();
+      });
+    }
   }
 }
 
