@@ -59,7 +59,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         if (isSmaller(currentId, otherId)) {
           const dir = std.normalize(current.position.sub(other.position));
           current.position = other.position.add(
-            dir.mul(radiusOf(current) + radiusOf(other)),
+            dir.mul(radiusOf(d.ref(current)) + radiusOf(d.ref(other))),
           );
         }
 
@@ -118,7 +118,7 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
       }
 
       const dist = std.max(
-        radiusOf(current) + radiusOf(other),
+        radiusOf(d.ref(current)) + radiusOf(d.ref(other)),
         std.distance(current.position, other.position),
       );
       const gravityForce = (current.mass * other.mass) / dist / dist;

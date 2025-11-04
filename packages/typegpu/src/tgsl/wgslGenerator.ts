@@ -782,6 +782,11 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (eq.value instanceof RefOnGPU) {
         // We're assigning a newly created `d.ref()`
+        if (eq.value.ptrType) {
+          throw new WgslTypeError(
+            `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
+          );
+        }
         const refSnippet = eq.value.snippet;
         const varName = this.refVariable(
           rawId,

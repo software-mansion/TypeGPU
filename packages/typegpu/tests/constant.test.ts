@@ -64,7 +64,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn2
-      - fn*:fn2: Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: 'vec3f(...)']
+      - fn*:fn2(): Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: 'vec3f(...)']
     `);
   });
 
@@ -84,7 +84,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn: 'boid.pos = vec3f()' is invalid, because boid.pos is a constant.]
+      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either

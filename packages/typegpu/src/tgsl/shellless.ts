@@ -3,8 +3,10 @@ import {
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
+import { RefOnGPU } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { isPtr } from '../data/wgslTypes.ts';
+import { WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
@@ -47,7 +49,22 @@ export class ShelllessRepository {
       );
     }
 
-    const argTypes = (argSnippets ?? []).map((s) => {
+    const argTypes = (argSnippets ?? []).map((s, index) => {
+      if (s.value instanceof RefOnGPU) {
+        if (!s.value.ptrType) {
+          throw new WgslTypeError(
+            `d.ref() created with primitive types must be stored in a variable before use`,
+          );
+        }
+        return s.value.ptrType;
+      }
+
+      if (s.dataType.type === 'unknown') {
+        throw new Error(
+          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)`,
+        );
+      }
+
       let type = concretize(s.dataType as AnyData);
 
       if (s.origin === 'constant-ref') {

@@ -56,7 +56,7 @@ export const mainVertex = tgpu['~unstable'].vertexFn({
   const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
   const worldPosition = currentBody.position.add(
-    input.position.xyz.mul(radiusOf(currentBody)),
+    input.position.xyz.mul(radiusOf(d.ref(currentBody))),
   );
 
   const camera = cameraAccess.$;

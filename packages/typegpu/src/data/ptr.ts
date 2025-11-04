@@ -1,4 +1,5 @@
 import { $internal } from '../shared/symbols.ts';
+import { Origin, OriginToPtrParams, originToPtrParams } from './snippet.ts';
 import type { Access, AddressSpace, Ptr, StorableData } from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(
@@ -57,4 +58,21 @@ export function INTERNAL_createPtr<
     implicit,
     toString: () => `ptr<${addressSpace}, ${inner}, ${access}>`,
   } as Ptr<TAddressSpace, TInner, TAccess>;
+}
+
+export function createPtrFromOrigin(
+  origin: Origin,
+  innerDataType: StorableData,
+): Ptr | undefined {
+  const ptrParams = originToPtrParams[origin as keyof OriginToPtrParams];
+
+  if (ptrParams) {
+    return INTERNAL_createPtr(
+      ptrParams.space,
+      innerDataType,
+      ptrParams.access,
+    );
+  }
+
+  return undefined;
 }

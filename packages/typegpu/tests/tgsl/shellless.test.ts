@@ -124,7 +124,7 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main
-      - fn*:someFn: Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
+      - fn*:someFn(f32, i32): Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
     `);
   });
 
@@ -196,22 +196,19 @@ describe('shellless', () => {
 
     const main = () => {
       'use gpu';
-      sumComponents(posUniform);
-      sumComponents(d.ref(posUniform.$.zyx));
+      sumComponents(d.ref(posUniform.$));
       // sumComponents(&posUniform);
     };
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
-        (*pos).x += vel.x;
-        (*pos).y += vel.y;
-        (*pos).z += vel.z;
+      "@group(0) @binding(0) var<uniform> posUniform: vec3f;
+
+      fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
       }
 
       fn main() {
-        var pos = vec3f();
-        var vel = vec3f(1, 2, 3);
-        advance((&pos), (&vel));
+        sumComponents((&posUniform));
       }"
     `);
   });

@@ -40,7 +40,7 @@ describe('ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello: Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
+      - fn*:hello(): Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
     `);
   });
 
@@ -55,8 +55,7 @@ describe('ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello
-      - fn:ref: Can't create refs from references. Copy the value first by wrapping it in its schema.]
+      - fn*:hello(): Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.]
     `);
   });
 });
