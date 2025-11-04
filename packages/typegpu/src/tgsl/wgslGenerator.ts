@@ -153,9 +153,10 @@ ${this.ctx.pre}}`;
     dataType: wgsl.StorableData,
   ): string {
     const varName = this.ctx.makeNameValid(id);
+    const ptrType = ptrFn(dataType);
     const snippet = snip(
-      new RefOperator(snip(varName, dataType, 'function')),
-      ptrFn(dataType),
+      new RefOperator(snip(varName, dataType, 'function'), ptrType),
+      ptrType,
       'function',
     );
     this.ctx.defineVariable(id, snippet);
@@ -696,6 +697,12 @@ ${this.ctx.pre}}`;
             expectedReturnType,
           )
           : this.expression(returnNode);
+
+        if (returnSnippet.value instanceof RefOperator) {
+          throw new WgslTypeError(
+            stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
+          );
+        }
 
         if (
           !expectedReturnType &&

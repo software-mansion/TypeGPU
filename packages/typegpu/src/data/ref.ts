@@ -41,7 +41,15 @@ export interface ref<T> {
 // TODO: Restrict calls to this function only from within TypeGPU functions
 export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   const gpuImpl = (value: Snippet) => {
-    return snip(new RefOperator(value), UnknownData, /* origin */ 'runtime');
+    const ptrType = createPtrFromOrigin(
+      value.origin,
+      value.dataType as StorableData,
+    );
+    return snip(
+      new RefOperator(value, ptrType),
+      ptrType ?? UnknownData,
+      /* origin */ 'runtime',
+    );
   };
 
   const jsImpl = <T>(value: T) => new refImpl(value);
@@ -99,6 +107,11 @@ class refImpl<T> implements ref<T> {
   }
 }
 
+/**
+ * The result of calling `d.ref(...)`. The code responsible for
+ * generating shader code can check if the value of a snippet is
+ * an instance of `RefOperator`, and act accordingly.
+ */
 export class RefOperator implements SelfResolvable {
   readonly [$internal]: true;
   readonly snippet: Snippet;
@@ -114,14 +127,10 @@ export class RefOperator implements SelfResolvable {
    */
   readonly ptrType: Ptr | undefined;
 
-  constructor(snippet: Snippet) {
+  constructor(snippet: Snippet, ptrType: Ptr | undefined) {
     this[$internal] = true;
     this.snippet = snippet;
-
-    this.ptrType = createPtrFromOrigin(
-      snippet.origin,
-      snippet.dataType as StorableData,
-    );
+    this.ptrType = ptrType;
   }
 
   get [$ownSnippet](): Snippet {

@@ -10,6 +10,7 @@ import {
   type I32,
   isMat,
   isVec,
+  Ptr,
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
@@ -73,6 +74,8 @@ function getImplicitConversionRank(
 
   if (
     trueSrc.type === 'ptr' &&
+    // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
+    trueSrc.implicit &&
     getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
@@ -240,7 +243,11 @@ function applyActionToSnippet(
 
   switch (action.action) {
     case 'ref':
-      return snip(new RefOperator(snippet), targetType, snippet.origin);
+      return snip(
+        new RefOperator(snippet, targetType as Ptr),
+        targetType,
+        snippet.origin,
+      );
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {

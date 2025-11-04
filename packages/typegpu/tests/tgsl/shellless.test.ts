@@ -186,7 +186,7 @@ describe('shellless', () => {
     `);
   });
 
-  it('generates uniform pointer params when passing a fixed uniform directly to a function', ({ root }) => {
+  it('generates uniform pointer params when passing a fixed uniform ref to a function', ({ root }) => {
     const posUniform = root.createUniform(d.vec3f);
 
     const sumComponents = (vec: d.ref<d.v3f>) => {
@@ -197,15 +197,14 @@ describe('shellless', () => {
     const main = () => {
       'use gpu';
       sumComponents(d.ref(posUniform.$));
-      // sumComponents(&posUniform);
     };
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> posUniform: vec3f;
-
-      fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
+      "fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
         return (((*vec).x + (*vec).y) + (*vec).z);
       }
+
+      @group(0) @binding(0) var<uniform> posUniform: vec3f;
 
       fn main() {
         sumComponents((&posUniform));

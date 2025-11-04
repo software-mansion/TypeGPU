@@ -394,11 +394,11 @@ export function concretizeSnippets(args: Snippet[]): Snippet[] {
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   /**
-   * Used by `generateTypedExpression` to signal downstream
+   * Used by `typedExpression` to signal downstream
    * expression resolution what type is expected of them.
    *
    * It is used exclusively for inferring the types of structs and arrays.
-   * It is modified exclusively by `generateTypedExpression` function.
+   * It is modified exclusively by `typedExpression` function.
    */
   expectedType: AnyData | undefined;
 

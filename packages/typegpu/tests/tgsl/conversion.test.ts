@@ -14,6 +14,7 @@ import { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
 
 const ctx = new ResolutionCtxImpl({
   namespace: namespace({ names: 'strict' }),
@@ -30,8 +31,20 @@ afterAll(() => {
 });
 
 describe('getBestConversion', () => {
-  const ptrF32 = d.ptrPrivate(d.f32);
-  const ptrI32 = d.ptrPrivate(d.i32);
+  // d.ptrPrivate(d.f32)
+  const ptrF32 = INTERNAL_createPtr(
+    'private',
+    d.f32,
+    'read-write',
+    /* implicit */ true,
+  );
+  // d.ptrPrivate(d.i32)
+  const ptrI32 = INTERNAL_createPtr(
+    'private',
+    d.i32,
+    'read-write',
+    /* implicit */ true,
+  );
 
   it('returns result for identical types', () => {
     const res = getBestConversion([d.f32, d.f32]);
@@ -192,7 +205,7 @@ describe('convertToCommonType', () => {
   const snippetAbsInt = snip('1', abstractInt, /* ref */ 'runtime');
   const snippetPtrF32 = snip(
     'ptr_f32',
-    d.ptrPrivate(d.f32),
+    INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true),
     /* ref */ 'function',
   );
   const snippetUnknown = snip('?', UnknownData, /* ref */ 'runtime');
