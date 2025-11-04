@@ -14,10 +14,13 @@ import {
   isComparisonSampler,
   isSampler,
   type TgpuComparisonSampler,
-  TgpuLaidOutComparisonSamplerImpl,
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
 } from './core/sampler/sampler.ts';
+import {
+  comparisonSampler as wgslComparisonSampler,
+  sampler as wgslSampler,
+} from './data/sampler.ts';
 import {
   type TgpuExternalTexture,
   TgpuExternalTextureImpl,
@@ -65,6 +68,7 @@ import type {
 } from './shared/utilityTypes.ts';
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
+import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 
 // ----------
 // Public API
@@ -403,8 +407,8 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends
   TgpuLayoutUniform ? Infer<T['uniform']>
   : T extends TgpuLayoutStorage ? Infer<UnwrapRuntimeConstructor<T['storage']>>
-  : T extends TgpuLayoutSampler ? TgpuSampler
-  : T extends TgpuLayoutComparisonSampler ? TgpuComparisonSampler
+  : T extends TgpuLayoutSampler ? Infer<WgslSampler>
+  : T extends TgpuLayoutComparisonSampler ? Infer<WgslComparisonSampler>
   : T extends TgpuLayoutTexture<infer TSchema> ? Infer<TSchema>
   : T extends TgpuLayoutStorageTexture<infer TSchema> ? Infer<TSchema>
   : T extends TgpuLayoutExternalTexture ? Infer<T['externalTexture']>
@@ -573,28 +577,21 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('sampler' in entry) {
-        if (entry.sampler === 'comparison') {
-          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-          (this.bound[key] as any) = new TgpuLaidOutComparisonSamplerImpl(
-            membership,
-          );
-        } else {
-          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-          (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(membership);
-        }
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(
+          entry.sampler === 'comparison'
+            ? wgslComparisonSampler()
+            : wgslSampler(),
+          membership,
+        );
       }
 
-      if ('sampler' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.value as any)[key] = this.bound[key];
-      } else {
-        Object.defineProperty(this.value, key, {
-          get: () => {
-            // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-            return (this.bound[key] as any).value;
-          },
-        });
-      }
+      Object.defineProperty(this.value, key, {
+        get: () => {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          return (this.bound[key] as any).value;
+        },
+      });
 
       idx++;
     }
@@ -822,7 +819,7 @@ export class TgpuBindGroupImpl<
           }
 
           if ('sampler' in entry) {
-            if (isSampler(value) || isComparisonSampler(value)) {
+            if (isComparisonSampler(value) || isSampler(value)) {
               return {
                 binding: idx,
                 resource: unwrapper.unwrap(value as TgpuSampler),

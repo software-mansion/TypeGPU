@@ -35,6 +35,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -274,7 +275,10 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData);
+        return snip(
+          new ConsoleLog(property),
+          UnknownData,
+        );
       }
 
       if (
@@ -367,7 +371,7 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+          `Unable to index a value of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -438,6 +442,12 @@ ${this.ctx.pre}}`;
         );
       }
 
+      if (callee.value === constant) {
+        throw new Error(
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
+        );
+      }
+
       if (callee.value instanceof InfixDispatch) {
         // Infix operator dispatch.
         if (!argNodes[0]) {
@@ -465,7 +475,7 @@ ${this.ctx.pre}}`;
         throw new Error(
           `Function '${
             getName(callee.value) ?? String(callee.value)
-          }' is not marked with the 'kernel' directive and cannot be used in a shader`,
+          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
         );
       }
 
@@ -508,7 +518,7 @@ ${this.ctx.pre}}`;
         }
 
         if (callee.value instanceof ConsoleLog) {
-          return this.ctx.generateLog(convertedArguments);
+          return this.ctx.generateLog(callee.value.op, convertedArguments);
         }
 
         // Assuming that `callee` is callable

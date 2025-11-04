@@ -6,6 +6,10 @@ import type {
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
+import type {
   AnyWgslData,
   U16,
   U32,
@@ -41,6 +45,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+} from '../sampler/sampler.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -69,6 +77,24 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // ----------
 // Public API
 // ----------
+
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
+  /**
+   * Returns a pipeline wrapper with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Dispatches the pipeline.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`, this method takes in the
+   * number of threads to run in each dimension.
+   *
+   * Under the hood, the number of expected threads is sent as a uniform, and
+   * "guarded" by a bounds check.
+   */
+  dispatchThreads(...args: TArgs): void;
+}
 
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
@@ -180,6 +206,55 @@ export interface WithBinding {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
+
+  /**
+   * Creates a compute pipeline that executes the given callback in an exact number of threads.
+   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * thread id, where as regular pipelines do not and work in units of workgroups.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU.
+   *                 It can accept up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   *                 of the executing thread.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline(() => {
+   *     'use gpu';
+   *     console.log('Hello, GPU!');
+   *   });
+   *
+   * fooPipeline.dispatchThreads();
+   * // [GPU] Hello, GPU!
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline((x) => {
+   *     'use gpu';
+   *     if (x % 16 === 0) {
+   *       // Logging every 16th thread
+   *       console.log('I am the', x, 'thread');
+   *     }
+   *   });
+   *
+   * // executing 512 threads
+   * fooPipeline.dispatchThreads(512);
+   * // [GPU] I am the 256 thread
+   * // [GPU] I am the 272 thread
+   * // ... (30 hidden logs)
+   * // [GPU] I am the 16 thread
+   * // [GPU] I am the 240 thread
+   * ```
+   */
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): TgpuGuardedComputePipeline<TArgs>;
 
   withVertex<
     VertexIn extends VertexInConstrained,
@@ -675,11 +750,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -719,9 +789,16 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     callback: (pass: RenderPass) => void,
   ): void;
 
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler;
+
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }

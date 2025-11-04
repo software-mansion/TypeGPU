@@ -1,9 +1,9 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { computeShader } from './compute.ts';
+import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
 import * as p from './params.ts';
 import { fragmentShader, vertexShader } from './render.ts';
@@ -98,33 +98,34 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsOnGPU = prepareDispatch(root, (x) => {
-  'kernel';
-  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
-  const data = ModelData({
-    position: d.vec3f(
-      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-    ),
-    direction: d.vec3f(
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-    ),
-    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-    variant: randf.sample(),
-    applySinWave: 1,
-    applySeaFog: 1,
-    applySeaDesaturation: 1,
+const randomizeFishPositionsPipeline = root['~unstable']
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+    const data = ModelData({
+      position: d.vec3f(
+        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+      ),
+      direction: d.vec3f(
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+      ),
+      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+      variant: randf.sample(),
+      applySinWave: 1,
+      applySeaFog: 1,
+      applySeaDesaturation: 1,
+    });
+    buffer0mutable.$[x] = data;
+    buffer1mutable.$[x] = data;
   });
-  buffer0mutable.$[x] = data;
-  buffer1mutable.$[x] = data;
-});
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
-  randomizeFishPositionsOnGPU.dispatch(p.fishAmount);
+  randomizeFishPositionsPipeline.dispatchThreads(p.fishAmount);
   enqueuePresetChanges();
 };
 
@@ -198,9 +199,8 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const computePipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline();
+const simulatePipeline = root['~unstable']
+  .createGuardedComputePipeline(simulate);
 
 // bind groups
 
@@ -256,9 +256,9 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  computePipeline
+  simulatePipeline
     .with(computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
+    .dispatchThreads(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({
@@ -305,8 +305,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
-
-  root['~unstable'].flush();
 
   requestAnimationFrame(frame);
 }

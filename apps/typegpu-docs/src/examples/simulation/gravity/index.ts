@@ -4,8 +4,6 @@ import tgpu, {
   type TgpuBuffer,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import * as m from 'wgpu-matrix';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -28,7 +26,6 @@ import {
   skyBoxVertex,
 } from './render.ts';
 import {
-  Camera,
   cameraAccess,
   CelestialBody,
   computeLayout,
@@ -42,6 +39,7 @@ import {
   Time,
   timeAccess,
 } from './schemas.ts';
+import { Camera, setupOrbitCamera } from './setup-orbit-camera.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -55,29 +53,21 @@ context.configure({
 
 // static resources (created on the example load)
 
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-let cameraPosition = examplePresets[initialPreset].initialCameraPos;
-const cameraInitial = Camera({
-  position: cameraPosition,
-  view: m.mat4.lookAt(
-    cameraPosition,
-    d.vec3f(0, 0, 0),
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  ),
-  projection: m.mat4.perspective(
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  ),
-});
-const camera = root.createUniform(Camera, cameraInitial);
+const camera = root.createUniform(Camera);
+const { cleanupCamera, targetCamera } = setupOrbitCamera(
+  canvas,
+  {
+    initPos: d.vec4f(examplePresets[initialPreset].initialCameraPos, 1),
+    minZoom: 10,
+    maxZoom: 800,
+  },
+  (updates) => camera.writePartial(updates),
+);
 
 const skyBoxVertexBuffer = root
   .createBuffer(d.arrayOf(SkyBoxVertex, skyBoxVertices.length), skyBoxVertices)
@@ -259,8 +249,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
   celestialBodiesCount = celestialBodies.length;
   celestialBodiesCountBuffer.write(celestialBodies.length);
   lightSource.write(presetData.lightSource ?? d.vec3f());
-  cameraPosition = presetData.initialCameraPos;
-  updateCameraPosition();
+  targetCamera(d.vec4f(presetData.initialCameraPos, 1));
 
   return {
     celestialBodiesBufferA: computeBufferA,
@@ -296,15 +285,6 @@ export const controls = {
 };
 
 const resizeObserver = new ResizeObserver(() => {
-  const proj = m.mat4.perspective(
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  );
-
-  camera.writePartial({ projection: proj });
   depthTexture.destroy();
   depthTexture = root.device.createTexture({
     size: [canvas.width, canvas.height, 1],
@@ -313,108 +293,6 @@ const resizeObserver = new ResizeObserver(() => {
   });
 });
 resizeObserver.observe(canvas);
-
-// Variables for mouse interaction.
-let isDragging = false;
-let prevX = 0;
-let prevY = 0;
-
-function updateCameraPosition() {
-  const newView = m.mat4.lookAt(
-    cameraPosition,
-    d.vec3f(0, 0, 0),
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
-  camera.writePartial({ view: newView, position: cameraPosition });
-}
-
-function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  const orbitRadius = std.length(cameraPosition);
-  const orbitYaw = Math.atan2(cameraPosition.x, cameraPosition.z) -
-    dx * orbitSensitivity;
-  const orbitPitch = std.clamp(
-    Math.asin(cameraPosition.y / orbitRadius) + dy * orbitSensitivity,
-    -(Math.PI / 2 - 0.01),
-    Math.PI / 2 - 0.01,
-  );
-  // Convert spherical coordinates to cartesian coordinates
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-
-  cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
-  updateCameraPosition();
-}
-
-canvas.addEventListener('wheel', (event: WheelEvent) => {
-  event.preventDefault();
-  const zoomSensitivity = 0.05;
-  const orbitRadius = std.length(cameraPosition);
-  const orbitYaw = Math.atan2(cameraPosition.x, cameraPosition.z);
-  const orbitPitch = Math.asin(cameraPosition.y / orbitRadius);
-  const newCamRadius = std.clamp(
-    std.length(cameraPosition) + event.deltaY * zoomSensitivity,
-    10,
-    500,
-  );
-  const newCamX = newCamRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = newCamRadius * Math.sin(orbitPitch);
-  const newCamZ = newCamRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-
-  cameraPosition = d.vec3f(newCamX, newCamY, newCamZ);
-  updateCameraPosition();
-}, { passive: false });
-
-canvas.addEventListener('mousedown', (event) => {
-  isDragging = true;
-  prevX = event.clientX;
-  prevY = event.clientY;
-});
-
-canvas.addEventListener('touchstart', (event) => {
-  if (event.touches.length === 1) {
-    isDragging = true;
-    prevX = event.touches[0].clientX;
-    prevY = event.touches[0].clientY;
-  }
-}, { passive: true });
-
-const mouseUpEventListener = () => {
-  isDragging = false;
-};
-window.addEventListener('mouseup', mouseUpEventListener);
-
-const touchEndEventListener = () => {
-  isDragging = false;
-};
-window.addEventListener('touchend', touchEndEventListener);
-
-const mouseMoveEventListener = (event: MouseEvent) => {
-  const dx = event.clientX - prevX;
-  const dy = event.clientY - prevY;
-  prevX = event.clientX;
-  prevY = event.clientY;
-
-  if (isDragging) {
-    updateCameraOrbit(dx, dy);
-  }
-};
-window.addEventListener('mousemove', mouseMoveEventListener);
-
-const touchMoveEventListener = (event: TouchEvent) => {
-  if (isDragging && event.touches.length === 1) {
-    event.preventDefault();
-    const dx = event.touches[0].clientX - prevX;
-    const dy = event.touches[0].clientY - prevY;
-    prevX = event.touches[0].clientX;
-    prevY = event.touches[0].clientY;
-
-    updateCameraOrbit(dx, dy);
-  }
-};
-window.addEventListener('touchmove', touchMoveEventListener);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -428,10 +306,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 
 export function onCleanup() {
   destroyed = true;
-  window.removeEventListener('mouseup', mouseUpEventListener);
-  window.removeEventListener('mousemove', mouseMoveEventListener);
-  window.removeEventListener('touchend', touchEndEventListener);
-  window.removeEventListener('touchmove', touchMoveEventListener);
+  cleanupCamera();
   resizeObserver.unobserve(canvas);
   root.destroy();
 }

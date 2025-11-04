@@ -1,0 +1,85 @@
+---
+---
+
+<div data-challenges-signup-popover="true" class="contents">
+    <slot />
+     <dialog class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 p-6 rounded-none shadow-lg max-w-md w-full backdrop:bg-black/20 dark:backdrop:bg-black/50 backdrop:backdrop-blur-md">
+        <form method="dialog">
+            <p class="text-justify text-base mb-12">Sign up to be notified when the <strong>ShaderHunt</strong> platform is available, along with interactive examples teaching TypeGPU from the ground up.</p>
+            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your name (required)</label>
+            <input type="text" id="name" name="name" required class="w-full mb-8 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your email (required)</label>
+            <input type="email" id="email" name="email" required class="w-full mb-8 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+            <div class="mb-4"></div>
+            <div class="flex items-start mb-4">
+              <input type="checkbox" id="updates-agree" name="updates-agree" required class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
+              <label for="updates-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive updates, news, and marketing materials related to ShaderHunt. You can unsubscribe at any time. See our <a target="_blank" rel="noreferrer" href="/TypeGPU/privacy" class="text-black dark:text-white">Privacy Policy</a> for details. (required)</label>
+            </div>
+
+            <div class="flex items-start mb-4">
+              <input type="checkbox" id="newsletter-agree" name="newsletter-agree" class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
+              <label for="newsletter-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive the monthly Software Mansion newsletter with updates on TypeGPU and other React Native, AI, and multimedia projects. You can unsubscribe anytime. See our <a target="_blank" rel="noreferrer" href="/TypeGPU/privacy" class="text-black dark:text-white">Privacy Policy</a> for details.</label>
+            </div>
+            <button type="submit" class="mt-4 w-full px-4 py-2 bg-accent-600 dark:bg-accent-700 text-white font-medium border-none rounded-none hover:bg-accent-700 dark:hover:bg-accent-800 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400">Get Notified</button>
+        </form>
+    </dialog>
+</div>
+
+<script>
+  const popovers = document.querySelectorAll('[data-challenges-signup-popover="true"]');
+  popovers.forEach((popover) => {
+    const linkElement: HTMLAnchorElement|null = popover.querySelector('a');
+    const dialogElement: HTMLDialogElement|null = popover.querySelector('dialog');
+    const formElement: HTMLFormElement|null = popover.querySelector('form');
+
+    if (!linkElement || !dialogElement || !formElement) {
+      return;
+    }
+
+    // Check if URL hash indicates popover should be open
+    if (window.location.hash === '#challenges-signup') {
+      dialogElement?.showModal();
+    }
+
+    linkElement.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = '#challenges-signup';
+      dialogElement?.showModal();
+     });
+
+    dialogElement.addEventListener('close', () => {
+      if (window.location.hash === '#challenges-signup') {
+        window.location.hash = '';
+      }
+    });
+
+    formElement.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(formElement);
+      const data = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        newsletterAgree: formData.get('newsletter-agree') === 'on'
+      };
+
+      try {
+        const response = await fetch('https://swmansion.dev/api/shaderhunt/signin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        console.log(await response.text());
+        if (response.ok) {
+          formElement.reset();
+          dialogElement.close();
+        } else {
+          alert('Error submitting form. Please try again.');
+        }
+      } catch (error) {
+        alert('Network error. Please try again.');
+      }
+    });
+  });
+</script>

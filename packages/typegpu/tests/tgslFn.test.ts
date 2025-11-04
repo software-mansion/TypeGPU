@@ -776,10 +776,7 @@ describe('TGSL tgpu.fn function', () => {
 
 describe('tgpu.fn arguments', () => {
   it('casts u32', () => {
-    const fn = tgpu['~unstable'].fn([d.u32], d.f32)((e) => {
-      'kernel & js';
-      return e;
-    });
+    const fn = tgpu.fn([d.u32], d.f32)((e) => e);
 
     const result = fn(3.14);
 
@@ -788,10 +785,7 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a float vector', () => {
     const vec = d.vec3f(1, 2, 3);
-    const fn = tgpu['~unstable'].fn([d.vec3f], d.vec3f)((e) => {
-      'kernel & js';
-      return e;
-    });
+    const fn = tgpu.fn([d.vec3f], d.vec3f)((e) => e);
 
     const clone = fn(vec);
 
@@ -801,10 +795,7 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a bool vector', () => {
     const vec = d.vec4b(false, true, false, true);
-    const fn = tgpu['~unstable'].fn([d.vec4b], d.vec4b)((e) => {
-      'kernel & js';
-      return e;
-    });
+    const fn = tgpu.fn([d.vec4b], d.vec4b)((e) => e);
 
     const clone = fn(vec);
 
@@ -814,10 +805,7 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a copy of a matrix', () => {
     const mat = d.mat2x2f(1, 2, 3, 7);
-    const fn = tgpu['~unstable'].fn([d.mat2x2f], d.mat2x2f)((e) => {
-      'kernel & js';
-      return e;
-    });
+    const fn = tgpu.fn([d.mat2x2f], d.mat2x2f)((e) => e);
 
     const clone = fn(mat);
 
@@ -827,13 +815,10 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a deep copy of a struct', () => {
     const struct = { prop: d.vec2f(1, 2) };
-    const fn = tgpu['~unstable'].fn(
+    const fn = tgpu.fn(
       [d.struct({ prop: d.vec2f })],
       d.struct({ prop: d.vec2f }),
-    )((e) => {
-      'kernel & js';
-      return e;
-    });
+    )((e) => e);
 
     const clone = fn(struct);
 
@@ -847,10 +832,7 @@ describe('tgpu.fn arguments', () => {
       nested: d.struct({ prop1: d.vec2f, prop2: d.u32 }),
     });
     const struct = schema({ nested: { prop1: d.vec2f(1, 2), prop2: 21 } });
-    const fn = tgpu['~unstable'].fn([schema], schema)((e) => {
-      'kernel & js';
-      return e;
-    });
+    const fn = tgpu.fn([schema], schema)((e) => e);
 
     const clone = fn(struct);
 
@@ -862,15 +844,10 @@ describe('tgpu.fn arguments', () => {
   // TODO: make it work
   // it('returns a deep copy of an array', () => {
   //   const array = [d.vec2f(), d.vec2f()];
-  //   const fn = tgpu['~unstable'].fn(
+  //   const fn = tgpu.fn(
   //     [d.arrayOf(d.vec2f, 2)],
   //     d.arrayOf(d.vec2f, 2),
-  //   )(
-  //     (e) => {
-  //       'kernel & js';
-  //       return e;
-  //     },
-  //   );
+  //   )((e) => e);
 
   //   const clone = fn(array);
 
@@ -881,13 +858,10 @@ describe('tgpu.fn arguments', () => {
 
   it('does not modify its argument', () => {
     const vec = d.vec3f();
-    const fn = tgpu['~unstable'].fn([d.vec3f])(
-      (e) => {
-        'kernel & js';
-        const copy = e; // in WGSL, this would copy the value, in JS it only copies the reference
-        copy[0] = 1;
-      },
-    );
+    const fn = tgpu.fn([d.vec3f])((e) => {
+      const copy = e; // in WGSL, this would copy the value, in JS it only copies the reference
+      copy[0] = 1;
+    });
 
     fn(vec);
 
@@ -916,18 +890,18 @@ describe('tgpu.fn called top-level', () => {
 });
 
 describe('tgsl fn when using plugin', () => {
-  it('can be invoked for a constant with "kernel" directive', () => {
-    const addKernelJs = (x: number, y: number) => {
-      'kernel';
+  it('can be invoked for a constant with "use gpu" directive', () => {
+    const addShellless = (x: number, y: number) => {
+      'use gpu';
       return x + y;
     };
 
-    const add = tgpu.fn([d.u32, d.u32], d.u32)(addKernelJs);
+    const add = tgpu.fn([d.u32, d.u32], d.u32)(addShellless);
 
-    expect(addKernelJs(2, 3)).toBe(5);
+    expect(addShellless(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
     expect(asWgsl(add)).toMatchInlineSnapshot(`
-      "fn addKernelJs(x: u32, y: u32) -> u32 {
+      "fn addShellless(x: u32, y: u32) -> u32 {
         return (x + y);
       }"
     `);
@@ -962,9 +936,7 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (recursion)', () => {
-    // biome-ignore lint/style/useConst: bar has to be assigned later
     let bar: TgpuFn;
-    // biome-ignore lint/style/useConst: foo has to be assigned later
     let foo: TgpuFn;
     bar = tgpu.fn([], d.f32)(() => foo() + 2);
     foo = tgpu.fn([], d.f32)(() => bar() - 2);
@@ -980,13 +952,9 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
-    // biome-ignore lint/style/useConst: one has to be assigned later
     let one: TgpuFn;
-    // biome-ignore lint/style/useConst: fnSlot has to be assigned later
     let fnSlot: TgpuSlot<TgpuFn<() => d.F32>>;
-    // biome-ignore lint/style/useConst: three has to be assigned later
     let three: TgpuFn;
-    // biome-ignore lint/style/useConst: two has to be assigned later
     let two: TgpuFn;
     one = tgpu.fn([], d.f32)(() => two() + 2);
     fnSlot = tgpu.slot(tgpu.fn([], d.f32)(() => one() + 2).$name('inner'));
@@ -1007,7 +975,6 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('throws when it detects a cyclic dependency (when using derived)', () => {
-    // biome-ignore lint/style/useConst: one has to be assigned later
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);

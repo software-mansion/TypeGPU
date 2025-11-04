@@ -19,7 +19,7 @@ const state = {
     second: [] as number[],
     result: [] as number[],
   },
-  kernelTime: 0,
+  gpuTime: 0,
 };
 
 const root = await tgpu.init({
@@ -57,7 +57,7 @@ function createBindGroup() {
 
 function createPipelines() {
   const performanceCallback = (start: bigint, end: bigint) => {
-    state.kernelTime = Number(end - start) / 1_000_000;
+    state.gpuTime = Number(end - start) / 1_000_000;
   };
 
   const optimized = root['~unstable']
@@ -195,11 +195,11 @@ async function compute() {
       cpu: 'CPU',
     }[state.strategy];
 
-    const showKernel = state.strategy !== 'cpu' && hasTimestampQuery;
+    const showGpu = state.strategy !== 'cpu' && hasTimestampQuery;
     updateTimingDisplay(
       strategyName,
       totalTime,
-      showKernel ? state.kernelTime : undefined,
+      showGpu ? state.gpuTime : undefined,
     );
 
     printMatrixToHtml(
@@ -227,15 +227,15 @@ generateMatrices();
 function updateTimingDisplay(
   strategy: string,
   totalTime: number,
-  kernelTime?: number,
+  gpuTime?: number,
 ) {
   if (!timingDisplay) return;
 
-  timingDisplay.innerHTML = kernelTime !== undefined
+  timingDisplay.innerHTML = gpuTime !== undefined
     ? `<div>${strategy} computation:</div>
        <div style="font-size: 0.9em; margin-top: 0.25rem;">
-         Total: ${totalTime.toFixed(2)}ms | Kernel: ${
-      kernelTime >= 0.01 ? kernelTime.toFixed(2) : '<0.01'
+         Total: ${totalTime.toFixed(2)}ms | GPU: ${
+      gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'
     }ms
        </div>`
     : `${strategy} computation: ${totalTime.toFixed(2)}ms`;

@@ -151,15 +151,16 @@ export function triggerPerformanceCallback({
     );
   }
 
-  root.commandEncoder.resolveQuerySet(
+  const commandEncoder = root.device.createCommandEncoder();
+  commandEncoder.resolveQuerySet(
     root.unwrap(querySet),
     0,
     querySet.count,
     querySet[$internal].resolveBuffer,
     0,
   );
+  root.device.queue.submit([commandEncoder.finish()]);
 
-  root.flush();
   root.device.queue.onSubmittedWorkDone().then(async () => {
     if (!querySet.available) {
       return;

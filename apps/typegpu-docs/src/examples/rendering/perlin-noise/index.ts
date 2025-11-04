@@ -1,34 +1,23 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import { fullScreenTriangle } from 'typegpu/common';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: mul(0.5, pos[input.vertexIndex]),
-  };
-});
-
 const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
 const timeAccess = tgpu['~unstable'].accessor(d.f32);
 const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
 const exponentialSharpen = (n: number, sharpness: number): number => {
-  'kernel';
+  'use gpu';
   return sign(n) * pow(abs(n), 1 - sharpness);
 };
 
 const tanhSharpen = (n: number, sharpness: number): number => {
-  'kernel';
+  'use gpu';
   return tanh(n * (1 + sharpness * 10));
 };
 

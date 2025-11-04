@@ -164,6 +164,12 @@ export {
   type WgslTextureMultisampled2d,
 } from './texture.ts';
 export {
+  comparisonSampler,
+  sampler,
+  type WgslComparisonSampler,
+  type WgslSampler,
+} from './sampler.ts';
+export {
   vec2b,
   vec2f,
   vec2h,
