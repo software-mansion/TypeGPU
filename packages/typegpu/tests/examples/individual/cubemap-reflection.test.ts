@@ -36,7 +36,7 @@ describe('cubemap reflection example', () => {
       }
 
       fn calculateMidpoint_4(v1: vec4f, v2: vec4f) -> vec4f {
-        return vec4f((0.5 * (v1.xyz + v2.xyz)), 1);
+        return vec4f((0.5 * (v1.xyz + v2.xyz)), 1f);
       }
 
       @group(0) @binding(2) var<uniform> smoothFlag_5: u32;
@@ -44,7 +44,7 @@ describe('cubemap reflection example', () => {
       fn getAverageNormal_6(v1: vec4f, v2: vec4f, v3: vec4f) -> vec4f {
         var edge1 = (v2.xyz - v1.xyz);
         var edge2 = (v3.xyz - v1.xyz);
-        return normalize(vec4f(cross(edge1, edge2), 0));
+        return normalize(vec4f(cross(edge1, edge2), 0f));
       }
 
       @group(0) @binding(1) var<storage, read_write> nextVertices_7: array<ComputeVertex_2>;
@@ -61,25 +61,25 @@ describe('cubemap reflection example', () => {
 
       @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_9) {
         var triangleCount = u32((f32(arrayLength(&prevVertices_1)) / 3f));
-        var triangleIndex = (input.gid.x + (input.gid.y * 65535));
+        var triangleIndex = (input.gid.x + (input.gid.y * 65535u));
         if ((triangleIndex >= triangleCount)) {
           return;
         }
-        var baseIndexPrev = (triangleIndex * 3);
+        var baseIndexPrev = (triangleIndex * 3u);
         var v1 = unpackVec2u_3(prevVertices_1[baseIndexPrev].position);
-        var v2 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 1)].position);
-        var v3 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 2)].position);
-        var v12 = vec4f(normalize(calculateMidpoint_4(v1, v2).xyz), 1);
-        var v23 = vec4f(normalize(calculateMidpoint_4(v2, v3).xyz), 1);
-        var v31 = vec4f(normalize(calculateMidpoint_4(v3, v1).xyz), 1);
+        var v2 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 1u)].position);
+        var v3 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 2u)].position);
+        var v12 = vec4f(normalize(calculateMidpoint_4(v1, v2).xyz), 1f);
+        var v23 = vec4f(normalize(calculateMidpoint_4(v2, v3).xyz), 1f);
+        var v31 = vec4f(normalize(calculateMidpoint_4(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
-        var baseIndexNext = (triangleIndex * 12);
-        for (var i = 0u; (i < 12); i++) {
+        var baseIndexNext = (triangleIndex * 12u);
+        for (var i = 0u; (i < 12u); i++) {
           var reprojectedVertex = newVertices[i];
-          var triBase = (i - (i % 3));
+          var triBase = (i - (i % 3u));
           var normal = reprojectedVertex;
-          if ((smoothFlag_5 == 0)) {
-            normal = getAverageNormal_6(newVertices[triBase], newVertices[(triBase + 1)], newVertices[(triBase + 2)]);
+          if ((smoothFlag_5 == 0u)) {
+            normal = getAverageNormal_6(newVertices[triBase], newVertices[(triBase + 1u)], newVertices[(triBase + 2u)]);
           }
           var outIndex = (baseIndexNext + i);
           var nextVertex = nextVertices_7[outIndex];
@@ -108,8 +108,8 @@ describe('cubemap reflection example', () => {
       }
 
       @vertex fn cubeVertexFn_0(input: cubeVertexFn_Input_4) -> cubeVertexFn_Output_3 {
-        var viewPos = (camera_1.view * vec4f(input.position.xyz, 0)).xyz;
-        return cubeVertexFn_Output_3((camera_1.projection * vec4f(viewPos, 1)), input.position.xyz);
+        var viewPos = (camera_1.view * vec4f(input.position.xyz, 0f)).xyz;
+        return cubeVertexFn_Output_3((camera_1.projection * vec4f(viewPos, 1f)), input.position.xyz);
       }
 
       @group(1) @binding(0) var cubemap_6: texture_cube<f32>;
@@ -178,17 +178,17 @@ describe('cubemap reflection example', () => {
         var normalizedNormal = normalize(input.normal.xyz);
         var normalizedLightDir = normalize(light_6.direction);
         var ambientLight = (material_8.ambient * (light_6.intensity * light_6.color));
-        var diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0);
+        var diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0f);
         var diffuseLight = (diffuseFactor * (material_8.diffuse * (light_6.intensity * light_6.color)));
         var viewDirection = normalize((camera_1.position.xyz - input.worldPos.xyz));
         var reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
-        var specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0), material_8.shininess);
+        var specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0f), material_8.shininess);
         var specularLight = (specularFactor * (material_8.specular * (light_6.intensity * light_6.color)));
         var reflectionVector = reflect(-(viewDirection), normalizedNormal);
         var environmentColor = textureSample(cubemap_10, texSampler_11, reflectionVector);
         var directLighting = (ambientLight + (diffuseLight + specularLight));
         var finalColor = mix(directLighting, environmentColor.xyz, material_8.reflectivity);
-        return vec4f(finalColor, 1);
+        return vec4f(finalColor, 1f);
       }"
     `);
   });

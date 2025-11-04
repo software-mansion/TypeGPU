@@ -25,7 +25,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -35,26 +35,26 @@ describe('probability distribution plot example', () => {
       fn item_7() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randUniformExclusive_9() -> f32 {
-        return ((item_7() * 0.9999998) + 1e-7);
+        return ((item_7() * 0.9999998f) + 1e-7f);
       }
 
       fn randNormal_8(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586 * randUniformExclusive_9());
+        var theta = (6.283185307179586f * randUniformExclusive_9());
         var R = sqrt((-2 * log(randUniformExclusive_9())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
       fn randInUnitSphere_6() -> vec3f {
         var u = item_7();
-        var v = vec3f(randNormal_8(0, 1), randNormal_8(0, 1), randNormal_8(0, 1));
+        var v = vec3f(randNormal_8(0f, 1f), randNormal_8(0f, 1f), randNormal_8(0f, 1f));
         var vNorm = normalize(v);
-        return (vNorm * pow(u, 0.33));
+        return (vNorm * pow(u, 0.33f));
       }
 
       struct item_10 {
@@ -77,7 +77,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -87,15 +87,15 @@ describe('probability distribution plot example', () => {
       fn item_7() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randOnUnitSphere_6() -> vec3f {
-        var z = ((2 * item_7()) - 1);
-        var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_7());
+        var z = ((2f * item_7()) - 1f);
+        var oneMinusZSq = sqrt((1f - (z * z)));
+        var theta = (6.283185307179586f * item_7());
         var x = (cos(theta) * oneMinusZSq);
         var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -121,7 +121,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -131,19 +131,19 @@ describe('probability distribution plot example', () => {
       fn item_8() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randInUnitCircle_7() -> vec2f {
         var radius = sqrt(item_8());
-        var angle = (item_8() * 6.283185307179586);
+        var angle = (item_8() * 6.283185307179586f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randInUnitCircle_7(), 0.5);
+        return vec3f(randInUnitCircle_7(), 0.5f);
       }
 
       struct item_9 {
@@ -166,7 +166,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -176,18 +176,18 @@ describe('probability distribution plot example', () => {
       fn item_8() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randOnUnitCircle_7() -> vec2f {
-        var angle = (item_8() * 6.283185307179586);
+        var angle = (item_8() * 6.283185307179586f);
         return vec2f(cos(angle), sin(angle));
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randOnUnitCircle_7(), 0.5);
+        return vec3f(randOnUnitCircle_7(), 0.5f);
       }
 
       struct item_9 {
@@ -210,7 +210,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -220,8 +220,8 @@ describe('probability distribution plot example', () => {
       fn item_7() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
@@ -249,7 +249,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -259,18 +259,18 @@ describe('probability distribution plot example', () => {
       fn item_7() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randOnUnitCube_6() -> vec3f {
-        var face = u32((item_7() * 6));
-        var axis = (face % 3);
+        var face = u32((item_7() * 6f));
+        var axis = (face % 3u);
         var result = vec3f();
-        result[axis] = f32(select(0, 1, (face > 2)));
-        result[((axis + 1) % 3)] = item_7();
-        result[((axis + 2) % 3)] = item_7();
+        result[axis] = f32(select(0, 1, (face > 2u)));
+        result[((axis + 1u) % 3u)] = item_7();
+        result[((axis + 2u) % 3u)] = item_7();
         return result;
       }
 
@@ -294,7 +294,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -304,26 +304,26 @@ describe('probability distribution plot example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randUniformExclusive_11() -> f32 {
-        return ((item_9() * 0.9999998) + 1e-7);
+        return ((item_9() * 0.9999998f) + 1e-7f);
       }
 
       fn randNormal_10(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586 * randUniformExclusive_11());
+        var theta = (6.283185307179586f * randUniformExclusive_11());
         var R = sqrt((-2 * log(randUniformExclusive_11())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
       fn randInUnitSphere_8() -> vec3f {
         var u = item_9();
-        var v = vec3f(randNormal_10(0, 1), randNormal_10(0, 1), randNormal_10(0, 1));
+        var v = vec3f(randNormal_10(0f, 1f), randNormal_10(0f, 1f), randNormal_10(0f, 1f));
         var vNorm = normalize(v);
-        return (vNorm * pow(u, 0.33));
+        return (vNorm * pow(u, 0.33f));
       }
 
       fn randInUnitHemisphere_7(normal: vec3f) -> vec3f {
@@ -356,7 +356,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -366,15 +366,15 @@ describe('probability distribution plot example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randOnUnitSphere_8() -> vec3f {
-        var z = ((2 * item_9()) - 1);
-        var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_9());
+        var z = ((2f * item_9()) - 1f);
+        var oneMinusZSq = sqrt((1f - (z * z)));
+        var theta = (6.283185307179586f * item_9());
         var x = (cos(theta) * oneMinusZSq);
         var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -410,7 +410,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -420,8 +420,8 @@ describe('probability distribution plot example', () => {
       fn item_8() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
@@ -431,7 +431,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randBernoulli_7(0.7));
+        return vec3f(randBernoulli_7(0.7f));
       }
 
       struct item_9 {
@@ -454,7 +454,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -464,8 +464,8 @@ describe('probability distribution plot example', () => {
       fn item_8() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
@@ -497,7 +497,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -507,13 +507,13 @@ describe('probability distribution plot example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998) + 1e-7);
+        return ((item_9() * 0.9999998f) + 1e-7f);
       }
 
       fn randExponential_7(rate: f32) -> f32 {
@@ -522,7 +522,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randExponential_7(1));
+        return vec3f(randExponential_7(1f));
       }
 
       struct item_10 {
@@ -545,7 +545,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -555,23 +555,23 @@ describe('probability distribution plot example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998) + 1e-7);
+        return ((item_9() * 0.9999998f) + 1e-7f);
       }
 
       fn randNormal_7(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586 * randUniformExclusive_8());
+        var theta = (6.283185307179586f * randUniformExclusive_8());
         var R = sqrt((-2 * log(randUniformExclusive_8())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randNormal_7(0, 1));
+        return vec3f(randNormal_7(0f, 1f));
       }
 
       struct item_10 {
@@ -594,7 +594,7 @@ describe('probability distribution plot example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -604,22 +604,22 @@ describe('probability distribution plot example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998) + 1e-7);
+        return ((item_9() * 0.9999998f) + 1e-7f);
       }
 
       fn randCauchy_7(x0: f32, gamma: f32) -> f32 {
         var u = randUniformExclusive_8();
-        return (x0 + (gamma * tan((3.141592653589793 * (u - 0.5)))));
+        return (x0 + (gamma * tan((3.141592653589793f * (u - 0.5f)))));
       }
 
       fn prng_6() -> vec3f {
-        return vec3f(randCauchy_7(0, 1));
+        return vec3f(randCauchy_7(0f, 1f));
       }
 
       struct item_10 {

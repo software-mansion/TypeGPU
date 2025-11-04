@@ -22,7 +22,7 @@ describe('slime mold example', () => {
       var<private> seed_5: vec2f;
 
       fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0);
+        seed_5 = vec2f(value, 0f);
       }
 
       fn randSeed_3(seed: f32) {
@@ -32,14 +32,14 @@ describe('slime mold example', () => {
       fn item_7() -> f32 {
         var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168));
-        seed_5.y = fract((cos(b) * 534.7645));
+        seed_5.x = fract((cos(a) * 136.8168f));
+        seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randInUnitCircle_6() -> vec2f {
         var radius = sqrt(item_7());
-        var angle = (item_7() * 6.283185307179586);
+        var angle = (item_7() * 6.283185307179586f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -51,9 +51,9 @@ describe('slime mold example', () => {
       @group(0) @binding(1) var<storage, read_write> agentsData_8: array<Agent_9, 200000>;
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
-        randSeed_3(((f32(x) / 2e+5f) + 0.1));
-        var pos = ((randInUnitCircle_6() * 140) + vec2f(150, 75));
-        var angle = atan2((75 - pos.y), (150 - pos.x));
+        randSeed_3(((f32(x) / 2e+5f) + 0.1f));
+        var pos = ((randInUnitCircle_6() * 140.) + vec2f(150, 75));
+        var angle = atan2((75f - pos.y), (150f - pos.x));
         agentsData_8[x] = Agent_9(pos, angle);
       }
 
@@ -93,26 +93,26 @@ describe('slime mold example', () => {
         }
         var sum = vec3f();
         var count = 0f;
-        for (var offsetY = -1; (offsetY <= 1); offsetY++) {
-          for (var offsetX = -1; (offsetX <= 1); offsetX++) {
+        for (var offsetY = -1; (offsetY <= 1i); offsetY++) {
+          for (var offsetX = -1; (offsetX <= 1i); offsetX++) {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(offsetX, offsetY));
             var dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0)) && (samplePos.y < dimsi.y))) {
+            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState_1, vec2u(samplePos)).xyz;
               sum = (sum + color);
-              count = (count + 1);
+              count = (count + 1f);
             }
           }
         }
         var blurred = (sum / count);
         var newColor = clamp((blurred - params_2.evaporationRate), vec3f(), vec3f(1));
-        textureStore(newState_4, _arg_0.gid.xy, vec4f(newColor, 1));
+        textureStore(newState_4, _arg_0.gid.xy, vec4f(newColor, 1f));
       }
 
       var<private> seed_3: vec2f;
 
       fn seed_2(value: f32) {
-        seed_3 = vec2f(value, 0);
+        seed_3 = vec2f(value, 0f);
       }
 
       fn randSeed_1(seed: f32) {
@@ -131,8 +131,8 @@ describe('slime mold example', () => {
       fn item_8() -> f32 {
         var a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
-        seed_3.x = fract((cos(a) * 136.8168));
-        seed_3.y = fract((cos(b) * 534.7645));
+        seed_3.x = fract((cos(a) * 136.8168f));
+        seed_3.y = fract((cos(b) * 534.7645f));
         return seed_3.y;
       }
 
@@ -170,14 +170,14 @@ describe('slime mold example', () => {
       }
 
       @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_14) {
-        if ((_arg_0.gid.x >= 200000)) {
+        if ((_arg_0.gid.x >= 200000u)) {
           return;
         }
-        randSeed_1(((f32(_arg_0.gid.x) / 2e+5f) + 0.1));
+        randSeed_1(((f32(_arg_0.gid.x) / 2e+5f) + 0.1f));
         var dims = textureDimensions(oldState_4);
         var agent = agentsData_5[_arg_0.gid.x];
         var random = randFloat01_7();
-        var weightForward = sense_9(agent.position, agent.angle, 0);
+        var weightForward = sense_9(agent.position, agent.angle, 0f);
         var weightLeft = sense_9(agent.position, agent.angle, params_10.sensorAngle);
         var weightRight = sense_9(agent.position, agent.angle, -params_10.sensorAngle);
         var angle = agent.angle;
@@ -186,7 +186,7 @@ describe('slime mold example', () => {
         }
         else {
           if (((weightForward < weightLeft) && (weightForward < weightRight))) {
-            angle = (angle + ((((random * 2) - 1) * params_10.turnSpeed) * deltaTime_12));
+            angle = (angle + ((((random * 2f) - 1f) * params_10.turnSpeed) * deltaTime_12));
           }
           else {
             if ((weightRight > weightLeft)) {
@@ -202,20 +202,20 @@ describe('slime mold example', () => {
         var dir = vec2f(cos(angle), sin(angle));
         var newPos = (agent.position + (dir * (params_10.moveSpeed * deltaTime_12)));
         var dimsf = vec2f(dims);
-        if (((((newPos.x < 0) || (newPos.x > dimsf.x)) || (newPos.y < 0)) || (newPos.y > dimsf.y))) {
+        if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - vec2f(1)));
-          if (((newPos.x <= 0) || (newPos.x >= (dimsf.x - 1)))) {
-            angle = (3.141592653589793 - angle);
+          if (((newPos.x <= 0f) || (newPos.x >= (dimsf.x - 1f)))) {
+            angle = (3.141592653589793f - angle);
           }
-          if (((newPos.y <= 0) || (newPos.y >= (dimsf.y - 1)))) {
+          if (((newPos.y <= 0f) || (newPos.y >= (dimsf.y - 1f)))) {
             angle = -angle;
           }
-          angle += ((random - 0.5) * 0.1);
+          angle += ((random - 0.5f) * 0.1f);
         }
         agentsData_5[_arg_0.gid.x] = Agent_6(newPos, angle);
         var oldState = textureLoad(oldState_4, vec2u(newPos)).xyz;
         var newState = (oldState + vec3f(1));
-        textureStore(newState_13, vec2u(newPos), vec4f(newState, 1));
+        textureStore(newState_13, vec2u(newPos), vec4f(newState, 1f));
       }
 
       struct fullScreenTriangle_Output_1 {
@@ -228,9 +228,9 @@ describe('slime mold example', () => {
       }
 
       @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
+        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
+        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0f, -1));
+        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), uv[input.vertexIndex]);
       }
 
       @group(1) @binding(0) var state_4: texture_2d<f32>;

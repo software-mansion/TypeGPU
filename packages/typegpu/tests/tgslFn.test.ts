@@ -19,7 +19,7 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(asWgsl(getY)).toMatchInlineSnapshot(`
       "fn getY() -> f32 {
-        return 3;
+        return 3f;
       }"
     `);
   });
@@ -53,7 +53,7 @@ describe('TGSL tgpu.fn function', () => {
 
       fn getX() -> f32 {
         var color = getColor();
-        return 3;
+        return 3f;
       }
 
       fn getY() -> f32 {
@@ -120,7 +120,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn pureConfusion() -> A {
-        return C(B(A(4), 5), A(3)).a;
+        return C(B(A(4f), 5f), A(3f)).a;
       }"
     `);
   });
@@ -165,7 +165,7 @@ describe('TGSL tgpu.fn function', () => {
         var vi = f32(input.vi);
         var ii = f32(input.ii);
         var color = input.color;
-        return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
+        return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
       }"
     `);
   });
@@ -230,7 +230,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
+        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1f), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
       }"
     `);
   });
@@ -275,7 +275,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1), vec2f(input.color.w, f32(input.vi)));
+        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1f), vec2f(input.color.w, f32(input.vi)));
         return myOutput;
       }"
     `);
@@ -393,10 +393,10 @@ describe('TGSL tgpu.fn function', () => {
       @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
         var pos = input.pos;
         var sampleMask = 0;
-        if (((input.sampleMask > 0) && (pos.x > 0))) {
-          sampleMask = 1;
+        if (((input.sampleMask > 0u) && (pos.x > 0f))) {
+          sampleMask = 1i;
         }
-        return fragmentFn_Output(u32(sampleMask), 1, vec4f());
+        return fragmentFn_Output(u32(sampleMask), 1f, vec4f());
       }"
     `);
   });
@@ -441,9 +441,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        var myOutput = fragmentFn_Output(0, 1, vec4f());
-        if (((input.sampleMask > 0) && (input.pos.x > 0))) {
-          myOutput.sampleMask = 1;
+        var myOutput = fragmentFn_Output(0u, 1f, vec4f());
+        if (((input.sampleMask > 0u) && (input.pos.x > 0f))) {
+          myOutput.sampleMask = 1u;
         }
         return myOutput;
       }"
@@ -518,9 +518,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
-        var out = fragmentFn_Output(0, 1, vec4f());
-        if (((_arg_0.sampleMask > 0) && (_arg_0.pos.x > 0))) {
-          out.sampleMask = 1;
+        var out = fragmentFn_Output(0u, 1f, vec4f());
+        if (((_arg_0.sampleMask > 0u) && (_arg_0.pos.x > 0f))) {
+          out.sampleMask = 1u;
         }
         return out;
       }"
@@ -568,7 +568,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn getTestStruct() -> TestStruct {
-        return TestStruct(1, 2, vec2f(3, 4));
+        return TestStruct(1f, 2f, vec2f(3, 4));
       }"
     `);
   });
@@ -606,7 +606,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn getTestStruct() -> TestStruct {
-        return TestStruct(1, 2, vec2f(3, 4));
+        return TestStruct(1f, 2f, vec2f(3, 4));
       }
 
       struct compute_fn_Input {
@@ -637,7 +637,7 @@ describe('TGSL tgpu.fn function', () => {
     expect(asWgsl(foo)).toMatchInlineSnapshot(
       `
       "fn foo(_arg_0: u32, _arg_1: u32) -> u32 {
-        return 2;
+        return 2u;
       }"
     `,
     );
@@ -652,9 +652,9 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(asWgsl(addOnes)).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-        (*ptr).x += 1;
-        (*ptr).y += 1;
-        (*ptr).z += 1;
+        (*ptr).x += 1f;
+        (*ptr).y += 1f;
+        (*ptr).z += 1f;
       }"
     `);
 
@@ -665,9 +665,9 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(asWgsl(callAddOnes)).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-        (*ptr).x += 1;
-        (*ptr).y += 1;
-        (*ptr).z += 1;
+        (*ptr).x += 1f;
+        (*ptr).y += 1f;
+        (*ptr).z += 1f;
       }
 
       fn callAddOnes() {
@@ -926,11 +926,11 @@ describe('tgsl fn when using plugin', () => {
 
     expect(asWgsl(bar)).toMatchInlineSnapshot(`
       "fn foo() -> f32 {
-        return 1;
+        return 1f;
       }
 
       fn bar() -> f32 {
-        return (foo() + 2);
+        return (foo() + 2f);
       }"
     `);
   });
@@ -1004,11 +1004,11 @@ describe('tgsl fn when using plugin', () => {
 
     expect(asWgsl(boundOne)).toMatchInlineSnapshot(`
       "fn mainFn() -> f32 {
-        return 1000;
+        return 1000f;
       }
 
       fn one() -> f32 {
-        return (mainFn() + 2);
+        return (mainFn() + 2f);
       }"
     `);
   });
