@@ -3,11 +3,7 @@ import { OBJLoader } from '@loaders.gl/obj';
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { sphereTextureNames } from './enums.ts';
-import {
-  type CelestialBody,
-  renderVertexLayout,
-  SkyBoxVertex,
-} from './schemas.ts';
+import { CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
 
 function vert(
   position: [number, number, number],
@@ -166,7 +162,7 @@ export async function loadSphereTextures(root: TgpuRoot) {
   return texture;
 }
 
-export const radiusOf = (body: CelestialBody): number => {
+export const radiusOf = (body: d.ref<CelestialBody>): number => {
   'use gpu';
-  return (((body.mass * 0.75) / Math.PI) ** 0.333) * body.radiusMultiplier;
+  return (((body.$.mass * 0.75) / Math.PI) ** 0.333) * body.$.radiusMultiplier;
 };

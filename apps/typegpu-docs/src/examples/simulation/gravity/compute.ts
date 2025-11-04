@@ -37,15 +37,15 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
       otherId++
     ) {
       const other = computeLayout.$.inState[otherId];
-      // no collision occurs...
       if (
         otherId === currentId || // ...with itself
         other.destroyed === 1 || // ...when other is destroyed
         current.collisionBehavior === none || // ...when current behavior is none
         other.collisionBehavior === none || // ...when other behavior is none
         std.distance(current.position, other.position) >=
-          radiusOf(current) + radiusOf(other) // ...when other is too far away
+          radiusOf(d.ref(current)) + radiusOf(d.ref(other)) // ...when other is too far away
       ) {
+        // no collision occurs...
         continue;
       }
 
@@ -58,8 +58,9 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         // push the smaller object outside
         if (isSmaller(currentId, otherId)) {
           const dir = std.normalize(current.position.sub(other.position));
-          current.position = other.position
-            .add(dir.mul(radiusOf(current) + radiusOf(other)));
+          current.position = other.position.add(
+            dir.mul(radiusOf(current) + radiusOf(other)),
+          );
         }
 
         // bounce with tiny damping

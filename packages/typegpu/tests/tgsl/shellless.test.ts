@@ -166,10 +166,11 @@ describe('shellless', () => {
       pos.$.z += vel.z;
     };
 
-    const main = tgpu.fn([])(() => {
+    const main = () => {
+      'use gpu';
       const pos = d.ref(d.vec3f(0, 0, 0));
       advance(pos, d.vec3f(1, 2, 3));
-    });
+    };
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
@@ -181,6 +182,36 @@ describe('shellless', () => {
       fn main() {
         var pos = vec3f();
         advance((&pos), vec3f(1, 2, 3));
+      }"
+    `);
+  });
+
+  it('generates uniform pointer params when passing a fixed uniform directly to a function', ({ root }) => {
+    const posUniform = root.createUniform(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(posUniform);
+      sumComponents(d.ref(posUniform.$.zyx));
+      // sumComponents(&posUniform);
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
+        (*pos).x += vel.x;
+        (*pos).y += vel.y;
+        (*pos).z += vel.z;
+      }
+
+      fn main() {
+        var pos = vec3f();
+        var vel = vec3f(1, 2, 3);
+        advance((&pos), (&vel));
       }"
     `);
   });

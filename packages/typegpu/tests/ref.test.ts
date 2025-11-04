@@ -43,4 +43,20 @@ describe('ref', () => {
       - fn*:hello: Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
     `);
   });
+
+  it('fails when creating a ref with a reference', () => {
+    const hello = () => {
+      'use gpu';
+      const position = d.vec3f(1, 2, 3);
+      const foo = d.ref(position);
+    };
+
+    expect(() => asWgsl(hello)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:hello
+      - fn*:hello
+      - fn:ref: Can't create refs from references. Copy the value first by wrapping it in its schema.]
+    `);
+  });
 });
