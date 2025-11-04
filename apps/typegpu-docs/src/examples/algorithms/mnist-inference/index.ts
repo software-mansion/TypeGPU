@@ -165,8 +165,8 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       const isLastLayer = i === buffers.length - 1;
 
       let boundPipeline = pipeline
-        .with(ioLayout, ioBindGroups[i])
-        .with(weightsBiasesLayout, weightsBindGroups[i]);
+        .with(ioBindGroups[i])
+        .with(weightsBindGroups[i]);
 
       if (querySet && (isFirstLayer || isLastLayer)) {
         const descriptor = {

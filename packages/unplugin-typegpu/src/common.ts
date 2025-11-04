@@ -29,7 +29,7 @@ export interface Options {
   autoNamingEnabled?: boolean | undefined;
 
   /**
-   * Skipping files that don't contain "typegpu", "tgpu" or "kernel".
+   * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
    *
@@ -163,9 +163,10 @@ const resourceConstructors: string[] = [
   'createQuerySet',
   // root['~unstable']
   'createPipeline',
+  'createGuardedComputePipeline',
   'createTexture',
-  'sampler',
-  'comparisonSampler',
+  'createSampler',
+  'createComparisonSampler',
 ];
 
 /**
@@ -261,7 +262,7 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
   }
 }
 
-export const kernelDirective = 'kernel';
+export const useGpuDirective = 'use gpu';
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const earlyPruneRegex = [/["']kernel["']/, /t(ype)?gpu/];
+export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];

@@ -23,7 +23,6 @@ fn fs_main() -> @location(0) vec4<f32> {
 
 export const DEFAULT_TGSL = `import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 
 const Particle = d.struct({
   position: d.vec3f,
@@ -42,14 +41,9 @@ const layout = tgpu.bindGroupLayout({
 
 export const updateParicle = tgpu.fn([Particle, d.vec3f, d.f32], Particle)(
   (particle, gravity, deltaTime) => {
-    const newVelocity = std.mul(
-      particle.velocity,
-      std.mul(gravity, deltaTime),
-    );
-    const newPosition = std.add(
-      particle.position,
-      std.mul(newVelocity, deltaTime),
-    );
+    const newVelocity = particle.velocity.mul(gravity).mul(deltaTime);
+    const newPosition = particle.position.add(newVelocity.mul(deltaTime));
+
     return Particle({
       position: newPosition,
       velocity: newVelocity,

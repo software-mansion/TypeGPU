@@ -1,7 +1,7 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,8 @@
     "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./data": "./src/data/index.ts",
-    "./std": "./src/std/index.ts"
+    "./std": "./src/std/index.ts",
+    "./common": "./src/common/index.ts"
   },
   "publishConfig": {
     "directory": "dist",
@@ -35,6 +36,12 @@
         "module": "./dist/std/index.js",
         "import": "./dist/std/index.js",
         "default": "./dist/std/index.cjs"
+      },
+      "./common": {
+        "types": "./dist/common/index.d.ts",
+        "module": "./dist/common/index.js",
+        "import": "./dist/common/index.js",
+        "default": "./dist/common/index.cjs"
       }
     }
   },
@@ -66,7 +73,7 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
-    "@ark/attest": "^0.46.0",
+    "@ark/attest": "^0.49.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
@@ -79,7 +86,7 @@
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "dependencies": {
-    "tinyest": "workspace:~0.1.1",
+    "tinyest": "workspace:~0.1.2",
     "typed-binary": "^4.3.1"
   }
 }

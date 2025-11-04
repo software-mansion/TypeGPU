@@ -27,7 +27,7 @@ export function offsetsForProps<T extends Record<string, BaseData>>(
 
   const measurer = new Measurer();
   const offsets = {} as Record<keyof T, OffsetInfo>;
-  let lastEntry: OffsetInfo | undefined = undefined;
+  let lastEntry: OffsetInfo | undefined;
 
   for (const key in struct.propTypes) {
     const prop = struct.propTypes[key];

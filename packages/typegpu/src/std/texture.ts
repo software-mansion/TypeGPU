@@ -1,8 +1,4 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type {
-  TgpuComparisonSampler,
-  TgpuSampler,
-} from '../core/sampler/sampler.ts';
 import {
   isWgslTexture,
   type WgslExternalTexture,
@@ -50,64 +46,65 @@ import type {
 } from '../data/texture.ts';
 
 import type { AnyData } from '../data/dataTypes.ts';
+import type { comparisonSampler, sampler } from '../data/sampler.ts';
 
 function sampleCpu<T extends texture1d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: number,
 ): v4f;
 function sampleCpu<T extends texture2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   offset?: v2i,
 ): v4f;
 function sampleCpu<T extends texture2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   offset?: v2i,
 ): v4f;
 function sampleCpu<T extends texture3d | textureCube>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
 ): v4f;
 function sampleCpu<T extends texture3d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   offset: v3i,
 ): v4f;
 function sampleCpu<T extends textureCubeArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   arrayIndex: number,
 ): v4f;
 function sampleCpu<T extends textureDepth2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   offset?: v2i,
 ): number;
 function sampleCpu<T extends textureDepth2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   offset?: v2i,
 ): number;
 function sampleCpu<T extends textureDepthCube>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   arrayIndex?: number,
 ): number;
 function sampleCpu(
   _texture: WgslTexture,
-  _sampler: TgpuSampler,
+  _sampler: sampler,
   _coords: number | v2f | v3f,
   _offsetOrArrayIndex?: v2i | v3i | number,
   _maybeOffset?: v2i | v3i,
@@ -132,20 +129,20 @@ export const textureSample = dualImpl({
 
 function sampleBiasCpu<T extends texture1d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: number,
   bias: number,
 ): v4f;
 function sampleBiasCpu<T extends texture2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   bias: number,
   offset?: v2i,
 ): v4f;
 function sampleBiasCpu<T extends texture2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   bias: number,
@@ -153,21 +150,21 @@ function sampleBiasCpu<T extends texture2dArray>(
 ): v4f;
 function sampleBiasCpu<T extends texture3d | textureCube>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   bias: number,
   offset?: v3i,
 ): v4f;
 function sampleBiasCpu<T extends textureCubeArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   arrayIndex: number,
   bias: number,
 ): v4f;
 function sampleBiasCpu(
   _texture: WgslTexture,
-  _sampler: TgpuSampler,
+  _sampler: sampler,
   _coords: number | v2f | v3f,
   _biasOrArrayIndex: number,
   _biasOrOffset?: number | v2i | v3i,
@@ -190,33 +187,33 @@ export const textureSampleBias = dualImpl({
 
 function sampleLevelCpu<T extends texture1d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: number,
   level: number,
 ): v4f;
 function sampleLevelCpu<T extends texture2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   level: number,
 ): v4f;
 function sampleLevelCpu<T extends texture2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   level: number,
   offset: v2i,
 ): v4f;
 function sampleLevelCpu<T extends texture2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
 ): v4f;
 function sampleLevelCpu<T extends texture2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
@@ -224,47 +221,47 @@ function sampleLevelCpu<T extends texture2dArray>(
 ): v4f;
 function sampleLevelCpu<T extends texture3d | textureCube>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   level: number,
 ): v4f;
 function sampleLevelCpu<T extends texture3d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   level: number,
   offset: v3i,
 ): v4f;
 function sampleLevelCpu<T extends textureCubeArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   arrayIndex: number,
   level: number,
 ): v4f;
 function sampleLevelCpu<T extends textureDepth2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   level: number,
 ): number;
 function sampleLevelCpu<T extends textureDepth2d>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   level: number,
   offset: v2i,
 ): number;
 function sampleLevelCpu<T extends textureDepth2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
 ): number;
 function sampleLevelCpu<T extends textureDepth2dArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v2f,
   arrayIndex: number,
   level: number,
@@ -272,20 +269,20 @@ function sampleLevelCpu<T extends textureDepth2dArray>(
 ): number;
 function sampleLevelCpu<T extends textureDepthCube>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   level: number,
 ): number;
 function sampleLevelCpu<T extends textureCubeArray>(
   texture: T,
-  sampler: TgpuSampler,
+  sampler: sampler,
   coords: v3f,
   arrayIndex: number,
   level: number,
 ): number;
 function sampleLevelCpu(
   _texture: WgslTexture,
-  _sampler: TgpuSampler,
+  _sampler: sampler,
   _coords: number | v2f | v3f,
   _level: number,
   _offsetOrArrayIndex?: v2i | v3i | number,
@@ -508,27 +505,27 @@ export const textureDimensions = dualImpl({
 
 function textureSampleCompareCpu<T extends textureDepth2d>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v2f,
   depthRef: number,
 ): number;
 function textureSampleCompareCpu<T extends textureDepth2d>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v2f,
   depthRef: number,
   offset: v2i,
 ): number;
 function textureSampleCompareCpu<T extends textureDepth2dArray>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v2f,
   arrayIndex: number,
   depthRef: number,
 ): number;
 function textureSampleCompareCpu<T extends textureDepth2dArray>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v2f,
   arrayIndex: number,
   depthRef: number,
@@ -536,20 +533,20 @@ function textureSampleCompareCpu<T extends textureDepth2dArray>(
 ): number;
 function textureSampleCompareCpu<T extends textureDepthCube>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v3f,
   depthRef: number,
 ): number;
 function textureSampleCompareCpu<T extends textureCubeArray>(
   texture: T,
-  sampler: TgpuComparisonSampler,
+  sampler: comparisonSampler,
   coords: v3f,
   arrayIndex: number,
   depthRef: number,
 ): number;
 function textureSampleCompareCpu(
   _texture: WgslTexture,
-  _sampler: TgpuComparisonSampler,
+  _sampler: comparisonSampler,
   _coords: v2f | v3f,
   _depthRefOrArrayIndex: number,
   _depthRefOrOffset?: number | v2i,
@@ -572,7 +569,7 @@ export const textureSampleCompare = dualImpl({
 
 function textureSampleBaseClampToEdgeCpu<
   T extends texture2d | textureExternal,
->(texture: T, sampler: TgpuSampler, coords: v2f): v4f {
+>(texture: T, sampler: sampler, coords: v2f): v4f {
   throw new Error(
     'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
   );

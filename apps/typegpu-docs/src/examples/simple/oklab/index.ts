@@ -69,7 +69,7 @@ const scaleView = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
 const patternFn = tgpu.fn([d.vec2f, d.vec3f], d.f32);
 
 const patternCheckers = patternFn((uv) => {
-  'kernel';
+  'use gpu';
   const suv = floor(mul(20, uv));
   return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
 });
@@ -82,7 +82,7 @@ const patternL0ProjectionLines =
   }`;
 
 const patternSolid = patternFn(() => {
-  'kernel';
+  'use gpu';
   return 1;
 });
 
@@ -173,7 +173,7 @@ function draw() {
   `;
 
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],

@@ -125,7 +125,7 @@ const newInkTex = createField('addedInk');
 const forceTex = createField('force');
 const divergenceTex = createField('divergence');
 
-const linSampler = tgpu['~unstable'].sampler({
+const linSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -320,47 +320,46 @@ function loop() {
     });
 
     brushPipeline
-      .with(c.brushLayout, brushBindGroup)
+      .with(brushBindGroup)
       .dispatchWorkgroups(dispatchX, dispatchY);
 
     addInkPipeline
-      .with(c.addInkLayout, addInkBindGroups[inkBuffer.currentIndex])
+      .with(addInkBindGroups[inkBuffer.currentIndex])
       .dispatchWorkgroups(dispatchX, dispatchY);
     inkBuffer.swap();
 
     addForcePipeline
-      .with(c.addForcesLayout, addForceBindGroups[velBuffer.currentIndex])
+      .with(addForceBindGroups[velBuffer.currentIndex])
       .dispatchWorkgroups(dispatchX, dispatchY);
   } else {
     velBuffer.setCurrent(0);
   }
 
   advectPipeline
-    .with(c.advectLayout, advectBindGroups[velBuffer.currentIndex])
+    .with(advectBindGroups[velBuffer.currentIndex])
     .dispatchWorkgroups(dispatchX, dispatchY);
 
   for (let i = 0; i < p.params.jacobiIter; i++) {
     diffusionPipeline
-      .with(c.diffusionLayout, diffusionBindGroups[velBuffer.currentIndex])
+      .with(diffusionBindGroups[velBuffer.currentIndex])
       .dispatchWorkgroups(dispatchX, dispatchY);
     velBuffer.swap();
   }
 
   divergencePipeline
-    .with(c.divergenceLayout, divergenceBindGroups[velBuffer.currentIndex])
+    .with(divergenceBindGroups[velBuffer.currentIndex])
     .dispatchWorkgroups(dispatchX, dispatchY);
 
   pressureBuffer.setCurrent(0);
   for (let i = 0; i < p.params.jacobiIter; i++) {
     pressurePipeline
-      .with(c.pressureLayout, pressureBindGroups[pressureBuffer.currentIndex])
+      .with(pressureBindGroups[pressureBuffer.currentIndex])
       .dispatchWorkgroups(dispatchX, dispatchY);
     pressureBuffer.swap();
   }
 
   projectPipeline
     .with(
-      c.projectLayout,
       projectBindGroups[velBuffer.currentIndex][pressureBuffer.currentIndex],
     )
     .dispatchWorkgroups(dispatchX, dispatchY);
@@ -368,7 +367,6 @@ function loop() {
 
   advectInkPipeline
     .with(
-      c.advectInkLayout,
       advectInkBindGroups[velBuffer.currentIndex][inkBuffer.currentIndex],
     )
     .dispatchWorkgroups(dispatchX, dispatchY);
@@ -406,7 +404,7 @@ function loop() {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(renderLayout, renderBG)
+    .with(renderBG)
     .draw(3);
 
   requestAnimationFrame(loop);

@@ -1,4 +1,8 @@
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import {
+  type AnyComputeBuiltin,
+  builtin,
+  type OmitBuiltins,
+} from '../../builtin.ts';
 import {
   INTERNAL_createQuerySet,
   isQuerySet,
@@ -10,6 +14,8 @@ import type {
   BaseData,
   U16,
   U32,
+  v3u,
+  Vec3u,
   WgslArray,
 } from '../../data/wgslTypes.ts';
 import {
@@ -49,8 +55,8 @@ import {
 } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
+import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+import { fn, type TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
@@ -65,11 +71,19 @@ import {
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
+  INTERNAL_createComparisonSampler,
+  INTERNAL_createSampler,
   isComparisonSampler,
   isSampler,
   type TgpuComparisonSampler,
+  type TgpuFixedComparisonSampler,
+  type TgpuFixedSampler,
   type TgpuSampler,
 } from '../sampler/sampler.ts';
+import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
 import {
   isAccessor,
   type TgpuAccessor,
@@ -94,12 +108,84 @@ import type {
   CreateTextureResult,
   ExperimentalTgpuRoot,
   RenderPass,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   WithBinding,
   WithCompute,
   WithFragment,
   WithVertex,
 } from './rootTypes.ts';
+import { vec3f, vec3u } from '../../data/vector.ts';
+import { u32 } from '../../data/numeric.ts';
+import { ceil } from '../../std/numeric.ts';
+import { allEq } from '../../std/boolean.ts';
+
+/**
+ * Changes the given array to a vec of 3 numbers, filling missing values with 1.
+ */
+function toVec3(arr: readonly (number | undefined)[]): v3u {
+  if (arr.includes(0)) {
+    throw new Error('Size and workgroupSize cannot contain zeroes.');
+  }
+  return vec3u(arr[0] ?? 1, arr[1] ?? 1, arr[2] ?? 1);
+}
+
+const workgroupSizeConfigs = [
+  vec3u(1, 1, 1),
+  vec3u(256, 1, 1),
+  vec3u(16, 16, 1),
+  vec3u(8, 8, 4),
+] as const;
+
+export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
+  implements TgpuGuardedComputePipeline<TArgs> {
+  #root: ExperimentalTgpuRoot;
+  #pipeline: TgpuComputePipeline;
+  #sizeUniform: TgpuUniform<Vec3u>;
+  #workgroupSize: v3u;
+
+  #lastSize: v3u;
+
+  constructor(
+    root: ExperimentalTgpuRoot,
+    pipeline: TgpuComputePipeline,
+    sizeUniform: TgpuUniform<Vec3u>,
+    workgroupSize: v3u,
+  ) {
+    this.#root = root;
+    this.#pipeline = pipeline;
+    this.#sizeUniform = sizeUniform;
+    this.#workgroupSize = workgroupSize;
+    this.#lastSize = vec3u();
+  }
+
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
+      this.#root,
+      this.#pipeline.with(bindGroup),
+      this.#sizeUniform,
+      this.#workgroupSize,
+    );
+  }
+
+  dispatchThreads(...threads: TArgs): void {
+    const sanitizedSize = toVec3(threads);
+    const workgroupCount = ceil(
+      vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)),
+    );
+    if (!allEq(sanitizedSize, this.#lastSize)) {
+      // Only updating the size if it has changed from the last
+      // invocation. This removes the need for flushing.
+      this.#lastSize = sanitizedSize;
+      this.#sizeUniform.write(sanitizedSize);
+    }
+    this.#pipeline.dispatchWorkgroups(
+      workgroupCount.x,
+      workgroupCount.y,
+      workgroupCount.z,
+    );
+  }
+}
 
 class WithBindingImpl implements WithBinding {
   constructor(
@@ -121,6 +207,48 @@ class WithBindingImpl implements WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
+  }
+
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => undefined,
+  ): TgpuGuardedComputePipeline<TArgs> {
+    const root = this._getRoot();
+
+    if (callback.length >= 4) {
+      throw new Error(
+        'Guarded compute callback only supports up to three dimensions.',
+      );
+    }
+
+    const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
+    const wrappedCallback = fn([u32, u32, u32])(
+      callback as (...args: number[]) => void,
+    );
+
+    const sizeUniform = root.createUniform(vec3u);
+
+    // WGSL instead of JS because we do not run unplugin
+    // before shipping the typegpu package
+    const mainCompute = computeFn({
+      workgroupSize,
+      in: { id: builtin.globalInvocationId },
+    })`{
+  if (any(in.id >= sizeUniform)) {
+    return;
+  }
+  wrappedCallback(in.id.x, in.id.y, in.id.z);
+}`.$uses({ sizeUniform, wrappedCallback });
+
+    const pipeline = this
+      .withCompute(mainCompute)
+      .createPipeline();
+
+    return new TgpuGuardedComputePipelineImpl(
+      root,
+      pipeline,
+      sizeUniform,
+      workgroupSize,
+    );
   }
 
   withVertex<VertexIn extends IOLayout>(
@@ -249,10 +377,6 @@ class WithFragmentImpl implements WithFragment {
   }
 }
 
-interface Disposable {
-  destroy(): void;
-}
-
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
@@ -261,16 +385,12 @@ class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 
-  private _disposables: Disposable[] = [];
-
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
   );
   private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
     key.unwrap(this)
   );
-
-  private _commandEncoder: GPUCommandEncoder | null = null;
 
   [$internal]: {
     logOptions: LogGeneratorOptions;
@@ -291,14 +411,6 @@ class TgpuRootImpl extends WithBindingImpl
     };
   }
 
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
-    }
-
-    return this._commandEncoder;
-  }
-
   get enabledFeatures() {
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
   }
@@ -307,9 +419,7 @@ class TgpuRootImpl extends WithBindingImpl
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
-    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
-    this._disposables.push(buffer);
-    return buffer;
+    return INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
   }
 
   createUniform<TData extends AnyWgslData>(
@@ -319,7 +429,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('uniform' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
   }
@@ -331,7 +440,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
   }
@@ -343,7 +451,6 @@ class TgpuRootImpl extends WithBindingImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
       .$usage('storage' as any);
-    this._disposables.push(buffer);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
   }
@@ -369,10 +476,6 @@ class TgpuRootImpl extends WithBindingImpl
   }
 
   destroy() {
-    for (const disposable of this._disposables) {
-      disposable.destroy();
-    }
-
     clearTextureUtilsCache(this.device);
 
     if (this._ownDevice) {
@@ -413,9 +516,18 @@ class TgpuRootImpl extends WithBindingImpl
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
+  }
+
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler {
+    return INTERNAL_createSampler(props, this);
+  }
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler {
+    return INTERNAL_createComparisonSampler(props, this);
   }
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
@@ -490,18 +602,11 @@ class TgpuRootImpl extends WithBindingImpl
       return resource.vertexLayout;
     }
 
-    if (isSampler(resource)) {
+    if (isSampler(resource) || isComparisonSampler(resource)) {
       if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap(this);
+        return resource[$internal].unwrap();
       }
       throw new Error('Cannot unwrap laid-out sampler.');
-    }
-
-    if (isComparisonSampler(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap(this);
-      }
-      throw new Error('Cannot unwrap laid-out comparison sampler.');
     }
 
     if (isQuerySet(resource)) {
@@ -515,7 +620,8 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -662,15 +768,11 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   flush() {
-    if (!this._commandEncoder) {
-      return;
-    }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
+    console.warn('flush() has been deprecated, and has no effect.');
   }
 }
 

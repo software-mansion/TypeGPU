@@ -289,7 +289,7 @@ function drawObject(
       depthStoreOp: 'store',
     })
     .with(vertexLayout, buffer)
-    .with(layout, group)
+    .with(group)
     .draw(vertexCount);
 }
 
@@ -303,7 +303,6 @@ function render() {
   drawObject(cubeBuffer, bindGroup, 36, 'clear');
   drawObject(secondCubeBuffer, secondBindGroup, 36, 'load');
   drawObject(planeBuffer, planeBindGroup, 6, 'load');
-  root['~unstable'].flush();
 }
 
 function frame() {

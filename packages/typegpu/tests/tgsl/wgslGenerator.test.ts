@@ -39,7 +39,7 @@ describe('wgslGenerator', () => {
 
   it('creates a simple return statement', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       return true;
     };
 
@@ -62,7 +62,7 @@ describe('wgslGenerator', () => {
 
   it('creates a function body', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let a = 12;
       a += 21;
       return a;
@@ -102,7 +102,7 @@ describe('wgslGenerator', () => {
     } as const;
 
     const main = () => {
-      'kernel';
+      'use gpu';
       const intLiteral = 12;
       const floatLiteral = 12.5;
       const scientificLiteral = 12e10;
@@ -344,9 +344,9 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for for statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -373,10 +373,10 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for for statements with outside init', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
-        // biome-ignore lint/correctness/noUnnecessaryContinue: it's just a test, chill
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -404,7 +404,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct code for while statements', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       let i = 0;
       while (i < 10) {
         i += 1;
@@ -845,9 +845,11 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for for loops with single statements', () => {
     const main = () => {
-      'kernel';
-      // biome-ignore lint/correctness/noUnnecessaryContinue: sshhhh, it's just a test
-      for (let i = 0; i < 10; i += 1) continue;
+      'use gpu';
+      for (let i = 0; i < 10; i += 1) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
     };
 
     const gen = provideCtx(
@@ -932,7 +934,6 @@ describe('wgslGenerator', () => {
 
   it('generates correct code for pointer value assignment', () => {
     const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
-      // biome-ignore  lint/style/noParameterAssign: go away
       val += 1;
     });
 
@@ -1144,6 +1145,33 @@ describe('wgslGenerator', () => {
       fn testFn() {
         var element = matrix[index];
       }"
+    `);
+  });
+
+  it('throws a descriptive error when accessing an external array with a runtime known index', () => {
+    const myArray = [9, 8, 7, 6];
+
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      return myArray[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Unable to index a value of unknown type with index i. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a const inside TGSL', () => {
+    const testFn = tgpu.fn([d.u32], d.u32)((i) => {
+      const myArray = tgpu.const(d.arrayOf(d.u32, 4), [9, 8, 7, 6]);
+      return myArray.$[i] as number;
+    });
+
+    expect(() => asWgsl(testFn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
     `);
   });
 });

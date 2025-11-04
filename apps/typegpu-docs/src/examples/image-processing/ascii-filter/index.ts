@@ -1,6 +1,7 @@
 import tgpu, { type TgpuBindGroup } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 
@@ -15,7 +16,7 @@ const glyphSize = root.createUniform(d.u32, 8);
 const uvTransformBuffer = root
   .createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const shaderSampler = tgpu['~unstable'].sampler({
+const shaderSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -45,19 +46,6 @@ const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
   return d.f32((n >> a) & 1);
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 /**
  * Adapted from the original Shadertoy implementation by movAX13h:
  * https://www.shadertoy.com/view/lssGDj
@@ -78,7 +66,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const color = std.textureSampleBaseClampToEdge(
     layout.$.externalTexture,
-    shaderSampler,
+    shaderSampler.$,
     blockCoord,
   );
 
@@ -199,7 +187,7 @@ let bindGroup:
   | undefined;
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined = undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 function processVideoFrame(
   _: number,
@@ -234,7 +222,7 @@ function processVideoFrame(
   }
 
   pipeline
-    .with(layout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',

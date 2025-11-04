@@ -114,7 +114,7 @@ describe('TgpuRenderPipeline', () => {
     );
 
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
     );
   });
 
@@ -138,6 +138,36 @@ describe('TgpuRenderPipeline', () => {
       tgpu['~unstable'].fragmentFn({ out: {} }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+  });
+
+  it('type checks passed bind groups', ({ root }) => {
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      out: { bar: d.location(0, d.vec3f) },
+    })(() => ({
+      bar: d.vec3f(),
+    }));
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      in: { bar: d.location(0, d.vec3f) },
+      out: d.vec4f,
+    })(() => d.vec4f());
+    const renderPipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { format: 'r8unorm' })
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    renderPipeline.with(layout1, bindGroup1);
+    renderPipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => renderPipeline.with(layout1, bindGroup2));
   });
 
   describe('resolve', () => {
@@ -451,7 +481,7 @@ describe('TgpuRenderPipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const vertexFn = tgpu['~unstable'].vertexFn({
@@ -474,7 +504,7 @@ describe('TgpuRenderPipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
     });
 
@@ -765,7 +795,7 @@ describe('TgpuRenderPipeline', () => {
     expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
   });
 
-  it('works when combining timestamp writes and index buffer', ({ root, device }) => {
+  it('works when combining timestamp writes and index buffer', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -781,7 +811,7 @@ describe('TgpuRenderPipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
 
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -837,7 +867,7 @@ describe('TgpuRenderPipeline', () => {
     });
   });
 
-  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device }) => {
+  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -852,8 +882,8 @@ describe('TgpuRenderPipeline', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
-    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const resolveQuerySetSpy = vi.spyOn(commandEncoder, 'resolveQuerySet');
 
     const callback = vi.fn();
 
@@ -896,7 +926,7 @@ describe('TgpuRenderPipeline', () => {
       count: 2,
     });
 
-    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
+    expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith({
       colorAttachments: [
         {
           loadOp: 'clear',
