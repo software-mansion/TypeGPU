@@ -253,7 +253,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       return snip(`${argStr}${op}`, argExpr.dataType);
     }
@@ -262,7 +262,7 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       const type = operatorToType(argExpr.dataType, op);
       return snip(`${op}${argStr}`, type);
