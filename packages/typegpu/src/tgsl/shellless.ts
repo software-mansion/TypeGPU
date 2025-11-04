@@ -3,7 +3,7 @@ import {
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
 import type { AnyData } from '../data/dataTypes.ts';
-import { RefOnGPU } from '../data/ref.ts';
+import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { isPtr } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
@@ -50,7 +50,7 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
-      if (s.value instanceof RefOnGPU) {
+      if (s.value instanceof RefOperator) {
         if (!s.value.ptrType) {
           throw new WgslTypeError(
             `d.ref() created with primitive types must be stored in a variable before use`,

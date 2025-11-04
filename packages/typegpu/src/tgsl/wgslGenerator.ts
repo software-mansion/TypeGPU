@@ -42,7 +42,7 @@ import {
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
 import { INTERNAL_createPtr, ptrFn } from '../data/ptr.ts';
-import { RefOnGPU, RefOperator } from '../data/ref.ts';
+import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -241,7 +241,7 @@ ${this.ctx.pre}}`;
       const lhsExpr = this.expression(lhs);
       const rhsExpr = this.expression(rhs);
 
-      if (rhsExpr.value instanceof RefOnGPU) {
+      if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
           stitch`Cannot assign a ref to an existing variable '${lhsExpr}', define a new variable instead.`,
         );
@@ -780,7 +780,7 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      if (eq.value instanceof RefOnGPU) {
+      if (eq.value instanceof RefOperator) {
         // We're assigning a newly created `d.ref()`
         if (eq.value.ptrType) {
           throw new WgslTypeError(
