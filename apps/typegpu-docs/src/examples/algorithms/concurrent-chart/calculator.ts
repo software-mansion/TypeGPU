@@ -40,7 +40,6 @@ export async function performCalculationsWithTime(
       timestampPromise = timeTgpuQuery.read();
     },
   );
-  root['~unstable'].flush();
   await root.device.queue.onSubmittedWorkDone();
   const gpuTime = performance.now() - gpuStartTime;
   // Compare results

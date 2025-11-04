@@ -161,7 +161,6 @@ class PrefixScanComputer {
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
     const result = this.recursiveScan(buffer, buffer.dataType.elementCount);
-    this.root['~unstable'].flush();
 
     this.#querySet?.resolve();
     if (this.#timeCallback && this.#querySet) {
