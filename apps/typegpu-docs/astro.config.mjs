@@ -36,6 +36,9 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
     },
   },
+  image: {
+    domains: ['raw.githubusercontent.com'],
+  },
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathJax],
