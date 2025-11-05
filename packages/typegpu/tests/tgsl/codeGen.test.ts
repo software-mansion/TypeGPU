@@ -16,7 +16,7 @@ describe('codeGen', () => {
 
       expect(asWgsl(main)).toMatchInlineSnapshot(`
         "fn main() -> f32 {
-          return 6;
+          return 6f;
         }"
       `);
     });

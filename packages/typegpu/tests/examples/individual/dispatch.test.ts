@@ -22,7 +22,7 @@ describe('tgsl parsing test example', () => {
       @group(0) @binding(1) var<storage, read_write> mutable_3: u32;
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        mutable_3 = 126;
+        mutable_3 = 126u;
       }
 
       struct mainCompute_Input_4 {
@@ -98,7 +98,7 @@ describe('tgsl parsing test example', () => {
       @group(0) @binding(1) var<storage, read_write> mutable_3: atomic<u32>;
 
       fn wrappedCallback_2(x: u32, y: u32, z: u32) {
-        atomicAdd(&mutable_3, 1);
+        atomicAdd(&mutable_3, 1u);
       }
 
       struct mainCompute_Input_4 {
@@ -117,7 +117,7 @@ describe('tgsl parsing test example', () => {
       @group(0) @binding(1) var<storage, read_write> mutable_3: array<u32, 7>;
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
-        mutable_3[x] *= 2;
+        mutable_3[x] *= 2u;
       }
 
       struct mainCompute_Input_4 {
@@ -137,7 +137,7 @@ describe('tgsl parsing test example', () => {
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         for (var i = 0u; (i < arrayLength(&buffer_3)); i++) {
-          buffer_3[i] *= 2;
+          buffer_3[i] *= 2u;
         }
       }
 
@@ -157,7 +157,7 @@ describe('tgsl parsing test example', () => {
       @group(0) @binding(1) var<storage, read_write> result_3: f32;
 
       fn main_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        result_3 += 1;
+        result_3 += 1f;
       }
 
       struct mainCompute_Input_4 {
@@ -176,7 +176,7 @@ describe('tgsl parsing test example', () => {
       @group(0) @binding(1) var<storage, read_write> result_3: f32;
 
       fn main_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        result_3 += 3;
+        result_3 += 3f;
       }
 
       struct mainCompute_Input_4 {

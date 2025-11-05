@@ -34,15 +34,15 @@ describe('vaporrave example', () => {
       fn item_9() -> f32 {
         var a = dot(seed_7, vec2f(23.140779495239258, 232.6168975830078));
         var b = dot(seed_7, vec2f(54.47856521606445, 345.8415222167969));
-        seed_7.x = fract((cos(a) * 136.8168));
-        seed_7.y = fract((cos(b) * 534.7645));
+        seed_7.x = fract((cos(a) * 136.8168f));
+        seed_7.y = fract((cos(b) * 534.7645f));
         return seed_7.y;
       }
 
       fn randOnUnitSphere_8() -> vec3f {
-        var z = ((2 * item_9()) - 1);
-        var oneMinusZSq = sqrt((1 - (z * z)));
-        var theta = (6.283185307179586 * item_9());
+        var z = ((2f * item_9()) - 1f);
+        var oneMinusZSq = sqrt((1f - (z * z)));
+        var theta = (6.283185307179586f * item_9());
         var x = (cos(theta) * oneMinusZSq);
         var y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -54,7 +54,7 @@ describe('vaporrave example', () => {
       }
 
       fn wrappedCallback_2(x: u32, y: u32, z: u32) {
-        var idx = ((x + (y * 7)) + ((z * 7) * 7));
+        var idx = ((x + (y * 7u)) + ((z * 7u) * 7u));
         memoryBuffer_3[idx] = computeJunctionGradient_4(vec3i(i32(x), i32(y), i32(z)));
       }
 
@@ -79,9 +79,9 @@ describe('vaporrave example', () => {
       }
 
       @vertex fn vertexMain_0(_arg_0: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
         var uv = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return vertexMain_Output_1(vec4f(pos[_arg_0.idx], 0, 1), uv[_arg_0.idx]);
+        return vertexMain_Output_1(vec4f(pos[_arg_0.idx], 0f, 1f), uv[_arg_0.idx]);
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform_4: vec2f;
@@ -96,10 +96,10 @@ describe('vaporrave example', () => {
       }
 
       fn circles_8(uv: vec2f, angle: f32) -> vec3f {
-        var uvRotated = (rotateXY_9(angle) * vec2f(uv.x, (uv.y - 12)));
+        var uvRotated = (rotateXY_9(angle) * vec2f(uv.x, (uv.y - 12f)));
         var uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2));
         var diff2 = pow((vec2f(0.5) - uvNormalized), vec2f(2));
-        var distO = pow((diff2.x + diff2.y), 0.5);
+        var distO = pow((diff2.x + diff2.y), 0.5f);
         return mix(vec3f(), vec3f(0.9200000166893005, 0.20999999344348907, 0.9599999785423279), exp((-5 * distO)));
       }
 
@@ -110,11 +110,11 @@ describe('vaporrave example', () => {
       }
 
       fn rotateAroundZ_13(angle: f32) -> mat3x3f {
-        return mat3x3f(vec3f(cos(angle), sin(angle), 0), vec3f(-sin(angle), cos(angle), 0), vec3f(0, 0, 1));
+        return mat3x3f(vec3f(cos(angle), sin(angle), 0f), vec3f(-sin(angle), cos(angle), 0f), vec3f(0, 0, 1));
       }
 
       fn rotateAroundX_14(angle: f32) -> mat3x3f {
-        return mat3x3f(vec3f(1, 0, 0), vec3f(0, cos(angle), sin(angle)), vec3f(0, -sin(angle), cos(angle)));
+        return mat3x3f(vec3f(1, 0, 0), vec3f(0f, cos(angle), sin(angle)), vec3f(0f, -sin(angle), cos(angle)));
       }
 
       fn sdSphere_15(p: vec3f, radius: f32) -> f32 {
@@ -164,13 +164,13 @@ describe('vaporrave example', () => {
 
       fn getSphere_12(p: vec3f, sphereColor: vec3f, sphereCenter: vec3f, angle: f32) -> Ray_6 {
         var localP = (p - sphereCenter);
-        var rotMatZ = rotateAroundZ_13((-angle * 0.3));
-        var rotMatX = rotateAroundX_14((-angle * 0.7));
+        var rotMatZ = rotateAroundZ_13((-angle * 0.3f));
+        var rotMatX = rotateAroundX_14((-angle * 0.7f));
         var rotatedP = ((localP * rotMatZ) * rotMatX);
-        var radius = (3 + sin(angle));
+        var radius = (3f + sin(angle));
         var rawDist = sdSphere_15(rotatedP, radius);
         var noise = 0f;
-        if ((rawDist < 1)) {
+        if ((rawDist < 1f)) {
           noise += sample_16((rotatedP + angle));
         }
         return Ray_6(sphereColor, (rawDist + noise));
@@ -185,7 +185,7 @@ describe('vaporrave example', () => {
       }
 
       fn getSceneRay_7(p: vec3f) -> Ray_6 {
-        var floor = Ray_6(circles_8(p.xz, floorAngleUniform_10), sdPlane_11(p, vec3f(0, 1, 0), 1));
+        var floor = Ray_6(circles_8(p.xz, floorAngleUniform_10), sdPlane_11(p, vec3f(0, 1, 0), 1f));
         var sphere = getSphere_12(p, sphereColorUniform_21, vec3f(0, 6, 12), sphereAngleUniform_22);
         return rayUnion_23(floor, sphere);
       }
@@ -197,19 +197,19 @@ describe('vaporrave example', () => {
 
       fn rayMarch_5(ro: vec3f, rd: vec3f) -> LightRay_24 {
         var distOrigin = 0f;
-        var result = Ray_6(vec3f(), 19);
+        var result = Ray_6(vec3f(), 19f);
         var glow = vec3f();
-        for (var i = 0; (i < 1000); i++) {
+        for (var i = 0; (i < 1000i); i++) {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay_7(p);
           var sphereDist = getSphere_12(p, sphereColorUniform_21, vec3f(0, 6, 12), sphereAngleUniform_22);
           glow = ((vec3f(sphereColorUniform_21) * exp(-sphereDist.dist)) + glow);
           distOrigin += scene.dist;
-          if ((distOrigin > 19)) {
-            result.dist = 19;
+          if ((distOrigin > 19f)) {
+            result.dist = 19f;
             break;
           }
-          if ((scene.dist < 1e-3)) {
+          if ((scene.dist < 1e-3f)) {
             result.dist = distOrigin;
             result.color = scene.color;
             break;
@@ -227,13 +227,13 @@ describe('vaporrave example', () => {
       @fragment fn fragmentMain_3(input: fragmentMain_Input_26) -> @location(0) vec4f {
         var uv = ((input.uv * 2) - 1);
         uv.x *= (resolutionUniform_4.x / resolutionUniform_4.y);
-        var ro = vec3f(0, 2, -1);
-        var rd = normalize(vec3f(uv.x, uv.y, 1));
+        var ro = vec3f(0f, 2f, -1);
+        var rd = normalize(vec3f(uv.x, uv.y, 1f));
         var march = rayMarch_5(ro, rd);
-        var y = (((rd * march.ray.dist) + ro).y - 2);
+        var y = (((rd * march.ray.dist) + ro).y - 2f);
         var sky = mix(vec4f(0.10000000149011612, 0, 0.20000000298023224, 1), vec4f(0.2800000011920929, 0, 0.5400000214576721, 1), (y / 19f));
-        var fog = min((march.ray.dist / 19f), 1);
-        return mix(mix(vec4f(march.ray.color, 1), sky, fog), vec4f(march.glow, 1), glowIntensityUniform_25);
+        var fog = min((march.ray.dist / 19f), 1f);
+        return mix(mix(vec4f(march.ray.color, 1f), sky, fog), vec4f(march.glow, 1f), glowIntensityUniform_25);
       }"
     `);
   });
