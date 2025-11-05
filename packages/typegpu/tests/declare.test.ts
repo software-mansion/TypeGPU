@@ -114,7 +114,7 @@ struct Output {
 
       fn main() -> f32 {
         ;
-        return 2;
+        return 2f;
       }"
     `);
   });

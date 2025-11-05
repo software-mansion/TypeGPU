@@ -27,8 +27,8 @@ describe('xor dev centrifuge example', () => {
       }
 
       @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
+        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
+        return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> aspectRatio_4: f32;
@@ -56,7 +56,7 @@ describe('xor dev centrifuge example', () => {
       }
 
       @fragment fn fragmentMain_3(_arg_0: fragmentMain_Input_13) -> @location(0) vec4f {
-        var ratio = vec2f(aspectRatio_4, 1);
+        var ratio = vec2f(aspectRatio_4, 1f);
         var dir = normalize(vec3f((_arg_0.uv * ratio), -1));
         var z = 0f;
         var acc = vec3f();
@@ -64,14 +64,14 @@ describe('xor dev centrifuge example', () => {
           var p = (dir * z);
           p.x += cameraPos_6.x;
           p.y += cameraPos_6.y;
-          var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5 * time_8)), (length(p.xy) - 11));
+          var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5f * time_8)), (length(p.xy) - 11f));
           var coords2 = (cos((coords + cos((coords * smallStrips_10)))) - 1);
-          var dd = ((length(vec4f(coords.z, coords2)) * 0.5) - 0.1);
+          var dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
           acc = (acc + ((1.2 - cos((color_11 * p.z))) / dd));
           z += dd;
         }
         acc = safeTanh_12((acc * 5e-3));
-        return vec4f(acc, 1);
+        return vec4f(acc, 1f);
       }"
     `);
   });

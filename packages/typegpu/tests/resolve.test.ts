@@ -91,11 +91,11 @@ describe('tgpu resolve', () => {
       "@group(0) @binding(0) var<uniform> intensity: f32;
 
       @fragment fn fragment1() -> @location(0) vec4f {
-        return vec4f(0, intensity, 0, 1);
+        return vec4f(0f, intensity, 0f, 1f);
       }
 
       @fragment fn fragment2() -> @location(0) vec4f {
-        return vec4f(intensity, 0, 0, 1);
+        return vec4f(intensity, 0f, 0f, 1f);
       }"
     `);
   });

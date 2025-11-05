@@ -247,7 +247,7 @@ describe('TgpuRenderPipeline', () => {
         }
 
         @vertex fn vertexMain() -> vertexMain_Output {
-          return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0, 0, vec4f());
+          return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0f, 0u, vec4f());
         }
 
         struct fragmentMain_Input {
