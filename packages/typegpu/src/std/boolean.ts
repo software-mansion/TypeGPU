@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { type AnyData, toStorables } from '../data/dataTypes.ts';
+import type { AnyData } from '../data/dataTypes.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
@@ -338,8 +338,7 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
  */
 export const select = dualImpl({
   name: 'select',
-  signature: (...args) => {
-    const [f, t, cond] = toStorables(args);
+  signature: (f, t, cond) => {
     const [uf, ut] = unify([f, t]) ?? [f, t] as const;
     return ({ argTypes: [uf, ut, cond], returnType: uf });
   },

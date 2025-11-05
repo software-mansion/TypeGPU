@@ -146,10 +146,6 @@ export function toStorable(schema: AnyData): AnyData {
   return undecorate(unptr(undecorate(schema)));
 }
 
-export function toStorables<T extends AnyData[]>(schemas: T): T {
-  return schemas.map(toStorable) as T;
-}
-
 const looseTypeLiterals = [
   'unstruct',
   'disarray',

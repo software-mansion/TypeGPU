@@ -70,7 +70,13 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   const gpuImpl = (...args: MapValueToSnippet<Parameters<T>>) => {
     const { argTypes, returnType } = typeof options.signature === 'function'
       ? options.signature(
-        ...args.map((s) => s.dataType) as MapValueToDataType<Parameters<T>>,
+        ...args.map((s) => {
+          // Dereference implicit pointers
+          if (s.dataType.type === 'ptr' && s.dataType.implicit) {
+            return s.dataType.inner;
+          }
+          return s.dataType;
+        }) as MapValueToDataType<Parameters<T>>,
       )
       : options.signature;
 
