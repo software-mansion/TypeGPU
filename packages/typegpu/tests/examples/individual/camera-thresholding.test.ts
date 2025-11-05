@@ -57,7 +57,7 @@ describe('camera thresholding example', () => {
         var crDiff = abs((ycbcr.y - colycbcr.y));
         var cbDiff = abs((ycbcr.z - colycbcr.z));
         var distance = length(vec2f(crDiff, cbDiff));
-        if ((distance < pow(thresholdBuffer_9, 2))) {
+        if ((distance < pow(thresholdBuffer_9, 2f))) {
           col = vec4f();
         }
         return col;
