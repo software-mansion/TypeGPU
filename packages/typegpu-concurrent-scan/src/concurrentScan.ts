@@ -172,51 +172,69 @@ class PrefixScanComputer {
 
 /**
  * Perform a GPU prefix-scan (parallel prefix scan depending on the
- * provided `binaryOp`) over the values in `buffer`. For instance, this can be used to
+ * provided operation) over the values in `inputBuffer`. For instance, this can be used to
  * compute a prefix sum over an array of numbers.
  *
  * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
- * @param buffer - A storage buffer (`TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag`) containing
- *                 the input values to scan.
- * @param binaryOp - Binary operation defining the associative operation and identity element
- *                   used for the scan e.g. addition for prefix-sum.
+ * @param options - Configuration object containing:
+ *   - inputBuffer: A storage buffer with the input values to scan
+ *   - outputBuffer: A storage buffer where the scanned values will be written
+ *   - operation: The binary operation to use for the scan (e.g., std.add)
+ *   - identity: The identity element for the operation (e.g., 0 for addition)
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
- *                       GPU dispatch has been submitted; useful for measuring execution time.
- * @returns The `buffer` instance which contains the scanned values.
+ *                              GPU dispatch has been submitted; useful for measuring execution time.
+ * @returns The `outputBuffer` instance which contains the scanned values.
  *
  * @example
  * ```typescript
  * const root = await tgpu.init();
- * const buffer = root
+ * const inputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
+ *   .$usage('storage');
+ * const outputBuffer = root
+ *   .createBuffer(d.arrayOf(d.f32, 4))
  *   .$usage('storage');
  *
  * // using an std function
-  const calcResult = prefixScan(
-    root,
-    inputBuffer,
-    { operation: std.add, identityElement: 0 },
-  );
+ * const result = prefixScan(
+ *   root,
+ *   {
+ *     inputBuffer,
+ *     outputBuffer,
+ *     operation: std.add,
+ *     identity: 0,
+ *   },
+ * );
  *
  * // using a custom tgpu.fn
  * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
  *
-  const calcResult = prefixScan(
-    root,
-    inputBuffer,
-    {
-      operation: multiply,
-      identityElement: 1,
-    },
-  );
+ * const result = prefixScan(
+ *   root,
+ *   {
+ *     inputBuffer,
+ *     outputBuffer,
+ *     operation: multiply,
+ *     identity: 1,
+ *   },
+ * );
  * ```
  */
 export function prefixScan(
   root: TgpuRoot,
-  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-  binaryOp: BinaryOp,
+  options: {
+    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    operation: BinaryOp['operation'];
+    identity: BinaryOp['identityElement'];
+  },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  const binaryOp: BinaryOp = {
+    operation: options.operation,
+    identityElement: options.identity,
+  };
+
   let computer = cache.get(root)?.get(binaryOp);
   if (!computer) {
     computer = initCache(root, binaryOp, false);
@@ -226,56 +244,78 @@ export function prefixScan(
     (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
   }
 
-  return computer.compute(buffer);
+  if (options.inputBuffer !== options.outputBuffer) {
+    options.outputBuffer.copyFrom(options.inputBuffer);
+    return computer.compute(options.outputBuffer);
+  }
+  return computer.compute(options.inputBuffer);
 }
 
 /**
- * Compute only the aggregated reduction result for `buffer` using `binaryOp`.
- * Returns only the top-level sums/reductions instead of the full. This is useful when
+ * Compute only the aggregated reduction result for `inputBuffer` using the provided operation.
+ * Returns only the top-level sums/reductions instead of the full scan. This is useful when
  * you only need the final reduction - for instance, the sum of the whole array).
  *
  * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
- * @param buffer - A storage buffer (`TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag`) containing
- *                 the input values to reduce.
- * @param binaryOp - Binary operation defining the associative operation and identity element
- *                   used for the reduction e.g. {std.add, 0} for sum.
+ * @param options - Configuration object containing:
+ *   - inputBuffer: A storage buffer with the input values to reduce
+ *   - outputBuffer: A storage buffer where the reduction result will be written
+ *   - operation: The binary operation to use for the reduction (e.g., std.add)
+ *   - identity: The identity element for the operation (e.g., 0 for addition)
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
- *                       GPU dispatch has been submitted; useful for measuring execution time.
+ *                              GPU dispatch has been submitted; useful for measuring execution time.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
  *
- *  * @example
+ * @example
  * ```typescript
  * const root = await tgpu.init();
- * const buffer = root
+ * const inputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
+ *   .$usage('storage');
+ * const outputBuffer = root
+ *   .createBuffer(d.arrayOf(d.f32, 1))
  *   .$usage('storage');
  *
  * // using an std function
-  const calcResult = scan(
-    root,
-    inputBuffer,
-    { operation: std.add, identityElement: 0 },
-  );
+ * const result = scan(
+ *   root,
+ *   {
+ *     inputBuffer,
+ *     outputBuffer,
+ *     operation: std.add,
+ *     identity: 0,
+ *   },
+ * );
  *
  * // using a custom tgpu.fn
  * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
  *
-  const calcResult = scan(
-    root,
-    inputBuffer,
-    {
-      operation: multiply,
-      identityElement: 1,
-    },
-  );
+ * const result = scan(
+ *   root,
+ *   {
+ *     inputBuffer,
+ *     outputBuffer,
+ *     operation: multiply,
+ *     identity: 1,
+ *   },
+ * );
  * ```
  */
 export function scan(
   root: TgpuRoot,
-  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-  binaryOp: BinaryOp,
+  options: {
+    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    operation: BinaryOp['operation'];
+    identity: BinaryOp['identityElement'];
+  },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  const binaryOp: BinaryOp = {
+    operation: options.operation,
+    identityElement: options.identity,
+  };
+
   let computer = cache.get(root)?.get(binaryOp);
   if (!computer) {
     computer = initCache(root, binaryOp, true);
@@ -285,7 +325,11 @@ export function scan(
     (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
   }
 
-  return computer.compute(buffer);
+  if (options.inputBuffer !== options.outputBuffer) {
+    options.outputBuffer.copyFrom(options.inputBuffer);
+    return computer.compute(options.outputBuffer);
+  }
+  return computer.compute(options.inputBuffer);
 }
 
 /**
