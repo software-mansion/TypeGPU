@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -35,6 +35,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -253,7 +254,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       return snip(`${argStr}${op}`, argExpr.dataType);
     }
@@ -262,7 +263,7 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       const type = operatorToType(argExpr.dataType, op);
       return snip(`${op}${argStr}`, type);
@@ -370,7 +371,7 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+          `Unable to index a value of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -438,6 +439,12 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
+        );
+      }
+
+      if (callee.value === constant) {
+        throw new Error(
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
         );
       }
 
@@ -728,7 +735,7 @@ ${this.ctx.pre}else ${alternate}`;
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+      return stitch`${this.ctx.pre}var ${snippet
         .value as string} = ${eq};`;
     }
 

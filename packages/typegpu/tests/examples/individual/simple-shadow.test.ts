@@ -130,31 +130,31 @@ describe('simple shadow example', () => {
         var L = normalize(-(light_9.direction));
         var V = normalize((cameraUniform_4.position - _arg_0.worldPos));
         var R = reflect(-(L), N);
-        var lp4 = (lightSpaceUniform_11.viewProj * vec4f(_arg_0.worldPos, 1));
+        var lp4 = (lightSpaceUniform_11.viewProj * vec4f(_arg_0.worldPos, 1f));
         var ndc = (lp4.xyz / lp4.w);
         var uv = ((ndc.xy * 0.5) + 0.5);
-        uv = vec2f(uv.x, (1 - uv.y));
+        uv = vec2f(uv.x, (1f - uv.y));
         var currentDepth = ndc.z;
         var inBounds = (all((uv >= vec2f())) && all((uv <= vec2f(1))));
         var shadowFactor = textureSampleCompare(shadowMap_13, comparisonSampler_14, uv, currentDepth);
         if (!inBounds) {
-          shadowFactor = 1;
+          shadowFactor = 1f;
         }
         var ambient = (instanceInfo.material.ambient * light_9.color);
-        var diff = max(0, dot(N, L));
+        var diff = max(0f, dot(N, L));
         var diffuse = ((instanceInfo.material.diffuse * light_9.color) * diff);
-        var spec = pow(max(0, dot(V, R)), instanceInfo.material.shininess);
+        var spec = pow(max(0f, dot(V, R)), instanceInfo.material.shininess);
         var specular = ((instanceInfo.material.specular * light_9.color) * spec);
         var lit = ((diffuse + specular) * shadowFactor);
         var finalColor = (ambient + lit);
-        if ((paramsUniform_15.shadowOnly == 1)) {
-          return vec4f(vec3f(shadowFactor), 1);
+        if ((paramsUniform_15.shadowOnly == 1f)) {
+          return vec4f(vec3f(shadowFactor), 1f);
         }
-        if ((paramsUniform_15.lightDepth == 1)) {
-          var remappedDepth = clamp(((currentDepth - 0.2) / 0.49999999999999994f), 0, 1);
-          return vec4f(vec3f(remappedDepth), 1);
+        if ((paramsUniform_15.lightDepth == 1f)) {
+          var remappedDepth = clamp(((currentDepth - 0.2f) / 0.49999999999999994f), 0f, 1f);
+          return vec4f(vec3f(remappedDepth), 1f);
         }
-        return vec4f(finalColor, 1);
+        return vec4f(finalColor, 1f);
       }"
     `);
   });
