@@ -27,59 +27,72 @@
 
 <script>
   const popovers = document.querySelectorAll('[data-challenges-signup-popover="true"]');
-  popovers.forEach((popover) => {
-    const linkElement: HTMLAnchorElement|null = popover.querySelector('a');
-    const dialogElement: HTMLDialogElement|null = popover.querySelector('dialog');
-    const formElement: HTMLFormElement|null = popover.querySelector('form');
 
-    if (!linkElement || !dialogElement || !formElement) {
-      return;
-    }
+  class DialogBox {
+    readonly dialogElement: HTMLDialogElement;
 
-    // Check if URL hash indicates popover should be open
-    if (window.location.hash === '#challenges-signup') {
-      dialogElement?.showModal();
-    }
+    constructor(popover: Element) {
+      const linkElement: HTMLAnchorElement|null = popover.querySelector('a');
+      const dialogElement: HTMLDialogElement|null = popover.querySelector('dialog');
+      const formElement: HTMLFormElement|null = popover.querySelector('form');
 
-    linkElement.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.hash = '#challenges-signup';
-      dialogElement?.showModal();
-     });
-
-    dialogElement.addEventListener('close', () => {
-      if (window.location.hash === '#challenges-signup') {
-        window.location.hash = '';
+      if (!linkElement || !dialogElement || !formElement) {
+        throw new Error(`Missing required elements: link: ${linkElement ? '✅' : '🚫'}, dialog: ${dialogElement ? '✅' : '🚫'}, form: ${formElement ? '✅' : '🚫'}`);
       }
-    });
 
-    formElement.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(formElement);
-      const data = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        newsletterAgree: formData.get('newsletter-agree') === 'on'
-      };
+      this.dialogElement = dialogElement;
 
-      try {
-        const response = await fetch('https://swmansion.dev/api/shaderhunt/signin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
-        console.log(await response.text());
-        if (response.ok) {
-          formElement.reset();
-          dialogElement.close();
-        } else {
-          alert('Error submitting form. Please try again.');
+      linkElement.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#challenges-signup';
+        dialogElement?.showModal();
+       });
+
+      dialogElement.addEventListener('close', () => {
+        if (window.location.hash === '#challenges-signup') {
+          window.location.hash = '';
         }
-      } catch (error) {
-        alert('Network error. Please try again.');
-      }
-    });
-  });
+      });
+
+      formElement.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(formElement);
+        const data = {
+          name: formData.get('name'),
+          email: formData.get('email'),
+          newsletterAgree: formData.get('newsletter-agree') === 'on'
+        };
+
+        try {
+          const response = await fetch('https://swmansion.dev/api/shaderhunt/signin', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+          console.log(await response.text());
+          if (response.ok) {
+            formElement.reset();
+            dialogElement.close();
+          } else {
+            alert('Error submitting form. Please try again.');
+          }
+        } catch (error) {
+          alert('Network error. Please try again.');
+        }
+      });
+    }
+  }
+
+  const dialogBoxes = Array.from(popovers).map((popover) => new DialogBox(popover));
+
+  // Check if URL hash indicates popover should be open
+  if (window.location.hash === '#challenges-signup') {
+    const firstDialogBox = dialogBoxes[0]
+    if (!firstDialogBox) {
+      throw new Error('Expected at least one dialog box');
+    }
+    firstDialogBox.dialogElement.showModal();
+  }
 </script>
