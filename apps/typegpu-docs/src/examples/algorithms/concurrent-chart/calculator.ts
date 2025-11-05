@@ -34,8 +34,12 @@ export async function performCalculationsWithTime(
   let timestampPromise: Promise<bigint[]> = Promise.resolve([]);
   const calcResult = prefixScan(
     root,
-    inputBuffer,
-    { operation: std.add, identityElement: 0 },
+    {
+      inputBuffer: inputBuffer,
+      outputBuffer: inputBuffer,
+      operation: std.add,
+      identityElement: 0,
+    },
     (timeTgpuQuery) => {
       timestampPromise = timeTgpuQuery.read();
     },

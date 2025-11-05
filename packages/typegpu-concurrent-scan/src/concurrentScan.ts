@@ -226,13 +226,13 @@ export function prefixScan(
     inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     operation: BinaryOp['operation'];
-    identity: BinaryOp['identityElement'];
+    identityElement: BinaryOp['identityElement'];
   },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   const binaryOp: BinaryOp = {
     operation: options.operation,
-    identityElement: options.identity,
+    identityElement: options.identityElement,
   };
 
   let computer = cache.get(root)?.get(binaryOp);
@@ -307,13 +307,13 @@ export function scan(
     inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     operation: BinaryOp['operation'];
-    identity: BinaryOp['identityElement'];
+    identityElement: BinaryOp['identityElement'];
   },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   const binaryOp: BinaryOp = {
     operation: options.operation,
-    identityElement: options.identity,
+    identityElement: options.identityElement,
   };
 
   let computer = cache.get(root)?.get(binaryOp);
