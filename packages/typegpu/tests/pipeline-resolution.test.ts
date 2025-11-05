@@ -52,7 +52,7 @@ describe('resolve', () => {
 
       @vertex fn vertexFn_0() -> vertexFn_Output_2 {
         var myBoid = Boid_1();
-        return vertexFn_Output_2(vec4f(myBoid.position, 0, 1), myBoid.color);
+        return vertexFn_Output_2(vec4f(myBoid.position, 0f, 1f), myBoid.color);
       }
 
       struct fragmentFn_Input_4 {
@@ -105,7 +105,7 @@ describe('resolve', () => {
         }
 
         fn wrappedCallback_2(x: u32, y: u32, z: u32) {
-          var myBoid = Boid_3(vec2f(), vec4f(f32(x), f32(y), f32(z), 1));
+          var myBoid = Boid_3(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
         }
 
         struct mainCompute_Input_4 {
