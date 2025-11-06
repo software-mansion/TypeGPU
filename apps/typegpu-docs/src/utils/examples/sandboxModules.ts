@@ -115,7 +115,7 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     import: { reroute: 'typegpu-color/src/index.ts' },
     typeDef: { reroute: 'typegpu-color/src/index.ts' },
   },
-  '@typegpu/concurrent-sum': {
-    typeDef: { reroute: ['typegpu-concurrent-sum/src/index.ts'] },
+  '@typegpu/concurrent-scan': {
+    typeDef: { reroute: 'typegpu-concurrent-scan/src/index.ts' },
   },
 };
