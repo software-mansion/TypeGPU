@@ -164,8 +164,8 @@ describe('TGSL tgpu.fn function', () => {
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
         let vi = f32(input.vi);
         let ii = f32(input.ii);
-        let color = (&input.color);
-        return vertex_fn_Output(vec4f((*color).w, ii, vi, 1f), vec2f((*color).w, vi));
+        let color = input.color;
+        return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
       }"
     `);
   });
@@ -391,9 +391,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        let pos = (&input.pos);
+        let pos = input.pos;
         var sampleMask = 0;
-        if (((input.sampleMask > 0u) && ((*pos).x > 0f))) {
+        if (((input.sampleMask > 0u) && (pos.x > 0f))) {
           sampleMask = 1i;
         }
         return fragmentFn_Output(u32(sampleMask), 1f, vec4f());

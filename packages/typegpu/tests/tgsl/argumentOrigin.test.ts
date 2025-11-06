@@ -91,7 +91,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): '(*b).x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(vec3f): 'b.x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -113,7 +113,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+      - fn*:foo(vec3f): 'let b = a' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
       -----
       - Try 'let b = vec3f(a)' if you need to reassign 'b' later
       - Try 'const b = a' if you won't reassign 'b' later.

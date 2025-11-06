@@ -270,9 +270,9 @@ describe('gravity example', () => {
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
         var textureColor = textureSample(celestialBodyTextures_9, sampler_10, input.uv, input.sphereTextureIndex).xyz;
         var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
-        let normal = (&input.normals);
+        let normal = input.normals;
         var lightDirection = normalize((lightSource_11 - input.worldPosition));
-        let cosTheta = dot((*normal), lightDirection);
+        let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         var litColor = (ambient + diffuse);
         return vec4f(litColor.xyz, 1f);

@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -46,6 +46,12 @@ export interface ref<T> {
 
 export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   const gpuImpl = (value: Snippet) => {
+    if (value.origin === 'argument') {
+      throw new WgslTypeError(
+        stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
+      );
+    }
+
     /**
      * Pointer type only exists if the ref was created from a reference (buttery-butter).
      *
@@ -161,10 +167,7 @@ export function derefSnippet(snippet: Snippet): Snippet {
   invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
 
   const innerType = snippet.dataType.inner;
-  const origin =
-    isNaturallyEphemeral(innerType) && snippet.origin !== 'argument'
-      ? 'runtime'
-      : snippet.origin;
+  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
 
   if (snippet.value instanceof RefOperator) {
     return snip(stitch`${snippet.value.snippet}`, innerType, origin);

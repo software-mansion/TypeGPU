@@ -184,4 +184,31 @@ describe('d.ref', () => {
       - fn*:bar(): Cannot return references, returning '0']
     `);
   });
+
+  it('fails when taking a reference of an argument', () => {
+    const advance = (value: d.ref<d.v3f>) => {
+      'use gpu';
+      value.$.x += 1;
+    };
+
+    const foo = (hello: d.v3f) => {
+      'use gpu';
+      // Trying to cheat and mutate a non-ref argument by taking a reference of it here.
+      advance(d.ref(hello));
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f());
+    };
+
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f)
+      - fn:ref: d.ref(hello) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.]
+    `);
+  });
 });

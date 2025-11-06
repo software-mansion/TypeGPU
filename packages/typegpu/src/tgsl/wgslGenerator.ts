@@ -717,6 +717,26 @@ ${this.ctx.pre}}`;
           );
         }
 
+        // Arguments cannot be returned from functions without copying. A simple example why is:
+        // const identity = (x) => {
+        //   'use gpu';
+        //   return x;
+        // };
+        //
+        // const foo = (arg: d.v3f) => {
+        //   'use gpu';
+        //   const marg = identity(arg);
+        //   marg.x = 1; // 'marg's origin would be 'runtime', so we wouldn't be able to track this misuse.
+        // };
+        if (
+          returnSnippet.origin === 'argument' &&
+          !isEphemeralSnippet(returnSnippet)
+        ) {
+          throw new WgslTypeError(
+            stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
+          );
+        }
+
         if (
           !expectedReturnType &&
           !isEphemeralSnippet(returnSnippet) &&
@@ -794,6 +814,10 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      const ephemeral = isEphemeralSnippet(eq);
+      let dataType = eq.dataType as wgsl.AnyWgslData;
+      const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
+
       if (isLooseData(eq.dataType)) {
         throw new Error(
           `Cannot create variable '${rawId}' with loose data type.`,
@@ -821,14 +845,9 @@ ${this.ctx.pre}else ${alternate}`;
         };`;
       }
 
-      let dataType = eq.dataType as wgsl.AnyWgslData;
-
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (
-        !isEphemeralSnippet(eq) ||
-        (eq.origin === 'argument' && !wgsl.isNaturallyEphemeral(dataType))
-      ) {
+      if (!ephemeral) {
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
@@ -866,11 +885,32 @@ ${this.ctx.pre}else ${alternate}`;
         }
       } else {
         // Non-referential
-        if (
-          stmtType === NODE.const &&
-          wgsl.isNaturallyEphemeral(dataType)
-        ) {
-          varType = eq.origin === 'constant' ? 'const' : 'let';
+
+        if (eq.origin === 'argument') {
+          if (stmtType === NODE.let) {
+            const rhsStr = this.ctx.resolve(eq.value).value;
+            const rhsTypeStr =
+              this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
+                .value;
+
+            throw new WgslTypeError(
+              `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
+-----
+- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+-----`,
+            );
+          }
+          varType = 'let';
+        }
+
+        if (stmtType === NODE.const) {
+          if (eq.origin === 'argument') {
+            // Arguments cannot be mutated, so we 'let' them be (kill me)
+            varType = 'let';
+          } else if (naturallyEphemeral) {
+            varType = eq.origin === 'constant' ? 'const' : 'let';
+          }
         }
       }
 
