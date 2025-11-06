@@ -7,6 +7,7 @@ import {
   type Snippet,
 } from '../../data/snippet.ts';
 import {
+  isNaturallyEphemeral,
   isPtr,
   isWgslData,
   isWgslStruct,
@@ -196,16 +197,18 @@ export function createFnCore(
         // of the argument based on the argument's referentiality.
         // In other words, if we pass a reference to a function, it's typed as a pointer,
         // otherwise it's typed as a value.
-        const ref = isPtr(argType)
+        const origin = isPtr(argType)
           ? argType.addressSpace === 'storage'
             ? argType.access === 'read' ? 'readonly' : 'mutable'
             : argType.addressSpace
+          : isNaturallyEphemeral(argType)
+          ? 'runtime'
           : 'argument';
 
         switch (astParam?.type) {
           case FuncParameterType.identifier: {
             const rawName = astParam.name;
-            const snippet = snip(ctx.makeNameValid(rawName), argType, ref);
+            const snippet = snip(ctx.makeNameValid(rawName), argType, origin);
             args.push(snippet);
             if (snippet.value !== rawName) {
               argAliases.push([rawName, snippet]);
@@ -213,22 +216,30 @@ export function createFnCore(
             break;
           }
           case FuncParameterType.destructuredObject: {
-            args.push(snip(`_arg_${i}`, argType, ref));
-            argAliases.push(...astParam.props.map(({ name, alias }) =>
-              [
+            args.push(snip(`_arg_${i}`, argType, origin));
+            argAliases.push(...astParam.props.map(({ name, alias }) => {
+              // Undecorating, as the struct type can contain builtins
+              const destrType = undecorate(
+                (argTypes[i] as WgslStruct).propTypes[name],
+              );
+
+              const destrOrigin = isPtr(destrType)
+                ? destrType.addressSpace === 'storage'
+                  ? destrType.access === 'read' ? 'readonly' : 'mutable'
+                  : destrType.addressSpace
+                : isNaturallyEphemeral(destrType)
+                ? 'runtime'
+                : 'argument';
+
+              return [
                 alias,
-                snip(
-                  `_arg_${i}.${name}`,
-                  (argTypes[i] as WgslStruct)
-                    .propTypes[name],
-                  ref,
-                ),
-              ] as [string, Snippet]
-            ));
+                snip(`_arg_${i}.${name}`, destrType, destrOrigin),
+              ] as [string, Snippet];
+            }));
             break;
           }
           case undefined:
-            args.push(snip(`_arg_${i}`, argType, ref));
+            args.push(snip(`_arg_${i}`, argType, origin));
         }
       }
 

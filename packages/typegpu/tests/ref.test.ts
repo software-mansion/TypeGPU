@@ -3,7 +3,7 @@ import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 import { asWgsl } from './utils/parseResolved.ts';
 
-describe('ref', () => {
+describe('d.ref', () => {
   it('fails when using a ref as an external', () => {
     const sup = d.ref(0);
 

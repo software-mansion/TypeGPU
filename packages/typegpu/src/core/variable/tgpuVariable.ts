@@ -1,5 +1,4 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import type { ref } from '../../data/ref.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { isNaturallyEphemeral } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
@@ -26,7 +25,7 @@ export type VariableScope = 'private' | 'workgroup';
 export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
   TDataType extends AnyData = AnyData,
-> extends TgpuNamable, ref<InferGPU<TDataType>> {
+> extends TgpuNamable {
   readonly [$gpuValueOf]: InferGPU<TDataType>;
   value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;

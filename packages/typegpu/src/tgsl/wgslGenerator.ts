@@ -174,6 +174,8 @@ ${this.ctx.pre}}`;
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
       varOrigin = 'constant-ref';
+    } else if (origin === 'argument' && !wgsl.isNaturallyEphemeral(dataType)) {
+      varOrigin = 'argument';
     } else if (!wgsl.isNaturallyEphemeral(dataType)) {
       varOrigin = isEphemeralOrigin(origin) ? 'function' : origin;
     } else if (origin === 'constant' && varType === 'const') {
@@ -291,11 +293,22 @@ ${this.ctx.pre}}`;
           );
         }
 
+        if (
+          rhsExpr.origin === 'argument' &&
+          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
+        ) {
+          throw new WgslTypeError(
+            `'${lhsStr} = ${rhsStr}' is invalid, because argument references cannot be assigned.\n-----\nTry '${lhsStr} = ${
+              this.ctx.resolve(rhsExpr.dataType).value
+            }(${rhsStr})' to copy the value instead.\n-----`,
+          );
+        }
+
         if (!isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
               this.ctx.resolve(rhsExpr.dataType).value
-            }(${rhsStr})' instead.\n-----`,
+            }(${rhsStr})' to copy the value instead.\n-----`,
           );
         }
       }
@@ -812,7 +825,10 @@ ${this.ctx.pre}else ${alternate}`;
 
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (!isEphemeralSnippet(eq)) {
+      if (
+        !isEphemeralSnippet(eq) ||
+        (eq.origin === 'argument' && !wgsl.isNaturallyEphemeral(dataType))
+      ) {
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;

@@ -161,8 +161,10 @@ export function derefSnippet(snippet: Snippet): Snippet {
   invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
 
   const innerType = snippet.dataType.inner;
-  // Dereferencing a pointer does not return a copy of the value, it's still a reference.
-  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
+  const origin =
+    isNaturallyEphemeral(innerType) && snippet.origin !== 'argument'
+      ? 'runtime'
+      : snippet.origin;
 
   if (snippet.value instanceof RefOperator) {
     return snip(stitch`${snippet.value.snippet}`, innerType, origin);
