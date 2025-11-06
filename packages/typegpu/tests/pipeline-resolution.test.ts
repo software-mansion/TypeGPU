@@ -2,6 +2,7 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
+import { asWgsl } from './utils/parseResolved.ts';
 
 describe('resolve', () => {
   const Boid = d.struct({
@@ -39,27 +40,27 @@ describe('resolve', () => {
       .withFragment(fragmentFn, { format: 'rgba8unorm' })
       .createPipeline();
 
-    expect(tgpu.resolve({ externals: { pipeline } })).toMatchInlineSnapshot(`
-      "struct Boid_1 {
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct Boid {
         position: vec2f,
         color: vec4f,
       }
 
-      struct vertexFn_Output_2 {
+      struct vertexFn_Output {
         @builtin(position) pos: vec4f,
         @location(0) color: vec4f,
       }
 
-      @vertex fn vertexFn_0() -> vertexFn_Output_2 {
-        var myBoid = Boid_1();
-        return vertexFn_Output_2(vec4f(myBoid.position, 0f, 1f), myBoid.color);
+      @vertex fn vertexFn() -> vertexFn_Output {
+        var myBoid = Boid();
+        return vertexFn_Output(vec4f(myBoid.position, 0f, 1f), myBoid.color);
       }
 
-      struct fragmentFn_Input_4 {
+      struct fragmentFn_Input {
         @location(0) color: vec4f,
       }
 
-      @fragment fn fragmentFn_3(input: fragmentFn_Input_4) -> @location(0) vec4f {
+      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
         return input.color;
       }"
     `);
@@ -70,18 +71,18 @@ describe('resolve', () => {
       .withCompute(computeFn)
       .createPipeline();
 
-    expect(tgpu.resolve({ externals: { pipeline } })).toMatchInlineSnapshot(`
-      "struct Boid_1 {
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct Boid {
         position: vec2f,
         color: vec4f,
       }
 
-      struct computeFn_Input_2 {
+      struct computeFn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn computeFn_0(_arg_0: computeFn_Input_2) {
-        var myBoid = Boid_1(vec2f(), vec4f(1, 0, 0, 1));
+      @compute @workgroup_size(1, 1, 1) fn computeFn(_arg_0: computeFn_Input) {
+        var myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
       }"
     `);
   });
@@ -95,28 +96,28 @@ describe('resolve', () => {
       });
     });
 
-    expect(tgpu.resolve({ externals: { pipeline: pipelineGuard.pipeline } }))
+    expect(asWgsl(pipelineGuard.pipeline))
       .toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+        "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-        struct Boid_3 {
+        struct Boid {
           position: vec2f,
           color: vec4f,
         }
 
-        fn wrappedCallback_2(x: u32, y: u32, z: u32) {
-          var myBoid = Boid_3(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
+        fn wrappedCallback(x: u32, y: u32, z: u32) {
+          var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
         }
 
-        struct mainCompute_Input_4 {
+        struct mainCompute_Input {
           @builtin(global_invocation_id) id: vec3u,
         }
 
-        @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_4)  {
-          if (any(in.id >= sizeUniform_1)) {
+        @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input)  {
+          if (any(in.id >= sizeUniform)) {
             return;
           }
-          wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+          wrappedCallback(in.id.x, in.id.y, in.id.z);
         }"
       `);
   });
@@ -131,10 +132,9 @@ describe('resolve', () => {
       .withCompute(computeFn)
       .createPipeline();
 
-    expect(() =>
-      tgpu.resolve({ externals: { renderPipeline, computePipeline } })
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Found 2 pipelines but can only resolve one at a time.]`,
-    );
+    expect(() => asWgsl(renderPipeline, computePipeline))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Found 2 pipelines but can only resolve one at a time.]`,
+      );
   });
 });

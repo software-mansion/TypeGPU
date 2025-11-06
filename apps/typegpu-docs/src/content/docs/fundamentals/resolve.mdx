@@ -90,7 +90,7 @@ import * as d from 'typegpu/data';
 // ---cut---
 const multiply = tgpu.fn([d.u32], d.u32)((n) => 2 * n);
 
-const resolved = tgpu.resolve({ externals: { multiply } });
+const resolved = tgpu.resolve([multiply]);
 
 console.log(resolved);
 // fn multiply_0(n: u32) ->  u32{

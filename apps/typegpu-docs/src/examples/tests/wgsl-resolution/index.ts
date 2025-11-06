@@ -169,9 +169,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 }).$name('compute shader');
 
 // WGSL resolution
-const resolved = tgpu.resolve({
-  externals: { mainVert, mainFrag, mainCompute },
-});
+const resolved = tgpu.resolve([mainVert, mainFrag, mainCompute]);
 
 (document.querySelector('.wgsl') as HTMLDivElement).innerText = resolved;
 

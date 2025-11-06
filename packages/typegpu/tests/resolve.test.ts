@@ -82,10 +82,7 @@ describe('tgpu resolve', () => {
     const fragment2 = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1));
 
-    const resolved = tgpu.resolve({
-      externals: { fragment1, fragment2 },
-      names: 'strict',
-    });
+    const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });
 
     expect(resolved).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> intensity: f32;

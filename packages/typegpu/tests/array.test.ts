@@ -265,7 +265,7 @@ describe('array', () => {
     });
 
     expect(
-      tgpu.resolve({ externals: { ...testLayout.bound }, names: 'strict' }),
+      asWgsl([Object.entries(testLayout.bound)]),
     ).toMatchInlineSnapshot(
       `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
     );
