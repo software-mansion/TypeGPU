@@ -130,3 +130,63 @@ Data type inference is the basis for generating signatures for functions just fr
 :::
 
 ### Origins
+
+Origins are enumerable values that describe where a value came from (or didn't come from). Used mainly for:
+- Determining if we're using a value that refers to something else (to create an implicit pointer). This mimics the behavior we
+  expect in JS, and doesn't perform unwanted copies on data. Example:
+  ```ts
+  const foo = () => {
+    'use gpu';
+    // The type of both expressions is `Boid`, yet one is a
+    // reference to an existing value, and the other is a
+    // value-type (ephemeral) and would disappear if we didn't
+    // assign it to a variable or use it.
+    const firstBoid = layout.$.boids[0];
+    const newBoid = Boid();
+    const boidPos = newBoid.pos;
+  };
+  ```
+  Generates:
+  ```wgsl
+  fn foo() {
+    let firstBoid = (&boids[0]); // typed as ptr<storage, Boid, read_write>
+    var newBoid = Boid(); // typed as Boid
+    let boidPos = (&newBoid.pos); // typed as ptr<function, vec3f>
+  }
+  ```
+- Detecting illegal uses of our APIs. One example is mutating a value that was passed in as an argument. Since we want the developer to have control over
+  passing something as value or as reference (pointer), we have to limit the dev's ability to mutate values that were passed in as arguments if they didn't
+  use refs (pointer instances). Otherwise, the generated WGSL won't act as we expect.
+  ```ts
+  const advance = (pos: d.v3f) => {
+    'use gpu';
+    pos.x += 1;
+  };
+
+  const main = () => {
+    'use gpu';
+    const pos = d.vec3f(0, 0, 0);
+    advance(pos);
+    // pos.x === 1 in JS
+  };
+  ```
+  Generates:
+  ```wgsl
+  fn advance(pos: vec3f) {
+    pos.x += 1;
+  }
+
+  fn main() {
+    let pos = vec3f(0, 0, 0);
+    advance(pos);
+    // pos.x === 0 in WGSL
+  }
+  ```
+
+There are essentially three types of origins:
+- **Ephemeral Origins**: These origins represent values that are created or derived from other values. They are typically used for creating new instances or
+  performing operations that produce new values. Examples include creating a new `Boid` instance or calculating a new position based on an existing one. These
+  include `'runtime'` and `'constant'`
+- **Referential Origins**: These origins represent references to existing values. They are typically used for accessing or modifying existing data. Examples
+  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` and `'constant-ref'`
+- **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.
