@@ -51,6 +51,35 @@ export interface TgpuResolveOptions {
   shaderGenerator?: ShaderGenerator | undefined;
 }
 
+export interface TgpuResolveWithoutTemplateOptions {
+  /**
+   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
+   *
+   * ## Namespaces
+   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
+   * custom namespace can be created with `tgpu.namespace` and passed in.
+   *
+   * This allows tracking the behavior of the resolution process, as well as
+   * sharing state between calls to `tgpu.resolve`.
+   *
+   * @default 'random'
+   */
+  names?: 'strict' | 'random' | Namespace | undefined;
+  /**
+   * A function to configure the resolution context.
+   */
+  config?: ((cfg: Configurable) => Configurable) | undefined;
+  /**
+   * List of WGSL shader extensions to enable.
+   */
+  enableExtensions?: WgslExtension[] | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
+}
+
 function resolveWithTemplate(options: TgpuResolveOptions): ResolutionResult {
   const {
     externals,
@@ -92,8 +121,42 @@ function resolveWithTemplate(options: TgpuResolveOptions): ResolutionResult {
   });
 }
 
-function resolveWithoutTemplate(items: unknown[]): ResolutionResult {
-  throw new Error('Not implemented yet!');
+function resolveWithoutTemplate(
+  items: unknown[],
+  options?: TgpuResolveWithoutTemplateOptions,
+): ResolutionResult {
+  const {
+    shaderGenerator,
+    names = 'random',
+    config,
+    enableExtensions,
+  } = options ?? {};
+
+  const resolutionObj: SelfResolvable = {
+    [$internal]: true,
+    [$resolve](ctx): ResolvedSnippet {
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
+      items.forEach((item) => ctx.resolve(item));
+      return snip('', Void);
+    },
+
+    toString: () => '<root>',
+  };
+
+  const pipelines = Object.values(items).filter(isPipeline);
+  if (pipelines.length > 1) {
+    throw new Error(
+      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
+    );
+  }
+
+  return resolveImpl(resolutionObj, {
+    namespace: typeof names === 'string' ? namespace({ names }) : names,
+    enableExtensions,
+    shaderGenerator,
+    config,
+    root: pipelines[0]?.[$internal].branch,
+  });
 }
 
 /**
@@ -134,14 +197,18 @@ function resolveWithoutTemplate(items: unknown[]): ResolutionResult {
 export function resolveWithContext(
   options: TgpuResolveOptions,
 ): ResolutionResult;
-export function resolveWithContext(items: unknown[]): ResolutionResult;
 export function resolveWithContext(
-  options: TgpuResolveOptions | unknown[],
+  items: unknown[],
+  options?: TgpuResolveWithoutTemplateOptions,
+): ResolutionResult;
+export function resolveWithContext(
+  arg0: TgpuResolveOptions | unknown[],
+  options?: TgpuResolveWithoutTemplateOptions,
 ): ResolutionResult {
-  if (Array.isArray(options)) {
-    return resolveWithoutTemplate(options);
+  if (Array.isArray(arg0)) {
+    return resolveWithoutTemplate(arg0, options);
   }
-  return resolveWithTemplate(options);
+  return resolveWithTemplate(arg0);
 }
 
 /**
@@ -180,10 +247,13 @@ export function resolveWithContext(
  * ```
  */
 export function resolve(options: TgpuResolveOptions): string;
-export function resolve(items: unknown[]): string;
-export function resolve(options: TgpuResolveOptions | unknown[]): string {
-  if (Array.isArray(options)) {
-    return resolveWithoutTemplate(options).code;
-  }
-  return resolveWithTemplate(options).code;
+export function resolve(
+  items: unknown[],
+  options?: TgpuResolveWithoutTemplateOptions,
+): string;
+export function resolve(
+  arg: TgpuResolveOptions | unknown[],
+  options?: TgpuResolveWithoutTemplateOptions,
+): string {
+  return resolveWithContext(arg as unknown as unknown[], options).code;
 }

@@ -568,3 +568,79 @@ describe('tgpu resolveWithContext', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });
+
+describe('resolve without template', () => {
+  it('resolves one item', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    expect(tgpu.resolve([Boid])).toMatchInlineSnapshot(`
+      "struct Boid_0 {
+        pos: vec2f,
+        vel: vec2f,
+      }"
+    `);
+  });
+
+  it('resolves items with dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Boid_1 {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn_0() -> Boid_1 {
+        return Boid_1(vec2f(1, 2), vec2f(3, 4));
+      }"
+    `);
+  });
+
+  it('resolves multiple items', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+    const Player = d.struct({ hp: d.u32, str: d.f32 });
+
+    expect(tgpu.resolve([Boid, Player])).toMatchInlineSnapshot(`
+      "struct Boid_0 {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      struct Player_1 {
+        hp: u32,
+        str: f32,
+      }"
+    `);
+  });
+
+  it('does not duplicate dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn1 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    const myFn2 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(10, 20), vel: d.vec2f(30, 40) });
+    });
+
+    expect(tgpu.resolve([myFn1, myFn2])).toMatchInlineSnapshot(`
+      "struct Boid_1 {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn1_0() -> Boid_1 {
+        return Boid_1(vec2f(1, 2), vec2f(3, 4));
+      }
+
+      fn myFn2_2() -> Boid_1 {
+        return Boid_1(vec2f(10, 20), vec2f(30, 40));
+      }"
+    `);
+  });
+});
