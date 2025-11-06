@@ -229,6 +229,12 @@ export function accessProp(
     return accessProp(derefed, propName);
   }
 
+  if (isVec(target.dataType)) {
+    if (propName === 'kind') {
+      return snip(target.dataType.type, UnknownData, 'constant');
+    }
+  }
+
   const propLength = propName.length;
   if (
     isVec(target.dataType) &&

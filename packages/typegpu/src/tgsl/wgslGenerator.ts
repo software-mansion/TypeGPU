@@ -26,7 +26,7 @@ import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import type { FnArgsConversionHint } from '../types.ts';
+import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -50,6 +50,8 @@ const { NodeTypeCatalog: NODE } = tinyest;
 const parenthesizedOps = [
   '==',
   '!=',
+  '===',
+  '!==',
   '<',
   '<=',
   '>',
@@ -68,7 +70,48 @@ const parenthesizedOps = [
   '||',
 ];
 
-const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
+const binaryLogicalOps = [
+  '&&',
+  '||',
+  '==',
+  '!=',
+  '===',
+  '!==',
+  '<',
+  '<=',
+  '>',
+  '>=',
+];
+
+const OP_MAP = {
+  //
+  // binary
+  //
+  '===': '==',
+  '!==': '!=',
+  get '>>>'(): never {
+    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
+  },
+  get in(): never {
+    throw new Error('The `in` operator is unsupported in TypeGPU functions.');
+  },
+  get instanceof(): never {
+    throw new Error(
+      'The `instanceof` operator is unsupported in TypeGPU functions.',
+    );
+  },
+  get '|>'(): never {
+    throw new Error('The `|>` operator is unsupported in TypeGPU functions.');
+  },
+  //
+  // logical
+  //
+  '||': '||',
+  '&&': '&&',
+  get '??'(): never {
+    throw new Error('The `??` operator is unsupported in TypeGPU functions.');
+  },
+} as Record<string, string>;
 
 type Operator =
   | tinyest.BinaryOperator
@@ -250,8 +293,24 @@ ${this.ctx.pre}}`;
         );
       }
 
+      if (op === '==') {
+        throw new Error('Please use the === operator instead of ==');
+      }
+
+      if (
+        op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)
+      ) {
+        return snip(
+          lhsExpr.value === rhsExpr.value,
+          bool,
+          /* ref */ 'constant',
+        );
+      }
+
       if (lhsExpr.dataType.type === 'unknown') {
-        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Left-hand side of '${op}' is of unknown type`,
+        );
       }
 
       if (rhsExpr.dataType.type === 'unknown') {
@@ -315,8 +374,8 @@ ${this.ctx.pre}}`;
 
       return snip(
         parenthesizedOps.includes(op)
-          ? `(${lhsStr} ${op} ${rhsStr})`
-          : `${lhsStr} ${op} ${rhsStr}`,
+          ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`
+          : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
         /* ref */ 'runtime',
@@ -670,7 +729,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* ref */ 'runtime'); // arbitrary ref
+      return snip(expression[1], UnknownData, /* origin */ 'constant');
     }
 
     if (expression[0] === NODE.preUpdate) {
