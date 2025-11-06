@@ -51,44 +51,7 @@ export interface TgpuResolveOptions {
   shaderGenerator?: ShaderGenerator | undefined;
 }
 
-/**
- * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
- * Any dependencies of the externals will also be resolved and included in the output.
- * @param options - The options for the resolution.
- *
- * @returns {ResolutionResult}
- *
- * @example
- * ```ts
- * const Gradient = d.struct({
- *   from: d.vec3f,
- *   to: d.vec3f,
- * });
- *
- * const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
- *   template: `
- *     fn getGradientAngle(gradient: Gradient) -> f32 {
- *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
- *     }
- *   `,
- *   externals: {
- *     Gradient,
- *   },
- * });
- *
- * console.log(code);
- * // struct Gradient_0 {
- * //   from: vec3f,
- * //   to: vec3f,
- * // }
- * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
- * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
- * // }
- * ```
- */
-export function resolveWithContext(
-  options: TgpuResolveOptions,
-): ResolutionResult {
+function resolveWithTemplate(options: TgpuResolveOptions): ResolutionResult {
   const {
     externals,
     shaderGenerator,
@@ -129,6 +92,58 @@ export function resolveWithContext(
   });
 }
 
+function resolveWithoutTemplate(items: unknown[]): ResolutionResult {
+  throw new Error('Not implemented yet!');
+}
+
+/**
+ * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
+ * Any dependencies of the externals will also be resolved and included in the output.
+ * @param options - The options for the resolution.
+ *
+ * @returns {ResolutionResult}
+ *
+ * @example
+ * ```ts
+ * const Gradient = d.struct({
+ *   from: d.vec3f,
+ *   to: d.vec3f,
+ * });
+ *
+ * const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+ *   template: `
+ *     fn getGradientAngle(gradient: Gradient) -> f32 {
+ *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ *     }
+ *   `,
+ *   externals: {
+ *     Gradient,
+ *   },
+ * });
+ *
+ * console.log(code);
+ * // struct Gradient_0 {
+ * //   from: vec3f,
+ * //   to: vec3f,
+ * // }
+ * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
+ * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ * // }
+ * ```
+ */
+export function resolveWithContext(
+  options: TgpuResolveOptions,
+): ResolutionResult;
+export function resolveWithContext(items: unknown[]): ResolutionResult;
+export function resolveWithContext(
+  options: TgpuResolveOptions | unknown[],
+): ResolutionResult {
+  if (Array.isArray(options)) {
+    return resolveWithoutTemplate(options);
+  }
+  return resolveWithTemplate(options);
+}
+
 /**
  * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
  * Any dependencies of the externals will also be resolved and included in the output.
@@ -164,6 +179,11 @@ export function resolveWithContext(
  * // }
  * ```
  */
-export function resolve(options: TgpuResolveOptions): string {
-  return resolveWithContext(options).code;
+export function resolve(options: TgpuResolveOptions): string;
+export function resolve(items: unknown[]): string;
+export function resolve(options: TgpuResolveOptions | unknown[]): string {
+  if (Array.isArray(options)) {
+    return resolveWithoutTemplate(options).code;
+  }
+  return resolveWithTemplate(options).code;
 }
