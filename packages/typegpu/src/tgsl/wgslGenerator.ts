@@ -312,17 +312,11 @@ ${this.ctx.pre}}`;
       if (
         op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)
       ) {
-        return snip(
-          lhsExpr.value === rhsExpr.value,
-          bool,
-          /* ref */ 'constant',
-        );
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
       }
 
       if (lhsExpr.dataType.type === 'unknown') {
-        throw new WgslTypeError(
-          `Left-hand side of '${op}' is of unknown type`,
-        );
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
       if (rhsExpr.dataType.type === 'unknown') {
