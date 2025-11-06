@@ -3,7 +3,11 @@ import { OBJLoader } from '@loaders.gl/obj';
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { sphereTextureNames } from './enums.ts';
-import { CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
+import {
+  type CelestialBody,
+  renderVertexLayout,
+  SkyBoxVertex,
+} from './schemas.ts';
 
 function vert(
   position: [number, number, number],

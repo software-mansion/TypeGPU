@@ -10,7 +10,7 @@ import {
   type I32,
   isMat,
   isVec,
-  Ptr,
+  type Ptr,
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
@@ -186,16 +186,15 @@ function findBestType(
   if (!bestResult) {
     return undefined;
   }
-  const actions: ConversionResultAction[] = bestResult.details.map((
-    detail,
-    index,
-  ) => ({
-    sourceIndex: index,
-    action: detail.action,
-    ...(detail.action === 'cast' && {
-      targetType: detail.targetType as U32 | F32 | I32 | F16,
+  const actions: ConversionResultAction[] = bestResult.details.map(
+    (detail, index) => ({
+      sourceIndex: index,
+      action: detail.action,
+      ...(detail.action === 'cast' && {
+        targetType: detail.targetType as U32 | F32 | I32 | F16,
+      }),
     }),
-  }));
+  );
 
   return {
     targetType: bestResult.type,

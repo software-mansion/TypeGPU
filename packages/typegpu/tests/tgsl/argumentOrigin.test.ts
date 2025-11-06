@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
-import { it } from '../utils/extendedIt';
-import { asWgsl } from '../utils/parseResolved';
+import { it } from '../utils/extendedIt.ts';
+import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('function argument origin tracking', () => {
   it('should allow mutation of primitive arguments', () => {

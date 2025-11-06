@@ -1,5 +1,9 @@
 import { $internal } from '../shared/symbols.ts';
-import { Origin, OriginToPtrParams, originToPtrParams } from './snippet.ts';
+import {
+  type Origin,
+  type OriginToPtrParams,
+  originToPtrParams,
+} from './snippet.ts';
 import type { Access, AddressSpace, Ptr, StorableData } from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(
