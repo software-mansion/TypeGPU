@@ -49,13 +49,13 @@ export const pointersTest = tgpu.fn([], d.bool)(() => {
   s = s && std.allEq(myStruct.$.vec, d.vec2f(1, 0));
 
   // private pointers
-  modifyNumPrivate(privateNum);
+  modifyNumPrivate(d.ref(privateNum.$));
   s = s && (privateNum.$ === 1);
 
-  modifyVecPrivate(privateVec);
+  modifyVecPrivate(d.ref(privateVec.$));
   s = s && std.allEq(privateVec.$, d.vec2f(1, 0));
 
-  modifyStructPrivate(privateStruct);
+  modifyStructPrivate(d.ref(privateStruct.$));
   s = s && std.allEq(privateStruct.$.vec, d.vec2f(1, 0));
 
   return s;
