@@ -143,6 +143,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
     // assign it to a variable or use it.
     const firstBoid = layout.$.boids[0];
     const newBoid = Boid();
+
     const boidPos = newBoid.pos;
   };
   ```
@@ -151,6 +152,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
   fn foo() {
     let firstBoid = (&boids[0]); // typed as ptr<storage, Boid, read_write>
     var newBoid = Boid(); // typed as Boid
+
     let boidPos = (&newBoid.pos); // typed as ptr<function, vec3f>
   }
   ```
@@ -160,6 +162,11 @@ Origins are enumerable values that describe where a value came from (or didn't c
   ```ts
   const advance = (pos: d.v3f) => {
     'use gpu';
+    // `pos` has the origin 'argument'. Property accesses on arguments
+    // return snippets that also have the origin 'argument'.
+    //
+    // If we try to mutate a snippet that has the origin 'argument',
+    // we'll get a resolution error.
     pos.x += 1;
   };
 
@@ -186,7 +193,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
 There are essentially three types of origins:
 - **Ephemeral Origins**: These origins represent values that are created or derived from other values. They are typically used for creating new instances or
   performing operations that produce new values. Examples include creating a new `Boid` instance or calculating a new position based on an existing one. These
-  include `'runtime'` and `'constant'`
+  include `'runtime'` and `'constant'`.
 - **Referential Origins**: These origins represent references to existing values. They are typically used for accessing or modifying existing data. Examples
-  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` and `'constant-ref'`
+  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` and `'constant-ref'`.
 - **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.
