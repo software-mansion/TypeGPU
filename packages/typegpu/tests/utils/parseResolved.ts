@@ -5,7 +5,7 @@ import type { AnyData } from '../../src/data/index.ts';
 import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { provideCtx } from '../../src/execMode.ts';
-import { CodegenState, type Wgsl } from '../../src/types.ts';
+import { CodegenState } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
@@ -14,13 +14,7 @@ import { namespace } from '../../src/core/resolve/namespace.ts';
  * Just a shorthand for tgpu.resolve
  */
 export function asWgsl(...values: unknown[]): string {
-  return tgpu.resolve({
-    // Arrays are objects with numeric keys if you thing about it hard enough
-    externals: Object.fromEntries(
-      values.map((v, i) => [`item_${i}`, v as Wgsl]),
-    ),
-    names: 'strict',
-  });
+  return tgpu.resolve(values, { names: 'strict' });
 }
 
 export function expectDataTypeOf(

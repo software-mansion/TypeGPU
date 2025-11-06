@@ -643,4 +643,14 @@ describe('resolve without template', () => {
       }"
     `);
   });
+
+  it('resolves unnamed items', () => {
+    expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })]))
+      .toMatchInlineSnapshot(`
+        "struct item_0 {
+          pos: vec2f,
+          vel: vec2f,
+        }"
+      `);
+  });
 });
