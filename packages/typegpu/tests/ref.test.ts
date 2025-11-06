@@ -4,8 +4,20 @@ import { it } from './utils/extendedIt.ts';
 import { asWgsl } from './utils/parseResolved.ts';
 
 describe('ref', () => {
-  it.skip('fails when created outside of a TypeGPU function', () => {
-    expect(() => d.ref(0)).toThrowErrorMatchingInlineSnapshot();
+  it('fails when using a ref as an external', () => {
+    const sup = d.ref(0);
+
+    const foo = () => {
+      'use gpu';
+      sup.$ += 1;
+    };
+
+    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): Cannot use refs (d.ref(...)) from the outer scope.]
+    `);
   });
 
   it('creates a regular looking variable in WGSL', () => {

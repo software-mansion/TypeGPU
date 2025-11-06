@@ -2,7 +2,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { invariant } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
-import { $internal, $isRef, $ownSnippet, $resolve } from '../shared/symbols.ts';
+import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import type { DualFn } from './dualFn.ts';
@@ -19,9 +19,15 @@ import {
 // Public API
 // ----------
 
+/**
+ * A reference to a value `T`. Can be passed to other functions to give them
+ * mutable access to the underlying value.
+ *
+ * Conceptually, it represents a WGSL pointer.
+ */
 export interface ref<T> {
   readonly [$internal]: unknown;
-  readonly [$isRef]: true;
+  readonly type: 'ref';
 
   /**
    * Derefences the reference, and gives access to the underlying value.
@@ -38,7 +44,6 @@ export interface ref<T> {
   $: T;
 }
 
-// TODO: Restrict calls to this function only from within TypeGPU functions
 export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   const gpuImpl = (value: Snippet) => {
     /**
@@ -84,19 +89,23 @@ export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
   return impl as unknown as DualFn<<T>(value: T) => ref<T>>;
 })();
 
+export function isRef<T>(value: unknown | ref<T>): value is ref<T> {
+  return value instanceof refImpl;
+}
+
 // --------------
 // Implementation
 // --------------
 
 class refImpl<T> implements ref<T> {
-  #value: T;
   readonly [$internal]: true;
-  readonly [$isRef]: true;
+  readonly type: 'ref';
+  #value: T;
 
   constructor(value: T) {
-    this.#value = value;
     this[$internal] = true;
-    this[$isRef] = true;
+    this.type = 'ref';
+    this.#value = value;
   }
 
   get $(): T {

@@ -10,7 +10,6 @@ import type { InferGPU } from '../../shared/repr.ts';
 import {
   $gpuValueOf,
   $internal,
-  $isRef,
   $ownSnippet,
   $resolve,
 } from '../../shared/symbols.ts';
@@ -78,7 +77,6 @@ export function isVariable<T extends TgpuVar>(
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   readonly [$internal] = {};
-  readonly [$isRef]: true;
   readonly #scope: TScope;
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
@@ -88,7 +86,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     dataType: TDataType,
     initialValue?: InferGPU<TDataType> | undefined,
   ) {
-    this[$isRef] = true;
     this.#scope = scope;
     this.#dataType = dataType;
     this.#initialValue = initialValue;

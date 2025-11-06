@@ -186,6 +186,32 @@ describe('shellless', () => {
     `);
   });
 
+  it('generates private pointer params when passing a private variable ref to a function', ({ root }) => {
+    const foo = tgpu.privateVar(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(d.ref(foo.$));
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn sumComponents(vec: ptr<private, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
+      }
+
+      var<private> foo: vec3f;
+
+      fn main() {
+        sumComponents((&foo));
+      }"
+    `);
+  });
+
   it('generates uniform pointer params when passing a fixed uniform ref to a function', ({ root }) => {
     const posUniform = root.createUniform(d.vec3f);
 

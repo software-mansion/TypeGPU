@@ -69,16 +69,6 @@ export const $invalidSchemaReason = Symbol(
   `typegpu:${version}:$invalidSchemaReason`,
 );
 
-/**
- * A symbol that identifies objects that act as references
- * (values returned from d.ref(), buffer usages, ...)
- */
-export const $isRef = Symbol(`typegpu:${version}:$isRef`);
-
-export function isRef(value: unknown): value is { [$isRef]: true } {
-  return !!(value as { [$isRef]: true })?.[$isRef];
-}
-
 export function isMarkedInternal(
   value: unknown,
 ): value is { [$internal]: Record<string, unknown> | true } {

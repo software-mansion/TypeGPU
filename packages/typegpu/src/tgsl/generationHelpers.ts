@@ -62,7 +62,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { $internal } from '../shared/symbols.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { derefSnippet } from '../data/ref.ts';
+import { derefSnippet, isRef } from '../data/ref.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -426,6 +426,10 @@ export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
     return value;
+  }
+
+  if (isRef(value)) {
+    throw new Error('Cannot use refs (d.ref(...)) from the outer scope.');
   }
 
   // Maybe the value can tell us what snippet it is
