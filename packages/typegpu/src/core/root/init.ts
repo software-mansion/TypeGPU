@@ -186,6 +186,14 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
       workgroupCount.z,
     );
   }
+
+  get pipeline() {
+    return this.#pipeline;
+  }
+
+  get sizeUniform() {
+    return this.#sizeUniform;
+  }
 }
 
 class WithBindingImpl implements WithBinding {
