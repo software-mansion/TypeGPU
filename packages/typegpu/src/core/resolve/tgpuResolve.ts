@@ -15,6 +15,35 @@ import { Void } from '../../data/wgslTypes.ts';
 
 export interface TgpuResolveOptions {
   /**
+   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
+   *
+   * ## Namespaces
+   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
+   * custom namespace can be created with `tgpu.namespace` and passed in.
+   *
+   * This allows tracking the behavior of the resolution process, as well as
+   * sharing state between calls to `tgpu.resolve`.
+   *
+   * @default 'random'
+   */
+  names?: 'strict' | 'random' | Namespace | undefined;
+  /**
+   * A function to configure the resolution context.
+   */
+  config?: ((cfg: Configurable) => Configurable) | undefined;
+  /**
+   * List of WGSL shader extensions to enable.
+   */
+  enableExtensions?: WgslExtension[] | undefined;
+  /**
+   * A custom shader code generator, used when resolving TGSL.
+   * If not provided, the default WGSL generator will be used.
+   */
+  shaderGenerator?: ShaderGenerator | undefined;
+}
+
+export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
+  /**
    * Map of external names to their resolvable values.
    */
   externals: Record<string, Wgsl | object>;
@@ -23,64 +52,11 @@ export interface TgpuResolveOptions {
    * @default ''
    */
   template?: string | undefined;
-  /**
-   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
-   *
-   * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
-   *
-   * This allows tracking the behavior of the resolution process, as well as
-   * sharing state between calls to `tgpu.resolve`.
-   *
-   * @default 'random'
-   */
-  names?: 'strict' | 'random' | Namespace | undefined;
-  /**
-   * A function to configure the resolution context.
-   */
-  config?: ((cfg: Configurable) => Configurable) | undefined;
-  /**
-   * List of WGSL shader extensions to enable.
-   */
-  enableExtensions?: WgslExtension[] | undefined;
-  /**
-   * A custom shader code generator, used when resolving TGSL.
-   * If not provided, the default WGSL generator will be used.
-   */
-  shaderGenerator?: ShaderGenerator | undefined;
 }
 
-export interface TgpuResolveWithoutTemplateOptions {
-  /**
-   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
-   *
-   * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
-   *
-   * This allows tracking the behavior of the resolution process, as well as
-   * sharing state between calls to `tgpu.resolve`.
-   *
-   * @default 'random'
-   */
-  names?: 'strict' | 'random' | Namespace | undefined;
-  /**
-   * A function to configure the resolution context.
-   */
-  config?: ((cfg: Configurable) => Configurable) | undefined;
-  /**
-   * List of WGSL shader extensions to enable.
-   */
-  enableExtensions?: WgslExtension[] | undefined;
-  /**
-   * A custom shader code generator, used when resolving TGSL.
-   * If not provided, the default WGSL generator will be used.
-   */
-  shaderGenerator?: ShaderGenerator | undefined;
-}
-
-function resolveWithTemplate(options: TgpuResolveOptions): ResolutionResult {
+function resolveWithTemplate(
+  options: TgpuExtendedResolveOptions,
+): ResolutionResult {
   const {
     externals,
     shaderGenerator,
@@ -123,7 +99,7 @@ function resolveWithTemplate(options: TgpuResolveOptions): ResolutionResult {
 
 function resolveWithoutTemplate(
   items: unknown[],
-  options?: TgpuResolveWithoutTemplateOptions,
+  options?: TgpuResolveOptions,
 ): ResolutionResult {
   const {
     shaderGenerator,
@@ -195,15 +171,15 @@ function resolveWithoutTemplate(
  * ```
  */
 export function resolveWithContext(
-  options: TgpuResolveOptions,
+  options: TgpuExtendedResolveOptions,
 ): ResolutionResult;
 export function resolveWithContext(
   items: unknown[],
-  options?: TgpuResolveWithoutTemplateOptions,
+  options?: TgpuResolveOptions,
 ): ResolutionResult;
 export function resolveWithContext(
-  arg0: TgpuResolveOptions | unknown[],
-  options?: TgpuResolveWithoutTemplateOptions,
+  arg0: TgpuExtendedResolveOptions | unknown[],
+  options?: TgpuResolveOptions,
 ): ResolutionResult {
   if (Array.isArray(arg0)) {
     return resolveWithoutTemplate(arg0, options);
@@ -246,14 +222,14 @@ export function resolveWithContext(
  * // }
  * ```
  */
-export function resolve(options: TgpuResolveOptions): string;
+export function resolve(options: TgpuExtendedResolveOptions): string;
 export function resolve(
   items: unknown[],
-  options?: TgpuResolveWithoutTemplateOptions,
+  options?: TgpuResolveOptions,
 ): string;
 export function resolve(
-  arg: TgpuResolveOptions | unknown[],
-  options?: TgpuResolveWithoutTemplateOptions,
+  arg: TgpuExtendedResolveOptions | unknown[],
+  options?: TgpuResolveOptions,
 ): string {
   return resolveWithContext(arg as unknown as unknown[], options).code;
 }
