@@ -1,7 +1,7 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -73,7 +73,7 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
-    "@ark/attest": "^0.49.0",
+    "@ark/attest": "^0.53.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",

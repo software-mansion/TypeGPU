@@ -75,7 +75,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(321);
+        log1_3(321u);
       }
 
       struct mainCompute_Input_12 {
@@ -139,7 +139,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(1, vec3u(2, 3, 4), 5, 6);
+        log1_3(1i, vec3u(2, 3, 4), 5i, 6i);
       }
 
       struct mainCompute_Input_13 {
@@ -196,7 +196,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(2, 3, 5);
+        log1_3(2i, 3i, 5i);
       }
 
       struct mainCompute_Input_12 {
@@ -797,15 +797,15 @@ describe('console log example', () => {
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1_3();
-        log2_10(3.140000104904175);
+        log2_10(3.140000104904175f);
         log3_14(i32(-2000000000));
-        log4_17(3000000000);
+        log4_17(3000000000u);
         log5_20(true);
         log6_23();
         log7_25();
-        log8_27(vec2f(1.1, -2.2));
-        log9_30(vec3f(10.1, -20.2, 30.3));
-        log10_33(vec4f(100.1, -200.2, 300.3, -400.4));
+        log8_27(vec2f(1.1f, -2.2));
+        log9_30(vec3f(10.1f, -20.2, 30.3f));
+        log10_33(vec4f(100.1f, -200.2, 300.3f, -400.4));
         log11_36();
         log12_38(vec2i(-1, -2));
         log13_41(vec3i(-1, -2, -3));
@@ -989,13 +989,13 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        var simpleStruct = SimpleStruct_3(vec3u(1, 2, 3), 4);
+        var simpleStruct = SimpleStruct_3(vec3u(1, 2, 3), 4u);
         log1_4(simpleStruct);
         var complexStruct = ComplexStruct_16(simpleStruct, true);
         log2_17(complexStruct);
-        var simpleArray = array<u32, 2>(1, 2);
+        var simpleArray = array<u32, 2>(1u, 2u);
         log3_24(simpleArray);
-        var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3, 4), array<u32, 2>(5, 6), array<u32, 2>(7, 8));
+        var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3u, 4u), array<u32, 2>(5u, 6u), array<u32, 2>(7u, 8u));
         log4_27(complexArray);
       }
 
@@ -1228,7 +1228,7 @@ describe('console log example', () => {
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         for (var i = 0u; (i < logCountUniform_3); i++) {
-          log1_4((i + 1), logCountUniform_3);
+          log1_4((i + 1u), logCountUniform_3);
         }
       }
 
@@ -1319,7 +1319,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(987, 1.26, vec4f(1, 2, 3, 4));
+        log1_3(987i, 1.26f, vec4f(1, 2, 3, 4));
         log2_14(vec3f(1, 2, 3), vec3f(1, 2, 3));
       }
 
@@ -1467,11 +1467,11 @@ describe('console log example', () => {
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1_3();
         log2_10();
-        log3_12(1);
-        log4_16(2);
-        log5_18(3);
-        log6_20(4);
-        log7_22(5);
+        log3_12(1i);
+        log4_16(2i);
+        log5_18(3i);
+        log6_20(4i);
+        log7_22(5i);
       }
 
       struct mainCompute_Input_24 {
@@ -1494,8 +1494,8 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer_5: atomic<u32>;
@@ -1555,8 +1555,8 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer_5: atomic<u32>;
