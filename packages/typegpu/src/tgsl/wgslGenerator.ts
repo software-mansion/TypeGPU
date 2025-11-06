@@ -111,6 +111,18 @@ const OP_MAP = {
   get '??'(): never {
     throw new Error('The `??` operator is unsupported in TypeGPU functions.');
   },
+  //
+  // assignment
+  //
+  get '>>>='(): never {
+    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
+  },
+  get '**='(): never {
+    throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
+  },
+  get '??='(): never {
+    throw new Error('The `??=` operator is unsupported in TypeGPU functions.');
+  },
 } as Record<string, string>;
 
 type Operator =

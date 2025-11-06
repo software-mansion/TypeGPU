@@ -230,6 +230,7 @@ export function accessProp(
   }
 
   if (isVec(target.dataType)) {
+    // Example: d.vec3f().kind === 'vec3f'
     if (propName === 'kind') {
       return snip(target.dataType.type, UnknownData, 'constant');
     }

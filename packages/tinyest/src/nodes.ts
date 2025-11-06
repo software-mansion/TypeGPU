@@ -160,7 +160,9 @@ export type AssignmentOperator =
   | '&='
   | '**='
   | '||='
-  | '&&=';
+  | '&&='
+  | '>>>='
+  | '??=';
 
 export type AssignmentExpression = readonly [
   type: NodeTypeCatalog['assignmentExpr'],
