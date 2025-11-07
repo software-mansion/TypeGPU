@@ -95,9 +95,6 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
-    // Why not a ref?
-    // 1. On the WGSL side, we cannot take pointers to constants.
-    // 2. On the JS side, we copy the constant each time we access it, so we're safe.
     return snip(
       id,
       this.dataType,
