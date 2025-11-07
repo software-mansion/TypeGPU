@@ -702,7 +702,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   resolve(
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
-    exact = false,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
@@ -719,7 +718,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema, exact),
+        () => this.resolve(item[$providing].inner, schema),
       );
     }
 
@@ -743,41 +742,34 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      const reinterpretedType = exact
-        ? schema
-        : numericLiteralToSnippet(item).dataType;
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
-      invariant(
-        reinterpretedType,
-        'Schema has to be defined for resolving numbers',
-      );
       invariant(
         realSchema.type !== 'unknown',
         'Schema has to be known for resolving numbers',
       );
 
-      if (reinterpretedType.type === 'abstractInt') {
+      if (realSchema.type === 'abstractInt') {
         return snip(`${item}`, realSchema);
       }
-      if (reinterpretedType.type === 'u32') {
+      if (realSchema.type === 'u32') {
         return snip(`${item}u`, realSchema);
       }
-      if (reinterpretedType.type === 'i32') {
+      if (realSchema.type === 'i32') {
         return snip(`${item}i`, realSchema);
       }
 
       const exp = item.toExponential();
       const decimal =
-        reinterpretedType.type === 'abstractFloat' && Number.isInteger(item)
+        realSchema.type === 'abstractFloat' && Number.isInteger(item)
           ? `${item}.`
           : `${item}`;
 
       // Just picking the shorter one
       const base = exp.length < decimal.length ? exp : decimal;
-      if (reinterpretedType.type === 'f32') {
+      if (realSchema.type === 'f32') {
         return snip(`${base}f`, realSchema);
       }
-      if (reinterpretedType.type === 'f16') {
+      if (realSchema.type === 'f16') {
         return snip(`${base}h`, realSchema);
       }
       return snip(base, realSchema);

@@ -46,6 +46,14 @@ export function setupCommonMocks() {
   });
 }
 
+export function mockFonts() {
+  Object.defineProperty(document, 'fonts', {
+    value: {
+      load: vi.fn().mockResolvedValue([{}, {}]),
+    },
+  });
+}
+
 export function mockResizeObserver() {
   vi.stubGlobal(
     'ResizeObserver',

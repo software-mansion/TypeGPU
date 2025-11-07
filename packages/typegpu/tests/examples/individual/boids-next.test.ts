@@ -64,10 +64,10 @@ describe('boids next example', () => {
             cohesionCount++;
           }
         }
-        if ((alignmentCount > 0)) {
+        if ((alignmentCount > 0i)) {
           alignment = ((1f / f32(alignmentCount)) * alignment);
         }
-        if ((cohesionCount > 0)) {
+        if ((cohesionCount > 0i)) {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
           cohesion = (cohesion - instanceInfo.position);
         }
@@ -75,18 +75,18 @@ describe('boids next example', () => {
         velocity = (velocity + (paramsBuffer_5.alignmentStrength * alignment));
         velocity = (velocity + (paramsBuffer_5.cohesionStrength * cohesion));
         instanceInfo.velocity = (instanceInfo.velocity + velocity);
-        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
-        if ((instanceInfo.position.x > 1.03)) {
+        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0f, 0.01f) * normalize(instanceInfo.velocity));
+        if ((instanceInfo.position.x > 1.03f)) {
           instanceInfo.position.x = (-1 - 0.03);
         }
-        if ((instanceInfo.position.y > 1.03)) {
+        if ((instanceInfo.position.y > 1.03f)) {
           instanceInfo.position.y = (-1 - 0.03);
         }
         if ((instanceInfo.position.x < (-1 - 0.03))) {
-          instanceInfo.position.x = 1.03;
+          instanceInfo.position.x = 1.03f;
         }
         if ((instanceInfo.position.y < (-1 - 0.03))) {
-          instanceInfo.position.y = 1.03;
+          instanceInfo.position.y = 1.03f;
         }
         instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
         nextTrianglePos_7[index] = instanceInfo;
@@ -129,8 +129,8 @@ describe('boids next example', () => {
       @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
         var angle = getRotationFromVelocity_1(input.velocity);
         var rotated = rotate_2(input.v, angle);
-        var pos = vec4f((rotated + input.center), 0, 1);
-        var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1);
+        var pos = vec4f((rotated + input.center), 0f, 1f);
+        var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1f);
         return mainVert_Output_4(pos, color);
       }
 
