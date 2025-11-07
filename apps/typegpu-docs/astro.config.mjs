@@ -132,11 +132,6 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
-              label: 'TGSL',
-              slug: 'fundamentals/tgsl',
-              badge: { text: 'new' },
-            },
-            {
               label: 'Pipelines',
               slug: 'fundamentals/pipelines',
               badge: { text: 'new' },
@@ -144,6 +139,11 @@ export default defineConfig({
             {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
+            },
+            {
+              label: 'Textures',
+              slug: 'fundamentals/textures',
+              badge: { text: 'new' },
             },
             {
               label: 'Variables',

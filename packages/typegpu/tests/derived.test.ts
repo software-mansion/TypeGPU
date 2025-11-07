@@ -48,11 +48,11 @@ describe('TgpuDerived', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
-        return 4;
+        return 4f;
       }
 
       fn getDouble_1() -> f32 {
-        return 8;
+        return 8f;
       }
 
       fn main() {
@@ -102,9 +102,9 @@ describe('TgpuDerived', () => {
       }
 
       fn main() {
-        fill(array<f32, 1>(1));
-        fill_1(array<f32, 2>(1, 2));
-        fill_2(array<f32, 3>(1, 2, 3));
+        fill(array<f32, 1>(1f));
+        fill_1(array<f32, 2>(1f, 2f));
+        fill_2(array<f32, 3>(1f, 2f, 3f));
       }"
     `);
   });
@@ -180,11 +180,11 @@ describe('TgpuDerived', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn innerFn() -> f32 {
-        return 1;
+        return 1f;
       }
 
       fn innerFn_1() -> f32 {
-        return 2;
+        return 2f;
       }
 
       fn main() {

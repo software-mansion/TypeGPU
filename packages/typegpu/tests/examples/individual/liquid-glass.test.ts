@@ -50,19 +50,20 @@ describe('liquid-glass example', () => {
       }
             
 
-      struct fullScreenTriangle_Output_1 {
+      struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> mousePosUniform_4: vec2f;
@@ -85,7 +86,7 @@ describe('liquid-glass example', () => {
 
       fn sdRoundedBox2d_7(p: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
         var d = ((abs(p) - size) + vec2f(cornerRadius));
-        return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0)) - cornerRadius);
+        return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
       @group(0) @binding(2) var sampledView_8: texture_2d<f32>;
@@ -97,9 +98,9 @@ describe('liquid-glass example', () => {
       }
 
       fn calculateWeights_9(sdfDist: f32, start: f32, end: f32, featherUV: f32) -> Weights_10 {
-        var inside = (1 - smoothstep((start - featherUV), (start + featherUV), sdfDist));
+        var inside = (1f - smoothstep((start - featherUV), (start + featherUV), sdfDist));
         var outside = smoothstep((end - featherUV), (end + featherUV), sdfDist);
-        var ring = max(0, ((1 - inside) - outside));
+        var ring = max(0f, ((1f - inside) - outside));
         return Weights_10(inside, ring, outside);
       }
 
@@ -107,8 +108,8 @@ describe('liquid-glass example', () => {
 
       fn sampleWithChromaticAberration_12(tex: texture_2d<f32>, sampler2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
-        for (var i = 0; (i < 3); i++) {
-          var channelOffset = (dir * ((f32(i) - 1) * offset));
+        for (var i = 0; (i < 3i); i++) {
+          var channelOffset = (dir * ((f32(i) - 1f) * offset));
           samples[i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).xyz;
         }
         return vec3f(samples[0].x, samples[1].y, samples[2].z);
@@ -120,7 +121,7 @@ describe('liquid-glass example', () => {
       }
 
       fn applyTint_14(color: vec3f, tint: TintParams_13) -> vec4f {
-        return mix(vec4f(color, 1), vec4f(tint.color, 1), tint.strength);
+        return mix(vec4f(color, 1f), vec4f(tint.color, 1f), tint.strength);
       }
 
       struct fragmentShader_Input_15 {

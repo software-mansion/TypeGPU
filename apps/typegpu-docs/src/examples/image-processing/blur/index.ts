@@ -4,6 +4,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -65,7 +66,7 @@ const ioLayout = tgpu.bindGroupLayout({
   outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
 });
 
-const tileData = tgpu['~unstable'].workgroupVar(
+const tileData = tgpu.workgroupVar(
   d.arrayOf(d.arrayOf(d.vec3f, 128), 4),
 );
 
@@ -127,19 +128,6 @@ const computeFn = tgpu['~unstable'].computeFn({
   }
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 const renderFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -191,7 +179,7 @@ function render() {
 
   for (const i of indices) {
     computePipeline
-      .with(ioLayout, ioBindGroups[i])
+      .with(ioBindGroups[i])
       .dispatchWorkgroups(
         Math.ceil(srcWidth / settings.blockDim),
         Math.ceil(srcHeight / 4),
@@ -203,7 +191,6 @@ function render() {
     loadOp: 'clear',
     storeOp: 'store',
   }).draw(3);
-  root['~unstable'].flush();
 }
 render();
 

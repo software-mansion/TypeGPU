@@ -551,7 +551,7 @@ describe('TgpuComputePipeline', () => {
           a[0] = f16(_arg_0.gid.x);
         }
         {
-          a[1] = 1;
+          a[1] = 1h;
         }
 
       }"

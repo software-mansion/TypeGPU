@@ -202,7 +202,7 @@ describe('indents', () => {
       "@group(0) @binding(2) var<storage, read> counter_2: u32;
 
       fn incrementCounter_1() {
-        counter_2 += 1;
+        counter_2 += 1u;
       }
 
       struct PhysicsData_6 {
@@ -274,7 +274,7 @@ describe('indents', () => {
       }
 
       fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
-        if ((particle.velocity.x > 0)) {
+        if ((particle.velocity.x > 0f)) {
           particle.position = (particle.position + particle.velocity);
         }
         else {
@@ -315,10 +315,10 @@ describe('indents', () => {
 
       fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
         var iterations = 0;
-        while ((iterations < 10)) {
+        while ((iterations < 10i)) {
           particle.position = (particle.position + particle.velocity);
-          iterations += 1;
-          while ((particle.position.x < 0)) {
+          iterations += 1i;
+          while ((particle.position.x < 0f)) {
             particle.position = (particle.position + gravity);
           }
         }
@@ -412,16 +412,16 @@ describe('indents', () => {
 
       @vertex fn someVertex_0(input: someVertex_Input_7) -> someVertex_Output_6 {
         var uniBoid = boids_1;
-        for (var i = 0u; (i < -1); i++) {
+        for (var i = 0u; (i < -1u); i++) {
           var sampled = textureSample(sampled_3, sampler_4, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender_5, vec2i(), 0);
-          if (((someVal.x + sampled.x) > 0.5)) {
+          if (((someVal.x + sampled.x) > 0.5f)) {
             var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
           }
           else {
             while (true) {
               var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
-              if ((newPos.x > 0)) {
+              if ((newPos.x > 0f)) {
                 var evenNewer = (newPos + input.position);
               }
             }

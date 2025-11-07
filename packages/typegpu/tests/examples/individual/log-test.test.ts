@@ -23,11 +23,13 @@ describe('console log example', () => {
         'Two threads',
         '100 dispatches',
         'Varying size logs',
+        'String interpolation',
+        'Different log functionalities',
         'Render pipeline',
         'Draw indexed',
         'Too many logs',
       ],
-      expectedCalls: 12,
+      expectedCalls: 14,
     }, device);
 
     // the resolution variant for when 'shader-f16' is not enabled
@@ -73,7 +75,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(321);
+        log1_3(321u);
       }
 
       struct mainCompute_Input_12 {
@@ -137,7 +139,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(1, vec3u(2, 3, 4), 5, 6);
+        log1_3(1i, vec3u(2, 3, 4), 5i, 6i);
       }
 
       struct mainCompute_Input_13 {
@@ -194,7 +196,7 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        log1_3(2, 3, 5);
+        log1_3(2i, 3i, 5i);
       }
 
       struct mainCompute_Input_12 {
@@ -795,15 +797,15 @@ describe('console log example', () => {
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1_3();
-        log2_10(3.140000104904175);
+        log2_10(3.140000104904175f);
         log3_14(i32(-2000000000));
-        log4_17(3000000000);
+        log4_17(3000000000u);
         log5_20(true);
         log6_23();
         log7_25();
-        log8_27(vec2f(1.1, -2.2));
-        log9_30(vec3f(10.1, -20.2, 30.3));
-        log10_33(vec4f(100.1, -200.2, 300.3, -400.4));
+        log8_27(vec2f(1.1f, -2.2));
+        log9_30(vec3f(10.1f, -20.2, 30.3f));
+        log10_33(vec4f(100.1f, -200.2, 300.3f, -400.4));
         log11_36();
         log12_38(vec2i(-1, -2));
         log13_41(vec3i(-1, -2, -3));
@@ -987,13 +989,13 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        var simpleStruct = SimpleStruct_3(vec3u(1, 2, 3), 4);
+        var simpleStruct = SimpleStruct_3(vec3u(1, 2, 3), 4u);
         log1_4(simpleStruct);
         var complexStruct = ComplexStruct_16(simpleStruct, true);
         log2_17(complexStruct);
-        var simpleArray = array<u32, 2>(1, 2);
+        var simpleArray = array<u32, 2>(1u, 2u);
         log3_24(simpleArray);
-        var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3, 4), array<u32, 2>(5, 6), array<u32, 2>(7, 8));
+        var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3u, 4u), array<u32, 2>(5u, 6u), array<u32, 2>(7u, 8u));
         log4_27(complexArray);
       }
 
@@ -1226,7 +1228,7 @@ describe('console log example', () => {
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         for (var i = 0u; (i < logCountUniform_3); i++) {
-          log1_4((i + 1), logCountUniform_3);
+          log1_4((i + 1u), logCountUniform_3);
         }
       }
 
@@ -1235,6 +1237,248 @@ describe('console log example', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_13)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer_4: atomic<u32>;
+
+      struct SerializedLogData_6 {
+        id: u32,
+        serializedData: array<u32, 32>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
+
+      var<private> dataBlockIndex_7: u32;
+
+      var<private> dataByteIndex_8: u32;
+
+      fn nextByteIndex_11() -> u32{
+        let i = dataByteIndex_8;
+        dataByteIndex_8 = dataByteIndex_8 + 1u;
+        return i;
+      }
+
+      fn serializeI32_10(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
+      }
+
+      fn serializeF32_12(n: f32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(n);
+      }
+
+      fn serializeVec4f_13(v: vec4f) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.x);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.y);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.z);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.w);
+      }
+
+      fn log1serializer_9(_arg_0: i32, _arg_1: f32, _arg_2: vec4f) {
+        serializeI32_10(_arg_0);
+        serializeF32_12(_arg_1);
+        serializeVec4f_13(_arg_2);
+      }
+
+      fn log1_3(_arg_0: i32, _arg_1: f32, _arg_2: vec4f) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 1;
+        dataByteIndex_8 = 0;
+
+        log1serializer_9(_arg_0, _arg_1, _arg_2);
+      }
+
+      fn serializeVec3f_16(v: vec3f) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.x);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.y);
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_11()] = bitcast<u32>(v.z);
+      }
+
+      fn log2serializer_15(_arg_0: vec3f, _arg_1: vec3f) {
+        serializeVec3f_16(_arg_0);
+        serializeVec3f_16(_arg_1);
+      }
+
+      fn log2_14(_arg_0: vec3f, _arg_1: vec3f) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 2;
+        dataByteIndex_8 = 0;
+
+        log2serializer_15(_arg_0, _arg_1);
+      }
+
+      fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+        log1_3(987i, 1.26f, vec4f(1, 2, 3, 4));
+        log2_14(vec3f(1, 2, 3), vec3f(1, 2, 3));
+      }
+
+      struct mainCompute_Input_17 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_17)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer_4: atomic<u32>;
+
+      struct SerializedLogData_6 {
+        id: u32,
+        serializedData: array<u32, 32>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer_5: array<SerializedLogData_6, 40>;
+
+      var<private> dataBlockIndex_7: u32;
+
+      var<private> dataByteIndex_8: u32;
+
+      fn log1serializer_9() {
+
+      }
+
+      fn log1_3() {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 1;
+        dataByteIndex_8 = 0;
+
+        log1serializer_9();
+      }
+
+      fn log2serializer_11() {
+
+      }
+
+      fn log2_10() {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 2;
+        dataByteIndex_8 = 0;
+
+        log2serializer_11();
+      }
+
+      fn nextByteIndex_15() -> u32{
+        let i = dataByteIndex_8;
+        dataByteIndex_8 = dataByteIndex_8 + 1u;
+        return i;
+      }
+
+      fn serializeI32_14(n: i32) {
+        dataBuffer_5[dataBlockIndex_7].serializedData[nextByteIndex_15()] = bitcast<u32>(n);
+      }
+
+      fn log3serializer_13(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log3_12(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 3;
+        dataByteIndex_8 = 0;
+
+        log3serializer_13(_arg_0);
+      }
+
+      fn log4serializer_17(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log4_16(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 4;
+        dataByteIndex_8 = 0;
+
+        log4serializer_17(_arg_0);
+      }
+
+      fn log5serializer_19(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log5_18(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 5;
+        dataByteIndex_8 = 0;
+
+        log5serializer_19(_arg_0);
+      }
+
+      fn log6serializer_21(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log6_20(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 6;
+        dataByteIndex_8 = 0;
+
+        log6serializer_21(_arg_0);
+      }
+
+      fn log7serializer_23(_arg_0: i32) {
+        serializeI32_14(_arg_0);
+      }
+
+      fn log7_22(_arg_0: i32) {
+        dataBlockIndex_7 = atomicAdd(&indexBuffer_4, 1);
+        if (dataBlockIndex_7 >= 40) {
+          return;
+        }
+        dataBuffer_5[dataBlockIndex_7].id = 7;
+        dataByteIndex_8 = 0;
+
+        log7serializer_23(_arg_0);
+      }
+
+      fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
+        log1_3();
+        log2_10();
+        log3_12(1i);
+        log4_16(2i);
+        log5_18(3i);
+        log6_20(4i);
+        log7_22(5i);
+      }
+
+      struct mainCompute_Input_24 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute_0(in: mainCompute_Input_24)  {
         if (any(in.id >= sizeUniform_1)) {
           return;
         }
@@ -1250,8 +1494,8 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer_5: atomic<u32>;
@@ -1311,8 +1555,8 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0, 1));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer_5: atomic<u32>;

@@ -837,7 +837,7 @@ describe('v3f', () => {
         "fn main() {
           var planarPosLocal = vec2f(1, 2);
           var one = vec3f(1, 2, 12);
-          var two = vec3f(planarPosLocal, 12);
+          var two = vec3f(planarPosLocal, 12f);
           var three = vec3f(1, 2, 12);
         }"
       `);
@@ -884,7 +884,7 @@ describe('v4f', () => {
         "fn main() {
           var green = vec3f(0, 1, 0);
           var one = vec4f(0.125, 0.25, 0.375, 1);
-          var two = vec4f(green, 1);
+          var two = vec4f(green, 1f);
           var three = vec4f(0, 0, 1, 1);
         }"
       `);
@@ -913,7 +913,7 @@ describe('v4f', () => {
         "fn main() {
           var fooLocal = vec3f(0.25, 0.5, 0.75);
           var one = vec4f(0.25, 0.25, 0.5, 0.75);
-          var two = vec4f(0.1, fooLocal);
+          var two = vec4f(0.1f, fooLocal);
           var three = vec4f(0.125, 0.25, 0.5, 0.75);
         }"
       `);
