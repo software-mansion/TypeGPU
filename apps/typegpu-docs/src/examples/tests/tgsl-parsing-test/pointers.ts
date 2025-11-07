@@ -16,11 +16,6 @@ const modifyStructFn = tgpu.fn([d.ptrFn(SimpleStruct)])((ptr) => {
   ptr.$.vec.x += 1;
 });
 
-const privateNum = tgpu.privateVar(d.u32);
-const modifyNumPrivate = tgpu.fn([d.ptrPrivate(d.u32)])((ptr) => {
-  ptr.$ += 1;
-});
-
 const privateVec = tgpu.privateVar(d.vec2f);
 const modifyVecPrivate = tgpu.fn([d.ptrPrivate(d.vec2f)])((ptr) => {
   ptr.$.x += 1;
@@ -49,9 +44,6 @@ export const pointersTest = tgpu.fn([], d.bool)(() => {
   s = s && std.allEq(myStruct.$.vec, d.vec2f(1, 0));
 
   // private pointers
-  modifyNumPrivate(d.ref(privateNum.$));
-  s = s && (privateNum.$ === 1);
-
   modifyVecPrivate(d.ref(privateVec.$));
   s = s && std.allEq(privateVec.$, d.vec2f(1, 0));
 

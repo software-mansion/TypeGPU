@@ -80,3 +80,21 @@ export function createPtrFromOrigin(
 
   return undefined;
 }
+
+export function implicitFrom(ptr: Ptr): Ptr {
+  return INTERNAL_createPtr(
+    ptr.addressSpace,
+    ptr.inner,
+    ptr.access,
+    /* implicit */ true,
+  );
+}
+
+export function explicitFrom(ptr: Ptr): Ptr {
+  return INTERNAL_createPtr(
+    ptr.addressSpace,
+    ptr.inner,
+    ptr.access,
+    /* implicit */ false,
+  );
+}

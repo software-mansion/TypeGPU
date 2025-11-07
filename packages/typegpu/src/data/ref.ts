@@ -6,7 +6,7 @@ import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import type { DualFn } from './dualFn.ts';
-import { createPtrFromOrigin } from './ptr.ts';
+import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
 import {
   isNaturallyEphemeral,
@@ -50,6 +50,12 @@ export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
       throw new WgslTypeError(
         stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
       );
+    }
+
+    if (value.dataType.type === 'ptr') {
+      // This can happen if we take a reference of an *implicit* pointer, one
+      // made by assigning a reference to a `const`.
+      return snip(value.value, explicitFrom(value.dataType), value.origin);
     }
 
     /**

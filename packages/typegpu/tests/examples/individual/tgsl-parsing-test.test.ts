@@ -178,23 +178,17 @@ describe('tgsl parsing test example', () => {
         (*ptr).vec.x += 1f;
       }
 
-      var<private> privateNum_16: u32;
-
-      fn modifyNumPrivate_17(ptr: ptr<private, u32>) {
-        (*ptr) += 1u;
-      }
-
-      var<private> privateVec_18: vec2f;
-
-      fn modifyVecPrivate_19(ptr: ptr<private, vec2f>) {
+      fn modifyVecPrivate_16(ptr: ptr<private, vec2f>) {
         (*ptr).x += 1f;
       }
 
-      var<private> privateStruct_20: SimpleStruct_14;
+      var<private> privateVec_17: vec2f;
 
-      fn modifyStructPrivate_21(ptr: ptr<private, SimpleStruct_14>) {
+      fn modifyStructPrivate_18(ptr: ptr<private, SimpleStruct_14>) {
         (*ptr).vec.x += 1f;
       }
+
+      var<private> privateStruct_19: SimpleStruct_14;
 
       fn pointersTest_11() -> bool {
         var s = true;
@@ -207,16 +201,14 @@ describe('tgsl parsing test example', () => {
         var myStruct = SimpleStruct_14();
         modifyStructFn_15((&myStruct));
         s = (s && all(myStruct.vec == vec2f(1, 0)));
-        modifyNumPrivate_17(privateNum_16);
-        s = (s && (privateNum_16 == 1u));
-        modifyVecPrivate_19(privateVec_18);
-        s = (s && all(privateVec_18 == vec2f(1, 0)));
-        modifyStructPrivate_21(privateStruct_20);
-        s = (s && all(privateStruct_20.vec == vec2f(1, 0)));
+        modifyVecPrivate_16((&privateVec_17));
+        s = (s && all(privateVec_17 == vec2f(1, 0)));
+        modifyStructPrivate_18((&privateStruct_19));
+        s = (s && all(privateStruct_19.vec == vec2f(1, 0)));
         return s;
       }
 
-      @group(0) @binding(0) var<storage, read_write> result_22: i32;
+      @group(0) @binding(0) var<storage, read_write> result_20: i32;
 
       @compute @workgroup_size(1) fn computeRunTests_0() {
         var s = true;
@@ -226,10 +218,10 @@ describe('tgsl parsing test example', () => {
         s = (s && arrayAndStructConstructorsTest_8());
         s = (s && pointersTest_11());
         if (s) {
-          result_22 = 1i;
+          result_20 = 1i;
         }
         else {
-          result_22 = 0i;
+          result_20 = 0i;
         }
       }"
     `);

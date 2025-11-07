@@ -1,4 +1,5 @@
-import * as d from 'typegpu/data';
+import tgpu from '../src/index.ts';
+import * as d from '../src/data/index.ts';
 import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 import { asWgsl } from './utils/parseResolved.ts';
@@ -209,6 +210,39 @@ describe('d.ref', () => {
       - fn*:main()
       - fn*:foo(vec3f)
       - fn:ref: d.ref(hello) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.]
+    `);
+  });
+
+  it('turns an implicit pointer into an explicit one', () => {
+    const layout = tgpu.bindGroupLayout({
+      positions: { storage: d.arrayOf(d.vec3f) },
+    });
+
+    const advance = (value: d.ref<d.v3f>) => {
+      'use gpu';
+      value.$.x += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      // biome-ignore lint/style/noNonNullAssertion: it's there
+      const pos = layout.$.positions[0]!;
+      advance(d.ref(pos));
+      d.ref(pos);
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> positions: array<vec3f>;
+
+      fn advance(value: ptr<storage, vec3f, read>) {
+        (*value).x += 1f;
+      }
+
+      fn main() {
+        let pos = (&positions[0i]);
+        advance(pos);
+        pos;
+      }"
     `);
   });
 });

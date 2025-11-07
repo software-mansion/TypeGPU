@@ -42,15 +42,11 @@ describe('gravity example', () => {
 
       @group(0) @binding(0) var<uniform> celestialBodiesCount_3: i32;
 
-      fn radiusOf_4(body: ptr<function, CelestialBody_2>) -> f32 {
-        return (pow((((*body).mass * 0.75f) / 3.141592653589793f), 0.333f) * (*body).radiusMultiplier);
+      fn radiusOf_4(body: CelestialBody_2) -> f32 {
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
-      fn radiusOf_5(body: ptr<storage, ptr<function, CelestialBody_2>, read>) -> f32 {
-        return (pow((((*(*body)).mass * 0.75f) / 3.141592653589793f), 0.333f) * (*(*body)).radiusMultiplier);
-      }
-
-      fn isSmaller_6(currentId: u32, otherId: u32) -> bool {
+      fn isSmaller_5(currentId: u32, otherId: u32) -> bool {
         let current = (&inState_1[currentId]);
         let other = (&inState_1[otherId]);
         if (((*current).mass < (*other).mass)) {
@@ -62,25 +58,25 @@ describe('gravity example', () => {
         return false;
       }
 
-      @group(0) @binding(2) var<storage, read_write> outState_7: array<CelestialBody_2>;
+      @group(0) @binding(2) var<storage, read_write> outState_6: array<CelestialBody_2>;
 
-      struct computeCollisionsShader_Input_8 {
+      struct computeCollisionsShader_Input_7 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_8) {
+      @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
         let currentId = input.gid.x;
         var current = inState_1[currentId];
         if ((current.destroyed == 0u)) {
           for (var otherId = 0u; (otherId < u32(celestialBodiesCount_3)); otherId++) {
             let other = (&inState_1[otherId]);
-            if ((((((otherId == currentId) || ((*other).destroyed == 1u)) || (current.collisionBehavior == 0u)) || ((*other).collisionBehavior == 0u)) || (distance(current.position, (*other).position) >= (radiusOf_4((&current)) + radiusOf_5((&other)))))) {
+            if ((((((otherId == currentId) || ((*other).destroyed == 1u)) || (current.collisionBehavior == 0u)) || ((*other).collisionBehavior == 0u)) || (distance(current.position, (*other).position) >= (radiusOf_4(current) + radiusOf_4((*other)))))) {
               continue;
             }
             if (((current.collisionBehavior == 1u) && ((*other).collisionBehavior == 1u))) {
-              if (isSmaller_6(currentId, otherId)) {
+              if (isSmaller_5(currentId, otherId)) {
                 var dir = normalize((current.position - (*other).position));
-                current.position = ((*other).position + (dir * (radiusOf_4((&current)) + radiusOf_5((&other)))));
+                current.position = ((*other).position + (dir * (radiusOf_4(current) + radiusOf_4((*other)))));
               }
               var posDiff = (current.position - (*other).position);
               var velDiff = (current.velocity - (*other).velocity);
@@ -88,7 +84,7 @@ describe('gravity example', () => {
               current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99);
             }
             else {
-              let isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller_6(currentId, otherId)));
+              let isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller_5(currentId, otherId)));
               if (isCurrentAbsorbed) {
                 current.destroyed = 1u;
               }
@@ -101,7 +97,7 @@ describe('gravity example', () => {
             }
           }
         }
-        outState_7[currentId] = current;
+        outState_6[currentId] = current;
       }
 
       struct Time_2 {
@@ -126,21 +122,17 @@ describe('gravity example', () => {
 
       @group(1) @binding(0) var<uniform> celestialBodiesCount_5: i32;
 
-      fn radiusOf_6(body: ptr<function, CelestialBody_4>) -> f32 {
-        return (pow((((*body).mass * 0.75f) / 3.141592653589793f), 0.333f) * (*body).radiusMultiplier);
+      fn radiusOf_6(body: CelestialBody_4) -> f32 {
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
-      fn radiusOf_7(body: ptr<storage, ptr<function, CelestialBody_4>, read>) -> f32 {
-        return (pow((((*(*body)).mass * 0.75f) / 3.141592653589793f), 0.333f) * (*(*body)).radiusMultiplier);
-      }
+      @group(1) @binding(2) var<storage, read_write> outState_7: array<CelestialBody_4>;
 
-      @group(1) @binding(2) var<storage, read_write> outState_8: array<CelestialBody_4>;
-
-      struct computeGravityShader_Input_9 {
+      struct computeGravityShader_Input_8 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_9) {
+      @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
         let dt = (time_1.passed * time_1.multiplier);
         let currentId = input.gid.x;
         var current = inState_3[currentId];
@@ -150,14 +142,14 @@ describe('gravity example', () => {
             if (((otherId == currentId) || ((*other).destroyed == 1u))) {
               continue;
             }
-            let dist = max((radiusOf_6((&current)) + radiusOf_7((&other))), distance(current.position, (*other).position));
+            let dist = max((radiusOf_6(current) + radiusOf_6((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
             var direction = normalize(((*other).position - current.position));
             current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
           }
           current.position = (current.position + (current.velocity * dt));
         }
-        outState_8[currentId] = current;
+        outState_7[currentId] = current;
       }
 
       struct Camera_2 {
@@ -209,8 +201,8 @@ describe('gravity example', () => {
 
       @group(1) @binding(1) var<storage, read> celestialBodies_1: array<CelestialBody_2>;
 
-      fn radiusOf_3(body: ptr<storage, ptr<function, CelestialBody_2>, read>) -> f32 {
-        return (pow((((*(*body)).mass * 0.75f) / 3.141592653589793f), 0.333f) * (*(*body)).radiusMultiplier);
+      fn radiusOf_3(body: CelestialBody_2) -> f32 {
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
       struct Camera_5 {
@@ -241,7 +233,7 @@ describe('gravity example', () => {
 
       @vertex fn mainVertex_0(input: mainVertex_Input_7) -> mainVertex_Output_6 {
         let currentBody = (&celestialBodies_1[input.instanceIndex]);
-        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf_3((&currentBody))));
+        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf_3((*currentBody))));
         let camera = (&camera_4);
         var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
         return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);

@@ -166,7 +166,7 @@ export async function loadSphereTextures(root: TgpuRoot) {
   return texture;
 }
 
-export const radiusOf = (body: d.ref<CelestialBody>): number => {
+export const radiusOf = (body: CelestialBody): number => {
   'use gpu';
-  return (((body.$.mass * 0.75) / Math.PI) ** 0.333) * body.$.radiusMultiplier;
+  return (((body.mass * 0.75) / Math.PI) ** 0.333) * body.radiusMultiplier;
 };

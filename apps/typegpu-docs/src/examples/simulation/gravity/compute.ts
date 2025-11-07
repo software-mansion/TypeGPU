@@ -43,7 +43,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         current.collisionBehavior === none || // ...when current behavior is none
         other.collisionBehavior === none || // ...when other behavior is none
         std.distance(current.position, other.position) >=
-          radiusOf(d.ref(current)) + radiusOf(d.ref(other)) // ...when other is too far away
+          radiusOf(current) + radiusOf(other) // ...when other is too far away
       ) {
         // no collision occurs...
         continue;
@@ -59,7 +59,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
         if (isSmaller(currentId, otherId)) {
           const dir = std.normalize(current.position.sub(other.position));
           current.position = other.position.add(
-            dir.mul(radiusOf(d.ref(current)) + radiusOf(d.ref(other))),
+            dir.mul(radiusOf(current) + radiusOf(other)),
           );
         }
 
@@ -118,7 +118,7 @@ export const computeGravityShader = tgpu['~unstable'].computeFn({
       }
 
       const dist = std.max(
-        radiusOf(d.ref(current)) + radiusOf(d.ref(other)),
+        radiusOf(current) + radiusOf(other),
         std.distance(current.position, other.position),
       );
       const gravityForce = (current.mass * other.mass) / dist / dist;

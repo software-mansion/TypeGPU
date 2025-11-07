@@ -41,7 +41,7 @@ import {
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
-import { INTERNAL_createPtr, ptrFn } from '../data/ptr.ts';
+import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 
@@ -869,18 +869,21 @@ ${this.ctx.pre}else ${alternate}`;
         } else {
           varType = 'let';
           if (!wgsl.isPtr(dataType)) {
-            dataType = ptrFn(concretize(dataType) as wgsl.StorableData);
+            const ptrType = createPtrFromOrigin(
+              eq.origin,
+              concretize(dataType) as wgsl.StorableData,
+            );
+            invariant(
+              ptrType !== undefined,
+              `Creating pointer type from origin ${eq.origin}`,
+            );
+            dataType = ptrType;
           }
 
           if (!(eq.value instanceof RefOperator)) {
             // If what we're assigning is something preceded by `&`, then it's a value
             // created using `d.ref()`. Otherwise, it's an implicit pointer
-            dataType = INTERNAL_createPtr(
-              dataType.addressSpace,
-              dataType.inner,
-              dataType.access,
-              /* implicit */ true,
-            );
+            dataType = implicitFrom(dataType);
           }
         }
       } else {
@@ -932,13 +935,11 @@ ${this.ctx.pre}else ${alternate}`;
       const [_, init, condition, update, body] = statement;
 
       const [initStatement, conditionExpr, updateStatement] = this.ctx
-        .withResetIndentLevel(
-          () => [
-            init ? this.statement(init) : undefined,
-            condition ? this.typedExpression(condition, bool) : undefined,
-            update ? this.statement(update) : undefined,
-          ],
-        );
+        .withResetIndentLevel(() => [
+          init ? this.statement(init) : undefined,
+          condition ? this.typedExpression(condition, bool) : undefined,
+          update ? this.statement(update) : undefined,
+        ]);
 
       const initStr = initStatement ? initStatement.slice(0, -1) : '';
       const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
