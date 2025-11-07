@@ -265,7 +265,7 @@ describe('array', () => {
     });
 
     expect(
-      asWgsl([Object.entries(testLayout.bound)]),
+      asWgsl(...Object.values(testLayout.bound)),
     ).toMatchInlineSnapshot(
       `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
     );

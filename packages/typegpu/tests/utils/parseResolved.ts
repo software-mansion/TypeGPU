@@ -5,7 +5,7 @@ import type { AnyData } from '../../src/data/index.ts';
 import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { provideCtx } from '../../src/execMode.ts';
-import { CodegenState } from '../../src/types.ts';
+import { CodegenState, type ResolvableObject } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
@@ -13,7 +13,7 @@ import { namespace } from '../../src/core/resolve/namespace.ts';
 /**
  * Just a shorthand for tgpu.resolve
  */
-export function asWgsl(...values: unknown[]): string {
+export function asWgsl(...values: ResolvableObject[]): string {
   return tgpu.resolve(values, { names: 'strict' });
 }
 

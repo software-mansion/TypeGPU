@@ -6,7 +6,7 @@ import {
 } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
-import type { SelfResolvable, Wgsl } from '../../types.ts';
+import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -93,61 +93,42 @@ export function resolveWithContext(
   options: TgpuExtendedResolveOptions,
 ): ResolutionResult;
 export function resolveWithContext(
-  items: unknown[],
+  items: ResolvableObject[],
   options?: TgpuResolveOptions,
 ): ResolutionResult;
 export function resolveWithContext(
-  arg0: TgpuExtendedResolveOptions | unknown[],
+  arg0: TgpuExtendedResolveOptions | ResolvableObject[],
   options?: TgpuResolveOptions,
 ): ResolutionResult {
   if (Array.isArray(arg0)) {
-    return resolveWithoutTemplate(arg0, options);
+    return resolveFromArray(arg0, options);
   }
-  return resolveWithTemplate(arg0);
+  return resolveFromTemplate(arg0);
 }
 
 /**
- * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
- * Any dependencies of the externals will also be resolved and included in the output.
- * @param options - The options for the resolution.
- *
- * @returns The resolved code.
+ * A shorthand for calling `tgpu.resolveWithContext(...).code`.
  *
  * @example
  * ```ts
- * const Gradient = d.struct({
- *   from: d.vec3f,
- *   to: d.vec3f,
- * });
+ * const Gradient = d.struct({ from: d.vec3f, to: d.vec3f });
  *
- * const resolved = tgpu.resolve({
- *   template: `
- *     fn getGradientAngle(gradient: Gradient) -> f32 {
- *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
- *     }
- *   `,
- *   externals: {
- *     Gradient,
- *   },
- * });
+ * const resolved = tgpu.resolve([Gradient]);
  *
  * console.log(resolved);
  * // struct Gradient_0 {
  * //   from: vec3f,
  * //   to: vec3f,
  * // }
- * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
- * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
- * // }
  * ```
  */
 export function resolve(options: TgpuExtendedResolveOptions): string;
 export function resolve(
-  items: unknown[],
+  items: ResolvableObject[],
   options?: TgpuResolveOptions,
 ): string;
 export function resolve(
-  arg: TgpuExtendedResolveOptions | unknown[],
+  arg: TgpuExtendedResolveOptions | ResolvableObject[],
   options?: TgpuResolveOptions,
 ): string {
   if (Array.isArray(arg)) {
@@ -156,7 +137,7 @@ export function resolve(
   return resolveWithContext(arg).code;
 }
 
-function resolveWithTemplate(
+function resolveFromTemplate(
   options: TgpuExtendedResolveOptions,
 ): ResolutionResult {
   const {
@@ -197,8 +178,8 @@ function resolveWithTemplate(
   });
 }
 
-function resolveWithoutTemplate(
-  items: unknown[],
+function resolveFromArray(
+  items: ResolvableObject[],
   options?: TgpuResolveOptions,
 ): ResolutionResult {
   const {
