@@ -26,8 +26,14 @@ export const AO_BIAS = SURF_DIST * 5;
 
 // Jelly constants
 export const JELLY_HALFSIZE = d.vec3f(0.35, 0.3, 0.3);
-export const SWITCH_RAIL_LENGTH = 0.6;
+export const SWITCH_RAIL_LENGTH = 0.4;
 export const SWITCH_ACCELERATION = 100;
+
+// Spring dynamics constants
+export const SPRING_X_STIFFNESS = 1000;
+export const SPRING_X_DAMPING = 10;
+export const SPRING_Z_STIFFNESS = 900;
+export const SPRING_Z_DAMPING = 12;
 
 // Mouse interaction constants
 export const MOUSE_SMOOTHING = 0.08;

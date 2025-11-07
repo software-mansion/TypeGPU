@@ -155,7 +155,7 @@ const rectangleCutoutDist = (position: d.v2f) => {
   return sdf.sdRoundedBox2d(
     position,
     d.vec2f(
-      SWITCH_RAIL_LENGTH * 0.5 + groundRoundness,
+      SWITCH_RAIL_LENGTH * 0.5 + 0.2 + groundRoundness,
       groundRadius + groundRoundness,
     ),
     groundRadius + groundRoundness,
@@ -177,16 +177,33 @@ const getMainSceneDist = (position: d.v3f) => {
   );
 };
 
+/**
+ * Returns a transformed position.
+ */
+const opCheapBend = (p: d.v3f, k: number) => {
+  'use gpu';
+  const c = std.cos(k * p.x);
+  const s = std.sin(k * p.x);
+  const m = d.mat2x2f(c, -s, s, c);
+  return d.vec3f(m.mul(p.xy), p.z);
+};
+
 const getJellyDist = (position: d.v3f) => {
   'use gpu';
   const state = switchBehavior.stateUniform.$;
   const jellyOrigin = d.vec3f(
-    (state.progress - 0.5) * SWITCH_RAIL_LENGTH,
+    (state.progress - 0.5) * SWITCH_RAIL_LENGTH -
+      state.squashX * (state.progress - 0.5) * 0.2,
     JELLY_HALFSIZE.y * 0.5,
     0,
   );
-  const localPos = position.sub(jellyOrigin);
-  return sdf.sdRoundedBox3d(localPos, JELLY_HALFSIZE.sub(0.1), 0.1);
+  const jellyInvScale = d.vec3f(1 - state.squashX, 1, 1 - state.squashZ);
+  const localPos = position.sub(jellyOrigin).mul(jellyInvScale);
+  return sdf.sdRoundedBox3d(
+    opCheapBend(localPos, 0.8),
+    JELLY_HALFSIZE.sub(0.1),
+    0.1,
+  );
 };
 
 const getJellyApproxDist = (position: d.v3f) => {
@@ -240,7 +257,7 @@ const getApproxNormal = (position: d.v3f, epsilon: number): d.v3f => {
 
 const getNormal = (position: d.v3f) => {
   'use gpu';
-  if (std.abs(position.z) > 0.22 || std.abs(position.x) > 1.02) {
+  if (std.abs(position.z) > 0.5 || std.abs(position.x) > 1.02) {
     return d.vec3f(0, 1, 0);
   }
   return getApproxNormal(position, 0.0001);
