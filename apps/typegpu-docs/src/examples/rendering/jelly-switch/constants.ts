@@ -25,7 +25,8 @@ export const AO_INTENSITY = 0.5;
 export const AO_BIAS = SURF_DIST * 5;
 
 // Jelly constants
-export const JELLY_HALFSIZE = d.vec3f(0.024, 0.024, 0.024);
+export const JELLY_HALFSIZE = d.vec3f(0.35, 0.3, 0.3);
+export const SWITCH_RAIL_LENGTH = 0.6;
 export const SWITCH_ACCELERATION = 100;
 
 // Mouse interaction constants

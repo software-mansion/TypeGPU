@@ -1,23 +1,12 @@
 import type { TgpuRoot, TgpuUniform } from 'typegpu';
 import * as std from 'typegpu/std';
-import { SwitchState } from './dataTypes.ts';
 import { SWITCH_ACCELERATION } from './constants.ts';
+import { SwitchState } from './dataTypes.ts';
 
 export class SwitchBehavior {
   #root: TgpuRoot;
 
   stateUniform: TgpuUniform<typeof SwitchState>;
-
-  // Physics parameters
-  iterations = 16;
-  substeps = 6;
-  damping = 0.01;
-  bendingStrength = 0.1;
-  archStrength = 2;
-  endFlatCount = 1;
-  endFlatStiffness = 0.05;
-  bendingExponent = 1.2;
-  archEdgeDeadzone = 0.01;
 
   // State
   toggled = false;
@@ -44,7 +33,6 @@ export class SwitchBehavior {
   update(dt: number) {
     if (dt <= 0) return;
 
-    const targetX = this.toggled ? 1 : 0;
     let acc = 0;
     if (this.toggled && this.#progress < 1) {
       acc = SWITCH_ACCELERATION;

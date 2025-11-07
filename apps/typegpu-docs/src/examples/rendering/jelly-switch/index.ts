@@ -35,6 +35,7 @@ import {
   AO_RADIUS,
   AO_STEPS,
   GROUND_ALBEDO,
+  JELLY_HALFSIZE,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
   MAX_DIST,
@@ -42,6 +43,7 @@ import {
   SPECULAR_INTENSITY,
   SPECULAR_POWER,
   SURF_DIST,
+  SWITCH_RAIL_LENGTH,
 } from './constants.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -141,17 +143,22 @@ const getJellyBounds = () => {
 
 const GroundParams = {
   groundThickness: 0.03,
+  groundRadius: 0.05,
   groundRoundness: 0.02,
 };
 
 const rectangleCutoutDist = (position: d.v2f) => {
   'use gpu';
   const groundRoundness = GroundParams.groundRoundness;
+  const groundRadius = GroundParams.groundRadius;
 
   return sdf.sdRoundedBox2d(
     position,
-    d.vec2f(1 + groundRoundness, 0.2 + groundRoundness),
-    0.2 + groundRoundness,
+    d.vec2f(
+      SWITCH_RAIL_LENGTH * 0.5 + groundRoundness,
+      groundRadius + groundRoundness,
+    ),
+    groundRadius + groundRoundness,
   );
 };
 
@@ -170,16 +177,22 @@ const getMainSceneDist = (position: d.v3f) => {
   );
 };
 
+const getJellyDist = (position: d.v3f) => {
+  'use gpu';
+  const state = switchBehavior.stateUniform.$;
+  const jellyOrigin = d.vec3f(
+    (state.progress - 0.5) * SWITCH_RAIL_LENGTH,
+    JELLY_HALFSIZE.y * 0.5,
+    0,
+  );
+  const localPos = position.sub(jellyOrigin);
+  return sdf.sdRoundedBox3d(localPos, JELLY_HALFSIZE.sub(0.1), 0.1);
+};
+
 const getJellyApproxDist = (position: d.v3f) => {
   'use gpu';
   // TODO: Return approximated jelly distance
-  return MAX_DIST;
-};
-
-const getJellyDist = (position: d.v3f) => {
-  'use gpu';
-  // TODO: Return jelly distance
-  return MAX_DIST;
+  return getJellyDist(position);
 };
 
 const getSceneDist = (position: d.v3f) => {
@@ -205,8 +218,6 @@ const getSceneDistForAO = (position: d.v3f) => {
   const jellyApprox = getJellyApproxDist(position);
   return std.min(mainScene, jellyApprox);
 };
-
-const sdfSlot = tgpu.slot<(pos: d.v3f) => number>();
 
 const getApproxNormal = (position: d.v3f, epsilon: number): d.v3f => {
   'use gpu';
@@ -361,6 +372,7 @@ const renderBackground = (
   offset: number,
 ) => {
   'use gpu';
+  const state = switchBehavior.stateUniform.$;
   const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
 
   let offsetX = d.f32();
@@ -370,8 +382,6 @@ const renderBackground = (
   const causticScale = 0.2;
   offsetX -= lightDir.x * causticScale;
   offsetZ += lightDir.z * causticScale;
-
-  const progress = switchBehavior.stateUniform.$.progress;
 
   const originYBound = std.saturate(rayOrigin.y + 0.01);
   const posOffset = hitPosition.add(
@@ -384,12 +394,14 @@ const renderBackground = (
   const newNormal = getNormal(posOffset);
 
   // Calculate fake bounce lighting
+  const switchX = (state.progress - 0.5) * SWITCH_RAIL_LENGTH;
   const jellyColor = jellyColorUniform.$;
-  const sqDist = sqLength(hitPosition.sub(d.vec3f(progress, 0, 0)));
+  const sqDist = sqLength(hitPosition.sub(d.vec3f(switchX, 0, 0)));
   const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
   const sideBounceLight = jellyColor.xyz
     .mul(1 / (sqDist * 40 + 1) * 0.3)
     .mul(std.abs(newNormal.z));
+  const emission = std.smoothstep(0.7, 1, state.progress) * 2 + 0.7;
 
   const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
   const backgroundColor = applyAO(
@@ -397,8 +409,8 @@ const renderBackground = (
     posOffset,
     newNormal,
   )
-    .add(d.vec4f(bounceLight, 0))
-    .add(d.vec4f(sideBounceLight, 0));
+    .add(d.vec4f(bounceLight.mul(emission), 0))
+    .add(d.vec4f(sideBounceLight.mul(emission), 0));
 
   return d.vec4f(backgroundColor.xyz, 1);
 };
@@ -482,7 +494,14 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const density = d.f32(20.0);
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
-        const progress = hitPosition.y;
+        const state = switchBehavior.stateUniform.$;
+        const progress = std.saturate(
+          std.mix(
+            1,
+            0.6,
+            hitPosition.y * (1 / (JELLY_HALFSIZE.y * 2)) + 0.25,
+          ),
+        ) * state.progress;
         const T = beerLambert(absorb.mul(progress ** 2), 0.08);
 
         const lightDir = std.neg(lightUniform.$.direction);
@@ -731,7 +750,7 @@ export const controls = {
     },
   },
   'Jelly Color': {
-    initial: [1.0, 0.45, 0.075],
+    initial: [0.08, 0.5, 1],
     onColorChange: (c: [number, number, number]) => {
       jellyColorUniform.write(d.vec4f(...c, 1.0));
     },
