@@ -1,3 +1,5 @@
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { Void } from '../../data/wgslTypes.ts';
 import {
   type ResolutionResult,
   resolve as resolveImpl,
@@ -7,11 +9,9 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
-import type { Configurable } from '../root/rootTypes.ts';
+import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { Void } from '../../data/wgslTypes.ts';
 
 export interface TgpuResolveOptions {
   /**
@@ -52,87 +52,6 @@ export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
    * @default ''
    */
   template?: string | undefined;
-}
-
-function resolveWithTemplate(
-  options: TgpuExtendedResolveOptions,
-): ResolutionResult {
-  const {
-    externals,
-    shaderGenerator,
-    template,
-    names = 'random',
-    config,
-    enableExtensions,
-  } = options;
-
-  const dependencies = {} as Record<string, Wgsl>;
-  applyExternals(dependencies, externals ?? {});
-
-  const resolutionObj: SelfResolvable = {
-    [$internal]: true,
-    [$resolve](ctx): ResolvedSnippet {
-      return snip(
-        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
-        Void,
-      );
-    },
-
-    toString: () => '<root>',
-  };
-
-  const pipelines = Object.values(externals).filter(isPipeline);
-  if (pipelines.length > 1) {
-    throw new Error(
-      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
-    );
-  }
-
-  return resolveImpl(resolutionObj, {
-    namespace: typeof names === 'string' ? namespace({ names }) : names,
-    enableExtensions,
-    shaderGenerator,
-    config,
-    root: pipelines[0]?.[$internal].branch,
-  });
-}
-
-function resolveWithoutTemplate(
-  items: unknown[],
-  options?: TgpuResolveOptions,
-): ResolutionResult {
-  const {
-    shaderGenerator,
-    names = 'random',
-    config,
-    enableExtensions,
-  } = options ?? {};
-
-  const resolutionObj: SelfResolvable = {
-    [$internal]: true,
-    [$resolve](ctx): ResolvedSnippet {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
-      items.forEach((item) => ctx.resolve(item));
-      return snip('', Void);
-    },
-
-    toString: () => '<root>',
-  };
-
-  const pipelines = Object.values(items).filter(isPipeline);
-  if (pipelines.length > 1) {
-    throw new Error(
-      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
-    );
-  }
-
-  return resolveImpl(resolutionObj, {
-    namespace: typeof names === 'string' ? namespace({ names }) : names,
-    enableExtensions,
-    shaderGenerator,
-    config,
-    root: pipelines[0]?.[$internal].branch,
-  });
 }
 
 /**
@@ -231,5 +150,83 @@ export function resolve(
   arg: TgpuExtendedResolveOptions | unknown[],
   options?: TgpuResolveOptions,
 ): string {
-  return resolveWithContext(arg as unknown as unknown[], options).code;
+  if (Array.isArray(arg)) {
+    return resolveWithContext(arg, options).code;
+  }
+  return resolveWithContext(arg).code;
+}
+
+function resolveWithTemplate(
+  options: TgpuExtendedResolveOptions,
+): ResolutionResult {
+  const {
+    template,
+    externals,
+    shaderGenerator,
+    names = 'random',
+    config,
+    enableExtensions,
+  } = options;
+
+  const dependencies = {} as Record<string, Wgsl>;
+  applyExternals(dependencies, externals ?? {});
+
+  const resolutionObj: SelfResolvable = {
+    [$internal]: true,
+    [$resolve](ctx): ResolvedSnippet {
+      return snip(
+        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        Void,
+      );
+    },
+    toString: () => '<root>',
+  };
+
+  return resolveImpl(resolutionObj, {
+    namespace: typeof names === 'string' ? namespace({ names }) : names,
+    enableExtensions,
+    shaderGenerator,
+    config,
+    root: tryFindRoot(Object.values(externals)),
+  });
+}
+
+function resolveWithoutTemplate(
+  items: unknown[],
+  options?: TgpuResolveOptions,
+): ResolutionResult {
+  const {
+    shaderGenerator,
+    names = 'strict',
+    config,
+    enableExtensions,
+  } = options ?? {};
+
+  const resolutionObj: SelfResolvable = {
+    [$internal]: true,
+    [$resolve](ctx): ResolvedSnippet {
+      // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
+      items.forEach((item) => ctx.resolve(item));
+      return snip('', Void);
+    },
+    toString: () => '<root>',
+  };
+
+  return resolveImpl(resolutionObj, {
+    namespace: typeof names === 'string' ? namespace({ names }) : names,
+    enableExtensions,
+    shaderGenerator,
+    config,
+    root: tryFindRoot(items),
+  });
+}
+
+function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
+  const pipelines = items.filter(isPipeline);
+  if (pipelines.length > 1) {
+    throw new Error(
+      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
+    );
+  }
+  return pipelines[0]?.[$internal].branch;
 }
