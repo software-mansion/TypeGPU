@@ -181,6 +181,70 @@ describe('[BABEL] "use gpu" directive', () => {
     `);
   });
 
+  it('makes plugin transpile marked object method', () => {
+    const code = `\
+        const obj = {
+          mod: (a: number, b: number): number => {
+            'use gpu';
+            return a % b;
+          }
+        }
+
+        const isPrime = (n: number): boolean => {
+          'use gpu';
+          if (n <= 1) {
+            return false;
+          }
+
+          for (let i = 2; i < n; i++) {
+            if (obj.mod(n, i) === 0) {
+              return false;
+            }
+          }
+          return true;
+        }
+      `;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "const obj = {
+        mod: ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a: number, b: number): number => {
+          'use gpu';
+
+          return a % b;
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
+          get externals() {
+            return {};
+          }
+        }) && $.f)({})
+      };
+      const isPrime = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (n: number): boolean => {
+        'use gpu';
+
+        if (n <= 1) {
+          return false;
+        }
+        for (let i = 2; i < n; i++) {
+          if (obj.mod(n, i) === 0) {
+            return false;
+          }
+        }
+        return true;
+      }, {
+        v: 1,
+        name: "isPrime",
+        ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"==",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
+        get externals() {
+          return {
+            obj
+          };
+        }
+      }) && $.f)({});"
+    `);
+  });
+
   it('parses when no typegpu import', () => {
     const code = `\
       function add(a, b) {
@@ -426,6 +490,65 @@ describe('[ROLLUP] "use gpu" directive', () => {
             }
 
             console.log(addCPU);
+      "
+    `);
+  });
+
+  it('makes plugin transpile marked object method', async () => {
+    const code = `\
+        const obj = {
+          mod: (a, b) => {
+            'use gpu';
+            return a % b;
+          }
+        }
+
+        const isPrime = (n) => {
+          'use gpu';
+          if (n <= 1) {
+            return false;
+          }
+
+          for (let i = 2; i < n; i++) {
+            if (obj.mod(n, i) === 0) {
+              return false;
+            }
+          }
+          return true;
+        }
+      `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const obj = {
+                mod: (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+                  'use gpu';
+                  return a % b;
+                }), {
+                    v: 1,
+                    name: undefined,
+                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
+                    get externals() { return {}; },
+                  }) && $.f)({}))
+              };
+
+              (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((n) => {
+                'use gpu';
+                if (n <= 1) {
+                  return false;
+                }
+
+                for (let i = 2; i < n; i++) {
+                  if (obj.mod(n, i) === 0) {
+                    return false;
+                  }
+                }
+                return true;
+              }), {
+                    v: 1,
+                    name: "isPrime",
+                    ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"==",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
+                    get externals() { return {obj}; },
+                  }) && $.f)({}));
       "
     `);
   });
