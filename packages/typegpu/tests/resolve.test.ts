@@ -567,6 +567,19 @@ describe('tgpu resolveWithContext', () => {
 });
 
 describe('resolve without template', () => {
+  it('warns when using deprecated resolve API', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    tgpu.resolve({ externals: { Boid }, template: '' });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+    );
+  });
+
   it('resolves one item', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 

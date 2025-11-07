@@ -168,6 +168,12 @@ function resolveWithTemplate(
     enableExtensions,
   } = options;
 
+  if (!template) {
+    console.warn(
+      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+    );
+  }
+
   const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, externals ?? {});
 
@@ -197,7 +203,7 @@ function resolveWithoutTemplate(
 ): ResolutionResult {
   const {
     shaderGenerator,
-    names = 'strict',
+    names = 'random',
     config,
     enableExtensions,
   } = options ?? {};
@@ -221,6 +227,11 @@ function resolveWithoutTemplate(
   });
 }
 
+/**
+ * Attempts to locate a pipeline in a list of items and returns the root.
+ * Does not check recursively.
+ * Throws an error if multiple pipelines are found.
+ */
 function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
   const pipelines = items.filter(isPipeline);
   if (pipelines.length > 1) {
