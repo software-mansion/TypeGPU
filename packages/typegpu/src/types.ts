@@ -318,7 +318,8 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 }
 
 export function isKnownAtComptime(snippet: Snippet): boolean {
-  return typeof snippet.value !== 'string' &&
+  return (typeof snippet.value !== 'string' ||
+    snippet.dataType.type === 'unknown') &&
     getOwnSnippet(snippet.value) === undefined;
 }
 
