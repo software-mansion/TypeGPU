@@ -6,7 +6,8 @@ export const MAX_DIST = 10;
 export const SURF_DIST = 0.001;
 
 // Ground material constants
-export const GROUND_ALBEDO = d.vec3f(1);
+export const LIGHT_GROUND_ALBEDO = d.vec3f(1);
+export const DARK_GROUND_ALBEDO = d.vec3f(0.2);
 
 // Lighting constants
 export const AMBIENT_COLOR = d.vec3f(0.6);
@@ -30,10 +31,12 @@ export const SWITCH_RAIL_LENGTH = 0.4;
 export const SWITCH_ACCELERATION = 100;
 
 // Spring dynamics constants
-export const SPRING_X_STIFFNESS = 1000;
-export const SPRING_X_DAMPING = 10;
-export const SPRING_Z_STIFFNESS = 900;
-export const SPRING_Z_DAMPING = 12;
+export const SQUASH_X_STIFFNESS = 1000;
+export const SQUASH_X_DAMPING = 10;
+export const SQUASH_Z_STIFFNESS = 900;
+export const SQUASH_Z_DAMPING = 12;
+export const WIGGLE_X_STIFFNESS = 1000;
+export const WIGGLE_X_DAMPING = 12;
 
 // Mouse interaction constants
 export const MOUSE_SMOOTHING = 0.08;

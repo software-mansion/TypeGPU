@@ -37,6 +37,7 @@ export const SwitchState = d.struct({
   progress: d.f32,
   squashX: d.f32,
   squashZ: d.f32,
+  wiggleX: d.f32,
   shockwavePosition: d.f32,
   shockwaveAmount: d.f32,
 });

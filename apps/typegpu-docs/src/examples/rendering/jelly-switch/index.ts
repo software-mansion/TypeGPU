@@ -1,6 +1,3 @@
-// TODO: Try a darker background
-// TODO: On mouse down, anticipate the movement of the active element and squash it
-// TODO: Stretch the
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -34,10 +31,11 @@ import {
   AO_INTENSITY,
   AO_RADIUS,
   AO_STEPS,
-  GROUND_ALBEDO,
+  DARK_GROUND_ALBEDO,
   JELLY_HALFSIZE,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
+  LIGHT_GROUND_ALBEDO,
   MAX_DIST,
   MAX_STEPS,
   SPECULAR_INTENSITY,
@@ -67,7 +65,11 @@ const NUM_POINTS = 17;
 const switchBehavior = new SwitchBehavior(root);
 
 canvas.addEventListener('mousedown', (event) => {
-  // TODO: Anticipate movement
+  switchBehavior.pressed = true;
+});
+
+window.addEventListener('mouseup', () => {
+  switchBehavior.pressed = false;
 });
 
 canvas.addEventListener('click', (event) => {
@@ -109,8 +111,9 @@ const jellyColorUniform = root.createUniform(
   d.vec4f(1.0, 0.45, 0.075, 1.0),
 );
 
+const darkModeUniform = root.createUniform(d.u32);
+
 const randomUniform = root.createUniform(d.vec2f);
-const blurEnabledUniform = root.createUniform(d.u32);
 
 const getRay = (ndc: d.v2f) => {
   'use gpu';
@@ -188,6 +191,17 @@ const opCheapBend = (p: d.v3f, k: number) => {
   return d.vec3f(m.mul(p.xy), p.z);
 };
 
+/**
+ * Source: https://mini.gmshaders.com/p/3d-rotation
+ */
+const opRotateAxisAngle = (p: d.v3f, axis: d.v3f, angle: number) => {
+  'use gpu';
+  return std.add(
+    std.mix(axis.mul(std.dot(p, axis)), p, std.cos(angle)),
+    std.cross(p, axis).mul(std.sin(angle)),
+  );
+};
+
 const getJellyDist = (position: d.v3f) => {
   'use gpu';
   const state = switchBehavior.stateUniform.$;
@@ -198,7 +212,11 @@ const getJellyDist = (position: d.v3f) => {
     0,
   );
   const jellyInvScale = d.vec3f(1 - state.squashX, 1, 1 - state.squashZ);
-  const localPos = position.sub(jellyOrigin).mul(jellyInvScale);
+  const localPos = opRotateAxisAngle(
+    position.sub(jellyOrigin).mul(jellyInvScale),
+    d.vec3f(0, 0, 1),
+    state.wiggleX,
+  );
   return sdf.sdRoundedBox3d(
     opCheapBend(localPos, 0.8),
     JELLY_HALFSIZE.sub(0.1),
@@ -376,7 +394,6 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       rayOrigin,
       rayDirection,
       distanceFromOrigin,
-      std.select(d.f32(), 0.87, blurEnabledUniform.$ === 1),
     ).xyz;
   }
   return d.vec3f();
@@ -386,7 +403,6 @@ const renderBackground = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
   backgroundHitDist: number,
-  offset: number,
 ) => {
   'use gpu';
   const state = switchBehavior.stateUniform.$;
@@ -400,15 +416,7 @@ const renderBackground = (
   offsetX -= lightDir.x * causticScale;
   offsetZ += lightDir.z * causticScale;
 
-  const originYBound = std.saturate(rayOrigin.y + 0.01);
-  const posOffset = hitPosition.add(
-    d.vec3f(0, 1, 0).mul(
-      offset *
-        (originYBound / (1.0 + originYBound)) *
-        (1 + randf.sample() / 2),
-    ),
-  );
-  const newNormal = getNormal(posOffset);
+  const newNormal = getNormal(hitPosition);
 
   // Calculate fake bounce lighting
   const switchX = (state.progress - 0.5) * SWITCH_RAIL_LENGTH;
@@ -420,10 +428,11 @@ const renderBackground = (
     .mul(std.abs(newNormal.z));
   const emission = std.smoothstep(0.7, 1, state.progress) * 2 + 0.7;
 
-  const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
+  const litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
   const backgroundColor = applyAO(
-    GROUND_ALBEDO.mul(litColor),
-    posOffset,
+    std.select(LIGHT_GROUND_ALBEDO, DARK_GROUND_ALBEDO, darkModeUniform.$ === 1)
+      .mul(litColor),
+    hitPosition,
     newNormal,
   )
     .add(d.vec4f(bounceLight.mul(emission), 0))
@@ -445,16 +454,9 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
       break;
     }
   }
-  const background = renderBackground(
-    rayOrigin,
-    rayDirection,
-    backgroundDist,
-    d.f32(),
-  );
+  const background = renderBackground(rayOrigin, rayDirection, backgroundDist);
 
   const bbox = getJellyBounds();
-  const zDepth = d.f32(0.25);
-
   const intersection = intersectBox(rayOrigin, rayDirection, bbox);
 
   if (!intersection.hit) {
@@ -562,7 +564,9 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
     ray.direction,
     uv,
   );
-  return d.vec4f(std.tanh(color.xyz.mul(1.3)), 1);
+
+  const exposure = std.select(1.5, 2, darkModeUniform.$ === 1);
+  return d.vec4f(std.tanh(color.xyz.mul(exposure)), 1);
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -772,10 +776,10 @@ export const controls = {
       jellyColorUniform.write(d.vec4f(...c, 1.0));
     },
   },
-  'Blur': {
-    initial: false,
+  'Dark Mode': {
+    initial: true,
     onToggleChange: (v: boolean) => {
-      blurEnabledUniform.write(d.u32(v));
+      darkModeUniform.write(d.u32(v));
     },
   },
 };
