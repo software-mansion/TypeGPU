@@ -36,7 +36,7 @@ export const SQUASH_X_DAMPING = 10;
 export const SQUASH_Z_STIFFNESS = 900;
 export const SQUASH_Z_DAMPING = 12;
 export const WIGGLE_X_STIFFNESS = 1000;
-export const WIGGLE_X_DAMPING = 12;
+export const WIGGLE_X_DAMPING = 20;
 
 // Mouse interaction constants
 export const MOUSE_SMOOTHING = 0.08;

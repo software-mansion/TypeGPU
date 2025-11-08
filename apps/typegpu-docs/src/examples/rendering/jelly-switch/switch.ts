@@ -175,7 +175,7 @@ export class SwitchBehavior {
       std.abs(this.#velocity * 0.1),
     ) * 5;
     this.#backgroundSource?.playbackRate.setTargetAtTime(
-      this.#velocity * 0.02 + 0.8,
+      std.abs(this.#velocity) * 0.02 + 0.8,
       0,
       0.02,
     );
