@@ -20,6 +20,13 @@ export class SwitchBehavior {
   toggled = false;
   pressed = false;
 
+  // Audio system
+  #audioContext: AudioContext;
+  #backgroundGainNode: GainNode;
+  #backgroundSource: AudioBufferSourceNode | undefined;
+  #switchOnBuffer: AudioBuffer | undefined;
+  #switchOffBuffer: AudioBuffer | undefined;
+
   // Derived physical state
   #progress: number;
   #squashX: number;
@@ -49,6 +56,45 @@ export class SwitchBehavior {
     this.#wiggleXVelocity = 0;
 
     this.stateUniform = this.#root.createUniform(SwitchState);
+
+    // Initialize audio system
+    this.#audioContext = new AudioContext();
+    this.#backgroundGainNode = this.#audioContext.createGain();
+    this.#backgroundGainNode.connect(this.#audioContext.destination);
+    this.#backgroundGainNode.gain.value = 0;
+  }
+
+  async init() {
+    const [backgroundResponse, switchOnResponse, switchOffResponse] =
+      await Promise.all([
+        fetch('/TypeGPU/assets/jelly-switch/drag-noise.ogg'),
+        fetch('/TypeGPU/assets/jelly-switch/switch-on.ogg'),
+        fetch('/TypeGPU/assets/jelly-switch/switch-off.ogg'),
+      ]);
+
+    const [backgroundArrayBuffer, switchOnArrayBuffer, switchOffArrayBuffer] =
+      await Promise.all([
+        backgroundResponse.arrayBuffer(),
+        switchOnResponse.arrayBuffer(),
+        switchOffResponse.arrayBuffer(),
+      ]);
+
+    const [backgroundBuffer, switchOnBuffer, switchOffBuffer] = await Promise
+      .all([
+        this.#audioContext.decodeAudioData(backgroundArrayBuffer),
+        this.#audioContext.decodeAudioData(switchOnArrayBuffer),
+        this.#audioContext.decodeAudioData(switchOffArrayBuffer),
+      ]);
+
+    this.#switchOnBuffer = switchOnBuffer;
+    this.#switchOffBuffer = switchOffBuffer;
+
+    const source = this.#audioContext.createBufferSource();
+    source.buffer = backgroundBuffer;
+    source.loop = true;
+    source.connect(this.#backgroundGainNode);
+    source.start();
+    this.#backgroundSource = source;
   }
 
   update(dt: number) {
@@ -83,6 +129,7 @@ export class SwitchBehavior {
       this.#squashXVelocity = -5;
       this.#squashZVelocity = 5;
       this.#wiggleXVelocity = -10;
+      this.playSwitchOn();
     }
     if (this.#progress < 0) {
       this.#progress = 0;
@@ -91,6 +138,7 @@ export class SwitchBehavior {
       this.#squashXVelocity = -5;
       this.#squashZVelocity = 5;
       this.#wiggleXVelocity = 10;
+      this.playSwitchOff();
     }
     this.#progress = std.saturate(this.#progress);
 
@@ -123,6 +171,14 @@ export class SwitchBehavior {
         this.#wiggleXVelocity * dt;
     }
 
+    this.#backgroundGainNode.gain.value = std.saturate(
+      std.abs(this.#velocity * 0.1),
+    ) * 5;
+    this.#backgroundSource?.playbackRate.setTargetAtTime(
+      this.#velocity * 0.02 + 0.8,
+      0,
+      0.02,
+    );
     this.#updateGPUBuffer();
   }
 
@@ -135,5 +191,21 @@ export class SwitchBehavior {
       shockwavePosition: this.#shockwavePosition,
       shockwaveAmount: this.#shockwaveAmount,
     });
+  }
+
+  playSwitchOn() {
+    if (!this.#switchOnBuffer) return;
+    const source = this.#audioContext.createBufferSource();
+    source.buffer = this.#switchOnBuffer;
+    source.connect(this.#audioContext.destination);
+    source.start();
+  }
+
+  playSwitchOff() {
+    if (!this.#switchOffBuffer) return;
+    const source = this.#audioContext.createBufferSource();
+    source.buffer = this.#switchOffBuffer;
+    source.connect(this.#audioContext.destination);
+    source.start();
   }
 }

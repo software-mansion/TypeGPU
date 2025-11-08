@@ -63,17 +63,31 @@ context.configure({
 const NUM_POINTS = 17;
 
 const switchBehavior = new SwitchBehavior(root);
+await switchBehavior.init();
+
+canvas.addEventListener('touchstart', (event) => {
+  switchBehavior.pressed = true;
+  event.preventDefault();
+});
+
+canvas.addEventListener('touchend', (event) => {
+  switchBehavior.pressed = false;
+  switchBehavior.toggled = !switchBehavior.toggled;
+});
 
 canvas.addEventListener('mousedown', (event) => {
   switchBehavior.pressed = true;
+  event.preventDefault();
 });
 
-window.addEventListener('mouseup', () => {
+canvas.addEventListener('mouseup', (event) => {
   switchBehavior.pressed = false;
+  switchBehavior.toggled = !switchBehavior.toggled;
+  event.stopPropagation();
 });
 
-canvas.addEventListener('click', (event) => {
-  switchBehavior.toggled = !switchBehavior.toggled;
+window.addEventListener('mouseup', (event) => {
+  switchBehavior.pressed = false;
 });
 
 let qualityScale = 0.5;
@@ -777,7 +791,7 @@ export const controls = {
     },
   },
   'Dark Mode': {
-    initial: true,
+    initial: false,
     onToggleChange: (v: boolean) => {
       darkModeUniform.write(d.u32(v));
     },
