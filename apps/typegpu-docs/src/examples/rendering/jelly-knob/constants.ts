@@ -1,4 +1,5 @@
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import type { SpringProperties } from './spring.ts';
 
 // Rendering constants
@@ -15,6 +16,8 @@ export const AMBIENT_COLOR = d.vec3f(0.6);
 export const AMBIENT_INTENSITY = 0.6;
 export const SPECULAR_POWER = 10;
 export const SPECULAR_INTENSITY = 0.6;
+export const LIGHT_MODE_LIGHT_DIR = std.normalize(d.vec3f(0.18, -0.30, 0.64));
+export const DARK_MODE_LIGHT_DIR = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
 
 // Jelly material constants
 export const JELLY_IOR = 1.42;
@@ -32,7 +35,7 @@ export const JELLY_HALFSIZE = d.vec3f(0.3, 0.3, 0.3);
 // Spring dynamics constants
 export const twistProperties: SpringProperties = {
   mass: 1,
-  stiffness: 1000,
+  stiffness: 700,
   damping: 10,
 };
 

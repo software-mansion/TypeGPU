@@ -32,10 +32,12 @@ import {
   AO_RADIUS,
   AO_STEPS,
   DARK_GROUND_ALBEDO,
+  DARK_MODE_LIGHT_DIR,
   JELLY_HALFSIZE,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
   LIGHT_GROUND_ALBEDO,
+  LIGHT_MODE_LIGHT_DIR,
   MAX_DIST,
   MAX_STEPS,
   SPECULAR_INTENSITY,
@@ -125,7 +127,7 @@ const filteringSampler = root['~unstable'].createSampler({
 
 const camera = new CameraController(
   root,
-  d.vec3f(0.024, 2.7, 1.9),
+  d.vec3f(0, 2.7, 0.8),
   d.vec3f(0, 0, 0),
   d.vec3f(0, 1, 0),
   Math.PI / 4,
@@ -183,7 +185,7 @@ const GroundParams = {
   groundRoundness: 0.02,
 };
 
-const floorCutoutDist = (position: d.v2f) => {
+const sdFloorCutout = (position: d.v2f) => {
   'use gpu';
   const groundRoundness = GroundParams.groundRoundness;
   const groundRadius = GroundParams.groundRadius;
@@ -194,19 +196,46 @@ const floorCutoutDist = (position: d.v2f) => {
   );
 };
 
+const sdArrowHead = (p: d.v3f) => {
+  'use gpu';
+  return sdf.sdRhombus(
+    p,
+    // shorter on one end, longer on the other
+    std.select(0.15, 0.05, p.x > 0),
+    0.04, // width of the arrow head
+    0.001, // thickness
+    std.smoothstep(-0.1, 0.1, p.x) * 0.02,
+  ) - 0.007;
+};
+
 const getMainSceneDist = (position: d.v3f) => {
   'use gpu';
+  const state = knobBehavior.stateUniform.$;
   const groundThickness = GroundParams.groundThickness;
   const groundRoundness = GroundParams.groundRoundness;
 
-  return sdf.opUnion(
+  let dist = std.min(
     sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.1),
     sdf.opExtrudeY(
       position,
-      -floorCutoutDist(position.xz),
+      -sdFloorCutout(position.xz),
       groundThickness - groundRoundness,
     ) - groundRoundness,
   );
+
+  // Axis
+  dist = std.min(
+    dist,
+    sdArrowHead(
+      opRotateAxisAngle(
+        position.sub(d.vec3f(0, 0.5, 0)),
+        d.vec3f(0, 1, 0),
+        -state.topProgress * Math.PI,
+      ),
+    ),
+  );
+
+  return dist;
 };
 
 /**
@@ -231,6 +260,28 @@ const opRotateAxisAngle = (p: d.v3f, axis: d.v3f, angle: number) => {
   );
 };
 
+/**
+ * Source: https://mini.gmshaders.com/p/3d-rotation
+ */
+const rotateY = (p: d.v3f, angle: number) => {
+  'use gpu';
+  return std.add(
+    std.mix(d.vec3f(0, p.y, 0), p, std.cos(angle)),
+    std.cross(p, d.vec3f(0, 1, 0)).mul(std.sin(angle)),
+  );
+};
+
+/**
+ * Returns a transformed position.
+ */
+const opTwist = (p: d.v3f, k: number): d.v3f => {
+  'use gpu';
+  const c = std.cos(k * p.y);
+  const s = std.sin(k * p.y);
+  const m = d.mat2x2f(c, -s, s, c);
+  return d.vec3f(m.mul(p.xz), p.y);
+};
+
 const getJellySegment = (position: d.v3f) => {
   'use gpu';
   return sdf.sdRoundedBox3d(
@@ -244,21 +295,14 @@ const getJellyDist = (position: d.v3f) => {
   'use gpu';
   const state = knobBehavior.stateUniform.$;
   const origin = d.vec3f(0, 0.18, 0);
-  const localPos = opRotateAxisAngle(
+  const twist = state.bottomProgress - state.topProgress;
+  let localPos = rotateY(
     position.sub(origin),
-    d.vec3f(0, 1, 0),
-    -state.topProgress * Math.PI / 2,
+    -(state.topProgress + twist * 0.5) * Math.PI,
   );
-  const rotated1Pos = opRotateAxisAngle(
-    localPos,
-    d.vec3f(0, 1, 0),
-    Math.PI / 6,
-  );
-  const rotated2Pos = opRotateAxisAngle(
-    localPos,
-    d.vec3f(0, 1, 0),
-    Math.PI / 3,
-  );
+  localPos = opTwist(localPos, twist * 3).xzy;
+  const rotated1Pos = rotateY(localPos, Math.PI / 6);
+  const rotated2Pos = rotateY(localPos, Math.PI / 3);
 
   return sdf.opSmoothUnion(
     getJellySegment(localPos),
@@ -269,12 +313,6 @@ const getJellyDist = (position: d.v3f) => {
     ),
     0.01,
   );
-};
-
-const getJellyApproxDist = (position: d.v3f) => {
-  'use gpu';
-  // TODO: Return approximated jelly distance
-  return getJellyDist(position);
 };
 
 const getSceneDist = (position: d.v3f) => {
@@ -297,8 +335,8 @@ const getSceneDist = (position: d.v3f) => {
 const getSceneDistForAO = (position: d.v3f) => {
   'use gpu';
   const mainScene = getMainSceneDist(position);
-  const jellyApprox = getJellyApproxDist(position);
-  return std.min(mainScene, jellyApprox);
+  const jelly = getJellyDist(position);
+  return std.min(mainScene, jelly);
 };
 
 const getApproxNormal = (position: d.v3f, epsilon: number): d.v3f => {
@@ -328,7 +366,7 @@ const getNormal = (position: d.v3f) => {
   return getApproxNormal(position, 0.0001);
 };
 
-const sqLength = (a: d.v3f) => {
+const sqLength = (a: d.v2f | d.v3f) => {
   'use gpu';
   return std.dot(a, a);
 };
@@ -342,7 +380,7 @@ const getFakeShadow = (
     // Applying darkening under the ground (the shadow cast by the upper ground layer)
     const fadeSharpness = 30;
     const inset = 0.02;
-    const cutout = floorCutoutDist(position.xz) + inset;
+    const cutout = sdFloorCutout(position.xz) + inset;
     const edgeDarkening = std.saturate(1 - cutout * fadeSharpness);
 
     // Applying a slight gradient based on the light direction
@@ -473,12 +511,27 @@ const renderBackground = (
   const sideBounceLight = jellyColor.xyz
     .mul(1 / (sqDist * 40 + 1) * 0.3)
     .mul(std.abs(newNormal.z));
-  const emission = d.f32(1);
+  const emission = 1 + d.f32(state.topProgress) * 2;
 
   const litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
+  const groundAlbedo = std.select(
+    LIGHT_GROUND_ALBEDO,
+    DARK_GROUND_ALBEDO,
+    darkModeUniform.$ === 1,
+  );
+  const rotPos = opRotateAxisAngle(
+    hitPosition,
+    d.vec3f(0, 1, 0),
+    -state.topProgress * Math.PI,
+  );
+  // const handAlbedo = std.mix(
+  //   DARK_GROUND_ALBEDO,
+  //   d.vec3f(1),
+  //   std.smoothstep(-0.05, 0.05, -rotPos.x),
+  // );
+  const albedo = std.select(groundAlbedo, groundAlbedo, hitPosition.y > 0.1);
   const backgroundColor = applyAO(
-    std.select(LIGHT_GROUND_ALBEDO, DARK_GROUND_ALBEDO, darkModeUniform.$ === 1)
-      .mul(litColor),
+    albedo.mul(litColor),
     hitPosition,
     newNormal,
   )
@@ -561,11 +614,16 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
         const state = knobBehavior.stateUniform.$;
+        const rotPos = opRotateAxisAngle(
+          hitPosition,
+          d.vec3f(0, 1, 0),
+          -state.topProgress * Math.PI,
+        );
         const progress = std.saturate(
           std.mix(
             1,
             0.2,
-            hitPosition.y * 1.2 + 0.25,
+            -rotPos.x * 5 + 1.5,
           ),
         );
         const T = beerLambert(absorb.mul(progress ** 2), 0.08);
@@ -612,8 +670,8 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
     uv,
   );
 
-  const exposure = std.select(1.5, 2, darkModeUniform.$ === 1);
-  return d.vec4f(std.tanh(color.xyz.mul(exposure)), 1);
+  const exposure = std.select(1.5, 3, darkModeUniform.$ === 1);
+  return d.vec4f(std.tanh(std.pow(color.xyz.mul(exposure), d.vec3f(1.2))), 1);
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -803,22 +861,9 @@ export const controls = {
       handleResize();
     },
   },
-  'Light dir': {
-    initial: 0,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (v: number) => {
-      const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
-      const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
-      const finalDir = std.normalize(std.mix(dir1, dir2, v));
-      lightUniform.writePartial({
-        direction: finalDir,
-      });
-    },
-  },
   'Jelly Color': {
-    initial: [0.63, 0.08, 1],
+    // initial: [0.63, 0.08, 1],
+    initial: [1.0, 0.35, 0.075],
     onColorChange: (c: [number, number, number]) => {
       jellyColorUniform.write(d.vec4f(...c, 1.0));
     },
@@ -827,6 +872,9 @@ export const controls = {
     initial: true,
     onToggleChange: (v: boolean) => {
       darkModeUniform.write(d.u32(v));
+      lightUniform.writePartial({
+        direction: v ? DARK_MODE_LIGHT_DIR : LIGHT_MODE_LIGHT_DIR,
+      });
     },
   },
 };
