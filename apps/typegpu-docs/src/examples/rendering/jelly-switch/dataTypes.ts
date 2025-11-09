@@ -38,8 +38,6 @@ export const SwitchState = d.struct({
   squashX: d.f32,
   squashZ: d.f32,
   wiggleX: d.f32,
-  shockwavePosition: d.f32,
-  shockwaveAmount: d.f32,
 });
 
 export const rayMarchLayout = tgpu.bindGroupLayout({
