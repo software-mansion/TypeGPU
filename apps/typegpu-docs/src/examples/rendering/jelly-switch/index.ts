@@ -60,8 +60,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const NUM_POINTS = 17;
-
 const switchBehavior = new SwitchBehavior(root);
 await switchBehavior.init();
 
@@ -238,12 +236,6 @@ const getJellyDist = (position: d.v3f) => {
   );
 };
 
-const getJellyApproxDist = (position: d.v3f) => {
-  'use gpu';
-  // TODO: Return approximated jelly distance
-  return getJellyDist(position);
-};
-
 const getSceneDist = (position: d.v3f) => {
   'use gpu';
   const mainScene = getMainSceneDist(position);
@@ -264,27 +256,21 @@ const getSceneDist = (position: d.v3f) => {
 const getSceneDistForAO = (position: d.v3f) => {
   'use gpu';
   const mainScene = getMainSceneDist(position);
-  const jellyApprox = getJellyApproxDist(position);
-  return std.min(mainScene, jellyApprox);
+  const jelly = getJellyDist(position);
+  return std.min(mainScene, jelly);
 };
 
-const getApproxNormal = (position: d.v3f, epsilon: number): d.v3f => {
+const getApproxNormal = (p: d.v3f, e: number): d.v3f => {
   'use gpu';
-  const k = d.vec3f(1, -1, 0);
+  const dist = getSceneDist(p).distance;
 
-  const offset1 = k.xyy.mul(epsilon);
-  const offset2 = k.yyx.mul(epsilon);
-  const offset3 = k.yxy.mul(epsilon);
-  const offset4 = k.xxx.mul(epsilon);
+  const n = d.vec3f(
+    getSceneDist(std.add(p, d.vec3f(e, 0, 0))).distance - dist,
+    getSceneDist(std.add(p, d.vec3f(0, e, 0))).distance - dist,
+    getSceneDist(std.add(p, d.vec3f(0, 0, e))).distance - dist,
+  );
 
-  const sample1 = offset1.mul(getSceneDist(position.add(offset1)).distance);
-  const sample2 = offset2.mul(getSceneDist(position.add(offset2)).distance);
-  const sample3 = offset3.mul(getSceneDist(position.add(offset3)).distance);
-  const sample4 = offset4.mul(getSceneDist(position.add(offset4)).distance);
-
-  const gradient = sample1.add(sample2).add(sample3).add(sample4);
-
-  return std.normalize(gradient);
+  return std.normalize(n);
 };
 
 const getNormal = (position: d.v3f) => {

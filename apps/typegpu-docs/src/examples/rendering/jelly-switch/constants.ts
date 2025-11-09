@@ -1,4 +1,5 @@
 import * as d from 'typegpu/data';
+import type { SpringProperties } from './spring.ts';
 
 // Rendering constants
 export const MAX_STEPS = 64;
@@ -31,19 +32,18 @@ export const SWITCH_RAIL_LENGTH = 0.4;
 export const SWITCH_ACCELERATION = 100;
 
 // Spring dynamics constants
-export const SQUASH_X_STIFFNESS = 1000;
-export const SQUASH_X_DAMPING = 10;
-export const SQUASH_Z_STIFFNESS = 900;
-export const SQUASH_Z_DAMPING = 12;
-export const WIGGLE_X_STIFFNESS = 1000;
-export const WIGGLE_X_DAMPING = 20;
-
-// Mouse interaction constants
-export const MOUSE_SMOOTHING = 0.08;
-export const MOUSE_MIN_X = 0.45;
-export const MOUSE_MAX_X = 0.9;
-export const MOUSE_RANGE_MIN = 0.4;
-export const MOUSE_RANGE_MAX = 0.9;
-export const TARGET_MIN = -0.7;
-export const TARGET_MAX = 1.0;
-export const TARGET_OFFSET = -0.5;
+export const squashXProperties: SpringProperties = {
+  mass: 1,
+  stiffness: 1000,
+  damping: 10,
+};
+export const squashZProperties: SpringProperties = {
+  mass: 1,
+  stiffness: 900,
+  damping: 12,
+};
+export const wiggleXProperties: SpringProperties = {
+  mass: 1,
+  stiffness: 1000,
+  damping: 20,
+};
