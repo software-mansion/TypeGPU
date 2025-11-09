@@ -227,9 +227,8 @@ const getMainSceneDist = (position: d.v3f) => {
   dist = std.min(
     dist,
     sdArrowHead(
-      opRotateAxisAngle(
+      rotateY(
         position.sub(d.vec3f(0, 0.5, 0)),
-        d.vec3f(0, 1, 0),
         -state.topProgress * Math.PI,
       ),
     ),
@@ -247,17 +246,6 @@ const opCheapBend = (p: d.v3f, k: number) => {
   const s = std.sin(k * p.x);
   const m = d.mat2x2f(c, -s, s, c);
   return d.vec3f(m.mul(p.xy), p.z);
-};
-
-/**
- * Source: https://mini.gmshaders.com/p/3d-rotation
- */
-const opRotateAxisAngle = (p: d.v3f, axis: d.v3f, angle: number) => {
-  'use gpu';
-  return std.add(
-    std.mix(axis.mul(std.dot(p, axis)), p, std.cos(angle)),
-    std.cross(p, axis).mul(std.sin(angle)),
-  );
 };
 
 /**
@@ -514,22 +502,11 @@ const renderBackground = (
   const emission = 1 + d.f32(state.topProgress) * 2;
 
   const litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
-  const groundAlbedo = std.select(
+  const albedo = std.select(
     LIGHT_GROUND_ALBEDO,
     DARK_GROUND_ALBEDO,
     darkModeUniform.$ === 1,
   );
-  const rotPos = opRotateAxisAngle(
-    hitPosition,
-    d.vec3f(0, 1, 0),
-    -state.topProgress * Math.PI,
-  );
-  // const handAlbedo = std.mix(
-  //   DARK_GROUND_ALBEDO,
-  //   d.vec3f(1),
-  //   std.smoothstep(-0.05, 0.05, -rotPos.x),
-  // );
-  const albedo = std.select(groundAlbedo, groundAlbedo, hitPosition.y > 0.1);
   const backgroundColor = applyAO(
     albedo.mul(litColor),
     hitPosition,
@@ -598,10 +575,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
       let refractedColor = d.vec3f();
       if (k > 0.0) {
         const refrDir = std.normalize(
-          std.add(
-            I.mul(eta),
-            N.mul(eta * cosi - std.sqrt(k)),
-          ),
+          std.add(I.mul(eta), N.mul(eta * cosi - std.sqrt(k))),
         );
         const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
@@ -614,11 +588,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
 
         const state = knobBehavior.stateUniform.$;
-        const rotPos = opRotateAxisAngle(
-          hitPosition,
-          d.vec3f(0, 1, 0),
-          -state.topProgress * Math.PI,
-        );
+        const rotPos = rotateY(hitPosition, -state.topProgress * Math.PI);
         const progress = std.saturate(
           std.mix(
             1,
