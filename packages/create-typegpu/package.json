@@ -8,6 +8,10 @@
   "bin": {
     "create-typegpu": "./index.js"
   },
+  "files": [
+    "dist",
+    "index.js"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
