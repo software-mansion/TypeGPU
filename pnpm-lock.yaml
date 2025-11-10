@@ -324,15 +324,6 @@ importers:
       execa:
         specifier: ^9.6.0
         version: 9.6.0
-      is-unicode-supported:
-        specifier: ^2.1.0
-        version: 2.1.0
-      pkg-types:
-        specifier: ^2.1.0
-        version: 2.1.0
-      remeda:
-        specifier: ^2.21.2
-        version: 2.21.2
     devDependencies:
       tsdown:
         specifier: ^0.16.1
