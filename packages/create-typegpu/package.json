@@ -1,6 +1,5 @@
 {
   "name": "create-typegpu",
-  "private": true,
   "type": "module",
   "version": "0.0.0",
   "description": "A CLI tool for bootstrapping TypeGPU projects.",
