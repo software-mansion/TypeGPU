@@ -523,13 +523,13 @@ function setupClothMesh() {
   });
 
   const checkerBoard = (uv: v2f): number => {
-    'kernel';
+    'use gpu';
     const fuv = floor(uv);
     return abs(fuv.x + fuv.y) % 2;
   };
 
   clothMaterial.colorNode = toTSL(() => {
-    'kernel';
+    'use gpu';
     const pattern = checkerBoard(uv.$.mul(5));
     return mix(vec4f(0.4, 0.3, 0.3, 1), vec4f(1, 0.5, 0.4, 1), pattern);
   });
