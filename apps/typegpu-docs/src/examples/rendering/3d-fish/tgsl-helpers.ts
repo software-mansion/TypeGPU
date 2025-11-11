@@ -3,7 +3,7 @@ import { add, cos, dot, normalize, sin } from 'typegpu/std';
 import type { Line3 } from './schemas.ts';
 
 export const projectPointOnLine = (point: d.v3f, line: Line3): d.v3f => {
-  'kernel';
+  'use gpu';
   const pointVector = point.sub(line.origin);
   const projection = dot(pointVector, line.dir);
   return line.origin.add(line.dir.mul(projection));
@@ -20,7 +20,7 @@ export const applySinWave = (
   vertex: PosAndNormal,
   time: number,
 ) => {
-  'kernel';
+  'use gpu';
   const a = -60.1;
   const b = 0.8;
   const c = 6.1;

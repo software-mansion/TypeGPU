@@ -28,7 +28,7 @@ const layout = tgpu
   .bindGroupLayout({
     lightSource: { uniform: LightSource },
     sampling: { sampler: 'filtering' },
-    bgTexture: { externalTexture: {} },
+    bgTexture: { externalTexture: d.textureExternal() },
   })
   .$idx(0);
 // ^ forces code-gen to assign `0` as the group index (optional)
@@ -103,7 +103,7 @@ You can also resolve TypeGPU schemas or even entire pipelines the same way.
 
 ## Template
 
-This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions. 
+This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions.
 It can contain references to objects passed in the `externals` record.
 
 ## Externals

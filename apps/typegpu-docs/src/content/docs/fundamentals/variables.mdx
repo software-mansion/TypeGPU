@@ -1,0 +1,110 @@
+---
+title: Variables
+description: A guide on how to create and use the TypeGPU typed variables.
+---
+
+## Storage and uniform variables
+
+When using TypeGPU for resolution, there is no need to ever define either `var<uniform>` or `var<storage[, address_space]>`, as such definitions are added automatically.
+
+For example, in the code snippet below, the external `counter` is automatically included as a `@group(0) @binding(0) var<storage, read_write> counter: vec3f`.
+In this case, the group and index match the automatically generated "catchall" bind group, used for fixed, "bindless" resources.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const counter = root.createMutable(d.vec3f, d.vec3f(0, 1, 0));
+
+const increment = tgpu['~unstable'].computeFn({
+  in: { num: d.builtin.numWorkgroups },
+  workgroupSize: [1],
+})((input) => {
+  const tmp = counter.$.x;
+  counter.$.x = counter.$.y;
+  counter.$.y += tmp;
+  counter.$.z += d.f32(input.num.x);
+});
+
+const pipeline = root['~unstable'].withCompute(increment).createPipeline();
+
+console.log(tgpu.resolve({ externals: { pipeline } }));
+```
+
+```wgsl
+// resolved WGSL
+@group(0) @binding(0) var<storage, read_write> counter: vec3f;
+
+struct increment_Input {
+  @builtin(num_workgroups) num: vec3u,
+}
+
+@compute @workgroup_size(1) fn increment(input: increment_Input) {
+  var tmp = counter.x;
+  counter.x = counter.y;
+  counter.y += tmp;
+  counter.z += f32(input.num.x);
+}
+```
+
+## Private and workgroup variables
+
+For variables of `private` and `workgroup` address spaces, TypeGPU provides `tgpu.privateVar()` and `tgpu.workgroupVar()` constructor functions.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const threadCounter = tgpu.privateVar(d.u32, 0);
+
+const getNext = () => {
+  'use gpu';
+  threadCounter.$ += 1;
+  return [42, 418, 23][threadCounter.$];
+};
+
+const myComputeFn = tgpu['~unstable'].computeFn({
+  workgroupSize: [64],
+})(() => {
+  const a = getNext();
+  const b = getNext();
+  const c = getNext();
+  // ...
+});
+```
+
+## Const variables
+
+The meaning of `const` differs between JS and WGSL.
+In JS, a `const` is a reference that cannot be reassigned, while in WGSL, it means a value known at shader-creation time.
+Therefore, to use the WGSL `const`, TypeGPU provides `tgpu.const()`, an interface analogous to `tgpu.privateVar()` and `tgpu.workgroupVar()`, with the only difference being that the previously optional init value is now required.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+// ---cut---
+const Boid = d.struct({
+  pos: d.vec3f,
+  vel: d.vec3u,
+});
+
+const boid = tgpu.const(Boid, {
+  pos: d.vec3f(1, 2, 3),
+  vel: d.vec3u(4, 5, 6),
+});
+
+const func = () => {
+  'use gpu';
+  const pos = boid.$;
+  const vel = boid.$.vel;
+  const velX = boid.$.vel.x;
+};
+```
+
+:::caution
+TypeGPU does not support defining `tgpu.const()` variables inside a TypeGPU function.
+:::

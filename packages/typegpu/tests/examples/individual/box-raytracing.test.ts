@@ -36,9 +36,9 @@ describe('box raytracing example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_4) -> mainVertex_Output_3 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
         var rayWorldOrigin = (uniforms_1.invViewMatrix * vec4f(0, 0, 0, 1)).xyz;
-        return mainVertex_Output_3(vec4f(pos[input.vertexIndex], 0, 1), rayWorldOrigin);
+        return mainVertex_Output_3(vec4f(pos[input.vertexIndex], 0f, 1f), rayWorldOrigin);
       }
 
       struct Ray_6 {
@@ -138,7 +138,7 @@ describe('box raytracing example', () => {
         var halfCanvasDims = (0.5 * uniforms_1.canvasDims);
         var minDim = min(uniforms_1.canvasDims.x, uniforms_1.canvasDims.y);
         var viewCoords = ((input.position.xy - halfCanvasDims) / minDim);
-        var ray = Ray_6(input.rayWorldOrigin, (uniforms_1.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1)), 0)).xyz);
+        var ray = Ray_6(input.rayWorldOrigin, (uniforms_1.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
         var bigBoxIntersection = getBoxIntersection_8(AxisAlignedBounds_7((-1 * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
         if (!bigBoxIntersection.intersects) {
           discard;;
@@ -148,16 +148,16 @@ describe('box raytracing example', () => {
         var invColor = vec3f();
         var tMin = 0f;
         var intersectionFound = false;
-        for (var i = 0; (i < 7); i++) {
-          for (var j = 0; (j < 7); j++) {
-            for (var k = 0; (k < 7); k++) {
-              if ((boxMatrix_10[i][j][k].isActive == 0)) {
+        for (var i = 0; (i < 7i); i++) {
+          for (var j = 0; (j < 7i); j++) {
+            for (var k = 0; (k < 7i); k++) {
+              if ((boxMatrix_10[i][j][k].isActive == 0u)) {
                 continue;
               }
               var ijkScaled = vec3f(f32(i), f32(j), f32(k));
               var intersection = getBoxIntersection_8(AxisAlignedBounds_7((ijkScaled - halfBoxSize3), (ijkScaled + halfBoxSize3)), ray);
               if (intersection.intersects) {
-                var boxDensity = (max(0, (intersection.tMax - intersection.tMin)) * pow(uniforms_1.materialDensity, 2));
+                var boxDensity = (max(0f, (intersection.tMax - intersection.tMin)) * pow(uniforms_1.materialDensity, 2f));
                 density += boxDensity;
                 invColor = (invColor + (boxDensity * (vec3f(1) / boxMatrix_10[i][j][k].albedo)));
                 tMin = intersection.tMin;
@@ -171,7 +171,7 @@ describe('box raytracing example', () => {
         var gamma = 2.2;
         var corrected = pow(srgb, vec3f((1f / gamma)));
         if (intersectionFound) {
-          return (min(density, 1) * vec4f(min(corrected, vec3f(1)), 1));
+          return (min(density, 1f) * vec4f(min(corrected, vec3f(1)), 1f));
         }
         discard;;
         return vec4f();

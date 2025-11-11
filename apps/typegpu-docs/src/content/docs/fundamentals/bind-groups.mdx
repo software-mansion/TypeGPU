@@ -19,7 +19,7 @@ import * as d from 'typegpu/data';
 // have access to.
 const fooLayout = tgpu.bindGroupLayout({
   foo: { uniform: d.vec3f },
-  bar: { texture: 'float' },
+  bar: { texture: d.texture2d(d.f32) },
 });
 
 const fooBuffer = ...;
@@ -187,31 +187,30 @@ Samplers can be made accessible to shaders with a property that matches the foll
 
 ### Textures
 
-To be able to sample a texture in a shader, create a property with the value matching:
+To be able to sample a texture in a shader, create a property with the corresponding schema:
 ```ts
 {
-  texture: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  texture: d.WgslTexture;
+  // for example:
+  // texture: d.texture2d(d.f32);
+  // texture: d.textureCubeArray(d.f32);
+  // texture: d.texture3d(d.i32);
 
-  /** @default '2d' */
-  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-
-  /** @default false */
-  multisampled?: boolean;
+  /** @default 'float' */
+  sampleType?: 'float' | 'unfilterable-float'; // only for float textures
 }
 ```
 
 ### Storage Textures
 
-To be able to operate on textures more directly in a shader, create a property with the value matching:
+To be able to operate on textures more directly in a shader, create a property with the corresponding schema:
 ```ts
 {
-  storageTexture: StorageTextureTexelFormat;
-
-  /** @default 'writeonly' */
-  access?: 'readonly' | 'writeonly' | 'mutable';
-
-  /** @default '2d' */
-  viewDimension?: '1d' | '2d' | '2d-array' | '3d';
+  storageTexture: d.WgslStorageTexture;
+  // for example:
+  // storageTexture: d.storageTexture2d('rgba8unorm');
+  // storageTexture: d.storageTextureCube('r32float', 'read-write');
+  // storageTexture: d.storageTexture2dArray('rgba16float', 'read-only');
 }
 ```
 You can see the list of supported storage texture formats [here](https://www.w3.org/TR/WGSL/#storage-texel-formats).

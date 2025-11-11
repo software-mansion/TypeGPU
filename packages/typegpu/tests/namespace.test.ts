@@ -70,7 +70,7 @@ describe('tgpu.namespace', () => {
 
     expect(code2).toMatchInlineSnapshot(`
       "fn updateBoid_2(boid: ptr<function, Boid_1>) {
-        (*boid).pos.x += 1;
+        (*boid).pos.x += 1f;
       }"
     `);
   });

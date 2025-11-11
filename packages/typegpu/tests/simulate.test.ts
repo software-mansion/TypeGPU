@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
-import { it } from './utils/extendedIt.ts';
-import tgpu from '../src/index.ts';
 import * as d from '../src/data/index.ts';
+import tgpu from '../src/index.ts';
+import { it } from './utils/extendedIt.ts';
 
 describe('tgpu.simulate()', () => {
   it('runs the callback synchronously and returns the result', () => {
@@ -10,7 +10,7 @@ describe('tgpu.simulate()', () => {
   });
 
   it('allows for nested simulations (*inception horn*)', () => {
-    const seed = tgpu['~unstable'].privateVar(d.u32, 1);
+    const seed = tgpu.privateVar(d.u32, 1);
 
     // A stateful function
     const hash = tgpu.fn([], d.u32)(() => {

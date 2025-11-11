@@ -38,20 +38,20 @@ describe('fluid with atomics example', () => {
       }
 
       fn isClearCell_7(x: u32, y: u32) -> bool {
-        return ((getCell_8(x, y) >> 24) == 4);
+        return ((getCell_8(x, y) >> 24u) == 4u);
       }
 
-      const MAX_WATER_LEVEL_11: u32 = 16777215;
+      const MAX_WATER_LEVEL_11: u32 = 16777215u;
 
       fn persistFlags_10(x: u32, y: u32) {
         var cell = getCell_8(x, y);
         var waterLevel = (cell & MAX_WATER_LEVEL_11);
-        var flags = (cell >> 24);
-        updateCell_3(x, y, ((flags << 24) | waterLevel));
+        var flags = (cell >> 24u);
+        updateCell_3(x, y, ((flags << 24u) | waterLevel));
       }
 
       fn isWall_12(x: u32, y: u32) -> bool {
-        return ((getCell_8(x, y) >> 24) == 1);
+        return ((getCell_8(x, y) >> 24u) == 1u);
       }
 
       fn getCellNext_14(x: u32, y: u32) -> u32 {
@@ -66,17 +66,17 @@ describe('fluid with atomics example', () => {
       }
 
       fn isWaterSource_15(x: u32, y: u32) -> bool {
-        return ((getCell_8(x, y) >> 24) == 2);
+        return ((getCell_8(x, y) >> 24u) == 2u);
       }
 
       fn isWaterDrain_16(x: u32, y: u32) -> bool {
-        return ((getCell_8(x, y) >> 24) == 3);
+        return ((getCell_8(x, y) >> 24u) == 3u);
       }
 
       fn subtractFromCell_17(x: u32, y: u32, value: u32) {
         var cell = getCellNext_14(x, y);
         var waterLevel = (cell & MAX_WATER_LEVEL_11);
-        var newWaterLevel = max((waterLevel - min(value, waterLevel)), 0);
+        var newWaterLevel = max((waterLevel - min(value, waterLevel)), 0u);
         atomicSub(&nextState_6[getIndex_4(x, y)], (waterLevel - newWaterLevel));
       }
 
@@ -86,7 +86,7 @@ describe('fluid with atomics example', () => {
 
       fn checkForFlagsAndBounds_2(x: u32, y: u32) -> bool {
         if (isClearCell_7(x, y)) {
-          updateCell_3(x, y, 0);
+          updateCell_3(x, y, 0u);
           return true;
         }
         if (isWall_12(x, y)) {
@@ -95,7 +95,7 @@ describe('fluid with atomics example', () => {
         }
         if (isWaterSource_15(x, y)) {
           persistFlags_10(x, y);
-          addToCell_13(x, y, 20);
+          addToCell_13(x, y, 20u);
           return false;
         }
         if (isWaterDrain_16(x, y)) {
@@ -103,23 +103,23 @@ describe('fluid with atomics example', () => {
           updateCell_3(x, y, (3 << 24));
           return true;
         }
-        if (((((y == 0) || (y == (size_5.y - 1))) || (x == 0)) || (x == (size_5.x - 1)))) {
+        if (((((y == 0u) || (y == (size_5.y - 1u))) || (x == 0u)) || (x == (size_5.x - 1u)))) {
           subtractFromCell_17(x, y, getWaterLevel_18(x, y));
           return true;
         }
         return false;
       }
 
-      const MAX_WATER_LEVEL_UNPRESSURIZED_20: u32 = 255;
+      const MAX_WATER_LEVEL_UNPRESSURIZED_20: u32 = 255u;
 
-      const MAX_PRESSURE_21: u32 = 12;
+      const MAX_PRESSURE_21: u32 = 12u;
 
       fn getStableStateBelow_19(upper: u32, lower: u32) -> u32 {
         var totalMass = (upper + lower);
         if ((totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED_20)) {
           return totalMass;
         }
-        if (((totalMass >= (MAX_WATER_LEVEL_UNPRESSURIZED_20 * 2)) && (upper > lower))) {
+        if (((totalMass >= (MAX_WATER_LEVEL_UNPRESSURIZED_20 * 2u)) && (upper > lower))) {
           return (u32((f32(totalMass) / 2f)) + MAX_PRESSURE_21);
         }
         return MAX_WATER_LEVEL_UNPRESSURIZED_20;
@@ -132,56 +132,56 @@ describe('fluid with atomics example', () => {
           return;
         }
         var remainingWater = getWaterLevel_18(x, y);
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_12(x, (y - 1))) {
-          var waterLevelBelow = getWaterLevel_18(x, (y - 1));
+        if (!isWall_12(x, (y - 1u))) {
+          var waterLevelBelow = getWaterLevel_18(x, (y - 1u));
           var stable = getStableStateBelow_19(remainingWater, waterLevelBelow);
           if ((waterLevelBelow < stable)) {
             var change = (stable - waterLevelBelow);
             var flow = min(change, viscosity_22);
             subtractFromCell_17(x, y, flow);
-            addToCell_13(x, (y - 1), flow);
+            addToCell_13(x, (y - 1u), flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
         var waterLevelBefore = remainingWater;
-        if (!isWall_12((x - 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x - 1), y)));
-          if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
+        if (!isWall_12((x - 1u), y)) {
+          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x - 1u), y)));
+          if ((flowRaw > 0i)) {
+            var change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
             var flow = min(change, viscosity_22);
             subtractFromCell_17(x, y, flow);
-            addToCell_13((x - 1), y, flow);
+            addToCell_13((x - 1u), y, flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_12((x + 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x + 1), y)));
-          if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
+        if (!isWall_12((x + 1u), y)) {
+          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_18((x + 1u), y)));
+          if ((flowRaw > 0i)) {
+            var change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
             var flow = min(change, viscosity_22);
             subtractFromCell_17(x, y, flow);
-            addToCell_13((x + 1), y, flow);
+            addToCell_13((x + 1u), y, flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_12(x, (y + 1))) {
-          var stable = getStableStateBelow_19(getWaterLevel_18(x, (y + 1)), remainingWater);
+        if (!isWall_12(x, (y + 1u))) {
+          var stable = getStableStateBelow_19(getWaterLevel_18(x, (y + 1u)), remainingWater);
           if ((stable < remainingWater)) {
             var flow = min((remainingWater - stable), viscosity_22);
             subtractFromCell_17(x, y, flow);
-            addToCell_13(x, (y + 1), flow);
+            addToCell_13(x, (y + 1u), flow);
             remainingWater -= flow;
           }
         }
@@ -214,20 +214,20 @@ describe('fluid with atomics example', () => {
         var gridX = (input.idx % w);
         var gridY = u32((f32(input.idx) / f32(w)));
         var maxDim = max(w, h);
-        var x = (((2 * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
-        var y = (((2 * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
-        var cellFlags = (input.currentStateData >> 24);
-        var cell = f32((input.currentStateData & 16777215));
-        if ((cellFlags == 1)) {
+        var x = (((2f * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
+        var y = (((2f * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
+        var cellFlags = (input.currentStateData >> 24u);
+        var cell = f32((input.currentStateData & 16777215u));
+        if ((cellFlags == 1u)) {
           cell = -1;
         }
-        if ((cellFlags == 2)) {
+        if ((cellFlags == 2u)) {
           cell = -2;
         }
-        if ((cellFlags == 3)) {
+        if ((cellFlags == 3u)) {
           cell = -3;
         }
-        return vertex_Output_2(vec4f(x, y, 0, 1), cell);
+        return vertex_Output_2(vec4f(x, y, 0f, 1f), cell);
       }
 
       struct fragment_Input_5 {
@@ -244,12 +244,12 @@ describe('fluid with atomics example', () => {
         if ((input.cell == -3)) {
           return vec4f(1, 0, 0, 1);
         }
-        var normalized = min((input.cell / 255f), 1);
-        if ((normalized == 0)) {
+        var normalized = min((input.cell / 255f), 1f);
+        if ((normalized == 0f)) {
           return vec4f();
         }
-        var res = (1f / (1 + exp((-(normalized - 0.2) * 10))));
-        return vec4f(0, 0, res, res);
+        var res = (1f / (1f + exp((-(normalized - 0.2f) * 10f))));
+        return vec4f(0f, 0f, res, res);
       }"
     `);
   });

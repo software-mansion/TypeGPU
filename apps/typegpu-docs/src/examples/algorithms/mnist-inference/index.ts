@@ -50,7 +50,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
   ioLayout.$.output[i] = relu(total);
 });
 
-const workgroupSize = tgpu['~unstable'].const(d.u32, 128);
+const workgroupSize = tgpu.const(d.u32, 128);
 const subgroupCompute = tgpu['~unstable'].computeFn({
   in: {
     lid: d.builtin.localInvocationId,
@@ -165,8 +165,8 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       const isLastLayer = i === buffers.length - 1;
 
       let boundPipeline = pipeline
-        .with(ioLayout, ioBindGroups[i])
-        .with(weightsBiasesLayout, weightsBindGroups[i]);
+        .with(ioBindGroups[i])
+        .with(weightsBindGroups[i]);
 
       if (querySet && (isFirstLayer || isLastLayer)) {
         const descriptor = {

@@ -317,6 +317,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       returnType: schema as AnyData,
     }),
     normalImpl: cpuConstruct,
+    ignoreImplicitCastWarning: true,
     codegenImpl: (...args) => stitch`${type}(${args})`,
   });
 

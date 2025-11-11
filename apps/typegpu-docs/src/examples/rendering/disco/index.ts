@@ -104,7 +104,6 @@ export const controls = {
       }[value];
       if (patternIndex !== undefined) {
         currentPipeline = pipelines[patternIndex];
-        render();
       }
     },
   },

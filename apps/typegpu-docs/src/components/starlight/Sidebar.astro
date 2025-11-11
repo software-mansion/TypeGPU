@@ -1,13 +1,19 @@
 ---
 import VanillaSidebar from "@astrojs/starlight/components/Sidebar.astro";
+import ChallengesSignupPopover from "../shaderhunt/ChallengesSignupPopover.astro";
 ---
 
 <div class="md:sl-hidden">
-  <a href="/TypeGPU/getting-started">Documentation</a>
+  <a href="/TypeGPU/getting-started">Docs</a>
 </div>
 <div class="md:sl-hidden">
   <a href="/TypeGPU/examples">Examples</a>
 </div>
+<ChallengesSignupPopover>
+    <div class="md:sl-hidden">
+        <a href="/TypeGPU/getting-started">Challenges</a>
+    </div>
+</ChallengesSignupPopover>
 <div class="md:sl-hidden">
   <a href="/TypeGPU/blog">Blog</a>
 </div>

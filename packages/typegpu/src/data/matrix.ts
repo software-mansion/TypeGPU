@@ -1,6 +1,6 @@
 import { createDualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { $repr } from '../shared/symbols.ts';
+import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -131,35 +131,35 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
 
   abstract makeColumn(e0: number, e1: number): TColumn;
 
-  get [0]() {
+  get 0() {
     return this.columns[0].x;
   }
 
-  get [1]() {
+  get 1() {
     return this.columns[0].y;
   }
 
-  get [2]() {
+  get 2() {
     return this.columns[1].x;
   }
 
-  get [3]() {
+  get 3() {
     return this.columns[1].y;
   }
 
-  set [0](value: number) {
+  set 0(value: number) {
     this.columns[0].x = value;
   }
 
-  set [1](value: number) {
+  set 1(value: number) {
     this.columns[0].y = value;
   }
 
-  set [2](value: number) {
+  set 2(value: number) {
     this.columns[1].x = value;
   }
 
-  set [3](value: number) {
+  set 3(value: number) {
     this.columns[1].y = value;
   }
 
@@ -225,95 +225,95 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
 
   abstract makeColumn(x: number, y: number, z: number): TColumn;
 
-  get [0]() {
+  get 0() {
     return this.columns[0].x;
   }
 
-  get [1]() {
+  get 1() {
     return this.columns[0].y;
   }
 
-  get [2]() {
+  get 2() {
     return this.columns[0].z;
   }
 
-  get [3]() {
+  get 3() {
     return 0;
   }
 
-  get [4]() {
+  get 4() {
     return this.columns[1].x;
   }
 
-  get [5]() {
+  get 5() {
     return this.columns[1].y;
   }
 
-  get [6]() {
+  get 6() {
     return this.columns[1].z;
   }
 
-  get [7]() {
+  get 7() {
     return 0;
   }
 
-  get [8]() {
+  get 8() {
     return this.columns[2].x;
   }
 
-  get [9]() {
+  get 9() {
     return this.columns[2].y;
   }
 
-  get [10]() {
+  get 10() {
     return this.columns[2].z;
   }
 
-  get [11]() {
+  get 11() {
     return 0;
   }
 
-  set [0](value: number) {
+  set 0(value: number) {
     this.columns[0].x = value;
   }
 
-  set [1](value: number) {
+  set 1(value: number) {
     this.columns[0].y = value;
   }
 
-  set [2](value: number) {
+  set 2(value: number) {
     this.columns[0].z = value;
   }
 
-  set [3](_: number) {}
+  set 3(_: number) {}
 
-  set [4](value: number) {
+  set 4(value: number) {
     this.columns[1].x = value;
   }
 
-  set [5](value: number) {
+  set 5(value: number) {
     this.columns[1].y = value;
   }
 
-  set [6](value: number) {
+  set 6(value: number) {
     this.columns[1].z = value;
   }
 
-  set [7](_: number) {}
+  set 7(_: number) {}
 
-  set [8](value: number) {
+  set 8(value: number) {
     this.columns[2].x = value;
   }
 
-  set [9](value: number) {
+  set 9(value: number) {
     this.columns[2].y = value;
   }
 
-  set [10](value: number) {
+  set 10(value: number) {
     this.columns[2].z = value;
   }
 
-  set [11](_: number) {}
+  set 11(_: number) {}
 
   *[Symbol.iterator]() {
     for (let i = 0; i < 12; i++) {
@@ -383,131 +383,131 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
   public readonly length = 16;
   [n: number]: number;
 
-  get [0]() {
+  get 0() {
     return this.columns[0].x;
   }
 
-  get [1]() {
+  get 1() {
     return this.columns[0].y;
   }
 
-  get [2]() {
+  get 2() {
     return this.columns[0].z;
   }
 
-  get [3]() {
+  get 3() {
     return this.columns[0].w;
   }
 
-  get [4]() {
+  get 4() {
     return this.columns[1].x;
   }
 
-  get [5]() {
+  get 5() {
     return this.columns[1].y;
   }
 
-  get [6]() {
+  get 6() {
     return this.columns[1].z;
   }
 
-  get [7]() {
+  get 7() {
     return this.columns[1].w;
   }
 
-  get [8]() {
+  get 8() {
     return this.columns[2].x;
   }
 
-  get [9]() {
+  get 9() {
     return this.columns[2].y;
   }
 
-  get [10]() {
+  get 10() {
     return this.columns[2].z;
   }
 
-  get [11]() {
+  get 11() {
     return this.columns[2].w;
   }
 
-  get [12]() {
+  get 12() {
     return this.columns[3].x;
   }
 
-  get [13]() {
+  get 13() {
     return this.columns[3].y;
   }
 
-  get [14]() {
+  get 14() {
     return this.columns[3].z;
   }
 
-  get [15]() {
+  get 15() {
     return this.columns[3].w;
   }
 
-  set [0](value: number) {
+  set 0(value: number) {
     this.columns[0].x = value;
   }
 
-  set [1](value: number) {
+  set 1(value: number) {
     this.columns[0].y = value;
   }
 
-  set [2](value: number) {
+  set 2(value: number) {
     this.columns[0].z = value;
   }
 
-  set [3](value: number) {
+  set 3(value: number) {
     this.columns[0].w = value;
   }
 
-  set [4](value: number) {
+  set 4(value: number) {
     this.columns[1].x = value;
   }
 
-  set [5](value: number) {
+  set 5(value: number) {
     this.columns[1].y = value;
   }
 
-  set [6](value: number) {
+  set 6(value: number) {
     this.columns[1].z = value;
   }
 
-  set [7](value: number) {
+  set 7(value: number) {
     this.columns[1].w = value;
   }
 
-  set [8](value: number) {
+  set 8(value: number) {
     this.columns[2].x = value;
   }
 
-  set [9](value: number) {
+  set 9(value: number) {
     this.columns[2].y = value;
   }
 
-  set [10](value: number) {
+  set 10(value: number) {
     this.columns[2].z = value;
   }
 
-  set [11](value: number) {
+  set 11(value: number) {
     this.columns[2].w = value;
   }
 
-  set [12](value: number) {
+  set 12(value: number) {
     this.columns[3].x = value;
   }
 
-  set [13](value: number) {
+  set 13(value: number) {
     this.columns[3].y = value;
   }
 
-  set [14](value: number) {
+  set 14(value: number) {
     this.columns[3].z = value;
   }
 
-  set [15](value: number) {
+  set 15(value: number) {
     this.columns[3].w = value;
   }
 

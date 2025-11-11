@@ -17,14 +17,16 @@ describe('boids next example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct TriangleData_2 {
+      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+
+      struct TriangleData_4 {
         position: vec2f,
         velocity: vec2f,
       }
 
-      @group(1) @binding(0) var<storage, read> currentTrianglePos_1: array<TriangleData_2>;
+      @group(1) @binding(0) var<storage, read> currentTrianglePos_3: array<TriangleData_4>;
 
-      struct Params_4 {
+      struct Params_6 {
         separationDistance: f32,
         separationStrength: f32,
         alignmentDistance: f32,
@@ -33,66 +35,72 @@ describe('boids next example', () => {
         cohesionStrength: f32,
       }
 
-      @group(0) @binding(0) var<uniform> paramsBuffer_3: Params_4;
+      @group(0) @binding(1) var<uniform> paramsBuffer_5: Params_6;
 
-      @group(1) @binding(1) var<storage, read_write> nextTrianglePos_5: array<TriangleData_2>;
+      @group(1) @binding(1) var<storage, read_write> nextTrianglePos_7: array<TriangleData_4>;
 
-      struct mainCompute_Input_6 {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn mainCompute_0(input: mainCompute_Input_6) {
-        var index = input.gid.x;
-        var instanceInfo = currentTrianglePos_1[index];
+      fn simulate_2(index: u32, _arg_1: u32, _arg_2: u32) {
+        var instanceInfo = currentTrianglePos_3[index];
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = 0u; (i < arrayLength(&currentTrianglePos_1)); i++) {
+        for (var i = 0u; (i < arrayLength(&currentTrianglePos_3)); i++) {
           if ((i == index)) {
             continue;
           }
-          var other = currentTrianglePos_1[i];
+          var other = currentTrianglePos_3[i];
           var dist = distance(instanceInfo.position, other.position);
-          if ((dist < paramsBuffer_3.separationDistance)) {
+          if ((dist < paramsBuffer_5.separationDistance)) {
             separation = (separation + (instanceInfo.position - other.position));
           }
-          if ((dist < paramsBuffer_3.alignmentDistance)) {
+          if ((dist < paramsBuffer_5.alignmentDistance)) {
             alignment = (alignment + other.velocity);
             alignmentCount++;
           }
-          if ((dist < paramsBuffer_3.cohesionDistance)) {
+          if ((dist < paramsBuffer_5.cohesionDistance)) {
             cohesion = (cohesion + other.position);
             cohesionCount++;
           }
         }
-        if ((alignmentCount > 0)) {
+        if ((alignmentCount > 0i)) {
           alignment = ((1f / f32(alignmentCount)) * alignment);
         }
-        if ((cohesionCount > 0)) {
+        if ((cohesionCount > 0i)) {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
           cohesion = (cohesion - instanceInfo.position);
         }
-        var velocity = (paramsBuffer_3.separationStrength * separation);
-        velocity = (velocity + (paramsBuffer_3.alignmentStrength * alignment));
-        velocity = (velocity + (paramsBuffer_3.cohesionStrength * cohesion));
+        var velocity = (paramsBuffer_5.separationStrength * separation);
+        velocity = (velocity + (paramsBuffer_5.alignmentStrength * alignment));
+        velocity = (velocity + (paramsBuffer_5.cohesionStrength * cohesion));
         instanceInfo.velocity = (instanceInfo.velocity + velocity);
-        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
-        if ((instanceInfo.position.x > 1.03)) {
+        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0f, 0.01f) * normalize(instanceInfo.velocity));
+        if ((instanceInfo.position.x > 1.03f)) {
           instanceInfo.position.x = (-1 - 0.03);
         }
-        if ((instanceInfo.position.y > 1.03)) {
+        if ((instanceInfo.position.y > 1.03f)) {
           instanceInfo.position.y = (-1 - 0.03);
         }
         if ((instanceInfo.position.x < (-1 - 0.03))) {
-          instanceInfo.position.x = 1.03;
+          instanceInfo.position.x = 1.03f;
         }
         if ((instanceInfo.position.y < (-1 - 0.03))) {
-          instanceInfo.position.y = 1.03;
+          instanceInfo.position.y = 1.03f;
         }
         instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
-        nextTrianglePos_5[index] = instanceInfo;
+        nextTrianglePos_7[index] = instanceInfo;
+      }
+
+      struct mainCompute_Input_8 {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_8)  {
+        if (any(in.id >= sizeUniform_1)) {
+          return;
+        }
+        simulate_2(in.id.x, in.id.y, in.id.z);
       }
 
       fn getRotationFromVelocity_1(velocity: vec2f) -> f32 {
@@ -121,8 +129,8 @@ describe('boids next example', () => {
       @vertex fn mainVert_0(input: mainVert_Input_5) -> mainVert_Output_4 {
         var angle = getRotationFromVelocity_1(input.velocity);
         var rotated = rotate_2(input.v, angle);
-        var pos = vec4f((rotated + input.center), 0, 1);
-        var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1);
+        var pos = vec4f((rotated + input.center), 0f, 1f);
+        var color = vec4f(((sin((colorPalette_3 + angle)) * 0.45) + 0.45), 1f);
         return mainVert_Output_4(pos, color);
       }
 

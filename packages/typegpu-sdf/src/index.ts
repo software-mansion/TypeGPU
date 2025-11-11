@@ -1,9 +1,19 @@
 export * from './operators.ts';
 
-export { sdBox2d, sdDisk, sdRoundedBox2d } from './2d.ts';
+export {
+  sdBezier,
+  sdBezierApprox,
+  sdBox2d,
+  sdDisk,
+  sdLine,
+  sdPie,
+  sdRoundedBox2d,
+} from './2d.ts';
 export {
   sdBox3d,
   sdBoxFrame3d,
+  sdCapsule,
+  sdLine3d,
   sdPlane,
   sdRoundedBox3d,
   sdSphere,

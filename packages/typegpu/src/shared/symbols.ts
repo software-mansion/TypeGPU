@@ -68,3 +68,9 @@ export const $validVertexSchema = Symbol(
 export const $invalidSchemaReason = Symbol(
   `typegpu:${version}:$invalidSchemaReason`,
 );
+
+export function isMarkedInternal(
+  value: unknown,
+): value is { [$internal]: Record<string, unknown> | true } {
+  return !!(value as { [$internal]: Record<string, unknown> })?.[$internal];
+}

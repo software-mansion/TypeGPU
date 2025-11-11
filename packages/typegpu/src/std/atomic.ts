@@ -1,6 +1,7 @@
+import { createDualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
 import { i32, u32 } from '../data/numeric.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type atomicI32,
@@ -8,8 +9,7 @@ import {
   isWgslData,
   Void,
 } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
+import { safeStringify } from '../shared/stringify.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = createDualImpl(

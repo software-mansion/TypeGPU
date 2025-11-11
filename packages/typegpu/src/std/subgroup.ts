@@ -6,142 +6,87 @@ import type {
   AnyIntegerVecInstance,
   AnyNumericVecInstance,
   AnyWgslData,
+  v4u,
 } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 
-function identityNumOrVec(e: number): number;
-function identityNumOrVec<T extends AnyNumericVecInstance>(e: T): T;
-function identityNumOrVec<T extends number | AnyNumericVecInstance>(
-  e: T,
-): T {
-  throw new Error('subgroup operations can only be used in the GPU context');
+interface IdentityNumOrVec {
+  (e: number): number;
+  <T extends AnyNumericVecInstance>(e: T): T;
 }
 
-function identityIntNumOrVec(e: number): number;
-function identityIntNumOrVec<T extends AnyIntegerVecInstance>(
-  e: T,
-): T;
-function identityIntNumOrVec<
-  T extends number | AnyIntegerVecInstance,
->(
-  e: T,
-): T {
-  throw new Error('subgroup operations can only be used in the GPU context');
+interface IdentityIntNumOrVec {
+  (e: number): number;
+  <T extends AnyIntegerVecInstance>(e: T): T;
 }
 
-export function identityNumOrVecWithIdx(
-  e: number,
-  index: number,
-): number;
-export function identityNumOrVecWithIdx<
-  T extends AnyNumericVecInstance,
->(
-  e: T,
-  index: number,
-): T;
-export function identityNumOrVecWithIdx<
-  T extends number | AnyNumericVecInstance,
->(
-  e: T,
-  index: number,
-): T {
-  throw new Error('subgroup operations can only be used in the GPU context');
+interface IdentityNumOrVecWithIdx {
+  (e: number, index: number): number;
+  <T extends AnyNumericVecInstance>(e: T, index: number): T;
 }
 
-export function identityNumOrVecWithDelta(
-  e: number,
-  delta: number,
-): number;
-export function identityNumOrVecWithDelta<
-  T extends AnyNumericVecInstance,
->(
-  e: T,
-  delta: number,
-): T;
-export function identityNumOrVecWithDelta<
-  T extends number | AnyNumericVecInstance,
->(
-  e: T,
-  delta: number,
-): T {
-  throw new Error('subgroup operations can only be used in the GPU context');
+interface IdentityNumOrVecWithDelta {
+  (e: number, delta: number): number;
+  <T extends AnyNumericVecInstance>(e: T, delta: number): T;
 }
 
-export function identityNumOrVecWithMask(
-  e: number,
-  mask: number,
-): number;
-export function identityNumOrVecWithMask<
-  T extends AnyNumericVecInstance,
->(
-  e: T,
-  mask: number,
-): T;
-export function identityNumOrVecWithMask<
-  T extends number | AnyNumericVecInstance,
->(
-  e: T,
-  mask: number,
-): T {
-  throw new Error('subgroup operations can only be used in the GPU context');
+interface IdentityNumOrVecWithMask {
+  (e: number, mask: number): number;
+  <T extends AnyNumericVecInstance>(e: T, mask: number): T;
 }
 
-export const subgroupAdd = dualImpl({
+const errorMessage = 'Subgroup operations can only be used in the GPU context.';
+
+export const subgroupAdd = dualImpl<IdentityNumOrVec>({
   name: 'subgroupAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupAdd(${arg})`,
 });
 
-export const subgroupExclusiveAdd = dualImpl({
+export const subgroupExclusiveAdd = dualImpl<IdentityNumOrVec>({
   name: 'subgroupExclusiveAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupExclusiveAdd(${arg})`,
 });
 
-export const subgroupInclusiveAdd = dualImpl({
+export const subgroupInclusiveAdd = dualImpl<IdentityNumOrVec>({
   name: 'subgroupInclusiveAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupInclusiveAdd(${arg})`,
 });
 
-export const subgroupAll = dualImpl({
+export const subgroupAll = dualImpl<(e: boolean) => boolean>({
   name: 'subgroupAll',
   signature: { argTypes: [bool], returnType: bool },
-  normalImpl: (e: boolean) => {
-    throw new Error('subgroupAll can only be used in the GPU context');
-  },
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupAll(${e})`,
 });
 
-export const subgroupAnd = dualImpl({
+export const subgroupAnd = dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupAnd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityIntNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupAnd(${e})`,
 });
 
-export const subgroupAny = dualImpl({
+export const subgroupAny = dualImpl<(e: boolean) => boolean>({
   name: 'subgroupAny',
   signature: { argTypes: [bool], returnType: bool },
-  normalImpl: (e: boolean) => {
-    throw new Error('subgroupAny can only be used in the GPU context');
-  },
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupAny(${e})`,
 });
 
-export const subgroupBallot = dualImpl({
+export const subgroupBallot = dualImpl<(e: boolean) => v4u>({
   name: 'subgroupBallot',
   signature: { argTypes: [bool], returnType: vec4u },
-  normalImpl: (e: boolean) => {
-    throw new Error('subgroupBallot can only be used in the GPU context');
-  },
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupBallot(${e})`,
 });
 
-export const subgroupBroadcast = dualImpl({
+export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
   name: 'subgroupBroadcast',
   signature: (...args) => {
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
@@ -154,69 +99,67 @@ export const subgroupBroadcast = dualImpl({
     }
     return { argTypes: [args[0], id[0]], returnType: args[0] };
   },
-  normalImpl: identityNumOrVecWithIdx,
+  normalImpl: errorMessage,
   codegenImpl: (e, index) => stitch`subgroupBroadcast(${e}, ${index})`,
 });
 
-export const subgroupBroadcastFirst = dualImpl({
+export const subgroupBroadcastFirst = dualImpl<IdentityNumOrVec>({
   name: 'subgroupBroadcastFirst',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupBroadcastFirst(${e})`,
 });
 
-export const subgroupElect = dualImpl({
+export const subgroupElect = dualImpl<() => boolean>({
   name: 'subgroupElect',
   signature: { argTypes: [], returnType: bool },
-  normalImpl: (): boolean => {
-    throw new Error('subgroupElect can only be used in the GPU context');
-  },
+  normalImpl: errorMessage,
   codegenImpl: () => stitch`subgroupElect()`,
 });
 
-export const subgroupMax = dualImpl({
+export const subgroupMax = dualImpl<IdentityNumOrVec>({
   name: 'subgroupMax',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupMax(${arg})`,
 });
 
-export const subgroupMin = dualImpl({
+export const subgroupMin = dualImpl<IdentityNumOrVec>({
   name: 'subgroupMin',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupMin(${arg})`,
 });
 
-export const subgroupMul = dualImpl({
+export const subgroupMul = dualImpl<IdentityNumOrVec>({
   name: 'subgroupMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupMul(${arg})`,
 });
 
-export const subgroupExclusiveMul = dualImpl({
+export const subgroupExclusiveMul = dualImpl<IdentityNumOrVec>({
   name: 'subgroupExclusiveMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupExclusiveMul(${arg})`,
 });
 
-export const subgroupInclusiveMul = dualImpl({
+export const subgroupInclusiveMul = dualImpl<IdentityNumOrVec>({
   name: 'subgroupInclusiveMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (arg) => stitch`subgroupInclusiveMul(${arg})`,
 });
 
-export const subgroupOr = dualImpl({
+export const subgroupOr = dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupOr',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityIntNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupOr(${e})`,
 });
 
-export const subgroupShuffle = dualImpl({
+export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
   name: 'subgroupShuffle',
   signature: (...args) => {
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
@@ -229,11 +172,11 @@ export const subgroupShuffle = dualImpl({
     }
     return { argTypes: [args[0], id[0]], returnType: args[0] };
   },
-  normalImpl: identityNumOrVecWithIdx,
+  normalImpl: errorMessage,
   codegenImpl: (e, index) => stitch`subgroupShuffle(${e}, ${index})`,
 });
 
-export const subgroupShuffleDown = dualImpl({
+export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
   name: 'subgroupShuffleDown',
   signature: (...args) => {
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
@@ -246,11 +189,11 @@ export const subgroupShuffleDown = dualImpl({
     }
     return { argTypes: [args[0], delta[0]], returnType: args[0] };
   },
-  normalImpl: identityNumOrVecWithDelta,
+  normalImpl: errorMessage,
   codegenImpl: (e, delta) => stitch`subgroupShuffleDown(${e}, ${delta})`,
 });
 
-export const subgroupShuffleUp = dualImpl({
+export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
   name: 'subgroupShuffleUp',
   signature: (...args) => {
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
@@ -263,11 +206,11 @@ export const subgroupShuffleUp = dualImpl({
     }
     return { argTypes: [args[0], delta[0]], returnType: args[0] };
   },
-  normalImpl: identityNumOrVecWithDelta,
+  normalImpl: errorMessage,
   codegenImpl: (e, delta) => stitch`subgroupShuffleUp(${e}, ${delta})`,
 });
 
-export const subgroupShuffleXor = dualImpl({
+export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
   name: 'subgroupShuffleXor',
   signature: (...args) => {
     const mask = unify([args[1]] as [AnyWgslData], [u32]);
@@ -280,13 +223,13 @@ export const subgroupShuffleXor = dualImpl({
     }
     return { argTypes: [args[0], mask[0]], returnType: args[0] };
   },
-  normalImpl: identityNumOrVecWithMask,
+  normalImpl: errorMessage,
   codegenImpl: (e, mask) => stitch`subgroupShuffleXor(${e}, ${mask})`,
 });
 
-export const subgroupXor = dualImpl({
+export const subgroupXor = dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupXor',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
-  normalImpl: identityIntNumOrVec,
+  normalImpl: errorMessage,
   codegenImpl: (e) => stitch`subgroupXor(${e})`,
 });

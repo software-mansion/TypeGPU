@@ -63,10 +63,6 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
-      fn serializeU32(n: u32) -> array<u32,1>{
-        return array<u32, 1>(n);
-      }
-
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -76,19 +72,37 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn log1serializer(_arg_0: u32) {
+        serializeU32(_arg_0);
+      }
+
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&indexBuffer, 1);
-        if (index >= 64) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
           return;
         }
-        dataBuffer[index].id = 1;
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
 
-        var serializedData0 = serializeU32(_arg_0);
-        dataBuffer[index].serializedData[0] = serializedData0[0];
+        log1serializer(_arg_0);
       }
 
       @fragment fn fs() -> @location(0) vec4f {
-        log1(321);
+        log1(321u);
         return vec4f();
       }"
     `);
@@ -107,11 +121,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "fn serializeU32(n: u32) -> array<u32,1>{
-        return array<u32, 1>(n);
-      }
-
-      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -120,15 +130,33 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn log1serializer(_arg_0: u32) {
+        serializeU32(_arg_0);
+      }
+
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&indexBuffer, 1);
-        if (index >= 64) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
           return;
         }
-        dataBuffer[index].id = 1;
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
 
-        var serializedData0 = serializeU32(_arg_0);
-        dataBuffer[index].serializedData[0] = serializedData0[0];
+        log1serializer(_arg_0);
       }
 
       struct fn_Input {
@@ -136,7 +164,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10);
+        log1(10u);
       }"
     `);
   });
@@ -155,11 +183,7 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "fn serializeU32(n: u32) -> array<u32,1>{
-        return array<u32, 1>(n);
-      }
-
-      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -168,26 +192,48 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn log1serializer(_arg_0: u32) {
+        serializeU32(_arg_0);
+      }
+
       fn log1(_arg_0: u32) {
-        var index = atomicAdd(&indexBuffer, 1);
-        if (index >= 64) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
           return;
         }
-        dataBuffer[index].id = 1;
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
 
-        var serializedData0 = serializeU32(_arg_0);
-        dataBuffer[index].serializedData[0] = serializedData0[0];
+        log1serializer(_arg_0);
+      }
+
+      fn log2serializer(_arg_0: u32) {
+        serializeU32(_arg_0);
       }
 
       fn log2(_arg_0: u32) {
-        var index = atomicAdd(&indexBuffer, 1);
-        if (index >= 64) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
           return;
         }
-        dataBuffer[index].id = 2;
+        dataBuffer[dataBlockIndex].id = 2;
+        dataByteIndex = 0;
 
-        var serializedData0 = serializeU32(_arg_0);
-        dataBuffer[index].serializedData[0] = serializedData0[0];
+        log2serializer(_arg_0);
       }
 
       struct fn_Input {
@@ -195,8 +241,8 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10);
-        log2(20);
+        log1(10u);
+        log2(20u);
       }"
     `);
   });
@@ -219,12 +265,96 @@ describe('wgslGenerator with console.log', () => {
       .createPipeline();
 
     expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-      "fn serializeU32(n: u32) -> array<u32,1>{
-        return array<u32, 1>(n);
+      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
       }
 
-      fn serializeVec3u(v: vec3u) -> array<u32,3>{
-        return array<u32, 3>(v.x, v.y, v.z);
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn serializeVec3u(v: vec3u) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.x;
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.y;
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = v.z;
+      }
+
+      fn log1serializer(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
+        serializeU32(_arg_0);
+        serializeVec3u(_arg_1);
+        serializeU32(_arg_2);
+      }
+
+      fn log1(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0, _arg_1, _arg_2);
+      }
+
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+        log1(10u, vec3u(2, 3, 4), 50u);
+      }"
+    `);
+  });
+
+  it('Parses console.logs with nested arrays/structs pipeline', ({ root }) => {
+    const SimpleArray = d.arrayOf(d.u32, 4);
+    const SimpleStruct = d.struct({ id: d.u32, data: SimpleArray });
+    const ComplexArray = d.arrayOf(SimpleStruct, 3);
+    const ComplexStruct = d.struct({ pos: d.vec3f, data: ComplexArray });
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      const complexStruct = ComplexStruct({
+        data: ComplexArray([
+          SimpleStruct({ id: 0, data: SimpleArray([9, 8, 7, 6]) }),
+          SimpleStruct({ id: 1, data: SimpleArray([8, 7, 6, 5]) }),
+          SimpleStruct({ id: 2, data: SimpleArray([7, 6, 5, 4]) }),
+        ]),
+        pos: d.vec3f(1, 2, 3),
+      });
+      console.log(complexStruct);
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct SimpleStruct {
+        id: u32,
+        data: array<u32, 4>,
+      }
+
+      struct ComplexStruct {
+        pos: vec3f,
+        data: array<SimpleStruct, 3>,
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -236,21 +366,70 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
 
-      fn log1(_arg_0: u32, _arg_1: vec3u, _arg_2: u32) {
-        var index = atomicAdd(&indexBuffer, 1);
-        if (index >= 64) {
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeVec3f(v: vec3f) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.z);
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn arraySerializer_1(arg: array<u32,4>) {
+        serializeU32(arg[0]);
+        serializeU32(arg[1]);
+        serializeU32(arg[2]);
+        serializeU32(arg[3]);
+      }
+
+      fn compoundSerializer_1(_arg_0: u32, _arg_1: array<u32,4>) {
+        serializeU32(_arg_0);
+        arraySerializer_1(_arg_1);
+      }
+
+      fn SimpleStructSerializer(arg: SimpleStruct) {
+        compoundSerializer_1(arg.id, arg.data);
+      }
+
+      fn arraySerializer(arg: array<SimpleStruct,3>) {
+        SimpleStructSerializer(arg[0]);
+        SimpleStructSerializer(arg[1]);
+        SimpleStructSerializer(arg[2]);
+      }
+
+      fn compoundSerializer(_arg_0: vec3f, _arg_1: array<SimpleStruct,3>) {
+        serializeVec3f(_arg_0);
+        arraySerializer(_arg_1);
+      }
+
+      fn ComplexStructSerializer(arg: ComplexStruct) {
+        compoundSerializer(arg.pos, arg.data);
+      }
+
+      fn log1serializer(_arg_0: ComplexStruct) {
+        ComplexStructSerializer(_arg_0);
+      }
+
+      fn log1(_arg_0: ComplexStruct) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
           return;
         }
-        dataBuffer[index].id = 1;
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
 
-        var serializedData0 = serializeU32(_arg_0);
-        dataBuffer[index].serializedData[0] = serializedData0[0];
-        var serializedData1 = serializeVec3u(_arg_1);
-        dataBuffer[index].serializedData[1] = serializedData1[0];
-        dataBuffer[index].serializedData[2] = serializedData1[1];
-        dataBuffer[index].serializedData[3] = serializedData1[2];
-        var serializedData2 = serializeU32(_arg_2);
-        dataBuffer[index].serializedData[4] = serializedData2[0];
+        log1serializer(_arg_0);
       }
 
       struct fn_Input {
@@ -258,7 +437,130 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10, vec3u(2, 3, 4), 50);
+        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
+        log1(complexStruct);
+      }"
+    `);
+  });
+
+  it('Parses console.logs with nested arrays/structs pipeline', ({ root }) => {
+    const SimpleArray = d.arrayOf(d.u32, 4);
+    const SimpleStruct = d.struct({ id: d.u32, data: SimpleArray });
+    const ComplexArray = d.arrayOf(SimpleStruct, 3);
+    const ComplexStruct = d.struct({ pos: d.vec3f, data: ComplexArray });
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      const complexStruct = ComplexStruct({
+        data: ComplexArray([
+          SimpleStruct({ id: 0, data: SimpleArray([9, 8, 7, 6]) }),
+          SimpleStruct({ id: 1, data: SimpleArray([8, 7, 6, 5]) }),
+          SimpleStruct({ id: 2, data: SimpleArray([7, 6, 5, 4]) }),
+        ]),
+        pos: d.vec3f(1, 2, 3),
+      });
+      console.log(complexStruct);
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct SimpleStruct {
+        id: u32,
+        data: array<u32, 4>,
+      }
+
+      struct ComplexStruct {
+        pos: vec3f,
+        data: array<SimpleStruct, 3>,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeVec3f(v: vec3f) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.z);
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn arraySerializer_1(arg: array<u32,4>) {
+        serializeU32(arg[0]);
+        serializeU32(arg[1]);
+        serializeU32(arg[2]);
+        serializeU32(arg[3]);
+      }
+
+      fn compoundSerializer_1(_arg_0: u32, _arg_1: array<u32,4>) {
+        serializeU32(_arg_0);
+        arraySerializer_1(_arg_1);
+      }
+
+      fn SimpleStructSerializer(arg: SimpleStruct) {
+        compoundSerializer_1(arg.id, arg.data);
+      }
+
+      fn arraySerializer(arg: array<SimpleStruct,3>) {
+        SimpleStructSerializer(arg[0]);
+        SimpleStructSerializer(arg[1]);
+        SimpleStructSerializer(arg[2]);
+      }
+
+      fn compoundSerializer(_arg_0: vec3f, _arg_1: array<SimpleStruct,3>) {
+        serializeVec3f(_arg_0);
+        arraySerializer(_arg_1);
+      }
+
+      fn ComplexStructSerializer(arg: ComplexStruct) {
+        compoundSerializer(arg.pos, arg.data);
+      }
+
+      fn log1serializer(_arg_0: ComplexStruct) {
+        ComplexStructSerializer(_arg_0);
+      }
+
+      fn log1(_arg_0: ComplexStruct) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
+        log1(complexStruct);
       }"
     `);
   });
@@ -302,47 +604,96 @@ describe('wgslGenerator with console.log', () => {
       - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
+
+  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.trace();
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+        /* console.log() */;
+      }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported log method 'trace' was used in TGSL.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('deserializeAndStringify', () => {
   it('works for string literals', () => {
-    const data: number[] = [];
+    const data = new Uint32Array([]);
     const logInfo: (string | d.AnyWgslData)[] = ['String literal'];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"String literal"`,
+      `
+      [
+        "String literal",
+      ]
+    `,
     );
   });
 
   it('works for u32', () => {
-    const data: number[] = [123];
+    const data = new Uint32Array([123]);
     const logInfo: (string | d.AnyWgslData)[] = [d.u32];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"123"`,
+      `
+      [
+        "123",
+      ]
+    `,
     );
   });
 
   it('works for vec3u', () => {
-    const data: number[] = [1, 2, 3];
+    const data = new Uint32Array([1, 2, 3]);
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+      ]
+    `,
     );
   });
 
   it('works for clumped vectors', () => {
-    const data: number[] = [1, 2, 3, 4, 5, 6]; // no alignment
+    const data = new Uint32Array([1, 2, 3, 4, 5, 6]); // no alignment
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u, d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3) vec3u(4, 5, 6)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+        "vec3u(4, 5, 6)",
+      ]
+    `,
     );
   });
 
   it('works for multiple arguments', () => {
-    const data: number[] = [1, 2, 3, 456];
+    const data = new Uint32Array([1, 2, 3, 456]);
     const logInfo: (string | d.AnyWgslData)[] = [
       'GID:',
       d.vec3u,
@@ -351,7 +702,75 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"GID: vec3u(1, 2, 3) Result: 456"`,
+      `
+      [
+        "GID:",
+        "vec3u(1, 2, 3)",
+        "Result:",
+        "456",
+      ]
+    `,
+    );
+  });
+
+  it('works for arrays', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.u32, 4)];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `
+      [
+        "[1, 2, 3, 4]",
+      ]
+    `,
+    );
+  });
+
+  it('works for nested arrays', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.arrayOf(d.arrayOf(d.u32, 2), 2),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `
+      [
+        "[[1, 2], [3, 4]]",
+      ]
+    `,
+    );
+  });
+
+  it('works for structs', () => {
+    const data = new Uint32Array([1, 2, 3, 4]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.struct({ vec: d.vec3u, num: d.u32 }),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `
+      [
+        "{ vec: vec3u(1, 2, 3), num: 4 }",
+      ]
+    `,
+    );
+  });
+
+  it('works for nested structs', () => {
+    const data = new Uint32Array([1, 2, 3, 4, 1]);
+    const logInfo: (string | d.AnyWgslData)[] = [
+      d.struct({
+        nested: d.struct({ vec: d.vec3u, num: d.u32 }),
+        bool: d.bool,
+      }),
+    ];
+
+    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
+      `
+      [
+        "{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }",
+      ]
+    `,
     );
   });
 });

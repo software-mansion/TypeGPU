@@ -20,18 +20,23 @@ import {
   type GenerationCtx,
 } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
-import type {
-  LogGenerator,
-  LogGeneratorOptions,
-  LogResources,
-  SerializedLogCallData,
+import {
+  type LogGenerator,
+  type LogGeneratorOptions,
+  type LogMeta,
+  type LogResources,
+  type SerializedLogCallData,
+  type SupportedLogOps,
+  supportedLogOps,
 } from './types.ts';
 
 const defaultOptions: Required<LogGeneratorOptions> = {
   logCountLimit: 64,
   logSizeLimit: 252,
-  messagePrefix: '%c GPU %c ',
+  messagePrefix: ' GPU ',
 };
+
+const fallbackSnippet = snip('/* console.log() */', Void);
 
 export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
@@ -41,20 +46,20 @@ export class LogGeneratorNullImpl implements LogGenerator {
     console.warn(
       "'console.log' is currently only supported in compute pipelines.",
     );
-    return snip('/* console.log() */', Void);
+    return fallbackSnippet;
   }
 }
 
 export class LogGeneratorImpl implements LogGenerator {
   #options: Required<LogGeneratorOptions>;
-  #logIdToArgTypes: Map<number, (string | AnyWgslData)[]>;
+  #logIdToMeta: Map<number, LogMeta>;
   #firstUnusedId = 1;
   #indexBuffer: TgpuMutable<Atomic<U32>>;
   #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
 
   constructor(root: TgpuRoot) {
     this.#options = { ...defaultOptions, ...root[$internal].logOptions };
-    this.#logIdToArgTypes = new Map();
+    this.#logIdToMeta = new Map();
 
     const SerializedLogData = struct({
       id: u32,
@@ -77,7 +82,16 @@ export class LogGeneratorImpl implements LogGenerator {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  generateLog(ctx: GenerationCtx, args: Snippet[]): Snippet {
+  generateLog(
+    ctx: GenerationCtx,
+    op: string,
+    args: Snippet[],
+  ): Snippet {
+    if (!supportedLogOps.includes(op as SupportedLogOps)) {
+      console.warn(`Unsupported log method '${op}' was used in TGSL.`);
+      return fallbackSnippet;
+    }
+
     const concreteArgs = concretizeSnippets(args);
     const id = this.#firstUnusedId++;
 
@@ -92,14 +106,13 @@ export class LogGeneratorImpl implements LogGenerator {
       this.#options,
     );
 
-    this.#logIdToArgTypes.set(
-      id,
-      concreteArgs.map((e) =>
-        e.dataType === UnknownData
-          ? (e.value as string)
-          : e.dataType as AnyWgslData
-      ),
+    const argTypes = concreteArgs.map((e) =>
+      e.dataType === UnknownData
+        ? (e.value as string)
+        : e.dataType as AnyWgslData
     );
+
+    this.#logIdToMeta.set(id, { op: op as SupportedLogOps, argTypes });
 
     return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
   }
@@ -109,7 +122,7 @@ export class LogGeneratorImpl implements LogGenerator {
       dataBuffer: this.#dataBuffer,
       indexBuffer: this.#indexBuffer,
       options: this.#options,
-      logIdToArgTypes: this.#logIdToArgTypes,
+      logIdToMeta: this.#logIdToMeta,
     };
   }
 }

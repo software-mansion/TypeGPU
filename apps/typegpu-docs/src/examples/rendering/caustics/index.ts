@@ -21,7 +21,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
  * location.
  */
 const tilePattern = (uv: d.v2f): number => {
-  'kernel';
+  'use gpu';
   const tiledUv = std.fract(uv);
   const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
   const maxProximity = std.max(proximity.x, proximity.y);
@@ -29,7 +29,7 @@ const tilePattern = (uv: d.v2f): number => {
 };
 
 const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
-  'kernel';
+  'use gpu';
   const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
   // Distorting UV coordinates
   const uv2 = std.add(uv, distortion);
@@ -42,7 +42,7 @@ const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
  * in the XY plane (around the imaginary Z axis)
  */
 const rotateXY = (angle: number): d.m2x2f => {
-  'kernel';
+  'use gpu';
   return d.mat2x2f(
     /* right */ d.vec2f(std.cos(angle), std.sin(angle)),
     /* up    */ d.vec2f(-std.sin(angle), std.cos(angle)),

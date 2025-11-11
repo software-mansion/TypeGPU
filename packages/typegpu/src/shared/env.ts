@@ -5,6 +5,6 @@
  * Even though the value of this constant uses Node.js specific APIs, pretty much every
  * bundler replaces the expression below with either `development` or `production`
  */
-export const DEV = globalThis.process.env.NODE_ENV === 'development';
+export const DEV = process.env.NODE_ENV === 'development';
 
-export const TEST = globalThis.process.env.NODE_ENV === 'test';
+export const TEST = process.env.NODE_ENV === 'test';

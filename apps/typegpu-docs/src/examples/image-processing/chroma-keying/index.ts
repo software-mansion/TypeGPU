@@ -10,7 +10,7 @@ const rareLayout = tgpu.bindGroupLayout({
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: {} },
+  inputTexture: { externalTexture: d.textureExternal() },
 });
 
 const VertexOutput = d.struct({
@@ -184,7 +184,7 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 };
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined = undefined;
+let lastFrameSize: { width: number; height: number } | undefined;
 
 function processVideoFrame(
   _: number,

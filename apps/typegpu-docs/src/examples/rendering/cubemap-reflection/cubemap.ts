@@ -1,4 +1,4 @@
-import type { TgpuRoot } from 'typegpu';
+import type { TgpuTexture } from 'typegpu';
 import * as d from 'typegpu/data';
 import { CubeVertex } from './dataTypes.ts';
 
@@ -66,29 +66,19 @@ function getCubemapUrls(name: CubemapNames) {
   );
 }
 
-export async function loadCubemap(root: TgpuRoot, chosenCubemap: CubemapNames) {
-  const size = 2048;
-  const texture = root['~unstable']
-    .createTexture({
-      dimension: '2d',
-      size: [size, size, 6],
-      format: 'rgba8unorm',
-    })
-    .$usage('sampled', 'render');
-
-  await Promise.all(
+export async function loadCubemap(
+  texture: TgpuTexture<{
+    size: [number, number, 6];
+    format: 'rgba8unorm';
+  }>,
+  chosenCubemap: CubemapNames,
+) {
+  const images = await Promise.all(
     getCubemapUrls(chosenCubemap).map(async (url, i) => {
       const response = await fetch(url);
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      root.device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [size, size],
-      );
+      return await createImageBitmap(blob);
     }),
   );
-
-  return texture;
+  texture.write(images);
 }

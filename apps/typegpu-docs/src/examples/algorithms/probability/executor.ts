@@ -123,7 +123,7 @@ export class Executor {
     }
 
     pipeline
-      .with(this.#bindGroupLayout, this.#bindGroup)
+      .with(this.#bindGroup)
       .dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();

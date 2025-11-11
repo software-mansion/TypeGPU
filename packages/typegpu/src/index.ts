@@ -11,7 +11,7 @@ import { vertexFn } from './core/function/tgpuVertexFn.ts';
 import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { simulate } from './core/simulate/tgpuSimulate.ts';
 import { init, initFromDevice } from './core/root/init.ts';
-import { comparisonSampler, sampler } from './core/sampler/sampler.ts';
+
 import { accessor } from './core/slot/accessor.ts';
 import { derived } from './core/slot/derived.ts';
 import { slot } from './core/slot/slot.ts';
@@ -32,6 +32,10 @@ export const tgpu = {
   resolve,
   resolveWithContext,
 
+  privateVar,
+  workgroupVar,
+  const: constant,
+
   '~unstable': {
     /**
      * @deprecated This feature is now stable, use tgpu.fn.
@@ -51,19 +55,24 @@ export const tgpu = {
      */
     slot,
     accessor,
+    /**
+     * @deprecated This feature is now stable, use tgpu.privateVar.
+     */
     privateVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.workgroupVar.
+     */
     workgroupVar,
+    /**
+     * @deprecated This feature is now stable, use tgpu.const.
+     */
     const: constant,
     declare,
-    sampler,
-    comparisonSampler,
 
     simulate,
   },
 };
 export default tgpu;
-
-export { prepareDispatch } from './prepareDispatch.ts';
 
 export {
   MissingBindGroupsError,
@@ -76,11 +85,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export { isDerived, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
-export {
-  isSampledTextureView,
-  isStorageTextureView,
-  isTexture,
-} from './core/texture/texture.ts';
+export { isTexture } from './core/texture/texture.ts';
 export {
   isUsableAsRender,
   isUsableAsSampled,
@@ -95,6 +100,7 @@ export { isVariable } from './core/variable/tgpuVariable.ts';
 
 export type {
   Configurable,
+  TgpuGuardedComputePipeline,
   TgpuRoot,
   ValidateBufferSchema,
   ValidateStorageSchema,
@@ -133,20 +139,18 @@ export type {
   TgpuDerived,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
-export type {
-  TgpuAnyTextureView,
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
-  TgpuTexture,
-  TgpuWriteonlyTexture,
-} from './core/texture/texture.ts';
+export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
-export type { Render, Sampled } from './core/texture/usageExtension.ts';
+export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';
 export type { TgpuConst } from './core/constant/tgpuConstant.ts';
 export type { TgpuVar, VariableScope } from './core/variable/tgpuVariable.ts';
-export type { TgpuSampler } from './core/sampler/sampler.ts';
+export type {
+  TgpuComparisonSampler,
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+  TgpuSampler,
+} from './core/sampler/sampler.ts';
 export type { TgpuQuerySet } from './core/querySet/querySet.ts';
 export type {
   BindLayoutEntry,
@@ -159,7 +163,6 @@ export type {
   TgpuLayoutExternalTexture,
   TgpuLayoutSampler,
   TgpuLayoutStorage,
-  TgpuLayoutStorageTexture,
   TgpuLayoutTexture,
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';

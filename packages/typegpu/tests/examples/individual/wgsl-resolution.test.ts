@@ -44,8 +44,8 @@ describe('wgsl resolution example', () => {
       @vertex fn vertex_shader_0(input: vertex_shader_Input_5) -> vertex_shader_Output_4 {
         var angle = get_rotation_from_velocity_util_1(input.velocity);
         var rotated = rotate_util_2(input.v, angle);
-        var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0, 1);
-        var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.y)) * 0.45) + 0.45), ((sin((angle + colorPalette_3.z)) * 0.45) + 0.45), 1);
+        var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0f, 1f);
+        var color = vec4f(((sin((angle + colorPalette_3.x)) * 0.45f) + 0.45f), ((sin((angle + colorPalette_3.y)) * 0.45f) + 0.45f), ((sin((angle + colorPalette_3.z)) * 0.45f) + 0.45f), 1f);
         return vertex_shader_Output_4(pos, color);
       }
 
@@ -108,10 +108,10 @@ describe('wgsl resolution example', () => {
             cohesionCount++;
           }
         }
-        if ((alignmentCount > 0)) {
+        if ((alignmentCount > 0i)) {
           alignment = ((1f / f32(alignmentCount)) * alignment);
         }
-        if ((cohesionCount > 0)) {
+        if ((cohesionCount > 0i)) {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
           cohesion = (cohesion - instanceInfo.position);
         }
@@ -119,18 +119,18 @@ describe('wgsl resolution example', () => {
         velocity = (velocity + (paramsBuffer_11.alignmentStrength * alignment));
         velocity = (velocity + (paramsBuffer_11.cohesionStrength * cohesion));
         instanceInfo.velocity = (instanceInfo.velocity + velocity);
-        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0, 0.01) * normalize(instanceInfo.velocity));
-        if ((instanceInfo.position.x > 1.03)) {
+        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0f, 0.01f) * normalize(instanceInfo.velocity));
+        if ((instanceInfo.position.x > 1.03f)) {
           instanceInfo.position.x = (-1 - 0.03);
         }
-        if ((instanceInfo.position.y > 1.03)) {
+        if ((instanceInfo.position.y > 1.03f)) {
           instanceInfo.position.y = (-1 - 0.03);
         }
         if ((instanceInfo.position.x < (-1 - 0.03))) {
-          instanceInfo.position.x = 1.03;
+          instanceInfo.position.x = 1.03f;
         }
         if ((instanceInfo.position.y < (-1 - 0.03))) {
-          instanceInfo.position.y = 1.03;
+          instanceInfo.position.y = 1.03f;
         }
         instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
         nextTrianglePos_13[index] = instanceInfo;

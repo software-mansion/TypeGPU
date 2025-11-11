@@ -1,5 +1,5 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32 } from '../data/numeric.ts';
 import { vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
@@ -192,7 +192,7 @@ export const div = dualImpl({
     });
   },
   normalImpl: cpuDiv,
-  codegenImpl: (lhs, rhs) => stitchWithExactTypes`(${lhs} / ${rhs})`,
+  codegenImpl: (lhs, rhs) => stitch`(${lhs} / ${rhs})`,
   ignoreImplicitCastWarning: true,
 });
 

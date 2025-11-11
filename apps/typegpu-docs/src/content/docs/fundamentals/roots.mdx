@@ -65,8 +65,7 @@ To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attribut
 
 ## Destroying resources
 
-Calling `root.destroy()` will destroy all resources created with it.
-It will also destroy the underlying WebGPU device, if it wasn't originally passed in via the `initFromDevice` function.
+Calling `root.destroy()` will call `device.destroy()` to let the browser know that it can free up all the resources. However, if an existing device is passed in via `tgpu.initFromDevice()`, this method does nothing.
 
 ```ts
 root.destroy(); // <- frees up all the resources

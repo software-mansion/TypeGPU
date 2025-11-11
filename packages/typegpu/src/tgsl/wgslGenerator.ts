@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -15,10 +15,12 @@ import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isMarkedInternal } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -33,7 +35,7 @@ import {
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import { safeStringify } from '../shared/safeStringify.ts';
+import { constant } from '../core/constant/tgpuConstant.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -252,7 +254,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       return snip(`${argStr}${op}`, argExpr.dataType);
     }
@@ -261,7 +263,7 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       const type = operatorToType(argExpr.dataType, op);
       return snip(`${op}${argStr}`, type);
@@ -273,7 +275,10 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(), UnknownData);
+        return snip(
+          new ConsoleLog(property),
+          UnknownData,
+        );
       }
 
       if (
@@ -366,7 +371,7 @@ ${this.ctx.pre}}`;
         }
 
         throw new Error(
-          `Cannot index value ${targetStr} of unknown type with index ${propertyStr}`,
+          `Unable to index a value of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -437,6 +442,12 @@ ${this.ctx.pre}}`;
         );
       }
 
+      if (callee.value === constant) {
+        throw new Error(
+          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
+        );
+      }
+
       if (callee.value instanceof InfixDispatch) {
         // Infix operator dispatch.
         if (!argNodes[0]) {
@@ -464,14 +475,15 @@ ${this.ctx.pre}}`;
         throw new Error(
           `Function '${
             getName(callee.value) ?? String(callee.value)
-          }' is not marked with the 'kernel' directive and cannot be used in a shader`,
+          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
         );
       }
 
       // Other, including tgsl functions, std and vector/matrix schema calls.
 
-      const argConversionHint = callee.value[$internal]
-        ?.argConversionHint as FnArgsConversionHint ?? 'keep';
+      const argConversionHint =
+        (callee.value[$internal] as Record<string, unknown>)
+          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
       try {
         let convertedArguments: Snippet[];
 
@@ -506,7 +518,7 @@ ${this.ctx.pre}}`;
         }
 
         if (callee.value instanceof ConsoleLog) {
-          return this.ctx.generateLog(convertedArguments);
+          return this.ctx.generateLog(callee.value.op, convertedArguments);
         }
 
         // Assuming that `callee` is callable
@@ -723,7 +735,7 @@ ${this.ctx.pre}else ${alternate}`;
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+      return stitch`${this.ctx.pre}var ${snippet
         .value as string} = ${eq};`;
     }
 

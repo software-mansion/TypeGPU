@@ -8,6 +8,7 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { WgslTexture } from '../../data/texture.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -26,6 +27,7 @@ import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
+  isBindGroup,
   isBindGroupLayout,
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
@@ -45,8 +47,13 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import { isTexture, type TgpuTexture } from '../texture/texture.ts';
-import type { Render } from '../texture/usageExtension.ts';
+import {
+  isTexture,
+  isTextureView,
+  type TgpuTexture,
+  type TgpuTextureView,
+} from '../texture/texture.ts';
+import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import {
   isVertexLayout,
@@ -95,10 +102,15 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
   ): this;
+  /**
+   * @deprecated This overload is outdated.
+   * Call `pipeline.with(bindGroup)` instead.
+   */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
+  with(bindGroup: TgpuBindGroup): this;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
@@ -149,7 +161,10 @@ export interface ColorAttachment {
    * A {@link GPUTextureView} describing the texture subresource that will be output to for this
    * color attachment.
    */
-  view: (TgpuTexture & Render) | GPUTextureView;
+  view:
+    | (TgpuTexture & RenderFlag)
+    | GPUTextureView
+    | TgpuTextureView<WgslTexture>;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -185,10 +200,10 @@ export interface ColorAttachment {
 
 export interface DepthStencilAttachment {
   /**
-   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link Render}) describing the texture subresource that will be output to
+   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
-  view: (TgpuTexture & Render) | GPUTextureView;
+  view: (TgpuTexture & RenderFlag) | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
    * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
@@ -330,28 +345,45 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
   ): this;
+  with(bindGroup: TgpuBindGroup): this;
   with(
-    definition: TgpuVertexLayout | TgpuBindGroupLayout,
-    resource: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
+    layoutOrBindGroup:
+      | TgpuVertexLayout
+      | TgpuBindGroupLayout
+      | TgpuBindGroup,
+    resource?: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
   ): this {
     const internals = this[$internal];
 
-    if (isBindGroupLayout(definition)) {
+    if (isBindGroup(layoutOrBindGroup)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [definition, resource as TgpuBindGroup],
+          [layoutOrBindGroup.layout, layoutOrBindGroup],
         ]),
       }) as this;
     }
 
-    if (isVertexLayout(definition)) {
+    if (isBindGroupLayout(layoutOrBindGroup)) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        bindGroupLayoutMap: new Map([
+          ...(internals.priors.bindGroupLayoutMap ?? []),
+          [layoutOrBindGroup, resource as TgpuBindGroup],
+        ]),
+      }) as this;
+    }
+
+    if (isVertexLayout(layoutOrBindGroup)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
-          [definition, resource as TgpuBuffer<AnyWgslData> & VertexFlag],
+          [
+            layoutOrBindGroup,
+            resource as TgpuBuffer<AnyWgslData> & VertexFlag,
+          ],
         ]),
       }) as this;
     }
@@ -466,7 +498,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
-  private setupRenderPass(): GPURenderPassEncoder {
+  private setupRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
     const memo = internals.core.unwrap();
     const { branch, fragmentFn } = internals.core.options;
@@ -480,6 +512,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           return {
             ...attachment,
             view: branch.unwrap(attachment.view).createView(),
+          };
+        }
+
+        if (isTextureView(attachment.view)) {
+          return {
+            ...attachment,
+            view: branch.unwrap(attachment.view),
           };
         }
 
@@ -509,7 +548,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     }
 
-    const pass = branch.commandEncoder.beginRenderPass(renderPassDescriptor);
+    const pass = encoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
@@ -558,24 +597,27 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstInstance?: number,
   ): void {
     const internals = this[$internal];
-    const pass = this.setupRenderPass();
-    const { logResources } = internals.core.unwrap();
     const { branch } = internals.core.options;
+    const { logResources } = internals.core.unwrap();
+
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-
     pass.end();
+
+    branch.device.queue.submit([commandEncoder.finish()]);
 
     if (logResources) {
       logDataFromGPU(logResources);
     }
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch.flush();
+      });
+    }
   }
 
   drawIndexed(
@@ -591,11 +633,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       throw new Error('No index buffer set for this render pipeline.');
     }
 
+    const { logResources } = internals.core.unwrap();
+    const { branch } = internals.core.options;
     const { buffer, indexFormat, offsetBytes, sizeBytes } =
       internals.priors.indexBuffer;
 
-    const pass = this.setupRenderPass();
-    const { branch } = internals.core.options;
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
     if (isGPUBuffer(buffer)) {
       pass.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
@@ -618,12 +662,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({
+    branch.device.queue.submit([commandEncoder.finish()]);
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+    }
+
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({
         root: branch,
         priors: internals.priors,
-      })
-      : branch.flush();
+      });
+    }
   }
 }
 

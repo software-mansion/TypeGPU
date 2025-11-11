@@ -31,7 +31,7 @@ describe('mnist inference example', () => {
       @group(0) @binding(1) var<storage, read_write> output_4: array<f32>;
 
       fn relu_5(x: f32) -> f32 {
-        return max(0, x);
+        return max(0f, x);
       }
 
       struct defaultCompute_Input_6 {
@@ -52,7 +52,7 @@ describe('mnist inference example', () => {
 
       enable subgroups;
 
-      const workgroupSize_1: u32 = 128;
+      const workgroupSize_1: u32 = 128u;
 
       @group(0) @binding(1) var<storage, read_write> output_2: array<f32>;
 
@@ -63,7 +63,7 @@ describe('mnist inference example', () => {
       @group(1) @binding(1) var<storage, read> biases_5: array<f32>;
 
       fn relu_6(x: f32) -> f32 {
-        return max(0, x);
+        return max(0f, x);
       }
 
       struct subgroupCompute_Input_7 {
@@ -88,7 +88,7 @@ describe('mnist inference example', () => {
           }
         }
         var sum = subgroupAdd(partial);
-        if ((valid && (_arg_0.sid == 0))) {
+        if ((valid && (_arg_0.sid == 0u))) {
           output_2[neuronIndex] = relu_6((sum + biases_5[neuronIndex]));
         }
       }"

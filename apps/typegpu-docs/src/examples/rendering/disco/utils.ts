@@ -2,7 +2,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 export const palette = (t: number): d.v3f => {
-  'kernel';
+  'use gpu';
   const a = d.vec3f(0.50, 0.59, 0.85);
   const b = d.vec3f(0.18, 0.42, 0.40);
   const c = d.vec3f(0.18, 0.48, 0.41);

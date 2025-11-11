@@ -10,7 +10,6 @@ describe('extension based pruning', () => {
     const someFn = tgpu.fn([], d.f32)(() => {
       if (std.extensionEnabled('f16')) {
         return d.f16(1.1) + d.f16(2.2) + d.f16(3.3);
-        // biome-ignore lint/style/noUselessElse: <for pruning>
       } else {
         return d.f32(4.4) + d.f32(5.5) + d.f32(6.6);
       }
@@ -24,7 +23,7 @@ describe('extension based pruning', () => {
 
       fn someFn_0() -> f32 {
         {
-          return 6.599609375;
+          return 6.599609375f;
         }
       }"
     `);
@@ -36,7 +35,7 @@ describe('extension based pruning', () => {
     ).toMatchInlineSnapshot(`
       "fn someFn_0() -> f32 {
         {
-          return 16.5;
+          return 16.5f;
         }
       }"
     `);

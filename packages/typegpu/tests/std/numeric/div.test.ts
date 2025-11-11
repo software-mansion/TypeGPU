@@ -79,7 +79,7 @@ describe('div', () => {
 
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -89,7 +89,7 @@ describe('div', () => {
         expect(foo()).toBe(0.5);
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -99,7 +99,7 @@ describe('div', () => {
         expect(foo()).toBe(0.5);
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -139,7 +139,7 @@ describe('div', () => {
         expect(foo()).toBe(0.5);
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -149,7 +149,7 @@ describe('div', () => {
         expect(foo()).toBe(0.5);
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -159,7 +159,7 @@ describe('div', () => {
         expect(foo()).toBe(0.125);
         expect(asWgsl(foo)).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.125;
+            return 0.125f;
           }"
         `);
       });
@@ -172,7 +172,7 @@ describe('div', () => {
 
         expect(asWgsl(bar)).toMatchInlineSnapshot(`
           "fn bar() -> u32 {
-            return 0;
+            return 0u;
           }"
         `);
       });
