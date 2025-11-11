@@ -49,12 +49,12 @@ class FragmentNode extends THREE.CodeNode {
   getNodeFunction(builder: THREE.NodeBuilder) {
     const nodeData = builder.getDataFromNode(this);
 
-    // @ts-expect-error <- Three.js types suck
+    // @ts-expect-error
     let nodeFunction = nodeData.nodeFunction;
 
     if (nodeFunction === undefined) {
       nodeFunction = builder.parser.parseFunction(this.code);
-      // @ts-expect-error <- Three.js types suck
+      // @ts-expect-error
       nodeData.nodeFunction = nodeFunction;
     }
 
@@ -75,15 +75,15 @@ class FragmentNode extends THREE.CodeNode {
     const nodeCode = builder.getCodeFromNode(this, type);
 
     if (name !== '') {
-      // @ts-expect-error <- Three.js types suck
+      // @ts-expect-error
       nodeCode.name = name;
     }
 
-    // @ts-expect-error <- Three.js types suck
+    // @ts-expect-error
     const propertyName = builder.getPropertyName(nodeCode, 'fragment');
 
     const code = this.getNodeFunction(builder).getCode(propertyName);
-    // @ts-expect-error <- Three.js types suck
+    // @ts-expect-error
     nodeCode.code = `${code}\n`;
 
     if (output === 'property') {
