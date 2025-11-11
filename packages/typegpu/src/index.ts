@@ -6,6 +6,7 @@ import { constant } from './core/constant/tgpuConstant.ts';
 import { declare } from './core/declare/tgpuDeclare.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
+import { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
 import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
@@ -68,6 +69,7 @@ export const tgpu = {
      */
     const: constant,
     declare,
+    rawCodeSnippet,
 
     simulate,
   },
