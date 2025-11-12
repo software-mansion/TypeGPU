@@ -61,7 +61,7 @@ export class SwitchBehavior {
 
     this.#squelchBuffers = await Promise.all(
       Array.from(
-        { length: 5 },
+        { length: 6 },
         (_, idx) =>
           fetch(`/TypeGPU/assets/jelly-switch/squelch${idx + 1}.wav`)
             .then((res) => res.arrayBuffer())

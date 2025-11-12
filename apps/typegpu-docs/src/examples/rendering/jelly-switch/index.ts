@@ -63,31 +63,6 @@ context.configure({
 const switchBehavior = new SwitchBehavior(root);
 await switchBehavior.init();
 
-canvas.addEventListener('touchstart', (event) => {
-  switchBehavior.pressed = true;
-  event.preventDefault();
-});
-
-canvas.addEventListener('touchend', (event) => {
-  switchBehavior.pressed = false;
-  switchBehavior.toggled = !switchBehavior.toggled;
-});
-
-canvas.addEventListener('mousedown', (event) => {
-  switchBehavior.pressed = true;
-  event.preventDefault();
-});
-
-canvas.addEventListener('mouseup', (event) => {
-  switchBehavior.pressed = false;
-  switchBehavior.toggled = !switchBehavior.toggled;
-  event.stopPropagation();
-});
-
-window.addEventListener('mouseup', (event) => {
-  switchBehavior.pressed = false;
-});
-
 let qualityScale = 0.5;
 let [width, height] = [
   canvas.width * qualityScale,
@@ -671,6 +646,31 @@ resizeObserver.observe(canvas);
 requestAnimationFrame(render);
 
 // #region Example controls and cleanup
+
+canvas.addEventListener('touchstart', (event) => {
+  switchBehavior.pressed = true;
+  event.preventDefault();
+});
+
+canvas.addEventListener('touchend', (event) => {
+  switchBehavior.pressed = false;
+  switchBehavior.toggled = !switchBehavior.toggled;
+});
+
+canvas.addEventListener('mousedown', (event) => {
+  switchBehavior.pressed = true;
+  event.preventDefault();
+});
+
+canvas.addEventListener('mouseup', (event) => {
+  switchBehavior.pressed = false;
+  switchBehavior.toggled = !switchBehavior.toggled;
+  event.stopPropagation();
+});
+
+window.addEventListener('mouseup', (event) => {
+  switchBehavior.pressed = false;
+});
 
 async function autoSetQuaility() {
   if (!hasTimestampQuery) {
