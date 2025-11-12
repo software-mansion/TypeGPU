@@ -23,7 +23,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { abs, floor, mix } from 'typegpu/std';
+import { abs, floor, length, max, mix } from 'typegpu/std';
 
 const clothWidth = 1;
 const clothHeight = 1;
@@ -36,13 +36,13 @@ let vertexPositionBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
   vertexParamsBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
 
 let springVertexIdBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
-  springRestLengthBuffer,
-  springForceBuffer;
+  springRestLengthBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
+  springForceBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
 let springListBuffer;
 let computeSpringForces, computeVertexForces;
 let dampeningUniform,
   spherePositionUniform,
-  stiffnessUniform,
+  stiffnessUniform: THREE.TSL.ShaderNodeObject<THREE.UniformNode<number>>,
   sphereUniform,
   windUniform;
 let vertexWireframeObject, springWireframeObject;
@@ -281,44 +281,38 @@ function setupComputeShaders() {
   const springCount = verletSprings.length;
 
   const index = fromTSL(instanceIndex, { type: u32 });
-  const index = fromTSL(instanceIndex, { type: u32 });
 
-  // const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
-  // const restLength = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });
-  // const vertexPositions = fromTSL(vertexPositions, { type: arrayOf(vec3f) });
-
-  // const testCompute = toTSL(() => {
-  //   'kernel';
-
-  //   const vertex0Position = vertexPositions.$[vertexIds.$[index.$].x];
-  //   const vertex1Position = vertexPositions.$[vertexIds.$[index.$].y];
-
-  //   const delta = vertex1Position.sub(vertex0Position).toVar();
-  //   const dist = delta.length().max(0.000001).toVar();
-  //   const force = dist.sub(restLength).mul(stiffnessUniform).mul(delta).mul(0.5)
-  //     .div(dist);
-  // });
+  const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
+  const restLengths = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });
+  const vertexPositions = fromTSL(vertexPositionBuffer, {
+    type: arrayOf(vec3f),
+  });
+  const springForces = fromTSL(springForceBuffer, { type: arrayOf(vec3f) });
+  const stiffness = fromTSL(stiffnessUniform, { type: f32 });
 
   // 1. computeSpringForces:
   // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
-  computeSpringForces = Fn(() => {
-    If(instanceIndex.greaterThanEqual(uint(springCount)), () => {
+  computeSpringForces = toTSL(() => {
+    'use gpu';
+
+    if (index.$ > springCount) {
       // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of springs.
       // in that case, return.
-      Return();
-    });
+      return;
+    }
 
-    const vertexIds = springVertexIdBuffer.element(instanceIndex);
-    const restLength = springRestLengthBuffer.element(instanceIndex);
+    const vertexId = vertexIds.$[index.$];
+    const restLength = restLengths.$[index.$];
 
-    const vertex0Position = vertexPositionBuffer.element(vertexIds.x);
-    const vertex1Position = vertexPositionBuffer.element(vertexIds.y);
+    const vertex0Position = vertexPositions.$[vertexId.x];
+    const vertex1Position = vertexPositions.$[vertexId.y];
 
-    const delta = vertex1Position.sub(vertex0Position).toVar();
-    const dist = delta.length().max(0.000001).toVar();
-    const force = dist.sub(restLength).mul(stiffnessUniform).mul(delta).mul(0.5)
-      .div(dist);
-    springForceBuffer.element(instanceIndex).assign(force);
+    const delta = vertex1Position.sub(vertex0Position);
+    const dist = max(length(delta), 0.000001);
+    const force = delta.mul(
+      (dist - restLength) * stiffness.$ * 0.5 / dist,
+    );
+    springForces.$[index.$] = force;
   })().compute(springCount);
 
   // 2. computeVertexForces:
@@ -535,7 +529,7 @@ function setupClothMesh() {
     'use gpu';
     const pattern = checkerBoard(uv.$.mul(5));
     return mix(vec4f(0.4, 0.3, 0.3, 1), vec4f(1, 0.5, 0.4, 1), pattern);
-  });
+  })();
 
   clothMaterial.positionNode = Fn(({ material }) => {
     // gather the position of the 4 verlet vertices and calculate the center position and normal from that
