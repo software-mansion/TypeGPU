@@ -1,7 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
+import tgpu, { isVariable, type Namespace } from 'typegpu';
 import type * as d from 'typegpu/data';
 
 /**
@@ -12,18 +12,42 @@ interface TgpuFnNodeData extends THREE.NodeData {
   nodeFunction: NodeFunction;
   code: string;
   functionId: string;
-  usedAccessors: { node: TSL.ShaderNodeObject<THREE.Node>; var: TgpuVar }[];
+  dependencies: TSLAccessor<d.AnyWgslData>[];
 }
 
-interface BuilderData {
+class BuilderData {
+  names: WeakMap<object, string>;
   namespace: Namespace;
-  names: WeakMap<TgpuVar, string>;
+
+  #lastPlaceholderId = 0;
+
+  constructor() {
+    this.names = new WeakMap();
+    this.namespace = tgpu['~unstable'].namespace();
+
+    this.namespace.on('name', (event) => {
+      if (isVariable(event.target)) {
+        this.names.set(event.target, event.name);
+      }
+    });
+  }
+
+  getPlaceholder(accessor: TSLAccessor<d.AnyWgslData>): string {
+    let placeholder = this.names.get(accessor);
+    if (!placeholder) {
+      placeholder = `$$TYPEGPU_TSL_ACCESSOR_${this.#lastPlaceholderId++}$$`;
+      this.names.set(accessor, placeholder);
+    }
+    return placeholder;
+  }
 }
 
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 
 interface TgpuFnNodeContext {
-  usedAccessors: { node: TSL.ShaderNodeObject<THREE.Node>; var: TgpuVar }[];
+  readonly builder: THREE.NodeBuilder;
+  readonly builderData: BuilderData;
+  readonly dependencies: TSLAccessor<d.AnyWgslData>[];
 }
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
@@ -53,15 +77,7 @@ class TgpuFnNode<T> extends THREE.CodeNode {
     let builderData = builderDataMap.get(builder);
 
     if (!builderData) {
-      builderData = {
-        names: new WeakMap(),
-        namespace: tgpu['~unstable'].namespace(),
-      };
-      builderData.namespace.on('name', (event) => {
-        if (isVariable(event.target)) {
-          builderData?.names.set(event.target, event.name);
-        }
-      });
+      builderData = new BuilderData();
       builderDataMap.set(builder, builderData);
     }
 
@@ -72,7 +88,11 @@ class TgpuFnNode<T> extends THREE.CodeNode {
         console.warn('Nested function generation detected');
       }
 
-      const ctx: TgpuFnNodeContext = { usedAccessors: [] };
+      const ctx: TgpuFnNodeContext = {
+        builder,
+        builderData,
+        dependencies: [],
+      };
       currentlyGeneratingFnNodeCtx = ctx;
       let resolved: string;
       try {
@@ -85,8 +105,8 @@ class TgpuFnNode<T> extends THREE.CodeNode {
         currentlyGeneratingFnNodeCtx = undefined;
       }
 
-      console.log('Used accessors:', ctx.usedAccessors);
-      nodeData.usedAccessors = ctx.usedAccessors;
+      console.log('Used accessors:', ctx.dependencies);
+      nodeData.dependencies = ctx.dependencies;
 
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
@@ -99,10 +119,21 @@ class TgpuFnNode<T> extends THREE.CodeNode {
       // Including code that was resolved before the function as another node
       // that this node depends on
       const priors = TSL.code(code.slice(0, lastFnStart) ?? '');
-      this.setIncludes([priors, ...ctx.usedAccessors.map((a) => a.node)]);
+      this.setIncludes([priors, ...ctx.dependencies.map((d) => d.node)]);
 
       // Extracting the function code
-      const fnCode = code.slice(lastFnStart).trim();
+      let fnCode = code.slice(lastFnStart).trim();
+
+      // Replacing placeholders
+      for (const dep of ctx.dependencies) {
+        console.log(dep.node.build(builder), dep.node.build(builder));
+        fnCode = fnCode.replace(
+          builderData.getPlaceholder(dep),
+          dep.node.build(builder) as string,
+        );
+      }
+
+      console.log(fnCode);
 
       this.code = fnCode ?? '';
       nodeData.functionId = functionId ?? '';
@@ -120,12 +151,12 @@ class TgpuFnNode<T> extends THREE.CodeNode {
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     const builderData = builderDataMap.get(builder) as BuilderData;
 
-    for (const accessor of nodeData.usedAccessors) {
-      const varName = builderData.names.get(accessor.var);
-      const varValue = accessor.node.build(builder);
-      // @ts-ignore: It's there
-      builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
-    }
+    // for (const accessor of nodeData.usedAccessors) {
+    //   const varName = builderData.names.get(accessor.var);
+    //   const varValue = accessor.node.build(builder);
+    //   // @ts-expect-error: It's there
+    //   builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
+    // }
 
     if (output === 'property') {
       return nodeData.functionId;
@@ -136,29 +167,35 @@ class TgpuFnNode<T> extends THREE.CodeNode {
 
 export function toTSL(
   fn: () => unknown,
-): THREE.CodeNode {
+): THREE.TSL.ShaderNodeFn<[number | THREE.Node, number | THREE.Node]> {
   return new TgpuFnNode(fn);
 }
 
 class TSLAccessor<T extends d.AnyWgslData> {
-  readonly #node: TSL.ShaderNodeObject<THREE.Node>;
-  readonly #var: TgpuVar<'private', T>;
+  readonly #dataType: T;
+  // readonly #var: TgpuVar<'private', T>;
+
+  readonly node: TSL.ShaderNodeObject<THREE.Node>;
 
   constructor(
     node: TSL.ShaderNodeObject<THREE.Node>,
     dataType: T,
   ) {
-    this.#node = node;
-    this.#var = tgpu['~unstable'].privateVar(dataType);
+    this.node = node;
+    this.#dataType = dataType;
+    // this.#var = tgpu.privateVar(dataType);
   }
 
   get $(): d.InferGPU<T> {
-    // TODO: Throw error if currentlyGeneratingFnNodeCtx is undefined
-    currentlyGeneratingFnNodeCtx?.usedAccessors.push({
-      node: this.#node,
-      var: this.#var,
-    });
-    return this.#var.$;
+    const ctx = currentlyGeneratingFnNodeCtx;
+
+    if (!ctx) {
+      throw new Error('Can only access TSL nodes on the GPU.');
+    }
+
+    ctx.dependencies.push(this);
+    const placeholder = ctx.builderData.getPlaceholder(this);
+    return tgpu['~unstable'].rawCodeSnippet(placeholder, this.#dataType).$;
   }
 }
 
