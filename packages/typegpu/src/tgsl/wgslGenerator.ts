@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { stitch, stitchWithExactTypes } from '../core/resolve/stitch.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
   type AnyData,
@@ -254,7 +254,7 @@ ${this.ctx.pre}}`;
       // Post-Update Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       return snip(`${argStr}${op}`, argExpr.dataType);
     }
@@ -263,7 +263,7 @@ ${this.ctx.pre}}`;
       // Unary Expression
       const [_, op, arg] = expression;
       const argExpr = this.expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value).value;
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       const type = operatorToType(argExpr.dataType, op);
       return snip(`${op}${argStr}`, type);
@@ -735,7 +735,7 @@ ${this.ctx.pre}else ${alternate}`;
         rawId,
         concretize(eq.dataType as wgsl.AnyWgslData),
       );
-      return stitchWithExactTypes`${this.ctx.pre}var ${snippet
+      return stitch`${this.ctx.pre}var ${snippet
         .value as string} = ${eq};`;
     }
 

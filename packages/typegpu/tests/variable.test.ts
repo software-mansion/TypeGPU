@@ -18,7 +18,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       .$uses({ x });
 
     expect(asWgsl(fn1)).toMatchInlineSnapshot(`
-      "var<private> x: u32 = 2;
+      "var<private> x: u32 = 2u;
 
       fn fn1() {
             let y = x;
@@ -37,11 +37,11 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
 
     test(
       tgpu.privateVar(d.u32, 2).$name('x'),
-      'var<private> x: u32 = 2;',
+      'var<private> x: u32 = 2u;',
     );
     test(
       tgpu.privateVar(d.f32, 1.5).$name('x'),
-      'var<private> x: f32 = 1.5;',
+      'var<private> x: f32 = 1.5f;',
     );
     test(
       tgpu.privateVar(d.u32).$name('x'),
@@ -64,7 +64,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
 
     test(
       tgpu.privateVar(d.arrayOf(d.u32, 2), [1, 2]).$name('x'),
-      'var<private> x: array<u32, 2> = array<u32, 2>(1, 2);',
+      'var<private> x: array<u32, 2> = array<u32, 2>(1u, 2u);',
     );
 
     const s = d.struct({ x: d.u32, y: d.vec2i }).$name('s');
@@ -77,7 +77,7 @@ struct s {
   y: vec2i,
 }
 
-var<private> x: s = s(2, vec2i(1, 2));`,
+var<private> x: s = s(2u, vec2i(1, 2));`,
     );
 
     const a = d.arrayOf(s, 2);
@@ -93,7 +93,7 @@ struct s {
   y: vec2i,
 }
 
-var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));`,
+var<private> x: array<s, 2> = array<s, 2>(s(1u, vec2i(2, 3)), s(4u, vec2i(5, 6)));`,
     );
   });
 
@@ -142,7 +142,7 @@ var<private> x: array<s, 2> = array<s, 2>(s(1, vec2i(2, 3)), s(4, vec2i(5, 6)));
       "var<workgroup> atomicCounter: atomic<u32>;
 
       fn func() {
-        var oldValue = atomicAdd(&atomicCounter, 1);
+        var oldValue = atomicAdd(&atomicCounter, 1u);
         var currentValue = atomicLoad(&atomicCounter);
       }"
     `);

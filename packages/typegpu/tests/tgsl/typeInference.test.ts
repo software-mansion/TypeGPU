@@ -97,10 +97,10 @@ describe('wgsl generator type inference', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() {
-        var myArrayF32 = array<f32, 2>(1, 2);
-        var myArrayF16 = array<f16, 2>(3, 4);
-        var myArrayI32 = array<i32, 2>(5, 6);
-        var myArrayU32 = array<u32, 2>(7, 8);
+        var myArrayF32 = array<f32, 2>(1f, 2f);
+        var myArrayF16 = array<f16, 2>(3h, 4h);
+        var myArrayI32 = array<i32, 2>(5i, 6i);
+        var myArrayU32 = array<u32, 2>(7u, 8u);
       }"
     `);
   });
@@ -197,7 +197,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() {
-        nop(Pos(1, 2), Boid(Pos(3, 4), vec2f()), array<Boid, 1>(Boid(Pos(5, 6), vec2f())));
+        nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
       }"
     `);
   });
@@ -235,7 +235,7 @@ describe('wgsl generator type inference', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() -> u32 {
-        return 1;
+        return 1u;
       }"
     `);
 
@@ -340,7 +340,7 @@ describe('wgsl generator js type inference', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 3>(1, 2, 3);
+        var result = array<f32, 3>(1f, 2f, 3f);
       }"
     `);
   });
@@ -460,10 +460,10 @@ describe('wgsl generator js type inference', () => {
 
     expect(asWgsl(myFn)).toMatchInlineSnapshot(`
       "fn myFn() {
-        var myArrayF32 = array<f32, 2>(1, 2);
-        var myArrayF16 = array<f16, 2>(3, 4);
-        var myArrayI32 = array<i32, 2>(5, 6);
-        var myArrayU32 = array<u32, 2>(7, 8);
+        var myArrayF32 = array<f32, 2>(1f, 2f);
+        var myArrayF16 = array<f16, 2>(3h, 4h);
+        var myArrayI32 = array<i32, 2>(5i, 6i);
+        var myArrayU32 = array<u32, 2>(7u, 8u);
       }"
     `);
   });
@@ -560,7 +560,7 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn myFn() {
-        nop(Pos(1, 2), Boid(Pos(3, 4), vec2f()), array<Boid, 1>(Boid(Pos(5, 6), vec2f())));
+        nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
       }"
     `);
   });

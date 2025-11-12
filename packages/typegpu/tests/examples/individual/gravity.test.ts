@@ -43,7 +43,7 @@ describe('gravity example', () => {
       @group(0) @binding(0) var<uniform> celestialBodiesCount_3: i32;
 
       fn radiusOf_4(body: CelestialBody_2) -> f32 {
-        return (pow(((body.mass * 0.75) / 3.141592653589793f), 0.333) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
       fn isSmaller_5(currentId: u32, otherId: u32) -> bool {
@@ -66,23 +66,23 @@ describe('gravity example', () => {
         var currentId = input.gid.x;
         var current = CelestialBody_2(inState_1[currentId].destroyed, inState_1[currentId].position, inState_1[currentId].velocity, inState_1[currentId].mass, inState_1[currentId].radiusMultiplier, inState_1[currentId].collisionBehavior, inState_1[currentId].textureIndex, inState_1[currentId].ambientLightFactor);
         var updatedCurrent = current;
-        if ((current.destroyed == 0)) {
+        if ((current.destroyed == 0u)) {
           for (var i = 0; (i < celestialBodiesCount_3); i++) {
             var otherId = u32(i);
             var other = CelestialBody_2(inState_1[otherId].destroyed, inState_1[otherId].position, inState_1[otherId].velocity, inState_1[otherId].mass, inState_1[otherId].radiusMultiplier, inState_1[otherId].collisionBehavior, inState_1[otherId].textureIndex, inState_1[otherId].ambientLightFactor);
-            if ((((((u32(i) == input.gid.x) || (other.destroyed == 1)) || (current.collisionBehavior == 0)) || (other.collisionBehavior == 0)) || (distance(current.position, other.position) >= (radiusOf_4(current) + radiusOf_4(other))))) {
+            if ((((((u32(i) == input.gid.x) || (other.destroyed == 1u)) || (current.collisionBehavior == 0u)) || (other.collisionBehavior == 0u)) || (distance(current.position, other.position) >= (radiusOf_4(current) + radiusOf_4(other))))) {
               continue;
             }
-            if (((current.collisionBehavior == 1) && (other.collisionBehavior == 1))) {
+            if (((current.collisionBehavior == 1u) && (other.collisionBehavior == 1u))) {
               if (isSmaller_5(currentId, otherId)) {
                 updatedCurrent.position = (other.position + ((radiusOf_4(current) + radiusOf_4(other)) * normalize((current.position - other.position))));
               }
-              updatedCurrent.velocity = (0.99 * (updatedCurrent.velocity - (((((2 * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2)) * (current.position - other.position))));
+              updatedCurrent.velocity = (0.99 * (updatedCurrent.velocity - (((((2f * other.mass) / (current.mass + other.mass)) * dot((current.velocity - other.velocity), (current.position - other.position))) / pow(distance(current.position, other.position), 2f)) * (current.position - other.position))));
             }
             else {
-              var isCurrentAbsorbed = ((current.collisionBehavior == 1) || ((current.collisionBehavior == 2) && isSmaller_5(currentId, otherId)));
+              var isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller_5(currentId, otherId)));
               if (isCurrentAbsorbed) {
-                updatedCurrent.destroyed = 1;
+                updatedCurrent.destroyed = 1u;
               }
               else {
                 var m1 = updatedCurrent.mass;
@@ -119,7 +119,7 @@ describe('gravity example', () => {
       @group(1) @binding(0) var<uniform> celestialBodiesCount_5: i32;
 
       fn radiusOf_6(body: CelestialBody_2) -> f32 {
-        return (pow(((body.mass * 0.75) / 3.141592653589793f), 0.333) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
       @group(1) @binding(2) var<storage, read_write> outState_7: array<CelestialBody_2>;
@@ -132,10 +132,10 @@ describe('gravity example', () => {
         var current = CelestialBody_2(inState_1[input.gid.x].destroyed, inState_1[input.gid.x].position, inState_1[input.gid.x].velocity, inState_1[input.gid.x].mass, inState_1[input.gid.x].radiusMultiplier, inState_1[input.gid.x].collisionBehavior, inState_1[input.gid.x].textureIndex, inState_1[input.gid.x].ambientLightFactor);
         var dt = (time_3.passed * time_3.multiplier);
         var updatedCurrent = current;
-        if ((current.destroyed == 0)) {
+        if ((current.destroyed == 0u)) {
           for (var i = 0; (i < celestialBodiesCount_5); i++) {
             var other = CelestialBody_2(inState_1[i].destroyed, inState_1[i].position, inState_1[i].velocity, inState_1[i].mass, inState_1[i].radiusMultiplier, inState_1[i].collisionBehavior, inState_1[i].textureIndex, inState_1[i].ambientLightFactor);
-            if (((u32(i) == input.gid.x) || (other.destroyed == 1))) {
+            if (((u32(i) == input.gid.x) || (other.destroyed == 1u))) {
               continue;
             }
             var dist = max((radiusOf_6(current) + radiusOf_6(other)), distance(current.position, other.position));
@@ -168,8 +168,8 @@ describe('gravity example', () => {
       }
 
       @vertex fn skyBoxVertex_0(input: skyBoxVertex_Input_4) -> skyBoxVertex_Output_3 {
-        var viewPos = (camera_1.view * vec4f(input.position, 0)).xyz;
-        return skyBoxVertex_Output_3((camera_1.projection * vec4f(viewPos, 1)), input.position.xyz);
+        var viewPos = (camera_1.view * vec4f(input.position, 0f)).xyz;
+        return skyBoxVertex_Output_3((camera_1.projection * vec4f(viewPos, 1f)), input.position.xyz);
       }
 
       @group(0) @binding(1) var item_6: texture_cube<f32>;
@@ -198,7 +198,7 @@ describe('gravity example', () => {
       @group(1) @binding(1) var<storage, read> celestialBodies_1: array<CelestialBody_2>;
 
       fn radiusOf_3(body: CelestialBody_2) -> f32 {
-        return (pow(((body.mass * 0.75) / 3.141592653589793f), 0.333) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
       struct Camera_5 {
@@ -231,7 +231,7 @@ describe('gravity example', () => {
         var currentBody = CelestialBody_2(celestialBodies_1[input.instanceIndex].destroyed, celestialBodies_1[input.instanceIndex].position, celestialBodies_1[input.instanceIndex].velocity, celestialBodies_1[input.instanceIndex].mass, celestialBodies_1[input.instanceIndex].radiusMultiplier, celestialBodies_1[input.instanceIndex].collisionBehavior, celestialBodies_1[input.instanceIndex].textureIndex, celestialBodies_1[input.instanceIndex].ambientLightFactor);
         var worldPosition = ((radiusOf_3(currentBody) * input.position.xyz) + currentBody.position);
         var camera = camera_4;
-        var positionOnCanvas = (camera.projection * (camera.view * vec4f(worldPosition, 1)));
+        var positionOnCanvas = (camera.projection * (camera.view * vec4f(worldPosition, 1f)));
         return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, currentBody.textureIndex, currentBody.destroyed, currentBody.ambientLightFactor);
       }
 
@@ -252,7 +252,7 @@ describe('gravity example', () => {
       }
 
       @fragment fn mainFragment_8(input: mainFragment_Input_12) -> @location(0) vec4f {
-        if ((input.destroyed == 1)) {
+        if ((input.destroyed == 1u)) {
           discard;;
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
@@ -261,9 +261,9 @@ describe('gravity example', () => {
         var normal = input.normals;
         var lightDirection = normalize((lightSource_11 - input.worldPosition));
         var cosTheta = dot(normal, lightDirection);
-        var diffuse = (max(0, cosTheta) * (textureColor * lightColor));
+        var diffuse = (max(0f, cosTheta) * (textureColor * lightColor));
         var litColor = (ambient + diffuse);
-        return vec4f(litColor.xyz, 1);
+        return vec4f(litColor.xyz, 1f);
       }"
     `);
   });
