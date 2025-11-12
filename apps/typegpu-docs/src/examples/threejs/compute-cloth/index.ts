@@ -35,7 +35,9 @@ let vertexPositionBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
   vertexForceBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
   vertexParamsBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
 
-let springVertexIdBuffer, springRestLengthBuffer, springForceBuffer;
+let springVertexIdBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
+  springRestLengthBuffer,
+  springForceBuffer;
 let springListBuffer;
 let computeSpringForces, computeVertexForces;
 let dampeningUniform,
@@ -278,7 +280,8 @@ function setupComputeShaders() {
   const vertexCount = verletVertices.length;
   const springCount = verletSprings.length;
 
-  // const index = fromTSL(instanceIndex, { type: u32 });
+  const index = fromTSL(instanceIndex, { type: u32 });
+  const index = fromTSL(instanceIndex, { type: u32 });
 
   // const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
   // const restLength = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });

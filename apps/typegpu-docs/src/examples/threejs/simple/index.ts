@@ -3,7 +3,7 @@ import { time, toTSL, uv } from '@typegpu/three';
 import { perlin3d } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 import { tanh } from 'typegpu/std';
-// import * as TSL from 'three/tsl';
+import * as TSL from 'three/tsl';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -32,6 +32,9 @@ material.colorNode = toTSL(() => {
   const pattern = perlin3d.sample(d.vec3f(coords, time.$ * 0.2));
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
 });
+
+material.colorNode = TSL.Fn<[THREE.Node, THREE.Node]>(([x, y], builder) => {
+})(0.1, 0.4);
 
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
