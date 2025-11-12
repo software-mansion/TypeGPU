@@ -31,7 +31,7 @@ material.colorNode = toTSL(() => {
   const coords = uv.$.mul(2);
   const pattern = perlin3d.sample(d.vec3f(coords, time.$ * 0.2));
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
-});
+})();
 
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),

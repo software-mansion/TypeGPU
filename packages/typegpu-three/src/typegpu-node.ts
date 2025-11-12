@@ -2,7 +2,7 @@ import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import tgpu, { isVariable, type Namespace, TgpuVar } from 'typegpu';
-import type * as d from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 /**
  * State held by the node, used during shader generation.
@@ -13,7 +13,7 @@ interface TgpuFnNodeData extends THREE.NodeData {
     fnCode: string;
     priorCode: THREE.Node;
     functionId: string;
-    dependencies: TSLAccessor<d.AnyWgslData>[];
+    dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
   };
 }
 
@@ -34,7 +34,7 @@ class BuilderData {
     });
   }
 
-  getPlaceholder(accessor: TSLAccessor<d.AnyWgslData>): string {
+  getPlaceholder(accessor: TSLAccessor<d.AnyWgslData, THREE.Node>): string {
     let placeholder = this.names.get(accessor);
     if (!placeholder) {
       placeholder = `$$TYPEGPU_TSL_ACCESSOR_${this.#lastPlaceholderId++}$$`;
@@ -49,10 +49,25 @@ const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 interface TgpuFnNodeContext {
   readonly builder: THREE.NodeBuilder;
   readonly builderData: BuilderData;
-  readonly dependencies: TSLAccessor<d.AnyWgslData>[];
+  readonly dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
 }
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
+
+function forceExplicitVoidReturn(codeIn: string) {
+  if (codeIn.includes('->')) {
+    // Has return type, so we don't need to force it
+    return codeIn;
+  }
+
+  const closingParen = codeIn.indexOf(')');
+  if (closingParen === -1) {
+    throw new Error('Invalid code: missing closing parenthesis');
+  }
+
+  return codeIn.substring(0, closingParen + 1) + '-> void' +
+    codeIn.substring(closingParen + 1);
+}
 
 class TgpuFnNode<T> extends THREE.Node {
   #impl: () => T;
@@ -119,9 +134,9 @@ class TgpuFnNode<T> extends THREE.Node {
       // Extracting the function code
       let fnCode = code.slice(lastFnStart).trim();
 
+      // TODO: Placeholders aren't necessary
       // Replacing placeholders
       for (const dep of ctx.dependencies) {
-        console.log(dep.node.build(builder), dep.node.build(builder));
         fnCode = fnCode.replace(
           builderData.getPlaceholder(dep),
           dep.node.build(builder) as string,
@@ -130,7 +145,10 @@ class TgpuFnNode<T> extends THREE.Node {
 
       nodeData.custom = {
         functionId: functionId ?? '',
-        nodeFunction: builder.parser.parseFunction(fnCode),
+        nodeFunction: builder.parser.parseFunction(
+          // TODO: Upstream a fix to Three.js that accepts functions with no return type
+          forceExplicitVoidReturn(fnCode),
+        ),
         fnCode,
         // Including code that was resolved before the function as another node
         // that this node depends on
@@ -181,25 +199,27 @@ class TgpuFnNode<T> extends THREE.Node {
 
 export function toTSL(
   fn: () => unknown,
-): THREE.Node {
-  return new TgpuFnNode(fn);
+): () => THREE.TSL.ShaderNodeObject<THREE.Node> {
+  return () => TSL.nodeObject(new TgpuFnNode(fn));
 }
 
-class TSLAccessor<T extends d.AnyWgslData> {
+class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
   readonly var: TgpuVar<'private', T> | undefined;
-  readonly node: TSL.ShaderNodeObject<THREE.Node>;
+  readonly node: TSL.ShaderNodeObject<TNode>;
 
   constructor(
-    node: TSL.ShaderNodeObject<THREE.Node>,
+    node: TSL.ShaderNodeObject<TNode>,
     dataType: T,
   ) {
     this.node = node;
     this.#dataType = dataType;
 
     // TODO: Only create a variable if it's not referentiable in the global scope
-    this.var = tgpu.privateVar(dataType);
+    if (!node.isStorageBufferNode) {
+      this.var = tgpu.privateVar(dataType);
+    }
   }
 
   get $(): d.InferGPU<T> {
@@ -209,7 +229,8 @@ class TSLAccessor<T extends d.AnyWgslData> {
       throw new Error('Can only access TSL nodes on the GPU.');
     }
 
-    ctx.dependencies.push(this);
+    // biome-ignore lint/suspicious/noExplicitAny: smh
+    ctx.dependencies.push(this as any);
 
     if (this.var) {
       return this.var.$;
@@ -222,9 +243,22 @@ class TSLAccessor<T extends d.AnyWgslData> {
   }
 }
 
-export function fromTSL<T extends d.AnyWgslData>(
-  node: TSL.ShaderNodeObject<THREE.Node>,
+export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
+  node: TSL.ShaderNodeObject<TNode>,
+  options: { type: (length: number) => T },
+): TSLAccessor<T, TNode>;
+export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
+  node: TSL.ShaderNodeObject<TNode>,
   options: { type: T },
-): TSLAccessor<T> {
-  return new TSLAccessor<T>(node, options.type);
+): TSLAccessor<T, TNode>;
+export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
+  node: TSL.ShaderNodeObject<TNode>,
+  options: { type: T } | { type: (length: number) => T },
+): TSLAccessor<T, TNode> {
+  return new TSLAccessor<T, TNode>(
+    node,
+    d.isData(options.type)
+      ? options.type as T
+      : (options.type as (length: number) => T)(0),
+  );
 }
