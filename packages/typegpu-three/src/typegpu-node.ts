@@ -1,18 +1,20 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isVariable, type Namespace } from 'typegpu';
+import tgpu, { isVariable, type Namespace, TgpuVar } from 'typegpu';
 import type * as d from 'typegpu/data';
 
 /**
  * State held by the node, used during shader generation.
  */
 interface TgpuFnNodeData extends THREE.NodeData {
-  initialized?: boolean;
-  nodeFunction: NodeFunction;
-  code: string;
-  functionId: string;
-  dependencies: TSLAccessor<d.AnyWgslData>[];
+  custom: {
+    nodeFunction: NodeFunction;
+    fnCode: string;
+    priorCode: THREE.Node;
+    functionId: string;
+    dependencies: TSLAccessor<d.AnyWgslData>[];
+  };
 }
 
 class BuilderData {
@@ -52,12 +54,16 @@ interface TgpuFnNodeContext {
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
 
-class TgpuFnNode<T> extends THREE.CodeNode {
+class TgpuFnNode<T> extends THREE.Node {
   #impl: () => T;
 
   constructor(impl: () => T) {
-    super('', [], 'wgsl');
+    super('typegpu-fn-node');
     this.#impl = impl;
+
+    // TODO: Figure out what this does. Apparently it's used for global cache,
+    // but I don't know the ramifications of that. The CodeNode sets this to true too.
+    this.global = true;
   }
 
   static get type() {
@@ -65,14 +71,10 @@ class TgpuFnNode<T> extends THREE.CodeNode {
   }
 
   getNodeType(builder: THREE.NodeBuilder) {
-    return this.getNodeFunction(builder).type;
+    return this.#getNodeFunction(builder).type;
   }
 
-  getInputs(builder: THREE.NodeBuilder) {
-    return this.getNodeFunction(builder).inputs;
-  }
-
-  getNodeFunction(builder: THREE.NodeBuilder) {
+  #getNodeFunction(builder: THREE.NodeBuilder) {
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     let builderData = builderDataMap.get(builder);
 
@@ -81,11 +83,9 @@ class TgpuFnNode<T> extends THREE.CodeNode {
       builderDataMap.set(builder, builderData);
     }
 
-    if (!nodeData.initialized) {
-      nodeData.initialized = true;
-
+    if (!nodeData.custom) {
       if (currentlyGeneratingFnNodeCtx !== undefined) {
-        console.warn('Nested function generation detected');
+        console.warn('[@typegpu/three] Nested function generation detected');
       }
 
       const ctx: TgpuFnNodeContext = {
@@ -106,7 +106,6 @@ class TgpuFnNode<T> extends THREE.CodeNode {
       }
 
       console.log('Used accessors:', ctx.dependencies);
-      nodeData.dependencies = ctx.dependencies;
 
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
@@ -116,10 +115,6 @@ class TgpuFnNode<T> extends THREE.CodeNode {
         // We're starting with the function declaration
         lastFnStart = 0;
       }
-      // Including code that was resolved before the function as another node
-      // that this node depends on
-      const priors = TSL.code(code.slice(0, lastFnStart) ?? '');
-      this.setIncludes([priors, ...ctx.dependencies.map((d) => d.node)]);
 
       // Extracting the function code
       let fnCode = code.slice(lastFnStart).trim();
@@ -133,48 +128,67 @@ class TgpuFnNode<T> extends THREE.CodeNode {
         );
       }
 
-      console.log(fnCode);
-
-      this.code = fnCode ?? '';
-      nodeData.functionId = functionId ?? '';
-      nodeData.nodeFunction = builder.parser.parseFunction(this.code);
+      nodeData.custom = {
+        functionId: functionId ?? '',
+        nodeFunction: builder.parser.parseFunction(fnCode),
+        fnCode,
+        // Including code that was resolved before the function as another node
+        // that this node depends on
+        priorCode: TSL.code(code.slice(0, lastFnStart) ?? ''),
+        dependencies: ctx.dependencies,
+      };
     }
 
-    return nodeData.nodeFunction;
+    return nodeData.custom.nodeFunction;
   }
 
   generate(
     builder: THREE.NodeBuilder,
     output: string | null | undefined,
   ): string | null | undefined {
-    super.generate(builder);
+    this.#getNodeFunction(builder); // making sure the node function exists
+
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     const builderData = builderDataMap.get(builder) as BuilderData;
 
-    // for (const accessor of nodeData.usedAccessors) {
-    //   const varName = builderData.names.get(accessor.var);
-    //   const varValue = accessor.node.build(builder);
-    //   // @ts-expect-error: It's there
-    //   builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
-    // }
+    // Building dependencies
+    for (const dep of nodeData.custom.dependencies) {
+      dep.node.build(builder);
+    }
+    nodeData.custom.priorCode.build(builder);
+
+    for (const dep of nodeData.custom.dependencies) {
+      if (!dep.var) {
+        continue;
+      }
+
+      const varName = builderData.names.get(dep.var);
+      const varValue = dep.node.build(builder);
+      // @ts-expect-error: It's there
+      builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
+    }
+
+    const nodeCode = builder.getCodeFromNode(this, this.getNodeType(builder));
+    // @ts-expect-error
+    nodeCode.code = nodeData.custom.fnCode;
 
     if (output === 'property') {
-      return nodeData.functionId;
+      return nodeData.custom.functionId;
     }
-    return `${nodeData.functionId}()`;
+    return `${nodeData.custom.functionId}()`;
   }
 }
 
 export function toTSL(
   fn: () => unknown,
-): THREE.TSL.ShaderNodeFn<[number | THREE.Node, number | THREE.Node]> {
+): THREE.Node {
   return new TgpuFnNode(fn);
 }
 
 class TSLAccessor<T extends d.AnyWgslData> {
   readonly #dataType: T;
-  // readonly #var: TgpuVar<'private', T>;
 
+  readonly var: TgpuVar<'private', T> | undefined;
   readonly node: TSL.ShaderNodeObject<THREE.Node>;
 
   constructor(
@@ -183,7 +197,9 @@ class TSLAccessor<T extends d.AnyWgslData> {
   ) {
     this.node = node;
     this.#dataType = dataType;
-    // this.#var = tgpu.privateVar(dataType);
+
+    // TODO: Only create a variable if it's not referentiable in the global scope
+    this.var = tgpu.privateVar(dataType);
   }
 
   get $(): d.InferGPU<T> {
@@ -194,8 +210,15 @@ class TSLAccessor<T extends d.AnyWgslData> {
     }
 
     ctx.dependencies.push(this);
-    const placeholder = ctx.builderData.getPlaceholder(this);
-    return tgpu['~unstable'].rawCodeSnippet(placeholder, this.#dataType).$;
+
+    if (this.var) {
+      return this.var.$;
+    }
+
+    return tgpu['~unstable'].rawCodeSnippet(
+      this.node.build(ctx.builder) as string,
+      this.#dataType,
+    ).$;
   }
 }
 
