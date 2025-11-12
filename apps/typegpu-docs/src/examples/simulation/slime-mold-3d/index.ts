@@ -6,9 +6,7 @@ import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
 const root = await tgpu.init({
-  device: {
-    optionalFeatures: ['float32-filterable', 'timestamp-query'],
-  },
+  device: { optionalFeatures: ['float32-filterable'] },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
 const device = root.device;
