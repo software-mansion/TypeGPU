@@ -33,9 +33,6 @@ material.colorNode = toTSL(() => {
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
 });
 
-material.colorNode = TSL.Fn<[THREE.Node, THREE.Node]>(([x, y], builder) => {
-})(0.1, 0.4);
-
 const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   material,
