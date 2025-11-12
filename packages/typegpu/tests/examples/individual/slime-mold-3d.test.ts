@@ -80,9 +80,11 @@ describe('slime mold 3d example', () => {
         wrappedCallback_2(in.id.x, in.id.y, in.id.z);
       }
 
-      @group(1) @binding(0) var oldState_1: texture_storage_3d<r32float, read>;
+      @group(1) @binding(0) var oldState_1: texture_3d<f32>;
 
-      struct Params_3 {
+      @group(1) @binding(2) var sampler_2: sampler;
+
+      struct Params_4 {
         deltaTime: f32,
         moveSpeed: f32,
         sensorAngle: f32,
@@ -91,37 +93,31 @@ describe('slime mold 3d example', () => {
         evaporationRate: f32,
       }
 
-      @group(0) @binding(0) var<uniform> params_2: Params_3;
+      @group(0) @binding(0) var<uniform> params_3: Params_4;
 
-      @group(1) @binding(1) var newState_4: texture_storage_3d<r32float, write>;
+      @group(1) @binding(1) var newState_5: texture_storage_3d<r32float, write>;
 
-      struct blur_Input_5 {
+      struct blur_Input_6 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(4, 4, 4) fn blur_0(_arg_0: blur_Input_5) {
+      @compute @workgroup_size(4, 4, 4) fn blur_0(_arg_0: blur_Input_6) {
         var dims = textureDimensions(oldState_1);
         if ((((_arg_0.gid.x >= dims.x) || (_arg_0.gid.y >= dims.y)) || (_arg_0.gid.z >= dims.z))) {
           return;
         }
+        var uv = ((vec3f(_arg_0.gid) + 0.5) / vec3f(dims));
+        var offset = (vec3f(1) / vec3f(dims));
         var sum = 0f;
-        var count = 0f;
-        for (var offsetZ = -1; (offsetZ <= 1i); offsetZ++) {
-          for (var offsetY = -1; (offsetY <= 1i); offsetY++) {
-            for (var offsetX = -1; (offsetX <= 1i); offsetX++) {
-              var samplePos = (vec3i(_arg_0.gid.xyz) + vec3i(offsetX, offsetY, offsetZ));
-              var dimsi = vec3i(dims);
-              if (((((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y)) && (samplePos.z >= 0i)) && (samplePos.z < dimsi.z))) {
-                var value = textureLoad(oldState_1, vec3u(samplePos)).x;
-                sum = (sum + value);
-                count = (count + 1f);
-              }
-            }
+        for (var axis = 0; (axis < 3i); axis++) {
+          for (var sign = -1; (sign <= 1i); sign += 2i) {
+            var offsetVec = vec3f(select(0f, (offset.x * f32(sign)), (axis == 0i)), select(0f, (offset.y * f32(sign)), (axis == 1i)), select(0f, (offset.z * f32(sign)), (axis == 2i)));
+            sum = (sum + textureSampleLevel(oldState_1, sampler_2, (uv + offsetVec), 0).x);
           }
         }
-        var blurred = (sum / count);
-        var newValue = saturate((blurred - params_2.evaporationRate));
-        textureStore(newState_4, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
+        var blurred = (sum / 6f);
+        var newValue = saturate((blurred - params_3.evaporationRate));
+        textureStore(newState_5, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
       var<private> seed_3: vec2f;
@@ -311,21 +307,31 @@ describe('slime mold 3d example', () => {
         return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      struct Camera_5 {
+      var<private> seed_6: vec2f;
+
+      fn seed2_5(value: vec2f) {
+        seed_6 = value;
+      }
+
+      fn randSeed2_4(seed: vec2f) {
+        seed2_5(seed);
+      }
+
+      struct Camera_8 {
         viewProj: mat4x4f,
         invViewProj: mat4x4f,
         position: vec3f,
       }
 
-      @group(0) @binding(0) var<uniform> cameraData_4: Camera_5;
+      @group(0) @binding(0) var<uniform> cameraData_7: Camera_8;
 
-      struct RayBoxResult_7 {
+      struct RayBoxResult_10 {
         tNear: f32,
         tFar: f32,
         hit: bool,
       }
 
-      fn rayBoxIntersection_6(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult_7 {
+      fn rayBoxIntersection_9(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult_10 {
         var invDir = (vec3f(1) / rayDir);
         var t0 = ((boxMin - rayOrigin) * invDir);
         var t1 = ((boxMax - rayOrigin) * invDir);
@@ -334,58 +340,76 @@ describe('slime mold 3d example', () => {
         var tNear = max(max(tmin.x, tmin.y), tmin.z);
         var tFar = min(min(tmax.x, tmax.y), tmax.z);
         var hit = ((tFar >= tNear) && (tFar >= 0f));
-        return RayBoxResult_7(tNear, tFar, hit);
+        return RayBoxResult_10(tNear, tFar, hit);
       }
 
-      @group(1) @binding(0) var state_8: texture_3d<f32>;
+      fn item_12() -> f32 {
+        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
+        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
+        seed_6.x = fract((cos(a) * 136.8168f));
+        seed_6.y = fract((cos(b) * 534.7645f));
+        return seed_6.y;
+      }
 
-      @group(0) @binding(1) var sampler_9: sampler;
+      fn randFloat01_11() -> f32 {
+        return item_12();
+      }
 
-      struct fragmentShader_Input_10 {
+      @group(1) @binding(0) var state_13: texture_3d<f32>;
+
+      @group(0) @binding(1) var sampler_14: sampler;
+
+      struct fragmentShader_Input_15 {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentShader_3(_arg_0: fragmentShader_Input_10) -> @location(0) vec4f {
+      @fragment fn fragmentShader_3(_arg_0: fragmentShader_Input_15) -> @location(0) vec4f {
+        randSeed2_4(_arg_0.uv);
         var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
         var ndcNear = vec4f(ndc, -1, 1f);
         var ndcFar = vec4f(ndc, 1f, 1f);
-        var worldNear = (cameraData_4.invViewProj * ndcNear);
-        var worldFar = (cameraData_4.invViewProj * ndcFar);
+        var worldNear = (cameraData_7.invViewProj * ndcNear);
+        var worldFar = (cameraData_7.invViewProj * ndcFar);
         var rayOrigin = (worldNear.xyz / worldNear.w);
         var rayEnd = (worldFar.xyz / worldFar.w);
         var rayDir = normalize((rayEnd - rayOrigin));
         var boxMin = vec3f();
         var boxMax = vec3f(256);
-        var isect = rayBoxIntersection_6(rayOrigin, rayDir, boxMin, boxMax);
+        var isect = rayBoxIntersection_9(rayOrigin, rayDir, boxMin, boxMax);
         if (!isect.hit) {
           return vec4f();
         }
-        var tStart = max(isect.tNear, 0f);
+        var jitter = (randFloat01_11() * 20f);
+        var tStart = max((isect.tNear + jitter), jitter);
         var tEnd = isect.tFar;
-        var numSteps = 128;
-        var stepSize = ((tEnd - tStart) / f32(numSteps));
+        var intersectionLength = (tEnd - tStart);
+        var baseStepsPerUnit = 0.30000001192092896f;
+        var minSteps = 8i;
+        var maxSteps = 48i;
+        var adaptiveSteps = clamp(i32((intersectionLength * baseStepsPerUnit)), minSteps, maxSteps);
+        var numSteps = adaptiveSteps;
+        var stepSize = (intersectionLength / f32(numSteps));
         var thresholdLo = 0.05999999865889549f;
         var thresholdHi = 0.25f;
         var gamma = 1.399999976158142f;
-        var sigmaT = 0.05000000074505806f;
+        var sigmaT = 0.10000000149011612f;
         var albedo = vec3f(0.5699999928474426, 0.4399999976158142, 0.9599999785423279);
         var transmittance = 1f;
         var accum = vec3f();
         var TMin = 0.0010000000474974513f;
-        for (var i = 0; (i < numSteps); i++) {
-          if ((transmittance <= TMin)) {
-            break;
-          }
+        var i = 0i;
+        while (((i < numSteps) && (transmittance > TMin))) {
           var t = (tStart + ((f32(i) + 0.5f) * stepSize));
           var pos = (rayOrigin + (rayDir * t));
           var texCoord = (pos / vec3f(256));
-          var sampleValue = textureSampleLevel(state_8, sampler_9, texCoord, 0).x;
+          var sampleValue = textureSampleLevel(state_13, sampler_14, texCoord, 0).x;
           var d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
           var density = pow(d0, gamma);
           var alphaSrc = (1f - exp(((-sigmaT * density) * stepSize)));
           var contrib = (albedo * alphaSrc);
           accum = (accum + (contrib * transmittance));
           transmittance = (transmittance * (1f - alphaSrc));
+          i += 1i;
         }
         var alpha = (1f - transmittance);
         return vec4f(accum, alpha);
