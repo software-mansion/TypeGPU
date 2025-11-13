@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
 import * as d from 'typegpu/data';
+import { expect, test } from 'vitest';
 import { asGLSL } from './utils/asGLSL.ts';
 
 test('no args, f32 return', () => {
@@ -10,7 +10,7 @@ test('no args, f32 return', () => {
 
   expect(asGLSL(foo)).toMatchInlineSnapshot(`
     "float foo() {
-      return 3;
+      return 3f;
     }"
   `);
 });
@@ -23,7 +23,7 @@ test('no args, void return', () => {
 
   expect(asGLSL(foo)).toMatchInlineSnapshot(`
     "void foo() {
-      var a = 3;
+      const a = 3;
     }"
   `);
 });
@@ -41,11 +41,11 @@ test('primitive args, f32 return', () => {
 
   expect(asGLSL(bar)).toMatchInlineSnapshot(`
     "float foo(int a, int b) {
-      return f32(((a + b) + 2));
+      return f32(((a + b) + 2i));
     }
 
     void bar() {
-      foo(1, 2);
+      foo(1i, 2i);
     }"
   `);
 });
