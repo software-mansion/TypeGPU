@@ -55,7 +55,7 @@ export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
 }
 
 /**
- * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
+ * Resolves a template with external values. Each external that is used will get resolved to a code string and replaced in the template.
  * Any dependencies of the externals will also be resolved and included in the output.
  * @param options - The options for the resolution.
  *
@@ -63,10 +63,7 @@ export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
  *
  * @example
  * ```ts
- * const Gradient = d.struct({
- *   from: d.vec3f,
- *   to: d.vec3f,
- * });
+ * const Gradient = d.struct({ from: d.vec3f, to: d.vec3f });
  *
  * const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
  *   template: `
@@ -92,6 +89,34 @@ export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
 export function resolveWithContext(
   options: TgpuExtendedResolveOptions,
 ): ResolutionResult;
+/**
+ * Resolves given TypeGPU resources.
+ * Any dependencies of the externals will also be resolved and included in the output.
+ * @param items - An array of items to resolve.
+ * @param options - The options for the resolution.
+ *
+ * @returns {ResolutionResult}
+ *
+ * @example
+ * ```ts
+ * const Gradient = d.struct({
+ *   from: d.vec3f,
+ *   to: d.vec3f,
+ * });
+ *
+ * const { code, usedBindGroupLayouts, catchall } =
+ *   tgpu.resolveWithContext([Gradient]);
+ *
+ * console.log(code);
+ * // struct Gradient_0 {
+ * //   from: vec3f,
+ * //   to: vec3f,
+ * // }
+ * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
+ * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ * // }
+ * ```
+ */
 export function resolveWithContext(
   items: ResolvableObject[],
   options?: TgpuResolveOptions,
@@ -119,6 +144,31 @@ export function resolveWithContext(
  * // struct Gradient_0 {
  * //   from: vec3f,
  * //   to: vec3f,
+ * // }
+ * ```
+ *
+ * @example
+ * ```ts
+ * const Gradient = d.struct({ from: d.vec3f, to: d.vec3f });
+ *
+ * const code = tgpu.resolve({
+ *   template: `
+ *     fn getGradientAngle(gradient: Gradient) -> f32 {
+ *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ *     }
+ *   `,
+ *   externals: {
+ *     Gradient,
+ *   },
+ * });
+ *
+ * console.log(code);
+ * // struct Gradient_0 {
+ * //   from: vec3f,
+ * //   to: vec3f,
+ * // }
+ * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
+ * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
  * // }
  * ```
  */
