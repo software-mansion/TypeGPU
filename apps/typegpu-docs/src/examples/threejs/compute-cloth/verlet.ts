@@ -234,8 +234,6 @@ export class VerletSimulation {
     // 1. computeSpringForces:
     // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
 
-    // biome-ignore lint/complexity/noUselessThisAlias: necessary for now
-    const self = this;
     this.computeSpringForces = toTSL(() => {
       'use gpu';
 
@@ -245,18 +243,18 @@ export class VerletSimulation {
         return;
       }
 
-      const vertexId = self.springVertexIdBuffer.$[instanceIndex.$];
-      const restLength = self.springRestLengthBuffer.$[instanceIndex.$];
+      const vertexId = this.springVertexIdBuffer.$[instanceIndex.$];
+      const restLength = this.springRestLengthBuffer.$[instanceIndex.$];
 
-      const vertex0Position = self.vertexPositionBuffer.$[vertexId.x];
-      const vertex1Position = self.vertexPositionBuffer.$[vertexId.y];
+      const vertex0Position = this.vertexPositionBuffer.$[vertexId.x];
+      const vertex1Position = this.vertexPositionBuffer.$[vertexId.y];
 
       const delta = vertex1Position.sub(vertex0Position);
       const dist = std.max(std.length(delta), 0.000001);
       const force = delta.mul(
-        (dist - restLength) * self.stiffnessUniform.$ * 0.5 / dist,
+        (dist - restLength) * this.stiffnessUniform.$ * 0.5 / dist,
       );
-      self.springForceBuffer.$[instanceIndex.$] = force;
+      this.springForceBuffer.$[instanceIndex.$] = force;
     }).compute(springCount);
 
     // 2. computeVertexForces:
@@ -277,7 +275,7 @@ export class VerletSimulation {
         return;
       }
 
-      const params = self.vertexParamsBuffer.$[idx];
+      const params = this.vertexParamsBuffer.$[idx];
       const isFixed = params.x;
       const springCount = params.y;
       const springPointer = params.z;
@@ -287,16 +285,16 @@ export class VerletSimulation {
         return;
       }
 
-      const position = self.vertexPositionBuffer.$[idx];
-      let force = d.vec3f(self.vertexForceBuffer.$[idx]);
-      force = force.mul(self.dampeningUniform.$);
+      const position = this.vertexPositionBuffer.$[idx];
+      let force = d.vec3f(this.vertexForceBuffer.$[idx]);
+      force = force.mul(this.dampeningUniform.$);
 
       const ptrStart = springPointer;
       const ptrEnd = ptrStart + springCount;
       for (let i = ptrStart; i < ptrEnd; i++) {
-        const springId = self.springListBuffer.$[i];
-        const springForce = self.springForceBuffer.$[springId];
-        const springVertexIds = self.springVertexIdBuffer.$[springId];
+        const springId = this.springListBuffer.$[i];
+        const springForce = this.springForceBuffer.$[springId];
+        const springVertexIds = this.springVertexIdBuffer.$[springId];
         const factor = std.select(
           d.f32(-1),
           d.f32(1),
@@ -310,7 +308,7 @@ export class VerletSimulation {
 
       // wind
       const noise = (triNoise3D(position, 1, time.$) - 0.2) * 0.0001;
-      const windForce = noise * self.windUniform.$;
+      const windForce = noise * this.windUniform.$;
       force.z -= windForce;
 
       // collision with sphere
@@ -321,8 +319,8 @@ export class VerletSimulation {
       );
       force = force.add(sphereForce);
 
-      self.vertexForceBuffer.$[idx] = d.vec3f(force);
-      self.vertexPositionBuffer.$[idx] = self.vertexPositionBuffer.$[idx].add(
+      this.vertexForceBuffer.$[idx] = d.vec3f(force);
+      this.vertexPositionBuffer.$[idx] = this.vertexPositionBuffer.$[idx].add(
         force,
       );
     }).compute(vertexCount);
