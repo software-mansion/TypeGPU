@@ -1,7 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isVariable, type Namespace, TgpuVar } from 'typegpu';
+import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
 
 /**
@@ -199,11 +199,11 @@ class TgpuFnNode<T> extends THREE.Node {
 
 export function toTSL(
   fn: () => unknown,
-): () => THREE.TSL.ShaderNodeObject<THREE.Node> {
-  return () => TSL.nodeObject(new TgpuFnNode(fn));
+): THREE.TSL.ShaderNodeObject<THREE.Node> {
+  return TSL.nodeObject(new TgpuFnNode(fn));
 }
 
-class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
+export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
   readonly var: TgpuVar<'private', T> | undefined;
@@ -217,7 +217,8 @@ class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.#dataType = dataType;
 
     // TODO: Only create a variable if it's not referentiable in the global scope
-    if (!node.isStorageBufferNode) {
+    // @ts-expect-error: The properties exist on the node
+    if (!node.isStorageBufferNode && !node.isUniformNode) {
       this.var = tgpu.privateVar(dataType);
     }
   }

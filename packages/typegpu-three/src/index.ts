@@ -1,3 +1,4 @@
-export { TypeGPUMaterial } from './typegpu-material.ts';
-export { fromTSL, toTSL } from './typegpu-node.ts';
+// export { TypeGPUMaterial } from './typegpu-material.ts';
+
 export { time, uv } from './builtin-accessors.ts';
+export { fromTSL, toTSL, type TSLAccessor } from './typegpu-node.ts';
