@@ -1,21 +1,13 @@
 import * as d from 'typegpu/data';
 import * as THREE from 'three/webgpu';
 import { fromTSL, toTSL, uv } from '@typegpu/three';
+import * as std from 'typegpu/std';
 
-import {
-  attribute,
-  cross,
-  Fn,
-  instanceIndex,
-  select,
-  transformNormalToView,
-  uniform,
-} from 'three/tsl';
+import * as TSL from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { abs, floor, mix } from 'typegpu/std';
 import {
   clothNumSegmentsX,
   clothNumSegmentsY,
@@ -23,10 +15,10 @@ import {
 } from './verlet.ts';
 
 const sphereRadius = 0.15;
-const spherePositionUniform = fromTSL(uniform(new THREE.Vector3(0, 0, 0)), {
+const spherePositionUniform = fromTSL(TSL.uniform(new THREE.Vector3(0, 0, 0)), {
   type: d.vec3f,
 });
-const sphereUniform = fromTSL(uniform(1.0), { type: d.f32 });
+const sphereUniform = fromTSL(TSL.uniform(1.0), { type: d.f32 });
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
@@ -121,7 +113,7 @@ function setupWireframe() {
   // verlet vertex visualizer
   const vertexWireframeMaterial = new THREE.SpriteNodeMaterial();
   vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node
-    .element(instanceIndex);
+    .element(TSL.instanceIndex);
   vertexWireframeObject = new THREE.Mesh(
     new THREE.PlaneGeometry(0.01, 0.01),
     vertexWireframeMaterial,
@@ -142,17 +134,14 @@ function setupWireframe() {
     false,
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  springWireframeMaterial.positionNode = Fn(() => {
-    const vertexIds = verletSim.springVertexIdBuffer.node.element(
-      instanceIndex,
-    );
-    const vertexId = select(
-      attribute('vertexIndex').equal(0),
-      vertexIds.x,
-      vertexIds.y,
-    );
-    return verletSim.vertexPositionBuffer.node.element(vertexId);
-  })();
+  const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });
+  const vertexIndex = fromTSL(TSL.attribute('vertexIndex'), { type: d.u32 });
+  springWireframeMaterial.positionNode = toTSL(() => {
+    'use gpu';
+    const vertexIds = verletSim.springVertexIdBuffer.$[instanceIndex.$];
+    const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
+    return verletSim.vertexPositionBuffer.$[vertexId];
+  });
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();
   springWireframeGeometry.setAttribute(
@@ -249,19 +238,19 @@ function setupClothMesh(): THREE.Mesh {
 
   const checkerBoard = (uv: d.v2f): number => {
     'use gpu';
-    const fuv = floor(uv);
-    return abs(fuv.x + fuv.y) % 2;
+    const fuv = std.floor(uv);
+    return std.abs(fuv.x + fuv.y) % 2;
   };
 
   clothMaterial.colorNode = toTSL(() => {
     'use gpu';
     const pattern = checkerBoard(uv.$.mul(5));
-    return mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
+    return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
   });
 
-  clothMaterial.positionNode = Fn(({ material }) => {
+  clothMaterial.positionNode = TSL.Fn(({ material }) => {
     // gather the position of the 4 verlet vertices and calculate the center position and normal from that
-    const vertexIds = attribute('vertexIds');
+    const vertexIds = TSL.attribute('vertexIds');
     const v3 = verletSim.vertexPositionBuffer.node.element(vertexIds.w).toVar();
     const v0 = verletSim.vertexPositionBuffer.node.element(vertexIds.x).toVar();
     const v1 = verletSim.vertexPositionBuffer.node.element(vertexIds.y).toVar();
@@ -275,11 +264,11 @@ function setupClothMesh(): THREE.Mesh {
     const tangent = right.sub(left).normalize();
     const bitangent = bottom.sub(top).normalize();
 
-    const normal = cross(tangent, bitangent);
+    const normal = TSL.cross(tangent, bitangent);
 
     // send the normalView from the vertex shader to the fragment shader
     // @ts-expect-error: `normalNode` is not on the type, but it exists
-    material.normalNode = transformNormalToView(normal).toVarying();
+    material.normalNode = TSL.transformNormalToView(normal).toVarying();
 
     return v0.add(v1).add(v2).add(v3).mul(0.25);
   })();
@@ -325,7 +314,7 @@ async function render() {
 
   sphere.visible = params.sphere;
   sphereUniform.node.value = params.sphere ? 1 : 0;
-  verletSim.windUniform.value = params.wind;
+  verletSim.windUniform.node.value = params.wind;
   clothMesh.visible = !params.wireframe;
   vertexWireframeObject.visible = params.wireframe;
   springWireframeObject.visible = params.wireframe;

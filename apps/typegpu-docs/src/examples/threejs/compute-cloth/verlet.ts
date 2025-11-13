@@ -33,9 +33,9 @@ export class VerletSimulation {
   readonly springs: Spring[];
   readonly vertexColumns: Vertex[][];
 
-  readonly stiffnessUniform: TSL.ShaderNodeObject<THREE.UniformNode<number>>;
-  readonly windUniform: TSL.ShaderNodeObject<THREE.UniformNode<number>>;
-  readonly dampeningUniform: TSL.ShaderNodeObject<THREE.UniformNode<number>>;
+  readonly stiffnessUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  readonly windUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  readonly dampeningUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
 
   readonly vertexPositionBuffer: TSLAccessor<
     d.WgslArray<d.Vec3f>,
@@ -77,9 +77,9 @@ export class VerletSimulation {
     this.springs = [];
     this.vertexColumns = [];
 
-    this.stiffnessUniform = TSL.uniform(0.2);
-    this.windUniform = TSL.uniform(1.0);
-    this.dampeningUniform = TSL.uniform(0.99);
+    this.stiffnessUniform = fromTSL(TSL.uniform(0.2), { type: d.f32 });
+    this.windUniform = fromTSL(TSL.uniform(1.0), { type: d.f32 });
+    this.dampeningUniform = fromTSL(TSL.uniform(0.99), { type: d.f32 });
 
     // this function sets up the geometry of the verlet system, a grid of vertices connected by springs
 
@@ -228,15 +228,7 @@ export class VerletSimulation {
     // This sets up the compute shaders for the verlet simulation
     // There are two shaders that are executed for each simulation step
 
-    const index = fromTSL(TSL.instanceIndex, { type: d.u32 });
-
-    // const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
-    // const restLengths = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });
-    // const vertexPositions = fromTSL(vertexPositionBuffer, {
-    //   type: arrayOf(vec3f),
-    // });
-    // const springForces = fromTSL(springForceBuffer, { type: arrayOf(vec3f) });
-    const stiffness = fromTSL(this.stiffnessUniform, { type: d.f32 });
+    const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });
 
     // 1. computeSpringForces:
     // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
@@ -246,14 +238,14 @@ export class VerletSimulation {
     this.computeSpringForces = toTSL(() => {
       'use gpu';
 
-      if (index.$ > springCount) {
+      if (instanceIndex.$ >= springCount) {
         // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of springs.
         // in that case, return.
         return;
       }
 
-      const vertexId = self.springVertexIdBuffer.$[index.$];
-      const restLength = self.springRestLengthBuffer.$[index.$];
+      const vertexId = self.springVertexIdBuffer.$[instanceIndex.$];
+      const restLength = self.springRestLengthBuffer.$[instanceIndex.$];
 
       const vertex0Position = self.vertexPositionBuffer.$[vertexId.x];
       const vertex1Position = self.vertexPositionBuffer.$[vertexId.y];
@@ -261,9 +253,9 @@ export class VerletSimulation {
       const delta = vertex1Position.sub(vertex0Position);
       const dist = std.max(std.length(delta), 0.000001);
       const force = delta.mul(
-        (dist - restLength) * stiffness.$ * 0.5 / dist,
+        (dist - restLength) * self.stiffnessUniform.$ * 0.5 / dist,
       );
-      self.springForceBuffer.$[index.$] = force;
+      self.springForceBuffer.$[instanceIndex.$] = force;
     }).compute(springCount);
 
     // 2. computeVertexForces:
@@ -271,78 +263,138 @@ export class VerletSimulation {
     // First it iterates over all springs connected to this vertex and accumulates their forces.
     // Then it adds a gravital force, wind force, and the collision with the sphere.
     // In the end it adds the force to the vertex' position.
-    this.computeVertexForces = TSL.Fn(() => {
-      TSL.If(TSL.instanceIndex.greaterThanEqual(TSL.uint(vertexCount)), () => {
-        // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
-        // in that case, return.
-        TSL.Return();
-      });
 
-      const params = this.vertexParamsBuffer.node.element(TSL.instanceIndex)
-        .toVar();
+    this.computeVertexForces = toTSL(() => {
+      'use gpu';
+      const idx = instanceIndex.$;
+
+      if (idx >= vertexCount) {
+        // compute shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
+        // in that case, return.
+        return;
+      }
+
+      const params = self.vertexParamsBuffer.$[idx];
       const isFixed = params.x;
       const springCount = params.y;
       const springPointer = params.z;
 
-      TSL.If(isFixed, () => {
+      if (isFixed) {
         // don't need to calculate vertex forces if the vertex is set as immovable
-        TSL.Return();
-      });
+        return;
+      }
 
-      const position = this.vertexPositionBuffer.node
-        .element(TSL.instanceIndex)
-        .toVar('vertexPosition');
-      const force = this.vertexForceBuffer.node.element(TSL.instanceIndex)
-        .toVar('vertexForce');
+      const position = self.vertexPositionBuffer.$[idx];
+      let force = d.vec3f(self.vertexForceBuffer.$[idx]);
+      force = force.mul(self.dampeningUniform.$);
 
-      force.mulAssign(this.dampeningUniform);
-
-      const ptrStart = springPointer.toVar('ptrStart');
-      const ptrEnd = ptrStart.add(springCount).toVar('ptrEnd');
-
-      TSL.Loop(
-        { start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' },
-        ({ i }) => {
-          const springId = this.springListBuffer.node.element(i).toVar(
-            'springId',
-          );
-          const springForce = this.springForceBuffer.node.element(
-            springId,
-          );
-          const springVertexIds = this.springVertexIdBuffer.node.element(
-            springId,
-          );
-          const factor = TSL.select(
-            springVertexIds.x.equal(TSL.instanceIndex),
-            1.0,
-            -1.0,
-          );
-          force.addAssign(springForce.mul(factor));
-        },
-      );
+      for (let i = springPointer; i < springPointer + springCount; i++) {
+        const springId = self.springListBuffer.$[i];
+        const springForce = self.springForceBuffer.$[springId];
+        const springVertexIds = self.springVertexIdBuffer.$[springId];
+        const factor = std.select(
+          d.f32(1),
+          d.f32(-1),
+          springVertexIds.x === idx,
+        );
+        force = force.add(springForce.mul(factor));
+      }
 
       // gravity
-      force.y.subAssign(0.00005);
+      force.y -= 0.00005;
 
       // wind
-      const noise = TSL.triNoise3D(position, 1, TSL.time).sub(0.2).mul(0.0001);
-      const windForce = noise.mul(this.windUniform);
-      force.z.subAssign(windForce);
+      // const noise = TSL.triNoise3D(position, 1, TSL.time).sub(0.2).mul(0.0001);
+      const noise = 0; // TODO: Apply perlin noise
+      const windForce = noise * self.windUniform.$;
+      force.z -= windForce;
 
       // collision with sphere
-      const deltaSphere = position.add(force).sub(spherePositionUniform.node);
-      const dist = deltaSphere.length();
-      const sphereForce = TSL.float(sphereRadius).sub(dist).max(0).mul(
-        deltaSphere,
-      )
-        .div(dist).mul(sphereUniform.node);
-      force.addAssign(sphereForce);
+      const deltaSphere = position.add(force).sub(spherePositionUniform.$);
+      const dist = std.length(deltaSphere);
+      const sphereForce = deltaSphere.mul(
+        std.max(0, sphereRadius - dist) / dist * sphereUniform.$,
+      );
+      force = force.add(sphereForce);
 
-      this.vertexForceBuffer.node.element(TSL.instanceIndex).assign(force);
-      this.vertexPositionBuffer.node.element(TSL.instanceIndex).addAssign(
+      self.vertexForceBuffer.$[idx] = d.vec3f(force);
+      self.vertexPositionBuffer.$[idx] = self.vertexPositionBuffer.$[idx].add(
         force,
       );
-    })().compute(vertexCount);
+    }).compute(vertexCount);
+
+    // this.computeVertexForces = TSL.Fn(() => {
+    //   TSL.If(TSL.instanceIndex.greaterThanEqual(TSL.uint(vertexCount)), () => {
+    //     // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
+    //     // in that case, return.
+    //     TSL.Return();
+    //   });
+
+    //   const params = this.vertexParamsBuffer.node.element(TSL.instanceIndex)
+    //     .toVar();
+    //   const isFixed = params.x;
+    //   const springCount = params.y;
+    //   const springPointer = params.z;
+
+    //   TSL.If(isFixed, () => {
+    //     // don't need to calculate vertex forces if the vertex is set as immovable
+    //     TSL.Return();
+    //   });
+
+    //   const position = this.vertexPositionBuffer.node
+    //     .element(TSL.instanceIndex)
+    //     .toVar('vertexPosition');
+    //   const force = this.vertexForceBuffer.node.element(TSL.instanceIndex)
+    //     .toVar('vertexForce');
+
+    //   force.mulAssign(this.dampeningUniform.node);
+
+    //   const ptrStart = springPointer.toVar('ptrStart');
+    //   const ptrEnd = ptrStart.add(springCount).toVar('ptrEnd');
+
+    //   TSL.Loop(
+    //     { start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' },
+    //     ({ i }) => {
+    //       const springId = this.springListBuffer.node.element(i).toVar(
+    //         'springId',
+    //       );
+    //       const springForce = this.springForceBuffer.node.element(
+    //         springId,
+    //       );
+    //       const springVertexIds = this.springVertexIdBuffer.node.element(
+    //         springId,
+    //       );
+    //       const factor = TSL.select(
+    //         springVertexIds.x.equal(TSL.instanceIndex),
+    //         1.0,
+    //         -1.0,
+    //       );
+    //       force.addAssign(springForce.mul(factor));
+    //     },
+    //   );
+
+    //   // gravity
+    //   force.y.subAssign(0.00005);
+
+    //   // wind
+    //   const noise = TSL.triNoise3D(position, 1, TSL.time).sub(0.2).mul(0.0001);
+    //   const windForce = noise.mul(this.windUniform.node);
+    //   force.z.subAssign(windForce);
+
+    //   // collision with sphere
+    //   const deltaSphere = position.add(force).sub(spherePositionUniform.node);
+    //   const dist = deltaSphere.length();
+    //   const sphereForce = TSL.float(sphereRadius).sub(dist).max(0).mul(
+    //     deltaSphere,
+    //   )
+    //     .div(dist).mul(sphereUniform.node);
+    //   force.addAssign(sphereForce);
+
+    //   this.vertexForceBuffer.node.element(TSL.instanceIndex).assign(force);
+    //   this.vertexPositionBuffer.node.element(TSL.instanceIndex).addAssign(
+    //     force,
+    //   );
+    // })().compute(vertexCount);
   }
 
   async update(renderer: THREE.WebGPURenderer) {
