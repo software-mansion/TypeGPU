@@ -4,7 +4,7 @@ import { it } from '../utils/extendedIt.ts';
 import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('function argument origin tracking', () => {
-  it('should allow mutation of primitive arguments', () => {
+  it('should fail on mutation of primitive arguments', () => {
     const foo = (a: number) => {
       'use gpu';
       a += 1;
@@ -15,18 +15,16 @@ describe('function argument origin tracking', () => {
       foo(1);
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "fn foo(a: i32) {
-        a += 1i;
-      }
-
-      fn main() {
-        foo(1i);
-      }"
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(i32): 'a += 1i' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
-  it('should allow mutation of destructured primitive arguments', () => {
+  it('should fail on mutation of destructured primitive arguments', () => {
     const Foo = d.struct({ a: d.f32 });
 
     const foo = ({ a }: { a: number }) => {
@@ -39,18 +37,12 @@ describe('function argument origin tracking', () => {
       foo(Foo({ a: 1 }));
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
-      "struct Foo {
-        a: f32,
-      }
-
-      fn foo(_arg_0: Foo) {
-        _arg_0.a += 1f;
-      }
-
-      fn main() {
-        foo(Foo(1f));
-      }"
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(struct:Foo): '_arg_0.a += 1f' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -114,10 +106,10 @@ describe('function argument origin tracking', () => {
       - fn*:main
       - fn*:main()
       - fn*:foo(vec3f): 'let b = a' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
-      -----
-      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
-      - Try 'const b = a' if you won't reassign 'b' later.
-      -----]
+        -----
+        - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+        - Try 'const b = a' if you won't reassign 'b' later.
+        -----]
     `);
   });
 

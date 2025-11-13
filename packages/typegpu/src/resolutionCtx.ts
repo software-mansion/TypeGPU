@@ -65,6 +65,7 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
@@ -149,6 +150,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
+    functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     returnType: AnyData | undefined,
@@ -156,6 +158,7 @@ class ItemStateStackImpl implements ItemStateStack {
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
       type: 'functionScope',
+      functionType,
       args,
       argAliases,
       returnType,
@@ -386,6 +389,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.pre;
   }
 
+  get topFunctionScope() {
+    return this._itemStateStack.topFunctionScope;
+  }
+
   get topFunctionReturnType() {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
@@ -448,6 +455,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     options: FnToWgslOptions,
   ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
     const scope = this._itemStateStack.pushFunctionScope(
+      options.functionType,
       options.args,
       options.argAliases,
       options.returnType,

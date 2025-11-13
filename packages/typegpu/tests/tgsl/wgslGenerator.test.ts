@@ -50,7 +50,13 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.bool, {});
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.bool,
+        {},
+      );
       const gen = wgslGenerator.functionDefinition(parsedBody);
       expect(gen).toMatchInlineSnapshot(`
         "{
@@ -75,7 +81,13 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope([], {}, d.i32, {});
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.i32,
+        {},
+      );
       const gen = wgslGenerator.functionDefinition(parsedBody);
       expect(gen).toMatchInlineSnapshot(`
         "{
@@ -161,6 +173,7 @@ describe('wgslGenerator', () => {
       `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
+      'normal',
       [],
       {},
       d.u32,
@@ -227,6 +240,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.u32,
@@ -303,6 +317,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         args,
         {},
         d.vec4f,
@@ -460,6 +475,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.vec4u,
@@ -496,6 +512,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [snip('idx', d.u32, /* origin */ 'runtime')],
         {},
         d.f32,
@@ -539,6 +556,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.u32,
@@ -635,6 +653,7 @@ describe('wgslGenerator', () => {
 
     const res = provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.f32,
@@ -723,6 +742,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.f32,
@@ -768,6 +788,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
         [],
         {},
         d.f32,

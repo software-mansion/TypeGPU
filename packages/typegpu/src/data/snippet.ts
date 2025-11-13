@@ -10,6 +10,7 @@ export type Origin =
   | 'workgroup'
   | 'private'
   | 'function'
+  | 'this-function'
   | 'handle'
   // is an argument (or part of an argument) given to the
   // function we're resolving. This includes primitives, to
@@ -40,6 +41,7 @@ export const originToPtrParams = {
   workgroup: { space: 'workgroup', access: 'read-write' },
   private: { space: 'private', access: 'read-write' },
   function: { space: 'function', access: 'read-write' },
+  'this-function': { space: 'function', access: 'read-write' },
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 

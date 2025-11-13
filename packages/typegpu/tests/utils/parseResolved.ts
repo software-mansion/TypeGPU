@@ -44,6 +44,7 @@ function extractSnippetFromFn(cb: () => unknown): Snippet {
         ctx.pushMode(new CodegenState());
         ctx[$internal].itemStateStack.pushItem();
         ctx[$internal].itemStateStack.pushFunctionScope(
+          'normal',
           [],
           {},
           undefined,

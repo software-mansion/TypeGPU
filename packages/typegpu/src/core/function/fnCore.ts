@@ -7,7 +7,6 @@ import {
   type Snippet,
 } from '../../data/snippet.ts';
 import {
-  isNaturallyEphemeral,
   isPtr,
   isWgslData,
   isWgslStruct,
@@ -201,8 +200,6 @@ export function createFnCore(
           ? argType.addressSpace === 'storage'
             ? argType.access === 'read' ? 'readonly' : 'mutable'
             : argType.addressSpace
-          : isNaturallyEphemeral(argType)
-          ? 'runtime'
           : 'argument';
 
         switch (astParam?.type) {
@@ -223,17 +220,9 @@ export function createFnCore(
                 (argTypes[i] as WgslStruct).propTypes[name],
               );
 
-              const destrOrigin = isPtr(destrType)
-                ? destrType.addressSpace === 'storage'
-                  ? destrType.access === 'read' ? 'readonly' : 'mutable'
-                  : destrType.addressSpace
-                : isNaturallyEphemeral(destrType)
-                ? 'runtime'
-                : 'argument';
-
               return [
                 alias,
-                snip(`_arg_${i}.${name}`, destrType, destrOrigin),
+                snip(`_arg_${i}.${name}`, destrType, 'argument'),
               ] as [string, Snippet];
             }));
             break;
@@ -244,6 +233,13 @@ export function createFnCore(
       }
 
       const { head, body, returnType: actualReturnType } = ctx.fnToWgsl({
+        functionType: fnAttribute.includes('@compute')
+          ? 'compute'
+          : fnAttribute.includes('@vertex')
+          ? 'vertex'
+          : fnAttribute.includes('@fragment')
+          ? 'fragment'
+          : 'normal',
         args,
         argAliases: Object.fromEntries(argAliases),
         returnType,

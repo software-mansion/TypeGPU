@@ -54,6 +54,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import {
+  FunctionScopeLayer,
   getOwnSnippet,
   isKnownAtComptime,
   type ResolutionCtx,
@@ -402,6 +403,7 @@ export type GenerationCtx = ResolutionCtx & {
    */
   expectedType: AnyData | undefined;
 
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: AnyData | undefined;
 
   indent(): string;

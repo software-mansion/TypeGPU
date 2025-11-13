@@ -169,17 +169,25 @@ ${this.ctx.pre}}`;
     dataType: wgsl.AnyWgslData | UnknownData,
     origin: Origin,
   ): Snippet {
-    let varOrigin: Origin = 'runtime';
+    const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
+
+    let varOrigin: Origin;
     if (origin === 'constant-ref') {
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
       varOrigin = 'constant-ref';
-    } else if (origin === 'argument' && !wgsl.isNaturallyEphemeral(dataType)) {
-      varOrigin = 'argument';
-    } else if (!wgsl.isNaturallyEphemeral(dataType)) {
-      varOrigin = isEphemeralOrigin(origin) ? 'function' : origin;
+    } else if (origin === 'argument') {
+      if (naturallyEphemeral) {
+        varOrigin = 'runtime';
+      } else {
+        varOrigin = 'argument';
+      }
+    } else if (!naturallyEphemeral) {
+      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
     } else if (origin === 'constant' && varType === 'const') {
       varOrigin = 'constant';
+    } else {
+      varOrigin = 'runtime';
     }
 
     const snippet = snip(
@@ -734,7 +742,10 @@ ${this.ctx.pre}}`;
         // };
         if (
           returnSnippet.origin === 'argument' &&
-          !isEphemeralSnippet(returnSnippet)
+          !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+          // Only restricting this use in non-entry functions, as the function
+          // is giving up ownership of all references anyway.
+          this.ctx.topFunctionScope?.functionType === 'normal'
         ) {
           throw new WgslTypeError(
             stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
@@ -744,7 +755,7 @@ ${this.ctx.pre}}`;
         if (
           !expectedReturnType &&
           !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'function'
+          returnSnippet.origin !== 'this-function'
         ) {
           const str = this.ctx.resolve(
             returnSnippet.value,
@@ -893,30 +904,31 @@ ${this.ctx.pre}else ${alternate}`;
       } else {
         // Non-referential
 
-        if (eq.origin === 'argument') {
-          if (stmtType === NODE.let) {
-            const rhsStr = this.ctx.resolve(eq.value).value;
-            const rhsTypeStr =
-              this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
-                .value;
-
-            throw new WgslTypeError(
-              `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
------
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
------`,
-            );
-          }
-          varType = 'let';
-        }
-
         if (stmtType === NODE.const) {
           if (eq.origin === 'argument') {
             // Arguments cannot be mutated, so we 'let' them be (kill me)
             varType = 'let';
           } else if (naturallyEphemeral) {
             varType = eq.origin === 'constant' ? 'const' : 'let';
+          }
+        } else {
+          // stmtType === NODE.let
+
+          if (eq.origin === 'argument') {
+            if (!naturallyEphemeral) {
+              const rhsStr = this.ctx.resolve(eq.value).value;
+              const rhsTypeStr =
+                this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
+                  .value;
+
+              throw new WgslTypeError(
+                `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
+  -----
+  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+  -----`,
+              );
+            }
           }
         }
       }
