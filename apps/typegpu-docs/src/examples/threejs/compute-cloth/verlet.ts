@@ -291,7 +291,9 @@ export class VerletSimulation {
       let force = d.vec3f(self.vertexForceBuffer.$[idx]);
       force = force.mul(self.dampeningUniform.$);
 
-      for (let i = springPointer; i < springPointer + springCount; i++) {
+      const ptrStart = springPointer;
+      const ptrEnd = ptrStart + springCount;
+      for (let i = ptrStart; i < ptrEnd; i++) {
         const springId = self.springListBuffer.$[i];
         const springForce = self.springForceBuffer.$[springId];
         const springVertexIds = self.springVertexIdBuffer.$[springId];

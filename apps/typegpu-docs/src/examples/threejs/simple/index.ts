@@ -27,7 +27,7 @@ const material = new THREE.MeshBasicNodeMaterial();
 
 material.colorNode = toTSL(() => {
   'use gpu';
-  const coords = uv.$.mul(2);
+  const coords = uv().$.mul(2);
   const pattern = perlin3d.sample(d.vec3f(coords, time.$ * 0.2));
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
 });

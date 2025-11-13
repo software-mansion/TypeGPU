@@ -1,3 +1,7 @@
+/*
+ * Based on: https://github.com/mrdoob/three.js/blob/dev/examples/webgpu_compute_cloth.html
+ */
+
 import * as d from 'typegpu/data';
 import * as THREE from 'three/webgpu';
 import { fromTSL, toTSL, uv } from '@typegpu/three';
@@ -244,7 +248,7 @@ function setupClothMesh(): THREE.Mesh {
 
   clothMaterial.colorNode = toTSL(() => {
     'use gpu';
-    const pattern = checkerBoard(uv.$.mul(5));
+    const pattern = checkerBoard(uv().$.mul(5));
     return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
   });
 

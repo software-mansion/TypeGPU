@@ -11,7 +11,7 @@ import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 
-function isKnownAtComptime(value: unknown): boolean {
+export function isKnownAtComptime(value: unknown): boolean {
   return typeof value !== 'string' && getOwnSnippet(value) === undefined;
 }
 
