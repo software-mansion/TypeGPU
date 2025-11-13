@@ -57,7 +57,7 @@ As you may note, the resolved WGSL code contains exactly the set of definitions 
 
 You can also resolve other resources, like consts, buffers, textures, entry point functions or even entire pipelines. Here's an example with a pipeline:
 
-```ts
+```ts twoslash
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 // ---cut---
@@ -97,7 +97,7 @@ struct computeMain_Input_2 {
 ```
 
 :::note
-If you already are using TypeGPU pipelines, omitting the manual resolve by using the `.draw()` and `.dispatchWorkgroups()` may be the simplest approach.
+If you already are using TypeGPU pipelines, the `.draw()` and `.dispatchWorkgroups()` methods perform the resolution and shader compilation under the hood, eliminating the need for manual resolves.
 :::
 
 :::tip
@@ -111,7 +111,7 @@ The second `tgpu.resolve` overload has only one argument -- an object with optio
 The goal of this overload is to extend the existing WGSL code provided as `template`, with additional definitions from `externals`.
 
 :::tip
-This variant of `tgpu.resolve` can often be omitted using [WGSL-implemented functions](/TypeGPU/fundamentals/functions/#implementing-functions-in-wgsl).
+This variant of `tgpu.resolve` can often be omitted with [WGSL-implemented functions](/TypeGPU/fundamentals/functions/#implementing-functions-in-wgsl).
 Use it when you are already provided with existing WGSL code and want to extend it.
 :::
 
@@ -154,7 +154,7 @@ fn calculateEffectStrength() -> f32 {
 }
 ```
 
-As you may note, in this case `tgpu.resolve` uses the structure of the `external` property to detect that `buffers.time`, `buffers.range` and `offset` need to be replaced, and that their definitions should be included.
+As you may note, in this case `tgpu.resolve` uses the structure of the `externals` property to detect that `buffers.time`, `buffers.range` and `offset` need to be replaced, and that their definitions should be included.
 
 Here is another example. Assume, that the bind group index `0` is already taken by some existing code:
 
@@ -229,20 +229,26 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 ```
 
 :::note
-To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fundamentals/bind-groups) via the `layout.$` property.
+You can access [bindGroupLayout](/TypeGPU/fundamentals/bind-groups) entries via the `layout.$` property.
 
 ```ts
-  externals: {
-    lightSource: layout.$.lightSource,
-    sampling: layout.$.sampling,
-    bgTexture: layout.$.bgTexture,
-  }
+// Requires using `layout.$.resource` in the WGSL code
+externals: {
+  layout,
+}
 
-  // As long as the names in the shader match the
-  // layout keys, it can be shortened to:
-  externals: {
-    ...layout.$,
-  }
+// Allows using resource names in the WGSL code
+externals: {
+  lightSource: layout.$.lightSource,
+  sampling: layout.$.sampling,
+  bgTexture: layout.$.bgTexture,
+}
+
+// As long as the names in the WGSL code match the
+// layout keys, it can be shortened to:
+externals: {
+  ...layout.$,
+}
 ```
 :::
 
