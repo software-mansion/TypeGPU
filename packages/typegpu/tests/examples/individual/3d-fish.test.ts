@@ -270,23 +270,23 @@ describe('3d fish example', () => {
       }
 
       @vertex fn vertexShader_0(input: vertexShader_Input_9) -> vertexShader_Output_8 {
-        var currentModelData = ModelData_2(modelData_1[input.instanceIndex].position, modelData_1[input.instanceIndex].direction, modelData_1[input.instanceIndex].scale, modelData_1[input.instanceIndex].variant, modelData_1[input.instanceIndex].applySinWave, modelData_1[input.instanceIndex].applySeaFog, modelData_1[input.instanceIndex].applySeaDesaturation);
+        let currentModelData = (&modelData_1[input.instanceIndex]);
         var wavedVertex = PosAndNormal_3(input.modelPosition, input.modelNormal);
-        if ((currentModelData.applySinWave == 1u)) {
+        if (((*currentModelData).applySinWave == 1u)) {
           wavedVertex = applySinWave_4(input.instanceIndex, PosAndNormal_3(input.modelPosition, input.modelNormal), currentTime_5);
         }
-        var direction = normalize(currentModelData.direction);
+        var direction = normalize((*currentModelData).direction);
         let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
         let pitch = asin(-(direction.y));
-        var scaleMatrix = mat4x4f(vec3f(currentModelData.scale).x, 0, 0, 0, 0, vec3f(currentModelData.scale).y, 0, 0, 0, 0, vec3f(currentModelData.scale).z, 0, 0, 0, 0, 1);
+        var scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
         var pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         var yawMatrix = mat4x4f(cos(yaw), 0, -sin(yaw), 0, 0, 1, 0, 0, sin(yaw), 0, cos(yaw), 0, 0, 0, 0, 1);
-        var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, currentModelData.position.x, currentModelData.position.y, currentModelData.position.z, 1);
+        var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, (*currentModelData).position.x, (*currentModelData).position.y, (*currentModelData).position.z, 1);
         var worldPosition = (translationMatrix * (yawMatrix * (pitchMatrix * (scaleMatrix * vec4f(wavedVertex.position, 1f)))));
         var worldNormal = normalize((yawMatrix * (pitchMatrix * vec4f(wavedVertex.normal, 1f))).xyz);
         let worldPositionUniform = (&worldPosition);
         var canvasPosition = (camera_6.projection * (camera_6.view * (*worldPositionUniform)));
-        return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
+        return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, input.textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
       }
 
       @group(0) @binding(1) var modelTexture_11: texture_2d<f32>;
