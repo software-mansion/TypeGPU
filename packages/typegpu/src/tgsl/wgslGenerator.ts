@@ -39,11 +39,16 @@ import {
   type GenerationCtx,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
-import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import type {
+  FunctionBodyOptions,
+  FunctionHeaderOptions,
+  ShaderGenerator,
+} from './shaderGenerator.ts';
+import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -115,7 +120,7 @@ const binaryOpCodeToCodegen = {
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
 
-class WgslGenerator implements ShaderGenerator {
+export class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
 
   public initGenerator(ctx: GenerationCtx) {
@@ -692,10 +697,32 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
-  public functionDefinition(
-    body: tinyest.Block,
+  public functionHeader(
+    { type, id, workgroupSize, args, returnType }: FunctionHeaderOptions,
   ): string {
-    return this.block(body);
+    const argList = args.map((arg) =>
+      `${arg.value}: ${this.ctx.resolve(arg.dataType as AnyData).value}`
+    ).join(', ');
+
+    const fnAttribute = type === 'vertex'
+      ? '@vertex\n'
+      : type === 'fragment'
+      ? '@fragment\n'
+      : type === 'compute'
+      ? `@compute @workgroup_size(${workgroupSize?.join(', ')})\n`
+      : '';
+
+    const returnSegment = returnType.type !== 'void'
+      ? ` -> ${getAttributesString(returnType)}${
+        this.ctx.resolve(returnType).value
+      }`
+      : '';
+
+    return `${fnAttribute}${id}(${argList})${returnSegment}`;
+  }
+
+  public functionBody(options: FunctionBodyOptions): string {
+    return this.block(options.bodyNode);
   }
 
   public statement(

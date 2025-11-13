@@ -60,7 +60,7 @@ import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
   ExecMode,
   ExecState,
-  FnToWgslOptions,
+  FnToShaderCodeOptions,
   FunctionScopeLayer,
   ItemLayer,
   ItemStateStack,
@@ -451,9 +451,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(
-    options: FnToWgslOptions,
-  ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
+  fnToShaderCode(
+    options: FnToShaderCodeOptions,
+  ): { code: string; returnType: AnyData } {
     const scope = this._itemStateStack.pushFunctionScope(
       options.functionType,
       options.args,
@@ -464,7 +464,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       this.#shaderGenerator.initGenerator(this);
-      const body = this.#shaderGenerator.functionDefinition(options.body);
+      const body = this.#shaderGenerator.functionBody(options.body);
 
       let returnType = options.returnType;
       if (!returnType) {
@@ -489,9 +489,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         returnType = concretize(returnType);
       }
 
+      const header = this.#shaderGenerator.functionHeader(
+        this,
+        options.args,
+        returnType,
+      );
+
       return {
-        head: resolveFunctionHeader(this, options.args, returnType),
-        body,
+        code: `${header} ${body}`,
         returnType,
       };
     } finally {
@@ -955,20 +960,4 @@ export function resolve(
     catchall,
     logResources: ctx.logResources,
   };
-}
-
-export function resolveFunctionHeader(
-  ctx: ResolutionCtx,
-  args: Snippet[],
-  returnType: AnyData,
-) {
-  const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData).value}`)
-    .join(', ');
-
-  return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)}${
-      ctx.resolve(returnType).value
-    } `
-    : `(${argList}) `;
 }
