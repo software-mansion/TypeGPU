@@ -15,6 +15,7 @@
     "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    // "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "rootDir": "${configDir}/.",
     "types": ["@webgpu/types", "@vitest/browser/matchers"]

@@ -40,7 +40,7 @@ export interface FnCore {
 
 export function createFnCore(
   implementation: Implementation,
-  extra?: FunctionDefinitionExtra | undefined,
+  extra: FunctionDefinitionExtra,
 ): FnCore {
   /**
    * External application has to be deferred until resolution because
@@ -84,7 +84,7 @@ export function createFnCore(
         let header = '';
         let body = '';
 
-        if (extra && extra.type !== 'normal') {
+        if (extra.type !== 'normal') {
           const input = isWgslStruct(argTypes[0])
             ? `(in: ${ctx.resolve(argTypes[0]).value})`
             : '()';
@@ -136,12 +136,12 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
-        const fnAttribute = extra?.type === 'vertex'
-          ? '@vertex\n'
-          : extra?.type === 'fragment'
+        const fnAttribute = extra.type === 'vertex'
+          ? '@vertex '
+          : extra.type === 'fragment'
           ? '@fragment\n'
-          : extra?.type === 'compute'
-          ? `@compute @workgroup_size(${extra.workgroupSize.join(', ')})\n`
+          : extra.type === 'compute'
+          ? `@compute @workgroup_size(${extra.workgroupSize?.join(', ')})\n`
           : '';
         ctx.addDeclaration(`${fnAttribute}fn ${id}${header}${body}`);
         return snip(id, returnType, /* origin */ 'runtime');
@@ -179,9 +179,7 @@ export function createFnCore(
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
       if (
-        maybeSecondArg && maybeSecondArg.type === 'i' &&
-        extra &&
-        extra.type !== 'normal'
+        maybeSecondArg && maybeSecondArg.type === 'i' && extra.type !== 'normal'
       ) {
         applyExternals(
           externalMap,
@@ -243,10 +241,12 @@ export function createFnCore(
       }
 
       const { code, returnType: actualReturnType } = ctx.fnToShaderCode({
+        ...extra,
+        id,
         args,
         argAliases: Object.fromEntries(argAliases),
         returnType,
-        body: ast.body,
+        bodyNode: ast.body,
         externalMap,
       });
 

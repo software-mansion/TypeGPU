@@ -698,18 +698,19 @@ ${this.ctx.pre}}`;
   }
 
   public functionHeader(
-    { type, id, workgroupSize, args, returnType }: FunctionHeaderOptions,
+    { type, id, workgroupSize, args, returnType }:
+      ShaderGenerator.FunctionHeaderOptions,
   ): string {
     const argList = args.map((arg) =>
       `${arg.value}: ${this.ctx.resolve(arg.dataType as AnyData).value}`
     ).join(', ');
 
     const fnAttribute = type === 'vertex'
-      ? '@vertex\n'
+      ? '@vertex '
       : type === 'fragment'
-      ? '@fragment\n'
+      ? '@fragment '
       : type === 'compute'
-      ? `@compute @workgroup_size(${workgroupSize?.join(', ')})\n`
+      ? `@compute @workgroup_size(${workgroupSize?.join(', ')}) `
       : '';
 
     const returnSegment = returnType.type !== 'void'
@@ -718,11 +719,11 @@ ${this.ctx.pre}}`;
       }`
       : '';
 
-    return `${fnAttribute}${id}(${argList})${returnSegment}`;
+    return `${fnAttribute}fn ${id}(${argList})${returnSegment}`;
   }
 
-  public functionBody(options: FunctionBodyOptions): string {
-    return this.block(options.bodyNode);
+  public functionBody(bodyNode: tinyest.Block): string {
+    return this.block(bodyNode);
   }
 
   public statement(

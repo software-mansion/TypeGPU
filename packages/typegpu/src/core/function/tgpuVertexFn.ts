@@ -175,7 +175,7 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(implementation, '@vertex ');
+  const core = createFnCore(implementation, { type: 'vertex' });
   const inputType = shell.argTypes[0];
 
   const result: This = {

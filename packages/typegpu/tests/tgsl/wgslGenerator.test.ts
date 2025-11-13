@@ -57,7 +57,7 @@ describe('wgslGenerator', () => {
         d.bool,
         {},
       );
-      const gen = wgslGenerator.functionDefinition(parsedBody);
+      const gen = wgslGenerator.functionBody(parsedBody);
       expect(gen).toMatchInlineSnapshot(`
         "{
           return true;
@@ -88,7 +88,7 @@ describe('wgslGenerator', () => {
         d.i32,
         {},
       );
-      const gen = wgslGenerator.functionDefinition(parsedBody);
+      const gen = wgslGenerator.functionBody(parsedBody);
       expect(gen).toMatchInlineSnapshot(`
         "{
           var a = 12;
@@ -378,7 +378,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.functionDefinition(parsed),
+      () => wgslGenerator.functionBody(parsed),
     );
 
     expect(gen).toMatchInlineSnapshot(`
@@ -408,7 +408,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.functionDefinition(parsed),
+      () => wgslGenerator.functionBody(parsed),
     );
 
     expect(gen).toMatchInlineSnapshot(`
@@ -437,7 +437,7 @@ describe('wgslGenerator', () => {
 
     const gen = provideCtx(
       ctx,
-      () => wgslGenerator.functionDefinition(parsed),
+      () => wgslGenerator.functionBody(parsed),
     );
 
     expect(gen).toMatchInlineSnapshot(`
@@ -880,7 +880,7 @@ describe('wgslGenerator', () => {
     const gen = provideCtx(
       ctx,
       () =>
-        wgslGenerator.functionDefinition(
+        wgslGenerator.functionBody(
           getMetaData(main)?.ast?.body as tinyest.Block,
         ),
     );

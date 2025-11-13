@@ -7,7 +7,7 @@ export class GLSLShaderGenerator extends WgslGenerator
     return super.expression(expression);
   }
 
-  public override functionDefinition(body: tinyest.Block): string {
+  public override functionBody(bodyNode: tinyest.Block): string {
     return 'hello';
   }
 }

@@ -166,7 +166,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$getNameForward]: FnCore;
   };
 
-  const core = createFnCore(implementation as Implementation, '');
+  const core = createFnCore(implementation, { type: 'normal' });
 
   const fnBase = {
     shell,
