@@ -1,57 +1,46 @@
-import { arrayOf, f32, u32, type v2f, vec2u, vec3f, vec4f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import * as THREE from 'three/webgpu';
 import { fromTSL, toTSL, uv } from '@typegpu/three';
 
 import {
   attribute,
   cross,
-  float,
   Fn,
-  If,
-  instancedArray,
   instanceIndex,
-  Loop,
-  Return,
   select,
-  time,
   transformNormalToView,
-  triNoise3D,
-  uint,
   uniform,
 } from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { abs, floor, length, max, mix } from 'typegpu/std';
+import { abs, floor, mix } from 'typegpu/std';
+import {
+  clothNumSegmentsX,
+  clothNumSegmentsY,
+  VerletSimulation,
+} from './verlet.ts';
 
-const clothWidth = 1;
-const clothHeight = 1;
-const clothNumSegmentsX = 30;
-const clothNumSegmentsY = 30;
 const sphereRadius = 0.15;
+const spherePositionUniform = fromTSL(uniform(new THREE.Vector3(0, 0, 0)), {
+  type: d.vec3f,
+});
+const sphereUniform = fromTSL(uniform(1.0), { type: d.f32 });
+const verletSim = new VerletSimulation({
+  sphereRadius,
+  sphereUniform,
+  spherePositionUniform,
+});
 
 let vertexPositionBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
   vertexForceBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
   vertexParamsBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
 
-let springVertexIdBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
-  springRestLengthBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
-  springForceBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
-let springListBuffer;
-let computeSpringForces, computeVertexForces;
-let dampeningUniform,
-  spherePositionUniform,
-  stiffnessUniform: THREE.TSL.ShaderNodeObject<THREE.UniformNode<number>>,
-  sphereUniform,
-  windUniform;
 let vertexWireframeObject, springWireframeObject;
 let clothMesh, clothMaterial: THREE.MeshPhysicalNodeMaterial, sphere;
 let timeSinceLastStep = 0;
 let timestamp = 0;
-const verletVertices = [];
-const verletSprings = [];
-const verletVertexColumns = [];
 
 const clock = new THREE.Clock();
 
@@ -123,279 +112,21 @@ scene.environment = hdrTexture;
 
 setupCloth();
 
-// gui.add(stiffnessUniform, 'value', 0.1, 0.5, 0.01).name('stiffness');
-// gui.add(params, 'wireframe');
-// gui.add(params, 'sphere');
-// gui.add(params, 'wind', 0, 5, 0.1);
-
-// const materialFolder = gui.addFolder('material');
-// materialFolder.addColor(API, 'color').onChange(function (color) {
-//   clothMaterial.color.setHex(color);
-// });
-// materialFolder.add(clothMaterial, 'roughness', 0.0, 1, 0.01);
-// materialFolder.add(clothMaterial, 'sheen', 0.0, 1, 0.01);
-// materialFolder.add(clothMaterial, 'sheenRoughness', 0.0, 1, 0.01);
-// materialFolder.addColor(API, 'sheenColor').onChange(function (color) {
-//   clothMaterial.sheenColor.setHex(color);
-// });
-
 renderer.setAnimationLoop(render);
-
-function setupVerletGeometry() {
-  // this function sets up the geometry of the verlet system, a grid of vertices connected by springs
-
-  const addVerletVertex = (x, y, z, isFixed) => {
-    const id = verletVertices.length;
-    const vertex = {
-      id,
-      position: new THREE.Vector3(x, y, z),
-      isFixed,
-      springIds: [],
-    };
-    verletVertices.push(vertex);
-    return vertex;
-  };
-
-  const addVerletSpring = (vertex0, vertex1) => {
-    const id = verletSprings.length;
-    const spring = {
-      id,
-      vertex0,
-      vertex1,
-    };
-    vertex0.springIds.push(id);
-    vertex1.springIds.push(id);
-    verletSprings.push(spring);
-    return spring;
-  };
-
-  // create the cloth's verlet vertices
-  for (let x = 0; x <= clothNumSegmentsX; x++) {
-    const column = [];
-    for (let y = 0; y <= clothNumSegmentsY; y++) {
-      const posX = x * (clothWidth / clothNumSegmentsX) - clothWidth * 0.5;
-      const posZ = y * (clothHeight / clothNumSegmentsY);
-      const isFixed = (y === 0) && ((x % 5) === 0); // make some of the top vertices' positions fixed
-      const vertex = addVerletVertex(posX, clothHeight * 0.5, posZ, isFixed);
-      column.push(vertex);
-    }
-
-    verletVertexColumns.push(column);
-  }
-
-  // create the cloth's verlet springs
-  for (let x = 0; x <= clothNumSegmentsX; x++) {
-    for (let y = 0; y <= clothNumSegmentsY; y++) {
-      const vertex0 = verletVertexColumns[x][y];
-      if (x > 0) addVerletSpring(vertex0, verletVertexColumns[x - 1][y]);
-      if (y > 0) addVerletSpring(vertex0, verletVertexColumns[x][y - 1]);
-      if (x > 0 && y > 0) {
-        addVerletSpring(vertex0, verletVertexColumns[x - 1][y - 1]);
-      }
-      if (x > 0 && y < clothNumSegmentsY) {
-        addVerletSpring(vertex0, verletVertexColumns[x - 1][y + 1]);
-      }
-
-      // You can make the cloth more rigid by adding more springs between further apart vertices
-      //if (x > 1) addVerletSpring(vertex0, verletVertexColumns[x - 2][y]);
-      //if (y > 1) addVerletSpring(vertex0, verletVertexColumns[x][y - 2]);
-    }
-  }
-}
-
-function setupVerletVertexBuffers() {
-  // setup the buffers holding the vertex data for the compute shaders
-
-  const vertexCount = verletVertices.length;
-
-  const springListArray = [];
-  // this springListArray will hold a list of spring ids, ordered by the id of the vertex affected by that spring.
-  // this is so the compute shader that accumulates the spring forces for each vertex can efficiently iterate over all springs affecting that vertex
-
-  const vertexPositionArray = new Float32Array(vertexCount * 3);
-  const vertexParamsArray = new Uint32Array(vertexCount * 3);
-  // the params Array holds three values for each verlet vertex:
-  // x: isFixed, y: springCount, z: springPointer
-  // isFixed is 1 if the verlet is marked as immovable, 0 if not
-  // springCount is the number of springs connected to that vertex
-  // springPointer is the index of the first spring in the springListArray that is connected to that vertex
-
-  for (let i = 0; i < vertexCount; i++) {
-    const vertex = verletVertices[i];
-    vertexPositionArray[i * 3] = vertex.position.x;
-    vertexPositionArray[i * 3 + 1] = vertex.position.y;
-    vertexPositionArray[i * 3 + 2] = vertex.position.z;
-    vertexParamsArray[i * 3] = vertex.isFixed ? 1 : 0;
-    if (!vertex.isFixed) {
-      vertexParamsArray[i * 3 + 1] = vertex.springIds.length;
-      vertexParamsArray[i * 3 + 2] = springListArray.length;
-      springListArray.push(...vertex.springIds);
-    }
-  }
-
-  vertexPositionBuffer = instancedArray(vertexPositionArray, 'vec3');
-  vertexForceBuffer = instancedArray(vertexCount, 'vec3');
-  vertexParamsBuffer = instancedArray(vertexParamsArray, 'uvec3');
-
-  springListBuffer = instancedArray(new Uint32Array(springListArray), 'uint')
-    .setPBO(true);
-}
-
-function setupVerletSpringBuffers() {
-  // setup the buffers holding the spring data for the compute shaders
-
-  const springCount = verletSprings.length;
-
-  const springVertexIdArray = new Uint32Array(springCount * 2);
-  const springRestLengthArray = new Float32Array(springCount);
-
-  for (let i = 0; i < springCount; i++) {
-    const spring = verletSprings[i];
-    springVertexIdArray[i * 2] = spring.vertex0.id;
-    springVertexIdArray[i * 2 + 1] = spring.vertex1.id;
-    springRestLengthArray[i] = spring.vertex0.position.distanceTo(
-      spring.vertex1.position,
-    );
-  }
-
-  springVertexIdBuffer = instancedArray(springVertexIdArray, 'uvec2').setPBO(
-    true,
-  );
-  springRestLengthBuffer = instancedArray(springRestLengthArray, 'float');
-  springForceBuffer = instancedArray(springCount * 3, 'vec3').setPBO(true);
-}
-
-function setupUniforms() {
-  dampeningUniform = uniform(0.99);
-  spherePositionUniform = uniform(new THREE.Vector3(0, 0, 0));
-  sphereUniform = uniform(1.0);
-  windUniform = uniform(1.0);
-  stiffnessUniform = uniform(0.2);
-}
-
-function setupComputeShaders() {
-  // This function sets up the compute shaders for the verlet simulation
-  // There are two shaders that are executed for each simulation step
-
-  const vertexCount = verletVertices.length;
-  const springCount = verletSprings.length;
-
-  const index = fromTSL(instanceIndex, { type: u32 });
-
-  const vertexIds = fromTSL(springVertexIdBuffer, { type: arrayOf(vec2u) });
-  const restLengths = fromTSL(springRestLengthBuffer, { type: arrayOf(f32) });
-  const vertexPositions = fromTSL(vertexPositionBuffer, {
-    type: arrayOf(vec3f),
-  });
-  const springForces = fromTSL(springForceBuffer, { type: arrayOf(vec3f) });
-  const stiffness = fromTSL(stiffnessUniform, { type: f32 });
-
-  // 1. computeSpringForces:
-  // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
-  computeSpringForces = toTSL(() => {
-    'use gpu';
-
-    if (index.$ > springCount) {
-      // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of springs.
-      // in that case, return.
-      return;
-    }
-
-    const vertexId = vertexIds.$[index.$];
-    const restLength = restLengths.$[index.$];
-
-    const vertex0Position = vertexPositions.$[vertexId.x];
-    const vertex1Position = vertexPositions.$[vertexId.y];
-
-    const delta = vertex1Position.sub(vertex0Position);
-    const dist = max(length(delta), 0.000001);
-    const force = delta.mul(
-      (dist - restLength) * stiffness.$ * 0.5 / dist,
-    );
-    springForces.$[index.$] = force;
-  })().compute(springCount);
-
-  // 2. computeVertexForces:
-  // This shader accumulates the force for each vertex.
-  // First it iterates over all springs connected to this vertex and accumulates their forces.
-  // Then it adds a gravital force, wind force, and the collision with the sphere.
-  // In the end it adds the force to the vertex' position.
-  computeVertexForces = Fn(() => {
-    If(instanceIndex.greaterThanEqual(uint(vertexCount)), () => {
-      // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
-      // in that case, return.
-      Return();
-    });
-
-    const params = vertexParamsBuffer.element(instanceIndex).toVar();
-    const isFixed = params.x;
-    const springCount = params.y;
-    const springPointer = params.z;
-
-    If(isFixed, () => {
-      // don't need to calculate vertex forces if the vertex is set as immovable
-      Return();
-    });
-
-    const position = vertexPositionBuffer.element(instanceIndex).toVar(
-      'vertexPosition',
-    );
-    const force = vertexForceBuffer.element(instanceIndex).toVar('vertexForce');
-
-    force.mulAssign(dampeningUniform);
-
-    const ptrStart = springPointer.toVar('ptrStart');
-    const ptrEnd = ptrStart.add(springCount).toVar('ptrEnd');
-
-    Loop(
-      { start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' },
-      ({ i }) => {
-        const springId = springListBuffer.element(i).toVar('springId');
-        const springForce = springForceBuffer.element(springId);
-        const springVertexIds = springVertexIdBuffer.element(springId);
-        const factor = select(
-          springVertexIds.x.equal(instanceIndex),
-          1.0,
-          -1.0,
-        );
-        force.addAssign(springForce.mul(factor));
-      },
-    );
-
-    // gravity
-    force.y.subAssign(0.00005);
-
-    // wind
-    const noise = triNoise3D(position, 1, time).sub(0.2).mul(0.0001);
-    const windForce = noise.mul(windUniform);
-    force.z.subAssign(windForce);
-
-    // collision with sphere
-    const deltaSphere = position.add(force).sub(spherePositionUniform);
-    const dist = deltaSphere.length();
-    const sphereForce = float(sphereRadius).sub(dist).max(0).mul(deltaSphere)
-      .div(dist).mul(sphereUniform);
-    force.addAssign(sphereForce);
-
-    vertexForceBuffer.element(instanceIndex).assign(force);
-    vertexPositionBuffer.element(instanceIndex).addAssign(force);
-  })().compute(vertexCount);
-}
 
 function setupWireframe() {
   // adds helpers to visualize the verlet system
 
   // verlet vertex visualizer
   const vertexWireframeMaterial = new THREE.SpriteNodeMaterial();
-  vertexWireframeMaterial.positionNode = vertexPositionBuffer.element(
-    instanceIndex,
-  );
+  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node
+    .element(instanceIndex);
   vertexWireframeObject = new THREE.Mesh(
     new THREE.PlaneGeometry(0.01, 0.01),
     vertexWireframeMaterial,
   );
   vertexWireframeObject.frustumCulled = false;
-  vertexWireframeObject.count = verletVertices.length;
+  vertexWireframeObject.count = verletSim.vertices.length;
   scene.add(vertexWireframeObject);
 
   // verlet spring visualizer
@@ -411,13 +142,15 @@ function setupWireframe() {
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
   springWireframeMaterial.positionNode = Fn(() => {
-    const vertexIds = springVertexIdBuffer.element(instanceIndex);
+    const vertexIds = verletSim.springVertexIdBuffer.node.element(
+      instanceIndex,
+    );
     const vertexId = select(
       attribute('vertexIndex').equal(0),
       vertexIds.x,
       vertexIds.y,
     );
-    return vertexPositionBuffer.element(vertexId);
+    return verletSim.vertexPositionBuffer.node.element(vertexId);
   })();
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();
@@ -429,14 +162,14 @@ function setupWireframe() {
     'vertexIndex',
     springWireframeIndexBuffer,
   );
-  springWireframeGeometry.instanceCount = verletSprings.length;
+  springWireframeGeometry.instanceCount = verletSim.springs.length;
 
   springWireframeObject = new THREE.Line(
     springWireframeGeometry,
     springWireframeMaterial,
   );
   springWireframeObject.frustumCulled = false;
-  springWireframeObject.count = verletSprings.length;
+  springWireframeObject.count = verletSim.springs.length;
   scene.add(springWireframeObject);
 }
 
@@ -458,7 +191,7 @@ function setupClothMesh() {
   const verletVertexIdArray = new Uint32Array(vertexCount * 4);
   const indices = [];
 
-  const getIndex = (x, y) => {
+  const getIndex = (x: number, y: number) => {
     return y * clothNumSegmentsX + x;
   };
 
@@ -466,10 +199,11 @@ function setupClothMesh() {
   for (let x = 0; x < clothNumSegmentsX; x++) {
     for (let y = 0; y < clothNumSegmentsX; y++) {
       const index = getIndex(x, y);
-      verletVertexIdArray[index * 4] = verletVertexColumns[x][y].id;
-      verletVertexIdArray[index * 4 + 1] = verletVertexColumns[x + 1][y].id;
-      verletVertexIdArray[index * 4 + 2] = verletVertexColumns[x][y + 1].id;
-      verletVertexIdArray[index * 4 + 3] = verletVertexColumns[x + 1][y + 1].id;
+      verletVertexIdArray[index * 4] = verletSim.vertexColumns[x][y].id;
+      verletVertexIdArray[index * 4 + 1] = verletSim.vertexColumns[x + 1][y].id;
+      verletVertexIdArray[index * 4 + 2] = verletSim.vertexColumns[x][y + 1].id;
+      verletVertexIdArray[index * 4 + 3] =
+        verletSim.vertexColumns[x + 1][y + 1].id;
 
       vertexUvArray[index * 2] = x / clothNumSegmentsX;
       vertexUvArray[index * 2 + 1] = y / clothNumSegmentsY;
@@ -519,7 +253,7 @@ function setupClothMesh() {
     sheenColor: new THREE.Color().setHex(API.sheenColor),
   });
 
-  const checkerBoard = (uv: v2f): number => {
+  const checkerBoard = (uv: d.v2f): number => {
     'use gpu';
     const fuv = floor(uv);
     return abs(fuv.x + fuv.y) % 2;
@@ -528,16 +262,16 @@ function setupClothMesh() {
   clothMaterial.colorNode = toTSL(() => {
     'use gpu';
     const pattern = checkerBoard(uv.$.mul(5));
-    return mix(vec4f(0.4, 0.3, 0.3, 1), vec4f(1, 0.5, 0.4, 1), pattern);
-  })();
+    return mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
+  });
 
   clothMaterial.positionNode = Fn(({ material }) => {
     // gather the position of the 4 verlet vertices and calculate the center position and normal from that
     const vertexIds = attribute('vertexIds');
-    const v0 = vertexPositionBuffer.element(vertexIds.x).toVar();
-    const v1 = vertexPositionBuffer.element(vertexIds.y).toVar();
-    const v2 = vertexPositionBuffer.element(vertexIds.z).toVar();
-    const v3 = vertexPositionBuffer.element(vertexIds.w).toVar();
+    const v3 = verletSim.vertexPositionBuffer.node.element(vertexIds.w).toVar();
+    const v0 = verletSim.vertexPositionBuffer.node.element(vertexIds.x).toVar();
+    const v1 = verletSim.vertexPositionBuffer.node.element(vertexIds.y).toVar();
+    const v2 = verletSim.vertexPositionBuffer.node.element(vertexIds.z).toVar();
 
     const top = v0.add(v1);
     const right = v1.add(v3);
@@ -561,11 +295,6 @@ function setupClothMesh() {
 }
 
 function setupCloth() {
-  setupVerletGeometry();
-  setupVerletVertexBuffers();
-  setupVerletSpringBuffers();
-  setupUniforms();
-  setupComputeShaders();
   setupWireframe();
   setupSphere();
   setupClothMesh();
@@ -591,7 +320,7 @@ function updateSphere() {
     0,
     Math.sin(timestamp * 0.8),
   );
-  spherePositionUniform.value.copy(sphere.position);
+  spherePositionUniform.node.value.copy(sphere.position);
 }
 
 async function render() {
@@ -605,8 +334,8 @@ async function render() {
   }
 
   sphere.visible = params.sphere;
-  sphereUniform.value = params.sphere ? 1 : 0;
-  windUniform.value = params.wind;
+  sphereUniform.node.value = params.sphere ? 1 : 0;
+  verletSim.windUniform.value = params.wind;
   clothMesh.visible = !params.wireframe;
   vertexWireframeObject.visible = params.wireframe;
   springWireframeObject.visible = params.wireframe;
@@ -622,8 +351,7 @@ async function render() {
     timestamp += timePerStep;
     timeSinceLastStep -= timePerStep;
     updateSphere();
-    await renderer.computeAsync(computeSpringForces);
-    await renderer.computeAsync(computeVertexForces);
+    await verletSim.update(renderer);
   }
 
   await renderer.renderAsync(scene, camera);
