@@ -24,7 +24,10 @@ import {
   prepareModelInput,
 } from './shaders.ts';
 
-// We need to wait for issue to close: https://github.com/microsoft/onnxruntime/issues/26480
+// Background segmentation uses the u2netp model (https://github.com/xuebinqin/U-2-Net)
+// by Xuebin Qin et al., licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+// We need to wait for issue to close and release: https://github.com/microsoft/onnxruntime/issues/26480
 if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
   throw new Error('Unfortunately, ONNX does not work on Safari or iOS yet.');
 }
@@ -33,9 +36,6 @@ if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
-const attributionPopup = document.getElementById(
-  'attribution',
-) as HTMLDivElement;
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -283,7 +283,6 @@ async function processVideoFrame(
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
-attributionPopup.style.opacity = '1';
 
 // #region Example controls & Cleanup
 
@@ -307,15 +306,6 @@ export const controls = {
     },
   },
 };
-
-const hideAttributionPopup = (e: Event) => {
-  if (e.target instanceof HTMLElement && e.target.tagName !== 'A') {
-    attributionPopup.style.opacity = '0';
-  }
-};
-
-attributionPopup.addEventListener('mousedown', hideAttributionPopup);
-attributionPopup.addEventListener('touchdown', hideAttributionPopup);
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {
