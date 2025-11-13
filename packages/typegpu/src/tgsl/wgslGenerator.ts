@@ -43,11 +43,7 @@ import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import type {
-  FunctionBodyOptions,
-  FunctionHeaderOptions,
-  ShaderGenerator,
-} from './shaderGenerator.ts';
+import type { ShaderGenerator } from './shaderGenerator.ts';
 import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;

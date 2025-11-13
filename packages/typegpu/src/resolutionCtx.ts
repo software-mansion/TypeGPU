@@ -454,7 +454,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     options: FnToShaderCodeOptions,
   ): { code: string; returnType: AnyData } {
     const scope = this._itemStateStack.pushFunctionScope(
-      options.functionType,
+      options.type,
       options.args,
       options.argAliases,
       options.returnType,
