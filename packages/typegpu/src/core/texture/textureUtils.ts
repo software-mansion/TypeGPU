@@ -7,10 +7,36 @@ import type { ExternalImageSource } from './texture.ts';
 export function getImageSourceDimensions(
   source: ExternalImageSource,
 ): { width: number; height: number } {
-  if ('displayWidth' in source && 'displayHeight' in source) {
-    return { width: source.displayWidth, height: source.displayHeight };
+  // We used to do it this way but it fails on React Native (ImageBitmap is probably a proxy there)
+  // if ('displayWidth' in source && 'displayHeight' in source) {
+  //   return { width: source.displayWidth, height: source.displayHeight };
+  // }
+
+  const { videoWidth, videoHeight } = source as HTMLVideoElement;
+  if (videoWidth && videoHeight) {
+    return { width: videoWidth, height: videoHeight };
   }
-  return { width: source.width as number, height: source.height as number };
+
+  const { naturalWidth, naturalHeight } = source as HTMLImageElement;
+  if (naturalWidth && naturalHeight) {
+    return { width: naturalWidth, height: naturalHeight };
+  }
+
+  const { codedWidth, codedHeight } = source as VideoFrame;
+  if (codedWidth && codedHeight) {
+    return { width: codedWidth, height: codedHeight };
+  }
+
+  const { width, height } = source as ImageBitmap || HTMLCanvasElement ||
+    OffscreenCanvas || HTMLImageElement || ImageData;
+
+  if (!width || !height) {
+    throw new Error(
+      'Cannot determine dimensions of the provided image source.',
+    );
+  }
+
+  return { width, height };
 }
 
 type CachedResources = {
