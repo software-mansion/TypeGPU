@@ -94,7 +94,7 @@ describe('shellless', () => {
       }
 
       fn main() -> f32 {
-        var x = someFn(1, 2);
+        let x = someFn(1i, 2i);
         return x;
       }"
     `);
@@ -124,7 +124,7 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main
-      - fn*:someFn: Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
+      - fn*:someFn(f32, i32): Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
     `);
   });
 
@@ -154,6 +154,86 @@ describe('shellless', () => {
 
       fn main() -> f32 {
         return fn2();
+      }"
+    `);
+  });
+
+  it('handles refs and generates pointer arguments for them', () => {
+    const advance = (pos: d.ref<d.v3f>, vel: d.v3f) => {
+      'use gpu';
+      pos.$.x += vel.x;
+      pos.$.y += vel.y;
+      pos.$.z += vel.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      const pos = d.ref(d.vec3f(0, 0, 0));
+      advance(pos, d.vec3f(1, 2, 3));
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
+        (*pos).x += vel.x;
+        (*pos).y += vel.y;
+        (*pos).z += vel.z;
+      }
+
+      fn main() {
+        var pos = vec3f();
+        advance((&pos), vec3f(1, 2, 3));
+      }"
+    `);
+  });
+
+  it('generates private pointer params when passing a private variable ref to a function', ({ root }) => {
+    const foo = tgpu.privateVar(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(d.ref(foo.$));
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn sumComponents(vec: ptr<private, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
+      }
+
+      var<private> foo: vec3f;
+
+      fn main() {
+        sumComponents((&foo));
+      }"
+    `);
+  });
+
+  it('generates uniform pointer params when passing a fixed uniform ref to a function', ({ root }) => {
+    const posUniform = root.createUniform(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(d.ref(posUniform.$));
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
+      }
+
+      @group(0) @binding(0) var<uniform> posUniform: vec3f;
+
+      fn main() {
+        sumComponents((&posUniform));
       }"
     `);
   });

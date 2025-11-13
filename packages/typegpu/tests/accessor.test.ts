@@ -136,11 +136,11 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         var color = vec3f(1, 0, 0);
-        var color2 = redUniform;
+        let color2 = (&redUniform);
         var color3 = getColor();
-        var colorX = 1;
-        var color2X = redUniform.x;
-        var color3X = getColor().x;
+        const colorX = 1f;
+        let color2X = redUniform.x;
+        let color3X = getColor().x;
       }"
     `);
   });
@@ -155,7 +155,7 @@ describe('tgpu.accessor', () => {
 
     expect(asWgsl(main)).toMatchInlineSnapshot(`
       "fn main() {
-        var foo = 1f;
+        const foo = 1f;
       }"
     `);
   });

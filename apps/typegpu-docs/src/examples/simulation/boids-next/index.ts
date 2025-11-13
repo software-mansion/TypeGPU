@@ -179,7 +179,7 @@ const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const simulate = (index: number) => {
   'use gpu';
-  const instanceInfo = currentTrianglePos.value[index];
+  const instanceInfo = TriangleData(currentTrianglePos.value[index]);
   let separation = d.vec2f();
   let alignment = d.vec2f();
   let cohesion = d.vec2f();
@@ -246,7 +246,7 @@ const simulate = (index: number) => {
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = instanceInfo;
+  nextTrianglePos.value[index] = TriangleData(instanceInfo);
 };
 
 const simulatePipeline = root['~unstable']

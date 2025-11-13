@@ -58,7 +58,7 @@ export class TgpuExternalTextureImpl
       };`,
     );
 
-    return snip(id, textureExternal());
+    return snip(id, textureExternal(), 'handle');
   }
 
   get [$gpuValueOf](): Infer<WgslExternalTexture> {
@@ -68,7 +68,7 @@ export class TgpuExternalTextureImpl
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema);
+          return snip(this, schema, 'handle');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `textureExternal:${getName(this) ?? '<unnamed>'}.$`,

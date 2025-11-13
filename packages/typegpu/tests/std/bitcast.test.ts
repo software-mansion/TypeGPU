@@ -160,14 +160,14 @@ describe('bitcast in shaders', () => {
     );
 
     expect(asWgsl(fnvec4i)).toMatchInlineSnapshot(`
-    "fn fnvec4i() -> vec4i {
-      return vec4i(1, 2, 3, 4);
-    }"
-  `);
+      "fn fnvec4i() -> vec4i {
+        return vec4i(1, 2, 3, 4);
+      }"
+    `);
     expect(asWgsl(fnvec4f)).toMatchInlineSnapshot(`
-    "fn fnvec4f() -> vec4f {
-      return vec4f(1.401298464324817e-45, 2.802596928649634e-45, 4.203895392974451e-45, 5.605193857299268e-45);
-    }"
-  `);
+      "fn fnvec4f() -> vec4f {
+        return vec4f(1.401298464324817e-45, 2.802596928649634e-45, 4.203895392974451e-45, 5.605193857299268e-45);
+      }"
+    `);
   });
 });

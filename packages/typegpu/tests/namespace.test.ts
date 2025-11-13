@@ -43,7 +43,7 @@ describe('tgpu.namespace', () => {
     });
 
     const updateBoid = tgpu.fn([d.ptrFn(Boid)])((boid) => {
-      boid.pos.x += 1;
+      boid.$.pos.x += 1;
     });
 
     const names = tgpu['~unstable'].namespace();

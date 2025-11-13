@@ -11,7 +11,8 @@ function cpuDpdx<T extends AnyFloat32VecInstance | number>(value: T): T {
 
 export const dpdx = createDualImpl(
   cpuDpdx,
-  (value) => snip(stitch`dpdx(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdx(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdx',
 );
 
@@ -25,7 +26,8 @@ function cpuDpdxCoarse<T extends AnyFloat32VecInstance | number>(
 
 export const dpdxCoarse = createDualImpl(
   cpuDpdxCoarse,
-  (value) => snip(stitch`dpdxCoarse(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdxCoarse(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdxCoarse',
 );
 
@@ -37,7 +39,8 @@ function cpuDpdxFine<T extends AnyFloat32VecInstance | number>(value: T): T {
 
 export const dpdxFine = createDualImpl(
   cpuDpdxFine,
-  (value) => snip(stitch`dpdxFine(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdxFine(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdxFine',
 );
 
@@ -49,7 +52,8 @@ function cpuDpdy<T extends AnyFloat32VecInstance | number>(value: T): T {
 
 export const dpdy = createDualImpl(
   cpuDpdy,
-  (value) => snip(stitch`dpdy(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdy(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdy',
 );
 
@@ -63,7 +67,8 @@ function cpuDpdyCoarse<T extends AnyFloat32VecInstance | number>(
 
 export const dpdyCoarse = createDualImpl(
   cpuDpdyCoarse,
-  (value) => snip(stitch`dpdyCoarse(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdyCoarse(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdyCoarse',
 );
 
@@ -75,7 +80,8 @@ function cpuDpdyFine<T extends AnyFloat32VecInstance | number>(value: T): T {
 
 export const dpdyFine = createDualImpl(
   cpuDpdyFine,
-  (value) => snip(stitch`dpdyFine(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`dpdyFine(${value})`, value.dataType, /* origin */ 'runtime'),
   'dpdyFine',
 );
 
@@ -87,7 +93,8 @@ function cpuFwidth<T extends AnyFloat32VecInstance | number>(value: T): T {
 
 export const fwidth = createDualImpl(
   cpuFwidth,
-  (value) => snip(stitch`fwidth(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`fwidth(${value})`, value.dataType, /* origin */ 'runtime'),
   'fwidth',
 );
 
@@ -101,7 +108,12 @@ function cpuFwidthCoarse<T extends AnyFloat32VecInstance | number>(
 
 export const fwidthCoarse = createDualImpl(
   cpuFwidthCoarse,
-  (value) => snip(stitch`fwidthCoarse(${value})`, value.dataType),
+  (value) =>
+    snip(
+      stitch`fwidthCoarse(${value})`,
+      value.dataType,
+      /* origin */ 'runtime',
+    ),
   'fwidthCoarse',
 );
 
@@ -115,6 +127,7 @@ function cpuFwidthFine<T extends AnyFloat32VecInstance | number>(
 
 export const fwidthFine = createDualImpl(
   cpuFwidthFine,
-  (value) => snip(stitch`fwidthFine(${value})`, value.dataType),
+  (value) =>
+    snip(stitch`fwidthFine(${value})`, value.dataType, /* origin */ 'runtime'),
   'fwidthFine',
 );

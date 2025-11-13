@@ -39,14 +39,14 @@ describe('mnist inference example', () => {
       }
 
       @compute @workgroup_size(1) fn defaultCompute_0(_arg_0: defaultCompute_Input_6) {
-        var inputSize = arrayLength(&input_1);
-        var i = _arg_0.gid.x;
-        var weightsOffset = (i * inputSize);
+        let inputSize = arrayLength(&input_1);
+        let i = _arg_0.gid.x;
+        let weightsOffset = (i * inputSize);
         var sum = 0f;
         for (var j = 0u; (j < inputSize); j++) {
           sum = fma(input_1[j], weights_2[(weightsOffset + j)], sum);
         }
-        var total = (sum + biases_3[i]);
+        let total = (sum + biases_3[i]);
         output_4[i] = relu_5(total);
       }
 
@@ -74,20 +74,20 @@ describe('mnist inference example', () => {
       }
 
       @compute @workgroup_size(128) fn subgroupCompute_0(_arg_0: subgroupCompute_Input_7) {
-        var subgroupId = u32((f32(_arg_0.lid.x) / f32(_arg_0.ssize)));
-        var outputsPerWG = u32((f32(workgroupSize_1) / f32(_arg_0.ssize)));
-        var neuronIndex = ((_arg_0.wid.x * outputsPerWG) + subgroupId);
-        var outLen = arrayLength(&output_2);
-        var valid = (neuronIndex < outLen);
-        var inputSize = arrayLength(&input_3);
+        let subgroupId = u32((f32(_arg_0.lid.x) / f32(_arg_0.ssize)));
+        let outputsPerWG = u32((f32(workgroupSize_1) / f32(_arg_0.ssize)));
+        let neuronIndex = ((_arg_0.wid.x * outputsPerWG) + subgroupId);
+        let outLen = arrayLength(&output_2);
+        let valid = (neuronIndex < outLen);
+        let inputSize = arrayLength(&input_3);
         var partial = 0f;
         if (valid) {
-          var weightsOffset = (neuronIndex * inputSize);
+          let weightsOffset = (neuronIndex * inputSize);
           for (var j = _arg_0.sid; (j < inputSize); j += _arg_0.ssize) {
             partial = fma(input_3[j], weights_4[(weightsOffset + j)], partial);
           }
         }
-        var sum = subgroupAdd(partial);
+        let sum = subgroupAdd(partial);
         if ((valid && (_arg_0.sid == 0u))) {
           output_2[neuronIndex] = relu_6((sum + biases_5[neuronIndex]));
         }

@@ -74,6 +74,7 @@ export const tgpu = {
 };
 export default tgpu;
 
+export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export {
   MissingBindGroupsError,
   MissingLinksError,
@@ -181,6 +182,9 @@ export type {
 } from './core/function/tgpuComputeFn.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 export type { Namespace } from './core/resolve/namespace.ts';
+export type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+export type { Snippet } from './data/snippet.ts';
+
 // Exported for being able to track use of these global extensions easier,
 // and to establish a solid contract between tooling using them.
 export type { INTERNAL_GlobalExt } from './shared/meta.ts';

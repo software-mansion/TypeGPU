@@ -129,7 +129,7 @@ export class TgpuLaidOutSamplerImpl<
       };`,
     );
 
-    return snip(id, this.schema);
+    return snip(id, this.schema, /* origin */ 'handle');
   }
 
   get [$gpuValueOf](): Infer<T> {
@@ -138,7 +138,7 @@ export class TgpuLaidOutSamplerImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema);
+          return snip(this, schema, /* origin */ 'handle');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -226,7 +226,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       };`,
     );
 
-    return snip(id, this.schema);
+    return snip(id, this.schema, /* origin */ 'handle');
   }
 
   get [$gpuValueOf](): Infer<T> {
@@ -235,7 +235,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema);
+          return snip(this, schema, /* origin */ 'handle');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,

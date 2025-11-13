@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import {
@@ -20,41 +20,23 @@ import {
   vec4h,
 } from '../../src/data/vector.ts';
 import {
+  accessIndex,
+  accessProp,
   coerceToSnippet,
-  type GenerationCtx,
-  getTypeForIndexAccess,
-  getTypeForPropAccess,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip } from '../../src/data/snippet.ts';
-import { CodegenState } from '../../src/types.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
-
-const mockCtx = {
-  indent: () => '',
-  dedent: () => '',
-  pushBlockScope: () => {},
-  popBlockScope: () => {},
-  mode: new CodegenState(),
-  getById: vi.fn(),
-  defineVariable: vi.fn((id, dataType) => ({ value: id, dataType })),
-  resolve: vi.fn((val) => {
-    if (
-      (typeof val === 'function' || typeof val === 'object') &&
-      'type' in val
-    ) {
-      return val.type;
-    }
-    return val;
-  }),
-  unwrap: vi.fn((val) => val),
-  pre: '',
-} as unknown as GenerationCtx;
+import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
+import { namespace } from '../../src/core/resolve/namespace.ts';
 
 describe('generationHelpers', () => {
   beforeEach(() => {
-    INTERNAL_setCtx(mockCtx);
+    const ctx = new ResolutionCtxImpl({
+      namespace: namespace(),
+    });
+    INTERNAL_setCtx(ctx);
   });
 
   afterEach(() => {
@@ -64,77 +46,123 @@ describe('generationHelpers', () => {
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
       expect(numericLiteralToSnippet(1)).toEqual(
-        snip(1, abstractInt),
+        snip(1, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(1.1)).toEqual(
-        snip(1.1, abstractFloat),
+        snip(1.1, abstractFloat, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractInt),
+        snip(1e10, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
-        snip(0.5, abstractFloat),
+        snip(0.5, abstractFloat, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(-45)).toEqual(
-        snip(-45, abstractInt),
+        snip(-45, abstractInt, /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0x1A)).toEqual(
-        snip(0x1A, abstractInt),
+        snip(0x1A, abstractInt, /* origin */ 'constant'),
       );
 
-      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt));
+      expect(numericLiteralToSnippet(0b101)).toEqual(
+        snip(5, abstractInt, /* origin */ 'constant'),
+      );
     });
   });
 
-  describe('getTypeForPropAccess', () => {
+  describe('accessProp', () => {
     const MyStruct = struct({
       foo: f32,
       bar: vec3f,
     });
 
     it('should return struct property types', () => {
-      expect(getTypeForPropAccess(MyStruct, 'foo')).toBe(f32);
-      expect(getTypeForPropAccess(MyStruct, 'bar')).toBe(vec3f);
-      expect(getTypeForPropAccess(MyStruct, 'notfound')).toBe(UnknownData);
+      const target = snip('foo', MyStruct, 'function');
+      expect(accessProp(target, 'foo')).toStrictEqual(
+        snip('foo.foo', f32, /* origin */ 'runtime'),
+      );
+      expect(accessProp(target, 'bar')).toStrictEqual(
+        snip('foo.bar', vec3f, /* origin */ 'function'),
+      );
+      expect(accessProp(target, 'notfound')).toStrictEqual(undefined);
     });
 
     it('should return swizzle types on vectors', () => {
-      expect(getTypeForPropAccess(vec4f, 'x')).toBe(f32);
-      expect(getTypeForPropAccess(vec4f, 'yz')).toBe(vec2f);
-      expect(getTypeForPropAccess(vec4f, 'xyzw')).toBe(vec4f);
+      const target = snip('foo', vec4f, 'function');
+
+      expect(accessProp(target, 'x')).toStrictEqual(
+        snip('foo.x', f32, /* origin */ 'runtime'),
+      );
+      expect(accessProp(target, 'yz')).toStrictEqual(
+        snip('foo.yz', vec2f, /* origin */ 'runtime'),
+      );
+      expect(accessProp(target, 'xyzw')).toStrictEqual(
+        snip('foo.xyzw', vec4f, /* origin */ 'runtime'),
+      );
     });
 
-    it('should return UnknownData when applied to primitives or invalid', () => {
-      expect(getTypeForPropAccess(u32, 'x')).toBe(UnknownData);
-      expect(getTypeForPropAccess(bool, 'x')).toBe(UnknownData);
+    it('should return undefined when applied to primitives or invalid', () => {
+      const target1 = snip('foo', u32, /* origin */ 'runtime');
+      const target2 = snip('foo', bool, /* origin */ 'runtime');
+      expect(accessProp(target1, 'x')).toBe(undefined);
+      expect(accessProp(target2, 'x')).toBe(undefined);
     });
   });
 
-  describe('getTypeForIndexAccess', () => {
+  describe('accessIndex', () => {
     const arr = arrayOf(f32, 2);
+    const index = snip('0', u32, /* origin */ 'runtime');
 
     it('returns element type for arrays', () => {
-      expect(getTypeForIndexAccess(arr)).toBe(f32);
+      const target = snip('foo', arr, /* origin */ 'runtime');
+      expect(accessIndex(target, index)).toStrictEqual(
+        snip('foo[0]', f32, 'runtime'),
+      );
     });
 
     it('returns vector component', () => {
-      expect(getTypeForIndexAccess(vec2i)).toBe(i32);
-      expect(getTypeForIndexAccess(vec4h)).toBe(f16);
+      const target1 = snip('foo', vec2i, /* origin */ 'runtime');
+      const target2 = snip('foo', vec4h, /* origin */ 'runtime');
+      expect(accessIndex(target1, index)).toStrictEqual(
+        snip('foo[0]', i32, 'runtime'),
+      );
+      expect(accessIndex(target2, index)).toStrictEqual(
+        snip('foo[0]', f16, 'runtime'),
+      );
     });
 
     it('returns matrix column type', () => {
-      expect(getTypeForIndexAccess(mat2x2f)).toBe(vec2f);
-      expect(getTypeForIndexAccess(mat3x3f)).toBe(vec3f);
-      expect(getTypeForIndexAccess(mat4x4f)).toBe(vec4f);
+      const target1 = accessProp(
+        snip('foo', mat2x2f, /* origin */ 'runtime'),
+        'columns',
+      );
+      const target2 = accessProp(
+        snip('foo', mat3x3f, /* origin */ 'runtime'),
+        'columns',
+      );
+      const target3 = accessProp(
+        snip('foo', mat4x4f, /* origin */ 'runtime'),
+        'columns',
+      );
+      expect(target1 && accessIndex(target1, index)).toStrictEqual(
+        snip('foo[0]', vec2f, 'runtime'),
+      );
+      expect(target2 && accessIndex(target2, index)).toStrictEqual(
+        snip('foo[0]', vec3f, 'runtime'),
+      );
+      expect(target3 && accessIndex(target3, index)).toStrictEqual(
+        snip('foo[0]', vec4f, 'runtime'),
+      );
     });
 
-    it('returns UnknownData otherwise', () => {
-      expect(getTypeForIndexAccess(f32)).toBe(UnknownData);
+    it('returns undefined otherwise', () => {
+      const target = snip('foo', f32, /* origin */ 'runtime');
+      expect(accessIndex(target, index)).toBe(undefined);
     });
   });
 
@@ -142,21 +170,39 @@ describe('generationHelpers', () => {
     const arr = arrayOf(f32, 2);
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt));
-      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat));
-      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt));
-      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt));
+      expect(coerceToSnippet(1)).toEqual(
+        snip(1, abstractInt, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(2.5)).toEqual(
+        snip(2.5, abstractFloat, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(-10)).toEqual(
+        snip(-10, abstractInt, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(0.0)).toEqual(
+        snip(0, abstractInt, /* origin */ 'constant'),
+      );
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual(snip(true, bool));
-      expect(coerceToSnippet(false)).toEqual(snip(false, bool));
+      expect(coerceToSnippet(true)).toEqual(
+        snip(true, bool, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(false)).toEqual(
+        snip(false, bool, /* origin */ 'constant'),
+      );
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
-      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData));
-      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData));
-      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData));
+      expect(coerceToSnippet(f32)).toEqual(
+        snip(f32, UnknownData, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(vec3i)).toEqual(
+        snip(vec3i, UnknownData, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(arr)).toEqual(
+        snip(arr, UnknownData, /* origin */ 'constant'),
+      );
     });
 
     it('coerces arrays to unknown', () => {
@@ -180,12 +226,22 @@ describe('generationHelpers', () => {
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData));
-      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData));
-      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData));
-      expect(coerceToSnippet(undefined)).toEqual(snip(undefined, UnknownData));
+      expect(coerceToSnippet('foo')).toEqual(
+        snip('foo', UnknownData, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet({})).toEqual(
+        snip({}, UnknownData, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(null)).toEqual(
+        snip(null, UnknownData, /* origin */ 'constant'),
+      );
+      expect(coerceToSnippet(undefined)).toEqual(
+        snip(undefined, UnknownData, /* origin */ 'constant'),
+      );
       const fn = () => {};
-      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData));
+      expect(coerceToSnippet(fn)).toEqual(
+        snip(fn, UnknownData, /* origin */ 'constant'),
+      );
     });
   });
 });

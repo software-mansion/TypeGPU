@@ -28,7 +28,7 @@ describe('disco example', () => {
       }
 
       @vertex fn mainVertex_0(_arg_0: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var pos = array<vec2f, 6>(vec2f(-1, 1f), vec2f(-1, -1), vec2f(1f, -1), vec2f(-1, 1f), vec2f(1f, -1), vec2f(1));
+        var pos = array<vec2f, 6>(vec2f(-1, 1), vec2f(-1), vec2f(1, -1), vec2f(-1, 1), vec2f(1, -1), vec2f(1));
         var uv = array<vec2f, 6>(vec2f(0, 1), vec2f(), vec2f(1, 0), vec2f(0, 1), vec2f(1, 0), vec2f(1));
         return mainVertex_Output_1(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), uv[_arg_0.vertexIndex]);
       }
@@ -36,8 +36,8 @@ describe('disco example', () => {
       @group(0) @binding(0) var<uniform> resolutionUniform_5: vec2f;
 
       fn aspectCorrected_4(uv: vec2f) -> vec2f {
-        var v = ((uv.xy - 0.5) * 2);
-        var aspect = (resolutionUniform_5.x / resolutionUniform_5.y);
+        var v = ((uv - 0.5) * 2);
+        let aspect = (resolutionUniform_5.x / resolutionUniform_5.y);
         if ((aspect > 1f)) {
           v.x *= aspect;
         }
@@ -68,17 +68,17 @@ describe('disco example', () => {
 
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_9) -> @location(0) vec4f {
       {
-          var aspectUv = aspectCorrected_4(_arg_0.uv);
-          var originalUv = aspectUv;
+          var originalUv = aspectCorrected_4(_arg_0.uv);
+          var aspectUv = originalUv;
           var accumulatedColor = vec3f();
           for (var iteration = 0; (iteration < 5i); iteration++) {
             aspectUv = (fract((aspectUv * (1.3f * sin(time_6)))) - 0.5);
-            var radialLength = (length(aspectUv) * exp((-length(originalUv) * 2f)));
-            var paletteColor = palette_7((length(originalUv) + (time_6 * 0.9f)));
+            var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
             radialLength = (sin(((radialLength * 8f) + time_6)) / 8f);
             radialLength = abs(radialLength);
             radialLength = smoothstep(0, 0.1, radialLength);
             radialLength = (0.06f / radialLength);
+            var paletteColor = palette_7((length(originalUv) + (time_6 * 0.9f)));
             accumulatedColor = accumulate_8(accumulatedColor, paletteColor, radialLength);
           }
           return vec4f(accumulatedColor, 1f);

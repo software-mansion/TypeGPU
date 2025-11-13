@@ -253,7 +253,10 @@ function cpuNeg(value: NumVec | number): NumVec | number {
 
 export const neg = dualImpl({
   name: 'neg',
-  signature: (arg) => ({ argTypes: [arg], returnType: arg }),
+  signature: (arg) => ({
+    argTypes: [arg],
+    returnType: arg,
+  }),
   normalImpl: cpuNeg,
   codegenImpl: (arg) => stitch`-(${arg})`,
 });

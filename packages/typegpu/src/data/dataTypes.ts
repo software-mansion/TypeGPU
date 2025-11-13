@@ -135,6 +135,20 @@ export function undecorate(data: AnyData): AnyData {
   return data;
 }
 
+export function unptr(data: AnyData): AnyData {
+  if (data.type === 'ptr') {
+    return data.inner as AnyData;
+  }
+  return data;
+}
+
+/**
+ * Dereferences `schema` if it's a pointer schema. Leaves it be otherwise.
+ */
+export function toStorable(schema: AnyData): AnyData {
+  return undecorate(unptr(undecorate(schema)));
+}
+
 const looseTypeLiterals = [
   'unstruct',
   'disarray',

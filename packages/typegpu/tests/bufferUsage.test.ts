@@ -41,7 +41,7 @@ describe('TgpuBufferUniform', () => {
       "@group(0) @binding(0) var<uniform> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -69,8 +69,8 @@ describe('TgpuBufferUniform', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -110,7 +110,7 @@ describe('TgpuBufferMutable', () => {
       "@group(0) @binding(0) var<storage, read_write> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -140,8 +140,8 @@ describe('TgpuBufferMutable', () => {
       @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -200,7 +200,7 @@ describe('TgpuBufferReadonly', () => {
       "@group(0) @binding(0) var<storage, read> paramBuffer: f32;
 
       fn func() {
-        var x = paramBuffer;
+        let x = paramBuffer;
       }"
     `);
   });
@@ -229,8 +229,8 @@ describe('TgpuBufferReadonly', () => {
       @group(0) @binding(0) var<storage, read> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });

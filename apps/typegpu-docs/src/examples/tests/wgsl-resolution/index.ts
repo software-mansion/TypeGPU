@@ -165,7 +165,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = instanceInfo;
+  nextTrianglePos.value[index] = TriangleData(instanceInfo);
 }).$name('compute shader');
 
 // WGSL resolution

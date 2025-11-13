@@ -548,10 +548,10 @@ describe('TgpuComputePipeline', () => {
       @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
         var a = array<f16, 3>();
         {
-          a[0] = f16(_arg_0.gid.x);
+          a[0i] = f16(_arg_0.gid.x);
         }
         {
-          a[1] = 1h;
+          a[1i] = 1h;
         }
 
       }"

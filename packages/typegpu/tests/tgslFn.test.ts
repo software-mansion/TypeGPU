@@ -162,9 +162,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var vi = f32(input.vi);
-        var ii = f32(input.ii);
-        var color = input.color;
+        let vi = f32(input.vi);
+        let ii = f32(input.ii);
+        let color = input.color;
         return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
       }"
     `);
@@ -300,9 +300,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
-        var index = input.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
+        let index = input.gid.x;
+        const iterationF = 0f;
+        const sign = 0;
         var change = vec4f();
       }"
     `);
@@ -327,9 +327,9 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
-        var index = _arg_0.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
+        let index = _arg_0.gid.x;
+        const iterationF = 0f;
+        const sign = 0;
         var change = vec4f();
       }"
     `);
@@ -391,7 +391,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        var pos = input.pos;
+        let pos = input.pos;
         var sampleMask = 0;
         if (((input.sampleMask > 0u) && (pos.x > 0f))) {
           sampleMask = 1i;
@@ -645,9 +645,9 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves a function with a pointer parameter', () => {
     const addOnes = tgpu.fn([d.ptrStorage(d.vec3f, 'read-write')])((ptr) => {
-      ptr.x += 1;
-      ptr.y += 1;
-      ptr.z += 1;
+      ptr.$.x += 1;
+      ptr.$.y += 1;
+      ptr.$.z += 1;
     });
 
     expect(asWgsl(addOnes)).toMatchInlineSnapshot(`
@@ -658,10 +658,11 @@ describe('TGSL tgpu.fn function', () => {
       }"
     `);
 
-    const callAddOnes = tgpu.fn([])(() => {
-      const someVec = d.vec3f(1, 2, 3);
+    const callAddOnes = () => {
+      'use gpu';
+      const someVec = d.ref(d.vec3f(1, 2, 3));
       addOnes(someVec);
-    });
+    };
 
     expect(asWgsl(callAddOnes)).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
@@ -672,7 +673,7 @@ describe('TGSL tgpu.fn function', () => {
 
       fn callAddOnes() {
         var someVec = vec3f(1, 2, 3);
-        addOnes(&someVec);
+        addOnes((&someVec));
       }"
     `);
   });
@@ -945,10 +946,9 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:bar
-      - call:foo
       - fn:foo
-      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
-      `);
+      - fn:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+    `);
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
@@ -964,13 +964,10 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:two
       - fn:two
-      - call:three
       - fn:three
-      - call:inner
       - fn:inner
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
   });
 
@@ -995,9 +992,8 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:fallbackFn
       - fn:fallbackFn
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
 
     const boundOne = one.with(flagSlot, true);

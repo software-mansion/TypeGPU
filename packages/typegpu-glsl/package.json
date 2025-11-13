@@ -1,0 +1,43 @@
+{
+  "name": "@typegpu/glsl",
+  "type": "module",
+  "version": "0.7.0",
+  "description": "An alternate shader generator for TypeGPU, producing GLSL code.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "peerDependencies": {
+    "typegpu": "^0.8.0",
+    "tinyest": "^0.1.1"
+  },
+  "devDependencies": {
+    "@webgpu/types": "catalog:types",
+    "typegpu": "workspace:*",
+    "typescript": "catalog:types",
+    "tsdown": "catalog:build",
+    "unplugin-typegpu": "workspace:*"
+  }
+}

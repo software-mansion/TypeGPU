@@ -144,7 +144,7 @@ describe('wgsl generator type inference', () => {
   it('coerces argument to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const id = tgpu.fn([Boid], Boid)((a) => a);
+    const id = tgpu.fn([Boid], Boid)((a) => Boid(a));
     const myFn = tgpu.fn([])(() => {
       const myBoid = id({ vel: d.vec2f(), pos: d.vec2f(1, 1) });
     });
@@ -507,7 +507,7 @@ describe('wgsl generator js type inference', () => {
   it('coerces argument to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const id = tgpu.fn([Boid], Boid)((a) => a);
+    const id = tgpu.fn([Boid], Boid)((a) => Boid(a));
     const structValue = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
     const myFn = tgpu.fn([])(() => {
       const myBoid = id(structValue);

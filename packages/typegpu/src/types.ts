@@ -47,6 +47,7 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import type { FunctionDefinitionExtra } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -74,7 +75,8 @@ export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
+export interface FnToShaderCodeOptions extends FunctionDefinitionExtra {
+  id: string;
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   /**
@@ -82,8 +84,8 @@ export interface FnToWgslOptions {
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
-  body: Block;
   externalMap: Record<string, unknown>;
+  bodyNode: Block;
 }
 
 export type ItemLayer = {
@@ -93,6 +95,7 @@ export type ItemLayer = {
 
 export type FunctionScopeLayer = {
   type: 'functionScope';
+  functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
@@ -117,6 +120,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   popSlotBindings(): void;
   pushFunctionScope(
+    functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     /**
@@ -273,9 +277,8 @@ export interface ResolutionCtx {
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
-    head: Wgsl;
-    body: Wgsl;
+  fnToShaderCode(options: FnToShaderCodeOptions): {
+    code: string;
     returnType: AnyData;
   };
 
@@ -315,6 +318,11 @@ export interface WithOwnSnippet {
 
 export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
+}
+
+export function isKnownAtComptime(snippet: Snippet): boolean {
+  return typeof snippet.value !== 'string' &&
+    getOwnSnippet(snippet.value) === undefined;
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

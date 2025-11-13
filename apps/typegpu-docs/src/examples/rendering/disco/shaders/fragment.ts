@@ -4,13 +4,17 @@ import * as std from 'typegpu/std';
 import { palette } from '../utils.ts';
 import { resolutionAccess, timeAccess } from '../consts.ts';
 
-const aspectCorrected = tgpu.fn([d.vec2f], d.vec2f)((uv) => {
-  const v = uv.xy.sub(0.5).mul(2.0);
+const aspectCorrected = (uv: d.v2f): d.v2f => {
+  'use gpu';
+  const v = uv.sub(0.5).mul(2);
   const aspect = resolutionAccess.$.x / resolutionAccess.$.y;
-  if (aspect > 1) v.x *= aspect;
-  else v.y /= aspect;
+  if (aspect > 1) {
+    v.x *= aspect;
+  } else {
+    v.y /= aspect;
+  }
   return v;
-});
+};
 
 const accumulate = tgpu.fn(
   [d.vec3f, d.vec3f, d.f32],
@@ -22,21 +26,20 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   {
-    let aspectUv = aspectCorrected(uv);
-    const originalUv = aspectUv;
+    const originalUv = aspectCorrected(uv);
+
+    let aspectUv = d.vec2f(originalUv);
     let accumulatedColor = d.vec3f();
     for (let iteration = 0.0; iteration < 5.0; iteration++) {
-      aspectUv = std.sub(
-        std.fract(std.mul(aspectUv, 1.3 * std.sin(timeAccess.$))),
-        0.5,
-      );
+      aspectUv = std.fract(aspectUv.mul(1.3 * std.sin(timeAccess.$))).sub(0.5);
       let radialLength = std.length(aspectUv) *
         std.exp(-std.length(originalUv) * 2);
-      const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
       radialLength = std.sin(radialLength * 8 + timeAccess.$) / 8;
       radialLength = std.abs(radialLength);
       radialLength = std.smoothstep(0.0, 0.1, radialLength);
       radialLength = 0.06 / radialLength;
+
+      const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
       accumulatedColor = accumulate(
         accumulatedColor,
         paletteColor,
@@ -53,8 +56,9 @@ export const mainFragment2 = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   {
-    let aspectUv = aspectCorrected(uv);
-    const originalUv = aspectUv;
+    const originalUv = aspectCorrected(uv);
+    let aspectUv = d.vec2f(originalUv);
+
     let accumulatedColor = d.vec3f();
     for (let iteration = 0.0; iteration < 3.0; iteration++) {
       aspectUv = std.fract(aspectUv.mul(-0.9)).sub(0.5);
@@ -80,8 +84,9 @@ export const mainFragment3 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let aspectUv = aspectCorrected(uv);
-  const originalUv = aspectUv;
+  const originalUv = aspectCorrected(uv);
+  let aspectUv = d.vec2f(originalUv);
+
   let accumulatedColor = d.vec3f();
   const baseAngle = timeAccess.$ * 0.3;
   const cosBaseAngle = std.cos(baseAngle);
@@ -129,10 +134,11 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
     std.abs(std.fract(aspectUv.x * 1.2) - 0.5),
     std.abs(std.fract(aspectUv.y * 1.2) - 0.5),
   ).mul(2).sub(1);
-  aspectUv = mirroredUv;
-  const originalUv = aspectUv;
+  aspectUv = d.vec2f(mirroredUv);
+  const originalUv = d.vec2f(aspectUv);
   let accumulatedColor = d.vec3f(0, 0, 0);
   const time = timeAccess.$;
+
   for (let iteration = 0; iteration < 4; iteration++) {
     const iterationF32 = d.f32(iteration);
     // rotation + scale
@@ -159,6 +165,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
     );
     accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
   }
+
   return d.vec4f(accumulatedColor, 1.0);
 });
 
@@ -167,9 +174,10 @@ export const mainFragment5 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  let aspectUv = aspectCorrected(uv);
-  const originalUv = aspectUv;
+  const originalUv = aspectCorrected(uv);
+  let aspectUv = d.vec2f(originalUv);
   let accumulatedColor = d.vec3f();
+
   for (let iteration = 0; iteration < 3; iteration++) {
     const iterationF32 = d.f32(iteration);
     // swirl distortion
@@ -203,7 +211,8 @@ export const mainFragment6 = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   let aspectUv = aspectCorrected(uv);
-  const originalUv = aspectUv;
+  const originalUv = d.vec2f(aspectUv);
+
   let accumulatedColor = d.vec3f(0, 0, 0);
   const time = timeAccess.$;
   for (let iteration = 0; iteration < 5; iteration++) {
@@ -245,7 +254,7 @@ export const mainFragment7 = tgpu['~unstable'].fragmentFn({
     std.abs(std.fract(aspectUv.x * 1.5) - 0.5),
     std.abs(std.fract(aspectUv.y * 1.5) - 0.5),
   ).mul(2);
-  const originalUv = aspectUv;
+  const originalUv = d.vec2f(aspectUv);
   let accumulatedColor = d.vec3f(0, 0, 0);
   const time = timeAccess.$;
   for (let iteration = 0; iteration < 4; iteration++) {

@@ -216,7 +216,7 @@ describe('array', () => {
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
         var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
-        var myClone = myArrays[0];
+        var myClone = myArrays[0i];
         return;
       }"
     `);
@@ -255,7 +255,7 @@ describe('array', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
-      - arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
+      - fn:arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
     `);
   });
 
@@ -383,7 +383,7 @@ describe('array.length', () => {
 
       fn foo() {
         var acc = 1f;
-        for (var i = 0; (i < 128); i++) {
+        for (var i = 0; (i < 128i); i++) {
           values[i] = acc;
           acc *= 2f;
         }
@@ -406,9 +406,7 @@ describe('array.length', () => {
       });
 
       expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-
-        fn testFn() -> i32 {
+        "fn testFn() -> i32 {
           return 5;
         }"
       `);
@@ -431,7 +429,7 @@ describe('array.length', () => {
         "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
         fn testFn() -> u32 {
-          return arrayLength(&values);
+          return arrayLength((&values));
         }"
       `);
     });
