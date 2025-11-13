@@ -654,7 +654,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       let result: ResolvedSnippet;
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
-        result = snip(resolveData(this, item), Void, /* ref */ 'runtime');
+        result = snip(resolveData(this, item), Void, /* origin */ 'runtime');
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
@@ -732,7 +732,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           return snip(
             `${[...this._declarations].join('\n\n')}${result.value}`,
             Void,
-            /* ref */ 'runtime', // arbitrary
+            /* origin */ 'runtime', // arbitrary
           );
         } finally {
           this.popMode('codegen');
@@ -751,13 +751,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
 
       if (realSchema.type === 'abstractInt') {
-        return snip(`${item}`, realSchema, /* ref */ 'constant');
+        return snip(`${item}`, realSchema, /* origin */ 'constant');
       }
       if (realSchema.type === 'u32') {
-        return snip(`${item}u`, realSchema, /* ref */ 'constant');
+        return snip(`${item}u`, realSchema, /* origin */ 'constant');
       }
       if (realSchema.type === 'i32') {
-        return snip(`${item}i`, realSchema, /* ref */ 'constant');
+        return snip(`${item}i`, realSchema, /* origin */ 'constant');
       }
 
       const exp = item.toExponential();
@@ -769,21 +769,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // Just picking the shorter one
       const base = exp.length < decimal.length ? exp : decimal;
       if (realSchema.type === 'f32') {
-        return snip(`${base}f`, realSchema, /* ref */ 'constant');
+        return snip(`${base}f`, realSchema, /* origin */ 'constant');
       }
       if (realSchema.type === 'f16') {
-        return snip(`${base}h`, realSchema, /* ref */ 'constant');
+        return snip(`${base}h`, realSchema, /* origin */ 'constant');
       }
-      return snip(base, realSchema, /* ref */ 'constant');
+      return snip(base, realSchema, /* origin */ 'constant');
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool, /* ref */ 'constant');
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
     }
 
     if (typeof item === 'string') {
       // Already resolved
-      return snip(item, Void, /* ref */ 'runtime');
+      return snip(item, Void, /* origin */ 'runtime');
     }
 
     if (schema && isWgslArray(schema)) {
@@ -806,12 +806,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             snip(
               element,
               schema.elementType as AnyData,
-              /* ref */ 'runtime',
+              /* origin */ 'runtime',
             )
           )
         })`,
         schema,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -819,7 +819,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return snip(
         stitch`array(${item.map((element) => this.resolve(element))})`,
         UnknownData,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       ) as ResolvedSnippet;
     }
 
@@ -830,12 +830,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             snip(
               (item as Infer<typeof schema>)[key],
               propType as AnyData,
-              /* ref */ 'runtime',
+              /* origin */ 'runtime',
             )
           )
         })`,
         schema,
-        /* ref */ 'runtime', // a new struct, not referenced from anywhere
+        /* origin */ 'runtime', // a new struct, not referenced from anywhere
       );
     }
 

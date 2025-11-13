@@ -231,7 +231,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* ref */ 'constant');
+      return snip(expression, bool, /* origin */ 'constant');
     }
 
     if (
@@ -319,7 +319,7 @@ ${this.ctx.pre}}`;
           : `${lhsStr} ${op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -330,7 +330,7 @@ ${this.ctx.pre}}`;
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ 'runtime');
+      return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -348,7 +348,7 @@ ${this.ctx.pre}}`;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* ref */ 'runtime');
+      return snip(`${op}${argStr}`, type, /* origin */ 'runtime');
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -357,7 +357,11 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(property), UnknownData, /* ref */ 'runtime');
+        return snip(
+          new ConsoleLog(property),
+          UnknownData,
+          /* origin */ 'runtime',
+        );
       }
 
       const accessed = accessProp(target, property);
@@ -427,7 +431,7 @@ ${this.ctx.pre}}`;
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
             // A new struct, so not a reference
-            /* ref */ 'runtime',
+            /* origin */ 'runtime',
           );
         }
 
@@ -442,7 +446,7 @@ ${this.ctx.pre}}`;
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
           // A new struct, so not a reference
-          /* ref */ 'runtime',
+          /* origin */ 'runtime',
         );
       }
 
@@ -480,7 +484,7 @@ ${this.ctx.pre}}`;
             return snip(
               stitch`${snippet.value}(${converted})`,
               snippet.dataType,
-              /* ref */ 'runtime',
+              /* origin */ 'runtime',
             );
           });
         }
@@ -609,7 +613,7 @@ ${this.ctx.pre}}`;
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -665,12 +669,12 @@ ${this.ctx.pre}}`;
           elemType as wgsl.AnyWgslData,
           values.length,
         ) as wgsl.AnyWgslData,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* ref */ 'runtime'); // arbitrary ref
+      return snip(expression[1], UnknownData, /* origin */ 'runtime'); // arbitrary ref
     }
 
     if (expression[0] === NODE.preUpdate) {

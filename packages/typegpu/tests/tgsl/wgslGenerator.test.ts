@@ -297,7 +297,7 @@ describe('wgslGenerator', () => {
       snip(
         (arg as { type: 'i'; name: string }).name,
         d.u32,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       )
     );
 
@@ -496,7 +496,7 @@ describe('wgslGenerator', () => {
 
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
-        [snip('idx', d.u32, /* ref */ 'runtime')],
+        [snip('idx', d.u32, /* origin */ 'runtime')],
         {},
         d.f32,
         astInfo.externals ?? {},

@@ -96,7 +96,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     // Doing a deep copy each time so that we don't have to deal with refs
     return schemaCallWrapper(
       this.schema,
-      snip(value, this.schema, /* ref */ 'constant'),
+      snip(value, this.schema, /* origin */ 'constant'),
     );
   }
 

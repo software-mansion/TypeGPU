@@ -611,7 +611,7 @@ export const frexp: FrexpOverload = createDualImpl(
       );
     }
 
-    return snip(stitch`frexp(${value})`, returnType, /* ref */ 'runtime');
+    return snip(stitch`frexp(${value})`, returnType, /* origin */ 'runtime');
   },
   'frexp',
 );
@@ -980,7 +980,7 @@ export const refract = createDualImpl(
     snip(
       stitch`refract(${e1}, ${e2}, ${e3})`,
       e1.dataType,
-      /* ref */ 'runtime',
+      /* origin */ 'runtime',
     ),
   'refract',
   (e1, e2, e3) => [

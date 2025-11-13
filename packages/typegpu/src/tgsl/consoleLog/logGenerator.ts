@@ -36,7 +36,11 @@ const defaultOptions: Required<LogGeneratorOptions> = {
   messagePrefix: ' GPU ',
 };
 
-const fallbackSnippet = snip('/* console.log() */', Void, /* ref */ 'runtime');
+const fallbackSnippet = snip(
+  '/* console.log() */',
+  Void,
+  /* origin */ 'runtime',
+);
 
 export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
@@ -115,7 +119,7 @@ export class LogGeneratorImpl implements LogGenerator {
     return snip(
       stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`,
       Void,
-      /* ref */ 'runtime',
+      /* origin */ 'runtime',
     );
   }
 

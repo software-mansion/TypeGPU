@@ -176,14 +176,14 @@ export function accessProp(
       return snip(
         stitch`arrayLength(&${target})`,
         u32,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
     return snip(
       target.dataType.elementCount,
       abstractInt,
-      /* ref */ 'constant',
+      /* origin */ 'constant',
     );
   }
 
@@ -354,7 +354,7 @@ export function accessIndex(
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
-    return snip(value, abstractFloat, /* ref */ 'constant');
+    return snip(value, abstractFloat, /* origin */ 'constant');
   }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
@@ -364,9 +364,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* ref */ 'constant');
+    return snip(value, abstractInt, /* origin */ 'constant');
   }
-  return snip(value, abstractFloat, /* ref */ 'constant');
+  return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
 export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
