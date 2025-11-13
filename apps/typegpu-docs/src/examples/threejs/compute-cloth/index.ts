@@ -34,7 +34,7 @@ const clock = new THREE.Clock();
 const params = {
   wireframe: false,
   sphere: true,
-  wind: 1.0,
+  wind: 1,
 };
 
 const API = {

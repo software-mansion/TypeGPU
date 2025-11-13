@@ -3,6 +3,7 @@ import * as TSL from 'three/tsl';
 import { fromTSL, toTSL, type TSLAccessor } from '@typegpu/three';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { triNoise3D } from './triNoise.ts';
 
 export type Vertex = {
   id: number;
@@ -264,6 +265,8 @@ export class VerletSimulation {
     // Then it adds a gravital force, wind force, and the collision with the sphere.
     // In the end it adds the force to the vertex' position.
 
+    const time = fromTSL(TSL.time, { type: d.f32 });
+
     this.computeVertexForces = toTSL(() => {
       'use gpu';
       const idx = instanceIndex.$;
@@ -293,8 +296,8 @@ export class VerletSimulation {
         const springForce = self.springForceBuffer.$[springId];
         const springVertexIds = self.springVertexIdBuffer.$[springId];
         const factor = std.select(
-          d.f32(1),
           d.f32(-1),
+          d.f32(1),
           springVertexIds.x === idx,
         );
         force = force.add(springForce.mul(factor));
@@ -304,8 +307,7 @@ export class VerletSimulation {
       force.y -= 0.00005;
 
       // wind
-      // const noise = TSL.triNoise3D(position, 1, TSL.time).sub(0.2).mul(0.0001);
-      const noise = 0; // TODO: Apply perlin noise
+      const noise = (triNoise3D(position, 1, time.$) - 0.2) * 0.0001;
       const windForce = noise * self.windUniform.$;
       force.z -= windForce;
 
@@ -322,79 +324,6 @@ export class VerletSimulation {
         force,
       );
     }).compute(vertexCount);
-
-    // this.computeVertexForces = TSL.Fn(() => {
-    //   TSL.If(TSL.instanceIndex.greaterThanEqual(TSL.uint(vertexCount)), () => {
-    //     // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
-    //     // in that case, return.
-    //     TSL.Return();
-    //   });
-
-    //   const params = this.vertexParamsBuffer.node.element(TSL.instanceIndex)
-    //     .toVar();
-    //   const isFixed = params.x;
-    //   const springCount = params.y;
-    //   const springPointer = params.z;
-
-    //   TSL.If(isFixed, () => {
-    //     // don't need to calculate vertex forces if the vertex is set as immovable
-    //     TSL.Return();
-    //   });
-
-    //   const position = this.vertexPositionBuffer.node
-    //     .element(TSL.instanceIndex)
-    //     .toVar('vertexPosition');
-    //   const force = this.vertexForceBuffer.node.element(TSL.instanceIndex)
-    //     .toVar('vertexForce');
-
-    //   force.mulAssign(this.dampeningUniform.node);
-
-    //   const ptrStart = springPointer.toVar('ptrStart');
-    //   const ptrEnd = ptrStart.add(springCount).toVar('ptrEnd');
-
-    //   TSL.Loop(
-    //     { start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' },
-    //     ({ i }) => {
-    //       const springId = this.springListBuffer.node.element(i).toVar(
-    //         'springId',
-    //       );
-    //       const springForce = this.springForceBuffer.node.element(
-    //         springId,
-    //       );
-    //       const springVertexIds = this.springVertexIdBuffer.node.element(
-    //         springId,
-    //       );
-    //       const factor = TSL.select(
-    //         springVertexIds.x.equal(TSL.instanceIndex),
-    //         1.0,
-    //         -1.0,
-    //       );
-    //       force.addAssign(springForce.mul(factor));
-    //     },
-    //   );
-
-    //   // gravity
-    //   force.y.subAssign(0.00005);
-
-    //   // wind
-    //   const noise = TSL.triNoise3D(position, 1, TSL.time).sub(0.2).mul(0.0001);
-    //   const windForce = noise.mul(this.windUniform.node);
-    //   force.z.subAssign(windForce);
-
-    //   // collision with sphere
-    //   const deltaSphere = position.add(force).sub(spherePositionUniform.node);
-    //   const dist = deltaSphere.length();
-    //   const sphereForce = TSL.float(sphereRadius).sub(dist).max(0).mul(
-    //     deltaSphere,
-    //   )
-    //     .div(dist).mul(sphereUniform.node);
-    //   force.addAssign(sphereForce);
-
-    //   this.vertexForceBuffer.node.element(TSL.instanceIndex).assign(force);
-    //   this.vertexPositionBuffer.node.element(TSL.instanceIndex).addAssign(
-    //     force,
-    //   );
-    // })().compute(vertexCount);
   }
 
   async update(renderer: THREE.WebGPURenderer) {
