@@ -1,6 +1,6 @@
-import tgpu from "typegpu";
-import * as d from "typegpu/data";
-import { randf } from "@typegpu/noise";
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
 
 const Boid = d.struct({
   pos: d.vec3f,

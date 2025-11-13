@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
 import { asWgsl } from './utils/parseResolved.ts';
 
 describe('invariant', () => {

@@ -7,7 +7,6 @@ import type {
   RenderFlag,
   SampledFlag,
 } from '../src/core/texture/usageExtension.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
