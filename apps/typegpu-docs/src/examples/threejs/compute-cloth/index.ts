@@ -33,12 +33,7 @@ const verletSim = new VerletSimulation({
   spherePositionUniform,
 });
 
-let vertexPositionBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
-  vertexForceBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>,
-  vertexParamsBuffer: THREE.TSL.ShaderNodeObject<THREE.StorageBufferNode>;
-
-let vertexWireframeObject, springWireframeObject;
-let clothMesh, clothMaterial: THREE.MeshPhysicalNodeMaterial, sphere;
+let vertexWireframeObject: THREE.Mesh, springWireframeObject: THREE.Line;
 let timeSinceLastStep = 0;
 let timestamp = 0;
 
@@ -85,6 +80,11 @@ renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1;
 
 const scene = new THREE.Scene();
+// Sphere
+const geometry = new THREE.IcosahedronGeometry(sphereRadius * 0.95, 4);
+const material = new THREE.MeshStandardNodeMaterial();
+const sphere = new THREE.Mesh(geometry, material);
+scene.add(sphere);
 
 const camera = new THREE.PerspectiveCamera(
   40,
@@ -110,7 +110,8 @@ scene.background = hdrTexture;
 scene.backgroundBlurriness = 0.5;
 scene.environment = hdrTexture;
 
-setupCloth();
+setupWireframe();
+const clothMesh = setupClothMesh();
 
 renderer.setAnimationLoop(render);
 
@@ -173,14 +174,7 @@ function setupWireframe() {
   scene.add(springWireframeObject);
 }
 
-function setupSphere() {
-  const geometry = new THREE.IcosahedronGeometry(sphereRadius * 0.95, 4);
-  const material = new THREE.MeshStandardNodeMaterial();
-  sphere = new THREE.Mesh(geometry, material);
-  scene.add(sphere);
-}
-
-function setupClothMesh() {
+function setupClothMesh(): THREE.Mesh {
   // This function generates a three Geometry and Mesh to render the cloth based on the verlet systems position data.
   // Therefore it creates a plane mesh, in which each vertex will be centered in the center of 4 verlet vertices.
 
@@ -243,7 +237,7 @@ function setupClothMesh() {
   geometry.setAttribute('vertexIds', verletVertexIdBuffer);
   geometry.setIndex(indices);
 
-  clothMaterial = new THREE.MeshPhysicalNodeMaterial({
+  const clothMaterial = new THREE.MeshPhysicalNodeMaterial({
     color: new THREE.Color().setHex(API.color),
     side: THREE.DoubleSide,
     transparent: true,
@@ -284,20 +278,16 @@ function setupClothMesh() {
     const normal = cross(tangent, bitangent);
 
     // send the normalView from the vertex shader to the fragment shader
+    // @ts-expect-error: `normalNode` is not on the type, but it exists
     material.normalNode = transformNormalToView(normal).toVarying();
 
     return v0.add(v1).add(v2).add(v3).mul(0.25);
   })();
 
-  clothMesh = new THREE.Mesh(geometry, clothMaterial);
+  const clothMesh = new THREE.Mesh(geometry, clothMaterial);
   clothMesh.frustumCulled = false;
   scene.add(clothMesh);
-}
-
-function setupCloth() {
-  setupWireframe();
-  setupSphere();
-  setupClothMesh();
+  return clothMesh;
 }
 
 function onWindowResize() {

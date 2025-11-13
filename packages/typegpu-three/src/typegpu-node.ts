@@ -120,8 +120,6 @@ class TgpuFnNode<T> extends THREE.Node {
         currentlyGeneratingFnNodeCtx = undefined;
       }
 
-      console.log('Used accessors:', ctx.dependencies);
-
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
       );
