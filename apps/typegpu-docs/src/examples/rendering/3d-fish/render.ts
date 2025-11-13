@@ -4,7 +4,6 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import {
-  ModelData,
   ModelVertexInput,
   ModelVertexOutput,
   renderBindGroupLayout as layout,

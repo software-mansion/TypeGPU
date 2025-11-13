@@ -54,7 +54,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import {
-  FunctionScopeLayer,
+  type FunctionScopeLayer,
   getOwnSnippet,
   isKnownAtComptime,
   type ResolutionCtx,
