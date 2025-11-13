@@ -112,9 +112,6 @@ export function resolveWithContext(
  * //   from: vec3f,
  * //   to: vec3f,
  * // }
- * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
- * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
- * // }
  * ```
  */
 export function resolveWithContext(
