@@ -3,7 +3,6 @@ import { mat4x4f, vec4f } from '../../../src/data/index.ts';
 import tgpu from '../../../src/index.ts';
 import { isCloseTo, mul } from '../../../src/std/index.ts';
 import { rotateX4, rotateY4, rotateZ4 } from '../../../src/std/matrix.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('rotate', () => {
   it('generates correct WGSL for rotateX4 with custom matrix', () => {
@@ -14,9 +13,9 @@ describe('rotate', () => {
       const resultExpression = rotateX4(M, angle);
     });
 
-    expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
@@ -30,9 +29,9 @@ describe('rotate', () => {
       const resultExpression = rotateY4(M, angle);
     });
 
-    expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(cos(angle), 0, -sin(angle), 0, 0, 1, 0, 0, sin(angle), 0, cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
@@ -46,9 +45,9 @@ describe('rotate', () => {
       const resultExpression = rotateZ4(M, angle);
     });
 
-    expect(asWgsl(rotateFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
-        var angle = 4;
+        const angle = 4;
         var resultExpression = (mat4x4f(cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);

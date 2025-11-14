@@ -153,7 +153,7 @@ export const sdBezierApprox = tgpu.fn(
 });
 
 export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((p, c, r) => {
-  const p_w = p;
+  const p_w = vec2f(p);
   p_w.x = abs(p.x);
   const l = length(p_w) - r;
   const m = length(p_w.sub(c.mul(clamp(dot(p_w, c), 0, r))));

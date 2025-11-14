@@ -46,11 +46,11 @@ describe('ascii filter example', () => {
       @group(0) @binding(4) var<uniform> charsetExtended_9: u32;
 
       fn characterFn_10(n: u32, p: vec2f) -> f32 {
-        var pos = floor(((p * vec2f(-4, 4f)) + 2.5));
+        var pos = floor(((p * vec2f(-4, 4)) + 2.5));
         if (((((pos.x < 0f) || (pos.x > 4f)) || (pos.y < 0f)) || (pos.y > 4f))) {
           return 0f;
         }
-        var a = u32((pos.x + (5f * pos.y)));
+        let a = u32((pos.x + (5f * pos.y)));
         return f32(((n >> a) & 1u));
       }
 
@@ -64,12 +64,12 @@ describe('ascii filter example', () => {
         var uv2 = ((uvTransformBuffer_4 * (input.uv - 0.5)) + 0.5);
         var textureSize = vec2f(textureDimensions(externalTexture_5));
         var pix = (uv2 * textureSize);
-        var cellSize = f32(glyphSize_6);
-        var halfCell = (cellSize * 0.5f);
+        let cellSize = f32(glyphSize_6);
+        let halfCell = (cellSize * 0.5f);
         var blockCoord = ((floor((pix / cellSize)) * cellSize) / textureSize);
         var color = textureSampleBaseClampToEdge(externalTexture_5, shaderSampler_7, blockCoord);
-        var rawGray = (((0.3f * color.x) + (0.59f * color.y)) + (0.11f * color.z));
-        var gray = pow(rawGray, gammaCorrection_8);
+        let rawGray = (((0.3f * color.x) + (0.59f * color.y)) + (0.11f * color.z));
+        let gray = pow(rawGray, gammaCorrection_8);
         var n = 4096u;
         if ((charsetExtended_9 == 0u)) {
           if ((gray > 0.2f)) {
@@ -223,7 +223,7 @@ describe('ascii filter example', () => {
           }
         }
         var p = vec2f((((pix.x / halfCell) % 2f) - 1f), (((pix.y / halfCell) % 2f) - 1f));
-        var charValue = characterFn_10(n, p);
+        let charValue = characterFn_10(n, p);
         var resultColor = vec3f(1);
         if ((displayMode_11 == 0u)) {
           resultColor = (color * charValue).xyz;

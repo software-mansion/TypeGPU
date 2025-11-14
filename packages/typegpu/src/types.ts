@@ -68,13 +68,14 @@ export type ResolvableObject =
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
-  | TgpuFn;
+  | ((...args: never[]) => unknown);
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
+  functionType: 'normal' | TgpuShaderStage;
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   /**
@@ -93,6 +94,7 @@ export type ItemLayer = {
 
 export type FunctionScopeLayer = {
   type: 'functionScope';
+  functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
@@ -117,6 +119,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   popSlotBindings(): void;
   pushFunctionScope(
+    functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     /**
@@ -315,6 +318,11 @@ export interface WithOwnSnippet {
 
 export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
+}
+
+export function isKnownAtComptime(snippet: Snippet): boolean {
+  return typeof snippet.value !== 'string' &&
+    getOwnSnippet(snippet.value) === undefined;
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

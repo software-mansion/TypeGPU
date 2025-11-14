@@ -1,5 +1,4 @@
 import type { TgpuNamable } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -24,7 +23,7 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { DualFn } from './dualFn.ts';
 import type {
@@ -33,6 +32,7 @@ import type {
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { ref } from './ref.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -1376,9 +1376,10 @@ export interface Ptr<
   readonly inner: TInner;
   readonly addressSpace: TAddr;
   readonly access: TAccess;
+  readonly implicit: boolean;
 
   // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<TInner>;
+  readonly [$repr]: ref<Infer<TInner>>;
   readonly [$invalidSchemaReason]: 'Pointers are not host-shareable';
   // ---
 }
@@ -1601,7 +1602,8 @@ export type StorableData =
   | ScalarData
   | VecData
   | MatData
-  | Atomic
+  | Atomic<I32>
+  | Atomic<U32>
   | WgslArray
   | WgslStruct;
 
@@ -1901,5 +1903,27 @@ export function isHalfPrecisionSchema(
       type === 'vec2h' ||
       type === 'vec3h' ||
       type === 'vec4h')
+  );
+}
+
+const ephemeralTypes = [
+  'abstractInt',
+  'abstractFloat',
+  'f32',
+  'f16',
+  'i32',
+  'u32',
+  'bool',
+];
+
+/**
+ * Returns true for schemas that are not naturally referential in JS (primitives).
+ * @param schema
+ * @returns
+ */
+export function isNaturallyEphemeral(schema: unknown): boolean {
+  return (
+    !isMarkedInternal(schema) ||
+    ephemeralTypes.includes((schema as BaseData)?.type)
   );
 }

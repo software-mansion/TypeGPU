@@ -4,7 +4,6 @@ import { struct } from '../../src/data/index.ts';
 import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
@@ -194,7 +193,7 @@ describe('autonaming', () => {
       myFun();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn myFun() -> i32 {
         return 0;
       }

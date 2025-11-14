@@ -124,7 +124,7 @@ Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pip
 
 ```ts
 const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
-tgpu.resolve({ externals: { innerPipeline } });
+tgpu.resolve([innerPipeline]);
 ```
 :::
 

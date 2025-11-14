@@ -28,7 +28,7 @@ export const extensionEnabled: DualFn<
         `extensionEnabled has to be called with a string literal representing a valid WGSL extension name. Got: ${value}`,
       );
     }
-    return snip(jsImpl(value as WgslExtension), bool);
+    return snip(jsImpl(value as WgslExtension), bool, /* origin */ 'constant');
   };
 
   const impl = (extensionName: WgslExtension) => {

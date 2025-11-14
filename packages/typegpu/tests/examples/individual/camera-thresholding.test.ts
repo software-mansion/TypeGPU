@@ -17,21 +17,21 @@ describe('camera thresholding example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var sampling_0: sampler;
+      "@group(0) @binding(0) var sampling: sampler;
 
-      @group(0) @binding(1) var<uniform> threshold_1: f32;
+      @group(0) @binding(1) var<uniform> threshold: f32;
 
-      @group(0) @binding(2) var<uniform> uvTransform_2: mat2x2f;
+      @group(0) @binding(2) var<uniform> uvTransform: mat2x2f;
 
-      @group(1) @binding(0) var inputTexture_3: texture_external;
+      @group(1) @binding(0) var inputTexture: texture_external;
 
-      struct VertexOutput_4 {
+      struct VertexOutput {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
       }
 
       @vertex
-      fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput_4 {
+      fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
         const pos = array(
           vec2( 1.0,  1.0),
           vec2( 1.0, -1.0),
@@ -50,7 +50,7 @@ describe('camera thresholding example', () => {
           vec2(0.0, 0.0),
         );
 
-        var output: VertexOutput_4;
+        var output: VertexOutput;
         output.position = vec4(pos[idx], 0.0, 1.0);
         output.uv = uv[idx];
         return output;
@@ -58,11 +58,11 @@ describe('camera thresholding example', () => {
 
       @fragment
       fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        let uv2 = uvTransform_2 * (uv - vec2f(0.5)) + vec2f(0.5);
-        var color = textureSampleBaseClampToEdge(inputTexture_3, sampling_0, uv2);
+        let uv2 = uvTransform * (uv - vec2f(0.5)) + vec2f(0.5);
+        var color = textureSampleBaseClampToEdge(inputTexture, sampling, uv2);
         let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
-        if (grey < threshold_1) {
+        if (grey < threshold) {
           return vec4f(0, 0, 0, 1);
         }
 

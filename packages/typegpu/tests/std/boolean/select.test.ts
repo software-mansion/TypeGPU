@@ -19,7 +19,6 @@ import {
 } from '../../../src/data/index.ts';
 import * as d from '../../../src/data/index.ts';
 import { select } from '../../../src/std/boolean.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('select', () => {
   it('selects for numbers', () => {
@@ -134,7 +133,7 @@ describe('select (on the GPU)', () => {
       return select(d.u32(1), d.i32(2), cond.$);
     };
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "var<private> cond: bool;
 
       fn foo() -> i32 {

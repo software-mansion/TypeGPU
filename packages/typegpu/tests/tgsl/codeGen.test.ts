@@ -1,6 +1,5 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 // Library entrypoints
 import { tgpu } from '../../src/index.ts';
@@ -14,7 +13,7 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
           return 6f;
         }"
@@ -27,7 +26,7 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
           var size = vec3f(1, 2, 3);
           return ((size.x * size.y) * size.z);

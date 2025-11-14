@@ -1,3 +1,4 @@
+import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
@@ -10,7 +11,12 @@ import {
   $ownSnippet,
   $resolve,
 } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import {
+  getOwnSnippet,
+  type ResolutionCtx,
+  type SelfResolvable,
+} from '../../types.ts';
+import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
 import {
@@ -26,7 +32,11 @@ import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 export function accessor<T extends AnyWgslData>(
   schema: T,
-  defaultValue?: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+  defaultValue?:
+    | TgpuFn<() => T>
+    | TgpuBufferUsage<T>
+    | TgpuBufferShorthand<T>
+    | Infer<T>,
 ): TgpuAccessor<T> {
   return new TgpuAccessorImpl(schema, defaultValue);
 }
@@ -40,13 +50,16 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
   readonly resourceType = 'accessor';
-  readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
+  readonly slot: TgpuSlot<
+    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
+  >;
 
   constructor(
     public readonly schema: T,
     public readonly defaultValue:
       | TgpuFn<() => T>
       | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
       | Infer<T>
       | undefined = undefined,
   ) {
@@ -75,7 +88,16 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return value[$internal].gpuImpl();
     }
 
-    return snip(value, this.schema);
+    const ownSnippet = getOwnSnippet(value);
+    if (ownSnippet) {
+      return ownSnippet;
+    }
+
+    // Doing a deep copy each time so that we don't have to deal with refs
+    return schemaCallWrapper(
+      this.schema,
+      snip(value, this.schema, /* origin */ 'constant'),
+    );
   }
 
   $name(label: string) {
@@ -106,6 +128,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return snip(
       ctx.resolve(snippet.value, snippet.dataType).value,
       snippet.dataType as T,
+      snippet.origin,
     );
   }
 }

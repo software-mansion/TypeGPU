@@ -57,7 +57,7 @@ describe('tgpu resolve', () => {
       [$gpuValueOf]: {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, d.f32);
+          return snip(this, d.f32, /* origin */ 'runtime');
         },
         [$resolve]: (ctx: ResolutionCtx) => ctx.resolve(intensity),
       } as unknown as number,
@@ -67,7 +67,7 @@ describe('tgpu resolve', () => {
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return snip(name, d.f32);
+        return snip(name, d.f32, /* origin */ 'runtime');
       },
 
       get value(): number {
@@ -82,10 +82,7 @@ describe('tgpu resolve', () => {
     const fragment2 = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1));
 
-    const resolved = tgpu.resolve({
-      externals: { fragment1, fragment2 },
-      names: 'strict',
-    });
+    const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });
 
     expect(resolved).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> intensity: f32;
@@ -566,5 +563,104 @@ describe('tgpu resolveWithContext', () => {
     );
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe('resolve without template', () => {
+  it('warns when using deprecated resolve API', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    tgpu.resolve({ externals: { Boid }, template: '' });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+    );
+  });
+
+  it('resolves one item', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    expect(tgpu.resolve([Boid])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }"
+    `);
+  });
+
+  it('resolves items with dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
+      }"
+    `);
+  });
+
+  it('resolves multiple items', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+    const Player = d.struct({ hp: d.u32, str: d.f32 });
+
+    expect(tgpu.resolve([Boid, Player])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      struct Player {
+        hp: u32,
+        str: f32,
+      }"
+    `);
+  });
+
+  it('does not duplicate dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn1 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    const myFn2 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(10, 20), vel: d.vec2f(30, 40) });
+    });
+
+    expect(tgpu.resolve([myFn1, myFn2])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn1() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
+      }
+
+      fn myFn2() -> Boid {
+        return Boid(vec2f(10, 20), vec2f(30, 40));
+      }"
+    `);
+  });
+
+  it('resolves unnamed items', () => {
+    expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })]))
+      .toMatchInlineSnapshot(`
+        "struct item {
+          pos: vec2f,
+          vel: vec2f,
+        }"
+      `);
   });
 });

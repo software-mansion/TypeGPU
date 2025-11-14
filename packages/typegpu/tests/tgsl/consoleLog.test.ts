@@ -6,7 +6,6 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('wgslGenerator with console.log', () => {
   let ctx: ResolutionCtxImpl;
@@ -26,14 +25,14 @@ describe('wgslGenerator with console.log', () => {
       console.log(987);
     });
 
-    expect(asWgsl(fn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         /* console.log() */;
       }"
     `);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is currently only supported in compute pipelines.",
+      "'console.log' is only supported when resolving pipelines.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
@@ -54,7 +53,7 @@ describe('wgslGenerator with console.log', () => {
       .withFragment(fs, { format: 'rg8unorm' })
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {
         @builtin(position) pos: vec4f,
       }
@@ -120,7 +119,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -182,7 +181,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -264,7 +263,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -346,7 +345,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
         id: u32,
         data: array<u32, 4>,
@@ -468,7 +467,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
         id: u32,
         data: array<u32, 4>,
@@ -595,13 +594,13 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(() => asWgsl(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - computePipeline:pipeline
       - computePipelineCore
       - computeFn:fn
-      - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - fn:consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
 
@@ -621,7 +620,7 @@ describe('wgslGenerator with console.log', () => {
       .withCompute(fn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }

@@ -30,16 +30,16 @@ describe('slime mold example', () => {
       }
 
       fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
         seed_5.x = fract((cos(a) * 136.8168f));
         seed_5.y = fract((cos(b) * 534.7645f));
         return seed_5.y;
       }
 
       fn randInUnitCircle_6() -> vec2f {
-        var radius = sqrt(item_7());
-        var angle = (item_7() * 6.283185307179586f);
+        let radius = sqrt(item_7());
+        let angle = (item_7() * 6.283185307179586f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -52,8 +52,8 @@ describe('slime mold example', () => {
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed_3(((f32(x) / 2e+5f) + 0.1f));
-        var pos = ((randInUnitCircle_6() * 140.) + vec2f(150, 75));
-        var angle = atan2((75f - pos.y), (150f - pos.x));
+        var pos = ((randInUnitCircle_6() * 140f) + vec2f(150, 75));
+        let angle = atan2((75f - pos.y), (150f - pos.x));
         agentsData_8[x] = Agent_9(pos, angle);
       }
 
@@ -129,8 +129,8 @@ describe('slime mold example', () => {
       @group(0) @binding(0) var<storage, read_write> agentsData_5: array<Agent_6, 200000>;
 
       fn item_8() -> f32 {
-        var a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
         seed_3.x = fract((cos(a) * 136.8168f));
         seed_3.y = fract((cos(b) * 534.7645f));
         return seed_3.y;
@@ -151,7 +151,7 @@ describe('slime mold example', () => {
       @group(0) @binding(1) var<uniform> params_10: Params_11;
 
       fn sense_9(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
-        var sensorAngle = (angle + sensorAngleOffset);
+        let sensorAngle = (angle + sensorAngleOffset);
         var sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
         var sensorPos = (pos + (sensorDir * params_10.sensorDistance));
         var dims = textureDimensions(oldState_4);
@@ -175,12 +175,12 @@ describe('slime mold example', () => {
         }
         randSeed_1(((f32(_arg_0.gid.x) / 2e+5f) + 0.1f));
         var dims = textureDimensions(oldState_4);
-        var agent = agentsData_5[_arg_0.gid.x];
-        var random = randFloat01_7();
-        var weightForward = sense_9(agent.position, agent.angle, 0f);
-        var weightLeft = sense_9(agent.position, agent.angle, params_10.sensorAngle);
-        var weightRight = sense_9(agent.position, agent.angle, -params_10.sensorAngle);
-        var angle = agent.angle;
+        let agent = (&agentsData_5[_arg_0.gid.x]);
+        let random = randFloat01_7();
+        let weightForward = sense_9((*agent).position, (*agent).angle, 0f);
+        let weightLeft = sense_9((*agent).position, (*agent).angle, params_10.sensorAngle);
+        let weightRight = sense_9((*agent).position, (*agent).angle, -(params_10.sensorAngle));
+        var angle = (*agent).angle;
         if (((weightForward > weightLeft) && (weightForward > weightRight))) {
 
         }
@@ -200,7 +200,7 @@ describe('slime mold example', () => {
           }
         }
         var dir = vec2f(cos(angle), sin(angle));
-        var newPos = (agent.position + (dir * (params_10.moveSpeed * deltaTime_12)));
+        var newPos = ((*agent).position + (dir * (params_10.moveSpeed * deltaTime_12)));
         var dimsf = vec2f(dims);
         if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - vec2f(1)));
@@ -208,7 +208,7 @@ describe('slime mold example', () => {
             angle = (3.141592653589793f - angle);
           }
           if (((newPos.y <= 0f) || (newPos.y >= (dimsf.y - 1f)))) {
-            angle = -angle;
+            angle = -(angle);
           }
           angle += ((random - 0.5f) * 0.1f);
         }
@@ -228,8 +228,8 @@ describe('slime mold example', () => {
       }
 
       @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
-        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0f, -1));
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
         return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), uv[input.vertexIndex]);
       }
 

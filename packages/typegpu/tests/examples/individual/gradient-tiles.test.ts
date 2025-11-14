@@ -17,12 +17,12 @@ describe('gradient tiles example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct Span_1 {
+      "struct Span {
         x: u32,
         y: u32,
       }
 
-      @group(0) @binding(0) var<uniform> span_0: Span_1;
+      @group(0) @binding(0) var<uniform> span: Span;
           struct VertexOutput {
             @builtin(position) pos: vec4f,
             @location(0) uv: vec2f,
@@ -48,8 +48,8 @@ describe('gradient tiles example', () => {
           fn main_fragment(
             @location(0) uv: vec2f,
           ) -> @location(0) vec4f {
-            let red = floor(uv.x * f32(span_0.x)) / f32(span_0.x);
-            let green = floor(uv.y * f32(span_0.y)) / f32(span_0.y);
+            let red = floor(uv.x * f32(span.x)) / f32(span.x);
+            let green = floor(uv.y * f32(span.y)) / f32(span.y);
             return vec4(red, green, 0.5, 1.0);
           }
         "

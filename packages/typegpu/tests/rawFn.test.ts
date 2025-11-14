@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
@@ -14,7 +13,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves to WGSL', () => {
     const getY = tgpu.fn([], d.f32)`() { return 3.0f; }`;
 
-    expect(asWgsl(getY)).toMatchInlineSnapshot(
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(
       `"fn getY() -> f32{ return 3.0f; }"`,
     );
   });
@@ -37,7 +36,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }`)
       .$uses({ get_x: getX, color: getColor });
 
-    expect(asWgsl(getY)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f{
             let color = vec3f();
             return color;
@@ -70,7 +69,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_y')
       .$uses({ getx });
 
-    expect(asWgsl(getY)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn externalFn() -> f32{ return 3.0f; }
 
       fn get_y() -> f32{
@@ -102,7 +101,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       let x = a.b.c.highlighted.d;
     }`.$uses({ highlighted: uniformBindGroupLayout.bound.highlightedCircle });
 
-    expect(asWgsl(vs)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([vs])).toMatchInlineSnapshot(`
       "struct HighlightedCircle {
         index: u32,
         color: vec4f,
@@ -139,7 +138,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     return output;
   }`).$name('vertex_fn');
 
-    const resolved = asWgsl(vertexFunction);
+    const resolved = tgpu.resolve([vertexFunction]);
 
     expect(resolved).toContain(`\
 struct vertex_fn_Output {
@@ -162,7 +161,7 @@ struct vertex_fn_Output {
       }`)
       .$name('fragment');
 
-    const resolved = asWgsl(fragmentFunction);
+    const resolved = tgpu.resolve([fragmentFunction]);
 
     expect(resolved).toContain(`\
 struct fragment_Output {
@@ -183,7 +182,7 @@ struct fragment_Output {
       }`)
       .$name('fragment');
 
-    expect(asWgsl(fragmentFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fragmentFunction])).toMatchInlineSnapshot(`
       "struct fragment_Input {
         @builtin(position) position: vec4f,
       }
@@ -206,7 +205,7 @@ struct fragment_Output {
       }`)
       .$name('newPointF');
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Point {
         a: u32,
         b: u32,
@@ -236,7 +235,7 @@ struct fragment_Output {
       }`)
       .$name('newPointF');
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct P {
         a: u32,
         b: u32,
@@ -265,7 +264,7 @@ struct fragment_Output {
       }`,
     ).$name('newPointF');
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct P {
         a: u32,
         b: u32,
@@ -315,7 +314,7 @@ struct fragment_Output {
       .$name('main')
       .$uses({ functions: { getColor } });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn get_color() -> vec3f{
               let color = vec3f();
               return color;
@@ -340,7 +339,7 @@ struct fragment_Output {
       .$name('get_color')
       .$uses({ MyPoint: Point });
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "struct P {
         a: u32,
       }
@@ -363,7 +362,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }`)
       .$name('get_color');
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u{
               return vec4u();
             }"
@@ -375,7 +374,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return;
     }`);
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() {
             return;
           }"
@@ -387,7 +386,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return a[0];
     }`);
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor(a: array<u32,4>) -> u32{
             return a[0];
           }"
@@ -403,7 +402,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }`)
       .$uses({ MyPoint: Point });
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "struct P {
         a: u32,
       }
@@ -428,7 +427,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }`)
       .$name('newPointF');
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct P {
         a: u32,
         b: u32,
@@ -445,7 +444,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return;
     }`);
 
-    expect(() => asWgsl(getColor)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:getColor: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "vec3f", WGSL type "vec4f".]
@@ -460,7 +459,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     }`)
       .$uses({ MyPoint: Point });
 
-    expect(() => asWgsl(getColor)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:getColor: Type mismatch between TGPU shell and WGSL code string: parameter a, JS type "array<P,4>", WGSL type "arrayOf<P,3>".]
@@ -472,7 +471,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return;
     }`);
 
-    expect(() => asWgsl(getColor)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:getColor: Type mismatch between TGPU shell and WGSL code string: return type, JS type "vec4f", WGSL type "vec2f".]
@@ -484,7 +483,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return;
     }`);
 
-    expect(() => asWgsl(getColor)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:getColor: WGSL implementation has 3 arguments, while the shell has 2 arguments.]
@@ -497,7 +496,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       return;
     }`);
 
-    expect(asWgsl(getColor)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "struct Point {
         a: i32,
       }
@@ -520,7 +519,7 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
       var result: array<f32, 4>;
     }`);
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "struct foo_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }

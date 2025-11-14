@@ -4,7 +4,7 @@ import { WgslTypeError } from '../../errors.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { isKnownAtComptime } from './dualImpl.ts';
+import { isKnownAtComptime } from '../../types.ts';
 
 export function comptime<T extends (...args: never[]) => unknown>(
   jsImpl: T,
@@ -12,7 +12,7 @@ export function comptime<T extends (...args: never[]) => unknown>(
   const gpuImpl = (...args: MapValueToSnippet<Parameters<T>>) => {
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
 
-    if (!argSnippets.every((s) => isKnownAtComptime(s.value))) {
+    if (!argSnippets.every((s) => isKnownAtComptime(s))) {
       throw new WgslTypeError(
         `Called comptime function with runtime-known values: ${
           argSnippets.filter((s) => !isKnownAtComptime(s)).map((s) =>

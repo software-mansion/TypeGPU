@@ -648,7 +648,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema);
+          return snip(this, schema, /* origin */ 'handle');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -696,7 +696,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       };`,
     );
 
-    return snip(id, this.schema);
+    return snip(id, this.schema, /* origin */ 'handle');
   }
 }
 
@@ -731,7 +731,7 @@ export class TgpuLaidOutTextureViewImpl<
       };`,
     );
 
-    return snip(id, this.schema);
+    return snip(id, this.schema, /* origin */ 'handle');
   }
 
   get [$gpuValueOf](): Infer<T> {
@@ -740,7 +740,7 @@ export class TgpuLaidOutTextureViewImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema);
+          return snip(this, schema, /* origin */ 'handle');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,

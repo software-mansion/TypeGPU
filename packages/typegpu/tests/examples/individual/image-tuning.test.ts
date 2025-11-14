@@ -19,25 +19,25 @@ describe('image tuning example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct VertexOutput_0 {
+      "struct VertexOutput {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @group(0) @binding(0) var currentLUTTexture_1: texture_3d<f32>;
+      @group(0) @binding(0) var currentLUTTexture: texture_3d<f32>;
 
-      @group(0) @binding(1) var lutSampler_2: sampler;
+      @group(0) @binding(1) var lutSampler: sampler;
 
-      struct LUTParams_4 {
+      struct LUTParams {
         size: f32,
         min: vec3f,
         max: vec3f,
         enabled: u32,
       }
 
-      @group(0) @binding(2) var<uniform> lut_3: LUTParams_4;
+      @group(0) @binding(2) var<uniform> lut: LUTParams;
 
-      struct Adjustments_6 {
+      struct Adjustments {
         exposure: f32,
         contrast: f32,
         highlights: f32,
@@ -45,13 +45,13 @@ describe('image tuning example', () => {
         saturation: f32,
       }
 
-      @group(0) @binding(3) var<uniform> adjustments_5: Adjustments_6;
+      @group(0) @binding(3) var<uniform> adjustments: Adjustments;
 
-      @group(1) @binding(0) var inTexture_7: texture_2d<f32>;
+      @group(1) @binding(0) var inTexture: texture_2d<f32>;
 
-      @group(1) @binding(1) var inSampler_8: sampler;
+      @group(1) @binding(1) var inSampler: sampler;
       @vertex
-      fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput_0 {
+      fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
         const vertices = array<vec2f, 4>(
           vec2f(-1.0, -1.0), // Bottom-left
           vec2f(-1.0,  1.0), // Top-left
@@ -60,7 +60,7 @@ describe('image tuning example', () => {
         );
 
         let pos = vertices[index];
-        var output: VertexOutput_0;
+        var output: VertexOutput;
         output.position = vec4f(pos, 0.0, 1.0);
 
         output.uv = vec2f((pos.x + 1.0) * 0.5, 1.0 - (pos.y + 1.0) * 0.5);
@@ -69,23 +69,23 @@ describe('image tuning example', () => {
 
       @fragment
       fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        let color = textureSample(inTexture_7, inSampler_8, uv).rgb;
+        let color = textureSample(inTexture, inSampler, uv).rgb;
         let inputLuminance = dot(color, vec3f(0.299, 0.587, 0.114));
-        let normColor = clamp((color - lut_3.min) / (lut_3.max - lut_3.min), vec3f(0.0), vec3f(1.0));
+        let normColor = clamp((color - lut.min) / (lut.max - lut.min), vec3f(0.0), vec3f(1.0));
 
-        let lutColor = select(color, textureSampleLevel(currentLUTTexture_1, lutSampler_2, normColor, 0.0).rgb, bool(lut_3.enabled));
+        let lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0.0).rgb, bool(lut.enabled));
         let lutColorNormalized = clamp(lutColor, vec3f(0.0), vec3f(1.0));
 
-        let exposureBiased = adjustments_5.exposure * 0.25;
+        let exposureBiased = adjustments.exposure * 0.25;
         let exposureColor = clamp(lutColorNormalized * pow(2.0, exposureBiased), vec3f(0.0), vec3f(2.0));
         let exposureLuminance = clamp(inputLuminance * pow(2.0, exposureBiased), 0.0, 2.0);
 
-        let contrastColor = (exposureColor - vec3f(0.5)) * adjustments_5.contrast + vec3f(0.5);
-        let contrastLuminance = (exposureLuminance - 0.5) * adjustments_5.contrast + 0.5;
+        let contrastColor = (exposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
+        let contrastLuminance = (exposureLuminance - 0.5) * adjustments.contrast + 0.5;
         let contrastColorLuminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
 
-        let highlightShift = adjustments_5.highlights - 1.0;
-        let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments_5.highlights >= 1.0);
+        let highlightShift = adjustments.highlights - 1.0;
+        let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments.highlights >= 1.0);
         let highlightFactor = 1.0 + highlightBiased * 0.5 * contrastColorLuminance;
         let highlightWeight = smoothstep(0.5, 1.0, contrastColorLuminance);
         let highlightLuminanceAdjust = contrastLuminance * highlightFactor;
@@ -93,15 +93,15 @@ describe('image tuning example', () => {
         let highlightColor = mix(contrastColor, clamp(contrastColor * highlightFactor, vec3f(0.0), vec3f(1.0)), highlightWeight);
 
         let shadowWeight = 1.0 - contrastColorLuminance;
-        let shadowAdjust = pow(highlightColor, vec3f(1.0 / adjustments_5.shadows));
-        let shadowLuminanceAdjust = pow(highlightLuminance, 1.0 / adjustments_5.shadows);
+        let shadowAdjust = pow(highlightColor, vec3f(1.0 / adjustments.shadows));
+        let shadowLuminanceAdjust = pow(highlightLuminance, 1.0 / adjustments.shadows);
 
         let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
         let toneLuminance = mix(highlightLuminance, shadowLuminanceAdjust, shadowWeight);
 
         let finalToneColor = clamp(toneColor, vec3f(0.0), vec3f(1.0));
         let grayscaleColor = vec3f(toneLuminance);
-        let finalColor = mix(grayscaleColor, finalToneColor, adjustments_5.saturation);
+        let finalColor = mix(grayscaleColor, finalToneColor, adjustments.saturation);
 
         return vec4f(finalColor, 1.0);
       }

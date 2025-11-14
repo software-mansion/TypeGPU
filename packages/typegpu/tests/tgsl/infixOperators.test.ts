@@ -2,7 +2,6 @@ import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import tgpu from '../../src/index.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('wgslGenerator', () => {
   it('resolves add infix operator', () => {
@@ -14,7 +13,7 @@ describe('wgslGenerator', () => {
       const m2 = d.mat3x3f().add(d.mat3x3f()).add(d.mat3x3f());
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var v1 = vec4f(1);
         var v2 = vec3f(3, 4, 5);
@@ -34,7 +33,7 @@ describe('wgslGenerator', () => {
       const m2 = d.mat3x3f().sub(d.mat3x3f()).sub(d.mat3x3f());
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var v1 = vec4f(-1);
         var v2 = vec3f(-1, -2, -3);
@@ -58,7 +57,7 @@ describe('wgslGenerator', () => {
       const m4 = d.mat2x2f().mul(d.mat2x2f()).mul(1);
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var v1 = vec2f(6);
         var v2 = vec3f(4, 6, 8);
@@ -83,7 +82,7 @@ describe('wgslGenerator', () => {
       const v1 = getVec().mul(getVec());
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn getVec() -> vec3f {
         return vec3f(1, 2, 3);
       }
@@ -103,7 +102,7 @@ describe('wgslGenerator', () => {
       const v1 = s.vec.mul(s.vec);
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct Struct {
         vec: vec3f,
       }
@@ -122,7 +121,7 @@ describe('wgslGenerator', () => {
       const v3 = d.vec2f(1).div(d.vec2f(2)).div(2);
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var v1 = vec4f(0.5);
         var v2 = vec3f(6, 3, 2);
@@ -141,7 +140,7 @@ describe('wgslGenerator', () => {
       const v3 = fooUniform.$.add(barUniform.$);
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> fooUniform: vec3f;
 
       @group(0) @binding(1) var<uniform> barUniform: vec3f;
@@ -160,7 +159,7 @@ describe('wgslGenerator', () => {
       const v2 = d.vec3f(1, 2, 3).add(d.vec3f(3, 2, 1));
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var v1 = vec3f(6, 7, 8);
         var v2 = vec3f(4);
