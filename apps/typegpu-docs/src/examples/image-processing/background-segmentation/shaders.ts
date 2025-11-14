@@ -32,10 +32,31 @@ export const prepareModelInput = (x: number, y: number) => {
 export const generateMaskFromOutput = (x: number, y: number) => {
   'use gpu';
   const color = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
+  const rawValue = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
+  
+  // threasholding
+  const threshold = 0.5;
+  let maskValue = std.step(threshold, rawValue);
+  
+  // erosion
+  let minNeighbor = maskValue;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const nx = std.clamp(d.i32(x) + dx, 0, MODEL_WIDTH - 1);
+      const ny = std.clamp(d.i32(y) + dy, 0, MODEL_HEIGHT - 1);
+      const neighborRaw = generateMaskLayout.$.outputBuffer[ny * MODEL_WIDTH + nx];
+      const neighborMask = std.step(threshold, neighborRaw);
+      minNeighbor = std.min(minNeighbor, neighborMask);
+    }
+  }
+  
+  maskValue = minNeighbor;
+  
   std.textureStore(
     generateMaskLayout.$.maskTexture,
     d.vec2u(x, y),
-    d.vec4f(color),
+    d.vec4f(maskValue),
+    // d.vec4f(color)
   );
 };
 

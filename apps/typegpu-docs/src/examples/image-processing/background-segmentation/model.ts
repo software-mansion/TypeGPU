@@ -23,8 +23,17 @@ export const MODEL_HEIGHT = 320;
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   const session = await ort.InferenceSession
     .create('/TypeGPU/assets/background-segmentation/u2netp.onnx', {
+    // .create('/TypeGPU/assets/background-segmentation/background_removal.onnx', {
       executionProviders: ['webgpu'],
+      graphOptimizationLevel: 'all',
+      // externalData: [
+      //   {
+      //     data: '/TypeGPU/assets/background-segmentation/background_removal.onnx.data',
+      //     path: 'background_removal.onnx.data',
+      //   }
+      // ],
     });
+
 
   const myPreAllocatedInputTensor = ort.Tensor.fromGpuBuffer(input, {
     dataType: 'float32',
@@ -36,8 +45,10 @@ export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
     dims: [1, 1, MODEL_HEIGHT, MODEL_WIDTH],
   });
 
+  // const feeds = { 'input': myPreAllocatedInputTensor };
+  // const fetches = { 'output': myPreAllocatedOutputTensor };
   const feeds = { 'input.1': myPreAllocatedInputTensor };
-  const fetches = { '1959': myPreAllocatedOutputTensor };
+  const fetches = { '1964': myPreAllocatedOutputTensor };
   return {
     run: () => session.run(feeds, fetches),
     release: () => session.release(),
