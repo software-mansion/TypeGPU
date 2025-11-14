@@ -2,8 +2,8 @@ import tgpu, { type TgpuRenderPipeline } from 'typegpu';
 import * as d from 'typegpu/data';
 
 import * as c from './constants.ts';
-import type { PRNG } from './prngs.ts';
 import { executePipeline, preparePipeline } from './helpers.ts';
+import type { PRNG } from './prngs.ts';
 
 const root = await tgpu.init();
 
@@ -25,7 +25,7 @@ const pipelineCache = new Map<PRNG, TgpuRenderPipeline>();
 let prng: PRNG = c.initialPRNG;
 
 const redraw = (value: PRNG) => {
-  let pipeline = undefined;
+  let pipeline: TgpuRenderPipeline;
   if (!pipelineCache.has(value)) {
     pipeline = preparePipeline(
       root,
