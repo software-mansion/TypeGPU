@@ -68,7 +68,7 @@ export type ResolvableObject =
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
-  | TgpuFn;
+  | ((...args: never[]) => unknown);
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
