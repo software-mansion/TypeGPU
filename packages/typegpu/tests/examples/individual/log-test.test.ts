@@ -798,14 +798,14 @@ describe('console log example', () => {
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1_3();
         log2_10(3.140000104904175f);
-        log3_14(i32(-2000000000));
+        log3_14(-2000000000i);
         log4_17(3000000000u);
         log5_20(true);
         log6_23();
         log7_25();
-        log8_27(vec2f(1.1f, -2.2));
-        log9_30(vec3f(10.1f, -20.2, 30.3f));
-        log10_33(vec4f(100.1f, -200.2, 300.3f, -400.4));
+        log8_27(vec2f(1.100000023841858, -2.200000047683716));
+        log9_30(vec3f(10.100000381469727, -20.200000762939453, 30.299999237060547));
+        log10_33(vec4f(100.0999984741211, -200.1999969482422, 300.29998779296875, -400.3999938964844));
         log11_36();
         log12_38(vec2i(-1, -2));
         log13_41(vec3i(-1, -2, -3));
@@ -1494,7 +1494,7 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 
@@ -1555,7 +1555,7 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex_0(input: mainVertex_Input_2) -> mainVertex_Output_1 {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5, -0.5), vec2f(0.5f, -0.5));
+        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return mainVertex_Output_1(vec4f(positions[input.vertexIndex], 0f, 1f));
       }
 

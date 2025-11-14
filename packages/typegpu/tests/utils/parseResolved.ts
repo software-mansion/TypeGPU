@@ -9,6 +9,8 @@ import { CodegenState, type Wgsl } from '../../src/types.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
+import type { Snippet } from '../../src/data/snippet.ts';
+import { $internal } from '../../src/shared/symbols.ts';
 
 /**
  * Just a shorthand for tgpu.resolve
@@ -23,37 +25,70 @@ export function asWgsl(...values: unknown[]): string {
   });
 }
 
-export function expectDataTypeOf(
-  cb: () => unknown,
-): Assertion<AnyData | UnknownData> {
+function extractSnippetFromFn(cb: () => unknown): Snippet {
   const ctx = new ResolutionCtxImpl({
     namespace: namespace({ names: 'strict' }),
   });
 
-  const dataType = provideCtx(
+  return provideCtx(
     ctx,
     () => {
+      let pushedFnScope = false;
       try {
+        const meta = getMetaData(cb);
+
+        if (!meta || !meta.ast) {
+          throw new Error('No metadata found for the function');
+        }
+
         ctx.pushMode(new CodegenState());
-        // Extracting the first expression from the block
-        const statements = (getMetaData(cb)?.ast?.body as tinyest.Block)[1];
-        if (statements.length !== 1) {
+        ctx[$internal].itemStateStack.pushItem();
+        ctx[$internal].itemStateStack.pushFunctionScope(
+          'normal',
+          [],
+          {},
+          undefined,
+          meta.externals ?? {},
+        );
+        ctx.pushBlockScope();
+        pushedFnScope = true;
+
+        // Extracting the last expression from the block
+        const statements = meta.ast.body[1] ?? [];
+        if (statements.length === 0) {
           throw new Error(
-            `Expected exactly one expression, got ${statements.length}`,
+            `Expected at least one expression, got ${statements.length}`,
           );
         }
 
         wgslGenerator.initGenerator(ctx);
-        const exprSnippet = wgslGenerator.expression(
-          statements[0] as tinyest.Expression,
+        // Prewarming statements
+        for (const statement of statements) {
+          wgslGenerator.statement(statement);
+        }
+        return wgslGenerator.expression(
+          statements[statements.length - 1] as tinyest.Expression,
         );
-
-        return exprSnippet.dataType;
       } finally {
+        if (pushedFnScope) {
+          ctx.popBlockScope();
+          ctx[$internal].itemStateStack.popFunctionScope();
+          ctx[$internal].itemStateStack.popItem();
+        }
         ctx.popMode('codegen');
       }
     },
   );
+}
 
-  return expect<AnyData | UnknownData>(dataType);
+export function expectSnippetOf(
+  cb: () => unknown,
+): Assertion<Snippet> {
+  return expect(extractSnippetFromFn(cb));
+}
+
+export function expectDataTypeOf(
+  cb: () => unknown,
+): Assertion<AnyData | UnknownData> {
+  return expect<AnyData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
