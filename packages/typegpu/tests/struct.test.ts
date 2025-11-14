@@ -344,7 +344,7 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStruct = TestStruct(1, 2);
+        var myStruct = TestStruct(1u, 2f);
         var myClone = myStruct;
         return;
       }"
@@ -370,7 +370,7 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
+        var myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
         var myClone = myStructs[0];
         return;
       }"

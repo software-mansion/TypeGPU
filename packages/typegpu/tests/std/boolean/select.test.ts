@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import tgpu from '../../../src/index.ts';
 import {
   vec2b,
   vec2f,
@@ -16,7 +17,9 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
+import * as d from '../../../src/data/index.ts';
 import { select } from '../../../src/std/boolean.ts';
+import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('select', () => {
   it('selects for numbers', () => {
@@ -119,5 +122,24 @@ describe('select', () => {
         vec4b(true, false, false, true),
       ),
     ).toStrictEqual(vec4b(false, false, false, false));
+  });
+});
+
+describe('select (on the GPU)', () => {
+  it('unifies numeric literal inputs to a common type', () => {
+    const cond = tgpu.privateVar(d.bool);
+
+    const foo = () => {
+      'use gpu';
+      return select(d.u32(1), d.i32(2), cond.$);
+    };
+
+    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      "var<private> cond: bool;
+
+      fn foo() -> i32 {
+        return select(1i, 2i, cond);
+      }"
+    `);
   });
 });

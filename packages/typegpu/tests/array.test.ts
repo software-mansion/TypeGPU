@@ -197,7 +197,7 @@ describe('array', () => {
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
-        var myArray = array<u32, 1>(10);
+        var myArray = array<u32, 1>(10u);
         var myClone = myArray;
         return;
       }"
@@ -215,7 +215,7 @@ describe('array', () => {
 
     expect(asWgsl(testFn)).toMatchInlineSnapshot(`
       "fn testFn() {
-        var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10));
+        var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
         var myClone = myArrays[0];
         return;
       }"
@@ -278,7 +278,7 @@ describe('array', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(1, 2, 3, 4);
+        var result = array<f32, 4>(1f, 2f, 3f, 4f);
       }"
     `);
   });
@@ -290,7 +290,7 @@ describe('array', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4, 3, 2, 1);
+        var result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
@@ -304,7 +304,7 @@ describe('array', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4, 3, 2, 1);
+        var result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
@@ -326,7 +326,7 @@ describe('array', () => {
 
     expect(asWgsl(foo)).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 8>(0, 1, 2, 3, 4, 5, 6, 7);
+        var result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
       }"
     `);
   });
@@ -356,7 +356,7 @@ describe('array.length', () => {
         var acc = 1f;
         for (var i = 0u; (i < arrayLength(&values)); i++) {
           values[i] = acc;
-          acc *= 2;
+          acc *= 2f;
         }
       }"
     `);
@@ -385,7 +385,7 @@ describe('array.length', () => {
         var acc = 1f;
         for (var i = 0; (i < 128); i++) {
           values[i] = acc;
-          acc *= 2;
+          acc *= 2f;
         }
       }"
     `);

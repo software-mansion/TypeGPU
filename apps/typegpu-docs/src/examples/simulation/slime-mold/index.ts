@@ -289,8 +289,6 @@ function frame(now: number) {
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 
-  root['~unstable'].flush();
-
   currentTexture = 1 - currentTexture;
 
   requestAnimationFrame(frame);

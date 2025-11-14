@@ -13,6 +13,7 @@ import type {
   AnyWgslData,
   U16,
   U32,
+  Vec3u,
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -94,6 +95,17 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
    * "guarded" by a bounds check.
    */
   dispatchThreads(...args: TArgs): void;
+
+  /**
+   * The underlying pipeline used during `dispatchThreads`.
+   */
+  pipeline: TgpuComputePipeline;
+
+  /**
+   * The buffer used to automatically pass the thread count to the underlying pipeline during `dispatchThreads`.
+   * For pipelines with a dimension count lower than 3, the remaining coordinates are expected to be 1.
+   */
+  sizeUniform: TgpuUniform<Vec3u>;
 }
 
 export interface WithCompute {
@@ -750,11 +762,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -801,8 +808,9 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   ): TgpuFixedComparisonSampler;
 
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }
