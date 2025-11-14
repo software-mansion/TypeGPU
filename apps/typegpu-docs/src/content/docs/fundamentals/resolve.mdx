@@ -230,30 +230,6 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 }
 ```
 
-:::note
-You can access [bindGroupLayout](/TypeGPU/fundamentals/bind-groups) entries via the `layout.$` property.
-
-```ts
-// Requires using `layout.$.resource` in the WGSL code
-externals: {
-  layout,
-}
-
-// Allows using resource names in the WGSL code
-externals: {
-  lightSource: layout.$.lightSource,
-  sampling: layout.$.sampling,
-  bgTexture: layout.$.bgTexture,
-}
-
-// As long as the names in the WGSL code match the
-// layout keys, it can be shortened to:
-externals: {
-  ...layout.bound,
-}
-```
-:::
-
 ## Naming scheme
 
 When items are being resolved, they are given new names based on their name and the specified naming scheme (`names` parameter in options).
