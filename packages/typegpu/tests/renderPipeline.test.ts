@@ -342,7 +342,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      tgpu.resolve({ externals: { pipeline } });
+      tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
       );
@@ -375,7 +375,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      tgpu.resolve({ externals: { pipeline } });
+      tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).not.toHaveBeenCalledWith(
         'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
       );
