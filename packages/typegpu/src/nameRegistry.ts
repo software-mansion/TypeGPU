@@ -198,6 +198,17 @@ export interface NameRegistry {
   makeValid(primer: string): string;
 }
 
+function sanitizePrimer(primer: string | undefined) {
+  if (primer) {
+    // sanitizing
+    return primer
+      .replaceAll(/\s/g, '_') // whitespaces
+      .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+  } else {
+    return 'item';
+  }
+}
+
 /**
  * A function for checking whether an identifier needs renaming.
  * Throws if provided with an invalid identifier that cannot be easily renamed.
@@ -233,16 +244,9 @@ export class RandomNameRegistry extends NameRegistryImpl {
   private lastUniqueId = 0;
 
   makeUnique(primer?: string | undefined): string {
-    let label: string;
-    if (primer) {
-      // sanitizing
-      label = primer.replaceAll(/\s/g, '_'); // whitespace -> _
-      label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-    } else {
-      label = 'item';
-    }
+    const sanitizedPrimer = sanitizePrimer(primer);
 
-    return `${label}_${this.lastUniqueId++}`;
+    return `${sanitizedPrimer}_${this.lastUniqueId++}`;
   }
 }
 
@@ -254,18 +258,15 @@ export class StrictNameRegistry extends NameRegistryImpl {
   private readonly _usedNames = new Set<string>(bannedTokens);
 
   makeUnique(primer?: string | undefined): string {
-    if (primer === undefined) {
-      throw new Error('Unnamed item found when using a strict name registry');
-    }
+    let sanitizedPrimer = sanitizePrimer(primer);
 
     let index = 0;
-    let unusedName = primer;
-    while (this._usedNames.has(unusedName)) {
+    while (this._usedNames.has(sanitizedPrimer)) {
       index++;
-      unusedName = `${primer}_${index}`;
+      sanitizedPrimer = `${primer}_${index}`;
     }
 
-    this._usedNames.add(unusedName);
-    return unusedName;
+    this._usedNames.add(sanitizedPrimer);
+    return sanitizedPrimer;
   }
 }
