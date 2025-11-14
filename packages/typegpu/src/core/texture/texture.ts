@@ -494,7 +494,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
         texture: this[$internal].unwrap(),
         mipLevel,
       },
-      source,
+      'buffer' in source ? source.buffer : source,
       {
         bytesPerRow: this.#formatInfo.texelSize * mipWidth,
         rowsPerImage: mipHeight,

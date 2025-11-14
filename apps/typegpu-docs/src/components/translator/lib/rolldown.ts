@@ -2,7 +2,7 @@ import type { InputOptions, OutputOptions } from '@rolldown/browser';
 import { join } from 'pathe';
 
 export interface BundleResult {
-  output: Record<string, string | Uint8Array>;
+  output: Record<string, string | Uint8Array<ArrayBuffer>>;
   warnings?: string[] | undefined;
 }
 
@@ -88,7 +88,7 @@ export async function bundle(
     result.output.map((chunk) =>
       chunk.type === 'chunk'
         ? [chunk.fileName, chunk.code]
-        : [chunk.fileName, chunk.source]
+        : [chunk.fileName, chunk.source.slice()]
     ),
   );
 

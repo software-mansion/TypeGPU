@@ -313,7 +313,7 @@ async function updateLUT(file: string) {
 
   device.queue.writeTexture(
     { texture: root.unwrap(currentLUTTexture) },
-    parsed.data,
+    parsed.data.buffer,
     {
       bytesPerRow: parsed.size * 4 * 2,
       rowsPerImage: parsed.size,
