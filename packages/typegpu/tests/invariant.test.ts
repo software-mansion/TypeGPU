@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import tgpu from '../src/index.ts';
 
 describe('invariant', () => {
   it('adds @invariant attribute to position builtin', () => {
@@ -8,7 +8,7 @@ describe('invariant', () => {
       position: d.invariant(d.builtin.position),
     });
 
-    expect(asWgsl(s1)).toContain(
+    expect(tgpu.resolve([s1])).toContain(
       '@invariant @builtin(position) position: vec4f',
     );
   });
@@ -37,7 +37,7 @@ describe('invariant', () => {
       color: d.vec4f,
     });
 
-    const resolved = asWgsl(VertexOutput);
+    const resolved = tgpu.resolve([VertexOutput]);
 
     expect(resolved).toContain('@invariant @builtin(position) pos: vec4f');
     expect(resolved).toContain('color: vec4f');

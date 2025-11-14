@@ -4,7 +4,6 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -833,7 +832,7 @@ describe('v3f', () => {
         const three = d.vec3f(d.vec2f(1, 2), 12); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
           var planarPosLocal = vec2f(1, 2);
           var one = vec3f(1, 2, 12);
@@ -880,7 +879,7 @@ describe('v4f', () => {
         const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
           var green = vec3f(0, 1, 0);
           var one = vec4f(0.125, 0.25, 0.375, 1);
@@ -909,7 +908,7 @@ describe('v4f', () => {
         const three = d.vec4f(0.125, d.vec3f(0.25, 0.5, 0.75)); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
           var fooLocal = vec3f(0.25, 0.5, 0.75);
           var one = vec4f(0.25, 0.25, 0.5, 0.75);
@@ -926,7 +925,7 @@ describe('v4f', () => {
         return d.vec4f(1, 2, 3, 4).zyx;
       });
 
-      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
         "fn foo() -> vec3f {
           return vec3f(3, 2, 1);
         }"
@@ -961,7 +960,7 @@ describe('v4b', () => {
         const three = d.vec4b(d.vec3b(false, false, true), true); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
           var vecLocal = vec3<bool>(true);
           var one = vec4<bool>(true, false, true, true);

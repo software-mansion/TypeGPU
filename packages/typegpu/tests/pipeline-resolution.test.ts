@@ -2,7 +2,6 @@ import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('resolve', () => {
   const Boid = d.struct({
@@ -40,7 +39,7 @@ describe('resolve', () => {
       .withFragment(fragmentFn, { format: 'rgba8unorm' })
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
         position: vec2f,
         color: vec4f,
@@ -71,7 +70,7 @@ describe('resolve', () => {
       .withCompute(computeFn)
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
         position: vec2f,
         color: vec4f,
@@ -96,7 +95,7 @@ describe('resolve', () => {
       });
     });
 
-    expect(asWgsl(pipelineGuard.pipeline))
+    expect(tgpu.resolve([pipelineGuard.pipeline]))
       .toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
@@ -132,7 +131,7 @@ describe('resolve', () => {
       .withCompute(computeFn)
       .createPipeline();
 
-    expect(() => asWgsl(renderPipeline, computePipeline))
+    expect(() => tgpu.resolve([renderPipeline, computePipeline]))
       .toThrowErrorMatchingInlineSnapshot(
         `[Error: Found 2 pipelines but can only resolve one at a time.]`,
       );

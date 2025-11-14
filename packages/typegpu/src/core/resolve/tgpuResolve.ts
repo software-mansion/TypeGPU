@@ -191,7 +191,7 @@ function resolveFromTemplate(
     template,
     externals,
     shaderGenerator,
-    names = 'random',
+    names = 'strict',
     config,
     enableExtensions,
   } = options;
@@ -232,7 +232,7 @@ function resolveFromArray(
 ): ResolutionResult {
   const {
     shaderGenerator,
-    names = 'random',
+    names = 'strict',
     config,
     enableExtensions,
   } = options ?? {};

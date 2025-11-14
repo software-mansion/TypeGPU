@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { alignmentOf } from '../src/data/alignmentOf.ts';
 import * as d from '../src/data/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import tgpu from '../src/index.ts';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
@@ -11,7 +11,7 @@ describe('d.align', () => {
       c: d.u32,
     });
 
-    expect(asWgsl(s1)).toContain(
+    expect(tgpu.resolve([s1])).toContain(
       '@align(16) b: u32,',
     );
   });

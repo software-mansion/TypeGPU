@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { tgpu } from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -70,7 +69,7 @@ describe('TGSL', () => {
         const b = d.bool();
       });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         const f = 0f;
         const h = 0h;
