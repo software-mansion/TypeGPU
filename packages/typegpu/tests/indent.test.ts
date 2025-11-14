@@ -111,9 +111,9 @@ describe('indents', () => {
       }
 
       fn main() {
-        for (var i = 0; (i < 100); i++) {
-          var particle = systemData.particles[i];
-          systemData.particles[i] = updateParicle(particle, systemData.gravity, systemData.deltaTime);
+        for (var i = 0; (i < 100i); i++) {
+          let particle = (&systemData.particles[i]);
+          systemData.particles[i] = updateParicle((*particle), systemData.gravity, systemData.deltaTime);
         }
       }"
     `);
@@ -223,7 +223,7 @@ describe('indents', () => {
       }
 
       fn updateParticle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
-        var density = getDensityAt(particle.physics.position);
+        let density = getDensityAt(particle.physics.position);
         var force = (gravity * density);
         var newVelocity = (particle.physics.velocity + (force * deltaTime));
         var newPosition = (particle.physics.position + (newVelocity * deltaTime));
@@ -232,9 +232,9 @@ describe('indents', () => {
 
       fn main() {
         incrementCounter();
-        for (var i = 0; (i < 100); i++) {
-          var particle = systemData.particles[i];
-          systemData.particles[i] = updateParticle(particle, systemData.gravity, systemData.deltaTime);
+        for (var i = 0; (i < 100i); i++) {
+          let particle = (&systemData.particles[i]);
+          systemData.particles[i] = updateParticle((*particle), systemData.gravity, systemData.deltaTime);
         }
       }"
     `);
@@ -250,12 +250,13 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
-      if (particle.velocity.x > 0) {
-        particle.position = std.add(particle.position, particle.velocity);
+      const newParticle = Particle(particle);
+      if (newParticle.velocity.x > 0) {
+        newParticle.position = newParticle.position.add(newParticle.velocity);
       } else {
-        particle.position = std.add(particle.position, gravity);
+        newParticle.position = newParticle.position.add(gravity);
       }
-      return particle;
+      return newParticle;
     });
 
     expect(asWgsl(updateParticle)).toMatchInlineSnapshot(`
@@ -265,13 +266,14 @@ describe('indents', () => {
       }
 
       fn updateParticle(particle: Particle, gravity: vec3f) -> Particle {
-        if ((particle.velocity.x > 0f)) {
-          particle.position = (particle.position + particle.velocity);
+        var newParticle = particle;
+        if ((newParticle.velocity.x > 0f)) {
+          newParticle.position = (newParticle.position + newParticle.velocity);
         }
         else {
-          particle.position = (particle.position + gravity);
+          newParticle.position = (newParticle.position + gravity);
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });
@@ -286,15 +288,18 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
+      const newParticle = Particle(particle);
       let iterations = 0;
       while (iterations < 10) {
-        particle.position = std.add(particle.position, particle.velocity);
+        newParticle.position = newParticle.position.add(
+          newParticle.velocity,
+        );
         iterations += 1;
-        while (particle.position.x < 0) {
-          particle.position = std.add(particle.position, gravity);
+        while (newParticle.position.x < 0) {
+          newParticle.position = newParticle.position.add(gravity);
         }
       }
-      return particle;
+      return newParticle;
     });
 
     expect(asWgsl(updateParticle)).toMatchInlineSnapshot(`
@@ -304,15 +309,16 @@ describe('indents', () => {
       }
 
       fn updateParticle(particle: Particle, gravity: vec3f) -> Particle {
+        var newParticle = particle;
         var iterations = 0;
         while ((iterations < 10i)) {
-          particle.position = (particle.position + particle.velocity);
+          newParticle.position = (newParticle.position + newParticle.velocity);
           iterations += 1i;
-          while ((particle.position.x < 0f)) {
-            particle.position = (particle.position + gravity);
+          while ((newParticle.position.x < 0f)) {
+            newParticle.position = (newParticle.position + gravity);
           }
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });
@@ -398,16 +404,16 @@ describe('indents', () => {
       }
 
       @vertex fn someVertex(input: someVertex_Input) -> someVertex_Output {
-        var uniBoid = boids;
+        let uniBoid = (&boids);
         for (var i = 0u; (i < -1u); i++) {
           var sampled = textureSample(sampled, sampler, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender, vec2i(), 0);
           if (((someVal.x + sampled.x) > 0.5f)) {
-            var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+            var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
             while (true) {
-              var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+              var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0f)) {
                 var evenNewer = (newPos + input.position);
               }

@@ -724,7 +724,7 @@ class RenderPipelineCore implements SelfResolvable {
           if (fragmentFn) {
             ctx.resolve(fragmentFn);
           }
-          return snip('', Void);
+          return snip('', Void, /* origin */ 'runtime');
         }),
     );
   }

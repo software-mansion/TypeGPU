@@ -211,6 +211,7 @@ function resolveFromTemplate(
       return snip(
         replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
         Void,
+        /* origin */ 'runtime',
       );
     },
     toString: () => '<root>',
