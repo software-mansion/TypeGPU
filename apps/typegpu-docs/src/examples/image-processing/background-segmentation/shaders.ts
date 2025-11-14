@@ -55,8 +55,8 @@ export const generateMaskFromOutput = (x: number, y: number) => {
   std.textureStore(
     generateMaskLayout.$.maskTexture,
     d.vec2u(x, y),
-    d.vec4f(maskValue),
-    // d.vec4f(color)
+    // d.vec4f(maskValue),
+    d.vec4f(color)
   );
 };
 
