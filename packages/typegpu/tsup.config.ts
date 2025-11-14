@@ -14,7 +14,7 @@ const entry = [
 export default defineConfig({
   entry,
   outDir: 'dist',
-  format: ['cjs', 'esm'],
+  format: ['esm'],
   target: 'es2024',
   splitting: true,
   sourcemap: true,
