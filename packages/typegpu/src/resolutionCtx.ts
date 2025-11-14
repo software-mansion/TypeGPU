@@ -65,11 +65,12 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  StackLayer,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { getName, hasTinyestMetadata } from './shared/meta.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -90,23 +91,8 @@ export type ResolutionCtxImplOptions = {
   readonly namespace: Namespace;
 };
 
-type SlotBindingLayer = {
-  type: 'slotBinding';
-  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
-};
-
-type BlockScopeLayer = {
-  type: 'blockScope';
-  declarations: Map<string, Snippet>;
-};
-
 class ItemStateStackImpl implements ItemStateStack {
-  private _stack: (
-    | ItemLayer
-    | SlotBindingLayer
-    | FunctionScopeLayer
-    | BlockScopeLayer
-  )[] = [];
+  private _stack: StackLayer[] = [];
   private _itemDepth = 0;
 
   get itemDepth(): number {
@@ -133,19 +119,12 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popItem() {
-    this.pop('item');
-  }
-
   pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
+      usedSet: new WeakSet(),
     });
-  }
-
-  popSlotBindings() {
-    this.pop('slotBinding');
   }
 
   pushFunctionScope(
@@ -167,10 +146,6 @@ class ItemStateStackImpl implements ItemStateStack {
     return scope;
   }
 
-  popFunctionScope() {
-    this.pop('functionScope');
-  }
-
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
@@ -178,20 +153,19 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popBlockScope() {
-    this.pop('blockScope');
-  }
-
-  pop(type?: (typeof this._stack)[number]['type']) {
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+  pop(type?: StackLayer['type']) {
     const layer = this._stack[this._stack.length - 1];
     if (!layer || (type && layer.type !== type)) {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
     }
 
-    this._stack.pop();
+    const poppedValue = this._stack.pop();
     if (type === 'item') {
       this._itemDepth--;
     }
+    return poppedValue;
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
@@ -204,6 +178,7 @@ class ItemStateStackImpl implements ItemStateStack {
         const boundValue = layer.bindingMap.get(slot);
 
         if (boundValue !== undefined) {
+          layer.usedSet.add(slot);
           return boundValue as T;
         }
       } else if (
@@ -433,7 +408,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   popBlockScope() {
-    this._itemStateStack.popBlockScope();
+    this._itemStateStack.pop('blockScope');
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
@@ -487,7 +462,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         returnType,
       };
     } finally {
-      this._itemStateStack.popFunctionScope();
+      this._itemStateStack.pop('functionScope');
     }
   }
 
@@ -537,7 +512,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      this._itemStateStack.popSlotBindings();
+      const usedSlots = this._itemStateStack.pop('slotBinding').usedSet;
+      pairs.forEach((pair) => {
+        if (!usedSlots.has(pair[0])) {
+          console.warn(
+            `Slot '${getName(pair[0])}' with value '${
+              pair[1]
+            }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.`,
+          );
+        }
+      });
     }
   }
 
@@ -624,7 +608,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [derived]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
@@ -695,7 +679,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [item]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
