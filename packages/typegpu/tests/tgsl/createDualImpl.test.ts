@@ -53,7 +53,7 @@ describe('dualImpl', () => {
       name: 'myDualImpl',
     });
 
-    expect(() => tgpu.resolve([dual(2)])).toThrowErrorMatchingInlineSnapshot(
+    expect(() => dual(2)).toThrowErrorMatchingInlineSnapshot(
       '[MissingCpuImplError: Not implemented yet.]',
     );
   });
