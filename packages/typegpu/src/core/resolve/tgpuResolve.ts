@@ -242,7 +242,7 @@ function resolveFromArray(
     [$resolve](ctx): ResolvedSnippet {
       // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
       items.forEach((item) => ctx.resolve(item));
-      return snip('', Void);
+      return snip('', Void, 'runtime');
     },
     toString: () => '<root>',
   };
