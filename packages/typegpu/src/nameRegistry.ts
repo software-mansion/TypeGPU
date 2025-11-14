@@ -204,9 +204,8 @@ function sanitizePrimer(primer: string | undefined) {
     return primer
       .replaceAll(/\s/g, '_') // whitespaces
       .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-  } else {
-    return 'item';
   }
+  return 'item';
 }
 
 /**
@@ -257,16 +256,18 @@ export class StrictNameRegistry extends NameRegistryImpl {
    */
   private readonly _usedNames = new Set<string>(bannedTokens);
 
+  // TODO: optimize this with a map
   makeUnique(primer?: string | undefined): string {
-    let sanitizedPrimer = sanitizePrimer(primer);
+    const sanitizedPrimer = sanitizePrimer(primer);
 
     let index = 0;
-    while (this._usedNames.has(sanitizedPrimer)) {
+    let label = sanitizedPrimer;
+    while (this._usedNames.has(label)) {
       index++;
-      sanitizedPrimer = `${primer}_${index}`;
+      label = `${sanitizedPrimer}_${index}`;
     }
 
-    this._usedNames.add(sanitizedPrimer);
-    return sanitizedPrimer;
+    this._usedNames.add(label);
+    return label;
   }
 }
