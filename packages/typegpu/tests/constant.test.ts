@@ -59,7 +59,7 @@ describe('tgpu.const', () => {
       return fn1(foo.$);
     };
 
-    expect(() => asWgsl(fn2)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([fn2])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn2
@@ -79,7 +79,7 @@ describe('tgpu.const', () => {
       boid.$.pos = d.vec3f(0, 0, 0);
     };
 
-    expect(() => asWgsl(fn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn

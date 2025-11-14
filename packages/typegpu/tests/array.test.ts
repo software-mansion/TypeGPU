@@ -405,9 +405,7 @@ describe('array.length', () => {
       });
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-
-        fn testFn() -> i32 {
+        "fn testFn() -> i32 {
           return 5;
         }"
       `);

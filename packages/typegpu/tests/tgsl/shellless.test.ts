@@ -171,7 +171,7 @@ describe('shellless', () => {
       advance(pos, d.vec3f(1, 2, 3));
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
         (*pos).x += vel.x;
         (*pos).y += vel.y;
@@ -198,7 +198,7 @@ describe('shellless', () => {
       sumComponents(d.ref(foo.$));
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn sumComponents(vec: ptr<private, vec3f>) -> f32 {
         return (((*vec).x + (*vec).y) + (*vec).z);
       }
@@ -224,7 +224,7 @@ describe('shellless', () => {
       sumComponents(d.ref(posUniform.$));
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
         return (((*vec).x + (*vec).y) + (*vec).z);
       }

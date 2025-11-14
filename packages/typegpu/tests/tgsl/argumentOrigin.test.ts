@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
+import tgpu from '../../src/index.ts';
 
 describe('function argument origin tracking', () => {
   it('should fail on mutation of primitive arguments', () => {
@@ -15,7 +15,7 @@ describe('function argument origin tracking', () => {
       foo(1);
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -37,7 +37,7 @@ describe('function argument origin tracking', () => {
       foo(Foo({ a: 1 }));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -57,7 +57,7 @@ describe('function argument origin tracking', () => {
       foo(d.vec3f(1, 2, 3));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -78,7 +78,7 @@ describe('function argument origin tracking', () => {
       foo(d.vec3f(1, 2, 3));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -100,7 +100,7 @@ describe('function argument origin tracking', () => {
       foo(d.vec3f(1, 2, 3));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -126,7 +126,7 @@ describe('function argument origin tracking', () => {
       foo(d.vec3f(1, 2, 3));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -149,7 +149,7 @@ describe('function argument origin tracking', () => {
       foo(d.vec3f(7));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main

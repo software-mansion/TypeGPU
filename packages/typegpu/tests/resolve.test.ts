@@ -584,7 +584,7 @@ describe('resolve without template', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     expect(tgpu.resolve([Boid])).toMatchInlineSnapshot(`
-      "struct Boid_0 {
+      "struct Boid {
         pos: vec2f,
         vel: vec2f,
       }"
@@ -599,13 +599,13 @@ describe('resolve without template', () => {
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
-      "struct Boid_1 {
+      "struct Boid {
         pos: vec2f,
         vel: vec2f,
       }
 
-      fn myFn_0() -> Boid_1 {
-        return Boid_1(vec2f(1, 2), vec2f(3, 4));
+      fn myFn() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
       }"
     `);
   });
@@ -615,12 +615,12 @@ describe('resolve without template', () => {
     const Player = d.struct({ hp: d.u32, str: d.f32 });
 
     expect(tgpu.resolve([Boid, Player])).toMatchInlineSnapshot(`
-      "struct Boid_0 {
+      "struct Boid {
         pos: vec2f,
         vel: vec2f,
       }
 
-      struct Player_1 {
+      struct Player {
         hp: u32,
         str: f32,
       }"
@@ -639,17 +639,17 @@ describe('resolve without template', () => {
     });
 
     expect(tgpu.resolve([myFn1, myFn2])).toMatchInlineSnapshot(`
-      "struct Boid_1 {
+      "struct Boid {
         pos: vec2f,
         vel: vec2f,
       }
 
-      fn myFn1_0() -> Boid_1 {
-        return Boid_1(vec2f(1, 2), vec2f(3, 4));
+      fn myFn1() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
       }
 
-      fn myFn2_2() -> Boid_1 {
-        return Boid_1(vec2f(10, 20), vec2f(30, 40));
+      fn myFn2() -> Boid {
+        return Boid(vec2f(10, 20), vec2f(30, 40));
       }"
     `);
   });
@@ -657,7 +657,7 @@ describe('resolve without template', () => {
   it('resolves unnamed items', () => {
     expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })]))
       .toMatchInlineSnapshot(`
-        "struct item_0 {
+        "struct item {
           pos: vec2f,
           vel: vec2f,
         }"

@@ -246,7 +246,7 @@ describe('TgpuBindGroupLayout', () => {
       return Boid(boids[0]!);
     };
 
-    expect(asWgsl(getFirst)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getFirst])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3f,

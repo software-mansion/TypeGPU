@@ -2,7 +2,6 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../../../src/data/index.ts';
 import tgpu from '../../../src/index.ts';
 import { div, isCloseTo } from '../../../src/std/index.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {

@@ -191,7 +191,7 @@ function resolveFromTemplate(
     template,
     externals,
     shaderGenerator,
-    names = 'random',
+    names = 'strict',
     config,
     enableExtensions,
   } = options;
@@ -232,7 +232,7 @@ function resolveFromArray(
 ): ResolutionResult {
   const {
     shaderGenerator,
-    names = 'random',
+    names = 'strict',
     config,
     enableExtensions,
   } = options ?? {};
@@ -242,7 +242,7 @@ function resolveFromArray(
     [$resolve](ctx): ResolvedSnippet {
       // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
       items.forEach((item) => ctx.resolve(item));
-      return snip('', Void);
+      return snip('', Void, 'runtime');
     },
     toString: () => '<root>',
   };
