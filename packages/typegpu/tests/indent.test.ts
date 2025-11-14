@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('indents', () => {
   it('should indent sanely', () => {
@@ -29,7 +28,7 @@ describe('indents', () => {
       });
     });
 
-    expect(asWgsl(updateParicle)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([updateParicle])).toMatchInlineSnapshot(`
       "struct Particle {
         position: vec3f,
         velocity: vec3f,
@@ -90,7 +89,7 @@ describe('indents', () => {
       }
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "struct Particle {
         position: vec3f,
         velocity: vec3f,
@@ -190,7 +189,7 @@ describe('indents', () => {
       }
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(2) var<storage, read> counter: u32;
 
       fn incrementCounter() {
@@ -259,7 +258,7 @@ describe('indents', () => {
       return newParticle;
     });
 
-    expect(asWgsl(updateParticle)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([updateParticle])).toMatchInlineSnapshot(`
       "struct Particle {
         position: vec3f,
         velocity: vec3f,
@@ -302,7 +301,7 @@ describe('indents', () => {
       return newParticle;
     });
 
-    expect(asWgsl(updateParticle)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([updateParticle])).toMatchInlineSnapshot(`
       "struct Particle {
         position: vec3f,
         velocity: vec3f,
@@ -378,7 +377,7 @@ describe('indents', () => {
       };
     });
 
-    expect(asWgsl(someVertex)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([someVertex])).toMatchInlineSnapshot(`
       "struct UniBoid {
         @size(32) position: vec4f,
         @align(64) velocity: vec4f,

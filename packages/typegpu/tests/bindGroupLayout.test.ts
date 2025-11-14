@@ -19,7 +19,6 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
@@ -223,7 +222,7 @@ describe('TgpuBindGroupLayout', () => {
     const main = tgpu.fn([])`() { textureLoad(fooTexture); }`
       .$uses({ fooTexture });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
       fn main() { textureLoad(fooTexture); }"

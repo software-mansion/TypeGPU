@@ -7,7 +7,6 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
@@ -62,7 +61,7 @@ describe('TgpuComputePipeline', () => {
       .withCompute(main)
       .createPipeline();
 
-    expect(asWgsl(computePipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(32) fn main() {
 
       }"

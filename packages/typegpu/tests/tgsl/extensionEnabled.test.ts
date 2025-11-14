@@ -4,7 +4,6 @@ import { it } from '../utils/extendedIt.ts';
 import { tgpu } from '../../src/index.ts';
 import * as d from '../../src/data/index.ts';
 import * as std from '../../src/std/index.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {
@@ -20,14 +19,14 @@ describe('extension based pruning', () => {
       .toMatchInlineSnapshot(`
       "enable f16;
 
-      fn someFn_0() -> f32 {
+      fn someFn() -> f32 {
         {
           return 6.599609375f;
         }
       }"
     `);
 
-    expect(asWgsl(someFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([someFn])).toMatchInlineSnapshot(`
       "fn someFn() -> f32 {
         {
           return 16.5f;

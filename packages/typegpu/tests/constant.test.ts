@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 const Boid = d.struct({
   pos: d.vec3f,
@@ -13,7 +12,7 @@ describe('tgpu.const', () => {
     const x = tgpu.const(d.u32, 2);
     const fn1 = tgpu.fn([], d.u32)`() { return x; }`.$uses({ x });
 
-    expect(asWgsl(fn1)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
       "const x: u32 = 2u;
 
       fn fn1() -> u32{ return x; }"
@@ -32,7 +31,7 @@ describe('tgpu.const', () => {
       const velX = boid.$.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,

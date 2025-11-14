@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import tgpu from '../src/index.ts';
 
 describe('attributes', () => {
   it('adds attributes in the correct order', () => {
@@ -11,7 +11,7 @@ describe('attributes', () => {
         c: d.u32,
       });
 
-    expect(asWgsl(s1)).toContain('@size(8) @align(16) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@size(8) @align(16) b: u32,');
 
     expectTypeOf(s1).toEqualTypeOf<
       d.WgslStruct<{

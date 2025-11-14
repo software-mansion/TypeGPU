@@ -3,7 +3,6 @@ import tgpu from '../../src/index.ts';
 import * as d from '../../src/data/index.ts';
 import * as std from '../../src/std/index.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('shellless', () => {
   it('is callable from shelled function', () => {
@@ -21,7 +20,7 @@ describe('shellless', () => {
       return foo();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn dot2(a: vec2f) -> f32 {
         return dot(a, a);
       }
@@ -47,7 +46,7 @@ describe('shellless', () => {
       return dot2(d.vec2f(1, 2)) + dot2(d.vec3f(3, 4, 5));
     };
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn dot2(a: vec2f) -> f32 {
         return dot(a, a);
       }
@@ -82,7 +81,7 @@ describe('shellless', () => {
       return x;
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn someFn(a: i32, b: i32) -> f32 {
         if ((a > b)) {
           return 12.2;
@@ -120,7 +119,7 @@ describe('shellless', () => {
       return x;
     });
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main
@@ -143,7 +142,7 @@ describe('shellless', () => {
       return fn2();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn fn1() -> f32 {
         return 4.1;
       }
@@ -244,7 +243,7 @@ describe('shellless', () => {
       return 4.1;
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> f32 {
         return 4.1;
       }"
@@ -257,7 +256,7 @@ describe('shellless', () => {
       return a + 1;
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
