@@ -6,8 +6,8 @@ import {
   ConsoleLog,
   InfixDispatch,
   isLooseData,
-  toStorable,
   UnknownData,
+  unptr,
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import {
@@ -275,7 +275,7 @@ ${this.ctx.pre}}`;
       }
 
       const forcedType = exprType === NODE.assignmentExpr
-        ? [toStorable(lhsExpr.dataType)]
+        ? [lhsExpr.dataType]
         : undefined;
 
       const [convLhs, convRhs] =
@@ -761,9 +761,7 @@ ${this.ctx.pre}}`;
             returnSnippet.value,
             returnSnippet.dataType,
           ).value;
-          const typeStr = this.ctx.resolve(
-            toStorable(returnSnippet.dataType as wgsl.StorableData),
-          ).value;
+          const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
           throw new WgslTypeError(
             `'return ${str};' is invalid, cannot return references.
 -----
@@ -774,7 +772,7 @@ Try 'return ${typeStr}(${str});' instead.
 
         returnSnippet = tryConvertSnippet(
           returnSnippet,
-          toStorable(returnSnippet.dataType as wgsl.StorableData),
+          unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
           false,
         );
 
@@ -866,9 +864,7 @@ ${this.ctx.pre}else ${alternate}`;
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
-          const rhsTypeStr =
-            this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
-              .value;
+          const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
           throw new WgslTypeError(
             `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
@@ -917,9 +913,7 @@ ${this.ctx.pre}else ${alternate}`;
           if (eq.origin === 'argument') {
             if (!naturallyEphemeral) {
               const rhsStr = this.ctx.resolve(eq.value).value;
-              const rhsTypeStr =
-                this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
-                  .value;
+              const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
               throw new WgslTypeError(
                 `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.

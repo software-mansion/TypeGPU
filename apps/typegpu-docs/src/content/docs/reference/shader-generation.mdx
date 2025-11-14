@@ -91,7 +91,7 @@ const createBoid = () => {
 Snippets are the basis for TypeGPU shader code generation. They are immutable objects that hold three values:
 - *value*: A piece of WGSL code, or something "resolvable" to a piece of WGSL code
 - *dataType*: The inferred WGSL type of `value` [(more here)](#data-types)
-- *origin*: An enumerable of where the value came from (if it's a reference to an existing value, or ephemeral)
+- *origin*: An enumerable of where `value` came from (if it's a reference to an existing value, or ephemeral)
 [(more here)](#origins)
 
 ```ts

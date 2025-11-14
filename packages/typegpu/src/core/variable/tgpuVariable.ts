@@ -122,12 +122,12 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const ref = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
+    const origin = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType, ref);
+        return snip(this, dataType, origin);
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,

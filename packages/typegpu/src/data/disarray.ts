@@ -59,7 +59,7 @@ export const disarrayOf = createDualImpl(
       // Marking so the WGSL generator lets this function through
       partial[$internal] = true;
 
-      return snip(partial, UnknownData, /* origin */ 'runtime');
+      return snip(partial, UnknownData, /* origin */ 'constant');
     }
 
     if (typeof elementCount.value !== 'number') {

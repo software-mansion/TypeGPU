@@ -137,4 +137,24 @@ describe('function argument origin tracking', () => {
       -----]
     `);
   });
+
+  it('should fail on returning an argument reference', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      return a;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(7));
+    };
+
+    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): Cannot return references to arguments, returning 'a'. Copy the argument before returning it.]
+    `);
+  });
 });

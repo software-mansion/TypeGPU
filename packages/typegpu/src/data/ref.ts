@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { invariant, WgslTypeError } from '../errors.ts';
+import { WgslTypeError } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -170,7 +170,9 @@ export class RefOperator implements SelfResolvable {
 }
 
 export function derefSnippet(snippet: Snippet): Snippet {
-  invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
+  if (!isPtr(snippet.dataType)) {
+    return snippet;
+  }
 
   const innerType = snippet.dataType.inner;
   const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
