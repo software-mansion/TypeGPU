@@ -232,7 +232,7 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
 ## Naming scheme
 
-When items are being resolved, they are given new names based on their name and the specified naming scheme (`names` parameter in options).
+When items are being resolved, they are given new unique names based on their name in code and the specified naming scheme (`names` parameter in options).
 
 The default naming scheme is `"random"`.
 It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
