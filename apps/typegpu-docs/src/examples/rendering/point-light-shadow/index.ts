@@ -24,12 +24,13 @@ mainCamera.target = d.vec3f(0, 0, 0);
 const cameraUniform = root.createUniform(CameraData, mainCamera.data);
 
 const cube = new BoxGeometry();
+cube.scale = d.vec3f(3, 1, 0.2);
 const floorCube = new BoxGeometry();
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
 
 const modelMatrixUniform = root.createUniform(d.mat4x4f);
-const pointLightWorldPosition = d.vec3f(2, 1, 0);
+const pointLightWorldPosition = d.vec3f(2, 4, 1);
 
 const shadowCameras = {
   right: new Camera(90, 0.1, 25), // +X
@@ -44,12 +45,12 @@ const shadowCameras = {
 // Right face (+X)
 shadowCameras.right.position = pointLightWorldPosition;
 shadowCameras.right.target = pointLightWorldPosition.add(d.vec3f(1, 0, 0));
-shadowCameras.right.up = d.vec3f(0, -1, 0);
+shadowCameras.right.up = d.vec3f(0, 1, 0);
 
 // Left face (-X)
 shadowCameras.left.position = pointLightWorldPosition;
 shadowCameras.left.target = pointLightWorldPosition.add(d.vec3f(-1, 0, 0));
-shadowCameras.left.up = d.vec3f(0, -1, 0);
+shadowCameras.left.up = d.vec3f(0, 1, 0);
 
 // Up face (+Y)
 shadowCameras.up.position = pointLightWorldPosition;
@@ -64,12 +65,12 @@ shadowCameras.down.up = d.vec3f(0, 0, -1);
 // Forward face (+Z)
 shadowCameras.forward.position = pointLightWorldPosition;
 shadowCameras.forward.target = pointLightWorldPosition.add(d.vec3f(0, 0, 1));
-shadowCameras.forward.up = d.vec3f(0, -1, 0);
+shadowCameras.forward.up = d.vec3f(0, 1, 0);
 
 // Backward face (-Z)
 shadowCameras.backward.position = pointLightWorldPosition;
 shadowCameras.backward.target = pointLightWorldPosition.add(d.vec3f(0, 0, -1));
-shadowCameras.backward.up = d.vec3f(0, -1, 0);
+shadowCameras.backward.up = d.vec3f(0, 1, 0);
 
 const cameraDepthCube = root['~unstable'].createTexture({
   size: [512, 512, 6],
@@ -108,6 +109,7 @@ let depthTexture = root['~unstable']
 const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraData },
   modelMatrix: { uniform: d.mat4x4f },
+  lightPosition: { uniform: d.vec3f },
 });
 
 const renderLayoutWithShadow = tgpu.bindGroupLayout({
@@ -148,8 +150,7 @@ const debugFragment = tgpu['~unstable'].fragmentFn({
     localUV,
     arrayIndex,
   );
-  const remappedDepth = std.pow(depth, 8.0);
-  return d.vec4f(d.vec3f(remappedDepth), 1.0);
+  return d.vec4f(d.vec3f(depth), 1.0);
 });
 
 const debugPipeline = root['~unstable']
@@ -163,6 +164,7 @@ const vertexDepth = tgpu['~unstable'].vertexFn({
   },
   out: {
     pos: d.builtin.position,
+    worldPos: d.vec3f,
   },
 })(({ position }) => {
   const worldPos = renderLayout.$.modelMatrix.mul(d.vec4f(position, 1)).xyz;
@@ -172,7 +174,27 @@ const vertexDepth = tgpu['~unstable'].vertexFn({
 
   return {
     pos,
+    worldPos,
   };
+});
+
+const lightFar = 25.0; // must match shadow camera far plane
+
+const fragmentDepth = tgpu['~unstable'].fragmentFn({
+  in: {
+    worldPos: d.vec3f,
+  },
+  out: d.builtin.fragDepth,
+})(({ worldPos }) => {
+  const lightPos = renderLayout.$.lightPosition;
+
+  const lightToFrag = worldPos.sub(lightPos);
+  const dist = std.length(lightToFrag);
+
+  // map [0, lightFar] -> [0, 1]
+  const depth = dist / lightFar;
+
+  return depth;
 });
 
 const vertexMain = tgpu['~unstable'].vertexFn({
@@ -210,41 +232,41 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   },
   out: d.vec4f,
 })(({ worldPos, normal }) => {
-  // calculate light direction
   const lightPos = renderLayoutWithShadow.$.lightPosition;
+
+  // direction from light to fragment (for cubemap)
+  const lightToFrag = worldPos.sub(lightPos);
+  const dist = std.length(lightToFrag);
+  const dir = lightToFrag.div(dist); // normalized direction
+
+  const depthRef = dist / 25.0; // must match lightFar used in depth pass
+
+  // Optional bias to reduce acne
+  const bias = 0.002;
+  const visibility = std.textureSampleCompare(
+    renderLayoutWithShadow.$.shadowDepthCube,
+    renderLayoutWithShadow.$.shadowSampler,
+    dir,
+    depthRef - bias,
+  );
+
+  const rawValue = std.textureSample(
+    renderLayoutWithShadow.$.shadowDepthCube,
+    debugSampler.$,
+    dir,
+  );
+
+  // return d.vec4f(d.vec3f(rawValue), 1.0);
+
+  // calculate light direction
   const lightDir = std.normalize(lightPos.sub(worldPos));
 
   // diffuse shading
   const diff = std.max(std.dot(normal, lightDir), 0.0);
 
-  // Shadow calculation
-  // Direction from fragment to light (for cubemap sampling - points away from center)
-  const fragToLight = worldPos.sub(lightPos);
-  const distance = std.length(fragToLight);
-
-  // Simple linear depth normalized to [0,1]
-  const far = 25.0;
-  const normalizedDepth = distance / far;
-
-  // Sample shadow cubemap
-  const shadowDepth = std.textureSampleCompare(
-    renderLayoutWithShadow.$.shadowDepthCube,
-    renderLayoutWithShadow.$.shadowSampler,
-    fragToLight,
-    normalizedDepth * debugUniform.$,
-  );
-  const rawDepth = std.textureSample(
-    renderLayoutWithShadow.$.shadowDepthCube,
-    debugSampler.$,
-    fragToLight,
-  );
-  return d.vec4f(std.pow(d.vec3f(rawDepth), d.vec3f(5.0)), 1.0);
-
-  // return d.vec4f(d.vec3f(shadowDepth), 1.0); // Visualize shadow factor
-
   const baseColor = d.vec3f(1.0, 0.5, 0.31);
   const ambient = 0.1;
-  const color = baseColor.mul(diff * shadowDepth + ambient);
+  const color = baseColor.mul(diff * visibility + ambient);
 
   return d.vec4f(color, 1.0);
 });
@@ -282,6 +304,7 @@ const pipelineMain = root['~unstable']
 
 const pipelineDepthOne = root['~unstable']
   .withVertex(vertexDepth, vertexData.attrib)
+  .withFragment(fragmentDepth, {} as never)
   .withDepthStencil({
     format: 'depth24plus',
     depthWriteEnabled: true,
@@ -302,6 +325,7 @@ const shadowBindGroups = Object.entries(shadowCameras).map(([key, cam]) => {
     root.createBindGroup(renderLayout, {
       camera: shadowCameraUniforms[key as keyof typeof shadowCameras].buffer,
       modelMatrix: modelMatrixUniform.buffer,
+      lightPosition: lightPositionUniform.buffer,
     }),
   ] as const;
 });
@@ -359,15 +383,15 @@ function render() {
   // Update shadow maps every frame
   updateShadowMaps();
 
-  debugPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
-  requestAnimationFrame(render);
-  return;
+  // debugPipeline
+  //   .withColorAttachment({
+  //     view: context.getCurrentTexture().createView(),
+  //     loadOp: 'clear',
+  //     storeOp: 'store',
+  //   })
+  //   .draw(3);
+  // requestAnimationFrame(render);
+  // return;
 
   modelMatrixUniform.write(cube.modelMatrix);
   pipelineMain
