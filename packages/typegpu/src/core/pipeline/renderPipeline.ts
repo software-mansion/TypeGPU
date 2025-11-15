@@ -203,7 +203,15 @@ export interface DepthStencilAttachment {
    * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
-  view: (TgpuTexture & RenderFlag) | GPUTextureView;
+  view:
+    | (
+      & TgpuTexture<{
+        size: [number, number];
+        format: 'depth24plus' | 'depth24plus-stencil8' | 'depth32float';
+      }>
+      & RenderFlag
+    )
+    | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
    * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
