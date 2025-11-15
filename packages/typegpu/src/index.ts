@@ -143,6 +143,10 @@ export type {
   TgpuDerived,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
+export type {
+  RawCodeSnippetOrigin,
+  TgpuRawCodeSnippet,
+} from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
 export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
