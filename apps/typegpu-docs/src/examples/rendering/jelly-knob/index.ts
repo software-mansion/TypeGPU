@@ -134,19 +134,43 @@ const getJellyBounds = () => {
 
 const GroundParams = {
   groundThickness: 0.03,
-  groundRadius: 0.38,
   groundRoundness: 0.02,
+  jellyCutoutRadius: 0.38,
+  meterCutoutRadius: 0.7,
+  meterCutoutGirth: 0.08,
 };
 
-const sdFloorCutout = (position: d.v2f) => {
+const sdJellyCutout = (position: d.v2f) => {
   'use gpu';
   const groundRoundness = GroundParams.groundRoundness;
-  const groundRadius = GroundParams.groundRadius;
+  const groundRadius = GroundParams.jellyCutoutRadius;
 
   return sdf.sdDisk(
     position,
     groundRadius + groundRoundness,
   );
+};
+
+const sdMeterCutout = (position: d.v2f) => {
+  'use gpu';
+  const groundRoundness = GroundParams.groundRoundness;
+  const meterCutoutRadius = GroundParams.meterCutoutRadius;
+  const meterCutoutGirth = GroundParams.meterCutoutGirth;
+  const angle = Math.PI / 2;
+
+  return sdf.sdArc(
+    position,
+    d.vec2f(std.sin(angle), std.cos(angle)),
+    meterCutoutRadius,
+    meterCutoutGirth + groundRoundness,
+  );
+};
+
+const sdFloorCutout = (position: d.v2f) => {
+  'use gpu';
+  const jellyCutoutDistance = sdJellyCutout(position);
+  const meterCutoutDistance = sdMeterCutout(position);
+  return sdf.opUnion(jellyCutoutDistance, meterCutoutDistance);
 };
 
 const sdArrowHead = (p: d.v3f) => {
@@ -168,7 +192,7 @@ const getMainSceneDist = (position: d.v3f) => {
   const groundRoundness = GroundParams.groundRoundness;
 
   let dist = std.min(
-    sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.1),
+    sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.1), // the plane underneath the jelly
     sdf.opExtrudeY(
       position,
       -sdFloorCutout(position.xz),
@@ -480,6 +504,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
     const p = rayOrigin.add(rayDirection.mul(backgroundDist));
     const hit = getMainSceneDist(p);
     backgroundDist += hit;
+    // AAA performance check
     if (hit < SURF_DIST) {
       break;
     }
