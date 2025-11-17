@@ -2,7 +2,10 @@
  * @module typegpu/data
  */
 
-import { type InfixOperator, infixOperators } from '../tgsl/wgslGenerator.ts';
+import {
+  type InfixOperator,
+  infixOperators,
+} from '../tgsl/generationHelpers.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
@@ -190,6 +193,7 @@ export { unstruct } from './unstruct.ts';
 export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
+export { ref } from './ref.ts';
 export {
   align,
   type AnyAttribute,
