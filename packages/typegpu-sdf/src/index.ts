@@ -1,6 +1,7 @@
 export * from './operators.ts';
 
 export {
+  sdArc,
   sdBezier,
   sdBezierApprox,
   sdBox2d,
