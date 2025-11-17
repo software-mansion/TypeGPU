@@ -15,12 +15,31 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
+  
+  // Get texture dimensions
+  const texDims = std.textureDimensions(prepareModelInputLayout.$.inputTexture);
+  const texWidth = d.f32(texDims.x);
+  const texHeight = d.f32(texDims.y);
+  
+  // Center crop to square using smallest dimension
+  const cropSize = std.min(texWidth, texHeight);
+  const xOffset = (texWidth - cropSize) / 2.0;
+  const yOffset = (texHeight - cropSize) / 2.0;
+  
+  // Map model coordinates to cropped region
+  const normalizedX = (d.f32(x) / d.f32(MODEL_WIDTH)) * cropSize + xOffset;
+  const normalizedY = (d.f32(y) / d.f32(MODEL_HEIGHT)) * cropSize + yOffset;
+  
+  // Sample from the center-cropped region
+  const uv = d.vec2f(normalizedX / texWidth, normalizedY / texHeight);
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
-    d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT)),
+    uv,
   );
-
+  
+  // Color space is already RGB from the video texture
+  // Normalize to [0, 1] range (texture values are already normalized)
   prepareModelInputLayout.$
     .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
   prepareModelInputLayout.$
@@ -31,32 +50,19 @@ export const prepareModelInput = (x: number, y: number) => {
 
 export const generateMaskFromOutput = (x: number, y: number) => {
   'use gpu';
-  const color = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
   const rawValue = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
   
-  // threasholding
-  const threshold = 0.5;
-  let maskValue = std.step(threshold, rawValue);
+  // Apply threshold with slight smoothing
+  const threshold = 0.55;
   
-  // erosion
-  let minNeighbor = maskValue;
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const nx = std.clamp(d.i32(x) + dx, 0, MODEL_WIDTH - 1);
-      const ny = std.clamp(d.i32(y) + dy, 0, MODEL_HEIGHT - 1);
-      const neighborRaw = generateMaskLayout.$.outputBuffer[ny * MODEL_WIDTH + nx];
-      const neighborMask = std.step(threshold, neighborRaw);
-      minNeighbor = std.min(minNeighbor, neighborMask);
-    }
-  }
-  
-  maskValue = minNeighbor;
+  // Instead of hard binary, use smoothstep for softer edges
+  const smoothness = 0.1;
+  let maskValue = std.smoothstep(threshold - smoothness, threshold + smoothness, rawValue);
   
   std.textureStore(
     generateMaskLayout.$.maskTexture,
     d.vec2u(x, y),
-    // d.vec4f(maskValue),
-    d.vec4f(color)
+    d.vec4f(maskValue),
   );
 };
 
@@ -141,11 +147,32 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  const mask = std.textureSampleBaseClampToEdge(
-    drawWithMaskLayout.$.maskTexture,
-    drawWithMaskLayout.$.sampler,
-    input.uv,
-  ).x;
+  // Map UV coordinates to the center-cropped square region
+  const texDims = std.textureDimensions(drawWithMaskLayout.$.inputTexture);
+  const texWidth = d.f32(texDims.x);
+  const texHeight = d.f32(texDims.y);
+  
+  const cropSize = std.min(texWidth, texHeight);
+  const xOffset = (texWidth - cropSize) / 2.0;
+  const yOffset = (texHeight - cropSize) / 2.0;
+  
+  // Convert UV to pixel coordinates
+  const pixelX = input.uv.x * texWidth;
+  const pixelY = input.uv.y * texHeight;
+  
+  // Map to cropped region UV (0-1 within the crop)
+  const croppedU = (pixelX - xOffset) / cropSize;
+  const croppedV = (pixelY - yOffset) / cropSize;
+  
+  // Sample mask from the cropped region, or use 0 if outside
+  let mask = d.f32(0);
+  if (croppedU >= 0.0 && croppedU <= 1.0 && croppedV >= 0.0 && croppedV <= 1.0) {
+    mask = std.textureSampleBaseClampToEdge(
+      drawWithMaskLayout.$.maskTexture,
+      drawWithMaskLayout.$.sampler,
+      d.vec2f(croppedU, croppedV),
+    ).x;
+  }
 
   return std.mix(blurredColor, originalColor, mask);
 });
