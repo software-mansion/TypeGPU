@@ -700,12 +700,12 @@ requestAnimationFrame(render);
 
 // #region Example controls and cleanup
 
-let prevY = 0;
+let prevX = 0;
 
 canvas.addEventListener('touchstart', (event) => {
   knobBehavior.pressed = true;
   event.preventDefault();
-  prevY = event.touches[0].clientY;
+  prevX = event.touches[0].clientX;
 });
 
 canvas.addEventListener('touchend', (event) => {
@@ -716,15 +716,15 @@ canvas.addEventListener('touchend', (event) => {
 canvas.addEventListener('touchmove', (event) => {
   if (!knobBehavior.pressed) return;
   event.preventDefault();
-  const y = event.touches[0].clientY;
-  knobBehavior.progress += (prevY - y) / canvas.clientHeight * 2;
-  prevY = y;
+  const x = event.touches[0].clientX;
+  knobBehavior.progress += (x - prevX) / canvas.clientHeight * 2;
+  prevX = x;
 });
 
 canvas.addEventListener('mousedown', (event) => {
   knobBehavior.pressed = true;
   event.preventDefault();
-  prevY = event.clientY;
+  prevX = event.clientX;
 });
 
 canvas.addEventListener('mouseup', (event) => {
@@ -740,9 +740,9 @@ window.addEventListener('mouseup', (event) => {
 canvas.addEventListener('mousemove', (event) => {
   if (!knobBehavior.pressed) return;
   event.preventDefault();
-  const y = event.clientY;
-  knobBehavior.progress += (prevY - y) / canvas.clientHeight * 2;
-  prevY = y;
+  const x = event.clientX;
+  knobBehavior.progress += (x - prevX) / canvas.clientHeight * 2;
+  prevX = x;
 });
 
 async function autoSetQuaility() {
