@@ -1,7 +1,7 @@
-import type * as tinyest from 'tinyest';
 import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
+  BaseData,
   Bool,
   Decorated,
   F16,
@@ -22,25 +22,12 @@ import type {
   Vec4u,
   Void,
 } from '../../data/wgslTypes.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 
 export type AnyFn = (...args: never[]) => unknown;
 
-/**
- * Information extracted from transpiling a JS function.
- */
-export type TranspilationResult = {
-  params: tinyest.FuncParameter[];
-  body: tinyest.Block;
-  /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
-   */
-  externalNames: string[];
-};
-
 export type InferArgs<T extends unknown[]> = {
-  [Idx in keyof T]: Infer<T[Idx]>;
+  [Idx in keyof T]: InferGPU<T[Idx]>;
 };
 
 type InheritTupleValues<T, From> = {
@@ -57,21 +44,16 @@ type InheritTupleValues<T, From> = {
 export type InheritArgNames<T extends AnyFn, From extends AnyFn> = {
   result: (
     ...args: Parameters<
-      & ((
-        ...args: InheritTupleValues<Parameters<From>, Parameters<T>>
-      ) => ReturnType<T>)
-      & T
+      ((...args: InheritTupleValues<Parameters<From>, Parameters<T>>) => ReturnType<T>) & T
     >
   ) => ReturnType<T>;
 };
 
 export type InferImplSchema<ImplSchema extends AnyFn> = (
   ...args: InferArgs<Parameters<ImplSchema>>
-) => Infer<ReturnType<ImplSchema>>;
+) => InferGPU<ReturnType<ImplSchema>>;
 
-export type Implementation<ImplSchema extends AnyFn = AnyFn> =
-  | string
-  | InferImplSchema<ImplSchema>;
+export type Implementation<ImplSchema extends AnyFn = AnyFn> = string | InferImplSchema<ImplSchema>;
 
 export type BaseIOData =
   | Bool
@@ -92,15 +74,9 @@ export type BaseIOData =
   | Vec3u
   | Vec4u;
 
-export type IOData =
-  | BaseIOData
-  | Decorated<BaseIOData, AnyAttribute[]>
-  | BuiltinClipDistances;
+export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]> | BuiltinClipDistances;
 
-export type IORecord<TElementType extends IOData = IOData> = Record<
-  string,
-  TElementType
->;
+export type IORecord<TElementType extends IOData = IOData> = Record<string, TElementType>;
 
 /**
  * Used for I/O definitions of entry functions.
@@ -110,6 +86,18 @@ export type IOLayout<TElementType extends IOData = IOData> =
   | IORecord<TElementType>
   | Void;
 
-export type InferIO<T> = T extends { type: string } ? Infer<T>
-  : T extends Record<string, unknown> ? { [K in keyof T]: Infer<T[K]> }
-  : T;
+export type InferIO<T> = T extends { type: string }
+  ? InferGPU<T>
+  : T extends Record<string, unknown>
+    ? { [K in keyof T]: InferGPU<T[K]> }
+    : T;
+
+export interface PositionalArgInfo {
+  schemaKey: string;
+  type: BaseData;
+}
+
+export interface SeparatedEntryArgs {
+  dataSchema: BaseData | undefined;
+  positionalArgs: PositionalArgInfo[];
+}

@@ -1,4 +1,7 @@
 {
   "title": "Gradient Tiles",
-  "category": "simple"
+  "description": "Draws a grid of tiles with smoothly interpolated corner colors to demonstrate basic vertex data and fragment interpolation.",
+  "category": "simple",
+  "tags": ["basics", "color"],
+  "coolFactor": 4
 }

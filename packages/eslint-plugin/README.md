@@ -1,0 +1,62 @@
+<div align="center">
+
+# eslint-plugin-typegpu
+
+TypeGPU specific linting rules for ESLint.
+
+[Docs](https://docs.swmansion.com/TypeGPU/tooling/eslint-plugin-typegpu/) -- [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/eslint-plugin) -- [npm](https://www.npmjs.com/package/eslint-plugin-typegpu)
+
+</div>
+
+## Installation
+
+`npm add -D eslint-plugin-typegpu`
+
+After installing, the plugin needs to be configured.
+
+## Configuration
+
+Configuration depends on the linter used. 
+
+In eslint, either define the used rules manually, or use one of the configs provided by the plugin.
+
+```ts
+import { defineConfig } from "eslint/config";
+import typegpu from "eslint-plugin-typegpu";
+
+export default defineConfig([
+// other configs
+  typegpu.configs.recommended,
+]);
+```
+
+`eslint-plugin-typegpu` provides two configs: `all` (enabled on all rules) and `recommended`.
+
+## List of supported rules
+
+<!-- begin auto-generated rules list -->
+
+🚨 Configurations enabled in.\
+⚠️ Configurations set to warn in.\
+⭐ Set in the `recommended` configuration.
+
+| Name                                                                   | Description                                                                                 | 🚨 | ⚠️ |
+| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ | :- | :- |
+| [no-integer-division](docs/rules/no-integer-division.md)               | Disallow division incorporating numbers wrapped in 'u32' and 'i32'                          |    | ⭐  |
+| [no-invalid-assignment](docs/rules/no-invalid-assignment.md)           | Disallow assignments that will generate invalid WGSL                                        | ⭐  |    |
+| [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions                      |    | ⭐  |
+| [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions              | ⭐  |    |
+| [no-unsupported-syntax](docs/rules/no-unsupported-syntax.md)           | Disallow JS syntax that will not be parsed into valid WGSL.                                 | ⭐  |    |
+| [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns) | ⭐  |    |
+
+<!-- end auto-generated rules list -->
+
+## TypeGPU is created by Software Mansion
+
+[![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
+
+Since 2012 [Software Mansion](https://swmansion.com) is a software agency with
+experience in building web and mobile apps. We are Core React Native
+Contributors and experts in dealing with all kinds of React Native issues. We
+can help you build your next dream product –
+[Hire us](https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=readme).

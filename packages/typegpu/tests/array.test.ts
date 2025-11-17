@@ -1,14 +1,9 @@
 import { attest } from '@ark/attest';
-import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, expectTypeOf, it } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
-import type { Infer } from '../src/shared/repr.ts';
-import { arrayLength } from '../src/std/array.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import { describe, expect, expectTypeOf } from 'vitest';
+import { d, readFromArrayBuffer, tgpu, writeToArrayBuffer } from 'typegpu';
+import type { Infer } from 'typegpu/data';
+import { arrayLength } from 'typegpu/std';
+import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -24,25 +19,18 @@ describe('array', () => {
   it('aligns array elements when writing', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
-    // deno-fmt-ignore
+    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('aligns array elements when reading', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toStrictEqual([
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -62,8 +50,8 @@ describe('array', () => {
       d.vec3f(1.5, 2, 15),
     ];
 
-    writeData(new BufferWriter(buffer), TestArray, value);
-    expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestArray, value);
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
   });
 
   it('throws when trying to read/write a runtime-sized array', () => {
@@ -72,25 +60,20 @@ describe('array', () => {
     expect(d.sizeOf(TestArray)).toBeNaN();
 
     expect(() =>
-      writeData(new BufferWriter(new ArrayBuffer(0)), TestArray, [
-        d.vec3f(),
-        d.vec3f(),
-      ])
+      writeToArrayBuffer(new ArrayBuffer(0), TestArray, [d.vec3f(), d.vec3f()]),
     ).toThrow();
 
-    expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray))
-      .toThrow();
+    expect(() => readFromArrayBuffer(new ArrayBuffer(0), TestArray)).toThrow();
 
-    const opts = { namespace: namespace({ names: 'strict' }) };
-
-    expect(resolve(TestArray, opts).code).toContain('array<vec3f>');
+    expect(tgpu.resolve({ template: 'TestArray', externals: { TestArray } })).toEqual(
+      'array<vec3f>',
+    );
   });
 
   it('throws when trying to nest runtime sized arrays', () => {
-    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Cannot nest runtime sized arrays.]',
-      );
+    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0)).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Cannot nest runtime sized arrays.]',
+    );
   });
 
   it('can be called to create an array', () => {
@@ -106,9 +89,9 @@ describe('array', () => {
     const ArraySchema = d.arrayOf(d.u32, 4);
 
     // @ts-expect-error
-    (() => ArraySchema([1, 2, 3, d.vec3f()]));
+    () => ArraySchema([1, 2, 3, d.vec3f()]);
     // @ts-expect-error
-    (() => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]));
+    () => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]);
   });
 
   it('can be called to create a deep copy of other array', () => {
@@ -141,6 +124,24 @@ describe('array', () => {
     );
   });
 
+  it('throws when invalid number of arguments during code generation', () => {
+    const ArraySchema = d.arrayOf(d.u32, 2);
+
+    const f = () => {
+      'use gpu';
+      // @ts-expect-error
+      const arr = ArraySchema([1, 1], [6, 7]);
+      return;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Array schemas should always be called with at most 1 argument]
+    `);
+  });
+
   it('can be called to create a default value', () => {
     const ArraySchema = d.arrayOf(d.vec3f, 2);
 
@@ -155,10 +156,7 @@ describe('array', () => {
 
     const defaultArray = ArraySchema();
 
-    expect(defaultArray).toStrictEqual([
-      { vec: d.vec3f() },
-      { vec: d.vec3f() },
-    ]);
+    expect(defaultArray).toStrictEqual([{ vec: d.vec3f() }, { vec: d.vec3f() }]);
   });
 
   it('can be partially called', () => {
@@ -179,9 +177,9 @@ describe('array', () => {
       const defaultValue = Outer();
     });
 
-    expect(asWgsl(testFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFunction])).toMatchInlineSnapshot(`
       "fn testFunction() {
-        var defaultValue = array<array<f32, 1>, 2>();
+        let defaultValue = array<array<f32, 1>, 2>();
       }"
     `);
   });
@@ -189,17 +187,32 @@ describe('array', () => {
   it('generates correct code when array clone is used', () => {
     const ArraySchema = d.arrayOf(d.u32, 1);
 
-    const testFn = tgpu.fn([])(() => {
+    function f(arr: d.InferGPU<typeof ArraySchema>) {
+      'use gpu';
+      const clone = ArraySchema(arr);
+    }
+
+    const external = [3];
+
+    function testFn() {
+      'use gpu';
       const myArray = ArraySchema([d.u32(10)]);
       const myClone = ArraySchema(myArray);
+      const myExternal = ArraySchema(external);
+      f(myArray);
       return;
-    });
+    }
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-      "fn testFn() {
-        var myArray = array<u32, 1>(10u);
-        var myClone = myArray;
-        return;
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn f(arr: array<u32, 1>) {
+        let clone = arr;
+      }
+
+      fn testFn() {
+        let myArray = array<u32, 1>(10u);
+        let myClone = myArray;
+        let myExternal = array<u32, 1>(3u);
+        f(myArray);
       }"
     `);
   });
@@ -213,11 +226,66 @@ describe('array', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
-        var myClone = myArrays[0];
-        return;
+        let myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
+        let myClone = myArrays[0i];
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with ephemeral element type clone is used', () => {
+    const f = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 2)([6, 7]);
+      return;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        let arr = array<f32, 2>(6f, 7f);
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with reference element type clone is used', () => {
+    const f = (v: d.v4f) => {
+      'use gpu';
+      const v2 = d.vec4f(3);
+      const v3 = v2;
+      const arr = d.arrayOf(d.vec4f, 3)([v, v2, v3]);
+    };
+
+    const main = tgpu.fn([])(() => {
+      const v1 = d.vec4f(7);
+      f(v1);
+      return;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn f(v: vec4f) {
+        var v2 = vec4f(3);
+        let v3 = (&v2);
+        let arr = array<vec4f, 3>(v, v2, (*v3));
+      }
+
+      fn main() {
+        let v1 = vec4f(7);
+        f(v1);
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with mixed element types clone is used', () => {
+    const f = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 3)([5, 6.7, 8.0]);
+      return;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        let arr = array<f32, 3>(5f, 6.7f, 8f);
       }"
     `);
   });
@@ -227,9 +295,9 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)();
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>();
+        let result = array<f32, 4>();
       }"
     `);
   });
@@ -239,9 +307,9 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)();
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>();
+        let result = array<f32, 4>();
       }"
     `);
   });
@@ -251,22 +319,20 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, count)();
     });
 
-    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
-      - arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
+      - fn:arrayOf: Called comptime function with runtime-known values: 'count']
     `);
   });
 
-  it('generates correct code when array is partially called', () => {
+  it('generates correct code when array is partially called in a layout', () => {
     const testLayout = tgpu.bindGroupLayout({
       testArray: { storage: d.arrayOf(d.u32) },
     });
 
-    expect(
-      tgpu.resolve({ externals: { ...testLayout.bound }, names: 'strict' }),
-    ).toMatchInlineSnapshot(
+    expect(tgpu.resolve([testLayout])).toMatchInlineSnapshot(
       `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
     );
   });
@@ -276,9 +342,9 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)([1, 2, 3, 4]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(1f, 2f, 3f, 4f);
+        let result = array<f32, 4>(1f, 2f, 3f, 4f);
       }"
     `);
   });
@@ -288,9 +354,9 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)([4, 3, 2, 1]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4f, 3f, 2f, 1f);
+        let result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
@@ -302,33 +368,211 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, arraySizeSlot.$)([4, 3, 2, 1]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4f, 3f, 2f, 1f);
+        let result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
 
-  it('can be immediately-invoked and initialized in TGSL in combination with slots and derived', () => {
+  it('can be immediately-invoked and initialized in TGSL in combination with slots and lazy', () => {
     const arraySizeSlot = tgpu.slot(4);
-    const derivedArraySizeSlot = tgpu['~unstable'].derived(() =>
-      arraySizeSlot.$ * 2
-    );
-    const derivedInitializer = tgpu['~unstable'].derived(
-      () => [...Array(derivedArraySizeSlot.$).keys()],
-    );
+    const lazyArraySizeSlot = tgpu.lazy(() => arraySizeSlot.$ * 2);
+    const lazyInitializer = tgpu.lazy(() => [...Array(lazyArraySizeSlot.$).keys()]);
 
     const foo = tgpu.fn([])(() => {
-      const result = d.arrayOf(d.f32, derivedArraySizeSlot.$)(
-        derivedInitializer.$,
-      );
+      const result = d.arrayOf(d.f32, lazyArraySizeSlot.$)(lazyInitializer.$);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
+        let result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
       }"
     `);
+  });
+
+  it('throws when using refs in arrays', () => {
+    const foo = tgpu.fn([])(() => {
+      const myVec = d.vec2f(1, 2);
+      const result = [d.vec2f(3, 4), myVec];
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo
+      - ArrayExpression: 'myVec' reference cannot be used in an array constructor.
+      -----
+      Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws when using argument refs in arrays', () => {
+    const foo = tgpu.fn([d.vec2f])((myVec) => {
+      const result = [d.vec2f(3, 4), myVec];
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo
+      - ArrayExpression: 'myVec' reference cannot be used in an array constructor.
+      -----
+      Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('allows using ephemeral refs in arrays', () => {
+    const foo = tgpu.fn([d.u32])((n) => {
+      const m = d.u32(1);
+      const result = [1, n, m];
+    });
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo(n: u32) {
+        const m = 1u;
+        let result = array<u32, 3>(1u, n, m);
+      }"
+    `);
+  });
+
+  it('array expressions can be indexed into with a comptime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 2;
+      const a = [i, 2][0];
+      const b = [i, 2][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 2;
+        let a = i;
+        const b = 2i;
+      }"
+    `);
+  });
+
+  it('array expressions can be indexed into with a runtime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 0;
+      const a = [1, 2][i];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 0;
+        let a = array<i32, 2>(1, 2)[i];
+      }"
+    `);
+  });
+
+  it('allows picking among references using comptime-known indices', () => {
+    function foo() {
+      'use gpu';
+      const x = d.vec3f(1, 2, 3);
+      // `const y = [x, d.vec3f()]` would throw, but since
+      // we're never constructing the array, it's equivalent
+      // to writing `const y = x;`
+      const y = [x, d.vec3f()][0];
+      return y;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec3f {
+        let x = vec3f(1, 2, 3);
+        let y = (&x);
+        return (*y);
+      }"
+    `);
+  });
+
+  it('resolves array expression elements when accessed with comptime-known index', () => {
+    let n = 0;
+    const next = tgpu.comptime(() => n++);
+
+    function foo() {
+      'use gpu';
+      const a = [next(), next()][0];
+      const b = [next(), next()][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const a = 0;
+        const b = 3;
+      }"
+    `);
+  });
+
+  it('prunes definitions in array expressions accessed with comptime-known index', ({ root }) => {
+    const u1 = root.createUniform(d.u32, 1);
+    const u2 = root.createUniform(d.u32, 2);
+    const u3 = root.createUniform(d.u32, 3);
+    const u4 = root.createUniform(d.u32, 4);
+
+    function foo() {
+      'use gpu';
+      const a = [u1.$, u2.$][0];
+      const b = [u3.$, u4.$][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> u1: u32;
+
+      @group(0) @binding(1) var<uniform> u4: u32;
+
+      fn foo() {
+        let a = u1;
+        let b = u4;
+      }"
+    `);
+  });
+
+  it('throws when trying to resolve an untyped external array', () => {
+    const arr = [1, 2, 3];
+    function main() {
+      'use gpu';
+      arr;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Value [1, 2, 3] is not resolvable]
+    `);
+  });
+
+  it('allows @location-decorated element types', () => {
+    const located = d.arrayOf(d.location(0, d.u32), 4);
+    expect(located.elementCount).toBe(4);
+    expectTypeOf(located).toEqualTypeOf<d.WgslArray<d.Decorated<d.U32, [d.Location<0>]>>>();
+  });
+
+  it('should allow calling arrayOf inside generic helpers', () => {
+    function arrayOf32<T extends d.AnyWgslData>(schema: T) {
+      return d.arrayOf(schema, 32);
+    }
+
+    arrayOf32(d.f32);
+  });
+
+  it('throws when a non-location decorated element type is passed', () => {
+    expect(() => d.arrayOf(d.align(16, d.u32), 4)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).]`,
+    );
+    expect(() => d.arrayOf(d.align(16, d.u32))).toThrow();
+    expect(() => d.arrayOf(d.size(16, d.u32), 3)).toThrow();
+    expect(() => d.arrayOf(d.location(0, d.align(16, d.u32)), 3)).toThrow();
+
+    const aligned = () => d.arrayOf(d.align(16, d.u32), 4);
+    expectTypeOf(
+      aligned,
+    ).returns.toEqualTypeOf<'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).'>();
   });
 });
 
@@ -343,13 +587,13 @@ describe('array.length', () => {
 
     const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
-      for (let i = d.u32(0); i < layout.bound.values.value.length; i++) {
-        layout.bound.values.value[i] = acc;
+      for (let i = d.u32(0); i < layout.$.values.length; i++) {
+        layout.$.values[i] = acc;
         acc *= 2;
       }
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
       fn foo() {
@@ -372,18 +616,18 @@ describe('array.length', () => {
 
     const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
-      for (let i = 0; i < layout.bound.values.value.length; i++) {
-        layout.bound.values.value[i] = acc;
+      for (let i = 0; i < layout.$.values.length; i++) {
+        layout.$.values[i] = acc;
         acc *= 2;
       }
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> values: array<f32, 128>;
 
       fn foo() {
         var acc = 1f;
-        for (var i = 0; (i < 128); i++) {
+        for (var i = 0; (i < 128i); i++) {
           values[i] = acc;
           acc *= 2f;
         }
@@ -401,14 +645,15 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu.fn([], d.i32)(() => {
+      const testFn = tgpu.fn(
+        [],
+        d.i32,
+      )(() => {
         return arrayLength(layout.$.values);
       });
 
-      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-
-        fn testFn() -> i32 {
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn() -> i32 {
           return 5;
         }"
       `);
@@ -423,15 +668,18 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu.fn([], d.u32)(() => {
-        return arrayLength(layout.bound.values.value);
+      const testFn = tgpu.fn(
+        [],
+        d.u32,
+      )(() => {
+        return arrayLength(layout.$.values);
       });
 
-      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
         fn testFn() -> u32 {
-          return arrayLength(&values);
+          return arrayLength((&values));
         }"
       `);
     });

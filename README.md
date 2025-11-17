@@ -1,12 +1,18 @@
 <div align="center">
 
-![TypeGPU (light mode)](./apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
-![TypeGPU (dark mode)](./apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
+<picture>
+<source srcset="https://typegpu.com/typegpu-logo-dark.svg" media="(prefers-color-scheme: dark)" />
+<img src="https://typegpu.com/typegpu-logo-light.svg" />
+</picture>
 
 [Website](https://docs.swmansion.com/TypeGPU) —
 [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
 
 </div>
+
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-1?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-1&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-2?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-2&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-3?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-3&n=1)
 
 **TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type
 inference and the ability to write shaders in TypeScript.
@@ -31,15 +37,13 @@ const main = () => {
   return neighborhood(1.1, 0.5);
 };
 
-const wgsl = tgpu.resolve({ externals: { main } });
+const wgsl = tgpu.resolve([main]);
 //    ^? string
 
 //
 // #3) Executed on the GPU (generates WGSL underneath)
 //
-root['~unstable']
-  .createGuardedComputePipeline(main)
-  .dispatchThreads();
+root.createGuardedComputePipeline(main).dispatchThreads();
 ```
 
 <div align="center">
@@ -114,7 +118,7 @@ compute shaders, and `@abc/plot` is a library for plots and visualization using
 WebGPU.
 
 ```ts
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import gen from '@xyz/gen';
 import plot from '@abc/plot';
 
@@ -138,7 +142,7 @@ API:
 
 ```ts
 import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 // We can define schemas, or functions that return schemas...
 const HeightMap = (width: number, height: number) =>
@@ -185,14 +189,41 @@ out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
 
 <!-- automd:file src="./projects-using-typegpu.md" -->
 
+Libraries:
+
+- [Vivarium](https://github.com/WonderYard/vivarium) - Modern, intuitive,
+  WebGPU-powered toolkit for creating your own cellular automata
+- [wayfare](https://github.com/iwoplaza/wayfare) - A modular game engine built
+  on top of TypeGPU & Koota
+- [typegpu-shader-canvas](https://github.com/AlexJWayne/typegpu-shader-canvas) -
+  a high-level library that sets up a canvas for you, so you can focus on
+  delivering pixels with TypeScript functions
+- [lilgpu](https://github.com/gnlow/lilgpu) - Lil wrapper to toy with WebGPU,
+  powered by TypeGPU
+- [fisheye.js](https://github.com/GyeongHoKim/fisheye.js/tree/main) - A
+  JavaScript library for correcting fisheye, or barrel distortion, in images in
+  the browser
+
+Apps:
+
+- [ComfyUI](https://www.comfy.org/) - An open-source tool for creating
+  generative AI
 - [Chaos Master](https://chaos-master.vercel.app) by deluksic & Komediruzecki
+- [Visual timer: Calm Jar](https://apps.apple.com/us/app/visual-timer-calm-jar/id6741375962)
+  by Nathan Schmidt
+
+Demos:
+
 - [Apollonian Circles](https://deluksic.github.io/apollonian-circles/) by
   deluksic
 - [Strange Forms](https://github.com/loganzartman/strangeforms) by Logan Zartman
 - [WebGPU Stable Fluids](https://github.com/loganzartman/webgpu-stable-fluids)
   by Logan Zartman
-- [Visual timer: Calm Jar](https://apps.apple.com/us/app/visual-timer-calm-jar/id6741375962)
-  by Nathan Schmidt
+- [Plasma Garden](https://alexwayne.codes/2026-01-11-plasma-garden/) by Alex
+  Wayne
+- [Glowout](https://alexwayne.codes/2025-12-04-glowout/) by Alex Wayne
+- [MeloSkia](https://github.com/kimchouard/meloskia) - A music-game demo to
+  highlight RN-Skia capabilities by Kim Chouard
 
 <!-- /automd -->
 

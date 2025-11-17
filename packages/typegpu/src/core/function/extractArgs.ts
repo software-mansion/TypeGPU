@@ -1,3 +1,5 @@
+import { blankSpaces, lineBreaks } from '../whitespaces.ts';
+
 interface FunctionArgsInfo {
   args: ArgInfo[];
   ret: ReturnInfo | undefined;
@@ -107,9 +109,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
  *
  * strip(code); // "(a,@location(0)b:i32)->i32"
  */
-function strip(
-  rawCode: string,
-): { strippedCode: string; argRange: [number, number] } {
+function strip(rawCode: string): { strippedCode: string; argRange: [number, number] } {
   const code = new ParsableString(rawCode);
   let strippedCode = '';
   let argsStart: number | undefined;
@@ -158,9 +158,13 @@ function strip(
 }
 
 class ParsableString {
+  readonly str: string;
+
   #parseStartPos: number | undefined;
   #pos: number;
-  constructor(public readonly str: string) {
+
+  constructor(str: string) {
+    this.str = str;
     this.#pos = 0;
   }
 
@@ -212,10 +216,7 @@ class ParsableString {
    * // '(@attribute(0) identifier: type)'
    * //               ^
    */
-  parseUntil(
-    toFind: Set<string>,
-    brackets?: readonly [string, string],
-  ): number {
+  parseUntil(toFind: Set<string>, brackets?: readonly [string, string]): number {
     this.#parseStartPos = this.#pos;
     let openedBrackets = 0;
     while (this.#pos < this.str.length) {
@@ -242,31 +243,16 @@ class ParsableString {
   consume(str: string): void {
     if (!this.isAt(str)) {
       throw new Error(
-        `Expected '${str}' at position ${this.#pos}, but found '${
-          this.str.slice(this.#pos, this.#pos + str.length)
-        }'`,
+        `Expected '${str}' at position ${this.#pos}, but found '${this.str.slice(
+          this.#pos,
+          this.#pos + str.length,
+        )}'`,
       );
     }
     this.advanceBy(str.length);
   }
 }
 
-const lineBreaks = new Set<string>([
-  '\u000A', // line feed
-  '\u000B', // vertical tab
-  '\u000C', // form feed
-  '\u000D', // carriage return
-  '\u0085', // next line
-  '\u2028', // line separator
-  '\u2029', // paragraph separator
-]);
-const blankSpaces = new Set<string>([
-  ...lineBreaks,
-  '\u0020', // space
-  '\u0009', // horizontal tab
-  '\u200E', // left-to-right mark
-  '\u200F', // right-to-left mark
-]);
 const closingParenthesis = new Set<string>([')']);
 const identifierEndSymbols = new Set([':', ',', ')']);
 const typeEndSymbols = new Set([',', ')']);

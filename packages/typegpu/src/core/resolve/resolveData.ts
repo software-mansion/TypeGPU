@@ -1,10 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
-import {
-  type AnyData,
-  type Disarray,
-  isLooseData,
-  type Unstruct,
-} from '../../data/dataTypes.ts';
+import { type AnyData, type Disarray, isLooseData, type Unstruct } from '../../data/dataTypes.ts';
 import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
 import {
   accessModeMap,
@@ -43,7 +38,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { isValidIdentifier } from '../../nameRegistry.ts';
+import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -106,7 +101,7 @@ type IdentityType =
   | Mat4x4f
   | WgslExternalTexture;
 
-function isIdentityType(data: AnyWgslData): data is IdentityType {
+function isIdentityType(data: BaseData): data is IdentityType {
   return identityTypes.includes(data.type);
 }
 
@@ -118,18 +113,8 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
  *
  * @returns The resolved property string.
  */
-function resolveStructProperty(
-  ctx: ResolutionCtx,
-  [key, property]: [string, BaseData],
-) {
-  if (!isValidIdentifier(key)) {
-    throw new Error(
-      `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-    );
-  }
-  return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData).value
-  },\n`;
+function resolveStructProperty(ctx: ResolutionCtx, [key, property]: [string, BaseData]) {
+  return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property).value},\n`;
 }
 
 /**
@@ -143,16 +128,17 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   if (struct[$internal].isAbstruct) {
     throw new Error('Cannot resolve abstract struct types to WGSL.');
   }
-  const id = ctx.getUniqueName(struct);
+  const id = ctx.makeUniqueIdentifier(getName(struct), 'global');
 
-  ctx.addDeclaration(`\
+  ctx.addDeclaration(
+    `\
 struct ${id} {
-${
-    Object.entries(struct.propTypes as Record<string, BaseData>)
-      .map((prop) => resolveStructProperty(ctx, prop))
-      .join('')
-  }\
-}`);
+${Object.entries(struct.propTypes)
+  .map((prop) => resolveStructProperty(ctx, prop))
+  .join('')}\
+}`,
+    id,
+  );
 
   return id;
 }
@@ -173,23 +159,21 @@ ${
  * ```
  */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
-  const id = ctx.getUniqueName(unstruct);
+  const id = ctx.makeUniqueIdentifier(getName(unstruct), 'global');
 
-  ctx.addDeclaration(`\
+  ctx.addDeclaration(
+    `\
 struct ${id} {
-${
-    Object.entries(unstruct.propTypes as Record<string, BaseData>)
-      .map((prop) =>
-        isAttribute(prop[1])
-          ? resolveStructProperty(ctx, [
-            prop[0],
-            formatToWGSLType[prop[1].format],
-          ])
-          : resolveStructProperty(ctx, prop)
-      )
-      .join('')
-  }
-}`);
+${Object.entries(unstruct.propTypes)
+  .map((prop) =>
+    isAttribute(prop[1])
+      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
+      : resolveStructProperty(ctx, prop),
+  )
+  .join('')}
+}`,
+    id,
+  );
 
   return id;
 }
@@ -245,11 +229,8 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     }
 
     if (data.type === 'loose-decorated') {
-      return ctx.resolve(
-        isAttribute(data.inner)
-          ? formatToWGSLType[data.inner.format]
-          : data.inner,
-      ).value;
+      return ctx.resolve(isAttribute(data.inner) ? formatToWGSLType[data.inner.format] : data.inner)
+        .value;
     }
 
     return ctx.resolve(formatToWGSLType[data.type]).value;

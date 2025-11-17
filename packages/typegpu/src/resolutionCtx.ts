@@ -1,36 +1,26 @@
-import { isTgpuFn } from './core/function/tgpuFn.ts';
-import {
-  getUniqueName,
-  type Namespace,
-  type NamespaceInternal,
-} from './core/resolve/namespace.ts';
-import { resolveData } from './core/resolve/resolveData.ts';
-import { stitch } from './core/resolve/stitch.ts';
+import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
-import type {
-  Configurable,
-  ExperimentalTgpuRoot,
-} from './core/root/rootTypes.ts';
+import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
   type Eventual,
-  isDerived,
+  isLazy,
   isProviding,
   isSlot,
   type SlotValuePair,
-  type TgpuDerived,
+  type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
-import { getAttributesString } from './data/attributes.ts';
-import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
+import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import { isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import {
-  invariant,
-  MissingSlotValueError,
-  ResolutionError,
-  WgslTypeError,
-} from './errors.ts';
+  type Origin,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withValue,
+} from './data/snippet.ts';
+import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import { isMarkedInternal } from './shared/symbols.ts';
@@ -44,32 +34,39 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import {
-  LogGeneratorImpl,
-  LogGeneratorNullImpl,
-} from './tgsl/consoleLog/logGenerator.ts';
-import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
+import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
+import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
-import {
-  coerceToSnippet,
-  concretize,
-  numericLiteralToSnippet,
-} from './tgsl/generationHelpers.ts';
+import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import wgslGenerator from './tgsl/wgslGenerator.ts';
+import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
+  BlockScopeLayer,
   ExecMode,
   ExecState,
-  FnToWgslOptions,
+  ResolveFunctionOptions,
+  FunctionArgumentAccess,
   FunctionScopeLayer,
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  StackLayer,
+  ShaderStage,
   Wgsl,
 } from './types.ts';
-import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
-import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
+import type { WgslEnableExtension } from './wgslExtensions.ts';
+import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
+import { FuncParameterType } from 'tinyest';
+import { accessProp } from './tgsl/accessProp.ts';
+import { createIoSchema } from './core/function/ioSchema.ts';
+import { isShelllessImpl } from './core/function/shelllessImpl.ts';
+import { isTgpuFn } from './core/function/tgpuFn.ts';
+import type { IOData } from './core/function/fnTypes.ts';
+import { AutoStruct } from './data/autoStruct.ts';
+import { EntryInputRouter } from './core/function/entryInputRouter.ts';
+import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { minify } from './minify.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -83,30 +80,16 @@ import { hasTinyestMetadata } from './shared/meta.ts';
 const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
-  readonly enableExtensions?: WgslExtension[] | undefined;
+  readonly enableExtensions?: WgslEnableExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
-};
-
-type SlotBindingLayer = {
-  type: 'slotBinding';
-  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
-};
-
-type BlockScopeLayer = {
-  type: 'blockScope';
-  declarations: Map<string, Snippet>;
+  readonly minify: boolean;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
-  private _stack: (
-    | ItemLayer
-    | SlotBindingLayer
-    | FunctionScopeLayer
-    | BlockScopeLayer
-  )[] = [];
+  private _stack: StackLayer[] = [];
   private _itemDepth = 0;
 
   get itemDepth(): number {
@@ -125,6 +108,25 @@ class ItemStateStackImpl implements ItemStateStack {
     return this._stack.findLast((e) => e.type === 'functionScope');
   }
 
+  get topBlockScope(): BlockScopeLayer | undefined {
+    return this._stack.findLast((e) => e.type === 'blockScope');
+  }
+
+  get blockDepth(): number {
+    let depth = 0;
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'functionScope') {
+        break;
+      }
+      if (layer?.type === 'blockScope') {
+        depth++;
+      }
+    }
+
+    return depth;
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -133,65 +135,56 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popItem() {
-    this.pop('item');
-  }
-
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+  pushSlotBindings(pairs: SlotValuePair[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
     });
   }
 
-  popSlotBindings() {
-    this.pop('slotBinding');
-  }
-
   pushFunctionScope(
-    args: Snippet[],
-    argAliases: Record<string, Snippet>,
-    returnType: AnyData | undefined,
+    functionType: 'normal' | ShaderStage,
+    argAccess: Record<string, FunctionArgumentAccess>,
+    returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
       type: 'functionScope',
-      args,
-      argAliases,
+      functionType,
+      argAccess,
       returnType,
       externalMap,
       reportedReturnTypes: new Set(),
+      placeholderForVariable: new Map(),
+      modifiedVariables: new Set(),
     };
 
     this._stack.push(scope);
     return scope;
   }
 
-  popFunctionScope() {
-    this.pop('functionScope');
-  }
-
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
+      takenLocalIdentifiers: new Set(),
       declarations: new Map(),
+      externals: new Map(),
     });
   }
 
-  popBlockScope() {
-    this.pop('blockScope');
-  }
-
-  pop(type?: (typeof this._stack)[number]['type']) {
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+  pop(type?: StackLayer['type']) {
     const layer = this._stack[this._stack.length - 1];
     if (!layer || (type && layer.type !== type)) {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
     }
 
-    this._stack.pop();
+    const poppedValue = this._stack.pop();
     if (type === 'item') {
       this._itemDepth--;
     }
+    return poppedValue;
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
@@ -206,10 +199,7 @@ class ItemStateStackImpl implements ItemStateStack {
         if (boundValue !== undefined) {
           return boundValue as T;
         }
-      } else if (
-        layer?.type === 'functionScope' ||
-        layer?.type === 'blockScope'
-      ) {
+      } else if (layer?.type === 'functionScope' || layer?.type === 'blockScope') {
         // Skip
       } else {
         throw new Error('Unknown layer type.');
@@ -224,28 +214,25 @@ class ItemStateStackImpl implements ItemStateStack {
       const layer = this._stack[i];
 
       if (layer?.type === 'functionScope') {
-        const arg = layer.args.find((a) => a.value === id);
-        if (arg !== undefined) {
-          return arg;
+        const access = layer.argAccess[id];
+        if (access) {
+          return access();
         }
 
-        if (layer.argAliases[id]) {
-          return layer.argAliases[id];
-        }
-
-        const external = layer.externalMap[id];
-
-        if (external !== undefined && external !== null) {
+        if (Object.hasOwn(layer.externalMap, id)) {
+          const external = layer.externalMap[id];
+          if (isNamable(external) && getName(external) === undefined) {
+            setName(external, id.replaceAll('.', '_'));
+          }
           return coerceToSnippet(external);
         }
 
-        // Since functions cannot access resources from the calling scope, we
-        // return early here.
         return undefined;
       }
 
       if (layer?.type === 'blockScope') {
-        const snippet = layer.declarations.get(id);
+        // the order matters
+        const snippet = layer.declarations.get(id) ?? layer.externals.get(id);
         if (snippet !== undefined) {
           return snippet;
         }
@@ -257,8 +244,49 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
+  /**
+   * Returns whether the given identifier is taken in any block scope up to the nearest function scope.
+   */
+  isIdentifierTakenLocally(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'functionScope') {
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return false;
+      }
+
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns whether the given identifier is taken in any block scope on the stack.
+   *
+   * This is useful when resolving a global identifier for the first time within a nested function.
+   */
+  isIdentifierTakenInCallStack(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   defineBlockVariable(id: string, snippet: Snippet): void {
-    if (snippet.dataType.type === 'unknown') {
+    if (snippet.dataType === UnknownData) {
       throw Error(`Tried to define variable '${id}' of unknown type`);
     }
 
@@ -272,6 +300,30 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     throw new Error('No block scope found to define a variable in.');
+  }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        Object.entries(externals).forEach(([id, snippet]) => {
+          layer.externals.set(id, snippet);
+        });
+        return;
+      }
+    }
+    throw new Error('No block scope found to set externals in.');
+  }
+
+  clearBlockExternals() {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        layer.externals.clear();
+        return;
+      }
+    }
+    throw new Error('No block scope found to clear externals in.');
   }
 }
 
@@ -295,8 +347,7 @@ export class IndentController {
   get pre(): string {
     return (
       INDENT[this.identLevel] ??
-        (INDENT[N] as string).repeat(this.identLevel / N) +
-          INDENT[this.identLevel % N]
+      (INDENT[N] as string).repeat(this.identLevel / N) + INDENT[this.identLevel % N]
     );
   }
 
@@ -327,17 +378,58 @@ interface FixedBindingConfig {
   resource: object;
 }
 
+function createArgument(
+  name: string,
+  type: BaseData,
+  origin: Origin = 'argument',
+): FunctionArgument {
+  let used = false;
+
+  return {
+    name,
+    access: () => {
+      used = true;
+      return snip(name, type, origin, /* possibleSideEffects */ false);
+    },
+    decoratedType: type,
+    get used() {
+      return used;
+    },
+  };
+}
+
+function createArgumentPropAccess(
+  argAccess: FunctionArgumentAccess,
+  prop: string,
+): FunctionArgumentAccess {
+  return () => {
+    const argSnippet = argAccess();
+    if (!argSnippet) {
+      return undefined;
+    }
+    return accessProp(argSnippet, prop);
+  };
+}
+
 export class ResolutionCtxImpl implements ResolutionCtx {
-  readonly #namespace: NamespaceInternal;
-  readonly #shaderGenerator: ShaderGenerator;
+  readonly #namespaceInternal: NamespaceInternal;
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   readonly #modeStack: ExecState[] = [];
-  private readonly _declarations: string[] = [];
+  private readonly _declarations: ResolvedDeclaration[] = [];
   private _varyingLocations: Record<string, number> | undefined;
-  readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
+  /**
+   * Holds a set of base (slot-less) functions that have started their resolution process.
+   * Used for recursion detection check - a function is recursive if:
+   * - it was passed to ctx.resolve while already present in this set,
+   * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
+   * The set is NOT cleared after the resolution finishes.
+   */
+  readonly #startedFunctionResolves: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
+
+  readonly gen: ShaderGenerator;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -354,36 +446,81 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * collect every use of a typed bind group layout, since they can be
    * explicitly imposed group indices, and they cannot collide.
    */
-  public readonly bindGroupLayoutsToPlaceholderMap = new Map<
-    TgpuBindGroupLayout,
-    string
-  >();
+  public readonly bindGroupLayoutsToPlaceholderMap = new Map<TgpuBindGroupLayout, string>();
   private _nextFreeLayoutPlaceholderIdx = 0;
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly enableExtensions: WgslExtension[] | undefined;
-  public expectedType: AnyData | undefined;
+  public readonly enableExtensions: WgslEnableExtension[] | undefined;
+  public expectedType: BaseData | undefined;
+
+  /**
+   * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
+   */
+  #lastUniqueId = 0;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this.#logGenerator = opts.root
-      ? new LogGeneratorImpl(opts.root)
-      : new LogGeneratorNullImpl();
-    this.#namespace = opts.namespace[$internal];
+    this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
+    this.#namespaceInternal = opts.namespace[$internal];
+    this.gen = opts.shaderGenerator ?? new WgslGenerator();
+    this.gen.initGenerator(this);
   }
 
-  getUniqueName(resource: object): string {
-    return getUniqueName(this.#namespace, resource);
+  isIdentifierBanned(name: string): boolean {
+    return bannedTokens.has(name);
   }
 
-  makeNameValid(name: string): string {
-    return this.#namespace.nameRegistry.makeValid(name);
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
+    return (
+      this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
+      (scope === 'block'
+        ? this._itemStateStack.isIdentifierTakenLocally(name)
+        : this._itemStateStack.isIdentifierTakenInCallStack(name))
+    );
+  }
+
+  makeUniqueIdentifier(primer: string = 'item', scope: 'global' | 'block'): string {
+    if (
+      scope === 'block' &&
+      validateIdentifier(primer).success &&
+      !this.isIdentifierTaken(primer, scope)
+    ) {
+      // Preserving local definitions as they are, provided they are valid and not already taken.
+      this.reserveIdentifier(primer, 'block');
+      return primer;
+    }
+
+    const base = sanitizePrimer(primer);
+    let index = 0;
+    const random = this.#namespaceInternal.strategy === 'random';
+    let name = random ? `${base}_${this.#lastUniqueId++}` : base;
+    while (this.isIdentifierTaken(name, scope)) {
+      name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
+    }
+
+    this.reserveIdentifier(name, scope);
+    return name;
+  }
+
+  reserveIdentifier(name: string, scope: 'global' | 'block'): void {
+    if (scope === 'block') {
+      const blockScope = this._itemStateStack.topBlockScope;
+      if (blockScope) {
+        blockScope.takenLocalIdentifiers.add(name);
+        return;
+      }
+      // Fall through if no block scope is present, treating as global.
+    }
+    this.#namespaceInternal.takenGlobalIdentifiers.add(name);
   }
 
   get pre(): string {
     return this._indentController.pre;
+  }
+
+  get topFunctionScope() {
+    return this._itemStateStack.topFunctionScope;
   }
 
   get topFunctionReturnType() {
@@ -393,7 +530,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   get shelllessRepo() {
-    return this.#namespace.shelllessRepo;
+    return this.#namespaceInternal.shelllessRepo;
+  }
+
+  get blockDepth(): number {
+    return this._itemStateStack.blockDepth;
   }
 
   indent(): string {
@@ -402,6 +543,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  getDedented(code: string): string {
+    return code.replaceAll(`\n${INDENT[1]}`, '\n');
   }
 
   withResetIndentLevel<T>(callback: () => T): T {
@@ -422,7 +567,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.defineBlockVariable(id, snippet);
   }
 
-  reportReturnType(dataType: AnyData) {
+  reportReturnType(dataType: BaseData) {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
     scope.reportedReturnTypes.add(dataType);
@@ -433,10 +578,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   popBlockScope() {
-    this._itemStateStack.popBlockScope();
+    this._itemStateStack.pop('blockScope');
   }
 
-  generateLog(op: string, args: Snippet[]): Snippet {
+  setBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.setBlockExternals(externals);
+  }
+
+  clearBlockExternals() {
+    this._itemStateStack.clearBlockExternals();
+  }
+
+  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {
     return this.#logGenerator.generateLog(this, op, args);
   }
 
@@ -444,55 +597,200 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(
-    options: FnToWgslOptions,
-  ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
-    const scope = this._itemStateStack.pushFunctionScope(
-      options.args,
-      options.argAliases,
-      options.returnType,
-      options.externalMap,
-    );
-
+  resolveFunction(options: ResolveFunctionOptions): { code: string; returnType: BaseData } {
     try {
-      this.#shaderGenerator.initGenerator(this);
-      const body = this.#shaderGenerator.functionDefinition(options.body);
+      const scope = this._itemStateStack.pushFunctionScope(
+        options.functionType,
+        {},
+        options.returnType,
+        options.externalMap,
+      );
+      // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
+      this._itemStateStack.pushBlockScope();
 
-      let returnType = options.returnType;
-      if (!returnType) {
-        const returnTypes = [...scope.reportedReturnTypes];
-        if (returnTypes.length === 0) {
-          returnType = Void;
+      const args: FunctionArgument[] = [];
+
+      if (options.entryInput) {
+        const { dataSchema, positionalArgs } = options.entryInput;
+        const firstParam = options.params[0];
+
+        const structArg = dataSchema
+          ? createArgument(this.makeUniqueIdentifier('_arg_0', 'block'), dataSchema)
+          : undefined;
+
+        if (structArg) {
+          args.push(structArg);
+        }
+
+        if (firstParam?.type === FuncParameterType.destructuredObject) {
+          // Route each destructured prop to a positional arg or struct field.
+          for (const { name, alias } of firstParam.props) {
+            const argInfo = positionalArgs.find((a) => a.schemaKey === name);
+            if (argInfo) {
+              const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
+              args.push(arg);
+              scope.argAccess[alias] = arg.access;
+            } else if (structArg) {
+              scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
+            }
+          }
+        } else if (firstParam?.type === FuncParameterType.identifier) {
+          // Create named arg snippets, then a proxy for property access routing.
+          const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
+          for (const a of positionalArgs) {
+            const argName = this.makeUniqueIdentifier(a.schemaKey, 'block');
+            const arg = createArgument(argName, a.type);
+            args.push(arg);
+            proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
+          }
+          const router = new EntryInputRouter(structArg?.access, proxyEntries);
+          scope.argAccess[firstParam.name] = () => snip('N/A', router, 'argument');
         } else {
-          const conversion = getBestConversion(returnTypes);
-          if (conversion && !conversion.hasImplicitConversions) {
-            returnType = conversion.targetType;
+          // No first param: push positional args with schema key names.
+          for (const a of positionalArgs) {
+            const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
+            const arg = createArgument(argName, a.type);
+            args.push(arg);
+            scope.argAccess[argName] = arg.access;
           }
         }
+      } else {
+        for (const [i, argType] of options.argTypes.entries()) {
+          const astParam = options.params[i];
+          // We know if arguments are passed by reference or by value, because we
+          // enforce that based on the whether the argument is a pointer or not.
+          //
+          // It still applies for shell-less functions, since we determine the type
+          // of the argument based on the argument's referentiality.
+          // In other words, if we pass a reference to a function, it's typed as a pointer,
+          // otherwise it's typed as a value.
+          const origin = isPtr(argType)
+            ? argType.addressSpace === 'storage'
+              ? argType.access === 'read'
+                ? 'readonly'
+                : 'mutable'
+              : argType.addressSpace
+            : 'argument';
 
-        if (!returnType) {
-          throw new Error(
-            `Expected function to have a single return type, got [${
-              returnTypes.join(', ')
-            }]. Cast explicitly to the desired type.`,
-          );
+          switch (astParam?.type) {
+            case FuncParameterType.identifier: {
+              const arg = createArgument(
+                this.makeUniqueIdentifier(astParam.name, 'block'),
+                argType,
+                origin,
+              );
+              args.push(arg);
+              scope.argAccess[astParam.name] = arg.access;
+              break;
+            }
+            case FuncParameterType.destructuredObject: {
+              const objArg = createArgument(
+                this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                argType,
+                origin,
+              );
+              args.push(objArg);
+              for (const { name, alias } of astParam.props) {
+                scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
+              }
+              break;
+            }
+            case undefined: {
+              // Only push the argument if it's not an auto-struct.
+              // If we're not using an auto-struct, it's not going to
+              // have any properties anyway.
+              if (!(argType instanceof AutoStruct)) {
+                args.push({
+                  name: this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                  access: () => {
+                    throw new Error(
+                      `Unreachable: Accessing an argument that wasn't named in the function signature`,
+                    );
+                  },
+                  decoratedType: argType,
+                  used: false,
+                });
+              }
+            }
+          }
         }
+      }
 
-        returnType = concretize(returnType);
+      let returnType: BaseData | undefined;
+
+      const code = this.gen.functionDefinition({
+        functionType: options.functionType,
+        name: options.name,
+        workgroupSize: options.workgroupSize,
+        args,
+        body: options.body,
+        determineReturnType: () => {
+          if (returnType) {
+            // Already determined
+            return returnType;
+          }
+
+          returnType = options.returnType;
+          if (returnType instanceof AutoStruct) {
+            // We're expecting an "auto" return type, so if there were structs returned,
+            // we accept the struct, otherwise we let the rest of the code unify on a
+            // primitive type.
+            if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+              returnType = returnType.completeStruct;
+            } else {
+              returnType = undefined;
+            }
+          }
+
+          if (!returnType) {
+            const returnTypes = [...scope.reportedReturnTypes];
+            if (returnTypes.length === 0) {
+              returnType = Void;
+            } else {
+              const conversion = getBestConversion(returnTypes);
+              if (conversion && !conversion.hasImplicitConversions) {
+                returnType = conversion.targetType;
+              }
+            }
+
+            if (!returnType) {
+              throw new Error(
+                `Expected function to have a single return type, got [${returnTypes.join(
+                  ', ',
+                )}]. Cast explicitly to the desired type.`,
+              );
+            }
+
+            returnType = concretize(returnType);
+
+            if (options.functionType === 'vertex' || options.functionType === 'fragment') {
+              returnType = createIoSchema(returnType as IOData);
+            }
+          }
+          return returnType;
+        },
+      });
+
+      if (!returnType) {
+        throw new Error(`Failed to determine return type`);
       }
 
       return {
-        head: resolveFunctionHeader(this, options.args, returnType),
-        body,
+        code,
         returnType,
       };
     } finally {
-      this._itemStateStack.popFunctionScope();
+      this._itemStateStack.pop('blockScope');
+      this._itemStateStack.pop('functionScope');
     }
   }
 
-  addDeclaration(declaration: string): void {
-    this._declarations.push(declaration);
+  addDeclaration(declaration: string, name?: string): void {
+    this._declarations.push({ name, code: declaration });
+  }
+
+  get declarations(): readonly ResolvedDeclaration[] {
+    return this._declarations;
   }
 
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
@@ -500,8 +798,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
-      placeholderKey = `#BIND_GROUP_LAYOUT_${this
-        ._nextFreeLayoutPlaceholderIdx++}#`;
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }
 
@@ -531,20 +828,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    if (pairs.length === 0) {
+      return callback();
+    }
+
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {
       return callback();
     } finally {
-      this._itemStateStack.popSlotBindings();
+      this._itemStateStack.pop('slotBinding');
     }
   }
 
-  withVaryingLocations<T>(
-    locations: Record<string, number>,
-    callback: () => T,
-  ): T {
+  withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T {
     this._varyingLocations = locations;
 
     try {
@@ -554,11 +852,28 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
+  withRenamed<T>(item: object, name: string | undefined, callback: () => T): T {
+    if (!name) {
+      return callback();
+    }
+    const oldName = getName(item);
+    try {
+      setName(item, name);
+      return callback();
+    } finally {
+      if (oldName) {
+        setName(item, oldName);
+      }
+    }
+  }
+
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
-      return this.withSlots(
-        eventual[$providing].pairs,
-        () => this.unwrap(eventual[$providing].inner) as T,
+      return this.withRenamed(eventual[$providing].inner, getName(eventual), () =>
+        this.withSlots(
+          eventual[$providing].pairs,
+          () => this.unwrap(eventual[$providing].inner) as T,
+        ),
       );
     }
 
@@ -568,7 +883,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     while (true) {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
-      } else if (isDerived(maybeEventual)) {
+      } else if (isLazy(maybeEventual)) {
         maybeEventual = this._getOrCompute(maybeEventual);
       } else {
         break;
@@ -578,9 +893,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeEventual;
   }
 
-  _getOrCompute<T>(derived: TgpuDerived<T>): T {
-    // All memoized versions of `derived`
-    const instances = this.#namespace.memoizedDerived.get(derived) ?? [];
+  _getOrCompute<T>(lazy: TgpuLazy<T>): T {
+    // All memoized versions of `lazy`
+    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -590,7 +905,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
           return instance.result as T;
@@ -603,7 +918,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let result: T;
       try {
-        result = derived['~compute']();
+        result = lazy[$internal].compute();
       } finally {
         this.popMode('normal');
       }
@@ -615,16 +930,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespace.memoizedDerived.set(derived, instances);
+      this.#namespaceInternal.memoizedLazy.set(lazy, instances);
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
-        throw err.appendToTrace(derived);
+        throw err.appendToTrace(lazy);
       }
 
-      throw new ResolutionError(err, [derived]);
+      throw new ResolutionError(err, [lazy]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
@@ -633,7 +948,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    */
   _getOrInstantiate(item: object): ResolvedSnippet {
     // All memoized versions of `item`
-    const instances = this.#namespace.memoizedResolves.get(item) ?? [];
+    const instances = this.#namespaceInternal.memoizedResolves.get(item) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -643,7 +958,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
           return instance.result;
@@ -653,15 +968,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       let result: ResolvedSnippet;
       if (isData(item)) {
-        result = snip(resolveData(this, item), Void);
-      } else if (isDerived(item) || isSlot(item)) {
+        // Ref is arbitrary, as we're resolving a schema
+        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
+      } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
       } else if (hasTinyestMetadata(item)) {
         // Resolving a function with tinyest metadata directly means calling it with no arguments, since
         // we cannot infer the types of the arguments from a WGSL string.
-        const shellless = this.#namespace.shelllessRepo.get(
+        const shellless = this.#namespaceInternal.shelllessRepo.get(
           item,
           /* no arguments */ undefined,
         );
@@ -673,9 +989,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         return this.withResetIndentLevel(() => this.resolve(shellless));
       } else {
-        throw new TypeError(
-          `Unresolvable internal value: ${safeStringify(item)}`,
-        );
+        throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
       }
 
       // We know which slots the item used while resolving
@@ -685,7 +999,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespace.memoizedResolves.set(item, instances);
+      this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;
     } catch (err) {
@@ -695,30 +1009,39 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [item]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
-  resolve(
-    item: unknown,
-    schema?: AnyData | UnknownData | undefined,
-  ): ResolvedSnippet {
-    if (isTgpuFn(item) || hasTinyestMetadata(item)) {
+  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
+    if (typeof item === 'string') {
+      if (!schema || schema === UnknownData) {
+        throw new Error(
+          `Strings cannot be injected into WGSL directly (tried to inject '${item}'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.`,
+        );
+      }
+      // For example:
+      // () => { 'use gpu'; const color = d.vec3f(); return color; }
+      //                             snip('color', d.vec3f) ^^^^^
+      return snip(item, schema, /* origin */ 'runtime');
+    }
+
+    if ((isTgpuFn(item) || isShelllessImpl(item)) && !isProviding(item)) {
+      // We skip providing functions to only perform the checks on slot-less functions.
       if (
-        this.#currentlyResolvedItems.has(item) &&
-        !this.#namespace.memoizedResolves.has(item)
+        this.#startedFunctionResolves.has(item) &&
+        !this.#namespaceInternal.memoizedResolves.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
         );
       }
-      this.#currentlyResolvedItems.add(item as object);
+      this.#startedFunctionResolves.add(item as object);
     }
 
     if (isProviding(item)) {
-      return this.withSlots(
-        item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema),
+      return this.withRenamed(item[$providing].inner, getName(item), () =>
+        this.withSlots(item[$providing].pairs, () => this.resolve(item[$providing].inner, schema)),
       );
     }
 
@@ -729,8 +1052,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
           return snip(
-            `${[...this._declarations].join('\n\n')}${result.value}`,
+            `${this._declarations.map((decl) => decl.code).join('\n\n')}${result.value}`,
             Void,
+            /* origin */ 'runtime', // arbitrary
           );
         } finally {
           this.popMode('codegen');
@@ -743,52 +1067,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
-      invariant(
-        realSchema.type !== 'unknown',
-        'Schema has to be known for resolving numbers',
-      );
+      invariant(realSchema !== UnknownData, 'Schema has to be known for resolving numbers');
 
-      if (realSchema.type === 'abstractInt') {
-        return snip(`${item}`, realSchema);
-      }
-      if (realSchema.type === 'u32') {
-        return snip(`${item}u`, realSchema);
-      }
-      if (realSchema.type === 'i32') {
-        return snip(`${item}i`, realSchema);
-      }
-
-      const exp = item.toExponential();
-      const decimal =
-        realSchema.type === 'abstractFloat' && Number.isInteger(item)
-          ? `${item}.`
-          : `${item}`;
-
-      // Just picking the shorter one
-      const base = exp.length < decimal.length ? exp : decimal;
-      if (realSchema.type === 'f32') {
-        return snip(`${base}f`, realSchema);
-      }
-      if (realSchema.type === 'f16') {
-        return snip(`${base}h`, realSchema);
-      }
-      return snip(base, realSchema);
+      return this.gen.numericLiteral(item, realSchema);
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool);
-    }
-
-    if (typeof item === 'string') {
-      // Already resolved
-      return snip(item, Void);
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant', false);
     }
 
     if (schema && isWgslArray(schema)) {
       if (!Array.isArray(item)) {
-        throw new WgslTypeError(
-          `Cannot coerce ${item} into value of type '${schema}'`,
-        );
+        throw new WgslTypeError(`Cannot coerce ${item} into value of type '${schema}'`);
       }
 
       if (schema.elementCount !== item.length) {
@@ -797,38 +1087,36 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         );
       }
 
-      const elementTypeString = this.resolve(schema.elementType);
-      return snip(
-        stitch`array<${elementTypeString}, ${schema.elementCount}>(${
-          item.map((element) => snip(element, schema.elementType as AnyData))
-        })`,
+      return this.gen.typeInstantiation(
         schema,
+        item.map((element) => snip(element, schema.elementType, /* origin */ 'runtime')),
       );
     }
 
-    if (Array.isArray(item)) {
-      return snip(
-        stitch`array(${item.map((element) => this.resolve(element))})`,
-        UnknownData,
-      ) as ResolvedSnippet;
+    if (schema && isWgslStruct(schema)) {
+      return this.gen.typeInstantiation(
+        schema,
+        Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
+        ),
+      );
     }
 
-    if (schema && isWgslStruct(schema)) {
-      return snip(
-        stitch`${this.resolve(schema)}(${
-          Object.entries(schema.propTypes).map(([key, propType]) =>
-            snip((item as Infer<typeof schema>)[key], propType as AnyData)
-          )
-        })`,
-        schema,
+    if (item === null) {
+      throw new WgslTypeError(
+        `'null' is not resolvable. 'null' is only allowed in comptime checks.`,
       );
     }
 
     throw new WgslTypeError(
-      `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
-        schema ? ` to type ${schema.type}` : ''
+      `Value ${safeStringify(item)} is not resolvable${
+        schema && schema !== UnknownData ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
+  }
+
+  resolveSnippet(snippet: Snippet): ResolvedSnippet {
+    return withValue(this.resolve(snippet.value, snippet.dataType).value, snippet);
   }
 
   pushMode(mode: ExecState) {
@@ -848,64 +1136,80 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 }
 
 /**
+ * A single module-scope declaration emitted during resolution.
+ *
+ * @property name - The resolved identifier the declaration declares (a fn, struct, var, const or
+ *   alias name), or `undefined` for declarations that don't declare a single identifier (e.g.
+ *   `tgpu['~unstable'].declare`).
+ * @property code - The WGSL code of the declaration.
+ */
+export interface ResolvedDeclaration {
+  name: string | undefined;
+  code: string;
+}
+
+/**
  * The results of a WGSL resolution.
  *
  * @param code - The resolved code.
+ * @param declarations - The module-scope declarations emitted by TypeGPU
+ *  during this resolution, in emission order. When resolving an array without a
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
+ *  When resolving a template, the template itself is not included in `declarations`.
+ *  With a shared namespace, only declarations emitted by *this* resolution are
+ *  included (memoized ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
- * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  */
 export interface ResolutionResult {
   code: string;
+  declarations: ResolvedDeclaration[];
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
 }
 
-export function resolve(
-  item: Wgsl,
-  options: ResolutionCtxImplOptions,
-): ResolutionResult {
+export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
   const snippet = options.config
-    ? ctx.withSlots(
-      options.config(new ConfigurableImpl([])).bindings,
-      () => ctx.resolve(item),
-    )
+    ? ctx.withSlots(options.config(new ConfigurableImpl([])).bindings, () => ctx.resolve(item))
     : ctx.resolve(item);
   let code = snippet.value;
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
   const takenIndices = new Set<number>(
-    [...memoMap.keys()]
-      .map((layout) => layout.index)
-      .filter((v): v is number => v !== undefined),
+    [...memoMap.keys()].map((layout) => layout.index).filter((v): v is number => v !== undefined),
   );
 
   const automaticIds = naturalsExcept(takenIndices);
 
   const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) =>
-      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+    (binding, idx) => [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
   );
+
+  // Bind group indices are only known now, so the same placeholder
+  // replacements applied to `code` are recorded and re-applied to each
+  // declaration's code.
+  const bindingReplacements: [placeholder: string, index: string][] = [];
 
   const createCatchallGroup = () => {
     const catchallIdx = automaticIds.next().value;
     const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
     usedBindGroupLayouts[catchallIdx] = catchallLayout;
     code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+    bindingReplacements.push([CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx)]);
 
     return [
       catchallIdx,
       new TgpuBindGroupImpl(
+        // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+        options.root as ExperimentalTgpuRoot,
         catchallLayout,
         Object.fromEntries(
-          ctx.fixedBindings.map(
-            (binding, idx) =>
-              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
-              [String(idx), binding.resource] as [string, any],
-          ),
+          // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
+          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];
@@ -919,6 +1223,7 @@ export function resolve(
     const idx = layout.index ?? automaticIds.next().value;
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
+    bindingReplacements.push([placeholder, String(idx)]);
   }
 
   if (options.enableExtensions && options.enableExtensions.length > 0) {
@@ -926,26 +1231,25 @@ export function resolve(
     code = `${extensions.join('\n')}\n\n${code}`;
   }
 
+  let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
+    name,
+    code: bindingReplacements.reduce(
+      (acc, [placeholder, idx]) => acc.replaceAll(placeholder, idx),
+      declarationCode,
+    ),
+  }));
+
+  if (options.minify) {
+    code = minify(code);
+    // TODO(#2804): remove this workaround
+    declarations = declarations.map((entry) => ({ ...entry, code: minify(entry.code) }));
+  }
+
   return {
     code,
+    declarations,
     usedBindGroupLayouts,
     catchall,
     logResources: ctx.logResources,
   };
-}
-
-export function resolveFunctionHeader(
-  ctx: ResolutionCtx,
-  args: Snippet[],
-  returnType: AnyData,
-) {
-  const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData).value}`)
-    .join(', ');
-
-  return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)}${
-      ctx.resolve(returnType).value
-    } `
-    : `(${argList}) `;
 }

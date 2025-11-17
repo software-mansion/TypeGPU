@@ -1,0 +1,37 @@
+---
+title: Migrating to 0.11
+---
+
+TypeGPU 0.11 brings a few API tweaks that require a small migration on the user's part. The following sections
+go into detail on what to do to migrate.
+
+## A new API to replace buffer.writePartial()
+
+The `buffer.writePartial` API is being deprecated in favor of `buffer.patch`.
+To migrate, simply replace any partial write of arrays in the form of `[{ idx: 2, value: foo }, /* ... */]` with `{ 2: foo, /* ... */ }`.
+
+```diff lang=ts
+const buffer = root.createBuffer(d.arrayOf(d.vec3f, 5)).$usage('storage');
+
+- buffer.writePartial([{ idx: 2, value: d.vec3f(1, 2, 3) }]);
++ buffer.patch({ 2: d.vec3f(1, 2, 3) });
+```
+
+## Stabilizing textures and samplers
+
+One by one, we're making our APIs available without the `['~unstable']` prefix, and this time around, it's **textures** and **samplers**.
+Just drop the unstable prefix, and you're good to go.
+
+```diff lang=ts
+- const sampler = root['~unstable'].createSampler({
++ const sampler = root.createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+- const texture = root['~unstable'].createTexture({
++ const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm' as const,
+}).$usage('sampled');
+```

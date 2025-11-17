@@ -1,0 +1,30 @@
+{
+  "name": "react-prerendering-test",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "dev:no-ssr": "NEXT_PUBLIC_DISABLE_SSR=1 next dev",
+    "build:no-ssr": "NEXT_PUBLIC_DISABLE_SSR=1 next build",
+    "check-ssr": "node checkSsr.mts"
+  },
+  "dependencies": {
+    "@typegpu/color": "workspace:*",
+    "@typegpu/noise": "workspace:*",
+    "@typegpu/react": "workspace:*",
+    "next": "^16.2.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typegpu": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@webgpu/types": "catalog:types",
+    "typescript": "catalog:types",
+    "unplugin-typegpu": "workspace:*"
+  }
+}

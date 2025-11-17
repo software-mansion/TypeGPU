@@ -1,167 +1,96 @@
-import cs from 'classnames';
-import { useAtom, useAtomValue } from 'jotai';
 import type { ReactNode } from 'react';
-import { useId, useRef } from 'react';
+import { useAtom } from 'jotai';
+import { useEffect, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
-import DiscordIconSvg from '../assets/discord-icon.svg';
-import GithubIconSvg from '../assets/github-icon.svg';
-import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
-import {
-  menuShownAtom,
-  menuShownMobileAtom,
-} from '../utils/examples/menuShownAtom.ts';
+import { exampleFullscreenAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
+import { useHydrated, useHydratedAtom } from '../utils/useHydrated.ts';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
-import { Button } from './design/Button.tsx';
-import { Toggle } from './design/Toggle.tsx';
-import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
 
 interface ExampleLayoutProps {
-  children?: ReactNode | undefined;
+  children?: ReactNode;
 }
 
-export function ExampleLayout(props: ExampleLayoutProps) {
-  const menuShown = useAtomValue(menuShownAtom);
-  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [codeShownMobile, setCodeShownMobile] = useAtom(
-    codeEditorShownMobileAtom,
-  );
+export function ExampleLayout({ children }: ExampleLayoutProps) {
+  const hydrated = useHydrated();
+  const [menuShown, setMenuShown] = useAtom(menuShownAtom);
+  const [fullscreen] = useHydratedAtom(exampleFullscreenAtom, false);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-examples-fullscreen', fullscreen);
+    return () => document.documentElement.removeAttribute('data-examples-fullscreen');
+  }, [fullscreen]);
+
+  useEffect(() => {
+    setMenuShown(window.innerWidth >= 1025);
+  }, [setMenuShown]);
 
   return (
-    <>
-      <div className='absolute top-4 left-4 z-50 flex gap-2 text-sm md:hidden'>
-        {menuShownMobile
-          ? null
-          : (
-            <Button onClick={() => setMenuShownMobile(true)}>
-              <img src={HamburgerSvg.src} alt='menu' className='-m-2 h-6 w-6' />
-            </Button>
-          )}
+    <div
+      className={
+        fullscreen
+          ? 'h-dvh w-full bg-tameplum-50 dark:bg-[#171a25]'
+          : 'relative isolate min-h-[calc(100dvh-6rem)] overflow-clip bg-[#f8f9ff] text-navy-100 dark:bg-[#1b1f2c] dark:text-almost-white'
+      }
+    >
+      <div
+        className={
+          fullscreen
+            ? 'flex h-full w-full'
+            : 'box-border flex w-full gap-5 px-4 py-5 sm:px-6 md:px-8 md:py-8'
+        }
+      >
+        {!fullscreen && (!hydrated || menuShown) && (
+          <SideMenu hiddenUntilDesktop={!hydrated} onClose={() => setMenuShown(false)} />
+        )}
 
-        <Button
-          onClick={() =>
-            setCodeShownMobile((codeShownMobile) => !codeShownMobile)}
-        >
-          {codeShownMobile ? 'Preview' : 'Code'}
-        </Button>
+        <main className={fullscreen ? 'h-full min-w-0 w-full flex-1' : 'min-w-0 flex-1'}>
+          {children}
+        </main>
       </div>
 
-      <div className='box-border flex h-dvh gap-4 bg-tameplum-50 p-4'>
-        {menuShown || menuShownMobile ? <SideMenu /> : null}
-        {props.children}
-      </div>
-    </>
+      {!fullscreen && (
+        <footer className="text-tameplum-600 dark:text-gray-300 box-border flex w-full items-center justify-center px-6 pb-6 text-center text-xs md:px-8">
+          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and copyrights belong
+          to their respective owners.
+        </footer>
+      )}
+    </div>
   );
 }
 
-function SideMenu() {
-  const menuShown = useAtomValue(menuShownAtom);
-  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [experimentalShowing, setExperimentalShowing] = useAtom(
-    experimentalExamplesShownAtom,
-  );
+function SideMenu({
+  hiddenUntilDesktop,
+  onClose,
+}: {
+  hiddenUntilDesktop: boolean;
+  onClose: () => void;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const experimentalExamplesToggleId = useId();
 
   return (
     <aside
-      className={cs(
-        menuShown ? '' : 'md:hidden',
-        menuShownMobile
-          ? 'absolute inset-0 z-50 w-full md:static'
-          : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:w-75 md:rounded-2xl',
-      )}
+      className={`border-tameplum-100 dark:border-white/10 dark:bg-[#232736] fixed inset-x-0 top-20 bottom-0 z-50 box-border w-full flex-col bg-white md:sticky md:top-28 md:bottom-auto md:z-10 md:max-h-[calc(100dvh-9rem)] md:w-84 md:shrink-0 md:overflow-hidden md:rounded-none md:border ${
+        hiddenUntilDesktop ? 'hidden min-[1025px]:flex' : 'flex'
+      }`}
     >
-      <header className='p-5'>
-        <div className='grid place-items-center'>
-          <a
-            href='/TypeGPU'
-            className='box-border grid h-20 cursor-pointer place-content-center'
-          >
-            <img
-              className='w-40'
-              src='/TypeGPU/typegpu-logo-light.svg'
-              alt='TypeGPU Logo'
-            />
-          </a>
+      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4">
+        <div>
+          <h2 className="text-navy-100 dark:text-almost-white mt-1 text-xl font-semibold">
+            Explore examples
+          </h2>
         </div>
-        <div className='absolute top-5 right-5 md:hidden'>
-          {menuShownMobile && (
-            <Button onClick={() => setMenuShownMobile(false)}>
-              <img src={CrossSvg.src} alt='Close menu' className='h-3 w-3' />
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <div className='box-border w-full px-5'>
-        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid size-9 shrink-0 place-items-center rounded-none bg-transparent"
+          aria-label="Close examples menu"
+        >
+          <img src={CrossSvg.src} alt="" className="size-3 dark:invert" />
+        </button>
       </div>
 
-      <div className='my-5 min-h-0 flex-1 overflow-y-auto px-5' ref={scrollRef}>
-        <section className='mb-5 space-y-2 border-tameplum-100 border-b pb-5'>
-          <h1 className='font-medium text-lg'>Welcome to examples page</h1>
-          <p className='text-sm'>
-            Test out the power of our TypeScript library and get to know
-            TypeGPU.
-          </p>
-          <a
-            href='/TypeGPU/why-typegpu'
-            className='bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-sm text-transparent underline'
-          >
-            Learn more about TypeGPU here
-          </a>
-        </section>
-
-        <SearchableExampleList
-          excludeTags={[experimentalShowing ? [] : ['experimental']].flat()}
-          scrollContainerRef={scrollRef}
-        />
-      </div>
-
-      <div className='box-border w-full px-5'>
-        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
-      </div>
-
-      <label
-        htmlFor={experimentalExamplesToggleId}
-        className='flex cursor-pointer items-center justify-between gap-3 p-5 text-sm'
-      >
-        <span>Experimental examples</span>
-        <Toggle
-          id={experimentalExamplesToggleId}
-          checked={experimentalShowing}
-          onChange={(e) => setExperimentalShowing(e.target.checked)}
-        />
-      </label>
-
-      <div className='flex justify-between px-5 pb-5 text-tameplum-800 text-xs'>
-        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
-        <div className='flex items-center gap-3'>
-          <a
-            href='https://discord.gg/8jpfgDqPcM'
-            target='_blank'
-            rel='noreferrer'
-          >
-            <img
-              src={DiscordIconSvg.src}
-              className='opacity-75'
-              alt='github logo'
-            />
-          </a>
-          <a
-            href='https://github.com/software-mansion/TypeGPU'
-            target='_blank'
-            rel='noreferrer'
-          >
-            <img
-              src={GithubIconSvg.src}
-              className='opacity-75'
-              alt='discord logo'
-            />
-          </a>
-        </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3" ref={scrollRef}>
+        <SearchableExampleList scrollContainerRef={scrollRef} />
       </div>
     </aside>
   );

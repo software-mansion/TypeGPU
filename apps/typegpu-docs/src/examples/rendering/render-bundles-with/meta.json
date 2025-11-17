@@ -1,0 +1,7 @@
+{
+  "title": "Render Bundles (.with API)",
+  "description": "Uses TypeGPU's fluent `.with` API to record reusable render bundles and efficiently redraw a large 3D scene.",
+  "category": "rendering",
+  "tags": ["3d", "rasterization", "performance"],
+  "coolFactor": 5
+}

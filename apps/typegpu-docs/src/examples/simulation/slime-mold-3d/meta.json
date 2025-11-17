@@ -1,5 +1,7 @@
 {
   "title": "Slime Mold 3d",
+  "description": "Extends a particle-based slime mold simulation into a volumetric trail field rendered through 3D ray marching.",
   "category": "simulation",
-  "tags": ["experimental", "compute", "double buffering"]
+  "tags": ["3d", "double buffering", "ecosystem", "particles", "ray marching"],
+  "coolFactor": 6
 }

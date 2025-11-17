@@ -1,5 +1,7 @@
 {
   "title": "Perlin Noise",
+  "description": "Visualizes configurable procedural Perlin noise generated with the TypeGPU noise package.",
   "category": "rendering",
-  "tags": ["experimental"]
+  "tags": ["ecosystem", "noise"],
+  "coolFactor": 7
 }

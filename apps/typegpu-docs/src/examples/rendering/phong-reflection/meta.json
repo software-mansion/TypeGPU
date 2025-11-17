@@ -1,5 +1,7 @@
 {
   "title": "Phong Reflection Model",
+  "description": "Demonstrates ambient, diffuse, and specular terms of the Phong lighting model on interactive 3D geometry.",
   "category": "rendering",
-  "tags": ["experimental", "3d"]
+  "tags": ["3d", "lighting", "rasterization"],
+  "coolFactor": 6
 }

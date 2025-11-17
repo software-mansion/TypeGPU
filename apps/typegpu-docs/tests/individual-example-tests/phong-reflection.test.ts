@@ -1,0 +1,89 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
+import {
+  mock3DModelLoading,
+  mockCreateImageBitmap,
+  mockResizeObserver,
+} from './utils/commonMocks.ts';
+
+describe('phong reflection example', () => {
+  setupCommonMocks();
+
+  it('should produce valid code', async ({ device }) => {
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'phong-reflection',
+        setupMocks: () => {
+          mockResizeObserver();
+          mockCreateImageBitmap();
+          mock3DModelLoading();
+        },
+        expectedCalls: 1,
+      },
+      device,
+    );
+
+    expect(shaderCodes).toMatchInlineSnapshot(`
+      "struct Camera {
+        position: vec4f,
+        targetPos: vec4f,
+        view: mat4x4f,
+        projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
+      }
+
+      @group(0) @binding(0) var<uniform> cameraUniform: Camera;
+
+      struct vertexShader_Output {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+        @builtin(position) canvasPosition: vec4f,
+      }
+
+      @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f) -> vertexShader_Output {
+        let worldPosition = vec4f(modelPosition, 1f);
+        let camera = (&cameraUniform);
+        let canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
+        return vertexShader_Output(modelPosition, modelNormal, canvasPosition);
+      }
+
+      struct ExampleControls {
+        lightColor: vec3f,
+        lightDirection: vec3f,
+        ambientColor: vec3f,
+        ambientStrength: f32,
+        specularExponent: f32,
+      }
+
+      @group(0) @binding(1) var<uniform> exampleControlsUniform: ExampleControls;
+
+      struct fragmentShader_Input {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+      }
+
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        let lightColor = normalize(exampleControlsUniform.lightColor);
+        let lightDirection = normalize(exampleControlsUniform.lightDirection);
+        let ambientColor = (&exampleControlsUniform.ambientColor);
+        let ambientStrength = exampleControlsUniform.ambientStrength;
+        let specularStrength = exampleControlsUniform.specularExponent;
+        let ambient = ((*ambientColor) * ambientStrength);
+        let cosTheta = dot(_arg_0.worldNormal, lightDirection);
+        let diffuse = (lightColor * max(0f, cosTheta));
+        let reflectionDirection = reflect((lightDirection * -1f), _arg_0.worldNormal);
+        let viewDirection = normalize((cameraUniform.position.xyz - _arg_0.worldPosition));
+        let specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularStrength));
+        let color = ((ambient + diffuse) + specular);
+        return vec4f(color, 1f);
+      }"
+    `);
+  });
+});

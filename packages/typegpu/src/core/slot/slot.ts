@@ -1,9 +1,9 @@
 import { getResolutionCtx } from '../../execMode.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
-import type { TgpuSlot } from './slotTypes.ts';
+import type { TgpuSlot, TgpuSlotSoul } from './slotTypes.ts';
 
 // ----------
 // Public API
@@ -18,10 +18,21 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 // --------------
 
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
-  public readonly [$internal] = true;
-  public readonly resourceType = 'slot';
+  readonly [$internal] = true;
+  readonly [$soul]: TgpuSlotSoul<T>;
+  readonly resourceType = 'slot';
 
-  constructor(public defaultValue: T | undefined = undefined) {}
+  constructor(defaultValue: T | undefined = undefined) {
+    this[$soul] = {
+      type: 'slot',
+      defaultValue,
+      label: undefined,
+    };
+  }
+
+  get defaultValue(): T | undefined {
+    return this[$soul].defaultValue;
+  }
 
   $name(label: string) {
     setName(this, label);
@@ -45,11 +56,7 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
     return getGpuValueRecursively(ctx.unwrap(this));
   }
 
-  get value(): GPUValueOf<T> {
-    return this[$gpuValueOf];
-  }
-
   get $(): GPUValueOf<T> {
-    return this.value;
+    return this[$gpuValueOf];
   }
 }

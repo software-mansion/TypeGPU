@@ -1,0 +1,8 @@
+{
+  "title": "Lines Combinations",
+  "description": "Demonstrates the TypeGPU line-rendering package by drawing several joins, caps, widths, and connected-line configurations.",
+  "category": "geometry",
+  "tags": ["ecosystem", "line-rendering"],
+  "dev": true,
+  "coolFactor": 6
+}

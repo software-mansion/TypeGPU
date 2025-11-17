@@ -30,10 +30,10 @@ canvas.height = canvas.clientHeight * devicePixelRatio;
 ```
 
 Canvas’ inner width and height need to be adjusted to its outer properties multiplied by the device’s pixel ratio - because canvas is pixel ratio independent.
-Then, start off with TypeGPU by creating its [`root`](/TypeGPU/fundamentals/roots/) object:
+Then, start off with TypeGPU by creating its [`root`](/TypeGPU/apis/roots/) object:
 
 ```ts
-import tgpu from "typegpu";
+import { tgpu } from "typegpu";
 const root = await tgpu.init();
 ```
 
@@ -74,12 +74,12 @@ Now we just need to define the variables used there. Let’s quickly go through 
     `bindGroupLayoutCompute` - that is a bind group layout. 
     What is a bind group layout? 
     Well, it serves as a blueprint for a bind group. 
-    Sooo, what is a [bind group?](/TypeGPU/fundamentals/bind-groups/)
-    A [bind group](/TypeGPU/fundamentals/bind-groups/) is a set of variables, that can be bound to shaders through a pipeline, and accessed both in JS and WGSL code. 
+    Sooo, what is a [bind group?](/TypeGPU/apis/bind-groups/)
+    A [bind group](/TypeGPU/apis/bind-groups/) is a set of variables, that can be bound to shaders through a pipeline, and accessed both in JS and WGSL code. 
 
     WebGPU API is really low-level - to create a bind group and its layout, you have to create buffers with adequate size, type and paddings, and keep in mind their order in the bind group. If you calculate the paddings incorrectly, you may not get a proper error, but end up with your colors shifted. 
 
-    Fortunately, we can leave the tricky stuff to the TypeGPU - just define the schema for your data using [`data schemas`](/TypeGPU/fundamentals/data-schemas/). Moreover, . What more, we can infer the bind group layout from the shader’s code. 
+    Fortunately, we can leave the tricky stuff to the TypeGPU - just define the schema for your data using [`data schemas`](/TypeGPU/apis/data-schemas/). Moreover, . What more, we can infer the bind group layout from the shader’s code. 
   </li>
   <li>
     `computeShader` - That’s the shader code which is going to be executed in this pipeline

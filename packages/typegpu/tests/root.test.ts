@@ -1,10 +1,50 @@
 import { describe, expect, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { Void } from '../src/data/wgslTypes.ts';
-import tgpu from '../src/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { Void } from 'typegpu/data';
+import { tgpu, d } from 'typegpu';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuRoot', () => {
+  describe('tgpu.init', () => {
+    it('requests a device when WebGPU is enabled', async ({ adapter }) => {
+      const requestDevice = vi.spyOn(adapter, 'requestDevice');
+      const root = await tgpu.init();
+
+      try {
+        expect(root).toBeDefined();
+        expect(requestDevice).toHaveBeenCalledOnce();
+      } finally {
+        root.destroy();
+      }
+    });
+
+    it('throws when WebGPU is disabled', async ({ disableWebGPU }) => {
+      disableWebGPU();
+
+      await expect(tgpu.init()).rejects.toThrowErrorMatchingInlineSnapshot(
+        `[Error: WebGPU is not supported by this browser.]`,
+      );
+    });
+
+    it('does not forward optionalFeatures to requestDevice', async ({ adapter }) => {
+      const root = await tgpu.init({
+        device: { optionalFeatures: ['timestamp-query'] },
+      });
+
+      expect(adapter.requestDevice.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "requiredFeatures": [
+                "timestamp-query",
+              ],
+            },
+          ],
+        ]
+      `);
+      root.destroy();
+    });
+  });
+
   describe('.createBuffer', () => {
     it('should create buffer with no initialization', ({ root }) => {
       const dataBuffer = root.createBuffer(d.u32).$usage('uniform');
@@ -17,16 +57,12 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 4,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
 
     it('should create buffer with initialization', ({ root }) => {
-      const dataBuffer = root
-        .createBuffer(d.vec3i, d.vec3i(0, 0, 0))
-        .$usage('uniform');
+      const dataBuffer = root.createBuffer(d.vec3i, d.vec3i(0, 0, 0)).$usage('uniform');
 
       const mockBuffer = root.unwrap(dataBuffer);
       expect(mockBuffer).toBeDefined();
@@ -36,9 +72,7 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: true,
         size: 12,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
 
@@ -52,9 +86,7 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 12,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
   });
@@ -98,10 +130,7 @@ describe('TgpuRoot', () => {
     });
 
     it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({ root }) => {
-      const vertexLayout = tgpu.vertexLayout(
-        d.arrayOf(d.location(0, d.vec2u)),
-        'vertex',
-      );
+      const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.location(0, d.vec2u)), 'vertex');
 
       expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 8,
@@ -116,17 +145,16 @@ describe('TgpuRoot', () => {
       });
     });
 
-    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({ root }) => {
+    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({
+      root,
+    }) => {
       const VertexData = d.unstruct({
         position: d.location(0, d.float32x3),
         color: d.location(1, d.unorm10_10_10_2),
         something: d.location(2, d.u32),
       });
 
-      const vertexLayout = tgpu.vertexLayout(
-        d.disarrayOf(VertexData),
-        'instance',
-      );
+      const vertexLayout = tgpu.vertexLayout(d.disarrayOf(VertexData), 'instance');
 
       expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 20,
@@ -161,13 +189,13 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('storage')
+          .$usage('storage'),
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('uniform')
+          .$usage('uniform'),
       ).toThrow();
 
       root.createBuffer(d.unstruct({ a: d.u32 })).$usage('vertex');
@@ -175,32 +203,32 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('storage')
+          .$usage('storage'),
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('uniform')
+          .$usage('uniform'),
       ).toThrow();
     });
   });
 
-  describe('beginRenderPass', () => {
+  describe('createCommandEncoder', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
-    const mainVertexUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexUsing = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
-      layout.bound.foo.value;
+      layout.$.foo;
       return {
         pos: d.vec4f(),
       };
     });
 
     // A vertex function that is using none of the layout's entries
-    const mainVertexNotUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexNotUsing = tgpu.vertexFn({
       out: {
         pos: d.builtin.position,
       },
@@ -208,89 +236,76 @@ describe('TgpuRoot', () => {
       pos: d.vec4f(),
     }));
 
-    const mainFragment = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
+    const mainFragment = tgpu.fragmentFn({ out: Void })(() => {});
 
-    it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
+    it('ignores bind groups that are not used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexNotUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexNotUsing,
+        fragment: mainFragment,
+      });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).not.toBeCalled();
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).not.toBeCalled();
+      expect(renderPassEncoder.end).toBeCalled();
     });
 
-    it('accepts bind groups that are used in the shader', ({ root, commandEncoder }) => {
+    it('accepts bind groups that are used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexUsing,
+        fragment: mainFragment,
+      });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
 
-    it('respects bind groups bound directly to pipelines', ({ root, commandEncoder }) => {
+    it('respects bind groups bound directly to pipelines', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
       const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: mainVertexUsing,
+          fragment: mainFragment,
+        })
         .with(group);
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
   });
 

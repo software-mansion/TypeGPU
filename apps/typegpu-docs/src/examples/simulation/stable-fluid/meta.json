@@ -1,5 +1,7 @@
 {
   "title": "Stable Fluids",
+  "description": "Implements an interactive stable-fluids solver with advection, diffusion, pressure projection, and double-buffered GPU fields.",
   "category": "simulation",
-  "tags": ["experimental", "double buffering"]
+  "tags": ["double buffering", "fluid", "interaction"],
+  "coolFactor": 8
 }

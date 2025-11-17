@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { isCloseTo, log } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { isCloseTo, log } from 'typegpu/std';
 
 describe('log', () => {
   it('computes natural logarithm of numeric value', () => {

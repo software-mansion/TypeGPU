@@ -1,33 +1,29 @@
-export const smoothstepScalar = (
-  edge0: number,
-  edge1: number,
-  x: number,
-): number => {
+export const smoothstepScalar = (edge0: number, edge1: number, x: number): number => {
   if (edge0 === edge1) {
     return 0; // WGSL spec says this is an indeterminate value
   }
-  const t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+  const t = clampScalar((x - edge0) / (edge1 - edge0), 0.0, 1.0);
   return t * t * (3 - 2 * t);
 };
 
-export const clamp = (value: number, low: number, high: number) =>
+export const clampScalar = (value: number, low: number, high: number) =>
   Math.min(Math.max(low, value), high);
 
-export const divInteger = (lhs: number, rhs: number) => {
-  if (rhs === 0) {
-    return lhs;
-  }
-  return Math.trunc(lhs / rhs);
-};
-
+const buf32 = new ArrayBuffer(4);
+const f32arr = new Float32Array(buf32);
+const u32arr = new Uint32Array(buf32);
+const i32arr = new Int32Array(buf32);
 export function bitcastU32toF32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setUint32(0, n, true);
-  return dataView.getFloat32(0, true);
+  u32arr[0] = n;
+  return f32arr[0] as number;
 }
 
 export function bitcastU32toI32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setUint32(0, n, true);
-  return dataView.getInt32(0, true);
+  u32arr[0] = n;
+  return i32arr[0] as number;
+}
+
+export function bitcastF32toU32Impl(n: number): number {
+  f32arr[0] = n;
+  return u32arr[0] as number;
 }

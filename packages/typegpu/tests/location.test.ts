@@ -1,7 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('d.location', () => {
   it('adds @location attribute for struct members', () => {
@@ -21,25 +19,17 @@ describe('d.location', () => {
       }>
     >();
 
-    const opts = {
-      namespace: namespace({ names: 'strict' }),
-    };
-
-    expect(resolve(s1, opts).code).toContain('@location(3) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@location(3) b: u32,');
   });
 });
 
 describe('d.HasCustomLocation', () => {
   it('determines if a type has any location attributes', () => {
     const schemaWithLocation = d.location(5, d.u32);
-    expectTypeOf<
-      d.HasCustomLocation<typeof schemaWithLocation>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<d.HasCustomLocation<typeof schemaWithLocation>>().toEqualTypeOf<true>();
 
     const schemaWithoutLocation = d.size(32, d.u32);
-    expectTypeOf<
-      d.HasCustomLocation<typeof schemaWithoutLocation>
-    >().toEqualTypeOf<false>();
+    expectTypeOf<d.HasCustomLocation<typeof schemaWithoutLocation>>().toEqualTypeOf<false>();
 
     const builtin = d.builtin.clipDistances;
     expectTypeOf<d.HasCustomLocation<typeof builtin>>().toEqualTypeOf<false>();

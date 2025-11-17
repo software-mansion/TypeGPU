@@ -41,9 +41,8 @@ export const atomWithUrl = <T>(
   defaultValue: T,
   options?: { encode: (val: T) => string; decode: (val: string) => unknown },
 ) => {
-  const optionsOrInferred = options ??
-    typeToParam[typeof defaultValue as keyof typeof typeToParam] ??
-    objParam;
+  const optionsOrInferred =
+    options ?? typeToParam[typeof defaultValue as keyof typeof typeToParam] ?? objParam;
 
   const { encode, decode } = optionsOrInferred;
 

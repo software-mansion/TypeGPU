@@ -1,12 +1,7 @@
 {
   "title": "MNIST Inference",
+  "description": "Runs handwritten-digit inference on the GPU and visualizes the model's confidence scores for an interactively drawn digit.",
   "category": "algorithms",
-  "tags": [
-    "ai",
-    "compute",
-    "inference",
-    "timestamp query",
-    "subgroups",
-    "experimental"
-  ]
+  "tags": ["ai", "inference", "interaction", "machine learning"],
+  "coolFactor": 7
 }

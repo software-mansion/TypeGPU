@@ -2,11 +2,7 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import {
-  applyExternals,
-  type ExternalMap,
-  replaceExternalsInWgsl,
-} from '../resolve/externals.ts';
+import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 
 // ----------
 // Public API
@@ -37,33 +33,35 @@ export function declare(declaration: string): TgpuDeclare {
 
 class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
   readonly [$internal] = true;
-  private externalsToApply: ExternalMap[] = [];
+  #externals: ExternalMap | undefined;
+  #declaration: string;
 
-  constructor(private declaration: string) {}
+  constructor(declaration: string) {
+    this.#declaration = declaration;
+  }
 
   $uses(dependencyMap: Record<string, unknown>): this {
-    this.externalsToApply.push(dependencyMap);
+    if (this.#externals !== undefined) {
+      throw new Error(
+        "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+      );
+    }
+    this.#externals = dependencyMap;
     return this;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const externalMap: ExternalMap = {};
-
-    for (const externals of this.externalsToApply) {
-      applyExternals(externalMap, externals);
-    }
-
     const replacedDeclaration = replaceExternalsInWgsl(
       ctx,
-      externalMap,
-      this.declaration,
+      this.#externals ?? {},
+      this.#declaration,
     );
 
     ctx.addDeclaration(replacedDeclaration);
-    return snip('', Void);
+    return snip('', Void, /* origin */ 'constant');
   }
 
   toString() {
-    return `declare: ${this.declaration}`;
+    return `declare: ${this.#declaration}`;
   }
 }

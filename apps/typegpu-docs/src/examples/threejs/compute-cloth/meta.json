@@ -1,0 +1,7 @@
+{
+  "title": "Three.js - compute / cloth",
+  "description": "Simulates an interactive cloth mesh with GPU compute constraints and renders the result through Three.js WebGPU.",
+  "category": "threejs",
+  "tags": ["3d", "ecosystem", "interaction", "physics"],
+  "coolFactor": 5
+}

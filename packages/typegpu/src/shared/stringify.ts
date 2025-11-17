@@ -1,6 +1,11 @@
 import { isMatInstance, isVecInstance } from '../data/wgslTypes.ts';
+import { logger } from '../tgpuLogger.ts';
 
 export function safeStringify(item: unknown): string {
+  if (Array.isArray(item)) {
+    return `[${item.map(safeStringify).join(', ')}]`;
+  }
+
   const asString = String(item);
   if (asString !== '[object Object]') {
     return asString;
@@ -9,7 +14,7 @@ export function safeStringify(item: unknown): string {
   try {
     return JSON.stringify(item);
   } catch (error) {
-    console.error('Error parsing JSON:', error);
+    logger.warn('suspicious', 'Error parsing JSON:', error);
     return '<invalid json>';
   }
 }
@@ -24,11 +29,9 @@ export function niceStringify(item: unknown): string {
   }
 
   if (item && typeof item === 'object') {
-    return `{ ${
-      Object.entries(item).map(([key, value]) =>
-        `${key}: ${niceStringify(value)}`
-      ).join(', ')
-    } }`;
+    return `{ ${Object.entries(item)
+      .map(([key, value]) => `${key}: ${niceStringify(value)}`)
+      .join(', ')} }`;
   }
 
   return String(item);

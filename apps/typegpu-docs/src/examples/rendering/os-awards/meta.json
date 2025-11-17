@@ -1,0 +1,7 @@
+{
+  "title": "OS Awards",
+  "description": "Recreates an interactive 3D awards scene with animated camera movement, layered geometry, and polished rasterized materials.",
+  "category": "rendering",
+  "tags": ["3d", "camera", "rasterization"],
+  "coolFactor": 9
+}

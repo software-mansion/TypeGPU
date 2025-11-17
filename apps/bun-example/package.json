@@ -1,17 +1,17 @@
 {
   "name": "bun-example",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "index.ts",
+  "dependencies": {
+    "@typegpu/noise": "workspace:",
+    "typegpu": "workspace:",
+    "unplugin-typegpu": "workspace:"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "typegpu": "workspace:",
-    "unplugin-typegpu": "workspace:",
-    "@typegpu/noise": "workspace:"
   }
 }

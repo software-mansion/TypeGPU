@@ -8,12 +8,12 @@ import { vec2f } from '../data/vector.ts';
  *
  * @example
  * ```ts
- * import { fullScreenTriangle } from 'typegpu/common';
+ * import { common } from 'typegpu';
  *
- * const pipeline = root['~unstable']
- *   .withVertex(fullScreenTriangle)
- *   .withFragment(yourFragmentShader)
- *   .createPipeline();
+ * const pipeline = root.createRenderPipeline({
+ *   vertex: common.fullScreenTriangle,
+ *   fragment: yourFragmentShader,
+ * });
  *
  * pipeline.draw(3);
  * ```

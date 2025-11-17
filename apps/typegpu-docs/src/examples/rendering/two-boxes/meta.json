@@ -1,5 +1,7 @@
 {
   "title": "Two Boxes",
+  "description": "Renders two independently transformed 3D boxes with typed vertex data, depth testing, and camera matrices.",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization"]
+  "tags": ["3d", "rasterization"],
+  "coolFactor": 4
 }

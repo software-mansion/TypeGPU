@@ -1,15 +1,15 @@
 ---
-title: Generator CLI
-description: A guide on how to use the TypeGPU Generator CLI
+title: WGSL to TypeGPU
+description: Convert existing WGSL shader files into TypeGPU definitions with tgpu-gen.
 ---
 
 import { FileTree } from '@astrojs/starlight/components';
 import FileDiff from '../../../components/FileDiff.astro';
 
-TypeGPU Generator (tgpu-gen) is a CLI companion tool that transforms WGSL code files into
+`tgpu-gen` is a WGSL migration tool that transforms WGSL code files into
 matching TypeGPU definitions. It can be used for integrating TypeGPU into established WebGPU projects, or automating the migration process.
 
-- ✨ Generate TypeGPU definitions from WGSL shaders
+- ✨ Convert WGSL shaders into TypeGPU definitions
 - 👀 Continuously watch for changes in WGSL files and update the generated definitions
 - 🌲 Specify input and output using glob patterns
 - 🎯 Choose the output extension and CJS or ESM format
@@ -179,7 +179,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 If we wanted to leverage TypeGPU's type-safe features with these shaders, we could
 manually create the necessary definitions. However, maintaining these handcrafted
 definitions in sync with the shaders can be both tedious and prone to errors.
-Fortunately, we don't have to do that; we can use the TypeGPU Generator CLI to automatically generate the required TypeScript definitions for us.
+Fortunately, we don't have to do that; we can use `tgpu-gen` to automatically generate the required TypeScript definitions for us.
 
 Assuming that we are inside the project directory (computeBoids folder), we can run the following command to generate the TypeScript definitions for the shaders:
 
@@ -209,7 +209,7 @@ The generated TypeScript definitions look like this:
   <summary>Click to see the content</summary>
   ```typescript
   /* generated via tgpu-gen by TypeGPU */
-  import tgpu from 'typegpu';
+  import { tgpu } from 'typegpu';
   import * as d from 'typegpu/data';
 
   /* structs */
@@ -272,7 +272,7 @@ For specific usage details, check out the following Usage section.
 
 ## Usage
 
-This section will cover the most common use cases of the TypeGPU Generator CLI and provide short examples.
+This section covers the most common `tgpu-gen` use cases and provides short examples.
 
 ### Generate TypeGPU definitions for WGSL shader files
 
@@ -304,7 +304,7 @@ The quotes are not necessary if the path does not contain spaces. However, using
 If you are using glob patterns, quotes are required to prevent the shell from expanding them.
 :::
 
-TypeGPU Generator CLI supports glob patterns for specifying input paths.
+`tgpu-gen` supports glob patterns for specifying input paths.
 The following command will generate TypeGPU definitions for all WGSL files inside a given directory:
 
 ```bash
@@ -526,7 +526,7 @@ This will overwrite the existing TypeScript files with the new TypeGPU definitio
 
 ### Watch mode
 
-TypeGPU Generator CLI supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
+`tgpu-gen` supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
 To enable the watch mode, use the `--watch` (or `-w`) option:
 
 ```bash
@@ -539,7 +539,7 @@ By default, the watch mode will overwrite the existing files when changes are de
 You can also use the `--keep` and `--overwrite` options in the watch mode. They will only affect the initial generation.
 
 
-## Getting help with the Generator CLI
+## Getting help with tgpu-gen
 
 To get a quick overview of the generator, its arguments and options, run:
 

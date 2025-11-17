@@ -1,9 +1,10 @@
 // @ts-check
+/// <reference types="node" />
 
 import { type } from 'arktype';
 import { readPackageJSON } from 'pkg-types';
 
-const PublishTags = /** @type {const} */ (['alpha', 'beta']);
+const PublishTags = /** @type {const} */ (['alpha', 'beta', 'rc', 'nightly']);
 
 const PublishTag = type.or(
   'undefined',
@@ -16,7 +17,7 @@ const chosenPublishTag = PublishTag.assert(process.env.npm_config_tag);
 export function verifyPublishTag() {
   let tagVerified = false;
   for (const tag of PublishTags) {
-    if (packageJSON.version?.includes(tag)) {
+    if (packageJSON.version?.includes(`-${tag}.`)) {
       if (tag !== chosenPublishTag) {
         throw new Error(
           `Publishing under a mismatched tag "${chosenPublishTag}" for version ${packageJSON.version}. Use --tag ${tag}`,

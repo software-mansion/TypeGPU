@@ -1,5 +1,3 @@
 {
-  "recommendations": [
-    "emeraldwalk.runonsave"
-  ]
+  "recommendations": ["astro-build.astro-vscode", "oxc.oxc-vscode"]
 }

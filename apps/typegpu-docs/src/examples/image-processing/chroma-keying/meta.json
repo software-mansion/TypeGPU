@@ -1,5 +1,7 @@
 {
   "title": "Chroma Keying",
+  "description": "Removes a selected color range from live camera footage and composites the remaining foreground using GPU chroma keying.",
   "category": "image-processing",
-  "tags": ["camera", "filtering"]
+  "tags": ["camera", "color", "ecosystem", "filtering", "segmentation"],
+  "coolFactor": 5
 }

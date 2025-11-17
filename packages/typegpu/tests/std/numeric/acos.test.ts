@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f } from '../../../src/data/index.ts';
-import { acos, isCloseTo } from '../../../src/std/index.ts';
+import { vec3f } from 'typegpu/data';
+import { acos, isCloseTo } from 'typegpu/std';
 
 describe('acos', () => {
   it('computes acos of numeric value', () => {
@@ -10,8 +10,6 @@ describe('acos', () => {
   });
 
   it('computes acos for two vectors', () => {
-    expect(
-      isCloseTo(acos(vec3f(-1, 0, 1)), vec3f(Math.PI, Math.PI / 2, 0)),
-    ).toBe(true);
+    expect(isCloseTo(acos(vec3f(-1, 0, 1)), vec3f(Math.PI, Math.PI / 2, 0))).toBe(true);
   });
 });

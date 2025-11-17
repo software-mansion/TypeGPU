@@ -1,6 +1,7 @@
 ---
-import VanillaSidebar from "@astrojs/starlight/components/Sidebar.astro";
-import ChallengesSignupPopover from "../shaderhunt/ChallengesSignupPopover.astro";
+import VanillaSidebar from '@astrojs/starlight/components/Sidebar.astro';
+import AcademySignupPopover from '../academy/AcademySignupPopover.astro';
+import AcademyLogo from './typegpu-academy-logomark.svg';
 ---
 
 <div class="md:sl-hidden">
@@ -9,11 +10,14 @@ import ChallengesSignupPopover from "../shaderhunt/ChallengesSignupPopover.astro
 <div class="md:sl-hidden">
   <a href="/TypeGPU/examples">Examples</a>
 </div>
-<ChallengesSignupPopover>
-    <div class="md:sl-hidden">
-        <a href="/TypeGPU/getting-started">Challenges</a>
-    </div>
-</ChallengesSignupPopover>
+<AcademySignupPopover>
+  <div class="md:sl-hidden">
+    <a href="/TypeGPU/getting-started">
+      <AcademyLogo width={20} height={20} aria-hidden="true" />
+      Academy
+    </a>
+  </div>
+</AcademySignupPopover>
 <div class="md:sl-hidden">
   <a href="/TypeGPU/blog">Blog</a>
 </div>
@@ -30,6 +34,8 @@ import ChallengesSignupPopover from "../shaderhunt/ChallengesSignupPopover.astro
     font-size: var(--sl-text-md);
     font-weight: 600;
     text-decoration: none;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
   }
 </style>

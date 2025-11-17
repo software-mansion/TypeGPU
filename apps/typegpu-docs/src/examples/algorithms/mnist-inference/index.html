@@ -2,8 +2,6 @@
 <div class="example">
   <canvas></canvas>
   <div class="predictions-container">
-    <div class="predictions-label">Predictions (-.--ms)</div>
-
     <div class="bars-container">
       <div class="bar">O</div>
       <div class="bar">1</div>
@@ -19,6 +17,7 @@
 
     <div class="info">
       <div>Subgroups: <span id="subgroups-status">-</span></div>
+      <div>Precision: <span id="precision-status">-</span></div>
       <div>Inference: <span id="inference-time">-</span></div>
     </div>
   </div>
@@ -49,11 +48,6 @@
     justify-content: center;
     padding: 0.5rem;
     gap: 1rem;
-  }
-
-  .predictions-label {
-    margin-bottom: 0.5rem;
-    font-size: 1.25rem;
   }
 
   .bars-container {
@@ -116,7 +110,7 @@
   }
 
   .info span {
-    font-family: 'Monaco', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
     color: #1e293b;
   }
@@ -133,7 +127,7 @@
     position: relative;
     height: 1.25rem;
     width: 100%;
-    font-family: 'Monaco', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     background: linear-gradient(to right, transparent, #e6e6f2);
     border-radius: 9999px;
@@ -159,6 +153,8 @@
     position: absolute;
     left: 2rem;
     border-radius: 9999px;
-    transition: width 0.2s ease-in-out, opacity 0.5s ease-in-out;
+    transition:
+      width 0.2s ease-in-out,
+      opacity 0.5s ease-in-out;
   }
 </style>

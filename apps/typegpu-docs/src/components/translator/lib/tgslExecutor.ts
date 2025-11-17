@@ -1,25 +1,32 @@
 import { mapValues, pipe } from 'remeda';
 import rolldownPlugin from 'unplugin-typegpu/rolldown-browser';
 import { bundle } from './rolldown.ts';
-import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
+import type { SandboxModuleDefinition } from '../../../utils/examples/sandboxModules.ts';
 
 const moduleImports = {
   'typed-binary': 'https://esm.sh/typed-binary@latest',
+  'tsover-runtime': 'https://esm.sh/tsover-runtime@latest',
 } as Record<string, string>;
 
 type TgslModule = Record<string, unknown>;
 
-async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
+async function executeTgslModule(
+  tgslCode: string,
+  sandboxModules: Record<string, SandboxModuleDefinition>,
+): Promise<TgslModule> {
   const result = await bundle(
     {
-      ...pipe(SANDBOX_MODULES, mapValues((val) => val.import)),
+      ...pipe(
+        sandboxModules,
+        mapValues((val) => val.import),
+      ),
       '/shader.ts': { content: tgslCode },
       '/index.ts': {
         content: `
-          import tgpu from 'typegpu';
+          import { tgpu } from 'typegpu';
           import * as exports from './shader.ts';
 
-          const shaderCode = tgpu.resolve({ externals: exports });
+          const shaderCode = tgpu.resolve(Object.values(exports));
           export default shaderCode;
         `,
       },
@@ -27,7 +34,7 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
     ['./index.ts'],
     {
       plugins: [rolldownPlugin({})],
-      external: ['typed-binary'],
+      external: ['typed-binary', 'tsover-runtime'],
     },
   );
 
@@ -52,16 +59,18 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   }
 }
 
-export async function executeTgslCode(tgslCode: string): Promise<string> {
+export async function executeTgslCode(
+  tgslCode: string,
+  sandboxModules: Record<string, SandboxModuleDefinition>,
+): Promise<string> {
   try {
-    const shaderCode = await executeTgslModule(tgslCode);
+    const shaderCode = await executeTgslModule(tgslCode, sandboxModules);
     return shaderCode.default as string;
   } catch (error) {
     console.error(error);
     throw new Error(
-      `Failed to execute TGSL code: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `Failed to execute TGSL code: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }

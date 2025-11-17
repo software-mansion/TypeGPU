@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../../../src/index.ts';
+import { tgpu, d } from 'typegpu';
 import {
   vec2b,
   vec2f,
@@ -16,10 +16,8 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import * as d from '../../../src/data/index.ts';
-import { select } from '../../../src/std/boolean.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
+} from 'typegpu/data';
+import { select } from 'typegpu/std';
 
 describe('select', () => {
   it('selects for numbers', () => {
@@ -33,15 +31,11 @@ describe('select', () => {
   });
 
   it('selects for f32 vectors', () => {
+    expect(select(vec2f(-1.1, -2.2), vec2f(1.1, 2.2), vec2b(false, true))).toStrictEqual(
+      vec2f(-1.1, 2.2),
+    );
     expect(
-      select(vec2f(-1.1, -2.2), vec2f(1.1, 2.2), vec2b(false, true)),
-    ).toStrictEqual(vec2f(-1.1, 2.2));
-    expect(
-      select(
-        vec3f(-1.1, -2.2, -3.3),
-        vec3f(1.1, 2.2, 3.3),
-        vec3b(true, false, true),
-      ),
+      select(vec3f(-1.1, -2.2, -3.3), vec3f(1.1, 2.2, 3.3), vec3b(true, false, true)),
     ).toStrictEqual(vec3f(1.1, -2.2, 3.3));
     expect(
       select(
@@ -53,15 +47,11 @@ describe('select', () => {
   });
 
   it('selects for f16 vectors', () => {
+    expect(select(vec2h(-1.1, -2.2), vec2h(1.1, 2.2), vec2b(false, true))).toStrictEqual(
+      vec2h(-1.1, 2.2),
+    );
     expect(
-      select(vec2h(-1.1, -2.2), vec2h(1.1, 2.2), vec2b(false, true)),
-    ).toStrictEqual(vec2h(-1.1, 2.2));
-    expect(
-      select(
-        vec3h(-1.1, -2.2, -3.3),
-        vec3h(1.1, 2.2, 3.3),
-        vec3b(true, false, true),
-      ),
+      select(vec3h(-1.1, -2.2, -3.3), vec3h(1.1, 2.2, 3.3), vec3b(true, false, true)),
     ).toStrictEqual(vec3h(1.1, -2.2, 3.3));
     expect(
       select(
@@ -73,47 +63,31 @@ describe('select', () => {
   });
 
   it('selects for i32 vectors', () => {
+    expect(select(vec2i(-1, -2), vec2i(1, 2), vec2b(true, false))).toStrictEqual(vec2i(1, -2));
+    expect(select(vec3i(-1, -2, -3), vec3i(1, 2, 3), vec3b(true, true, false))).toStrictEqual(
+      vec3i(1, 2, -3),
+    );
     expect(
-      select(vec2i(-1, -2), vec2i(1, 2), vec2b(true, false)),
-    ).toStrictEqual(vec2i(1, -2));
-    expect(
-      select(vec3i(-1, -2, -3), vec3i(1, 2, 3), vec3b(true, true, false)),
-    ).toStrictEqual(vec3i(1, 2, -3));
-    expect(
-      select(
-        vec4i(-1, -2, -3, -4),
-        vec4i(1, 2, 3, 4),
-        vec4b(true, false, false, true),
-      ),
+      select(vec4i(-1, -2, -3, -4), vec4i(1, 2, 3, 4), vec4b(true, false, false, true)),
     ).toStrictEqual(vec4i(1, -2, -3, 4));
   });
 
   it('selects for u32 vectors', () => {
+    expect(select(vec2u(11, 12), vec2u(1, 2), vec2b(true, false))).toStrictEqual(vec2u(1, 12));
+    expect(select(vec3u(11, 12, 13), vec3u(1, 2, 3), vec3b(true, true, false))).toStrictEqual(
+      vec3u(1, 2, 13),
+    );
     expect(
-      select(vec2u(11, 12), vec2u(1, 2), vec2b(true, false)),
-    ).toStrictEqual(vec2u(1, 12));
-    expect(
-      select(vec3u(11, 12, 13), vec3u(1, 2, 3), vec3b(true, true, false)),
-    ).toStrictEqual(vec3u(1, 2, 13));
-    expect(
-      select(
-        vec4u(11, 12, 13, 14),
-        vec4u(1, 2, 3, 4),
-        vec4b(true, false, false, true),
-      ),
+      select(vec4u(11, 12, 13, 14), vec4u(1, 2, 3, 4), vec4b(true, false, false, true)),
     ).toStrictEqual(vec4u(1, 12, 13, 4));
   });
 
   it('selects for bool vectors', () => {
+    expect(select(vec2b(true, true), vec2b(false, false), vec2b(true, false))).toStrictEqual(
+      vec2b(false, true),
+    );
     expect(
-      select(vec2b(true, true), vec2b(false, false), vec2b(true, false)),
-    ).toStrictEqual(vec2b(false, true));
-    expect(
-      select(
-        vec3b(true, false, true),
-        vec3b(false, true, false),
-        vec3b(true, true, false),
-      ),
+      select(vec3b(true, false, true), vec3b(false, true, false), vec3b(true, true, false)),
     ).toStrictEqual(vec3b(false, true, true));
     expect(
       select(
@@ -122,6 +96,22 @@ describe('select', () => {
         vec4b(true, false, false, true),
       ),
     ).toStrictEqual(vec4b(false, false, false, false));
+  });
+
+  it('copies arguments to prevent aliasing (mismatch with WGSL behavior)', () => {
+    function foo() {
+      'use gpu';
+      const from = d.vec3f(0, 1, 2);
+      const to = d.vec3f(2, 1, 0);
+      const cond = false;
+
+      const v = select(from, to, cond);
+      from.r = 10; // updating the original variable
+
+      return v; // should still be (0, 1, 2)
+    }
+
+    expect(foo()).toStrictEqual(d.vec3f(0, 1, 2));
   });
 });
 
@@ -134,7 +124,7 @@ describe('select (on the GPU)', () => {
       return select(d.u32(1), d.i32(2), cond.$);
     };
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "var<private> cond: bool;
 
       fn foo() -> i32 {

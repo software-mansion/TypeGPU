@@ -1,26 +1,15 @@
 // @ts-nocheck
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
-import {
-  addButtonParameter,
-  addElement,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addButtonParameter, addElement, onFrame } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 addButtonParameter('Randomize', randomizeTriangles);
 

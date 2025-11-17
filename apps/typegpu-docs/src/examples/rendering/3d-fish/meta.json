@@ -1,5 +1,7 @@
 {
   "title": "3D Fish",
+  "description": "Animates a school of stylized 3D fish by updating their movement in GPU buffers and rendering the instances with depth.",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization", "compute", "double buffering"]
+  "tags": ["3d", "double buffering", "rasterization"],
+  "coolFactor": 9
 }

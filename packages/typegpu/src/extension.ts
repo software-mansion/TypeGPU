@@ -19,10 +19,6 @@ export interface StorageFlag {
  */
 export type Storage = StorageFlag;
 
-export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
-  return !!(value as unknown as StorageFlag)?.usableAsStorage;
-}
-
 /**
  * @category Errors
  */

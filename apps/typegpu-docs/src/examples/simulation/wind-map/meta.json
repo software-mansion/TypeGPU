@@ -1,0 +1,8 @@
+{
+  "title": "Global Wind Map",
+  "description": "Advects thousands of particles through real-world wind vector data and renders their paths over a global map.",
+  "category": "simulation",
+  "tags": ["ecosystem", "line-rendering", "particles", "vector field"],
+  "dev": true,
+  "coolFactor": 7
+}

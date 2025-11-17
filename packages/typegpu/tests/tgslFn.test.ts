@@ -1,23 +1,25 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import * as d from '../src/data/index.ts';
-import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
-import { getName } from '../src/shared/meta.ts';
-import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import { builtin } from 'typegpu/data';
+import { tgpu, d, type TgpuFn, type TgpuSlot, std } from 'typegpu';
+import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
-    const getX = tgpu.fn([], d.f32)(() => 3).$name('get_x');
+    const getX = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => 3)
+      .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
     const getY = tgpu.fn([], d.f32)(() => 3);
 
-    expect(asWgsl(getY)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getY() -> f32 {
         return 3f;
       }"
@@ -25,39 +27,45 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu.fn([], d.vec3f)(() => {
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       const color = d.vec3f();
       const color2 = d.vec3f(1, 2, 3);
       return color;
-    })
-      .$uses({ v: d.vec3f });
+    });
 
-    const getX = tgpu.fn([], d.f32)(() => {
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       const color = getColor();
       return 3;
-    })
-      .$uses({ getColor });
+    });
 
-    const getY = tgpu.fn([], d.f32)(() => {
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       const c = getColor();
       return getX();
-    })
-      .$uses({ getX, getColor });
+    });
 
-    expect(asWgsl(getY)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-        var color = vec3f();
-        var color2 = vec3f(1, 2, 3);
+        let color = vec3f();
+        let color2 = vec3f(1, 2, 3);
         return color;
       }
 
       fn getX() -> f32 {
-        var color = getColor();
+        let color = getColor();
         return 3f;
       }
 
       fn getY() -> f32 {
-        var c = getColor();
+        let c = getColor();
         return getX();
       }"
     `);
@@ -69,11 +77,14 @@ describe('TGSL tgpu.fn function', () => {
       end: d.vec3f,
     });
 
-    const createGradient = tgpu.fn([], Gradient)(() => {
+    const createGradient = tgpu.fn(
+      [],
+      Gradient,
+    )(() => {
       return Gradient({ end: d.vec3f(1, 2, 3), start: d.vec3f(4, 5, 6) });
     });
 
-    expect(asWgsl(createGradient)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([createGradient])).toMatchInlineSnapshot(`
       "struct Gradient {
         start: vec3f,
         end: vec3f,
@@ -100,11 +111,14 @@ describe('TGSL tgpu.fn function', () => {
       a: A,
     });
 
-    const pureConfusion = tgpu.fn([], A)(() => {
+    const pureConfusion = tgpu.fn(
+      [],
+      A,
+    )(() => {
       return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
     });
 
-    expect(asWgsl(pureConfusion)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pureConfusion])).toMatchInlineSnapshot(`
       "struct A {
         b: f32,
       }
@@ -126,7 +140,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -149,33 +163,27 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var vi = f32(input.vi);
-        var ii = f32(input.ii);
-        var color = input.color;
-        return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        let vi_1 = f32(vi);
+        let ii_1 = f32(ii);
+        let color_1 = color;
+        return vertex_fn_Output(vec4f(color_1.w, ii_1, vi_1, 1f), vec2f(color_1.w, vi_1));
       }"
     `);
   });
 
   it('resolves vertexFn with empty in', () => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
+    const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => ({ pos: d.vec4f() }));
 
-    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertexFn_Output {
         @builtin(position) pos: vec4f,
       }
@@ -188,17 +196,17 @@ describe('TGSL tgpu.fn function', () => {
 
   it('throws when vertexFn with empty out', () => {
     expect(() =>
-      tgpu['~unstable'].vertexFn({
+      tgpu.vertexFn({
         in: { vi: builtin.vertexIndex },
         out: {},
-      })
+      }),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: A vertexFn output cannot be empty since it must include the 'position' builtin.]`,
     );
   });
 
   it('allows destructuring the input argument in vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -217,26 +225,20 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1f), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        return vertex_fn_Output(vec4f(color.w, f32(ii), f32(vi), 1f), vec2f(color.w, f32(vi)));
       }"
     `);
   });
 
   it('allows access to output struct as second argument in vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -249,40 +251,28 @@ describe('TGSL tgpu.fn function', () => {
         },
       })((input, Out) => {
         const myOutput = Out({
-          pos: d.vec4f(
-            d.f32(input.color.w),
-            d.f32(input.ii),
-            d.f32(input.vi),
-            1,
-          ),
+          pos: d.vec4f(d.f32(input.color.w), d.f32(input.ii), d.f32(input.vi), 1),
           uv: d.vec2f(d.f32(input.color.w), input.vi),
         });
         return myOutput;
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
-    expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1f), vec2f(input.color.w, f32(input.vi)));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        let myOutput = vertex_fn_Output(vec4f(color.w, f32(ii), f32(vi), 1f), vec2f(color.w, f32(vi)));
         return myOutput;
       }"
     `);
   });
 
   it('resolves computeFn', () => {
-    const computeFn = tgpu['~unstable']
+    const computeFn = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -294,22 +284,36 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('compute_fn');
 
-    expect(asWgsl(computeFn)).toMatchInlineSnapshot(`
-      "struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) gid: vec3u) {
+        let index = gid.x;
+        const iterationF = 0f;
+        const sign_1 = 0;
+        let change = vec4f();
+      }"
+    `);
+  });
 
-      @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
-        var index = input.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
-        var change = vec4f();
+  it('resolves linear compute builtins', () => {
+    const computeFn = tgpu.computeFn({
+      in: {
+        globalIndex: builtin.globalInvocationIndex,
+        workgroupIndex: builtin.workgroupIndex,
+      },
+      workgroupSize: [24],
+    })((input) => {
+      const index = input.globalIndex + input.workgroupIndex;
+    });
+
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn computeFn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
+        let index = (globalIndex + workgroupIndex);
       }"
     `);
   });
 
   it('allows destructuring the input argument in computeFn', () => {
-    const computeFn = tgpu['~unstable']
+    const computeFn = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -321,128 +325,106 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('compute_fn');
 
-    expect(asWgsl(computeFn)).toMatchInlineSnapshot(`
-      "struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
-        var index = _arg_0.gid.x;
-        var iterationF = 0f;
-        var sign = 0;
-        var change = vec4f();
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) gid: vec3u) {
+        let index = gid.x;
+        const iterationF = 0f;
+        const sign_1 = 0;
+        let change = vec4f();
       }"
     `);
   });
 
   it('rejects invalid arguments for computeFn', () => {
-    const u = tgpu['~unstable'];
+    // @ts-expect-error
+    tgpu.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(() => {});
 
     // @ts-expect-error
-    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(
-      () => {},
-    );
-
-    // @ts-expect-error
-    u.computeFn({
+    tgpu.computeFn({
       in: { gid: builtin.globalInvocationId, random: d.f32 },
       workgroupSize: [24],
     })(() => {});
   });
 
   it('resolves fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })((input) => {
-        const pos = input.pos;
-        let sampleMask = 0;
-        if (input.sampleMask > 0 && pos.x > 0) {
-          sampleMask = 1;
-        }
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })((input) => {
+      const pos = input.pos;
+      let sampleMask = 0;
+      if (input.sampleMask > 0 && pos.x > 0) {
+        sampleMask = 1;
+      }
 
-        return {
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: d.u32(sampleMask),
-        };
-      });
+      return {
+        out: d.vec4f(0, 0, 0, 0),
+        fragDepth: 1,
+        sampleMask: d.u32(sampleMask),
+      };
+    });
 
-    expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        var pos = input.pos;
-        var sampleMask = 0;
-        if (((input.sampleMask > 0u) && (pos.x > 0f))) {
-          sampleMask = 1i;
+      @fragment fn fragmentFn(@builtin(position) pos: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
+        let pos_1 = pos;
+        var sampleMask_1 = 0;
+        if (((sampleMask > 0u) && (pos_1.x > 0f))) {
+          sampleMask_1 = 1i;
         }
-        return fragmentFn_Output(u32(sampleMask), 1f, vec4f());
+        return fragmentFn_Output(u32(sampleMask_1), 1f, vec4f());
       }"
     `);
   });
 
   it('allows accessing the output struct as second argument in fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })((input, Out) => {
-        const myOutput = Out({
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: 0,
-        });
-        if (input.sampleMask > 0 && input.pos.x > 0) {
-          myOutput.sampleMask = 1;
-        }
-
-        return myOutput;
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })((input, Out) => {
+      const myOutput = Out({
+        out: d.vec4f(0, 0, 0, 0),
+        fragDepth: 1,
+        sampleMask: 0,
       });
+      if (input.sampleMask > 0 && input.pos.x > 0) {
+        myOutput.sampleMask = 1;
+      }
 
-    expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
+      return myOutput;
+    });
+
+    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) pos: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
         var myOutput = fragmentFn_Output(0u, 1f, vec4f());
-        if (((input.sampleMask > 0u) && (input.pos.x > 0f))) {
+        if (((sampleMask > 0u) && (pos.x > 0f))) {
           myOutput.sampleMask = 1u;
         }
         return myOutput;
@@ -451,75 +433,61 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows accessing fragment output even when it is not a struct', () => {
-    const fragmentFn = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: d.vec4f,
-      })((input, Out) => {
-        const hmm = Out(1.25);
-        return hmm;
-      });
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: d.vec4f,
+    })((input, Out) => {
+      const hmm = Out(1.25);
+      return hmm;
+    });
 
-    expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var hmm = vec4f(1.25);
+    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
+      "@fragment fn fragmentFn() -> @location(0) vec4f {
+        let hmm = vec4f(1.25);
         return hmm;
       }"
     `);
   });
 
   it('allows destructuring the input argument in fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })(({ pos: position, sampleMask }, Out) => {
-        const out = Out({
-          out: d.vec4f(),
-          fragDepth: 1,
-          sampleMask: 0,
-        });
-        if (sampleMask > 0 && position.x > 0) {
-          out.sampleMask = 1;
-        }
-
-        return out;
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })(({ pos: position, sampleMask }, Out) => {
+      const out = Out({
+        out: d.vec4f(),
+        fragDepth: 1,
+        sampleMask: 0,
       });
+      if (sampleMask > 0 && position.x > 0) {
+        out.sampleMask = 1;
+      }
 
-    expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
+      return out;
+    });
+
+    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) position: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
         var out = fragmentFn_Output(0u, 1f, vec4f());
-        if (((_arg_0.sampleMask > 0u) && (_arg_0.pos.x > 0f))) {
+        if (((sampleMask > 0u) && (position.x > 0f))) {
           out.sampleMask = 1u;
         }
         return out;
@@ -528,31 +496,28 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves fragmentFn with a single output', () => {
-    const fragmentFn = tgpu['~unstable']
-      .fragmentFn({ in: { pos: builtin.position }, out: d.vec4f })((input) => {
-        return input.pos;
-      });
+    const fragmentFn = tgpu.fragmentFn({ in: { pos: builtin.position }, out: d.vec4f })((input) => {
+      return input.pos;
+    });
 
-    expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        return input.pos;
+    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
+      "@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+        return pos;
       }"
     `);
   });
 
   it('allows for an object based on return type struct to be returned', () => {
-    const TestStruct = d
-      .struct({
-        a: d.f32,
-        b: d.f32,
-        c: d.vec2f,
-      });
+    const TestStruct = d.struct({
+      a: d.f32,
+      b: d.f32,
+      c: d.vec2f,
+    });
 
-    const getTestStruct = tgpu.fn([], TestStruct)(() => {
+    const getTestStruct = tgpu.fn(
+      [],
+      TestStruct,
+    )(() => {
       return {
         a: 1,
         b: 2,
@@ -560,7 +525,7 @@ describe('TGSL tgpu.fn function', () => {
       };
     });
 
-    expect(asWgsl(getTestStruct)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([getTestStruct])).toMatchInlineSnapshot(`
       "struct TestStruct {
         a: f32,
         b: f32,
@@ -574,14 +539,16 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('correctly handles object based on return type struct with a function call inside another function', () => {
-    const TestStruct = d
-      .struct({
-        a: d.f32,
-        b: d.f32,
-        c: d.vec2f,
-      });
+    const TestStruct = d.struct({
+      a: d.f32,
+      b: d.f32,
+      c: d.vec2f,
+    });
 
-    const getTestStruct = tgpu.fn([], TestStruct)(() => {
+    const getTestStruct = tgpu.fn(
+      [],
+      TestStruct,
+    )(() => {
       return {
         a: 1,
         b: 2,
@@ -589,7 +556,7 @@ describe('TGSL tgpu.fn function', () => {
       };
     });
 
-    const fn2 = tgpu['~unstable']
+    const fn2 = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -598,7 +565,7 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('compute_fn');
 
-    expect(asWgsl(fn2)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fn2])).toMatchInlineSnapshot(`
       "struct TestStruct {
         a: f32,
         b: f32,
@@ -609,12 +576,8 @@ describe('TGSL tgpu.fn function', () => {
         return TestStruct(1f, 2f, vec2f(3, 4));
       }
 
-      struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
-        var testStruct = getTestStruct();
+      @compute @workgroup_size(24) fn compute_fn() {
+        let testStruct = getTestStruct();
       }"
     `);
   });
@@ -622,7 +585,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function accepting a subset of arguments', () => {
     const foo = tgpu.fn([d.u32, d.u32], d.u32)((a) => a);
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(
       `
       "fn foo(a: u32, _arg_1: u32) -> u32 {
         return a;
@@ -634,7 +597,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves its header based on the shell, not AST, allowing passing function with no arguments', () => {
     const foo = tgpu.fn([d.u32, d.u32], d.u32)(() => 2);
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(
       `
       "fn foo(_arg_0: u32, _arg_1: u32) -> u32 {
         return 2u;
@@ -645,12 +608,12 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves a function with a pointer parameter', () => {
     const addOnes = tgpu.fn([d.ptrStorage(d.vec3f, 'read-write')])((ptr) => {
-      ptr.x += 1;
-      ptr.y += 1;
-      ptr.z += 1;
+      ptr.$.x += 1;
+      ptr.$.y += 1;
+      ptr.$.z += 1;
     });
 
-    expect(asWgsl(addOnes)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([addOnes])).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
         (*ptr).x += 1f;
         (*ptr).y += 1f;
@@ -658,12 +621,13 @@ describe('TGSL tgpu.fn function', () => {
       }"
     `);
 
-    const callAddOnes = tgpu.fn([])(() => {
-      const someVec = d.vec3f(1, 2, 3);
+    const callAddOnes = () => {
+      'use gpu';
+      const someVec = d.ref(d.vec3f(1, 2, 3));
       addOnes(someVec);
-    });
+    };
 
-    expect(asWgsl(callAddOnes)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([callAddOnes])).toMatchInlineSnapshot(`
       "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
         (*ptr).x += 1f;
         (*ptr).y += 1f;
@@ -672,7 +636,7 @@ describe('TGSL tgpu.fn function', () => {
 
       fn callAddOnes() {
         var someVec = vec3f(1, 2, 3);
-        addOnes(&someVec);
+        addOnes((&someVec));
       }"
     `);
   });
@@ -686,13 +650,13 @@ describe('TGSL tgpu.fn function', () => {
       const vector = d.vec2u(value);
     });
 
-    expect(asWgsl(fun)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fun])).toMatchInlineSnapshot(`
       "struct Input {
         value: i32,
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -706,13 +670,13 @@ describe('TGSL tgpu.fn function', () => {
       const vector = d.vec2u(input.value);
     });
 
-    expect(asWgsl(fun)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fun])).toMatchInlineSnapshot(`
       "struct Input {
         value: i32,
       }
 
       fn fun(input: Input) {
-        var vector = vec2u(u32(input.value));
+        let vector = vec2u(u32(input.value));
       }"
     `);
   });
@@ -726,13 +690,13 @@ describe('TGSL tgpu.fn function', () => {
       const vector = d.vec2u(v);
     });
 
-    expect(asWgsl(fun)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fun])).toMatchInlineSnapshot(`
       "struct Input {
         value: i32,
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -746,19 +710,22 @@ describe('TGSL tgpu.fn function', () => {
       const vector = d.vec3u(v, x, value);
     });
 
-    expect(asWgsl(fun)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fun])).toMatchInlineSnapshot(`
       "struct Input {
         value: i32,
       }
 
       fn fun(_arg_0: Input, x: i32, _arg_2: Input) {
-        var vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
+        let vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
       }"
     `);
   });
 
   it('maintains argument names in the type', () => {
-    const fun = tgpu.fn([d.f32, d.f32], d.f32)((x, y) => {
+    const fun = tgpu.fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((x, y) => {
       return x + y;
     });
 
@@ -766,7 +733,10 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('falls back to args_N naming when not every argument is used in the implementation', () => {
-    const fun = tgpu.fn([d.f32, d.f32], d.f32)((x) => {
+    const fun = tgpu.fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((x) => {
       return x * 2;
     });
 
@@ -815,10 +785,7 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a deep copy of a struct', () => {
     const struct = { prop: d.vec2f(1, 2) };
-    const fn = tgpu.fn(
-      [d.struct({ prop: d.vec2f })],
-      d.struct({ prop: d.vec2f }),
-    )((e) => e);
+    const fn = tgpu.fn([d.struct({ prop: d.vec2f })], d.struct({ prop: d.vec2f }))((e) => e);
 
     const clone = fn(struct);
 
@@ -878,7 +845,10 @@ describe('tgpu.fn called top-level', () => {
 
   it('throws helpful error when reading a uniform', ({ root }) => {
     const uniform = root.createUniform(d.f32, 0);
-    const foo = tgpu.fn([], d.f32)(() => {
+    const foo = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return uniform.$; // accessing GPU resource
     });
 
@@ -900,7 +870,7 @@ describe('tgsl fn when using plugin', () => {
 
     expect(addShellless(2, 3)).toBe(5);
     expect(add(2, 3)).toBe(5);
-    expect(asWgsl(add)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
       "fn addShellless(x: u32, y: u32) -> u32 {
         return (x + y);
       }"
@@ -908,12 +878,10 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32], d.u32)(
-      (x, y) => x + y,
-    );
+    const add = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => x + y);
 
     expect(add(2, 3)).toBe(5);
-    expect(asWgsl(add)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
       "fn add(x: u32, y: u32) -> u32 {
         return (x + y);
       }"
@@ -924,7 +892,7 @@ describe('tgsl fn when using plugin', () => {
     const bar = tgpu.fn([], d.f32)(() => foo() + 2);
     const foo = tgpu.fn([], d.f32)(() => 1);
 
-    expect(asWgsl(bar)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([bar])).toMatchInlineSnapshot(`
       "fn foo() -> f32 {
         return 1f;
       }
@@ -935,20 +903,55 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('throws when it detects simple recursion', () => {
+    function increment(n: number, k: number): number {
+      'use gpu';
+      if (k === 0) return n;
+      return increment(n, k - 1) + 1;
+    }
+
+    const f1 = () => {
+      'use gpu';
+      return increment(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const wrappedIncrement = tgpu.fn(increment);
+
+    const f2 = () => {
+      'use gpu';
+      return wrappedIncrement(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
   it('throws when it detects a cyclic dependency (recursion)', () => {
     let bar: TgpuFn;
     let foo: TgpuFn;
     bar = tgpu.fn([], d.f32)(() => foo() + 2);
     foo = tgpu.fn([], d.f32)(() => bar() - 2);
 
-    expect(() => asWgsl(bar)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([bar])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:bar
-      - call:foo
       - fn:foo
-      - call:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
-      `);
+      - fn:bar: Recursive function fn:bar detected. Recursion is not allowed on the GPU.]
+    `);
   });
 
   it('throws when it detects a cyclic dependency (when using slots)', () => {
@@ -957,24 +960,28 @@ describe('tgsl fn when using plugin', () => {
     let three: TgpuFn;
     let two: TgpuFn;
     one = tgpu.fn([], d.f32)(() => two() + 2);
-    fnSlot = tgpu.slot(tgpu.fn([], d.f32)(() => one() + 2).$name('inner'));
+    fnSlot = tgpu.slot(
+      tgpu
+        .fn(
+          [],
+          d.f32,
+        )(() => one() + 2)
+        .$name('inner'),
+    );
     three = tgpu.fn([], d.f32)(() => fnSlot.$() + 1);
     two = tgpu.fn([], d.f32)(() => three() + 2);
-    expect(() => asWgsl(one)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:two
       - fn:two
-      - call:three
       - fn:three
-      - call:inner
       - fn:inner
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
   });
 
-  it('throws when it detects a cyclic dependency (when using derived)', () => {
+  it('throws when it detects a cyclic dependency (when using lazy)', () => {
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);
@@ -982,27 +989,28 @@ describe('tgsl fn when using plugin', () => {
     const mainFn = tgpu.fn([], d.f32)(() => 1000);
     const fallbackFn = tgpu.fn([], d.f32)(() => one());
 
-    const derivedFn = tgpu['~unstable'].derived(() => {
-      if (flagSlot.$) {
-        return fnSlot.$;
-      }
-      return fallbackFn;
-    }).with(fnSlot, mainFn);
+    const lazyFn = tgpu
+      .lazy(() => {
+        if (flagSlot.$) {
+          return fnSlot.$;
+        }
+        return fallbackFn;
+      })
+      .with(fnSlot, mainFn);
 
-    one = tgpu.fn([], d.f32)(() => derivedFn.$() + 2);
+    one = tgpu.fn([], d.f32)(() => lazyFn.$() + 2);
 
-    expect(() => asWgsl(one)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:one
-      - call:fallbackFn
       - fn:fallbackFn
-      - call:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
+      - fn:one: Recursive function fn:one detected. Recursion is not allowed on the GPU.]
     `);
 
     const boundOne = one.with(flagSlot, true);
 
-    expect(asWgsl(boundOne)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([boundOne])).toMatchInlineSnapshot(`
       "fn mainFn() -> f32 {
         return 1000f;
       }
@@ -1010,6 +1018,371 @@ describe('tgsl fn when using plugin', () => {
       fn one() -> f32 {
         return (mainFn() + 2f);
       }"
+    `);
+  });
+
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
+      }"
+    `);
+  });
+
+  it('allows .with to be called at comptime', () => {
+    const multiplierSlot = tgpu.slot(1);
+    const scale = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((v) => {
+      'use gpu';
+      return v * multiplierSlot.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      scale(2);
+      scale.with(multiplierSlot, 2)(2);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 1f);
+      }
+
+      fn scale_1(v: f32) -> f32 {
+        return (v * 2f);
+      }
+
+      fn main() {
+        scale(2f);
+        scale_1(2f);
+      }"
+    `);
+  });
+
+  it('does not accidentally shadow std', () => {
+    const fn = () => {
+      'use gpu';
+      const sin = 1;
+      const a = std.sin(sin);
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const sin_1 = 1;
+        let a = sin(f32(sin_1));
+      }"
+    `);
+  });
+
+  it('throws a readable error when assigning to a value defined outside of scope', () => {
+    let a = 0;
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
+      a = 2;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): 'a = 2' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('throws a readable error when updating a value defined outside of scope', () => {
+    let a = 0;
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
+      a++;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('allows external variable recapture', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
+
+  it('names used externals', () => {
+    const myConst = (() => tgpu.const(d.u32, 1))(); // unnamed
+    const fn = () => {
+      'use gpu';
+      return myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it('names used nested externals', () => {
+    const EXT = { myConst: (() => tgpu.const(d.u32, 1))() /* unnamed */ };
+    const fn = () => {
+      'use gpu';
+      return EXT.myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const EXT_myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return EXT_myConst;
+      }"
+    `);
+  });
+
+  it("does not name externals that shouldn't be named", () => {
+    const Schema = (() =>
+      d.struct({ p: (() => d.struct({ q: (() => d.struct({ r: d.u32 }))() }))() }))();
+    const fn = () => {
+      'use gpu';
+      return Schema();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        r: u32,
+      }
+
+      struct item {
+        q: item_1,
+      }
+
+      struct Schema {
+        p: item,
+      }
+
+      fn fn_1() -> Schema {
+        return Schema();
+      }"
+    `);
+  });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {}
+
+      fn fn_1() {
+        item();
+      }"
+    `);
+  });
+});
+
+describe('string injection', () => {
+  it('is forbidden directly', () => {
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      ('call()');
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via direct externals', () => {
+    const call = 'call()';
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via indirect externals', () => {
+    const call = ['call()'];
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via slots', () => {
+    const slot = tgpu.slot('call()');
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      slot.$;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+});
+
+describe('nulls in TGSL', () => {
+  it('throws when assigning to a variable', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = null;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(null)'
+      -----]
+    `);
+  });
+
+  it('allows comptime usage', () => {
+    let externalNum: number | null;
+    const myFn = () => {
+      'use gpu';
+      if (externalNum !== null) {
+        return externalNum;
+      } else {
+        return 1;
+      }
+    };
+
+    externalNum = 0;
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 0;
+      }"
+    `);
+    externalNum = null;
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('allows comptime usage in ternary checks', () => {
+    let externalNum: number | null = 1;
+    const myFn = () => {
+      'use gpu';
+      return externalNum !== null ? externalNum : 1;
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('is not coerced to false', () => {
+    const myFn = () => {
+      'use gpu';
+      // @ts-ignore
+      if (null) {
+        return false;
+      }
+      return true;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'null' is not resolvable. 'null' is only allowed in comptime checks.]
     `);
   });
 });

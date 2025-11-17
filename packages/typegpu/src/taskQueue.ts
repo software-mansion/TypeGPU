@@ -1,4 +1,4 @@
-export class TaskQueue<T> {
+export class TaskQueue {
   private _queue: (() => Promise<void>)[] = [];
   private _pending = false;
 
@@ -11,7 +11,7 @@ export class TaskQueue<T> {
           reject(e);
         }
       });
-      this._processQueue();
+      void this._processQueue();
     });
   }
 

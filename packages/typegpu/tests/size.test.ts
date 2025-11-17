@@ -1,7 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {
@@ -11,11 +9,7 @@ describe('d.size', () => {
       c: d.u32,
     });
 
-    const opts = {
-      namespace: namespace({ names: 'strict' }),
-    };
-
-    expect(resolve(s1, opts).code).toContain('@size(16) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@size(16) b: u32,');
   });
 
   it('changes size of the struct containing aligned member', () => {
@@ -82,9 +76,7 @@ describe('d.size', () => {
     const s1 = d.disarrayOf(d.size(11, d.u32), 10);
 
     expect(d.sizeOf(s1)).toBe(110);
-    expectTypeOf(s1).toEqualTypeOf<
-      d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>
-    >();
+    expectTypeOf(s1).toEqualTypeOf<d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>>();
   });
 
   it('changes size of loose struct member of type loose array', () => {

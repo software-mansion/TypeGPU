@@ -4,7 +4,7 @@ import { babelTransform, rollupTransform } from './transform.ts';
 describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
   it('wraps argument passed to function shell with globalThis set call', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         const counterBuffer = root
@@ -14,15 +14,15 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
         const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
-                const tmp = counter.value.x;
-                counter.value.x = counter.value.y;
-                counter.value.y += tmp;
-                counter.value.z += d.f32(input.num.x);
+                const tmp = counter.$.x;
+                counter.$.x = counter.$.y;
+                counter.$.y += tmp;
+                counter.$.z += d.f32(input.num.x);
             });
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const counterBuffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 0)).$usage('storage');
       const counter = counterBuffer.as('mutable');
@@ -31,20 +31,24 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
-        const tmp = counter.value.x;
-        counter.value.x = counter.value.y;
-        counter.value.y += tmp;
-        counter.value.z += d.f32(input.num.x);
+      })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+        const tmp = counter.$.x;
+        counter.$.x = counter.$.y;
+        counter.$.y += tmp;
+        counter.$.z += d.f32(input.num.x);
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
-        get externals() {
-          return {
-            counter,
-            d
-          };
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [{
+            type: "i",
+            name: "input"
+          }],
+          body: [0, [[13, "tmp", [7, [7, "counter", "$"], "x"]], [2, [7, [7, "counter", "$"], "x"], "=", [7, [7, "counter", "$"], "y"]], [2, [7, [7, "counter", "$"], "y"], "+=", "tmp"], [2, [7, [7, "counter", "$"], "z"], "+=", [6, "d.f32", [[7, [7, "input", "num"], "x"]]]]]]
+        },
+        externals: {
+          "counter": () => counter,
+          "d.f32": () => d.f32
         }
       }) && $.f)({}));"
     `);
@@ -52,55 +56,61 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works for multiple functions, skips wgsl-implemented', () => {
     const code = `\
-        import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+      const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
-        });
+      });
 
-        const b = tgpu.fn([])(() => {
+      const b = tgpu.fn([])(() => {
         const y = 2 + 2;
-        });
+      });
 
-        const cx = 2;
-        const c = tgpu.fn([])(() => cx);
+      const cx = 2;
+      const c = tgpu.fn([])(() => cx);
 
-        const d = tgpu.fn([])('() {}');
+      const d = tgpu.fn([])('() {}');
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      const a = tgpu['~unstable'].computeFn({
+      "import { tgpu } from 'typegpu';
+      const a = tgpu.computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+      })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [{
+            type: "i",
+            name: "input"
+          }],
+          body: [0, [[13, "x", true]]]
+        },
+        externals: {}
       }) && $.f)({}));
-      const b = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const b = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const y = 2 + 2;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "y", [1, [5, "2"], "+", [5, "2"]]]]]
+        },
+        externals: {}
       }) && $.f)({}));
       const cx = 2;
-      const c = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
-        get externals() {
-          return {
-            cx
-          };
+      const c = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[10, "cx"]]]
+        },
+        externals: {
+          "cx": () => cx
         }
       }) && $.f)({}));
       const d = tgpu.fn([])('() {}');"
@@ -109,14 +119,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('transpiles only function shell invocations', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       tgpu.x()(d.arrayOf(d.u32));"
     `);
@@ -124,59 +134,114 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works with some typescript features', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
 
-        const fun = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const fun = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true;
         });
 
-        const funcWithAs = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const funcWithAs = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true as boolean;
         });
 
-        const funcWithSatisfies = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const funcWithSatisfies = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true satisfies boolean;
         });
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      const fun = tgpu['~unstable'].computeFn({
+      "import { tgpu } from 'typegpu';
+      const fun = tgpu.computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+      })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [{
+            type: "i",
+            name: "input"
+          }],
+          body: [0, [[13, "x", true]]]
+        },
+        externals: {}
       }) && $.f)({}));
-      const funcWithAs = tgpu['~unstable'].computeFn({
+      const funcWithAs = tgpu.computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+      })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true as boolean;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [{
+            type: "i",
+            name: "input"
+          }],
+          body: [0, [[13, "x", true]]]
+        },
+        externals: {}
       }) && $.f)({}));
-      const funcWithSatisfies = tgpu['~unstable'].computeFn({
+      const funcWithSatisfies = tgpu.computeFn({
         workgroupSize: [1]
-      })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
+      })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true satisfies boolean;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [{
+            type: "i",
+            name: "input"
+          }],
+          body: [0, [[13, "x", true]]]
+        },
+        externals: {}
       }) && $.f)({}));"
+    `);
+  });
+
+  it('correctly lists "this" in externals', () => {
+    const code = `
+      import { tgpu } from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(() => {
+          return this.myBuffer.$;
+        });
+      }
+
+      const myController = new MyController();
+
+      console.log(tgpu.resolve([myController.myFn]));`;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
+      import * as d from 'typegpu/data';
+      const root = await tgpu.init();
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          return this.myBuffer.$;
+        }, {
+          v: 2,
+          name: undefined,
+          ast: {
+            params: [],
+            body: [0, [[10, [7, "this.myBuffer", "$"]]]]
+          },
+          externals: {
+            "this.myBuffer": () => this.myBuffer
+          }
+        }) && $.f)({}));
+      }
+      const myController = new MyController();
+      console.log(tgpu.resolve([myController.myFn]));"
     `);
   });
 });
@@ -184,7 +249,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
   it('wraps argument passed to function shell with globalThis set call', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         const counterBuffer = root
@@ -194,15 +259,15 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
         const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
-            const tmp = counter.value.x;
-            counter.value.x = counter.value.y;
-            counter.value.y += tmp;
-            counter.value.z += d.f32(input.num.x);
+            const tmp = counter.$.x;
+            counter.$.x = counter.$.y;
+            counter.$.y += tmp;
+            counter.$.z += d.f32(input.num.x);
             });
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const counterBuffer = root
@@ -211,26 +276,26 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const counter = counterBuffer.as('mutable');
 
               tgpu
-                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
-                  const tmp = counter.value.x;
-                  counter.value.x = counter.value.y;
-                  counter.value.y += tmp;
-                  counter.value.z += d.f32(input.num.x);
+                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
+                  const tmp = counter.$.x;
+                  counter.$.x = counter.$.y;
+                  counter.$.y += tmp;
+                  counter.$.z += d.f32(input.num.x);
                   }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
-                    get externals() { return {counter, d}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]]},
+          externals: {"counter":() => counter,"d.f32":() => d.f32}
+        }) && $.f)({})));
       "
     `);
   });
 
   it('works for multiple functions, skips wgsl-implemented', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
         });
 
@@ -245,31 +310,31 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
+      tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
               }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]]},
+          externals: {}
+        }) && $.f)({})));
 
-              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]]},
+          externals: {}
+        }) && $.f)({})));
 
               const cx = 2;
-              tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
-                    get externals() { return {cx}; },
-                  }) && $.f)({})));
+              tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[[10,"cx"]]]},
+          externals: {"cx":() => cx}
+        }) && $.f)({})));
 
               tgpu.fn([])('() {}');
       "
@@ -278,17 +343,60 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('transpiles only function shell invocations', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       tgpu.x()(d.arrayOf(d.u32));
+      "
+    `);
+  });
+
+  it('correctly lists "this" in externals', async () => {
+    const code = `
+      import { tgpu } from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(() => {
+          return this.myBuffer.$;
+        });
+      }
+
+      const myController = new MyController();
+
+      console.log(tgpu.resolve([myController.myFn]));`;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+            class MyController {
+              myBuffer = root.createUniform(d.u32);
+              myFn = tgpu.fn([], d.u32)((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                return this.myBuffer.$;
+              }), {
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[[10,[7,"this.myBuffer","$"]]]]},
+          externals: {"this.myBuffer":() => this.myBuffer}
+        }) && $.f)({})));
+            }
+
+            const myController = new MyController();
+
+            console.log(tgpu.resolve([myController.myFn]));
       "
     `);
   });

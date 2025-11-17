@@ -12,7 +12,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-
 # environment variables
 .env
 .env.production
@@ -26,3 +25,7 @@ src/content/docs/api
 # tests
 tests/artifacts
 !tests/artifacts/README.md
+
+# generated transformed files
+*.tsnotover.ts
+*.tsnotover.tsx

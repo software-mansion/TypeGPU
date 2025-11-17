@@ -1,0 +1,52 @@
+import { defineConfig } from 'oxlint';
+import typegpu from 'eslint-plugin-typegpu';
+import eslintPlugin from 'eslint-plugin-eslint-plugin';
+
+export default defineConfig({
+  plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
+  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin', 'eslint-plugin-internal'],
+  categories: {
+    correctness: 'warn',
+    suspicious: 'warn',
+  },
+  rules: {
+    ...typegpu.configs.recommended.rules,
+    'typescript/no-unsafe-enum-comparison': 'off',
+    'typescript/restrict-template-expressions': 'off',
+    'typescript/no-unsafe-type-assertion': 'off',
+    'typescript/no-explicit-any': 'error',
+    'typescript/no-non-null-assertion': 'error',
+    'eslint/no-shadow': 'off',
+    'eslint-plugin-unicorn/prefer-add-event-listener': 'off',
+    'eslint-plugin-import/no-named-as-default': 'off',
+    'eslint-plugin-import/no-named-as-default-member': 'off',
+    'eslint-plugin-import/namespace': 'off',
+    'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
+    'eslint-plugin-internal/no-useless-path-segments': 'error',
+    'eslint-plugin-internal/no-tgpu-default-import': 'error',
+  },
+  ignorePatterns: ['**/*.astro', '**/*.mjs'],
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/tests/**'],
+      rules: {
+        'typescript/unbound-method': 'off',
+        'typescript/no-non-null-assertion': 'off',
+        'eslint/no-unused-vars': 'off',
+        'eslint/no-unused-expressions': 'off',
+        'eslint-plugin-unicorn/consistent-function-scoping': 'off',
+        'eslint/no-unsafe-optional-chaining': 'off',
+        'eslint/no-constant-condition': 'off',
+      },
+    },
+    {
+      files: ['**/packages/eslint-plugin/**/*.ts'],
+      rules: {
+        ...(eslintPlugin.configs.recommended.rules as Record<string, 'error' | 'warn' | 'off'>),
+      },
+    },
+  ],
+  env: {
+    builtin: true,
+  },
+});

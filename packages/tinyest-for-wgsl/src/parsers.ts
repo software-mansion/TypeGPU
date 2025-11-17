@@ -2,103 +2,21 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
+import type { Context, JsNode, TranspilationResult } from './types.ts';
+import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-type Scope = {
-  /** identifiers declared in this scope */
-  declaredNames: string[];
+const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
+  return transpile(ctx, node.expression);
 };
 
-type Context = {
-  /** Holds a set of all identifiers that were used in code, but were not declared in code. */
-  externalNames: Set<string>;
-  /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
-  ignoreExternalDepth: number;
-  stack: Scope[];
-};
-
-type JsNode = babel.Node | acorn.AnyNode;
-
-function isDeclared(ctx: Context, name: string) {
-  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
-}
-
-const BINARY_OP_MAP = {
-  '==': '==',
-  '!=': '!=',
-  '===': '==',
-  '!==': '!=',
-  '<': '<',
-  '<=': '<=',
-  '>': '>',
-  '>=': '>=',
-  '<<': '<<',
-  '>>': '>>',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TGSL.');
-  },
-  '+': '+',
-  '-': '-',
-  '*': '*',
-  '/': '/',
-  '%': '%',
-  '|': '|',
-  '^': '^',
-  '&': '&',
-  get in(): never {
-    throw new Error('The `in` operator is unsupported in TGSL.');
-  },
-  get instanceof(): never {
-    throw new Error('The `instanceof` operator is unsupported in TGSL.');
-  },
-  '**': '**',
-  get '|>'(): never {
-    throw new Error('The `|>` operator is unsupported in TGSL.');
-  },
-} as const;
-
-const LOGICAL_OP_MAP = {
-  '||': '||',
-  '&&': '&&',
-  get '??'(): never {
-    throw new Error('The `??` operator is unsupported in TGSL.');
-  },
-} as const;
-
-const ASSIGNMENT_OP_MAP = {
-  '=': '=',
-  '+=': '+=',
-  '-=': '-=',
-  '*=': '*=',
-  '/=': '/=',
-  '%=': '%=',
-  '<<=': '<<=',
-  '>>=': '>>=',
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TGSL.');
-  },
-  '|=': '|=',
-  '^=': '^=',
-  '&=': '&=',
-  get '**='(): never {
-    throw new Error('The `**=` operator is unsupported in TGSL.');
-  },
-  '||=': '||=',
-  '&&=': '&&=',
-  get '??='(): never {
-    throw new Error('The `??=` operator is unsupported in TGSL.');
-  },
-} as const;
-
-const Transpilers: Partial<
-  {
-    [Type in JsNode['type']]: (
-      ctx: Context,
-      node: Extract<JsNode, { type: Type }>,
-    ) => tinyest.AnyNode;
-  }
-> = {
+const Transpilers: Partial<{
+  [Type in JsNode['type']]: (
+    ctx: Context,
+    node: Extract<JsNode, { type: Type }>,
+  ) => tinyest.AnyNode;
+}> = {
   Program(ctx, node) {
     const body = node.body[0];
 
@@ -111,7 +29,7 @@ const Transpilers: Partial<
 
   ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
 
-  ArrowFunctionExpression: (ctx, node) => {
+  ArrowFunctionExpression: () => {
     throw new Error('Arrow functions are not supported inside TGSL.');
   },
 
@@ -120,9 +38,7 @@ const Transpilers: Partial<
 
     const result = [
       NODE.block,
-      node.body.map(
-        (statement) => transpile(ctx, statement) as tinyest.Statement,
-      ),
+      node.body.map((statement) => transpile(ctx, statement) as tinyest.Statement),
     ] as const;
 
     ctx.stack.pop();
@@ -136,32 +52,29 @@ const Transpilers: Partial<
       : [NODE.return],
 
   Identifier(ctx, node) {
-    if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      ctx.externalNames.add(node.name);
-    }
-
     return node.name;
   },
 
+  ThisExpression() {
+    return 'this';
+  },
+
   BinaryExpression(ctx, node) {
-    const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.binaryExpr, left, wgslOp, right];
+    return [NODE.binaryExpr, left, node.operator as tinyest.BinaryOperator, right];
   },
 
   LogicalExpression(ctx, node) {
-    const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.logicalExpr, left, wgslOp, right];
+    return [NODE.logicalExpr, left, node.operator as tinyest.LogicalOperator, right];
   },
 
   AssignmentExpression(ctx, node) {
-    const wgslOp = ASSIGNMENT_OP_MAP[node.operator as acorn.AssignmentOperator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.assignmentExpr, left, wgslOp, right];
+    return [NODE.assignmentExpr, left, node.operator as tinyest.AssignmentOperator, right];
   },
 
   UnaryExpression(ctx, node) {
@@ -200,6 +113,14 @@ const Transpilers: Partial<
     return [NODE.postUpdate, operator, argument];
   },
 
+  ConditionalExpression(ctx, node) {
+    const test = transpile(ctx, node.test) as tinyest.Expression;
+    const consequent = transpile(ctx, node.consequent) as tinyest.Expression;
+    const alternative = transpile(ctx, node.alternate) as tinyest.Expression;
+
+    return [NODE.conditionalExpr, test, consequent, alternative];
+  },
+
   Literal(ctx, node) {
     if (typeof node.value === 'boolean') {
       return node.value;
@@ -208,26 +129,23 @@ const Transpilers: Partial<
       return [NODE.stringLiteral, node.value];
     }
     if (node.regex) {
-      throw new Error(
-        'Regular expression literals are not representable in WGSL.',
-      );
+      throw new Error('Regular expression literals are not representable in WGSL.');
     }
     if (node.bigint) {
-      console.warn(
-        'BigInt literals are represented as numbers - loss of precision may occur.',
-      );
+      console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
     }
-    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
+    if (node.raw === 'null') {
+      return [NODE.nullLiteral];
+    }
+    return [NODE.numericLiteral, String(Number(node.value))];
   },
 
   NumericLiteral(ctx, node) {
-    return [NODE.numericLiteral, String(node.value) ?? ''];
+    return [NODE.numericLiteral, String(node.value)];
   },
 
   BigIntLiteral(ctx, node) {
-    console.warn(
-      'BigInt literals are represented as numbers - loss of precision may occur.',
-    );
+    console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
     return [NODE.numericLiteral, String(Number.parseInt(node.value))];
   },
 
@@ -242,9 +160,7 @@ const Transpilers: Partial<
   CallExpression(ctx, node) {
     const callee = transpile(ctx, node.callee) as tinyest.Expression;
 
-    const args = node.arguments.map((arg) =>
-      transpile(ctx, arg)
-    ) as tinyest.Expression[];
+    const args = node.arguments.map((arg) => transpile(ctx, arg)) as tinyest.Expression[];
 
     return [NODE.call, callee, args];
   },
@@ -261,9 +177,7 @@ const Transpilers: Partial<
 
   VariableDeclaration(ctx, node) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
-      throw new Error(
-        'Currently only one declaration in a statement is supported.',
-      );
+      throw new Error('Currently only one declaration in a statement is supported.');
     }
 
     const decl = node.declarations[0];
@@ -277,21 +191,14 @@ const Transpilers: Partial<
 
     ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
 
-    const init = decl.init
-      ? (transpile(ctx, decl.init) as tinyest.Expression)
-      : undefined;
+    const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
 
     if (node.kind === 'var') {
       throw new Error('`var` declarations are not supported.');
     }
 
     if (node.kind === 'const') {
-      if (init === undefined) {
-        throw new Error(
-          'Did not provide initial value in `const` declaration.',
-        );
-      }
-      return [NODE.const, id, init];
+      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
     }
 
     return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
@@ -304,9 +211,7 @@ const Transpilers: Partial<
       ? (transpile(ctx, node.alternate) as tinyest.Statement)
       : undefined;
 
-    return alternate
-      ? [NODE.if, test, consequent, alternate]
-      : [NODE.if, test, consequent];
+    return alternate ? [NODE.if, test, consequent, alternate] : [NODE.if, test, consequent];
   },
 
   ObjectExpression(ctx, node) {
@@ -320,9 +225,7 @@ const Transpilers: Partial<
 
       // TODO: Handle computed properties
       if (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') {
-        throw new Error(
-          'Only Identifier and Literal keys are supported as object keys.',
-        );
+        throw new Error('Only Identifier and Literal keys are supported as object keys.');
       }
 
       // TODO: Handle Object method
@@ -331,9 +234,10 @@ const Transpilers: Partial<
       }
 
       ctx.ignoreExternalDepth++;
-      const key = prop.key.type === 'Identifier'
-        ? (transpile(ctx, prop.key) as string)
-        : String(prop.key.value);
+      const key =
+        prop.key.type === 'Identifier'
+          ? (transpile(ctx, prop.key) as string)
+          : String(prop.key.value);
       ctx.ignoreExternalDepth--;
       const value = transpile(ctx, prop.value) as tinyest.Expression;
 
@@ -344,16 +248,14 @@ const Transpilers: Partial<
   },
 
   ForStatement(ctx, node) {
-    const init = node.init
-      ? (transpile(ctx, node.init) as tinyest.Statement)
-      : null;
-    const condition = node.test
-      ? (transpile(ctx, node.test) as tinyest.Expression)
-      : null;
-    const update = node.update
-      ? (transpile(ctx, node.update) as tinyest.Statement)
-      : null;
+    ctx.stack.push({ declaredNames: [] });
+
+    const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
+    const condition = node.test ? (transpile(ctx, node.test) as tinyest.Expression) : null;
+    const update = node.update ? (transpile(ctx, node.update) as tinyest.Statement) : null;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
 
     return [NODE.for, init, condition, update, body];
   },
@@ -361,7 +263,20 @@ const Transpilers: Partial<
   WhileStatement(ctx, node) {
     const condition = transpile(ctx, node.test) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
     return [NODE.while, condition, body];
+  },
+
+  ForOfStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
+
+    const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
+    const iterable = transpile(ctx, node.right) as tinyest.Expression;
+    const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
+
+    return [NODE.forOf, loopVar, iterable, body];
   },
 
   ContinueStatement() {
@@ -372,13 +287,13 @@ const Transpilers: Partial<
     return [NODE.break];
   },
 
-  TSAsExpression(ctx, node) {
-    return transpile(ctx, node.expression);
+  NullLiteral() {
+    return [NODE.nullLiteral];
   },
 
-  TSSatisfiesExpression(ctx, node) {
-    return transpile(ctx, node.expression);
-  },
+  TSAsExpression: tsFallthrough,
+  TSSatisfiesExpression: tsFallthrough,
+  TSNonNullExpression: tsFallthrough,
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
@@ -388,27 +303,23 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
+  if (ctx.ignoreExternalDepth === 0) {
+    // Check if the node is an external prop access chain, and if so,
+    // add it to externals and swap the AST node for an identifier.
+    const externalChain = tryFindExternalChain(ctx, node);
+    if (externalChain) {
+      ctx.externalNames.set(externalChain, externalChain);
+      return externalChain;
+    }
+  }
+
   // @ts-expect-error <too much for typescript, it seems :/ >
   return transpiler(ctx, node);
 }
 
-export type TranspilationResult = {
-  params: tinyest.FuncParameter[];
-  body: tinyest.Block;
-  /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
-   */
-  externalNames: string[];
-};
-
 export function extractFunctionParts(rootNode: JsNode): {
   params: tinyest.FuncParameter[];
-  body:
-    | acorn.BlockStatement
-    | acorn.Expression
-    | babel.BlockStatement
-    | babel.Expression;
+  body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   let functionNode:
     | acorn.ArrowFunctionExpression
@@ -425,8 +336,7 @@ export function extractFunctionParts(rootNode: JsNode): {
   while (true) {
     if (unwrappedNode.type === 'Program') {
       const statement = unwrappedNode.body.filter(
-        (n) =>
-          n.type === 'ExpressionStatement' || n.type === 'FunctionDeclaration',
+        (n) => n.type === 'ExpressionStatement' || n.type === 'FunctionDeclaration',
       )[0]; // <- assuming only one function declaration
 
       if (!statement) {
@@ -453,9 +363,9 @@ export function extractFunctionParts(rootNode: JsNode): {
 
   if (!functionNode) {
     throw new Error(
-      `tgpu.fn expected a single function to be passed as implementation ${
-        JSON.stringify(unwrappedNode)
-      }`,
+      `tgpu.fn expected a single function to be passed as implementation ${JSON.stringify(
+        unwrappedNode,
+      )}`,
     );
   }
 
@@ -469,41 +379,38 @@ export function extractFunctionParts(rootNode: JsNode): {
 
   const unsupportedTypes = new Set(
     functionNode.params.flatMap((param) =>
-      param.type === 'ObjectPattern' || param.type === 'Identifier'
-        ? []
-        : [param.type]
+      param.type === 'ObjectPattern' || param.type === 'Identifier' ? [] : [param.type],
     ),
   );
   if (unsupportedTypes.size > 0) {
-    throw new Error(
-      `Unsupported function parameter type(s): ${[...unsupportedTypes]}`,
-    );
+    throw new Error(`Unsupported function parameter type(s): ${[...unsupportedTypes].join(', ')}`);
   }
 
   return {
-    params: (functionNode
-      .params as (
+    params: (
+      functionNode.params as (
         | babel.Identifier
         | acorn.Identifier
         | babel.ObjectPattern
         | acorn.ObjectPattern
-      )[]).map((param) =>
-        param.type === 'ObjectPattern'
-          ? {
+      )[]
+    ).map((param) =>
+      param.type === 'ObjectPattern'
+        ? {
             type: FuncParameterType.destructuredObject,
             props: param.properties.flatMap((prop) =>
               (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-                prop.key.type === 'Identifier' &&
-                prop.value.type === 'Identifier'
+              prop.key.type === 'Identifier' &&
+              prop.value.type === 'Identifier'
                 ? [{ name: prop.key.name, alias: prop.value.name }]
-                : []
+                : [],
             ),
           }
-          : {
+        : {
             type: FuncParameterType.identifier,
             name: param.name,
-          }
-      ),
+          },
+    ),
     body: functionNode.body,
   };
 }
@@ -512,41 +419,42 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: new Map(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
           param.type === FuncParameterType.identifier
             ? param.name
-            : param.props.map((prop) => prop.alias)
+            : param.props.map((prop) => prop.alias),
         ),
       },
     ],
   };
 
   const tinyestBody = transpile(ctx, body);
-  const externalNames = [...ctx.externalNames];
 
   if (body.type === 'BlockStatement') {
     return {
       params,
       body: tinyestBody as tinyest.Block,
-      externalNames,
+      externalNames: ctx.externalNames,
     };
   }
 
   return {
     params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
-    externalNames,
+    externalNames: ctx.externalNames,
   };
 }
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: new Map(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: [],

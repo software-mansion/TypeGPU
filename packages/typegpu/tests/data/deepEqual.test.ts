@@ -21,8 +21,10 @@ import {
   vec2f,
   vec2u,
   vec3f,
-} from '../../src/data/index.ts';
-import { ptrPrivate, ptrStorage, ptrWorkgroup } from '../../src/data/ptr.ts';
+  ptrPrivate,
+  ptrStorage,
+  ptrWorkgroup,
+} from 'typegpu/data';
 
 describe('deepEqual', () => {
   it('compares simple types', () => {
@@ -125,9 +127,7 @@ describe('deepEqual', () => {
     expect(deepEqual(ptr1, ptr3)).toBe(false);
     expect(deepEqual(ptr1, ptr4)).toBe(false);
     expect(deepEqual(ptr5, ptr6)).toBe(false);
-    expect(deepEqual(ptrStorage(f32, 'read'), ptrStorage(f32, 'read'))).toBe(
-      true,
-    );
+    expect(deepEqual(ptrStorage(f32, 'read'), ptrStorage(f32, 'read'))).toBe(true);
   });
 
   it('compares atomic types', () => {

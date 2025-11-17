@@ -1,0 +1,46 @@
+"MediaPipe Selfie Segmentation Model
+====================================
+
+This directory contains the MediaPipe Selfie Segmentation model
+(general 256x256 variant), repackaged into the `.ssbin` binary
+format for use with the TypeGPU runtime.
+
+Original work
+-------------
+Title:      MediaPipe Selfie Segmentation (general 256x256 model)
+Authors:    Tingbo Hou, Siargey Pisarchyk, Karthik Raveendran (Google LLC)
+Date:       May 6, 2021
+License:    Apache License, Version 2.0
+Model card: https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Selfie%20Segmentation.pdf
+
+Copyright (c) 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Modifications
+-------------
+The original model has been repackaged from its original distribution
+format into the `.ssbin` binary container format compatible with the
+TypeGPU runtime. The model weights, architecture, and computational
+behavior have not been altered; only the file container has been changed.
+
+This repackaging was performed by Software Mansion S.A. as part of the
+TypeGPU project (https://github.com/software-mansion/TypeGPU).
+
+Trademarks
+----------
+"MediaPipe" and "Google" are trademarks of Google LLC. This project is
+not affiliated with, endorsed by, or sponsored by Google LLC. References
+to MediaPipe herein are made for the sole purpose of identifying the
+upstream source of the model in accordance with Apache License 2.0
+attribution requirements."

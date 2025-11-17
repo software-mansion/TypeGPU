@@ -1,7 +1,9 @@
 <div align="center">
 
-![TypeGPU (light mode)](/apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
-![TypeGPU (dark mode)](/apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
+<picture>
+<source srcset="https://typegpu.com/typegpu-logo-dark.svg" media="(prefers-color-scheme: dark)" />
+<img src="https://typegpu.com/typegpu-logo-light.svg" />
+</picture>
 
 [Website](https://docs.swmansion.com/TypeGPU) —
 [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
@@ -31,13 +33,13 @@ const main = () => {
   return neighborhood(1.1, 0.5);
 };
 
-const wgsl = tgpu.resolve({ externals: { main } });
+const wgsl = tgpu.resolve([main]);
 //    ^? string
 
 //
 // #3) Executed on the GPU (generates WGSL underneath)
 //
-root['~unstable']
+root
   .createGuardedComputePipeline(main)
   .dispatchThreads();
 ```

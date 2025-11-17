@@ -1,6 +1,8 @@
 {
   "title": "TGSL Parsing Tests",
+  "description": "Displays shader-language parsing and transpilation cases used to verify TypeGPU's TypeScript-to-WGSL behavior.",
   "category": "tests",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["test"],
+  "dev": true,
+  "coolFactor": 1
 }

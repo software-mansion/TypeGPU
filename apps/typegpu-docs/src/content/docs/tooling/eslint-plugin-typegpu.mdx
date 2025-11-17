@@ -1,0 +1,102 @@
+---
+title: Lint Plugin
+description: A guide on how to use the optional lint plugin for TypeGPU
+---
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+[eslint-plugin-typegpu](https://www.npmjs.com/package/eslint-plugin-typegpu) is an optional (but highly recommended) tool for projects using TypeGPU.
+It helps with writing 'use gpu' functions by highlighting common pitfalls and unsupported syntax.
+
+## Installation
+
+<Tabs syncKey='package-manager'>
+  <TabItem label='npm' icon='seti:npm'>
+    ```sh frame=none
+    npm add -D eslint-plugin-typegpu
+    ```
+  </TabItem>
+  <TabItem label='pnpm' icon='pnpm'>
+    ```sh frame=none
+    pnpm add -D eslint-plugin-typegpu
+    ```
+  </TabItem>
+  <TabItem label='yarn' icon='seti:yarn'>
+    ```sh frame=none
+    yarn add -D eslint-plugin-typegpu
+    ```
+  </TabItem>
+</Tabs>
+
+After installing, the plugin still needs to be added to a config.
+The way this is done depends on the linter used.
+
+## Configuring
+
+### ESLint (`eslint.config.js`)
+
+The plugin needs to be imported and included in `defineConfig`.
+
+```ts
+import { defineConfig } from 'eslint/config';
+import typegpu from 'eslint-plugin-typegpu';
+
+export default defineConfig([
+  {
+    plugins: { typegpu },
+    rules: {
+      'typegpu/no-integer-division': 'warn',
+      'typegpu/no-math': 'warn',
+      // other rules you want to enable
+    }
+  }
+]);
+```
+
+The plugin also exports `recommended` and `all` configs, which may be used instead of listing the rules one by one.
+
+```ts
+import { defineConfig } from 'eslint/config';
+import typegpu from 'eslint-plugin-typegpu';
+
+export default defineConfig([
+  typegpu.configs.recommended,
+]);
+```
+
+### Oxlint (`oxlint.config.ts`)
+
+The plugin needs to be listed in `jsPlugins`. The rules can either be listed one by one, or a config can be used.
+
+```ts
+import { defineConfig } from 'oxlint';
+import typegpu from 'eslint-plugin-typegpu';
+
+export default defineConfig({
+  jsPlugins: ['eslint-plugin-typegpu'],
+  rules: {
+    ...typegpu.configs.recommended.rules,
+    // (optional) changes from the recommended preset
+  },
+});
+```
+
+### Oxlint (`.oxlintrc.json`)
+
+The plugin needs to be listed in `jsPlugins`, and the rules have to be listed one by one.
+In this type of config there is no way to enable all rules 
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["eslint-plugin-typegpu"],
+  "rules": {
+    "typegpu/no-integer-division": "warn",
+    "typegpu/no-math": "warn",
+    ...
+  }
+}
+```
+
+## Rules
+
+For the full list of supported rules, as well as their specifics, see the [README.md](https://www.npmjs.com/package/eslint-plugin-typegpu) of the plugin.

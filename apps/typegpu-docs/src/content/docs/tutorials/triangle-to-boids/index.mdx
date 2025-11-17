@@ -19,7 +19,7 @@ In this tutorial, we will explore the capabilities of TypeGPU by transforming a 
 
 <ul class="list-disc pl-5">
   <li>
-    Managing resources with a [root](/TypeGPU/fundamentals/roots).
+    Managing resources with a [root](/TypeGPU/apis/roots).
   </li>
   <li>
     Writing shader code in TGSL.
@@ -43,7 +43,7 @@ This setup will mostly look very similar in every project that draws something t
 <Tabs>
   <TabItem label="triangle.ts">
   ```ts
-  import tgpu from 'typegpu';
+  import { tgpu } from 'typegpu';
 
   // Create the root
   const root = await tgpu.init();
@@ -85,7 +85,7 @@ import { LinkCard } from '@astrojs/starlight/components';
 Now that we have our canvas setup, we can start drawing on it. We will start by creating a simple shader that will draw a triangle.
 
 ```ts
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 const VertexOutput = d.ioStruct({
   position: tgpu.builtin.position,
@@ -1500,4 +1500,3 @@ import step9webgpu from 'code/step9-webgpu.ts?raw';
 
 Congratulations! You've successfully implemented the boids flocking algorithm in WebGPU using TypeGPU.
 Along the way, you learned about creating and using a TypeGPU runtime, writing shader code, managing buffers, creating pipelines, and using slots. For more information, refer to the TypeGPU documentation. Thank you for following along and happy coding!
-

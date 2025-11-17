@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
       - name: Print commit id, message and tag
         run: |
@@ -35,7 +33,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -44,6 +42,19 @@ jobs:
       - name: Build all
         run: pnpm -r build
 
+      - name: Check docs llms.txt
+        run: |
+          file=apps/typegpu-docs/dist/llms.txt
+          if [ ! -s "$file" ]; then
+            echo "::error::$file is missing or empty"
+            exit 1
+          fi
+          count=$(grep -cE '^- \[[^]]+\]\(https://docs\.swmansion\.com/TypeGPU/[^)]+\)' "$file" || true)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::$file lists no pages"
+            exit 1
+          fi
+          echo "llms.txt lists $count pages"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

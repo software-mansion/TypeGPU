@@ -1,28 +1,14 @@
-import tgpu, {
-  type RenderFlag,
-  type TgpuBindGroup,
-  type TgpuBuffer,
-  type TgpuTexture,
-  type VertexFlag,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { RenderFlag, TgpuBindGroup, TgpuBuffer, TgpuTexture, VertexFlag } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const helpInfo = document.getElementById('help') as HTMLDivElement;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Data Structures
 
@@ -151,9 +137,8 @@ function getPlaneTransform(translation: d.v3f, scale: d.v3f) {
 
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-const [cubeBuffer, secondCubeBuffer] = [createCube(), createCube()].map(
-  (cube) =>
-    root.createBuffer(vertexLayout.schemaForCount(36), cube).$usage('vertex'),
+const [cubeBuffer, secondCubeBuffer] = [createCube(), createCube()].map((cube) =>
+  root.createBuffer(vertexLayout.schemaForCount(36), cube).$usage('vertex'),
 );
 
 const [transformBuffer, secondTransformBuffer] = [
@@ -164,7 +149,7 @@ const [transformBuffer, secondTransformBuffer] = [
     .createBuffer(Transform, {
       model: getCubeTransform(translation, m.mat4.identity(d.mat4x4f())),
     })
-    .$usage('uniform')
+    .$usage('uniform'),
 );
 
 const planeBuffer = root
@@ -196,75 +181,76 @@ const planeBindGroup = root.createBindGroup(layout, {
 
 // Textures
 
-let depthTexture:
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'depth24plus';
-    sampleCount: 4;
-  }>
-  & RenderFlag;
-let msaaTexture:
-  & TgpuTexture<{
-    size: [number, number];
-    format: typeof presentationFormat;
-    sampleCount: 4;
-  }>
-  & RenderFlag;
+let depthTexture: TgpuTexture<{
+  size: [number, number];
+  format: 'depth24plus';
+  sampleCount: 4;
+}> &
+  RenderFlag;
+let msaaTexture: TgpuTexture<{
+  size: [number, number];
+  format: typeof presentationFormat;
+  sampleCount: 4;
+}> &
+  RenderFlag;
 
 function createDepthAndMsaaTextures() {
   if (depthTexture) {
     depthTexture.destroy();
   }
-  depthTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'depth24plus',
-    sampleCount: 4,
-  }).$usage('render');
+  depthTexture = root
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'depth24plus',
+      sampleCount: 4,
+    })
+    .$usage('render');
 
   if (msaaTexture) {
     msaaTexture.destroy();
   }
-  msaaTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: presentationFormat,
-    sampleCount: 4,
-  }).$usage('render');
+  msaaTexture = root
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: presentationFormat,
+      sampleCount: 4,
+    })
+    .$usage('render');
 }
 createDepthAndMsaaTextures();
 
 // Shaders and Pipeline
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: { position: d.vec4f, color: d.vec4f },
   out: { pos: d.builtin.position, color: d.vec4f },
 })((input) => {
   const pos = std.mul(
     layout.$.camera.projection,
-    std.mul(
-      layout.$.camera.view,
-      std.mul(layout.$.transform.model, input.position),
-    ),
+    std.mul(layout.$.camera.view, std.mul(layout.$.transform.model, input.position)),
   );
   return { pos, color: input.color };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { color: d.vec4f },
   out: d.vec4f,
 })((input) => input.color);
 
-const pipeline = root['~unstable']
-  .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex,
+  fragment,
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .createPipeline();
+  },
+});
 
 // Render Loop
 
@@ -277,10 +263,8 @@ function drawObject(
   pipeline
     .withColorAttachment({
       view: msaaTexture,
-      resolveTarget: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
+      resolveTarget: context,
       loadOp: loadOp,
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture,
@@ -293,24 +277,16 @@ function drawObject(
     .draw(vertexCount);
 }
 
-let disposed = false;
+let animationFrameId: number;
 
-function render() {
-  if (disposed) {
-    return;
-  }
-
+function frame() {
   drawObject(cubeBuffer, bindGroup, 36, 'clear');
   drawObject(secondCubeBuffer, secondBindGroup, 36, 'load');
   drawObject(planeBuffer, planeBindGroup, 6, 'load');
+  animationFrameId = requestAnimationFrame(frame);
 }
 
-function frame() {
-  requestAnimationFrame(frame);
-  render();
-}
-
-frame();
+animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
@@ -319,6 +295,7 @@ let isRightDragging = false;
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
+let lastPinchDist = 0;
 let orbitRadius = Math.sqrt(
   cameraInitialPos.x * cameraInitialPos.x +
     cameraInitialPos.y * cameraInitialPos.y +
@@ -336,16 +313,8 @@ function updateCubesRotation(dx: number, dy: number) {
   const sensitivity = 0.003;
   const yaw = -dx * sensitivity;
   const pitch = -dy * sensitivity;
-  const yawMatrix = m.mat4.rotateY(
-    m.mat4.identity(d.mat4x4f()),
-    yaw,
-    d.mat4x4f(),
-  );
-  const pitchMatrix = m.mat4.rotateX(
-    m.mat4.identity(d.mat4x4f()),
-    pitch,
-    d.mat4x4f(),
-  );
+  const yawMatrix = m.mat4.rotateY(m.mat4.identity(d.mat4x4f()), yaw, d.mat4x4f());
+  const pitchMatrix = m.mat4.rotateX(m.mat4.identity(d.mat4x4f()), pitch, d.mat4x4f());
   const deltaRotation = m.mat4.mul(yawMatrix, pitchMatrix, d.mat4x4f());
   cube1Rotation = m.mat4.mul(deltaRotation, cube1Rotation, d.mat4x4f());
   cube2Rotation = m.mat4.mul(deltaRotation, cube2Rotation, d.mat4x4f());
@@ -355,28 +324,25 @@ function updateCubesRotation(dx: number, dy: number) {
   secondTransformBuffer.write({ model: cube2Transform });
 }
 
-function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += dy * orbitSensitivity;
-  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
-  const maxPitch = Math.PI / 2 - 0.01;
-  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // basically converting spherical coordinates to cartesian.
-  // like sampling points on a unit sphere and then scaling them by the radius.
+function updateCameraPosition() {
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    target,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
+  const newView = m.mat4.lookAt(newCameraPos, target, d.vec3f(0, 1, 0), d.mat4x4f());
   cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+}
+
+function updateCameraOrbit(dx: number, dy: number) {
+  orbitYaw += -dx * 0.005;
+  orbitPitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, orbitPitch + dy * 0.005));
+  updateCameraPosition();
+}
+
+function zoomCamera(delta: number) {
+  orbitRadius = Math.max(1, orbitRadius + delta);
+  updateCameraPosition();
 }
 
 // Prevent the context menu from appearing on right click.
@@ -391,41 +357,53 @@ canvas.addEventListener('mouseout', () => {
   helpInfo.style.opacity = '1';
 });
 // handle mobile devices
-canvas.addEventListener('touchstart', () => {
-  helpInfo.style.opacity = '0';
-}, { passive: true });
+canvas.addEventListener(
+  'touchstart',
+  () => {
+    helpInfo.style.opacity = '0';
+  },
+  { passive: true },
+);
 canvas.addEventListener('touchend', () => {
   helpInfo.style.opacity = '1';
 });
 
-canvas.addEventListener('wheel', (event: WheelEvent) => {
-  event.preventDefault();
-  const zoomSensitivity = 0.05;
-  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    target,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
-  cameraBuffer.writePartial({ view: newView });
-}, { passive: false });
+canvas.addEventListener(
+  'wheel',
+  (e: WheelEvent) => {
+    e.preventDefault();
+    zoomCamera(e.deltaY * 0.05);
+  },
+  { passive: false },
+);
 
-canvas.addEventListener('mousedown', (event) => {
-  if (event.button === 0) {
-    // Left Mouse Button controls Camera Orbit.
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 0) {
     isDragging = true;
-  } else if (event.button === 2) {
-    // Right Mouse Button controls Cube Rotation.
+  } else if (e.button === 2) {
     isRightDragging = true;
   }
-  prevX = event.clientX;
-  prevY = event.clientY;
+  prevX = e.clientX;
+  prevY = e.clientY;
 });
+
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      prevX = e.touches[0].clientX;
+      prevY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  },
+  { passive: false },
+);
 
 const mouseUpEventListener = () => {
   isRightDragging = false;
@@ -433,11 +411,16 @@ const mouseUpEventListener = () => {
 };
 window.addEventListener('mouseup', mouseUpEventListener);
 
-canvas.addEventListener('mousemove', (event) => {
-  const dx = event.clientX - prevX;
-  const dy = event.clientY - prevY;
-  prevX = event.clientX;
-  prevY = event.clientY;
+const touchEndEventListener = () => {
+  isDragging = false;
+};
+window.addEventListener('touchend', touchEndEventListener);
+
+const mouseMoveEventListener = (e: MouseEvent) => {
+  const dx = e.clientX - prevX;
+  const dy = e.clientY - prevY;
+  prevX = e.clientX;
+  prevY = e.clientY;
 
   if (isDragging) {
     updateCameraOrbit(dx, dy);
@@ -445,47 +428,37 @@ canvas.addEventListener('mousemove', (event) => {
   if (isRightDragging) {
     updateCubesRotation(dx, dy);
   }
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-// Mobile touch support.
-canvas.addEventListener('touchstart', (event: TouchEvent) => {
-  event.preventDefault();
-  if (event.touches.length === 1) {
-    // Single touch controls Camera Orbit.
-    isDragging = true;
-  } else if (event.touches.length === 2) {
-    // Two-finger touch controls Cube Rotation.
-    isRightDragging = true;
-  }
-  // Use the first touch for rotation.
-  prevX = event.touches[0].clientX;
-  prevY = event.touches[0].clientY;
-}, { passive: false });
-
-canvas.addEventListener('touchmove', (event: TouchEvent) => {
-  event.preventDefault();
-  const touch = event.touches[0];
-  const dx = touch.clientX - prevX;
-  const dy = touch.clientY - prevY;
-  prevX = touch.clientX;
-  prevY = touch.clientY;
-
-  if (isDragging && event.touches.length === 1) {
+const touchMoveEventListener = (e: TouchEvent) => {
+  if (e.touches.length === 1 && isDragging) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - prevX;
+    const dy = e.touches[0].clientY - prevY;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
     updateCameraOrbit(dx, dy);
   }
-  if (isRightDragging && event.touches.length === 2) {
-    updateCubesRotation(dx, dy);
-  }
-}, { passive: false });
-
-const touchEndEventListener = (event: TouchEvent) => {
-  event.preventDefault();
-  if (event.touches.length === 0) {
-    isRightDragging = false;
-    isDragging = false;
-  }
 };
-window.addEventListener('touchend', touchEndEventListener);
+window.addEventListener('touchmove', touchMoveEventListener, {
+  passive: false,
+});
+
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      zoomCamera((lastPinchDist - pinchDist) * 0.05);
+      lastPinchDist = pinchDist;
+    }
+  },
+  { passive: false },
+);
 
 const resizeObserver = new ResizeObserver(() => {
   createDepthAndMsaaTextures();
@@ -493,9 +466,11 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

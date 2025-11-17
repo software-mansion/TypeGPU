@@ -1,0 +1,8 @@
+{
+  "title": "Prefix Scan Tests",
+  "description": "Validates the parallel prefix-scan implementation across different input sizes and scan configurations.",
+  "category": "tests",
+  "tags": ["ecosystem", "test"],
+  "dev": true,
+  "coolFactor": 1
+}

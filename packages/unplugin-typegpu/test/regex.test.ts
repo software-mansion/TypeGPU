@@ -1,4 +1,4 @@
-import { defaultOptions } from '../src/common.ts';
+import { defaultOptions } from '../src/core/common.ts';
 import { describe, expect, it } from 'vitest';
 
 const regex = defaultOptions.include;

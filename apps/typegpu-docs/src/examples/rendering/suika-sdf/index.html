@@ -1,0 +1,123 @@
+<canvas data-fit-to-container></canvas>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" />
+
+<style>
+  #score {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.4rem;
+    color: white;
+    text-shadow:
+      0 3px 0 rgba(0, 0, 0, 0.35),
+      0 0 12px rgba(255, 220, 100, 0.4);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #attribution {
+    opacity: 1;
+    position: absolute;
+    bottom: 0.625rem;
+    left: 0.625rem;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    user-select: none;
+    pointer-events: auto;
+    transition: opacity 0.5s;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  #attribution a {
+    color: #87ceeb;
+    text-decoration: none;
+  }
+
+  #attribution a:hover {
+    text-decoration: underline;
+  }
+
+  #lose-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    background: rgba(38, 14, 14, 0.55);
+    backdrop-filter: blur(6px);
+  }
+
+  #lose-screen[hidden] {
+    display: none;
+  }
+
+  #lose-card {
+    min-width: 15rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    background: rgba(255, 247, 240, 0.94);
+    box-shadow:
+      0 1rem 2.5rem rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    text-align: center;
+    color: #4d2216;
+    font-family: 'Fredoka One', cursive;
+  }
+
+  #lose-card h2 {
+    margin: 0 0 0.625rem;
+    font-size: 2rem;
+    color: #c63d2f;
+  }
+
+  #lose-score {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  #reset-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.65rem 1.2rem;
+    background: linear-gradient(180deg, #ffb45b, #ef7d32);
+    color: white;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 0.35rem 0 rgba(168, 78, 26, 0.9);
+  }
+
+  #reset-button:hover {
+    filter: brightness(1.05);
+  }
+
+  #reset-button:active {
+    transform: translateY(0.15rem);
+    box-shadow: 0 0.2rem 0 rgba(168, 78, 26, 0.9);
+  }
+</style>
+
+<div id="score">0</div>
+
+<div id="lose-screen" hidden>
+  <div id="lose-card">
+    <h2>Game Over</h2>
+    <div id="lose-score">Score: <span id="final-score">0</span></div>
+    <button id="reset-button" type="button">Reset</button>
+  </div>
+</div>
+
+<div id="attribution">
+  Assets by
+  <a href="https://apps2amigos.itch.io/fruit-game-free-asset-pack" target="_blank">Apps2Amigos</a
+  ><br />
+  Adapted from
+  <a href="https://zrghr.itch.io/froots-and-veggies-culinary-pixels" target="_blank">zrghr</a>
+</div>

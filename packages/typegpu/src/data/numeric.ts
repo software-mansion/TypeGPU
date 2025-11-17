@@ -1,50 +1,56 @@
-import { stitch } from '../core/resolve/stitch.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
-import type {
-  AbstractFloat,
-  AbstractInt,
-  Bool,
-  F16,
-  F32,
-  I32,
-  U16,
-  U32,
+import {
+  isBool,
+  type AbstractFloat,
+  type AbstractInt,
+  type Bool,
+  type F16,
+  type F32,
+  type I32,
+  type U16,
+  type U32,
 } from './wgslTypes.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { FiniteMathAssumptionError, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
+import { isSnippetNumeric } from './snippet.ts';
+import { UnknownData } from './dataTypes.ts';
 
-export const abstractInt = {
-  [$internal]: true,
-  type: 'abstractInt',
-  toString() {
-    return 'abstractInt';
-  },
-} as AbstractInt;
-
-export const abstractFloat = {
-  [$internal]: true,
-  type: 'abstractFloat',
-  toString() {
-    return 'abstractFloat';
-  },
-} as AbstractFloat;
-
-const boolCast = dualImpl({
+const boolCast = callableSchema({
   name: 'bool',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return false;
-    }
+  schema: () => bool,
+  argTypes: (arg) => (arg ? [arg] : []),
+  normalImpl(v: number | boolean = false) {
     if (typeof v === 'boolean') {
       return v;
     }
-    return !!v;
+
+    if (typeof v === 'number') {
+      if (!Number.isFinite(v)) {
+        throw new FiniteMathAssumptionError(v, bool);
+      }
+      return Boolean(v);
+    }
+
+    throw new Error(
+      `Invalid argument type for 'd.bool'. Got '${typeof v}', expected number or boolean`,
+    );
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'bool'
-      // Already of type bool
-      ? stitch`${arg}`
-      : stitch`bool(${arg})`,
+  codegenImpl: (ctx, [v]) => {
+    // check if zero arguments were passed
+    if (v === undefined) {
+      return ctx.gen.typeInstantiation(bool, []);
+    }
+
+    if (isBool(v.dataType) || isSnippetNumeric(v)) {
+      return ctx.gen.typeInstantiation(bool, [v]);
+    }
+
+    if (v.dataType === UnknownData) {
+      throw new WgslTypeError("Unknown argument type for 'd.bool'.");
+    }
+
+    throw new SignatureNotSupportedError([v.dataType], [bool, u32, i32, f32, f16]);
+  },
 });
 
 /**
@@ -62,12 +68,14 @@ const boolCast = dualImpl({
  * const value = bool(21.37); // true
  */
 export const bool: Bool = Object.assign(boolCast, {
+  [$internal]: {},
   type: 'bool',
 }) as unknown as Bool;
 
-const u32Cast = dualImpl({
+const u32Cast = callableSchema({
   name: 'u32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: u32 }),
+  schema: () => u32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -75,13 +83,23 @@ const u32Cast = dualImpl({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, u32);
+    }
+    if (!Number.isInteger(v)) {
+      const truncated = Math.trunc(v);
+      if (truncated < 0) {
+        return 0;
+      }
+      if (truncated > 0xffffffff) {
+        return 0xffffffff;
+      }
+      return truncated;
+    }
+    // Integer input: treat as bit reinterpretation (i32 -> u32)
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'u32'
-      // Already of type u32
-      ? stitch`${arg}`
-      : stitch`u32(${arg})`,
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(u32, v ? [v] : []),
 });
 
 /**
@@ -101,12 +119,14 @@ const u32Cast = dualImpl({
  * const value = u32(-3.1); // 0
  */
 export const u32: U32 = Object.assign(u32Cast, {
+  [$internal]: {},
   type: 'u32',
 }) as unknown as U32;
 
-const i32Cast = dualImpl({
+const i32Cast = callableSchema({
   name: 'i32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: i32 }),
+  schema: () => i32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -114,17 +134,16 @@ const i32Cast = dualImpl({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, i32);
+    }
     return v | 0;
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'i32'
-      // Already of type i32
-      ? stitch`${arg}`
-      : stitch`i32(${arg})`,
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(i32, v ? [v] : []),
 });
 
 export const u16: U16 = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'u16',
 } as U16;
 
@@ -143,12 +162,14 @@ export const u16: U16 = {
  * const value = i32(10000000000) // 1410065408
  */
 export const i32: I32 = Object.assign(i32Cast, {
+  [$internal]: {},
   type: 'i32',
 }) as unknown as I32;
 
-const f32Cast = dualImpl({
+const f32Cast = callableSchema({
   name: 'f32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
+  schema: () => f32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -156,13 +177,12 @@ const f32Cast = dualImpl({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f32);
+    }
     return Math.fround(v);
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'f32'
-      // Already of type f32
-      ? stitch`${arg}`
-      : stitch`f32(${arg})`,
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f32, v ? [v] : []),
 });
 
 /**
@@ -178,6 +198,7 @@ const f32Cast = dualImpl({
  * const value = f32(true); // 1
  */
 export const f32: F32 = Object.assign(f32Cast, {
+  [$internal]: {},
   type: 'f32',
 }) as unknown as F32;
 
@@ -198,7 +219,7 @@ export function toHalfBits(x: number): number {
   // 1. Extract sign, exponent, and mantissa from the 32‑bit layout.
   const sign = (bits >>> 31) & 0x1; // Bit 31 is the sign.
   let exp = (bits >>> 23) & 0xff; // Bits 30‑23 form the biased exponent.
-  let mant = bits & 0x7fffff; // Bits 22‑0 are the significand.
+  const mant = bits & 0x7fffff; // Bits 22‑0 are the significand.
 
   // 2. Handle special values (NaN, ±∞) before re‑biasing.
   if (exp === 0xff) {
@@ -211,15 +232,25 @@ export function toHalfBits(x: number): number {
 
   // 4. Underflow: exponent ≤ 0 yields sub‑normals or signed zero.
   if (exp <= 0) {
-    // If we need to shift more than 10 places, the value rounds to ±0.
+    // Below the smallest representable subnormal magnitude, round to ±0.
     if (exp < -10) {
       return sign << 15;
     }
 
-    // Produce a sub‑normal: prepend the hidden 1, right‑shift, then round.
-    mant = (mant | 0x800000) >> (1 - exp);
-    mant = (mant + 0x1000) >> 13; // Round‑to‑nearest‑even at bit 10.
-    return (sign << 15) | mant;
+    // Produce a sub‑normal: prepend the hidden 1, then round to nearest,
+    // ties to even. `shift` is the number of low bits dropped from the
+    // 24‑bit significand; the bit just below it is the rounding bit and
+    // everything under that forms the sticky bit.
+    const full = mant | 0x800000; // 24-bit significand incl. the implicit 1.
+    const shift = 14 - exp; // in [14, 24]
+    const roundBit = (full >>> (shift - 1)) & 1;
+    const sticky = full & ((1 << (shift - 1)) - 1) ? 1 : 0;
+    let half = full >>> shift;
+    if (roundBit & (sticky | (half & 1))) {
+      half += 1; // A carry here promotes to the smallest normal — that's fine,
+      // the bit pattern (exp field 1, mant 0) is exactly 2^-14.
+    }
+    return (sign << 15) | half;
   }
 
   // 5. Overflow: if the biased exponent is 31 (0x1f) or higher, the number
@@ -228,17 +259,23 @@ export function toHalfBits(x: number): number {
     return (sign << 15) | 0x7c00; // ±∞
   }
 
-  // 6. Normalised number: round mantissa and pack sign|exp|mant.
-  mant = mant + 0x1000; // Add rounding bias at bit 12.
-  if (mant & 0x800000) { // The carry propagated out of the top bit; mantissa overflowed.
-    mant = 0; // Rounded up to 1.0 × 2^(exp+1).
+  // 6. Normalised number: round mantissa to nearest, ties to even, then pack.
+  const roundBit = (mant >>> 12) & 1;
+  const sticky = mant & 0xfff ? 1 : 0;
+  let half = mant >>> 13;
+  if (roundBit & (sticky | (half & 1))) {
+    half += 1;
+  }
+  if (half === 0x400) {
+    // The carry propagated out of the 10‑bit mantissa; it overflowed.
+    half = 0; // Rounded up to 1.0 × 2^(exp+1).
     ++exp; // Increment exponent (may overflow to ±∞).
     if (exp >= 0x1f) {
       return (sign << 15) | 0x7c00;
     }
   }
 
-  return (sign << 15) | (exp << 10) | (mant >> 13);
+  return (sign << 15) | (exp << 10) | half;
 }
 
 /**
@@ -247,20 +284,19 @@ export function toHalfBits(x: number): number {
  * @returns JavaScript number (64-bit float) with same numerical value
  */
 export function fromHalfBits(h: number): number {
-  const sign = (h & 0x8000) ? -1 : 1; // Sign multiplier (preserves −0).
+  const sign = h & 0x8000 ? -1 : 1; // Sign multiplier (preserves −0).
   const exp = (h >> 10) & 0x1f; // 5‑bit exponent.
   const mant = h & 0x03ff; // 10‑bit significand.
 
   // 1. Zero and sub‑normals.
   if (exp === 0) {
+    // oxlint-disable-next-line oxc/erasing-op -- negative zero exists
     return mant ? sign * mant * 2 ** -24 : sign * 0;
   }
 
   // 2. Special cases (exp == 31).
   if (exp === 0x1f) {
-    return mant
-      ? Number.NaN
-      : (sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+    return mant ? Number.NaN : sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
   }
 
   // 3. Normalised numbers.
@@ -271,9 +307,10 @@ function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 
-const f16Cast = dualImpl({
+const f16Cast = callableSchema({
   name: 'f16',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
+  schema: () => f16,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -281,14 +318,13 @@ const f16Cast = dualImpl({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f16);
+    }
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'f16'
-      // Already of type f16
-      ? stitch`${arg}`
-      : stitch`f16(${arg})`,
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f16, v ? [v] : []),
 });
 
 /**
@@ -306,5 +342,24 @@ const f16Cast = dualImpl({
  * const value = f16(21877.5); // 21872
  */
 export const f16: F16 = Object.assign(f16Cast, {
+  [$internal]: {},
   type: 'f16',
 }) as unknown as F16;
+
+export const abstractInt = {
+  [$internal]: {},
+  type: 'abstractInt',
+  toString() {
+    return 'abstractInt';
+  },
+  concretized: i32,
+} as AbstractInt;
+
+export const abstractFloat = {
+  [$internal]: {},
+  type: 'abstractFloat',
+  toString() {
+    return 'abstractFloat';
+  },
+  concretized: f32,
+} as AbstractFloat;

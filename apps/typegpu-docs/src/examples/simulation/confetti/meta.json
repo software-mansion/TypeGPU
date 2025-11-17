@@ -1,5 +1,7 @@
 {
   "title": "Confetti",
+  "description": "Simulates and renders thousands of colorful confetti pieces with GPU-updated motion, rotation, gravity, and drag.",
   "category": "simulation",
-  "tags": ["experimental", "compute", "instancing"]
+  "tags": ["particles", "physics"],
+  "coolFactor": 6
 }

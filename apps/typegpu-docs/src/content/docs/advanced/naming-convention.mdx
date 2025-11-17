@@ -1,0 +1,76 @@
+---
+title: Naming Convention
+draft: true
+---
+
+Here's how we recommend naming things in your code.
+
+## Structs & custom data types
+
+We give structs and other custom data types *PascalCase* names.
+
+```ts
+const Boid = struct({
+  pos: vec2f,
+  vel: vec2f,
+});
+
+const BoidArray = (n: number) => arrayOf(Boid, n);
+```
+
+
+## Functions
+
+We give tgpu functions *camelCase* names, without any special suffix or prefix. Usually imperative mood, verb-phrase structure (i.e., `"doSomething"`).
+
+```ts
+const createBoid = tgpu
+  .fn([], Boid)(() => ({
+    pos: vec2f(),
+    vel: vec2f(0, 1),
+  }));
+```
+
+## Buffers
+
+We give buffers *camelCase* names with a `Buffer` suffix.
+
+```ts
+const boidsBuffer = root
+  .createBuffer(BoidArray(512))
+  .$usage('uniform');
+```
+
+## Buffer bindings
+
+We give buffer bindings *camelCase* names with a suffix that corresponds to their usage.
+
+```ts
+const cellsUniform = root.createUniform(Cells);
+const cellsMutable = root.createMutable(Cells);
+const cellsReadonly = root.createReadonly(Cells);
+```
+
+## Slots
+
+We give slots *camelCase* names with the `Slot` suffix.
+
+```ts
+const colorSlot = tgpu.slot(vec4f(1, 0, 0, 1));
+```
+
+## Accessors
+
+We give accessors *camelCase* names with the `Access` suffix.
+
+```ts
+const colorAccess = tgpu.accessor(vec4f);
+```
+
+## Lazy
+
+We give lazy values *camelCase* names, without any special prefix or suffix.
+
+```ts
+const lighterColor = tgpu.lazy(() => add(color.$, vec4f(0.2, 0.2, 0.2, 0)));
+```

@@ -1,15 +1,10 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
-import { tgpu, type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, type TgpuRoot } from 'typegpu';
 import { sphereTextureNames } from './enums.ts';
-import { CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
+import { type CelestialBody, renderVertexLayout, SkyBoxVertex } from './schemas.ts';
 
-function vert(
-  position: [number, number, number],
-  uv: [number, number],
-) {
+function vert(position: [number, number, number], uv: [number, number]) {
   return SkyBoxVertex({
     position: d.vec3f(...position),
     uv: d.vec2f(...uv),
@@ -74,7 +69,7 @@ function getSkyBoxUrls() {
 
 export async function loadSkyBox(root: TgpuRoot) {
   const size = 2048;
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       dimension: '2d',
       size: [size, size, 6],
@@ -82,19 +77,15 @@ export async function loadSkyBox(root: TgpuRoot) {
     })
     .$usage('sampled', 'render');
 
-  await Promise.all(
-    getSkyBoxUrls().map(async (url, i) => {
+  const bitmaps = await Promise.all(
+    getSkyBoxUrls().map(async (url) => {
       const response = await fetch(url);
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      root.device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [size, size],
-      );
+      return await createImageBitmap(blob);
     }),
   );
+
+  texture.write(bitmaps, { fit: 'stretch' });
 
   return texture;
 }
@@ -137,7 +128,7 @@ export async function loadModel(root: TgpuRoot, modelPath: string) {
 }
 
 export async function loadSphereTextures(root: TgpuRoot) {
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       dimension: '2d',
       size: [2048, 1024, sphereTextureNames.length],
@@ -145,24 +136,20 @@ export async function loadSphereTextures(root: TgpuRoot) {
     })
     .$usage('sampled', 'render');
 
-  await Promise.all(
-    sphereTextureNames.map(async (name, i) => {
+  const planets = await Promise.all(
+    sphereTextureNames.map(async (name) => {
       const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
       const response = await fetch(url);
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      root.device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [2048, 1024],
-      );
+      return await createImageBitmap(blob);
     }),
   );
+  texture.write(planets, { fit: 'stretch' });
 
   return texture;
 }
 
-export const radiusOf = tgpu.fn([CelestialBody], d.f32)((body) =>
-  std.pow((body.mass * 0.75) / Math.PI, 0.333) * body.radiusMultiplier
-);
+export const radiusOf = (body: CelestialBody): number => {
+  'use gpu';
+  return ((body.mass * 0.75) / Math.PI) ** 0.333 * body.radiusMultiplier;
+};

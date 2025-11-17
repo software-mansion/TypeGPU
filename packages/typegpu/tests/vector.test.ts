@@ -1,18 +1,12 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
-import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import { sizeOf } from 'typegpu/data';
+import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
     expect(d.vec2i(1.1, -1.1)).toStrictEqual(d.vec2i(1, -1));
     expect(d.vec3i(1.7, 2.6, 0.0)).toStrictEqual(d.vec3i(1, 2, 0));
-    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(
-      d.vec4i(1, -1, -10, -1),
-    );
+    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(d.vec4i(1, -1, -10, -1));
   });
 
   it('casts floats to unsigned integers', () => {
@@ -37,7 +31,7 @@ describe('setters', () => {
     vec[0] = 1.1;
     vec[1] = -1.1;
     vec.z = 2.2;
-    expect(vec).toStrictEqual(d.vec3u(1, 4294967295, 2));
+    expect(vec).toStrictEqual(d.vec3u(1, 0, 2));
   });
 });
 
@@ -69,8 +63,8 @@ describe('vec2f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
 
-    writeData(new BufferWriter(buffer), d.vec2f, vec);
-    expect(readData(new BufferReader(buffer), d.vec2f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -150,8 +144,8 @@ describe('vec2i', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec2i));
 
-    writeData(new BufferWriter(buffer), d.vec2i, vec);
-    expect(readData(new BufferReader(buffer), d.vec2i)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2i, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2i)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -225,9 +219,8 @@ describe('vec2<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(8);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()))
-      .toThrow();
-    expect(() => readData(new BufferReader(buffer), d.vec2b)).toThrow();
+    expect(() => writeToArrayBuffer(buffer, d.vec2b, d.vec2b())).toThrow();
+    expect(() => readFromArrayBuffer(buffer, d.vec2b)).toThrow();
   });
 
   it('differs in type from other vector schemas', () => {
@@ -333,8 +326,8 @@ describe('vec3f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec3f));
 
-    writeData(new BufferWriter(buffer), d.vec3f, vec);
-    expect(readData(new BufferReader(buffer), d.vec3f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec3f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec3f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -421,8 +414,8 @@ describe('vec3i', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec3i));
 
-    writeData(new BufferWriter(buffer), d.vec3i, vec);
-    expect(readData(new BufferReader(buffer), d.vec3i)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec3i, vec);
+    expect(readFromArrayBuffer(buffer, d.vec3i)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -503,9 +496,8 @@ describe('vec3<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(16);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()))
-      .toThrow();
-    expect(() => readData(new BufferReader(buffer), d.vec3b)).toThrow();
+    expect(() => writeToArrayBuffer(buffer, d.vec3b, d.vec3b())).toThrow();
+    expect(() => readFromArrayBuffer(buffer, d.vec3b)).toThrow();
   });
 
   it('differs in type from other vector schemas', () => {
@@ -621,8 +613,8 @@ describe('vec4f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec4f));
 
-    writeData(new BufferWriter(buffer), d.vec4f, vec);
-    expect(readData(new BufferReader(buffer), d.vec4f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec4f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec4f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -705,8 +697,8 @@ describe('vec2h', () => {
     const vec = d.vec2h(1, 2050);
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
 
-    writeData(new BufferWriter(buffer), d.vec2h, vec);
-    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2h, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(vec);
   });
 
   it('should change unrepresentable values to the closest representable', () => {
@@ -714,10 +706,8 @@ describe('vec2h', () => {
 
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
 
-    writeData(new BufferWriter(buffer), d.vec2h, vec);
-    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(
-      d.vec2h(1, 4096),
-    );
+    writeToArrayBuffer(buffer, d.vec2h, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(d.vec2h(1, 4096));
   });
 
   it('differs in type from other vector schemas', () => {
@@ -833,12 +823,12 @@ describe('v3f', () => {
         const three = d.vec3f(d.vec2f(1, 2), 12); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var planarPosLocal = vec2f(1, 2);
-          var one = vec3f(1, 2, 12);
-          var two = vec3f(planarPosLocal, 12f);
-          var three = vec3f(1, 2, 12);
+          let planarPosLocal = vec2f(1, 2);
+          let one = vec3f(1, 2, 12);
+          let two = vec3f(planarPosLocal, 12f);
+          let three = vec3f(1, 2, 12);
         }"
       `);
     });
@@ -880,12 +870,12 @@ describe('v4f', () => {
         const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var green = vec3f(0, 1, 0);
-          var one = vec4f(0.125, 0.25, 0.375, 1);
-          var two = vec4f(green, 1f);
-          var three = vec4f(0, 0, 1, 1);
+          let green = vec3f(0, 1, 0);
+          let one = vec4f(0.125, 0.25, 0.375, 1);
+          let two = vec4f(green, 1f);
+          let three = vec4f(0, 0, 1, 1);
         }"
       `);
     });
@@ -909,12 +899,12 @@ describe('v4f', () => {
         const three = d.vec4f(0.125, d.vec3f(0.25, 0.5, 0.75)); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var fooLocal = vec3f(0.25, 0.5, 0.75);
-          var one = vec4f(0.25, 0.25, 0.5, 0.75);
-          var two = vec4f(0.1f, fooLocal);
-          var three = vec4f(0.125, 0.25, 0.5, 0.75);
+          let fooLocal = vec3f(0.25, 0.5, 0.75);
+          let one = vec4f(0.25, 0.25, 0.5, 0.75);
+          let two = vec4f(0.1f, fooLocal);
+          let three = vec4f(0.125, 0.25, 0.5, 0.75);
         }"
       `);
     });
@@ -922,11 +912,14 @@ describe('v4f', () => {
 
   describe('swizzling', () => {
     it('works in TGSL on compile-time known vectors', () => {
-      const foo = tgpu.fn([], d.vec3f)(() => {
+      const foo = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         return d.vec4f(1, 2, 3, 4).zyx;
       });
 
-      expect(asWgsl(foo)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
         "fn foo() -> vec3f {
           return vec3f(3, 2, 1);
         }"
@@ -961,12 +954,299 @@ describe('v4b', () => {
         const three = d.vec4b(d.vec3b(false, false, true), true); // literal
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var vecLocal = vec3<bool>(true);
-          var one = vec4<bool>(true, false, true, true);
-          var two = vec4<bool>(vecLocal, false);
-          var three = vec4<bool>(false, false, true, true);
+          let vecLocal = vec3<bool>(true);
+          let one = vec4<bool>(true, false, true, true);
+          let two = vec4<bool>(vecLocal, false);
+          let three = vec4<bool>(false, false, true, true);
+        }"
+      `);
+    });
+  });
+});
+
+describe('type predicates', () => {
+  it('prunes branches', () => {
+    const ceil = (input: d.v3f | d.v3i): d.v3i => {
+      'use gpu';
+      if (input.kind === 'vec3f') {
+        return d.vec3i(std.ceil(input));
+      } else {
+        return d.vec3i(input);
+      }
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = ceil(d.vec3f(1, 2, 3));
+      const bar = ceil(d.vec3i(1, 2, 3));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn ceil_1(input: vec3f) -> vec3i {
+        return vec3i(ceil(input));
+      }
+
+      fn ceil_2(input: vec3i) -> vec3i {
+        return input;
+      }
+
+      fn main() {
+        let foo = ceil_1(vec3f(1, 2, 3));
+        let bar = ceil_2(vec3i(1, 2, 3));
+      }"
+    `);
+  });
+});
+describe('RGBA swizzles', () => {
+  describe('vec2f', () => {
+    it('should access individual r and g components', () => {
+      const vec = d.vec2f(1, 2);
+      expect(vec.r).toBe(1);
+      expect(vec.g).toBe(2);
+    });
+
+    it('should modify individual r and g components', () => {
+      const vec = d.vec2f(1, 2);
+      vec.r = 5;
+      vec.g = 6;
+      expect(vec).toStrictEqual(d.vec2f(5, 6));
+    });
+
+    it('should create a vector using identity rgba swizzle', () => {
+      const vec = d.vec2f(1, 2);
+      const swizzled = vec.rg;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(2);
+    });
+
+    it('should create a vector using mixed rgba swizzle', () => {
+      const vec = d.vec2f(1, 2);
+      const swizzled = vec.gr;
+      expect(swizzled.r).toBe(2);
+      expect(swizzled.g).toBe(1);
+    });
+
+    it('should create a vector using rgba swizzle with repeats', () => {
+      const vec = d.vec2f(1, 2);
+      const swizzled = vec.gg;
+      expect(swizzled.r).toBe(2);
+      expect(swizzled.g).toBe(2);
+    });
+
+    it('should create vec3 from rgba swizzle', () => {
+      const vec = d.vec2f(1, 2);
+      const swizzled = vec.rrg;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(1);
+      expect(swizzled.b).toBe(2);
+    });
+
+    it('should create vec4 from rgba swizzle', () => {
+      const vec = d.vec2f(1, 2);
+      const swizzled = vec.rgrg;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(2);
+      expect(swizzled.b).toBe(1);
+      expect(swizzled.a).toBe(2);
+    });
+  });
+
+  describe('vec3f', () => {
+    it('should access individual r, g, and b components', () => {
+      const vec = d.vec3f(1, 2, 3);
+      expect(vec.r).toBe(1);
+      expect(vec.g).toBe(2);
+      expect(vec.b).toBe(3);
+    });
+
+    it('should modify individual r, g, and b components', () => {
+      const vec = d.vec3f(1, 2, 3);
+      vec.r = 5;
+      vec.g = 6;
+      vec.b = 7;
+      expect(vec).toStrictEqual(d.vec3f(5, 6, 7));
+    });
+
+    it('should create a vector using identity rgba swizzle', () => {
+      const vec = d.vec3f(1, 2, 3);
+      const swizzled = vec.rgb;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(2);
+      expect(swizzled.b).toBe(3);
+    });
+
+    it('should create a vector using mixed rgba swizzle', () => {
+      const vec = d.vec3f(1, 2, 3);
+      const swizzled = vec.bgr;
+      expect(swizzled.r).toBe(3);
+      expect(swizzled.g).toBe(2);
+      expect(swizzled.b).toBe(1);
+    });
+
+    it('should create vec2 from rgba swizzle', () => {
+      const vec = d.vec3f(1, 2, 3);
+      const swizzled = vec.rb;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(3);
+    });
+
+    it('should create vec4 from rgba swizzle', () => {
+      const vec = d.vec3f(1, 2, 3);
+      const swizzled = vec.rgbr;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(2);
+      expect(swizzled.b).toBe(3);
+      expect(swizzled.a).toBe(1);
+    });
+  });
+
+  describe('vec4f', () => {
+    it('should access individual r, g, b, and a components', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      expect(vec.r).toBe(1);
+      expect(vec.g).toBe(2);
+      expect(vec.b).toBe(3);
+      expect(vec.a).toBe(4);
+    });
+
+    it('should modify individual r, g, b, and a components', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      vec.r = 5;
+      vec.g = 6;
+      vec.b = 7;
+      vec.a = 8;
+      expect(vec).toStrictEqual(d.vec4f(5, 6, 7, 8));
+    });
+
+    it('should create a vector using identity rgba swizzle', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      const swizzled = vec.rgba;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(2);
+      expect(swizzled.b).toBe(3);
+      expect(swizzled.a).toBe(4);
+    });
+
+    it('should create a vector using mixed rgba swizzle', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      const swizzled = vec.abgr;
+      expect(swizzled.r).toBe(4);
+      expect(swizzled.g).toBe(3);
+      expect(swizzled.b).toBe(2);
+      expect(swizzled.a).toBe(1);
+    });
+
+    it('should create vec2 from rgba swizzle', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      const swizzled = vec.ra;
+      expect(swizzled.r).toBe(1);
+      expect(swizzled.g).toBe(4);
+    });
+
+    it('should create vec3 from rgba swizzle', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      const swizzled = vec.gba;
+      expect(swizzled.r).toBe(2);
+      expect(swizzled.g).toBe(3);
+      expect(swizzled.b).toBe(4);
+    });
+  });
+
+  describe('vec4i', () => {
+    it('should work with integer vectors', () => {
+      const vec = d.vec4i(10, 20, 30, 40);
+      expect(vec.r).toBe(10);
+      expect(vec.g).toBe(20);
+      expect(vec.b).toBe(30);
+      expect(vec.a).toBe(40);
+
+      const swizzled = vec.bgra;
+      expect(swizzled.r).toBe(30);
+      expect(swizzled.g).toBe(20);
+      expect(swizzled.b).toBe(10);
+      expect(swizzled.a).toBe(40);
+    });
+  });
+
+  describe('vec3b', () => {
+    it('should work with boolean vectors', () => {
+      const vec = d.vec3b(true, false, true);
+      expect(vec.r).toBe(true);
+      expect(vec.g).toBe(false);
+      expect(vec.b).toBe(true);
+
+      const swizzled = vec.bgr;
+      expect(swizzled.r).toBe(true);
+      expect(swizzled.g).toBe(false);
+      expect(swizzled.b).toBe(true);
+    });
+  });
+
+  describe('GPU functions', () => {
+    it('should work with rgba swizzles in GPU code', () => {
+      const main = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
+        const color = d.vec4f(1, 0.5, 0.25, 1);
+        return color.rgb;
+      });
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn main() -> vec3f {
+          let color = vec4f(1, 0.5, 0.25, 1);
+          return color.rgb;
+        }"
+      `);
+    });
+
+    it('should work with complex rgba swizzles in GPU code', () => {
+      const main = tgpu.fn(
+        [],
+        d.vec4f,
+      )(() => {
+        const color = d.vec4f(1, 0.5, 0.25, 1);
+        return color.bgra;
+      });
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn main() -> vec4f {
+          let color = vec4f(1, 0.5, 0.25, 1);
+          return color.bgra;
+        }"
+      `);
+    });
+
+    it('should work with rgba on compile-time known vectors', () => {
+      const foo = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
+        return d.vec4f(1, 2, 3, 4).bgr;
+      });
+
+      expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+        "fn foo() -> vec3f {
+          return vec3f(3, 2, 1);
+        }"
+      `);
+    });
+
+    it('should support individual rgba component access', () => {
+      const main = tgpu.fn(
+        [],
+        d.f32,
+      )(() => {
+        const color = d.vec4f(1, 0.5, 0.25, 0.75);
+        return color.a;
+      });
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn main() -> f32 {
+          let color = vec4f(1, 0.5, 0.25, 0.75);
+          return color.a;
         }"
       `);
     });

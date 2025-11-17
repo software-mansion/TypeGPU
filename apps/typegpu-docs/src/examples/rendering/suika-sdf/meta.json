@@ -1,0 +1,7 @@
+{
+  "title": "Suika SDF",
+  "description": "Runs an interactive fruit-merging physics game whose colorful pieces are rendered from signed distance fields.",
+  "category": "rendering",
+  "tags": ["ecosystem", "interaction", "physics", "ray marching", "sdf"],
+  "coolFactor": 10
+}

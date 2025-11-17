@@ -23,9 +23,7 @@ import type { Atomic, atomicI32, atomicU32, I32, U32 } from './wgslTypes.ts';
  *
  * @param data Underlying type schema.
  */
-export function atomic<TSchema extends U32 | I32>(
-  data: TSchema,
-): Atomic<TSchema> {
+export function atomic<TSchema extends U32 | I32>(data: TSchema): Atomic<TSchema> {
   return new AtomicImpl(data);
 }
 
@@ -34,8 +32,9 @@ export function atomic<TSchema extends U32 | I32>(
 // --------------
 
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
-  public readonly [$internal] = true;
-  public readonly type = 'atomic';
+  readonly [$internal] = {};
+  readonly type = 'atomic';
+  readonly inner: TSchema;
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TSchema>;
@@ -46,5 +45,7 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   declare readonly [$validVertexSchema]: true;
   // ---
 
-  constructor(public readonly inner: TSchema) {}
+  constructor(inner: TSchema) {
+    this.inner = inner;
+  }
 }

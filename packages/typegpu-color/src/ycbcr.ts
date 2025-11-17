@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { mat3x3f, vec3f } from 'typegpu/data';
 import { mul } from 'typegpu/std';
 
@@ -26,6 +26,4 @@ export const rgbToYcbcrMatrix = tgpu.const(
   ),
 );
 
-export const rgbToYcbcr = tgpu.fn([vec3f], vec3f)((rgb) =>
-  mul(rgb, rgbToYcbcrMatrix.value)
-);
+export const rgbToYcbcr = tgpu.fn([vec3f], vec3f)((rgb) => mul(rgb, rgbToYcbcrMatrix.$));

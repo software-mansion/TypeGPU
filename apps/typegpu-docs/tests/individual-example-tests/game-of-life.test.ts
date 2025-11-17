@@ -1,0 +1,324 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
+
+describe('game of life example', () => {
+  setupCommonMocks();
+
+  it('should produce valid code', async ({ device }) => {
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'game-of-life',
+        controlTriggers: ['Test Resolution'],
+        expectedCalls: 5,
+      },
+      device,
+    );
+
+    expect(shaderCodes).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<uniform> gameSizeUniform: u32;
+
+      @group(0) @binding(2) var<uniform> timeUniform: f32;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      @group(1) @binding(1) var next_1: texture_storage_2d<r32uint, write>;
+
+      fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
+        randSeed2(((vec2f(f32(x), f32(y)) / f32(gameSizeUniform)) * timeUniform));
+        textureStore(next_1, vec2u(x, y), vec4u(u32(select(0i, 1i, (randFloat01() > 0.5f))), 0u, 0u, 0u));
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
+
+      @group(1) @binding(0) var current: texture_2d<u32>;
+
+      fn loadTexAt(pos: vec2u) -> u32 {
+        return textureLoad(current, pos, 0).x;
+      }
+
+      @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
+
+      @compute @workgroup_size(16, 16) fn naiveCompute(@builtin(global_invocation_id) gid: vec3u) {
+        let gs = gameSizeUniform;
+        let vmax = (gs - 1u);
+        let p = gid.xy;
+        var neighbors = 0u;
+        for (var oy = -1; (oy <= 1i); oy++) {
+          for (var ox = -1; (ox <= 1i); ox++) {
+            if (((ox == 0i) && (oy == 0i))) {
+              continue;
+            }
+            let nx = (i32(p.x) + ox);
+            let ny = (i32(p.y) + oy);
+            let ok = ((((nx >= 0i) && (ny >= 0i)) && (nx <= i32(vmax))) && (ny <= i32(vmax)));
+            let sample = (loadTexAt(vec2u(select(0u, u32(nx), ok), select(0u, u32(ny), ok))) * select(0u, 1u, ok));
+            neighbors = (neighbors + sample);
+          }
+        }
+        let self_1 = loadTexAt(p);
+        let alive = (self_1 != 0u);
+        let outAlive = ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
+        textureStore(next, p, vec4u(select(0u, 1u, outAlive), 0u, 0u, 0u));
+      }
+
+      @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
+
+      @group(1) @binding(0) var current: texture_2d<u32>;
+
+      @group(1) @binding(2) var sampler_1: sampler;
+
+      fn tileIdx(x: u32, y: u32) -> u32 {
+        return ((y * 18u) + x);
+      }
+
+      var<workgroup> sharedTile: array<u32, 324>;
+
+      fn readTile(x: u32, y: u32) -> u32 {
+        return sharedTile[tileIdx(x, y)];
+      }
+
+      fn countNeighborsInTile(x: u32, y: u32) -> u32 {
+        return (((((((readTile((x - 1u), (y - 1u)) + readTile(x, (y - 1u))) + readTile((x + 1u), (y - 1u))) + readTile((x - 1u), y)) + readTile((x + 1u), y)) + readTile((x - 1u), (y + 1u))) + readTile(x, (y + 1u))) + readTile((x + 1u), (y + 1u)));
+      }
+
+      fn golNextState(alive: bool, neighbors: u32) -> bool {
+        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
+      }
+
+      @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
+
+      @compute @workgroup_size(16, 16) fn tiledCompute(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wgid: vec3u) {
+        let gs = f32(gameSizeUniform);
+        let texelSize = (vec2f(1) / gs);
+        let tileOrigin = ((vec2f(wgid.xy) * 16f) - 1f);
+        let linearId = ((lid.y * 16u) + lid.x);
+        const numGathers = 81u;
+        if ((linearId < numGathers)) {
+          let gx = (linearId % 9u);
+          let gy = u32((f32(linearId) / 9f));
+          let sx = (gx * 2u);
+          let sy = (gy * 2u);
+          let uv = ((tileOrigin + vec2f(f32((sx + 1u)), f32((sy + 1u)))) * texelSize);
+          let g = textureGather(0i, current, sampler_1, uv);
+          sharedTile[tileIdx(sx, sy)] = g.w;
+          sharedTile[tileIdx((sx + 1u), sy)] = g.z;
+          sharedTile[tileIdx(sx, (sy + 1u))] = g.x;
+          sharedTile[tileIdx((sx + 1u), (sy + 1u))] = g.y;
+        }
+        workgroupBarrier();
+        let lx = (lid.x + 1u);
+        let ly = (lid.y + 1u);
+        let current_1 = readTile(lx, ly);
+        let neighbors = countNeighborsInTile(lx, ly);
+        let nextAlive = golNextState((current_1 != 0u), neighbors);
+        textureStore(next, gid.xy, vec4u(u32(select(0i, 1i, nextAlive)), 0u, 0u, 0u));
+      }
+
+      @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
+
+      @group(1) @binding(0) var current: texture_2d<u32>;
+
+      @group(1) @binding(2) var sampler_1: sampler;
+
+      fn tileIdx(x: u32, y: u32) -> u32 {
+        return ((y * 18u) + x);
+      }
+
+      var<workgroup> sharedTile: array<u32, 324>;
+
+      fn readTile(x: u32, y: u32) -> u32 {
+        return sharedTile[tileIdx(x, y)];
+      }
+
+      fn countNeighborsInTile(x: u32, y: u32) -> u32 {
+        return (((((((readTile((x - 1u), (y - 1u)) + readTile(x, (y - 1u))) + readTile((x + 1u), (y - 1u))) + readTile((x - 1u), y)) + readTile((x + 1u), y)) + readTile((x - 1u), (y + 1u))) + readTile(x, (y + 1u))) + readTile((x + 1u), (y + 1u)));
+      }
+
+      fn golNextState(alive: bool, neighbors: u32) -> bool {
+        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
+      }
+
+      @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
+
+      @compute @workgroup_size(16, 16) fn tiledCompute(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wgid: vec3u) {
+        let gs = f32(gameSizeUniform);
+        let texelSize = (vec2f(1) / gs);
+        let tileOrigin = ((vec2f(wgid.xy) * 16f) - 1f);
+        let linearId = ((lid.y * 16u) + lid.x);
+        const numGathers = 81u;
+        if ((linearId < numGathers)) {
+          let gx = (linearId % 9u);
+          let gy = u32((f32(linearId) / 9f));
+          let sx = (gx * 2u);
+          let sy = (gy * 2u);
+          let uv = ((tileOrigin + vec2f(f32((sx + 1u)), f32((sy + 1u)))) * texelSize);
+          let g = textureGather(0i, current, sampler_1, uv);
+          sharedTile[tileIdx(sx, sy)] = g.w;
+          sharedTile[tileIdx((sx + 1u), sy)] = g.z;
+          sharedTile[tileIdx(sx, (sy + 1u))] = g.x;
+          sharedTile[tileIdx((sx + 1u), (sy + 1u))] = g.y;
+        }
+        workgroupBarrier();
+        let lx = (lid.x + 1u);
+        let ly = (lid.y + 1u);
+        let current_1 = readTile(lx, ly);
+        let neighbors = countNeighborsInTile(lx, ly);
+        let nextAlive = golNextState((current_1 != 0u), neighbors);
+        textureStore(next, gid.xy, vec4u(u32(select(0i, 1i, nextAlive)), 0u, 0u, 0u));
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct ZoomParams {
+        enabled: u32,
+        level: f32,
+        centerX: f32,
+        centerY: f32,
+      }
+
+      @group(0) @binding(0) var<uniform> zoomUniform: ZoomParams;
+
+      @group(0) @binding(1) var<uniform> gameSizeUniform: u32;
+
+      fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+        let d = ((abs(point) - size) + vec2f(cornerRadius));
+        return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
+      }
+
+      @group(1) @binding(0) var source: texture_storage_2d<r32uint, read>;
+
+      fn sampleRegular(sampleUv: vec2f, gs: f32) -> u32 {
+        return textureLoad(source, vec2u((sampleUv * gs))).x;
+      }
+
+      @group(0) @binding(2) var<uniform> viewModeUniform: u32;
+
+      struct displayFragment_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn displayFragment(_arg_0: displayFragment_Input) -> @location(0) vec4f {
+        let zoom = (&zoomUniform);
+        let gs = f32(gameSizeUniform);
+        let halfView = (0.5f / (*zoom).level);
+        let clampedCenter = clamp(vec2f((*zoom).centerX, (*zoom).centerY), vec2f(halfView), vec2f((1f - halfView)));
+        let minimapMin = vec2f(0.7799999713897705);
+        let minimapMax = vec2f(0.9800000190734863);
+        const minimapSize = 0.2;
+        let inMinimap = ((((((*zoom).enabled == 1u) && (_arg_0.uv.x >= minimapMin.x)) && (_arg_0.uv.x <= minimapMax.x)) && (_arg_0.uv.y >= minimapMin.y)) && (_arg_0.uv.y <= minimapMax.y));
+        if (inMinimap) {
+          let localUv = ((_arg_0.uv - minimapMin) / minimapSize);
+          let edgeDist = sdRoundedBox2d((localUv - 0.5f), vec2f(0.5), 0.02f);
+          if ((edgeDist > -0.02f)) {
+            let alpha = (1f - smoothstep(0f, 0.02f, edgeDist));
+            return vec4f(0.5f, 0.5f, 0.5f, alpha);
+          }
+          let viewSize = (1f / (*zoom).level);
+          let dist = sdRoundedBox2d((localUv - clampedCenter), vec2f((viewSize / 2f)), 0.01f);
+          const borderWidth = 0.015;
+          if (((dist > -(borderWidth)) && (dist < borderWidth))) {
+            let borderColor = mix(vec4f(0.7689999938011169, 0.3919999897480011, 1, 1), vec4f(0.11400000005960464, 0.44699999690055847, 0.9409999847412109, 1), localUv.x);
+            let a = (1f - smoothstep(0f, borderWidth, abs(dist)));
+            return vec4f(borderColor.x, borderColor.y, borderColor.z, a);
+          }
+          let value = sampleRegular(localUv, gs);
+          let alive = select(vec4f((localUv.x / 2.5f), (localUv.y / 2.5f), ((1f - localUv.x) / 2.5f), 0.8f), vec4f(0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.800000011920929), (viewModeUniform == 1u));
+          return select(vec4f(0, 0, 0, 0.800000011920929), alive, (value == 1u));
+        }
+        var sampleUv = _arg_0.uv;
+        if (((*zoom).enabled == 1u)) {
+          sampleUv = (((_arg_0.uv - 0.5f) / (*zoom).level) + clampedCenter);
+        }
+        let value = sampleRegular(sampleUv, gs);
+        let isClassic = (viewModeUniform == 1u);
+        let alive = select(normalize(vec4f((sampleUv.x / 1.5f), (sampleUv.y / 1.5f), (1f - (sampleUv.x / 1.5f)), 1f)), vec4f(1), isClassic);
+        let dead = select(vec4f(), vec4f(0, 0, 0, 1), isClassic);
+        return select(dead, alive, (value == 1u));
+      }"
+    `);
+  });
+});

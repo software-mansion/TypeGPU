@@ -1,0 +1,7 @@
+{
+  "title": "Parallax Occlusion Mapping",
+  "description": "Adds convincing surface depth to a flat mesh by ray marching through a height map with self-shadowing and lighting.",
+  "category": "rendering",
+  "tags": ["3d", "lighting", "ray marching", "rasterization", "shadows"],
+  "coolFactor": 8
+}

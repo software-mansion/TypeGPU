@@ -1,0 +1,8 @@
+{
+  "title": "Buffer Write Benchmark",
+  "description": "Benchmarks several typed buffer-writing strategies and data representations to compare CPU-side upload performance.",
+  "category": "tests",
+  "tags": ["test", "performance", "buffer"],
+  "dev": true,
+  "coolFactor": 1
+}

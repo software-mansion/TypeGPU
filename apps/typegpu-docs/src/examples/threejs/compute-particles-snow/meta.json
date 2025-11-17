@@ -1,0 +1,7 @@
+{
+  "title": "Three.js - compute / particles / snow",
+  "description": "Simulates a large snowfall on the GPU and renders layered, softly blurred particles through Three.js.",
+  "category": "threejs",
+  "tags": ["3d", "ecosystem", "particles", "physics"],
+  "coolFactor": 5
+}

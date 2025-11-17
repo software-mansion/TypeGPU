@@ -44,9 +44,7 @@ async function main(options) {
  * @param {StructInfo[]} structs
  */
 function topologicalSort(structs) {
-  const allStructs = Object.fromEntries(
-    structs.map((struct) => [struct.name, struct]),
-  );
+  const allStructs = Object.fromEntries(structs.map((struct) => [struct.name, struct]));
   const allStructNames = Object.keys(allStructs);
 
   /** @type {Record<string, Set<string>>} */
@@ -69,9 +67,7 @@ function topologicalSort(structs) {
     }
   }
 
-  const visited = Object.fromEntries(
-    allStructNames.map((name) => [name, false]),
-  );
+  const visited = Object.fromEntries(allStructNames.map((name) => [name, false]));
   /** @type {StructInfo[]} */
   const result = [];
 
@@ -114,10 +110,7 @@ export function generate(
 
   const structs = generateStructs(topologicalSort(reflect.structs), options);
   const aliases = generateAliases(reflect.aliases, options);
-  const bindGroupLayouts = generateBindGroupLayouts(
-    reflect.getBindGroups(),
-    options,
-  );
+  const bindGroupLayouts = generateBindGroupLayouts(reflect.getBindGroups(), options);
 
   const functions = generateFunctions(reflect.functions, wgsl, options);
 
@@ -125,11 +118,9 @@ export function generate(
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${
-    [imports, structs, aliases, bindGroupLayouts, functions, exports_]
-      .filter((generated) => generated && generated.trim() !== '')
-      .join('\n')
-  }
+${[imports, structs, aliases, bindGroupLayouts, functions, exports_]
+  .filter((generated) => generated && generated.trim() !== '')
+  .join('\n')}
 `;
 }
 
@@ -152,15 +143,9 @@ function generateStruct(struct, options) {
   setUseImport('data', options);
 
   return `${declareConst(struct.name, options)} = ${
-    hasVarLengthMember(struct)
-      ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
-      : ''
+    hasVarLengthMember(struct) ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => ` : ''
   }d.struct({
-  ${
-    struct.members
-      .map((member) => generateStructMember(member, options))
-      .join('\n  ')
-  }
+  ${struct.members.map((member) => generateStructMember(member, options)).join('\n  ')}
 });`;
 }
 
@@ -175,9 +160,7 @@ function isVarLengthArray(type_) {
  * @param {StructInfo} struct
  */
 function hasVarLengthMember(struct) {
-  return isVarLengthArray(
-    /** @type MemberInfo */ (struct.members[struct.members.length - 1]).type,
-  );
+  return isVarLengthArray(/** @type MemberInfo */ (struct.members[struct.members.length - 1]).type);
 }
 
 /**
@@ -187,19 +170,9 @@ function hasVarLengthMember(struct) {
 function generateAliases(aliases, options) {
   return aliases.length > 0
     ? `\n/* aliases */
-${
-      aliases
-        .map(
-          (alias) =>
-            `${declareConst(alias.name, options)} = ${
-              generateType(
-                alias.type,
-                options,
-              )
-            };`,
-        )
-        .join('\n')
-    }`
+${aliases
+  .map((alias) => `${declareConst(alias.name, options)} = ${generateType(alias.type, options)};`)
+  .join('\n')}`
     : '';
 }
 
@@ -216,36 +189,32 @@ function generateStructMember(member, options) {
  * @param {Options} options
  */
 function generateType(type_, options) {
-  if (
-    type_.size === 0 &&
-    !type_.isArray &&
-    !options.declaredIdentifiers?.has(type_.name)
-  ) {
+  if (type_.size === 0 && !type_.isArray && !options.declaredIdentifiers?.has(type_.name)) {
     throw new Error(`Unknown data type: ${type_.name}`);
   }
 
   /** @type {string} */
-  const tgpuType = type_ instanceof StructInfo
-    ? type_.name
-    : type_ instanceof ArrayInfo
-    ? `d.arrayOf(${generateType(type_.format, options)}, ${
-      type_.count > 0 ? type_.count : LENGTH_VAR
-    })`
-    : type_ instanceof TemplateInfo &&
-        type_.name === 'atomic' &&
-        type_.format
-    ? `d.atomic(${generateType(type_.format, options)})`
-    : type_.size === 0
-    ? type_.name
-    : `d.${replaceWithAlias(type_)}`;
+  const tgpuType =
+    type_ instanceof StructInfo
+      ? type_.name
+      : type_ instanceof ArrayInfo
+        ? `d.arrayOf(${generateType(type_.format, options)}, ${
+            type_.count > 0 ? type_.count : LENGTH_VAR
+          })`
+        : type_ instanceof TemplateInfo && type_.name === 'atomic' && type_.format
+          ? `d.atomic(${generateType(type_.format, options)})`
+          : type_.size === 0
+            ? type_.name
+            : `d.${replaceWithAlias(type_)}`;
 
-  const result = type_.attributes?.reduce(
-    (acc, attribute) =>
-      ['align', 'size', 'location'].includes(attribute.name)
-        ? `d.${attribute.name}(${attribute.value}, ${acc})`
-        : acc,
-    tgpuType,
-  ) ?? tgpuType;
+  const result =
+    type_.attributes?.reduce(
+      (acc, attribute) =>
+        ['align', 'size', 'location'].includes(attribute.name)
+          ? `d.${attribute.name}(${attribute.value}, ${acc})`
+          : acc,
+      tgpuType,
+    ) ?? tgpuType;
 
   if (result.startsWith('d.')) {
     setUseImport('data', options);
@@ -259,10 +228,7 @@ function generateType(type_, options) {
  * @param {string} format
  */
 function typeToAlias(type, format) {
-  if (
-    ['vec2', 'vec3', 'vec4'].includes(type) &&
-    ['i32', 'u32', 'f32'].includes(format)
-  ) {
+  if (['vec2', 'vec3', 'vec4'].includes(type) && ['i32', 'u32', 'f32'].includes(format)) {
     return type + format[0];
   }
 }
@@ -271,9 +237,7 @@ function typeToAlias(type, format) {
  * @param {TypeInfo} type
  */
 function replaceWithAlias(type) {
-  return type instanceof TemplateInfo
-    ? typeToAlias(type.name, type.format?.name ?? '')
-    : type.name;
+  return type instanceof TemplateInfo ? typeToAlias(type.name, type.format?.name ?? '') : type.name;
 }
 
 /**
@@ -283,17 +247,15 @@ function replaceWithAlias(type) {
 function generateBindGroupLayouts(bindGroups, options) {
   return bindGroups.length > 0
     ? `\n/* bindGroupLayouts */
-${
-      bindGroups
-        .flatMap(
-          (group, index) =>
-            `\
+${bindGroups
+  .flatMap(
+    (group, index) =>
+      `\
 ${declareConst(`layout${index}`, options)} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group, options)}
 });`,
-        )
-        .join('\n\n')
-    }`
+  )
+  .join('\n\n')}`
     : '';
 }
 
@@ -311,10 +273,41 @@ const ACCESS_TYPES = {
   read_write: 'mutable',
 };
 
-const SAMPLE_TYPES = {
-  u32: 'uint',
-  i32: 'sint',
-  f32: 'float',
+const STORAGE_TEXTURE_ACCESS = {
+  read: 'read-only',
+  write: 'write-only',
+  read_write: 'read-write',
+};
+
+const TEXTURE_SAMPLE_SCHEMAS = {
+  u32: 'd.u32',
+  i32: 'd.i32',
+  f32: 'd.f32',
+};
+
+const TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_1d: 'texture1d',
+  texture_2d: 'texture2d',
+  texture_2d_array: 'texture2dArray',
+  texture_3d: 'texture3d',
+  texture_cube: 'textureCube',
+  texture_cube_array: 'textureCubeArray',
+  texture_multisampled_2d: 'textureMultisampled2d',
+};
+
+const DEPTH_TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_depth_2d: 'textureDepth2d',
+  texture_depth_multisampled_2d: 'textureDepthMultisampled2d',
+  texture_depth_2d_array: 'textureDepth2dArray',
+  texture_depth_cube: 'textureDepthCube',
+  texture_depth_cube_array: 'textureDepthCubeArray',
+};
+
+const STORAGE_TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_storage_1d: 'textureStorage1d',
+  texture_storage_2d: 'textureStorage2d',
+  texture_storage_2d_array: 'textureStorage2dArray',
+  texture_storage_3d: 'textureStorage3d',
 };
 
 /**
@@ -328,7 +321,7 @@ function generateGroupLayout(group, options) {
     .map((variable, index) =>
       variable
         ? `${variable.name}: ${generateVariable(variable, options)},`
-        : `_${index}: null, // skipping binding ${index}`
+        : `_${index}: null, // skipping binding ${index}`,
     )
     .join('\n  ');
 }
@@ -348,10 +341,8 @@ function generateVariable(variable, options) {
 function generateUniformVariable(variable, options) {
   return `{
     uniform: ${
-    isVarLengthArray(variable.type)
-      ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
-      : ''
-  }${generateType(variable.type, options)},
+      isVarLengthArray(variable.type) ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => ` : ''
+    }${generateType(variable.type, options)},
   }`;
 }
 
@@ -362,57 +353,37 @@ function generateUniformVariable(variable, options) {
 function generateStorageVariable(variable, options) {
   return `{
     storage: ${
-    isVarLengthArray(variable.type)
-      ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
-      : ''
-  }${generateType(variable.type, options)},${
-    variable.access
-      ? `\n    access: '${
-        ACCESS_TYPES[
-          /** @type ('read' | 'write' | 'read_write') */ (variable.access)
-        ]
-      }',`
-      : ''
-  }
+      isVarLengthArray(variable.type) ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => ` : ''
+    }${generateType(variable.type, options)},${
+      variable.access
+        ? `\n    access: '${
+            ACCESS_TYPES[/** @type ('read' | 'write' | 'read_write') */ (variable.access)]
+          }',`
+        : ''
+    }
   }`;
 }
 
 /**
  * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function getViewDimension(variable) {
+function generateStorageTextureVariable(variable, options) {
+  setUseImport('data', options);
   const type_ = variable.type.name;
-  const dimension = type_.includes('_1d')
-    ? '1d'
-    : type_.includes('_2d')
-    ? '2d'
-    : type_.includes('_3d')
-    ? '3d'
-    : type_.includes('_cube')
-    ? 'cube'
-    : null;
-
-  return type_.includes('_array')
-    ? `${dimension ?? '2d'}-array`
-    : dimension !== '2d'
-    ? dimension
-    : null;
-}
-
-/**
- * @param {VariableInfo} variable
- */
-function generateStorageTextureVariable(variable) {
-  const viewDimension = getViewDimension(variable);
-
-  const access = variable.type instanceof TemplateInfo
-    ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
-    : null;
+  const schemaFn =
+    STORAGE_TEXTURE_SCHEMA_FUNCTIONS[
+      /** @type {keyof typeof STORAGE_TEXTURE_SCHEMA_FUNCTIONS} */ (type_)
+    ] ?? 'textureStorage2d';
+  const access =
+    variable.type instanceof TemplateInfo
+      ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
+      : null;
 
   return `{
-    storageTexture: '${variable.format?.name}',${
-    access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-  }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+    storageTexture: d.${schemaFn}('${variable.format?.name}'${
+      access ? `, '${STORAGE_TEXTURE_ACCESS[access]}'` : ''
+    }),
   }`;
 }
 
@@ -427,46 +398,55 @@ const SAMPLER_TYPES = {
 function generateSamplerVariable(variable) {
   return `{
     sampler: '${
-    SAMPLER_TYPES[
-      /** @type ('sampler' | 'sampler_comparison') */ (variable.type.name)
-    ]
-  }',
+      SAMPLER_TYPES[/** @type ('sampler' | 'sampler_comparison') */ (variable.type.name)]
+    }',
   }`;
 }
 
 /**
  * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function generateTextureVariable(variable) {
+function generateTextureVariable(variable, options) {
+  setUseImport('data', options);
   const type_ = variable.type.name;
 
   if (type_ === 'texture_external') {
-    return generateExternalTextureVariable(variable);
+    return generateExternalTextureVariable(variable, options);
+  }
+
+  const depthSchemaFn =
+    DEPTH_TEXTURE_SCHEMA_FUNCTIONS[
+      /** @type {keyof typeof DEPTH_TEXTURE_SCHEMA_FUNCTIONS} */ (type_)
+    ];
+  if (depthSchemaFn) {
+    return `{
+    texture: d.${depthSchemaFn}(),
+  }`;
   }
 
   const format = variable.format?.name;
-  const viewDimension = getViewDimension(variable);
-  const multisampled = type_.includes('_multisampled');
+  const schemaFn =
+    TEXTURE_SCHEMA_FUNCTIONS[/** @type {keyof typeof TEXTURE_SCHEMA_FUNCTIONS} */ (type_)] ??
+    'texture2d';
+  const sampleType =
+    format && format in TEXTURE_SAMPLE_SCHEMAS
+      ? TEXTURE_SAMPLE_SCHEMAS[/** @type {keyof typeof TEXTURE_SAMPLE_SCHEMAS} */ (format)]
+      : 'd.u32';
 
   return `{
-    texture: '${
-    type_.includes('_depth')
-      ? 'depth'
-      : format && format in SAMPLE_TYPES
-      ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
-      : 'uint'
-  }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
-    multisampled ? '\n    multisampled: true,' : ''
-  }
+    texture: d.${schemaFn}(${sampleType}),
   }`;
 }
 
 /**
- * @param {VariableInfo} variable
+ * @param {VariableInfo} _variable
+ * @param {Options} options
  */
-function generateExternalTextureVariable(variable) {
+function generateExternalTextureVariable(_variable, options) {
+  setUseImport('data', options);
   return `{
-    externalTexture: {},
+    externalTexture: d.textureExternal(),
   }`;
 }
 
@@ -479,20 +459,9 @@ function generateFunctions(functions, wgsl, options) {
   const nonEntryFunctions = functions.filter((func) => func.stage === null);
   return nonEntryFunctions.length > 0
     ? `\n/* functions */
-${
-      nonEntryFunctions
-        .map(
-          (func) =>
-            `${declareConst(func.name, options)} = ${
-              generateFunction(
-                func,
-                wgsl,
-                options,
-              )
-            };`,
-        )
-        .join('\n\n')
-    }`
+${nonEntryFunctions
+  .map((func) => `${declareConst(func.name, options)} = ${generateFunction(func, wgsl, options)};`)
+  .join('\n\n')}`
     : '';
 }
 
@@ -511,28 +480,20 @@ function generateFunction(func, wgsl, options) {
     .slice(func.startLine - 1, func.endLine)
     .join('\n');
 
-  const inputs = `[${
-    func.arguments
-      .flatMap((arg) =>
-        arg.type &&
-          arg.type.attributes?.find((attr) => attr.name === 'builtin') ===
-            undefined
-          ? [`${generateType(arg.type, options)}`]
-          : []
-      )
-      .join(', ')
-  }]`;
+  const inputs = `[${func.arguments
+    .flatMap((arg) =>
+      arg.type && arg.type.attributes?.find((attr) => attr.name === 'builtin') === undefined
+        ? [`${generateType(arg.type, options)}`]
+        : [],
+    )
+    .join(', ')}]`;
 
-  const output = func.returnType
-    ? generateType(func.returnType, options)
-    : null;
+  const output = func.returnType ? generateType(func.returnType, options) : null;
 
   const body = implementation.match(/\(.*\).*{.*}/s);
 
   return body?.[0]
-    ? `tgpu.fn(${inputs}${output ? `, ${output}` : ''})(/* wgsl */ \`${
-      body[0]
-    }\`)`
+    ? `tgpu.fn(${inputs}${output ? `, ${output}` : ''})(/* wgsl */ \`${body[0]}\`)`
     : '';
 }
 
@@ -547,30 +508,25 @@ function declareConst(ident, options) {
     options.declaredIdentifiers.add(ident);
   }
 
-  return `${
-    options.moduleSyntax === 'esmodule' ? 'export ' : ''
-  }const ${ident}`;
+  return `${options.moduleSyntax === 'esmodule' ? 'export ' : ''}const ${ident}`;
 }
 
 /**
  * @param {Options} options
  */
 function generateImports(options) {
-  return [
-    options.usedImports?.tgpu
-      ? options.moduleSyntax === 'commonjs'
-        ? "const tgpu = require('typegpu').default;"
-        : "import tgpu from 'typegpu';"
-      : null,
+  const imports = [
+    options.usedImports?.tgpu ? 'tgpu' : null,
+    options.usedImports?.data ? 'd' : null,
+  ].filter((imp) => !!imp);
 
-    options.usedImports?.data
-      ? options.moduleSyntax === 'commonjs'
-        ? "const d = require('typegpu/data');"
-        : "import * as d from 'typegpu/data';"
-      : null,
-  ]
-    .filter((imp) => !!imp)
-    .join('\n');
+  if (imports.length === 0) {
+    return '';
+  }
+
+  return options.moduleSyntax === 'commonjs'
+    ? `const { ${imports.join(', ')} } = require('typegpu');`
+    : `import { ${imports.join(', ')} } from 'typegpu';`;
 }
 
 /**
@@ -578,11 +534,7 @@ function generateImports(options) {
  */
 function generateExports(options) {
   return options.moduleSyntax === 'commonjs'
-    ? `\nmodule.exports = {${
-      [...(options.declaredIdentifiers ?? [])].join(
-        ', ',
-      )
-    }};`
+    ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(', ')}};`
     : '';
 }
 

@@ -1,0 +1,209 @@
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { tgpu, d } from 'typegpu';
+
+describe('function argument origin tracking', () => {
+  it('should fail on mutation of primitive arguments', () => {
+    const foo = (a: number) => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      a += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(1);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(i32): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on mutation of destructured primitive arguments', () => {
+    const Foo = d.struct({ a: d.f32 });
+
+    const foo = ({ a }: { a: number }) => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      a += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(Foo({ a: 1 }));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(struct:Foo): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on mutation of non-primitive arguments', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      a.x += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(1, 2, 3));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): 'a.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on transitive mutation of non-primitive arguments', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      const b = a;
+      b.x += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(1, 2, 3));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): 'b.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on update of primitive arguments', () => {
+    const foo = tgpu.fn([d.u32])((a) => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      a++;
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'a++' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on update of non-primitive arguments', () => {
+    const foo = tgpu.fn([d.vec3f])((a: d.v3f) => {
+      'use gpu';
+      const b = a;
+      b.x++;
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'b.x++' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on create a let variable from an argument reference', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      let b = a;
+      b = d.vec3f();
+      return b;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(1, 2, 3));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+      - Try 'const b = a' if you won't reassign 'b' later.
+      -----]
+    `);
+  });
+
+  it('should fail on assigning an argument reference to a variable', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      let b = d.vec3f();
+      b = a;
+      return b;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(1, 2, 3));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): 'b = a' is invalid, because references cannot be assigned.
+      -----
+      Try 'b = vec3f(a)' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('should fail on returning an argument reference', () => {
+    const foo = (a: d.v3f) => {
+      'use gpu';
+      return a;
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(d.vec3f(7));
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(vec3f): 'return a;' is invalid, cannot return references to arguments. Copy the argument before returning it.]
+    `);
+  });
+
+  it('throws a descriptive error when assigning a const to let', () => {
+    const testFn = () => {
+      'use gpu';
+      const a = d.vec3f();
+      let b = a;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+      - Try 'const b = a' if you won't reassign 'b' later.
+      -----]
+    `);
+  });
+});

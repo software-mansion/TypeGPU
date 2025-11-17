@@ -1,0 +1,57 @@
+{
+  "name": "@typegpu/three",
+  "version": "0.12.1",
+  "description": "Utilities for integrating TypeGPU with Three.js",
+  "keywords": [],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-three"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "unbuild",
+    "test": "vitest run",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/three": "catalog:types",
+    "@webgpu/types": "catalog:types",
+    "jiti": "catalog:build",
+    "typegpu": "workspace:*",
+    "typegpu-testing-utility": "workspace:*",
+    "typescript": "catalog:types",
+    "unbuild": "catalog:build",
+    "unplugin-typegpu": "workspace:*",
+    "vitest": "catalog:test"
+  },
+  "peerDependencies": {
+    "@typegpu/gl": "workspace:^",
+    "three": ">0.126.0",
+    "typegpu": "workspace:^"
+  }
+}

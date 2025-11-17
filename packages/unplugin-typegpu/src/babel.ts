@@ -1,243 +1,186 @@
-import * as Babel from '@babel/standalone';
-import type TemplateGenerator from '@babel/template';
-import type { TraverseOptions } from '@babel/traverse';
-import type * as babel from '@babel/types';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import { FORMAT_VERSION } from 'tinyest';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
+import * as t from '@babel/types';
 import {
-  type Context,
+  METADATA_FORMAT_VERSION,
+  type PluginState,
+  checkOpts,
   defaultOptions,
-  embedJSON,
-  gatherTgpuAliases,
-  getFunctionName,
-  isShellImplementationCall,
-  type Options,
-  performExpressionNaming,
-  useGpuDirective,
-} from './common.ts';
-import { createFilterForId } from './filter.ts';
+  functionVisitor,
+  getBlockScope,
+  initPluginState,
+} from './core/common.ts';
+import { createFilterForId } from './core/filter.ts';
 
-// NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
-// typing for @babel/standalone does not expose them.
-const template = (
-  Babel as unknown as { packages: { template: typeof TemplateGenerator } }
-).packages.template;
-const types = (Babel as unknown as { packages: { types: typeof babel } })
-  .packages.types;
-
-function containsUseGpuDirective(
-  node:
-    | babel.FunctionDeclaration
-    | babel.FunctionExpression
-    | babel.ArrowFunctionExpression,
-): boolean {
-  return ((
-    'directives' in node.body ? (node.body?.directives ?? []) : []
-  )
-    .map((directive) => directive.value.value))
-    .includes(useGpuDirective);
+function i(identifier: string): t.Identifier {
+  return t.identifier(identifier);
 }
 
-function i(identifier: string): babel.Identifier {
-  return types.identifier(identifier);
+function externalsToNode(externals: Externals): t.Expression {
+  return t.objectExpression(
+    Array.from(externals, ([key, value]) => {
+      const chain = value.split('.');
+      if (!chain[0]) {
+        throw new Error('Internal error, expected chain to not be empty');
+      }
+      const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+      const propAccess = chain
+        .slice(1)
+        .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+
+      return t.objectProperty(
+        t.stringLiteral(key),
+        t.arrowFunctionExpression([], propAccess),
+        false,
+      );
+    }),
+  );
 }
 
-function functionToTranspiled(
-  node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  parent: babel.Node | null,
-): babel.CallExpression {
-  const { params, body, externalNames } = transpileFn(node);
-  const maybeName = getFunctionName(node, parent);
-
-  const metadata = types.objectExpression([
-    types.objectProperty(
-      i('v'),
-      types.numericLiteral(FORMAT_VERSION),
-    ),
-    types.objectProperty(
-      i('name'),
-      maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
-    ),
-    types.objectProperty(
-      i('ast'),
-      template.expression`${embedJSON({ params, body, externalNames })}`(),
-    ),
-    types.objectMethod(
-      'get',
-      i('externals'),
-      [],
-      types.blockStatement([
-        types.returnStatement(
-          types.objectExpression(
-            externalNames.map((name) =>
-              types.objectProperty(i(name), i(name), false, true)
-            ),
-          ),
-        ),
-      ]),
-    ),
+function assignMetadata(
+  this: PluginState,
+  path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
+  name: string | undefined,
+  ast: ReturnType<typeof transpileFn>,
+): void {
+  const metadata = t.objectExpression([
+    t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
+    t.objectProperty(i('name'), t.valueToNode(name)),
+    t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
+    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
-  return types.callExpression(
-    types.arrowFunctionExpression(
+  let expression: t.Expression;
+  const visibility = t.isFunctionDeclaration(path.node)
+    ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
+    : undefined;
+
+  if (t.isFunctionDeclaration(path.node)) {
+    expression = t.functionExpression(path.node.id, path.node.params, path.node.body);
+  } else {
+    expression = path.node as t.Expression;
+  }
+
+  const callExpr = t.callExpression(
+    t.arrowFunctionExpression(
       [i('$')],
-      types.logicalExpression(
+      t.logicalExpression(
         '&&',
-        types.callExpression(
-          types.memberExpression(
-            types.assignmentExpression(
+        t.callExpression(
+          t.memberExpression(
+            t.assignmentExpression(
               '??=',
-              types.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
-              types.newExpression(i('WeakMap'), []),
+              t.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
+              t.newExpression(i('WeakMap'), []),
             ),
             i('set'),
           ),
-          [
-            types.assignmentExpression(
-              '=',
-              types.memberExpression(i('$'), i('f')),
-              node,
-            ),
-            metadata,
-          ],
+          [t.assignmentExpression('=', t.memberExpression(i('$'), i('f')), expression), metadata],
         ),
-        types.memberExpression(i('$'), i('f')),
+        t.memberExpression(i('$'), i('f')),
       ),
     ),
-    [types.objectExpression([])],
+    [t.objectExpression([])],
   );
-}
 
-function wrapInAutoName(
-  node: babel.Expression,
-  name: string,
-) {
-  return types.callExpression(
-    template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
-      placeholderPattern: false,
-    })(),
-    [node, types.stringLiteral(name)],
-  );
-}
+  t.addComment(callExpr, 'leading', '#__PURE__');
 
-function functionVisitor(ctx: Context): TraverseOptions {
-  return {
-    VariableDeclarator(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('init').replaceWith(wrapInAutoName(node, name));
-      });
-    },
+  let replacement: t.Node = callExpr;
 
-    AssignmentExpression(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('right').replaceWith(wrapInAutoName(node, name));
-      });
-    },
+  if (t.isFunctionDeclaration(path.node) && path.node.id) {
+    const declaration = t.variableDeclaration('const', [
+      t.variableDeclarator(path.node.id, callExpr),
+    ]);
+    t.inheritLeadingComments(declaration, path.node);
 
-    ObjectProperty(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('value').replaceWith(wrapInAutoName(node, name));
-      });
-    },
+    if (
+      path.parentPath &&
+      (path.parentPath.isExportNamedDeclaration() || path.parentPath.isExportDefaultDeclaration())
+    ) {
+      t.inheritLeadingComments(declaration, path.parentPath.node);
+      path.parentPath.node.leadingComments = null;
+    }
+    replacement = declaration;
+  }
 
-    ImportDeclaration(path) {
-      gatherTgpuAliases(path.node, ctx);
-    },
+  if (visibility) {
+    // Hoisting the declaration to the top of the scope
+    visibility.unshiftContainer('body', replacement as t.Statement);
 
-    ArrowFunctionExpression(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      if (containsUseGpuDirective(node)) {
-        path.replaceWith(functionToTranspiled(node, parent));
-        path.skip();
-      }
-    },
-
-    FunctionExpression(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      if (containsUseGpuDirective(node)) {
-        path.replaceWith(functionToTranspiled(node, parent));
-        path.skip();
-      }
-    },
-
-    FunctionDeclaration(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      const expression = types.functionExpression(
-        node.id,
-        node.params,
-        node.body,
+    const id = t.isFunctionDeclaration(path.node) ? path.node.id : undefined;
+    if (id && path.parentPath.isExportNamedDeclaration()) {
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
       );
-
-      if (containsUseGpuDirective(path.node) && node.id) {
-        path.replaceWith(
-          types.variableDeclaration('const', [
-            types.variableDeclarator(
-              node.id,
-              functionToTranspiled(expression, parent),
-            ),
-          ]),
-        );
-        path.skip();
-      }
-    },
-
-    CallExpression(path) {
-      const node = path.node;
-
-      if (isShellImplementationCall(node, ctx)) {
-        const implementation = node.arguments[0];
-
-        if (
-          implementation &&
-          (implementation.type === 'FunctionExpression' ||
-            implementation.type === 'ArrowFunctionExpression')
-        ) {
-          const transpiled = functionToTranspiled(
-            implementation,
-            null,
-          ) as babel.CallExpression;
-
-          path.replaceWith(
-            types.callExpression(node.callee, [
-              transpiled,
-            ]),
-          );
-
-          path.skip();
-        }
-      }
-    },
-  };
+    } else if (id && path.parentPath.isExportDefaultDeclaration()) {
+      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+    } else {
+      path.remove();
+    }
+  } else {
+    path.replaceWith(replacement);
+  }
+  path.skip();
 }
 
-export default function () {
+function wrapInAutoName(path: NodePath<t.Expression>, name: string): void {
+  // /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(<node>, '<name>')
+  const callExpr = t.callExpression(
+    t.logicalExpression(
+      '??',
+      // globalThis.__TYPEGPU_AUTONAME__
+      t.memberExpression(i('globalThis'), i('__TYPEGPU_AUTONAME__')),
+      // (a => a)
+      t.arrowFunctionExpression([i('a')], i('a')),
+    ),
+    [path.node, t.stringLiteral(name)],
+  );
+  t.addComment(callExpr, 'leading', '#__PURE__');
+  path.replaceWith(callExpr);
+}
+
+function replaceWithAssignmentOverload(
+  path: NodePath<t.AssignmentExpression>,
+  runtimeFn: string,
+): void {
+  path.replaceWith(
+    t.assignmentExpression(
+      '=',
+      path.node.left,
+      t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
+    ),
+  );
+}
+
+function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
+  path.replaceWith(
+    t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
+  );
+}
+
+export default function TypeGPUPlugin() {
   return {
+    name: 'typegpu',
+    pre(this: PluginState) {
+      this.opts = checkOpts(defu(this.opts, defaultOptions));
+      initPluginState(this, {
+        warn: (message) => console.warn(message),
+        assignMetadata,
+        wrapInAutoName,
+        replaceWithAssignmentOverload,
+        replaceWithBinaryOverload,
+      });
+    },
     visitor: {
       Program(path, state) {
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const options = defu((state as any).opts as Options, defaultOptions);
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const id: string | undefined = (state as any).filename;
-
-        const filter = createFilterForId(options);
-        if (id && filter && !filter?.(id)) {
+        const filter = createFilterForId(state.opts);
+        if (state.filename && filter && !filter?.(state.filename)) {
           return;
         }
 
-        const ctx: Context = {
-          tgpuAliases: new Set<string>(
-            options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
-          ),
-          fileId: id,
-          autoNamingEnabled: options.autoNamingEnabled,
-        };
-
-        path.traverse(functionVisitor(ctx));
+        path.traverse(functionVisitor, state);
       },
-    } satisfies TraverseOptions,
+    } satisfies TraverseOptions<PluginState>,
   };
 }

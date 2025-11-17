@@ -1,11 +1,7 @@
 // @ts-nocheck
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
-import {
-  addButtonParameter,
-  addElement,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addButtonParameter, addElement, onFrame } from '@typegpu/example-toolkit';
 import {
   builtin,
   createRuntime,
@@ -16,17 +12,10 @@ import {
 import { arrayOf, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 addButtonParameter('Randomize', randomizeTriangles);
 
@@ -64,14 +53,11 @@ const writeSlot = tgpu.slot<TgpuBufferMutable<TrianglePosData>>();
 function randomizeTriangles() {
   const positions = [];
   for (let i = 0; i < triangleAmount; i++) {
-    const position = [Math.random() * 2 - 1, Math.random() * 2 - 1] as [
+    const position = [Math.random() * 2 - 1, Math.random() * 2 - 1] as [number, number];
+    const velocity = [Math.random() * 0.01 - 0.005, Math.random() * 0.01 - 0.005] as [
       number,
       number,
     ];
-    const velocity = [
-      Math.random() * 0.01 - 0.005,
-      Math.random() * 0.01 - 0.005,
-    ] as [number, number];
     positions.push({ position, velocity });
   }
   runtime.writeBuffer(trianglePosBuffers[0], positions);
@@ -130,7 +116,7 @@ const renderPipelines = [0, 1].map((idx) =>
     primitive: {
       topology: 'triangle-list',
     },
-  })
+  }),
 );
 
 const computePipelines = [0, 1].map((idx) =>
@@ -159,7 +145,7 @@ const computePipelines = [0, 1].map((idx) =>
   `
       .with(readSlot, pairs[idx][0])
       .with(writeSlot, pairs[idx][1]),
-  })
+  }),
 );
 
 randomizeTriangles();

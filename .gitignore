@@ -2,6 +2,7 @@
 node_modules
 .pnp
 .pnp.js
+.pnpm-store
 
 # testing
 coverage
@@ -31,3 +32,6 @@ yarn-error.log*
 .DS_Store
 .idea
 .husky
+
+# agents
+.claude

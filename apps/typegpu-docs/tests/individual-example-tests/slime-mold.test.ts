@@ -1,0 +1,396 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
+
+describe('slime mold example', () => {
+  setupCommonMocks();
+
+  it('should produce valid code', async ({ device }) => {
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'slime-mold',
+        expectedCalls: 4,
+      },
+      device,
+    );
+
+    expect(shaderCodes).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed_1(value: f32) {
+        let scrambled = scrambleSeed(value);
+        let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed(seed: f32) {
+        seed_1(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randInUnitCircle() -> vec2f {
+        let radius = sqrt(sample());
+        let angle = (sample() * 6.283185307179586f);
+        return vec2f((cos(angle) * radius), (sin(angle) * radius));
+      }
+
+      struct Agent {
+        position: vec2f,
+        angle: f32,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> agentsData: array<Agent, 200000>;
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        randSeed(((f32(x) / 2e+5f) + 0.1f));
+        let pos = ((randInUnitCircle() * 118f) + vec2f(128));
+        let angle = atan2((128f - pos.y), (128f - pos.x));
+        agentsData[x] = Agent(pos, angle);
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }
+
+      @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
+
+      struct Params {
+        moveSpeed: f32,
+        sensorAngle: f32,
+        sensorDistance: f32,
+        turnSpeed: f32,
+        evaporationRate: f32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
+
+      @group(1) @binding(1) var newState: texture_storage_2d<rgba8unorm, write>;
+
+      @compute @workgroup_size(16, 16) fn blur(@builtin(global_invocation_id) gid: vec3u) {
+        let dims = textureDimensions(oldState);
+        if (((gid.x >= dims.x) || (gid.y >= dims.y))) {
+          return;
+        }
+        var sum = vec3f();
+        var count = 0f;
+        // unrolled iteration #0
+        // unrolled iteration #0 / #0
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(-1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #0 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(0, -1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #0 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1, -1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
+        // unrolled iteration #1
+        // unrolled iteration #1 / #0
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #1 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i());
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #1 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1, 0));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
+        // unrolled iteration #2
+        // unrolled iteration #2 / #0
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #2 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(0, 1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #2 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
+        // ---
+        let blurred = (sum / count);
+        let newColor = saturate((blurred - params.evaporationRate));
+        textureStore(newState, gid.xy, vec4f(newColor, 1f));
+      }
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed_1(value: f32) {
+        let scrambled = scrambleSeed(value);
+        let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed(seed: f32) {
+        seed_1(seed);
+      }
+
+      @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
+
+      struct Agent {
+        position: vec2f,
+        angle: f32,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      struct Params {
+        moveSpeed: f32,
+        sensorAngle: f32,
+        sensorDistance: f32,
+        turnSpeed: f32,
+        evaporationRate: f32,
+      }
+
+      @group(0) @binding(1) var<uniform> params: Params;
+
+      fn sense(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
+        let sensorAngle = (angle + sensorAngleOffset);
+        let sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
+        let sensorPos = (pos + (sensorDir * params.sensorDistance));
+        let dims = textureDimensions(oldState);
+        let dimsf = vec2f(dims);
+        let sensorPosInt = vec2u(clamp(sensorPos, vec2f(), (dimsf - 1f)));
+        let color = textureLoad(oldState, sensorPosInt).rgb;
+        return ((color.x + color.y) + color.z);
+      }
+
+      @group(0) @binding(2) var<uniform> deltaTime: f32;
+
+      @group(1) @binding(1) var newState_1: texture_storage_2d<rgba8unorm, write>;
+
+      @compute @workgroup_size(64) fn updateAgents(@builtin(global_invocation_id) gid: vec3u) {
+        if ((gid.x >= 200000u)) {
+          return;
+        }
+        randSeed(((f32(gid.x) / 2e+5f) + 0.1f));
+        let dims = textureDimensions(oldState);
+        let agent = (&agentsData[gid.x]);
+        let random = randFloat01();
+        let weightForward = sense((*agent).position, (*agent).angle, 0f);
+        let weightLeft = sense((*agent).position, (*agent).angle, params.sensorAngle);
+        let weightRight = sense((*agent).position, (*agent).angle, -(params.sensorAngle));
+        var angle = (*agent).angle;
+        if (((weightForward > weightLeft) && (weightForward > weightRight))) {}
+        else {
+          if (((weightForward < weightLeft) && (weightForward < weightRight))) {
+            angle = (angle + ((((random * 2f) - 1f) * params.turnSpeed) * deltaTime));
+          }
+          else {
+            if ((weightRight > weightLeft)) {
+              angle = (angle - (params.turnSpeed * deltaTime));
+            }
+            else {
+              if ((weightLeft > weightRight)) {
+                angle = (angle + (params.turnSpeed * deltaTime));
+              }
+            }
+          }
+        }
+        let dir = vec2f(cos(angle), sin(angle));
+        var newPos = ((*agent).position + ((dir * params.moveSpeed) * deltaTime));
+        let dimsf = vec2f(dims);
+        if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
+          newPos = clamp(newPos, vec2f(), (dimsf - 1f));
+          if (((newPos.x <= 0f) || (newPos.x >= (dimsf.x - 1f)))) {
+            angle = (3.141592653589793f - angle);
+          }
+          if (((newPos.y <= 0f) || (newPos.y >= (dimsf.y - 1f)))) {
+            angle = -(angle);
+          }
+          angle += ((random - 0.5f) * 0.1f);
+        }
+        agentsData[gid.x] = Agent(newPos, angle);
+        let oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
+        let newState = (oldState_1 + 1f);
+        textureStore(newState_1, vec2u(newPos), vec4f(newState, 1f));
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      @group(1) @binding(0) var state: texture_2d<f32>;
+
+      @group(0) @binding(0) var filteringSampler: sampler;
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        return textureSample(state, filteringSampler, _arg_0.uv);
+      }"
+    `);
+  });
+});

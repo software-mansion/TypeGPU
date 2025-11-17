@@ -1,87 +1,23 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, {
-  type TgpuBindGroupLayout,
-  type TgpuBuffer,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  type TgpuTextureView,
-  type UniformFlag,
-} from '../src/index.ts';
-import { getName } from '../src/shared/meta.ts';
-import {
-  type ExtractBindGroupInputFromLayout,
-  MissingBindingError,
-  type TgpuBindGroup,
-  type TgpuLayoutComparisonSampler,
-  type TgpuLayoutSampler,
-  type UnwrapRuntimeConstructor,
-} from '../src/tgpuBindGroupLayout.ts';
-import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
-import './utils/webgpuGlobals.ts';
+import { d, tgpu } from 'typegpu';
+import type {
+  TgpuBindGroupLayout,
+  TgpuBuffer,
+  TgpuTextureView,
+  UniformFlag,
+  ExtractBindGroupInputFromLayout,
+  TgpuBindGroup,
+  TgpuLayoutComparisonSampler,
+  TgpuLayoutSampler,
+  TgpuUniform,
+} from 'typegpu';
+import { it } from 'typegpu-testing-utility';
 
-const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
-  GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
-const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
-  GPUShaderStage.FRAGMENT;
+const DEFAULT_READONLY_VISIBILITY_FLAGS =
+  GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
-  it('names bound elements', () => {
-    const layout = tgpu.bindGroupLayout({
-      uniBuffer: { uniform: d.vec3f },
-      stoBuffer: { storage: d.vec3f },
-      defTexture: { texture: d.textureDepth2d() },
-      stoTexture: {
-        storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
-      },
-      extTexture: { externalTexture: d.textureExternal() },
-      compSampler: { sampler: 'comparison' },
-      filtSampler: { sampler: 'filtering' },
-    });
-
-    expect(getName(layout.bound.uniBuffer)).toBe('uniBuffer');
-    expect(getName(layout.bound.stoBuffer)).toBe('stoBuffer');
-    expect(getName(layout.bound.defTexture)).toBe('defTexture');
-    expect(getName(layout.bound.stoTexture)).toBe('stoTexture');
-    expect(getName(layout.bound.extTexture)).toBe('extTexture');
-    expect(getName(layout.bound.compSampler)).toBe('compSampler');
-    expect(getName(layout.bound.filtSampler)).toBe('filtSampler');
-  });
-
-  it('infers the bound type of a uniform entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      position: { uniform: d.vec3f },
-    });
-
-    const { position } = layout.bound;
-
-    expectTypeOf(position).toEqualTypeOf<TgpuBufferUniform<d.Vec3f>>();
-  });
-
-  it('infers the bound type of a readonly storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      a: { storage: d.vec3f },
-      b: { storage: d.vec3f, access: 'readonly' },
-    });
-
-    const { a, b } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferReadonly<d.Vec3f>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<d.Vec3f>>();
-  });
-
-  it('infers the bound type of a mutable storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      a: { storage: d.vec3f, access: 'mutable' },
-    });
-
-    const { a } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<d.Vec3f>>();
-  });
-
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
     const layout = tgpu.bindGroupLayout({
       a: {
@@ -108,10 +44,8 @@ describe('TgpuBindGroupLayout', () => {
       }>
     >();
 
-    const { a, b } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<d.WgslArray<d.U32>>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<d.WgslArray<d.Vec3f>>>();
+    expectTypeOf<typeof layout.$.a>().toEqualTypeOf<number[]>();
+    expectTypeOf<typeof layout.$.b>().toEqualTypeOf<d.v3f[]>();
 
     const aBuffer = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
     const bBuffer = root.createBuffer(d.arrayOf(d.vec3f, 4)).$usage('storage');
@@ -218,15 +152,55 @@ describe('TgpuBindGroupLayout', () => {
       fooTexture: { texture: d.texture1d(d.f32) },
     });
 
-    const fooTexture = layout.bound.fooTexture;
+    const main = tgpu.fn([])`() { textureLoad(layout.$.fooTexture); }`.$uses({ layout });
 
-    const main = tgpu.fn([])`() { textureLoad(fooTexture); }`
-      .$uses({ fooTexture });
-
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
       fn main() { textureLoad(fooTexture); }"
+    `);
+  });
+
+  it('infers atomics as GPU atomic types in layout.$', () => {
+    const layout = tgpu.bindGroupLayout({
+      counter: { storage: d.atomic(d.u32), access: 'mutable' },
+      signedCounter: { storage: d.atomic(d.i32), access: 'mutable' },
+      atomicArray: { storage: d.arrayOf(d.atomic(d.u32)), access: 'mutable' },
+    });
+
+    expectTypeOf<typeof layout.$.counter>().toEqualTypeOf<d.atomicU32>();
+    expectTypeOf<typeof layout.$.signedCounter>().toEqualTypeOf<d.atomicI32>();
+    expectTypeOf<typeof layout.$.atomicArray>().toEqualTypeOf<d.atomicU32[]>();
+  });
+
+  it('takes a pointer to layout.$... if assigned to a const variable', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const layout = tgpu.bindGroupLayout({
+      boids: { storage: d.arrayOf(Boid), access: 'mutable' },
+    });
+
+    const getFirst = () => {
+      'use gpu';
+      const boids = layout.$.boids;
+      return Boid(boids[0]!);
+    };
+
+    expect(tgpu.resolve([getFirst])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> boids_1: array<Boid>;
+
+      fn getFirst() -> Boid {
+        let boids = (&boids_1);
+        return (*boids)[0i];
+      }"
     `);
   });
 });
@@ -310,15 +284,9 @@ describe('TgpuBindGroup', () => {
 
     it('populates a simple layout with a raw buffer', ({ root }) => {
       const scalarBuffer = root.createBuffer(d.u32).$usage('uniform');
-      const arrayBuffer = root
-        .createBuffer(d.arrayOf(d.i32, 4))
-        .$usage('storage');
-      const structBuffer = root
-        .createBuffer(d.struct({ a: d.u32, b: d.i32 }))
-        .$usage('uniform');
-      const runtimeArrayBuffer = root
-        .createBuffer(d.arrayOf(d.i32, 4))
-        .$usage('storage');
+      const arrayBuffer = root.createBuffer(d.arrayOf(d.i32, 4)).$usage('storage');
+      const structBuffer = root.createBuffer(d.struct({ a: d.u32, b: d.i32 })).$usage('uniform');
+      const runtimeArrayBuffer = root.createBuffer(d.arrayOf(d.i32, 4)).$usage('storage');
       const bindGroup = root.createBindGroup(layout, {
         foo: root.unwrap(scalarBuffer),
         bar: root.unwrap(arrayBuffer),
@@ -363,12 +331,8 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with an atomic version of a primitive buffer', ({ root }) => {
-      const atomicScalarBuffer = root
-        .createBuffer(d.atomic(d.u32))
-        .$usage('uniform');
-      const atomicArrayBuffer = root
-        .createBuffer(d.arrayOf(d.atomic(d.i32), 4))
-        .$usage('uniform');
+      const atomicScalarBuffer = root.createBuffer(d.atomic(d.u32)).$usage('uniform');
+      const atomicArrayBuffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4)).$usage('uniform');
       const atomicStructBuffer = root
         .createBuffer(d.struct({ a: d.atomic(d.u32), b: d.atomic(d.i32) }))
         .$usage('storage');
@@ -454,7 +418,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = root['~unstable'].createSampler({
+      const sampler = root.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
       });
@@ -479,7 +443,9 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({ root }) => {
+    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
+      root,
+    }) => {
       root.createBindGroup(layout, {
         foo: root.createSampler({ minFilter: 'linear' }),
       });
@@ -494,7 +460,7 @@ describe('TgpuBindGroup', () => {
 
       root.createBindGroup(layout, {
         // @ts-expect-error
-        foo: root['~unstable'].createComparisonSampler({ compare: 'less' }),
+        foo: root.createComparisonSampler({ compare: 'less' }),
       });
     });
   });
@@ -534,7 +500,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = root['~unstable'].createComparisonSampler({
+      const sampler = root.createComparisonSampler({
         compare: 'equal',
       });
 
@@ -558,7 +524,9 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({ root }) => {
+    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({
+      root,
+    }) => {
       root.createBindGroup(layout, {
         foo: root.createComparisonSampler({ compare: 'equal' }),
       });
@@ -567,49 +535,19 @@ describe('TgpuBindGroup', () => {
         foo: root.device.createSampler(),
       });
 
-      (() => {
+      () => {
         root.createBindGroup(layout, {
           // @ts-expect-error
           foo: root.createSampler({ minFilter: 'linear' }),
         });
-      });
+      };
 
-      (() => {
+      () => {
         root.createBindGroup(layout, {
           // @ts-expect-error
           foo: root.createSampler({ minFilter: 'nearest' }),
         });
-      });
-    });
-  });
-
-  describe('legacy texture layout', () => {
-    it('supports legacy texture definitions and converts the types correctly', ({ root }) => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { texture: 'float', viewDimension: '2d' },
-        bar: { storageTexture: 'bgra8unorm', access: 'readonly' },
-      });
-
-      const bg = root.createBindGroup(layout, {
-        foo: root['~unstable'].createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        }).$usage('sampled'),
-        bar: root['~unstable'].createTexture({
-          size: [64, 64],
-          format: 'bgra8unorm',
-        }).$usage('storage'),
-      });
-
-      expect(bg).toBeDefined();
-
-      const { foo, bar } = layout.bound;
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture2d<d.F32>>
-      >();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture2d<'bgra8unorm', 'read-only'>>
-      >();
+      };
     });
   });
 
@@ -693,7 +631,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -722,7 +662,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
@@ -770,25 +712,6 @@ describe('TgpuBindGroup', () => {
       // root.createBindGroup(layout3d, {
       //   foo: texture3d,
       // });
-    });
-
-    it('properly fill the bound property', () => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { texture: d.texture2d(d.f32) },
-        bar: {
-          texture: d.textureCubeArray(d.f32),
-          sampleType: 'unfilterable-float',
-        },
-      });
-
-      const { foo, bar } = layout.bound;
-
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture2d<d.F32>>
-      >();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslTextureCubeArray<d.F32>>
-      >();
     });
   });
 
@@ -874,7 +797,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -911,7 +836,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
@@ -965,24 +892,6 @@ describe('TgpuBindGroup', () => {
       // root.createBindGroup(layout2d, {
       //   foo: texture2d,
       // });
-    });
-
-    it('properly fill the bound property', () => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { storageTexture: d.textureStorage3d('rgba8unorm', 'write-only') },
-        bar: {
-          storageTexture: d.textureStorage2dArray('rg32sint', 'write-only'),
-        },
-      });
-
-      const { foo, bar } = layout.bound;
-
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture3d<'rgba8unorm', 'write-only'>>
-      >();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture2dArray<'rg32sint', 'write-only'>>
-      >();
     });
   });
 
@@ -1052,10 +961,14 @@ describe('TgpuBindGroup', () => {
           a: aBuffer,
           b: bBuffer,
         });
-      }).toThrow(new MissingBindingError('example', 'd'));
+      }).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Bind group 'example' is missing a required binding 'd']`,
+      );
     });
 
-    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({ root }) => {
+    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({
+      root,
+    }) => {
       const aBuffer = root.createBuffer(d.vec3f).$usage('uniform');
       const bBuffer = root.createBuffer(d.u32).$usage('storage');
       const dBuffer = root.createBuffer(d.f32).$usage('storage');
@@ -1100,22 +1013,44 @@ describe('TgpuBindGroup', () => {
   describe('wide type', () => {
     it('accepts wide buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
-      const buffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const anyBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const baseBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.BaseData>;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
     it('accepts wide uniform buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
 
-      const buffer = root
-        .createBuffer(d.f32)
-        .$usage('uniform') as TgpuBuffer<d.AnyWgslData> & UniformFlag;
+      const anyBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+        UniformFlag;
+      const baseBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.BaseData> &
+        UniformFlag;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
+      });
+    });
+
+    it('accepts wide buffer binding', ({ root }) => {
+      const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
+
+      const anyBuffer = root.createUniform(d.f32) as TgpuUniform<d.AnyWgslData>;
+      const baseBuffer = root.createUniform(d.f32) as TgpuUniform<d.BaseData>;
+
+      root.createBindGroup(layout, {
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
@@ -1150,21 +1085,5 @@ describe('TgpuBindGroup', () => {
       // the library fulfills the `foo` resource
       const group = createGroupWithFoo(layout, { custom: customBuffer });
     });
-  });
-});
-
-describe('UnwrapRuntimeConstructor', () => {
-  it('unwraps return types of functions returning TgpuData', () => {
-    expectTypeOf<UnwrapRuntimeConstructor<d.U32>>().toEqualTypeOf<d.U32>();
-    expectTypeOf<
-      UnwrapRuntimeConstructor<d.WgslArray<d.Vec3f>>
-    >().toEqualTypeOf<d.WgslArray<d.Vec3f>>();
-    expectTypeOf<
-      UnwrapRuntimeConstructor<(_: number) => d.WgslArray<d.Vec3f>>
-    >().toEqualTypeOf<d.WgslArray<d.Vec3f>>();
-
-    expectTypeOf<
-      UnwrapRuntimeConstructor<d.F32 | ((_: number) => d.U32)>
-    >().toEqualTypeOf<d.F32 | d.U32>();
   });
 });

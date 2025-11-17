@@ -1,0 +1,8 @@
+{
+  "title": "RC Docs Examples",
+  "description": "Collects focused radiance-cascade scenes used to verify and illustrate the package documentation.",
+  "category": "tests",
+  "tags": ["dev", "docs", "radiance cascades", "sdf"],
+  "dev": true,
+  "coolFactor": 1
+}

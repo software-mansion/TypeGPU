@@ -1,4 +1,3 @@
-import { invariant } from './errors.ts';
 import { type ExecState, NormalState, type ResolutionCtx } from './types.ts';
 
 /**
@@ -30,25 +29,21 @@ let resolutionCtx: ResolutionCtx | undefined;
 /**
  * Used to mock the context before all tests. For normal use-cases, use `provideCtx`
  */
-export function INTERNAL_setCtx<T>(ctx: ResolutionCtx | undefined) {
+export function INTERNAL_setCtx(ctx: ResolutionCtx | undefined) {
   resolutionCtx = ctx;
 }
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
-  invariant(
-    resolutionCtx === undefined || resolutionCtx === ctx,
-    'Cannot nest context providers',
-  );
-
   if (resolutionCtx === ctx) {
     return callback();
   }
 
+  const prevCtx = resolutionCtx;
   resolutionCtx = ctx;
   try {
     return callback();
   } finally {
-    resolutionCtx = undefined;
+    resolutionCtx = prevCtx;
   }
 }
 

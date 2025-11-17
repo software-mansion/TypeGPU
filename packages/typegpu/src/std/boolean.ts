@@ -1,10 +1,26 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
-import { bool, f32 } from '../data/numeric.ts';
+import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
-import { vec2b, vec3b, vec4b } from '../data/vector.ts';
+import {
+  vec2b,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { generalizeBoolFn, generalizeFn } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -13,16 +29,19 @@ import {
   type AnyVec3Instance,
   type AnyVecInstance,
   type AnyWgslData,
-  isVecInstance,
+  type BaseData,
+  isBool,
+  isVecBool,
+  isVecBoolInstance,
   type v2b,
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
+import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
-import { sub } from './operators.ts';
+import { cpuCopy } from './copy.ts';
 
-function correspondingBooleanVectorSchema(dataType: AnyData) {
+function correspondingBooleanVectorSchema(dataType: BaseData) {
   if (dataType.type.includes('2')) {
     return vec2b;
   }
@@ -44,13 +63,13 @@ function correspondingBooleanVectorSchema(dataType: AnyData) {
 export const allEq = dualImpl({
   name: 'allEq',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
-  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-    cpuAll(cpuEq(lhs, rhs)),
-  codegenImpl: (lhs, rhs) => stitch`all(${lhs} == ${rhs})`,
+  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuAll(cpuEq(lhs, rhs)),
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`all(${lhs} == ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  VectorOps.eq[lhs.kind](lhs, rhs);
+  generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -68,7 +87,8 @@ export const eq = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: cpuEq,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} == ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} == ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -85,13 +105,13 @@ export const ne = dualImpl({
     argTypes,
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
-  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-    cpuNot(cpuEq(lhs, rhs)),
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} != ${rhs})`,
+  normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuNot(cpuEq(lhs, rhs)),
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} != ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  VectorOps.lt[lhs.kind](lhs, rhs);
+  generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -108,7 +128,8 @@ export const lt = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: cpuLt,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} < ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} < ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -127,7 +148,8 @@ export const le = dualImpl({
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuOr(cpuLt(lhs, rhs), cpuEq(lhs, rhs)),
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} <= ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} <= ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -146,7 +168,8 @@ export const gt = dualImpl({
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs))),
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} > ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} > ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -163,31 +186,61 @@ export const ge = dualImpl({
     argTypes: argTypes,
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
-  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-    cpuNot(cpuLt(lhs, rhs)),
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} >= ${rhs})`,
+  normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => cpuNot(cpuLt(lhs, rhs)),
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} >= ${rhs})`,
+  sideEffects: false,
 });
 
 // logical ops
 
-const cpuNot = <T extends AnyBooleanVecInstance>(value: T): T =>
-  VectorOps.neg[value.kind](value);
+function cpuNot(value: boolean): boolean;
+function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
+function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
+  if (typeof value === 'boolean') {
+    return !value as T;
+  }
+
+  if (!isVecBoolInstance(value)) {
+    throw new Error(`'std.not' requires a boolean or boolean vector.`);
+  }
+
+  switch (value.length) {
+    case 2:
+      return vec2b(cpuNot(value.x), cpuNot(value.y)) as T;
+    case 3:
+      return vec3b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z)) as T;
+    case 4:
+      return vec4b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z), cpuNot(value.w)) as T;
+  }
+}
 
 /**
- * Returns **component-wise** `!value`.
+ * Returns the logical negation of the given value.
+ * For booleans returns `!value`.
+ * For boolean vectors, returns **component-wise** `!value`.
  * @example
- * not(vec2b(false, true)) // returns vec2b(true, false)
+ * not(true) // returns false
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
  */
 export const not = dualImpl({
   name: 'not',
-  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  signature: (arg) => {
+    if (!isBool(arg) && !isVecBool(arg)) {
+      throw new SignatureNotSupportedError([arg], [bool, vec2b, vec3b, vec4b]);
+    }
+
+    return {
+      argTypes: [arg],
+      returnType: arg,
+    };
+  },
   normalImpl: cpuNot,
-  codegenImpl: (arg) => stitch`!(${arg})`,
+  codegenImpl: (_ctx, [arg]) => stitch`!(${arg})`,
+  sideEffects: false,
 });
 
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  VectorOps.or[lhs.kind](lhs, rhs);
+  generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -199,7 +252,8 @@ export const or = dualImpl({
   name: 'or',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuOr,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} | ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} | ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuAnd = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
@@ -215,13 +269,13 @@ export const and = dualImpl({
   name: 'and',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuAnd,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} & ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} & ${rhs})`,
+  sideEffects: false,
 });
 
 // logical aggregation
 
-const cpuAll = (value: AnyBooleanVecInstance) =>
-  VectorOps.all[value.kind](value);
+const cpuAll = (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value);
 
 /**
  * Returns `true` if each component of `value` is true.
@@ -233,7 +287,8 @@ export const all = dualImpl({
   name: 'all',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: cpuAll,
-  codegenImpl: (value) => stitch`all(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`all(${value})`,
+  sideEffects: false,
 });
 
 /**
@@ -246,7 +301,8 @@ export const any = dualImpl({
   name: 'any',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: (value: AnyBooleanVecInstance) => !cpuAll(cpuNot(value)),
-  codegenImpl: (arg) => stitch`any(${arg})`,
+  codegenImpl: (_ctx, [arg]) => stitch`any(${arg})`,
+  sideEffects: false,
 });
 
 // other
@@ -272,19 +328,14 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return Math.abs(lhs - rhs) < precision;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.isCloseToZero[lhs.kind](
-        sub[$internal].jsImpl(lhs, rhs),
-        precision,
-      );
-    }
-    return false;
+    const componentResult = generalizeBoolFn(
+      (lhs, rhs) => Math.abs(lhs - rhs) < precision,
+      [lhs, rhs],
+    );
+    return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },
   // GPU implementation
-  codegenImpl: (lhs, rhs, precision = snip(0.01, f32)) => {
+  codegenImpl: (_ctx, [lhs, rhs, precision = snip(0.01, f32, /* origin */ 'constant', false)]) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
@@ -295,6 +346,7 @@ export const isCloseTo = dualImpl({
     }
     return 'false';
   },
+  sideEffects: false,
 });
 
 function cpuSelect(f: boolean, t: boolean, cond: boolean): boolean;
@@ -302,11 +354,7 @@ function cpuSelect(f: number, t: number, cond: boolean): number;
 function cpuSelect<T extends AnyVecInstance>(
   f: T,
   t: T,
-  cond:
-    | boolean
-    | (T extends AnyVec2Instance ? v2b
-      : T extends AnyVec3Instance ? v3b
-      : v4b),
+  cond: boolean | (T extends AnyVec2Instance ? v2b : T extends AnyVec3Instance ? v3b : v4b),
 ): T;
 function cpuSelect<T extends number | boolean | AnyVecInstance>(
   f: T,
@@ -314,14 +362,34 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   cond: AnyBooleanVecInstance | boolean,
 ) {
   if (typeof cond === 'boolean') {
-    return cond ? t : f;
+    return cpuCopy(cond ? t : f);
   }
-  return VectorOps.select[(f as AnyVecInstance).kind](
-    f as AnyVecInstance,
-    t as AnyVecInstance,
-    cond,
-  );
+  // generalizeFn will handle this fine, it just has no mixed type overload.
+  return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
 }
+
+export const validSelectBranchTypes: AnyWgslData[] = [
+  f32,
+  f16,
+  i32,
+  u32,
+  bool,
+  vec2f,
+  vec3f,
+  vec4f,
+  vec2h,
+  vec3h,
+  vec4h,
+  vec2i,
+  vec3i,
+  vec4i,
+  vec2u,
+  vec3u,
+  vec4u,
+  vec2b,
+  vec3b,
+  vec4b,
+];
 
 /**
  * Returns `t` if `cond` is `true`, and `f` otherwise.
@@ -335,9 +403,28 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
 export const select = dualImpl({
   name: 'select',
   signature: (f, t, cond) => {
-    const [uf, ut] = unify([f, t]) ?? [f, t] as const;
-    return ({ argTypes: [uf, ut, cond], returnType: uf });
+    const [uf, ut] = unify([f, t], validSelectBranchTypes) ?? ([f, t] as const);
+    return { argTypes: [uf, ut, cond], returnType: uf };
   },
   normalImpl: cpuSelect,
-  codegenImpl: (f, t, cond) => stitch`select(${f}, ${t}, ${cond})`,
+  codegenImpl: (ctx, [f, t, cond]) => {
+    const result = ctx.gen.emitCall('select', [], [f, t, cond]);
+    if (
+      !validSelectBranchTypes.includes(f.dataType as AnyWgslData) ||
+      !validSelectBranchTypes.includes(t.dataType as AnyWgslData)
+    ) {
+      throw new Error(
+        `'${result}' is invalid, std.select requires both branches to be either scalars or vectors.`,
+      );
+    }
+    if (f.dataType !== t.dataType) {
+      const fStr = ctx.resolve(f.dataType);
+      const tStr = ctx.resolve(t.dataType);
+      throw new Error(
+        `'${result}' is invalid, std.select requires both branches to be the same type, got [${fStr.value}, ${tStr.value}].`,
+      );
+    }
+    return result;
+  },
+  sideEffects: false,
 });

@@ -5,7 +5,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with default import named not tgpu', () => {
     const code = `\
       import hello from 'typegpu';
-      
+
       const increment = hello.fn([])(() => {
         const x = 2+2;
       });
@@ -13,15 +13,16 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
-      const increment = hello.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = hello.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+        },
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -29,7 +30,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with aliased tgpu import', () => {
     const code = `\
       import { tgpu as t } from 'typegpu';
-      
+
       const increment = t.fn([])(() => {
         const x = 2+2;
       });
@@ -37,15 +38,16 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
-      const increment = t.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = t.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+        },
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -53,7 +55,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with namespace import', () => {
     const code = `\
       import * as t from 'typegpu';
-      
+
       const increment = t.tgpu.fn([])(() => {
         const x = 2+2;
       });
@@ -61,15 +63,16 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
-      const increment = t.tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = t.tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+        },
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -79,7 +82,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
   it('works with default import named not tgpu', async () => {
     const code = `\
       import hello from 'typegpu';
-      
+
       const increment = hello.fn([])(() => {
       });
     `;
@@ -87,13 +90,13 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
 
-      hello.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      hello.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[]]},
+          externals: {}
+        }) && $.f)({})));
       "
     `);
   });
@@ -101,7 +104,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
   it('works with aliased tgpu import', async () => {
     const code = `\
       import { tgpu as t } from 'typegpu';
-      
+
       const increment = t.fn([])(() => {
       });
     `;
@@ -110,13 +113,13 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
 
-      tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[]]},
+          externals: {}
+        }) && $.f)({})));
       "
     `);
   });
@@ -125,7 +128,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     // TODO: Oh ohh, this breaks for some reason :(
     const code = `\
       import * as t from 'typegpu';
-      
+
       const increment = t.tgpu.fn([])(() => {
       });
     `;
@@ -133,13 +136,13 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
 
-      t.tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      t.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[]]},
+          externals: {}
+        }) && $.f)({})));
       "
     `);
   });

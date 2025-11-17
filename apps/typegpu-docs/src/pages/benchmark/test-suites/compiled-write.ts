@@ -106,15 +106,9 @@ export const compiledWriteSuite = createSuite(
           }
         }
 
-        ctx.vectorlessBuffers.small = ctx.root.createBuffer(
-          particleArrays.small,
-        );
-        ctx.vectorlessBuffers.medium = ctx.root.createBuffer(
-          particleArrays.medium,
-        );
-        ctx.vectorlessBuffers.large = ctx.root.createBuffer(
-          particleArrays.large,
-        );
+        ctx.vectorlessBuffers.small = ctx.root.createBuffer(particleArrays.small);
+        ctx.vectorlessBuffers.medium = ctx.root.createBuffer(particleArrays.medium);
+        ctx.vectorlessBuffers.large = ctx.root.createBuffer(particleArrays.large);
 
         for (const buffer of Object.values(ctx.vectorlessBuffers)) {
           if ('compileWriter' in buffer) {
@@ -160,26 +154,20 @@ export const compiledWriteSuite = createSuite(
 
         for (const size of ['small', 'medium', 'large'] as const) {
           const amountOfBoids = sizes[size];
-          ctx.typegpuBoidData[size] = Array.from(
-            { length: amountOfBoids },
-            () => ({
-              pos: d.vec3f(1, 2, 3),
-              vel: d.vec3f(4, 5, 6),
-            }),
-          );
+          ctx.typegpuBoidData[size] = Array.from({ length: amountOfBoids }, () => ({
+            pos: d.vec3f(1, 2, 3),
+            vel: d.vec3f(4, 5, 6),
+          }));
         }
 
         for (const size of ['small', 'medium', 'large'] as const) {
           const amountOfBoids = sizes[size];
-          ctx.typegpuParticleData[size] = Array.from(
-            { length: amountOfBoids },
-            () => ({
-              x: 1,
-              y: 2,
-              z: 3,
-              opacity: 4,
-            }),
-          );
+          ctx.typegpuParticleData[size] = Array.from({ length: amountOfBoids }, () => ({
+            x: 1,
+            y: 2,
+            z: 3,
+            opacity: 4,
+          }));
         }
       },
       teardown() {
@@ -192,31 +180,19 @@ export const compiledWriteSuite = createSuite(
   {
     'WebGPU reference (32 elements)': (getCtx) => async () => {
       const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.small),
-        0,
-        webgpuData.small,
-      );
+      root.device.queue.writeBuffer(root.unwrap(buffers.small), 0, webgpuData.small);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference (32² elements)': (getCtx) => async () => {
       const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.medium),
-        0,
-        webgpuData.medium,
-      );
+      root.device.queue.writeBuffer(root.unwrap(buffers.medium), 0, webgpuData.medium);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference (32³ elements)': (getCtx) => async () => {
       const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.large),
-        0,
-        webgpuData.large,
-      );
+      root.device.queue.writeBuffer(root.unwrap(buffers.large), 0, webgpuData.large);
       await root.device.queue.onSubmittedWorkDone();
     },
 

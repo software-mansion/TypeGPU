@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import { tgpu, d, std } from 'typegpu';
 
 describe('indents', () => {
   it('should indent sanely', () => {
@@ -14,31 +12,25 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      'use gpu';
+      const newVelocity = particle.velocity * gravity * deltaTime;
+      const newPosition = particle.position + newVelocity * deltaTime;
       return Particle({
         position: newPosition,
         velocity: newVelocity,
       });
     });
 
-    const code = tgpu.resolve({ externals: { updateParicle } });
-    expect(code).toMatchInlineSnapshot(`
-      "struct Particle_1 {
+    expect(tgpu.resolve([updateParicle])).toMatchInlineSnapshot(`
+      "struct Particle {
         position: vec3f,
         velocity: vec3f,
       }
 
-      fn updateParicle_0(particle: Particle_1, gravity: vec3f, deltaTime: f32) -> Particle_1 {
-        var newVelocity = (particle.velocity * (gravity * deltaTime));
-        var newPosition = (particle.position + (newVelocity * deltaTime));
-        return Particle_1(newPosition, newVelocity);
+      fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
+        let newVelocity = ((particle.velocity * gravity) * deltaTime);
+        let newPosition = (particle.position + (newVelocity * deltaTime));
+        return Particle(newPosition, newVelocity);
       }"
     `);
   });
@@ -56,21 +48,16 @@ describe('indents', () => {
     });
 
     const layout = tgpu.bindGroupLayout({
-      systemData: { storage: SystemData },
+      systemData: { storage: SystemData, access: 'mutable' },
     });
 
     const updateParicle = tgpu.fn(
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      'use gpu';
+      const newVelocity = particle.velocity * gravity * deltaTime;
+      const newPosition = particle.position + newVelocity * deltaTime;
       return Particle({
         position: newPosition,
         velocity: newVelocity,
@@ -79,9 +66,7 @@ describe('indents', () => {
 
     const main = tgpu.fn([])(() => {
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i]!;
         layout.$.systemData.particles[i] = updateParicle(
           particle,
           layout.$.systemData.gravity,
@@ -90,34 +75,30 @@ describe('indents', () => {
       }
     });
 
-    const code = tgpu.resolve({
-      externals: { main },
-    });
-
-    expect(code).toMatchInlineSnapshot(`
-      "struct Particle_3 {
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Particle {
         position: vec3f,
         velocity: vec3f,
       }
 
-      struct SystemData_2 {
-        particles: array<Particle_3, 100>,
+      struct SystemData {
+        particles: array<Particle, 100>,
         gravity: vec3f,
         deltaTime: f32,
       }
 
-      @group(0) @binding(0) var<storage, read> systemData_1: SystemData_2;
+      @group(0) @binding(0) var<storage, read_write> systemData: SystemData;
 
-      fn updateParicle_4(particle: Particle_3, gravity: vec3f, deltaTime: f32) -> Particle_3 {
-        var newVelocity = (particle.velocity * (gravity * deltaTime));
-        var newPosition = (particle.position + (newVelocity * deltaTime));
-        return Particle_3(newPosition, newVelocity);
+      fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
+        let newVelocity = ((particle.velocity * gravity) * deltaTime);
+        let newPosition = (particle.position + (newVelocity * deltaTime));
+        return Particle(newPosition, newVelocity);
       }
 
-      fn main_0() {
-        for (var i = 0; (i < 100); i++) {
-          var particle = systemData_1.particles[i];
-          systemData_1.particles[i] = updateParicle_4(particle, systemData_1.gravity, systemData_1.deltaTime);
+      fn main() {
+        for (var i = 0; (i < 100i); i++) {
+          let particle = (&systemData.particles[i]);
+          systemData.particles[i] = updateParicle((*particle), systemData.gravity, systemData.deltaTime);
         }
       }"
     `);
@@ -142,11 +123,11 @@ describe('indents', () => {
     });
 
     const layout = tgpu.bindGroupLayout({
-      systemData: { storage: SystemData },
+      systemData: { storage: SystemData, access: 'mutable' },
       densityField: {
         storageTexture: d.textureStorage3d('r32float', 'read-only'),
       },
-      counter: { storage: d.u32 },
+      counter: { storage: d.u32, access: 'mutable' },
     });
 
     const getDensityAt = tgpu.fn(
@@ -164,12 +145,12 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
+      'use gpu';
       const density = getDensityAt(particle.physics.position);
-      const force = std.mul(gravity, density);
-      const newVelocity = particle.physics.velocity.add(force.mul(deltaTime));
-      const newPosition = particle.physics.position.add(
-        newVelocity.mul(deltaTime),
-      );
+      const force = gravity * density;
+      const newVelocity = particle.physics.velocity + force * deltaTime;
+      const newPosition = particle.physics.position + newVelocity * deltaTime;
+
       return Particle({
         id: particle.id,
         physics: PhysicsData({
@@ -183,9 +164,7 @@ describe('indents', () => {
     const main = tgpu.fn([])(() => {
       incrementCounter();
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i]!;
         layout.$.systemData.particles[i] = updateParticle(
           particle,
           layout.$.systemData.gravity,
@@ -194,55 +173,51 @@ describe('indents', () => {
       }
     });
 
-    const code = tgpu.resolve({
-      externals: { main },
-    });
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(2) var<storage, read_write> counter: u32;
 
-    expect(code).toMatchInlineSnapshot(`
-      "@group(0) @binding(2) var<storage, read> counter_2: u32;
-
-      fn incrementCounter_1() {
-        counter_2 += 1u;
+      fn incrementCounter() {
+        counter += 1u;
       }
 
-      struct PhysicsData_6 {
+      struct PhysicsData {
         weight: f32,
         velocity: vec3f,
         position: vec3f,
       }
 
-      struct Particle_5 {
+      struct Particle {
         id: u32,
-        physics: PhysicsData_6,
+        physics: PhysicsData,
       }
 
-      struct SystemData_4 {
-        particles: array<Particle_5, 100>,
+      struct SystemData {
+        particles: array<Particle, 100>,
         gravity: vec3f,
         deltaTime: f32,
       }
 
-      @group(0) @binding(0) var<storage, read> systemData_3: SystemData_4;
+      @group(0) @binding(0) var<storage, read_write> systemData: SystemData;
 
-      @group(0) @binding(1) var densityField_9: texture_storage_3d<r32float, read>;
+      @group(0) @binding(1) var densityField: texture_storage_3d<r32float, read>;
 
-      fn getDensityAt_8(position: vec3f) -> f32 {
-        return textureLoad(densityField_9, vec3i(position)).x;
+      fn getDensityAt(position: vec3f) -> f32 {
+        return textureLoad(densityField, vec3i(position)).x;
       }
 
-      fn updateParticle_7(particle: Particle_5, gravity: vec3f, deltaTime: f32) -> Particle_5 {
-        var density = getDensityAt_8(particle.physics.position);
-        var force = (gravity * density);
-        var newVelocity = (particle.physics.velocity + (force * deltaTime));
-        var newPosition = (particle.physics.position + (newVelocity * deltaTime));
-        return Particle_5(particle.id, PhysicsData_6(particle.physics.weight, newVelocity, newPosition));
+      fn updateParticle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
+        let density = getDensityAt(particle.physics.position);
+        let force = (gravity * density);
+        let newVelocity = (particle.physics.velocity + (force * deltaTime));
+        let newPosition = (particle.physics.position + (newVelocity * deltaTime));
+        return Particle(particle.id, PhysicsData(particle.physics.weight, newVelocity, newPosition));
       }
 
-      fn main_0() {
-        incrementCounter_1();
-        for (var i = 0; (i < 100); i++) {
-          var particle = systemData_3.particles[i];
-          systemData_3.particles[i] = updateParticle_7(particle, systemData_3.gravity, systemData_3.deltaTime);
+      fn main() {
+        incrementCounter();
+        for (var i = 0; (i < 100i); i++) {
+          let particle = (&systemData.particles[i]);
+          systemData.particles[i] = updateParticle((*particle), systemData.gravity, systemData.deltaTime);
         }
       }"
     `);
@@ -258,29 +233,31 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
-      if (particle.velocity.x > 0) {
-        particle.position = std.add(particle.position, particle.velocity);
+      'use gpu';
+      const newParticle = Particle(particle);
+      if (newParticle.velocity.x > 0) {
+        newParticle.position += newParticle.velocity;
       } else {
-        particle.position = std.add(particle.position, gravity);
+        newParticle.position += gravity;
       }
-      return particle;
+      return newParticle;
     });
 
-    const code = tgpu.resolve({ externals: { updateParticle } });
-    expect(code).toMatchInlineSnapshot(`
-      "struct Particle_1 {
+    expect(tgpu.resolve([updateParticle])).toMatchInlineSnapshot(`
+      "struct Particle {
         position: vec3f,
         velocity: vec3f,
       }
 
-      fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
-        if ((particle.velocity.x > 0f)) {
-          particle.position = (particle.position + particle.velocity);
+      fn updateParticle(particle: Particle, gravity: vec3f) -> Particle {
+        var newParticle = particle;
+        if ((newParticle.velocity.x > 0f)) {
+          newParticle.position += newParticle.velocity;
         }
         else {
-          particle.position = (particle.position + gravity);
+          newParticle.position += gravity;
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });
@@ -295,34 +272,36 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
+      'use gpu';
+      const newParticle = Particle(particle);
       let iterations = 0;
       while (iterations < 10) {
-        particle.position = std.add(particle.position, particle.velocity);
+        newParticle.position += newParticle.velocity;
         iterations += 1;
-        while (particle.position.x < 0) {
-          particle.position = std.add(particle.position, gravity);
+        while (newParticle.position.x < 0) {
+          newParticle.position += gravity;
         }
       }
-      return particle;
+      return newParticle;
     });
 
-    const code = tgpu.resolve({ externals: { updateParticle } });
-    expect(code).toMatchInlineSnapshot(`
-      "struct Particle_1 {
+    expect(tgpu.resolve([updateParticle])).toMatchInlineSnapshot(`
+      "struct Particle {
         position: vec3f,
         velocity: vec3f,
       }
 
-      fn updateParticle_0(particle: Particle_1, gravity: vec3f) -> Particle_1 {
+      fn updateParticle(particle: Particle, gravity: vec3f) -> Particle {
+        var newParticle = particle;
         var iterations = 0;
         while ((iterations < 10i)) {
-          particle.position = (particle.position + particle.velocity);
+          newParticle.position += newParticle.velocity;
           iterations += 1i;
-          while ((particle.position.x < 0f)) {
-            particle.position = (particle.position + gravity);
+          while ((newParticle.position.x < 0f)) {
+            newParticle.position += gravity;
           }
         }
-        return particle;
+        return newParticle;
       }"
     `);
   });
@@ -341,7 +320,7 @@ describe('indents', () => {
       sampler: { sampler: 'filtering', multisampled: true },
     });
 
-    const someVertex = tgpu['~unstable'].vertexFn({
+    const someVertex = tgpu.vertexFn({
       in: {
         vertexIndex: d.builtin.vertexIndex,
         position: d.vec4f,
@@ -352,26 +331,18 @@ describe('indents', () => {
         uv: d.interpolate('flat, either', d.vec2f),
       },
     })((input) => {
+      'use gpu';
       const uniBoid = layout.$.boids;
-      for (let i = d.u32(); i < std.floor(std.sin(123)); i++) {
-        const sampled = std.textureSample(
-          layout.$.sampled,
-          layout.$.sampler,
-          d.vec2f(0.5, 0.5),
-          i,
-        );
-        const someVal = std.textureLoad(
-          layout.$.smoothRender,
-          d.vec2i(),
-          0,
-        );
+      for (let i = d.u32(); i < d.u32(std.sin(Math.PI / 2)); i++) {
+        const sampled = std.textureSample(layout.$.sampled, layout.$.sampler, d.vec2f(0.5, 0.5), i);
+        const someVal = std.textureLoad(layout.$.smoothRender, d.vec2i(), 0);
         if (someVal.x + sampled.x > 0.5) {
-          const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+          const newPos = uniBoid.position + d.vec4f(1, 2, 3, 4);
         } else {
           while (std.allEq(d.vec2f(1, 2), d.vec2f(1, 2))) {
-            const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+            const newPos = uniBoid.position + d.vec4f(1, 2, 3, 4);
             if (newPos.x > 0) {
-              const evenNewer = std.add(newPos, input.position);
+              const evenNewer = newPos + input.position;
             }
           }
         }
@@ -382,52 +353,43 @@ describe('indents', () => {
       };
     });
 
-    const code = tgpu.resolve({
-      externals: { someVertex },
-    });
-    expect(code).toMatchInlineSnapshot(`
-      "struct UniBoid_2 {
+    expect(tgpu.resolve([someVertex])).toMatchInlineSnapshot(`
+      "struct UniBoid {
         @size(32) position: vec4f,
         @align(64) velocity: vec4f,
       }
 
-      @group(0) @binding(0) var<uniform> boids_1: UniBoid_2;
+      @group(0) @binding(0) var<uniform> boids: UniBoid;
 
-      @group(0) @binding(3) var sampled_3: texture_2d_array<f32>;
+      @group(0) @binding(3) var sampled: texture_2d_array<f32>;
 
-      @group(0) @binding(4) var sampler_4: sampler;
+      @group(0) @binding(4) var sampler_1: sampler;
 
-      @group(0) @binding(2) var smoothRender_5: texture_multisampled_2d<f32>;
+      @group(0) @binding(2) var smoothRender: texture_multisampled_2d<f32>;
 
-      struct someVertex_Output_6 {
+      struct someVertex_Output {
         @builtin(position) position: vec4f,
         @location(0) @interpolate(flat, either) uv: vec2f,
       }
 
-      struct someVertex_Input_7 {
-        @builtin(vertex_index) vertexIndex: u32,
-        @location(0) position: vec4f,
-        @location(1) something: vec4f,
-      }
-
-      @vertex fn someVertex_0(input: someVertex_Input_7) -> someVertex_Output_6 {
-        var uniBoid = boids_1;
-        for (var i = 0u; (i < -1u); i++) {
-          var sampled = textureSample(sampled_3, sampler_4, vec2f(0.5), i);
-          var someVal = textureLoad(smoothRender_5, vec2i(), 0);
-          if (((someVal.x + sampled.x) > 0.5f)) {
-            var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+      @vertex fn someVertex(@location(0) position: vec4f, @location(1) something: vec4f) -> someVertex_Output {
+        let uniBoid = (&boids);
+        for (var i = 0u; (i < 1u); i++) {
+          let sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
+          let someVal = textureLoad(smoothRender, vec2i(), 0);
+          if (((someVal.x + sampled_1.x) > 0.5f)) {
+            let newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
             while (true) {
-              var newPos = (uniBoid.position + vec4f(1, 2, 3, 4));
+              let newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0f)) {
-                var evenNewer = (newPos + input.position);
+                let evenNewer = (newPos + position);
               }
             }
           }
         }
-        return someVertex_Output_6(input.position, input.something.xy);
+        return someVertex_Output(position, something.xy);
       }"
     `);
   });

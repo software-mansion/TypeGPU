@@ -1,0 +1,8 @@
+{
+  "title": "SDF Docs Examples",
+  "description": "Collects focused signed-distance-field shapes and operations used to verify and illustrate the SDF documentation.",
+  "category": "tests",
+  "tags": ["dev", "docs", "sdf"],
+  "dev": true,
+  "coolFactor": 1
+}

@@ -1,0 +1,709 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
+
+describe('fluid double buffering example', () => {
+  setupCommonMocks();
+
+  it('should produce valid code', async ({ device }) => {
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'fluid-double-buffering',
+        expectedCalls: 4,
+      },
+      device,
+    );
+
+    expect(shaderCodes).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      fn coordsToIndex(x: i32, y: i32) -> i32 {
+        return (x + (y * 256i));
+      }
+
+      fn isValidCoord(x: i32, y: i32) -> bool {
+        return ((((x < 256i) && (x >= 0i)) && (y < 256i)) && (y >= 0i));
+      }
+
+      struct BoxObstacle {
+        center: vec2i,
+        size: vec2i,
+        enabled: u32,
+      }
+
+      @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
+
+      fn isInsideObstacle(x: i32, y: i32) -> bool {
+        for (var i = 0u; i < 4u; i += 1u) {
+          let obs = (&obstacles[i]);
+          {
+            if (((*obs).enabled == 0u)) {
+              continue;
+            }
+            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      fn isValidFlowOut(x: i32, y: i32) -> bool {
+        if (!(isValidCoord(x, y))) {
+          return false;
+        }
+        if (isInsideObstacle(x, y)) {
+          return false;
+        }
+        return true;
+      }
+
+      @group(0) @binding(2) var<storage, read_write> gridBetaBuffer: array<vec4f, 1048576>;
+
+      fn wrappedCallback(xu: u32, yu: u32, _arg_2: u32) {
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex(x, y);
+        var value = vec4f();
+        if (!(isValidFlowOut(x, y))) {
+          value = vec4f();
+        }
+        else {
+          if ((y < 128i)) {
+            let depth = (1f - (f32(y) / 128f));
+            value = vec4f(0f, 0f, (10f + (depth * 10f)), 0f);
+          }
+        }
+        gridBetaBuffer[index] = value;
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      fn coordsToIndex(x: i32, y: i32) -> i32 {
+        return (x + (y * 256i));
+      }
+
+      @group(0) @binding(1) var<uniform> time: f32;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      @group(0) @binding(2) var<storage, read> gridBetaBuffer: array<vec4f, 1048576>;
+
+      fn getCell(x: i32, y: i32) -> vec4f {
+        return gridBetaBuffer[coordsToIndex(x, y)];
+      }
+
+      fn isValidCoord(x: i32, y: i32) -> bool {
+        return ((((x < 256i) && (x >= 0i)) && (y < 256i)) && (y >= 0i));
+      }
+
+      struct BoxObstacle {
+        center: vec2i,
+        size: vec2i,
+        enabled: u32,
+      }
+
+      @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
+
+      fn isInsideObstacle(x: i32, y: i32) -> bool {
+        for (var i = 0u; i < 4u; i += 1u) {
+          let obs = (&obstacles[i]);
+          {
+            if (((*obs).enabled == 0u)) {
+              continue;
+            }
+            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      fn isValidFlowOut(x: i32, y: i32) -> bool {
+        if (!(isValidCoord(x, y))) {
+          return false;
+        }
+        if (isInsideObstacle(x, y)) {
+          return false;
+        }
+        return true;
+      }
+
+      fn next_1() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next_1();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      fn computeVelocity(x: i32, y: i32) -> vec2f {
+        const gravityCost = 0.5;
+        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        let cell = getCell(x, y);
+        var leastCost = cell.z;
+        var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
+        var dirChoiceCount = 1;
+        // unrolled iteration #0
+        {
+          let neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #1
+        {
+          let neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #2
+        {
+          let neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #3
+        {
+          let neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // ---
+        let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
+        return (*leastCostDir);
+      }
+
+      fn flowFromCell(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
+        if (!(isValidCoord(x, y))) {
+          return 0;
+        }
+        let src = getCell(x, y);
+        let destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
+        let dest = getCell(destPos.x, destPos.y);
+        let diff = (src.z - dest.z);
+        var outFlow = min(max(0.01f, (0.3f + (diff * 0.1f))), src.z);
+        if ((length(src.xy) < 0.5f)) {
+          outFlow = 0f;
+        }
+        if (((myX == x) && (myY == y))) {
+          return (src.z - outFlow);
+        }
+        if (((destPos.x == myX) && (destPos.y == myY))) {
+          return outFlow;
+        }
+        return 0;
+      }
+
+      struct item {
+        center: vec2f,
+        radius: f32,
+        intensity: f32,
+      }
+
+      @group(0) @binding(4) var<uniform> sourceParams: item;
+
+      fn getMinimumInFlow(x: i32, y: i32) -> f32 {
+        const gridSizeF = 256f;
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
+        let sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
+          return sourceParams.intensity;
+        }
+        return 0;
+      }
+
+      @group(0) @binding(5) var<storage, read_write> gridAlphaBuffer: array<vec4f, 1048576>;
+
+      fn simulate(xu: u32, yu: u32, _arg_2: u32) {
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex(x, y);
+        randSeed2(vec2f(f32(index), time));
+        var next = getCell(x, y);
+        let nextVelocity = computeVelocity(x, y);
+        next.x = nextVelocity.x;
+        next.y = nextVelocity.y;
+        next.z = flowFromCell(x, y, x, y);
+        next.z += flowFromCell(x, y, x, (y + 1i));
+        next.z += flowFromCell(x, y, x, (y - 1i));
+        next.z += flowFromCell(x, y, (x + 1i), y);
+        next.z += flowFromCell(x, y, (x - 1i), y);
+        let minInflow = getMinimumInFlow(x, y);
+        next.z = max(minInflow, next.z);
+        gridAlphaBuffer[index] = next;
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        simulate(id.x, id.y, id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      fn coordsToIndex(x: i32, y: i32) -> i32 {
+        return (x + (y * 256i));
+      }
+
+      @group(0) @binding(1) var<uniform> time: f32;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      @group(0) @binding(2) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
+
+      fn getCell(x: i32, y: i32) -> vec4f {
+        return gridAlphaBuffer[coordsToIndex(x, y)];
+      }
+
+      fn isValidCoord(x: i32, y: i32) -> bool {
+        return ((((x < 256i) && (x >= 0i)) && (y < 256i)) && (y >= 0i));
+      }
+
+      struct BoxObstacle {
+        center: vec2i,
+        size: vec2i,
+        enabled: u32,
+      }
+
+      @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
+
+      fn isInsideObstacle(x: i32, y: i32) -> bool {
+        for (var i = 0u; i < 4u; i += 1u) {
+          let obs = (&obstacles[i]);
+          {
+            if (((*obs).enabled == 0u)) {
+              continue;
+            }
+            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      fn isValidFlowOut(x: i32, y: i32) -> bool {
+        if (!(isValidCoord(x, y))) {
+          return false;
+        }
+        if (isInsideObstacle(x, y)) {
+          return false;
+        }
+        return true;
+      }
+
+      fn next_1() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next_1();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      fn computeVelocity(x: i32, y: i32) -> vec2f {
+        const gravityCost = 0.5;
+        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        let cell = getCell(x, y);
+        var leastCost = cell.z;
+        var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
+        var dirChoiceCount = 1;
+        // unrolled iteration #0
+        {
+          let neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #1
+        {
+          let neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #2
+        {
+          let neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // unrolled iteration #3
+        {
+          let neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        // ---
+        let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
+        return (*leastCostDir);
+      }
+
+      fn flowFromCell(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
+        if (!(isValidCoord(x, y))) {
+          return 0;
+        }
+        let src = getCell(x, y);
+        let destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
+        let dest = getCell(destPos.x, destPos.y);
+        let diff = (src.z - dest.z);
+        var outFlow = min(max(0.01f, (0.3f + (diff * 0.1f))), src.z);
+        if ((length(src.xy) < 0.5f)) {
+          outFlow = 0f;
+        }
+        if (((myX == x) && (myY == y))) {
+          return (src.z - outFlow);
+        }
+        if (((destPos.x == myX) && (destPos.y == myY))) {
+          return outFlow;
+        }
+        return 0;
+      }
+
+      struct item {
+        center: vec2f,
+        radius: f32,
+        intensity: f32,
+      }
+
+      @group(0) @binding(4) var<uniform> sourceParams: item;
+
+      fn getMinimumInFlow(x: i32, y: i32) -> f32 {
+        const gridSizeF = 256f;
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
+        let sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
+          return sourceParams.intensity;
+        }
+        return 0;
+      }
+
+      @group(0) @binding(5) var<storage, read_write> gridBetaBuffer: array<vec4f, 1048576>;
+
+      fn simulate(xu: u32, yu: u32, _arg_2: u32) {
+        let x = i32(xu);
+        let y = i32(yu);
+        let index = coordsToIndex(x, y);
+        randSeed2(vec2f(f32(index), time));
+        var next = getCell(x, y);
+        let nextVelocity = computeVelocity(x, y);
+        next.x = nextVelocity.x;
+        next.y = nextVelocity.y;
+        next.z = flowFromCell(x, y, x, y);
+        next.z += flowFromCell(x, y, x, (y + 1i));
+        next.z += flowFromCell(x, y, x, (y - 1i));
+        next.z += flowFromCell(x, y, (x + 1i), y);
+        next.z += flowFromCell(x, y, (x - 1i), y);
+        let minInflow = getMinimumInFlow(x, y);
+        next.z = max(minInflow, next.z);
+        gridBetaBuffer[index] = next;
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        simulate(id.x, id.y, id.z);
+      }
+
+      struct vertexMain_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
+        let pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
+        let uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
+        return vertexMain_Output(vec4f(pos[idx].x, pos[idx].y, 0f, 1f), uv[idx]);
+      }
+
+      fn coordsToIndex(x: i32, y: i32) -> i32 {
+        return (x + (y * 256i));
+      }
+
+      @group(0) @binding(0) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
+
+      struct BoxObstacle {
+        center: vec2i,
+        size: vec2i,
+        enabled: u32,
+      }
+
+      @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
+
+      fn isInsideObstacle(x: i32, y: i32) -> bool {
+        for (var i = 0u; i < 4u; i += 1u) {
+          let obs = (&obstacles[i]);
+          {
+            if (((*obs).enabled == 0u)) {
+              continue;
+            }
+            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        let x = i32((_arg_0.uv.x * 256f));
+        let y = i32((_arg_0.uv.y * 256f));
+        let index = coordsToIndex(x, y);
+        let cell = (&gridAlphaBuffer[index]);
+        let density = max(0f, (*cell).z);
+        let obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
+        let background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
+        let firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
+        let secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
+        let thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
+        const firstThreshold = 2f;
+        const secondThreshold = 10f;
+        const thirdThreshold = 20f;
+        if (isInsideObstacle(x, y)) {
+          return obstacleColor;
+        }
+        if ((density <= 0f)) {
+          return background;
+        }
+        if ((density <= firstThreshold)) {
+          let t = (1f - pow((1f - (density / firstThreshold)), 2f));
+          return mix(background, firstColor, t);
+        }
+        if ((density <= secondThreshold)) {
+          return mix(firstColor, secondColor, ((density - firstThreshold) / (secondThreshold - firstThreshold)));
+        }
+        return mix(secondColor, thirdColor, min(((density - secondThreshold) / thirdThreshold), 1f));
+      }"
+    `);
+  });
+});

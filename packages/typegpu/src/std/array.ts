@@ -1,26 +1,25 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
+import { type _ref as ref, isRef } from '../data/ref.ts';
 import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 
 const sizeOfPointedToArray = (dataType: unknown) =>
-  isPtr(dataType) && isWgslArray(dataType.inner)
-    ? dataType.inner.elementCount
-    : 0;
+  isPtr(dataType) && isWgslArray(dataType.inner) ? dataType.inner.elementCount : 0;
 
 export const arrayLength = dualImpl({
   name: 'arrayLength',
   signature: (arg) => {
     const ptrArg = isPtr(arg) ? arg : ptrFn(arg as StorableData);
-    return ({
+    return {
       argTypes: [ptrArg],
       returnType: sizeOfPointedToArray(ptrArg) > 0 ? abstractInt : u32,
-    });
+    };
   },
-  normalImpl: (a: unknown[]) => a.length,
-  codegenImpl(a) {
+  normalImpl: (a: unknown[] | ref<unknown[]>) => (isRef(a) ? a.$.length : a.length),
+  codegenImpl(ctx, [a]) {
     const length = sizeOfPointedToArray(a.dataType);
-    return length > 0 ? String(length) : stitch`arrayLength(${a})`;
+    return length > 0 ? `${length}` : ctx.gen.emitCall('arrayLength', [], [a]);
   },
+  sideEffects: false,
 });

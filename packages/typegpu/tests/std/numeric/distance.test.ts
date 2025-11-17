@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3h } from '../../../src/data/index.ts';
-import { distance } from '../../../src/std/index.ts';
+import { vec2f, vec3h } from 'typegpu/data';
+import { distance } from 'typegpu/std';
 
 describe('distance', () => {
   it('computes distance between two points', () => {
@@ -21,8 +21,8 @@ describe('distance', () => {
 
   it('does not accept different types', () => {
     // @ts-expect-error
-    distance(vec2f(0, 0), vec3h(0, 0, 0));
+    () => distance(vec2f(0, 0), vec3h(0, 0, 0));
     // @ts-expect-error
-    distance(vec2f(0, 0), 0);
+    () => distance(vec2f(0, 0), 0);
   });
 });

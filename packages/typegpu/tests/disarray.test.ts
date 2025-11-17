@@ -1,8 +1,7 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import * as d from 'typegpu/data';
+import { it } from 'typegpu-testing-utility';
 
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {
@@ -23,48 +22,26 @@ describe('disarray', () => {
   it('does not align array elements when writing', () => {
     const TestArray = d.disarrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
-    expect([...new Uint32Array(buffer)]).toStrictEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-    ]);
+    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('aligns array elements when writing with custom aligned elements', () => {
     const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
-    // deno-fmt-ignore
+    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('does not align array elements when reading', () => {
     const TestArray = d.disarrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7]);
 
-    expect(readData(reader, TestArray)).toStrictEqual([
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(0, 4, 5),
       d.vec3u(6, 0, 7),
@@ -74,11 +51,10 @@ describe('disarray', () => {
   it('aligns array elements when reading with custom aligned elements', () => {
     const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toStrictEqual([
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -88,11 +64,10 @@ describe('disarray', () => {
   it('aligns array elements when reading with custom aligned elements and other attributes', () => {
     const TestArray = d.disarrayOf(d.size(12, d.align(16, d.vec3u)), 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toStrictEqual([
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -112,8 +87,8 @@ describe('disarray', () => {
       d.vec3f(1.5, 2, 15),
     ];
 
-    writeData(new BufferWriter(buffer), TestArray, value);
-    expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestArray, value);
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
   });
 
   it('can be called to create a disarray', () => {
@@ -129,9 +104,9 @@ describe('disarray', () => {
     const DisarraySchema = d.disarrayOf(d.unorm16x2, 2);
 
     // @ts-expect-error
-    (() => DisarraySchema([d.vec2f(), d.vec3f()]));
+    () => DisarraySchema([d.vec2f(), d.vec3f()]);
     // @ts-expect-error
-    (() => DisarraySchema([d.vec3f(), d.vec3f()]));
+    () => DisarraySchema([d.vec3f(), d.vec3f()]);
   });
 
   it('can be called to create a deep copy of other disarray', () => {
@@ -152,14 +127,14 @@ describe('disarray', () => {
   it('throws when invalid number of arguments', () => {
     const DisarraySchema = d.disarrayOf(d.float32x2, 2);
 
-    expect(() => DisarraySchema([d.vec2f()]))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]',
-      );
-    expect(() => DisarraySchema([d.vec2f(), d.vec2f(), d.vec2f()]))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]',
-      );
+    expect(() => DisarraySchema([d.vec2f()])).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]',
+    );
+    expect(() =>
+      DisarraySchema([d.vec2f(), d.vec2f(), d.vec2f()]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]',
+    );
   });
 
   it('can be called to create a default value', () => {
@@ -176,10 +151,7 @@ describe('disarray', () => {
 
     const defaultDisarray = DisarraySchema();
 
-    expect(defaultDisarray).toStrictEqual([
-      { vec: d.vec3f() },
-      { vec: d.vec3f() },
-    ]);
+    expect(defaultDisarray).toStrictEqual([{ vec: d.vec3f() }, { vec: d.vec3f() }]);
   });
 
   it('can be partially called', () => {
@@ -190,11 +162,7 @@ describe('disarray', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-    expect(disarray3).toStrictEqual([
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
+    expect(disarray3).toStrictEqual([d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
 
     const disarray7 = DisarrayPartialSchema(7)([
       d.vec3u(1, 1, 1),

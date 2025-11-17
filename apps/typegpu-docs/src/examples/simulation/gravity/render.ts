@@ -1,10 +1,7 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { tgpu, d, std } from 'typegpu';
 import { radiusOf } from './helpers.ts';
 import {
   cameraAccess,
-  CelestialBody,
   filteringSamplerSlot,
   lightSourceAccess,
   renderBindGroupLayout as renderLayout,
@@ -13,7 +10,7 @@ import {
   VertexOutput,
 } from './schemas.ts';
 
-export const skyBoxVertex = tgpu['~unstable'].vertexFn({
+export const skyBoxVertex = tgpu.vertexFn({
   in: {
     position: d.vec3f,
     uv: d.vec2f,
@@ -23,63 +20,39 @@ export const skyBoxVertex = tgpu['~unstable'].vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewPos = std.mul(cameraAccess.$.view, d.vec4f(input.position, 0)).xyz;
+  'use gpu';
+  const viewPos = (cameraAccess.$.view * d.vec4f(input.position, 0)).xyz;
 
   return {
-    pos: std.mul(
-      cameraAccess.$.projection,
-      d.vec4f(viewPos, 1),
-    ),
+    pos: cameraAccess.$.projection * d.vec4f(viewPos, 1),
     texCoord: input.position.xyz,
   };
 });
 
-export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
+export const skyBoxFragment = tgpu.fragmentFn({
   in: {
     texCoord: d.vec3f,
   },
   out: d.vec4f,
 })((input) =>
-  std.textureSample(
-    skyBoxAccess.$,
-    filteringSamplerSlot.$,
-    std.normalize(input.texCoord),
-  )
+  std.textureSample(skyBoxAccess.$, filteringSamplerSlot.$, std.normalize(input.texCoord)),
 );
 
-export const mainVertex = tgpu['~unstable'].vertexFn({
+export const mainVertex = tgpu.vertexFn({
   in: {
     ...VertexInput,
     instanceIndex: d.builtin.instanceIndex,
   },
   out: VertexOutput,
 })((input) => {
-  // TODO: replace it with struct copy when Chromium is fixed
-  const currentBody = CelestialBody({
-    position: renderLayout.$.celestialBodies[input.instanceIndex].position,
-    velocity: renderLayout.$.celestialBodies[input.instanceIndex].velocity,
-    mass: renderLayout.$.celestialBodies[input.instanceIndex].mass,
-    collisionBehavior:
-      renderLayout.$.celestialBodies[input.instanceIndex].collisionBehavior,
-    textureIndex:
-      renderLayout.$.celestialBodies[input.instanceIndex].textureIndex,
-    radiusMultiplier:
-      renderLayout.$.celestialBodies[input.instanceIndex].radiusMultiplier,
-    ambientLightFactor:
-      renderLayout.$.celestialBodies[input.instanceIndex].ambientLightFactor,
-    destroyed: renderLayout.$.celestialBodies[input.instanceIndex].destroyed,
-  });
+  'use gpu';
+  const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
-  const worldPosition = std.add(
-    std.mul(radiusOf(currentBody), input.position.xyz),
-    currentBody.position,
-  );
+  const worldPosition = currentBody.position + input.position.xyz * radiusOf(currentBody);
 
   const camera = cameraAccess.$;
-  const positionOnCanvas = std.mul(
-    camera.projection,
-    std.mul(camera.view, d.vec4f(worldPosition, 1)),
-  );
+  const positionOnCanvas = camera.projection * camera.view * d.vec4f(worldPosition, 1);
+
   return {
     position: positionOnCanvas,
     uv: input.uv,
@@ -91,10 +64,11 @@ export const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const mainFragment = tgpu['~unstable'].fragmentFn({
+export const mainFragment = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   if (input.destroyed === 1) {
     std.discard();
   }
@@ -105,24 +79,14 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
     filteringSamplerSlot.$,
     input.uv,
     input.sphereTextureIndex,
-  ).xyz;
+  ).rgb;
 
-  const ambient = std.mul(
-    input.ambientLightFactor,
-    std.mul(textureColor, lightColor),
-  );
+  const ambient = textureColor * lightColor * input.ambientLightFactor;
 
   const normal = input.normals;
-  const lightDirection = std.normalize(
-    std.sub(lightSourceAccess.$, input.worldPosition),
-  );
+  const lightDirection = std.normalize(lightSourceAccess.$ - input.worldPosition);
   const cosTheta = std.dot(normal, lightDirection);
-  const diffuse = std.mul(
-    std.max(0, cosTheta),
-    std.mul(textureColor, lightColor),
-  );
+  const diffuse = textureColor * lightColor * std.max(0, cosTheta);
 
-  const litColor = std.add(ambient, diffuse);
-
-  return d.vec4f(litColor.xyz, 1);
+  return d.vec4f(ambient + diffuse, 1);
 });

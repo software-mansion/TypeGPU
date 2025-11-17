@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4h } from '../../../src/data/index.ts';
-import { pow } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4h } from 'typegpu/data';
+import { pow } from 'typegpu/std';
 
 describe('pow', () => {
   it('should return the correct power', () => {
@@ -30,8 +30,6 @@ describe('pow', () => {
   });
 
   it('should return correct power for half precision vectors', () => {
-    expect(pow(vec4h(2, 3, 4, 5), vec4h(2, 3, 0, 1))).toStrictEqual(
-      vec4h(4, 27, 1, 5),
-    );
+    expect(pow(vec4h(2, 3, 4, 5), vec4h(2, 3, 0, 1))).toStrictEqual(vec4h(4, 27, 1, 5));
   });
 });

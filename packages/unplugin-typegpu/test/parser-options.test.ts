@@ -4,26 +4,25 @@ import { babelTransform, rollupTransform } from './transform.ts';
 describe('[BABEL] parser options', () => {
   it('with no include option, import determines whether to run the plugin', () => {
     const codeWithImport = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       
       const increment = tgpu.fn([])(() => {
         const x = 2+2;
       });
     `;
 
-    expect(
-      babelTransform(codeWithImport, { include: [/virtual:/] }),
-    ).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      const increment = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+    expect(babelTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
+      const increment = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
-        get externals() {
-          return {};
-        }
+        v: 2,
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+        },
+        externals: {}
       }) && $.f)({}));"
     `);
 
@@ -33,9 +32,7 @@ describe('[BABEL] parser options', () => {
       });
     `;
 
-    expect(
-      babelTransform(codeWithoutImport, { include: [/virtual:/] }),
-    ).toMatchInlineSnapshot(`
+    expect(babelTransform(codeWithoutImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
       "const increment = tgpu.fn([])(() => {
         const x = 2 + 2;
       });"
@@ -46,7 +43,7 @@ describe('[BABEL] parser options', () => {
 describe('[ROLLUP] tgpu alias gathering', async () => {
   it('with no include option, import determines whether to run the plugin', async () => {
     const codeWithImport = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       
       const increment = tgpu.fn([])(() => {
       });
@@ -54,18 +51,16 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       console.log(increment);
   `;
 
-    expect(
-      await rollupTransform(codeWithImport, { include: [/virtual:/] }),
-    ).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+    expect(await rollupTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
 
-      const increment = tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      const increment = tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    get externals() { return {}; },
-                  }) && $.f)({})));
+          v: 2,
+          name: undefined,
+          ast: {"params":[],"body":[0,[]]},
+          externals: {}
+        }) && $.f)({})));
 
             console.log(increment);
       "
@@ -79,9 +74,8 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
       console.log(increment);
     `;
 
-    expect(
-      await rollupTransform(codeWithoutImport, { include: [/virtual:/] }),
-    ).toMatchInlineSnapshot(`
+    expect(await rollupTransform(codeWithoutImport, { include: [/virtual:/] }))
+      .toMatchInlineSnapshot(`
       "const increment = tgpu.fn([])(() => {
             });
 

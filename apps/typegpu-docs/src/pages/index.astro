@@ -1,360 +1,242 @@
 ---
-import { Image } from 'astro:assets';
-import DiscordIconSvg from '../assets/discord-icon.svg';
-import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
-import GithubIconSvg from '../assets/github-icon.svg';
-import Illustration from '../assets/illustration.svg';
-import SwmLogoSvg from '../assets/swm-logo.svg';
-import SwmLogomarkSvg from '../assets/swm-logomark.svg';
-import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
-import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
-import FeatureCard from '../components/FeatureCard.astro';
-import FooterLink from '../components/FooterLink.astro';
-import GetStartedButton from '../components/GetStartedButton.astro';
-import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
-import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
-import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
-import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
-import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
-import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
-import RoadMapStep from '../components/roadmap/RoadMapStep.astro';
+import SwmLogomarkTopRightSvg from '../assets/swm-logomark-top-right.svg';
+import CodeShowcase from '../components/CodeShowcase.astro';
+import CallToActionButton from '../components/CallToActionButton.astro';
+import GradientTitle from '../components/GradientTitle.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Videos from '../components/Videos.astro';
 import PageLayout from '../layouts/PageLayout.astro';
-
-const showcaseVideoResolution = [2048, 1200];
+import LandingExampleGrid from '../components/landing-examples/LandingExampleGrid.tsx';
+import { HeroEffect } from '../components/hero-effect/HeroEffect.tsx';
+import SecondaryButton from '../components/SecondaryButton.astro';
 ---
 
-<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
-  <main
-    class="flex flex-col items-center bg-tameplum-50 lg:gap-30 gap-10 md:gap-20"
+<PageLayout title="TypeGPU – Type-safe WebGPU toolkit" edgeAwareOverscroll>
+  <div
+    class="isolate flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
   >
+    <main class="self-stretch">
+      <SiteHeader />
+    </main>
+
+    <!-- Hero Section -->
     <section
-      class="box-border relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]"
+      class="relative box-border flex min-h-[min(calc(100dvh-5rem),800px)] flex-col items-start justify-center gap-8 self-stretch px-6 py-10 md:mx-auto md:w-full md:max-w-214 md:gap-20 md:py-20 lg:max-w-[960px]"
     >
-      <header
-        class="self-stretch shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-7.5 md:px-10 lg:px-12.5"
-      >
-        <a href="https://swmansion.com" target="_blank" rel="noreferrer">
-          <Image
-            src={SwmLogoSvg}
-            class="w-auto h-10 sm:h-12 md:h-16 lg:h-20 opacity-75"
-            alt="Software Mansion Logo"
-          />
-        </a>
-
-        <div class="flex items-center gap-4">
-          <a
-            href="https://discord.gg/8jpfgDqPcM"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Image
-              src={DiscordIconSvg}
-              class="w-auto h-6 sm:h-8 md:h-10 opacity-75"
-              alt="Discord Logo"
-            />
-          </a>
-          <a
-            href="https://github.com/software-mansion/TypeGPU"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Image
-              src={GithubIconSvg}
-              class="w-6 h-6 opacity-75 sm:w-8 sm:h-8 md:w-10 md:h-10"
-              alt="GitHub Logo"
-            />
-          </a>
-        </div>
-      </header>
-
       <div
-        class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
+        class="pointer-events-none absolute inset-0 box-border flex items-center justify-end overflow-hidden md:justify-center"
       >
-        <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
-          {/* Blurred background */}
-        </div>
-        <Image
-          src={TypeGPULogoLight}
-          alt="TypeGPU Logo"
-          class="w-58 md:w-[20rem] lg:w-[24rem]"
-        />
-        <h1 class="text-center font-normal text-pretty mb-4">
-          TypeScript library that enhances the WebGPU <br
-            class="hidden sm:block"
-          /> API, allowing resource management in <br class="hidden sm:block" />
-          a type-safe, declarative way.
-        </h1>
-
         <div
-          class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row"
+          class="-z-20 flex translate-x-[50%] -translate-y-[4%] justify-end sm:translate-x-[40%] md:w-full md:max-w-214 md:translate-x-[20%] lg:max-w-[960px]"
         >
-          <GetStartedButton />
-
-          <a
-            class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-            href="/TypeGPU/examples">Explore interactive examples</a
-          >
+          <HeroEffect client:only="react" />
         </div>
       </div>
 
-      <div
-        class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-138 md:w-234 lg:w-280 lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl relative md:top-full md:-translate-y-[50%] sm:mb-10"
-      >
-        <video
-          src="/TypeGPU/assets/migration.mp4"
-          style={{
-            aspectRatio:
-              showcaseVideoResolution[0] / showcaseVideoResolution[1],
-          }}
-          autoplay
-          loop
-          muted
-          controls
-          playsinline
-          class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
-        ></video>
+      <div class="flex flex-col gap-4 md:gap-12">
+        <!-- Hero Copy -->
+        <div
+          class="dark:text-almost-white text-navy-100 text-[1.625rem] font-bold md:text-6xl"
+        >
+          Type<GradientTitle title="GPU" />
+        </div>
+        <p
+          class="text-navy-100 dark:text-almost-white max-w-[40rem] text-2xl leading-[1.14] font-normal tracking-[2%] text-pretty md:text-[32px]"
+        >
+          A modular and open-ended toolkit for WebGPU, with advanced type
+          interface and ability to write shaders in TypeScript.
+        </p>
+      </div>
+
+      <div class="flex flex-col items-stretch gap-4 self-stretch sm:flex-row">
+        <CallToActionButton
+          href="/TypeGPU/getting-started"
+          title="Get started"
+          size="base"
+        />
+        <SecondaryButton
+          href="/TypeGPU/examples"
+          title="See examples"
+          size="base"
+        />
       </div>
     </section>
 
-    <div class="lg:h-64 md:h-52 md:block hidden"></div>
-
+    <!-- TypeGPU examples -->
     <section
-      class="box-border flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
+      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
     >
-      <div>
-        <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
+      <div class="flex flex-col gap-6 pb-14">
+        <h2
+          class="text-navy-100 dark:text-almost-white text-2xl font-medium tracking-[2%] md:text-4xl"
+        >
+          Explore TypeGPU examples
+        </h2>
+        <p
+          class="text-navy-100 dark:text-almost-white text-lg font-normal text-pretty md:text-xl"
+        >
+          From interactive 3D apps to custom shaders and type-safe libraries,
+          TypeGPU gives you the tools to build anything WebGPU can do.
+        </p>
+      </div>
+      <LandingExampleGrid client:load />
+    </section>
+
+    <!-- Code Showcase -->
+    <section
+      class="mb-14 flex flex-col gap-10 self-stretch sm:mx-auto sm:w-full md:mb-30 md:max-w-214 md:gap-20 lg:max-w-[960px]"
+    >
+      <div class="flex flex-col gap-4 px-6 md:gap-6">
+        <h2
+          class="center text-navy-100 dark:text-almost-white text-2xl font-medium md:text-4xl"
+        >
+          Ways to use TypeGPU
+        </h2>
+        <p
+          class="text-navy-100 dark:text-almost-white text-lg text-pretty md:text-xl"
+        >
+          TypeGPU is a three-way toolkit that is easy for you to integrate
+          granularly and doesn't restrict you in what you can do.
+        </p>
+      </div>
+      <CodeShowcase />
+      <div
+        class="flex flex-col gap-6 px-6 sm:flex-row sm:items-center sm:justify-between sm:gap-0"
+      >
+        <h3
+          class="center text-navy-100 dark:text-almost-white text-xl font-medium md:text-2xl"
+        >
+          Read more about TypeGPU
+        </h3>
+        <SecondaryButton
+          href="/TypeGPU/why-typegpu/"
+          title="Why TypeGPU?"
+          size="base"
+          arrow
+        />
+      </div>
+    </section>
+
+    <!-- Videos -->
+    <section
+      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
+    >
+      <div class="flex flex-col gap-6 pb-20">
+        <h2
+          class="center text-navy-100 dark:text-almost-white text-2xl font-medium md:text-4xl"
+        >
           Get to know TypeGPU
         </h2>
-        <p class="text-center text-pretty">
-          Discover how it can change the way you work with GPU rendering and
-          computing.
+        <p
+          class="text-navy-100 dark:text-almost-white text-lg text-pretty md:text-xl"
+        >
+          Dive into guides, tutorials, and videos to see how TypeGPU can change
+          the way you work with GPU rendering and computing.
         </p>
       </div>
-
-      <div
-        class="grid max-w-6xl grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20"
-      >
-        <FeatureCard image="task-check" header="Easily encode and decode"
-          >Leveraging <a
-            href="https://github.com/iwoplaza/typed-binary"
-            target="_blank"
-            class="no-underline text-blue-600"
-            rel="noreferrer noopener">typed-binary</a
-          > ensures you don't have to think about bytes when writing your GPU programs
-          ever again.</FeatureCard
-        >
-        <FeatureCard
-          image="grid-mixed"
-          header="Compose data types"
-          class="md:translate-y-20"
-          >Complex data types like structs and arrays can be easily described,
-          and TypeScript automatically validates outgoing and incoming data.</FeatureCard
-        >
-        <FeatureCard image="atom" header="Run it on React Native"
-          >Works on React Native thanks to the recently announced
-          <a
-            href="https://github.com/wcandillon/react-native-webgpu"
-            target="_blank"
-            class="no-underline text-blue-600"
-            rel="noreferrer noopener">react-native-wgpu</a
-          >
-          library.</FeatureCard
-        >
-
-        <article
-          class="box-border flex justify-center items-center lg:h-112 md:h-88 h-50 md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl opacity-50 md:translate-y-20"
-        >
-          <h3 class="font-normal text-grayscale-80">More coming soon...</h3>
-        </article>
-      </div>
+      <Videos />
     </section>
 
-    {/* Roadmap Section */}
-    <div
-      class="box-border flex flex-col items-center bg-white w-full md:my-8 lg:my-20 py-12 md:p-20 lg:p-32 md:rounded-[5rem] rounded-[2.5rem] overflow-hidden"
-    >
-      <section
-        class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
-      >
-        <div>
-          <h2 class="mb-4 font-normal text-center md:mb-8 center">Roadmap</h2>
-          <p class="text-center text-pretty max-w-240">
-            The road to end-to-end type safety on the GPU involves implementing
-            several interoperating primitives. Below is our roadmap of features
-            that aim to fulfill that goal.
-          </p>
-        </div>
-
-        <div class="max-w-200">
-          <ol class="flex flex-col m-0 p-0">
-            <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
-              <MilestoneBuffersBadge slot="visual" />
-              The WebGPU Shading Language (WGSL) gives developers a rich sense of
-              the structure of the data that it operates on. This is lost when accessed
-              through JavaScript, as the APIs accept raw byte buffers. TypeGPU regains
-              that information on the JavaScript side and handles proper byte alignment
-              and padding automatically.
-            </RoadMapStep>
-            <RoadMapStep title="Bind groups" releasedIn="0.2">
-              <MilestoneBindGroupsBadge slot="visual" />
-              Connecting resources to shaders via numeric indices can lead to problems
-              that are hard to catch at build-time/CI. By using named keys and typed
-              data structures we can ensure that the provided resources are what
-              the shader expects.
-            </RoadMapStep>
-            <RoadMapStep title="Linker" releasedIn="0.3">
-              <MilestoneLinkerBadge slot="visual" />
-              No more duplication between JS and GPU object definitions. A dedicated
-              linker combines WGSL code with TypeGPU objects it references, producing
-              shader code ready to be used in pipelines.
-            </RoadMapStep>
-            <RoadMapStep title="Functions" releasedIn="0.6">
-              <MilestoneFunctionsBadge slot="visual" />
-              By wrapping each function with a "typed shell", they can be moved across
-              different files/modules. Any resources (variables, buffers, etc.) in
-              the external scope can be accessed inside the function.
-            </RoadMapStep>
-            <RoadMapStep title="Pipelines">
-              <MilestonePipelinesBadge slot="visual" />
-              To ensure that shader stages match each other, and pipeline constants
-              are filled with proper values, TypeGPU plans to provide typed pipelines.
-            </RoadMapStep>
-            <RoadMapStep title="Imperative code">
-              <MilestoneCodeBadge slot="visual" />
-              By giving developers the ability to write imperative shader code in
-              TypeScript, we can leverage the excellent TypeScript LSP to complete
-              the type safety puzzle, bridging the gap between our API and type-safe
-              shader code.
-            </RoadMapStep>
-          </ol>
-        </div>
-
-        <article class="isolate relative flex flex-col items-center gap-5">
-          <div
-            class="absolute -inset-x-40 inset-y-0 -bottom-20 bg-blurred-radial-tameplum -z-10"
-          >
-            {/* Blurred background */}
-          </div>
-          <p class="text-center text-pretty max-w-200">
-            Take active part in the development by joining our discussions.
-          </p>
-          <div class="flex flex-col items-center sm:flex-row gap-3">
-            <a
-              class="inline-flex justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-              href="https://github.com/software-mansion/TypeGPU/discussions"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Image
-                src={GithubIconSvg}
-                class="w-auto h-7 opacity-75"
-                alt="GitHub Logo"
-              />
-              GitHub Discussions</a
-            >
-            <a
-              class="inline-flex w-fit justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-              href="https://discord.gg/8jpfgDqPcM"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Image
-                src={DiscordIconSvg}
-                class="w-auto h-7 opacity-75"
-                alt="Discord Logo"
-              /> Discord Server</a
-            >
-          </div>
-        </article>
-      </section>
-    </div>
-
+    <!-- Call to Action -->
     <section
-      class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-15 gap-10 w-full max-w-138 lg:max-w-340"
+      class="mx-auto mb-14 flex flex-col items-center gap-16 px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
     >
-      <div>
-        <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">
-          Got hooked?
-        </h1>
-        <p class="text-center text-pretty">
-          Try TypeGPU and reshape your GPU rendering and computing.
-        </p>
-      </div>
-
-      <GetStartedButton />
-
-      <Image
-        src={Illustration}
-        class="hidden md:block lg:w-4xl w-154 max-w-full"
-        alt="An illustration showing the TypeGPU plums in a bowl."
+      <h2
+        class="text-navy-100 dark:text-almost-white text-center text-3xl leading-tight font-bold lg:text-5xl"
+      >
+        Ready to try out <span class="whitespace-nowrap"
+          ><GradientTitle title="TypeGPU" />?</span
+        >
+      </h2>
+      <CallToActionButton
+        href="/TypeGPU/getting-started"
+        title="Get started"
+        size="lg"
       />
     </section>
 
-    <section></section>
-  </main>
-
-  <footer class="text-micro bg-tameplum-50">
-    <div
-      class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20"
+    <!-- Footer -->
+    <footer
+      class="mt-20 flex flex-col items-center self-stretch bg-gradient-to-b from-[#C464FF00] to-[#d0ddfb] dark:from-[#C86EFF00] dark:to-[#33486f]"
     >
       <div
-        class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-340 md:max-w-234 w-full max-w-138"
+        class="dark:text-almost-white text-navy-100 mx-auto box-border flex w-full flex-col items-center px-6 md:max-w-214 lg:max-w-[960px]"
       >
-        <div class="w-full">
-          <Image
-            src={TypeGPULogomarkMonolight}
-            alt="TypeGPU logomark"
-            class="w-12 h-12 pb-4"
-          />
-          <div
-            class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80"
+        <h2
+          class="text-center text-[1.625rem] leading-tight font-bold lg:text-5xl"
+        >
+          We are <GradientTitle title="Software Mansion" />
+        </h2>
+
+        <div
+          class="dark:text-almost-white text-navy-80 mt-6 mb-12 max-w-[40rem] text-center text-xl leading-[160%] font-normal text-pretty"
+        >
+          We’re a software company built around improving developer experience
+          and bringing to life the innovative ideas of our clients. Do you have
+          a software project that we can help you with?
+        </div>
+
+        <CallToActionButton
+          title="Hire us"
+          size="base"
+          href="https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=docs"
+        />
+
+        <div
+          class="dark:bg-off-navy my-15 box-border grid grid-cols-1 gap-8 self-stretch bg-white px-8 py-8 text-center sm:grid-cols-2 md:grid-cols-[repeat(3,1fr)]"
+        >
+          <a
+            href="https://docs.swmansion.com/react-native-reanimated/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native Reanimated</a
           >
-            <div class="text-pretty md:max-w-94 lg:max-w-108">
-              <span class="font-medium">TypeGPU</span>
-              <span class="text-grayscale-100">&mdash;</span> TypeScript library
-              that enhances the WebGPU API, allowing resource management in a type-safe,
-              declarative way.
-            </div>
-
-            <div class="grid gap-6 md:w-[24rem] lg:w-108">
-              <FooterLink
-                label="Made by Software Mansion"
-                callToAction="Learn more about us"
-                href="https://swmansion.com"
-              />
-
-              <FooterLink
-                label="Check what's underneath"
-                callToAction="Open Github repository"
-                href="https://github.com/software-mansion/TypeGPU"
-              />
-
-              <FooterLink
-                label="Share feedback with us"
-                callToAction="Join our Discord server"
-                href="https://discord.gg/8jpfgDqPcM"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center self-start gap-4 text-grayscale-100">
-          <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
-          &copy; {new Date().getFullYear()} Software Mansion S.A.
-        </div>
-
-        <div class="hidden md:grid">
-          <div
-            class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"
+          <a
+            href="https://docs.swmansion.com/react-native-gesture-handler/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native Gesture Handler</a
           >
-          </div>
-          <Image
-            class="w-full h-auto col-start-1 row-start-1"
-            src={GiantTypeGPULogo}
-            alt="A giant TypeGPU logo."
-          />
+          <a
+            href="https://docs.swmansion.com/react-native-screens/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native Screens</a
+          >
+          <a
+            href="https://github.com/software-mansion/react-native-svg"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native SVG</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-audio-api/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native Audio API</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-executorch/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >React Native ExecuTorch</a
+          >
+          <a
+            href="https://docs.swmansion.com/TypeGPU/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >TypeGPU</a
+          >
+          <a
+            href="https://ide.swmansion.com/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >Radon IDE</a
+          >
+          <a
+            href="https://docs.swmansion.com/byegl/"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >ByeGL</a
+          >
         </div>
+        <p class="text-navy-100 dark:text-almost-white text-center text-sm">
+          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
+          copyrights belong to their respective owners.
+        </p>
+        <SwmLogomarkTopRightSvg class="my-15" />
       </div>
-    </div>
-  </footer>
+    </footer>
+  </div>
 </PageLayout>

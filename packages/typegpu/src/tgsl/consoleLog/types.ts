@@ -1,13 +1,10 @@
-import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferBinding.ts';
 import type { Snippet } from '../../data/snippet.ts';
-import type {
-  AnyWgslData,
-  Atomic,
-  U32,
-  WgslArray,
-  WgslStruct,
-} from '../../data/wgslTypes.ts';
-import type { GenerationCtx } from '../generationHelpers.ts';
+import type { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
+import type { ResolutionCtx } from '../../types.ts';
+import type { supportedLogOps } from '../jsPolyfills.ts';
+
+export type SupportedLogOp = ReturnType<typeof supportedLogOps>[number];
 
 /**
  * Options for configuring GPU log generation.
@@ -16,6 +13,7 @@ export interface LogGeneratorOptions {
   /**
    * The maximum number of logs that appear during a single draw/dispatch call.
    * If this number is exceeded, a warning containing the total number of calls is logged and further logs are dropped.
+   * Draws and dispatches recorded into a shared command encoder count against a single limit for the whole submission.
    * @default 64
    */
   logCountLimit?: number;
@@ -38,12 +36,12 @@ export type SerializedLogCallData = WgslStruct<{
 }>;
 
 export interface LogMeta {
-  op: SupportedLogOps;
+  op: SupportedLogOp;
   argTypes: (string | AnyWgslData)[];
 }
 
 /**
- * The resources required for logging within the TGSL console.
+ * The resources required for logging via console.log within TypeGPU functions.
  *
  * @property indexBuffer - A buffer used for indexing log entries. Needs to be cleared after each dispatch/draw.
  * @property dataBuffer - A buffer containing an array of serialized log call data.
@@ -58,21 +56,6 @@ export interface LogResources {
 }
 
 export interface LogGenerator {
-  generateLog(
-    ctx: GenerationCtx,
-    op: string,
-    args: Snippet[],
-  ): Snippet;
+  generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: Snippet[]): Snippet;
   get logResources(): LogResources | undefined;
 }
-
-export const supportedLogOps = [
-  'log',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'clear',
-] as const;
-
-export type SupportedLogOps = (typeof supportedLogOps)[number];

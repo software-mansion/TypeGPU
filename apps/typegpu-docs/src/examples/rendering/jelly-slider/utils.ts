@@ -1,13 +1,7 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { BoxIntersection } from './dataTypes.ts';
-import type { TgpuRoot } from 'typegpu';
 
-export const fresnelSchlick = (
-  cosTheta: number,
-  ior1: number,
-  ior2: number,
-) => {
+export const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
   'use gpu';
   const r0 = std.pow((ior1 - ior2) / (ior1 + ior2), 2.0);
   return r0 + (1.0 - r0) * std.pow(1.0 - cosTheta, 5.0);
@@ -33,8 +27,8 @@ export const intersectBox = (
   const tMinVec = std.min(t1, t2);
   const tMaxVec = std.max(t1, t2);
 
-  const tMin = std.max(std.max(tMinVec.x, tMinVec.y), tMinVec.z);
-  const tMax = std.min(std.min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
+  const tMin = std.max(tMinVec.x, tMinVec.y, tMinVec.z);
+  const tMax = std.min(tMaxVec.x, tMaxVec.y, tMaxVec.z);
 
   const result = BoxIntersection();
   result.hit = tMax >= tMin && tMax >= 0.0;
@@ -46,10 +40,12 @@ export const intersectBox = (
 
 export function createTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
-    const texture = root['~unstable'].createTexture({
-      size: [width, height],
-      format: 'rgba8unorm',
-    }).$usage('storage', 'sampled', 'render');
+    const texture = root
+      .createTexture({
+        size: [width, height],
+        format: 'rgba8unorm',
+      })
+      .$usage('storage', 'sampled', 'render');
 
     return {
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
@@ -58,15 +54,13 @@ export function createTextures(root: TgpuRoot, width: number, height: number) {
   });
 }
 
-export function createBackgroundTexture(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
-  const texture = root['~unstable'].createTexture({
-    size: [width, height],
-    format: 'rgba16float',
-  }).$usage('sampled', 'render');
+export function createBackgroundTexture(root: TgpuRoot, width: number, height: number) {
+  const texture = root
+    .createTexture({
+      size: [width, height],
+      format: 'rgba16float',
+    })
+    .$usage('sampled', 'render');
 
   return {
     sampled: texture.createView(),

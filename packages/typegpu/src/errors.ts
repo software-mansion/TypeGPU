@@ -1,10 +1,9 @@
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type { AnyData, Disarray } from './data/dataTypes.ts';
-import type { WgslArray } from './data/wgslTypes.ts';
+import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
-import { DEV } from './shared/env.ts';
+import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
@@ -22,7 +21,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (!DEV) {
+  if (!DEV && !TEST) {
     throw new Error(prefix);
   }
 
@@ -46,14 +45,12 @@ export function invariant(
  * @category Errors
  */
 export class ResolutionError extends Error {
-  constructor(
-    public readonly cause: unknown,
-    public readonly trace: unknown[],
-  ) {
-    let entries = trace.map((ancestor) =>
-      `- ${
-        hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor
-      }`
+  readonly cause: unknown;
+  readonly trace: unknown[];
+
+  constructor(cause: unknown, trace: unknown[]) {
+    let entries = trace.map(
+      (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
     );
 
     // Showing only the root and leaf nodes.
@@ -63,11 +60,12 @@ export class ResolutionError extends Error {
 
     super(
       `Resolution of the following tree failed:\n${entries.join('\n')}: ${
-        cause && typeof cause === 'object' && 'message' in cause
-          ? cause.message
-          : cause
+        cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
+
+    this.cause = cause;
+    this.trace = trace;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -87,10 +85,10 @@ export class ResolutionError extends Error {
  * @category Errors
  */
 export class ExecutionError extends Error {
-  constructor(
-    public readonly cause: unknown,
-    public readonly trace: unknown[],
-  ) {
+  readonly cause: unknown;
+  readonly trace: unknown[];
+
+  constructor(cause: unknown, trace: unknown[]) {
     let entries = trace.map((ancestor) => `- ${ancestor}`);
 
     // Showing only the root and leaf nodes.
@@ -100,11 +98,12 @@ export class ExecutionError extends Error {
 
     super(
       `Execution of the following tree failed:\n${entries.join('\n')}: ${
-        cause && typeof cause === 'object' && 'message' in cause
-          ? cause.message
-          : cause
+        cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
+
+    this.cause = cause;
+    this.trace = trace;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ExecutionError.prototype);
@@ -121,8 +120,11 @@ export class ExecutionError extends Error {
  * @category Errors
  */
 export class MissingSlotValueError extends Error {
-  constructor(public readonly slot: TgpuSlot<unknown>) {
+  readonly slot: TgpuSlot<unknown>;
+
+  constructor(slot: TgpuSlot<unknown>) {
     super(`Missing value for '${slot}'`);
+    this.slot = slot;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingSlotValueError.prototype);
@@ -133,7 +135,7 @@ export class MissingSlotValueError extends Error {
  * @category Errors
  */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<AnyData>) {
+  constructor(value: TgpuBuffer<BaseData>) {
     super(
       `Buffer '${
         getName(value) ?? '<unnamed>'
@@ -145,25 +147,12 @@ export class NotUniformError extends Error {
   }
 }
 
-export class MissingLinksError extends Error {
-  constructor(fnLabel: string | undefined, externalNames: string[]) {
-    super(
-      `The function '${
-        fnLabel ?? '<unnamed>'
-      }' is missing links to the following external values: ${externalNames}.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingLinksError.prototype);
-  }
-}
-
 export class MissingBindGroupsError extends Error {
   constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(
-      `Missing bind groups for layouts: '${
-        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(bindGroup).(...)`,
+      `Missing bind groups for layouts: '${[...layouts]
+        .map((layout) => getName(layout) ?? '<unnamed>')
+        .join(', ')}'. Please provide it using pipeline.with(bindGroup).(...)`,
     );
 
     // Set the prototype explicitly.
@@ -172,11 +161,11 @@ export class MissingBindGroupsError extends Error {
 }
 
 export class MissingVertexBuffersError extends Error {
-  constructor(layouts: Iterable<TgpuVertexLayout<WgslArray | Disarray>>) {
+  constructor(layouts: Iterable<TgpuVertexLayout>) {
     super(
-      `Missing vertex buffers for layouts: '${
-        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(layout, buffer).(...)`,
+      `Missing vertex buffers for layouts: '${[...layouts]
+        .map((layout) => getName(layout) ?? '<unnamed>')
+        .join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
     );
 
     // Set the prototype explicitly.
@@ -208,5 +197,28 @@ export class WgslTypeError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, WgslTypeError.prototype);
+  }
+}
+
+export class SignatureNotSupportedError extends Error {
+  constructor(actual: BaseData[], candidates: BaseData[]) {
+    super(
+      `Unsupported data types: ${actual
+        .map((a) => a.type)
+        .join(', ')}. Supported types are: ${candidates.map((r) => r.type).join(', ')}.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, SignatureNotSupportedError.prototype);
+  }
+}
+
+export class FiniteMathAssumptionError extends Error {
+  constructor(value: number, type: BaseData) {
+    super(
+      `Cannot convert value '${value}' to type ${type.type} because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)`,
+    );
+
+    Object.setPrototypeOf(this, FiniteMathAssumptionError.prototype);
   }
 }

@@ -36,6 +36,6 @@ export const foo = tgpu.fn([])(/* wgsl */ \`() {
 
   it('adds tgpu import', () => {
     const wgsl = 'fn f() {}';
-    expect(generate(wgsl)).toContain("import tgpu from 'typegpu';");
+    expect(generate(wgsl)).toContain("import { tgpu } from 'typegpu';");
   });
 });

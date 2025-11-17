@@ -1,0 +1,7 @@
+{
+  "title": "Smoky Triangle",
+  "description": "Wraps a simple triangle in animated, noise-shaped smoke to combine basic rasterization with procedural effects.",
+  "category": "rendering",
+  "tags": ["ecosystem", "noise", "primitives"],
+  "coolFactor": 8
+}

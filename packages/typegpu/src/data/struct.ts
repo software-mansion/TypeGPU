@@ -1,6 +1,6 @@
+import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { AnyData } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
@@ -25,7 +25,7 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
   return INTERNAL_createStruct(props, false);
 }
 
-export function abstruct<TProps extends Record<string, BaseData>>(
+export function abstruct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
   return INTERNAL_createStruct(props, true);
@@ -35,17 +35,24 @@ export function abstruct<TProps extends Record<string, BaseData>>(
 // Implementation
 // --------------
 
-function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
+export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
+  Object.keys(props).forEach((key) => {
+    const result = validateProp(key);
+    if (!result.success) {
+      throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
+    }
+  });
+
   // In the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls.
   const structSchema = (instanceProps?: TProps) =>
     Object.fromEntries(
       Object.entries(props).map(([key, schema]) => [
         key,
-        schemaCallWrapper(schema as AnyData, instanceProps?.[key]),
+        schemaCallWrapper(schema, instanceProps?.[key]),
       ]),
     );
 

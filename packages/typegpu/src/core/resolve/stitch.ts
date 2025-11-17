@@ -2,7 +2,7 @@ import { isSnippet, type Snippet } from '../../data/snippet.ts';
 import { getResolutionCtx } from '../../execMode.ts';
 import type { ResolutionCtx } from '../../types.ts';
 
-type ValueOrArray<T> = T | T[];
+type ValueOrArray<T> = T | readonly T[];
 
 /**
  * "The reverse of snipping"
@@ -15,9 +15,7 @@ export function stitch(
   const ctx = getResolutionCtx() as ResolutionCtx;
 
   function resolveSnippet(maybeSnippet: Snippet | string | number) {
-    return isSnippet(maybeSnippet)
-      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType).value
-      : maybeSnippet;
+    return isSnippet(maybeSnippet) ? ctx.resolveSnippet(maybeSnippet).value : maybeSnippet;
   }
 
   let result = '';
@@ -30,7 +28,7 @@ export function stitch(
         .map(resolveSnippet)
         .join(', ');
     } else if (snippet) {
-      result += resolveSnippet(snippet);
+      result += resolveSnippet(snippet as Snippet | string | number);
     }
   }
   return result;

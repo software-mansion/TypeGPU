@@ -1,0 +1,31 @@
+# typegpu/no-uninitialized-variables
+
+📝 Disallow variable declarations without initializers inside 'use gpu' functions.
+
+🚨 This rule is enabled in the ⭐ `recommended` config.
+
+<!-- end auto-generated rule header -->
+
+## Rule details
+
+Examples of **incorrect** code for this rule:
+
+```ts
+const fn = () => { 
+  'use gpu'; 
+  let a; 
+}
+```
+
+Examples of **correct** code for this rule:
+
+```ts
+const fn = () => { 
+  'use gpu'; 
+  let vec = d.vec3f();
+} 
+```
+```ts
+// outside 'use gpu'
+let a;
+```

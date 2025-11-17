@@ -1,6 +1,8 @@
 {
   "title": "Console Log Test",
+  "description": "Checks GPU-side console logging for scalar, vector, and structured values emitted from shader code.",
   "category": "tests",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["test"],
+  "dev": true,
+  "coolFactor": 1
 }

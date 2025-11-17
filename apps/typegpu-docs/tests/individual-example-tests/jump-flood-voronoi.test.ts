@@ -1,0 +1,286 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
+import { mockResizeObserver } from './utils/commonMocks.ts';
+
+describe('jump flood (voronoi) example', () => {
+  setupCommonMocks();
+
+  it('should produce valid code', async ({ device }) => {
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'jump-flood-voronoi',
+        expectedCalls: 3,
+        setupMocks: mockResizeObserver,
+      },
+      device,
+    );
+
+    expect(shaderCodes).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(1) @binding(0) var writeView: texture_storage_2d_array<rgba16float, write>;
+
+      @group(0) @binding(1) var<uniform> timeUniform: f32;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      @group(0) @binding(2) var<uniform> seedThresholdUniform: f32;
+
+      const palette: array<vec3f, 4> = array<vec3f, 4>(vec3f(0.9215686321258545, 0.8117647171020508, 1), vec3f(0.7176470756530762, 0.545098066329956, 0.9803921580314636), vec3f(0.545098066329956, 0.3607843220233917, 0.9647058844566345), vec3f(0.4274509847164154, 0.2666666805744171, 0.9490196108818054));
+
+      fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
+        let size = textureDimensions(writeView);
+        randSeed2(((vec2f(f32(x), f32(y)) / vec2f(size)) + timeUniform));
+        let randomVal = randFloat01();
+        let isSeed = (randomVal >= seedThresholdUniform);
+        let paletteColor = palette[u32(floor((randFloat01() * 4f)))];
+        let variation = (vec3f((randFloat01() - 0.5f), (randFloat01() - 0.5f), (randFloat01() - 0.5f)) * 0.15f);
+        let color = select(vec4f(), vec4f(saturate((paletteColor + variation)), 1f), isSeed);
+        let coord = select(vec2f(-1), (vec2f(f32(x), f32(y)) / vec2f(size)), isSeed);
+        textureStore(writeView, vec2i(i32(x), i32(y)), 0, color);
+        textureStore(writeView, vec2i(i32(x), i32(y)), 1, vec4f(coord, 0f, 0f));
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      @group(0) @binding(0) var floodTexture: texture_2d<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return textureSample(floodTexture, sampler_1, _arg_0.uv);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<uniform> offsetUniform: i32;
+
+      @group(1) @binding(1) var readView: texture_storage_2d_array<rgba16float, read>;
+
+      struct SampleResult {
+        color: vec4f,
+        coord: vec2f,
+      }
+
+      fn sampleWithOffset(tex: texture_storage_2d_array<rgba16float, read>, pos: vec2i, offset: vec2i) -> SampleResult {
+        let dims = textureDimensions(tex);
+        let samplePos = (pos + offset);
+        let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
+        let safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
+        let loadedColor = textureLoad(tex, safePos, 0);
+        let loadedCoord = textureLoad(tex, safePos, 1).xy;
+        return SampleResult(select(loadedColor, vec4f(), outOfBounds), select(loadedCoord, vec2f(-1), outOfBounds));
+      }
+
+      @group(1) @binding(0) var writeView: texture_storage_2d_array<rgba16float, write>;
+
+      fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
+        let offset = offsetUniform;
+        let size = textureDimensions(readView);
+        var minDist = 1e+20;
+        var bestSample = SampleResult(vec4f(), vec2f(-1));
+        // unrolled iteration #0
+        // unrolled iteration #0 / #0
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #0 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #0 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
+        // unrolled iteration #1
+        // unrolled iteration #1 / #0
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #1 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #1 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
+        // unrolled iteration #2
+        // unrolled iteration #2 / #0
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #2 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #2 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
+        // ---
+        textureStore(writeView, vec2i(i32(x), i32(y)), 0, bestSample.color);
+        textureStore(writeView, vec2i(i32(x), i32(y)), 1, vec4f(bestSample.coord, 0f, 0f));
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
+});

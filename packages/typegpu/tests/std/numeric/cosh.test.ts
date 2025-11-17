@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { cosh, isCloseTo } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { cosh, isCloseTo } from 'typegpu/std';
 
 describe('cosh', () => {
   it('computes cosh of a number', () => {
@@ -23,12 +23,7 @@ describe('cosh', () => {
 
   it('computes cosh of vec4f', () => {
     const input = vec4f(0, 1, -1, 2);
-    const expected = vec4f(
-      Math.cosh(0),
-      Math.cosh(1),
-      Math.cosh(-1),
-      Math.cosh(2),
-    );
+    const expected = vec4f(Math.cosh(0), Math.cosh(1), Math.cosh(-1), Math.cosh(2));
     expect(isCloseTo(cosh(input), expected)).toBe(true);
   });
 });

@@ -1,10 +1,11 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';
 import type { Distribution } from './types.ts';
 import * as c from './constants.ts';
 import { getCameraPosition, getPRNG } from './helpers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -13,10 +14,7 @@ const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
 
-const replot = async (
-  currentDistribution: Distribution,
-  animate = false,
-) => {
+const replot = async (currentDistribution: Distribution, animate = false) => {
   const prng = getPRNG(currentDistribution);
 
   const samples = await executor.executeMoreWorkers(prng.prng);
@@ -41,9 +39,13 @@ canvas.addEventListener('mouseout', () => {
 
 // handle mobile devices
 
-canvas.addEventListener('touchstart', () => {
-  helpInfo.style.opacity = '0';
-}, { passive: true });
+canvas.addEventListener(
+  'touchstart',
+  () => {
+    helpInfo.style.opacity = '0';
+  },
+  { passive: true },
+);
 
 canvas.addEventListener('touchend', () => {
   setTimeout(() => {
@@ -53,61 +55,54 @@ canvas.addEventListener('touchend', () => {
 
 plotter.resetView(getCameraPosition(currentDistribution));
 
-export const controls = {
+export const controls = defineControls({
   'Reset Camera': {
     onButtonClick: () => {
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Reseed': {
+  Reseed: {
     async onButtonClick() {
       executor.reseed();
       await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Distribution': {
+  Distribution: {
     initial: c.initialDistribution,
     options: c.distributions,
-    async onSelectChange(value: Distribution) {
+    async onSelectChange(value) {
       if (currentDistribution === value) {
         return;
       }
 
       currentDistribution = value;
-      await replot(
-        currentDistribution,
-        true,
-      );
+      await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
   'Number of samples': {
     initial: c.initialNumSamples,
     options: c.numSamplesOptions,
-    async onSelectChange(value: number) {
+    async onSelectChange(value) {
       executor.count = value;
-      await replot(
-        currentDistribution,
+      await replot(currentDistribution);
+    },
+  },
+  // this is the only place where some niche distributions are tested
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick() {
+      c.distributions.forEach((dist) =>
+        root.device.createShaderModule({
+          code: tgpu.resolve([executor.getPipeline(getPRNG(dist).prng)]),
+        }),
       );
     },
   },
-  'Test Resolution': import.meta.env.DEV && {
-    onButtonClick() {
-      c.distributions
-        .map((dist) =>
-          tgpu.resolve({
-            externals: {
-              f: executor.cachedPipeline(getPRNG(dist).prng),
-            },
-          })
-        )
-        .map((r) => root.device.createShaderModule({ code: r }));
-    },
-  },
-};
+});
 
 export function onCleanup() {
+  plotter.destroy();
   root.destroy();
 }
 

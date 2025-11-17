@@ -1,5 +1,5 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { getName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -23,26 +23,32 @@ import { createFnCore } from './fnCore.ts';
  */
 export interface ShelllessImpl extends SelfResolvable {
   readonly resourceType: 'shellless-impl';
+  readonly argTypes: BaseData[];
   readonly [$getNameForward]: unknown;
 }
 
+export function isShelllessImpl(value: unknown): value is ShelllessImpl {
+  return (value as ShelllessImpl)?.resourceType === 'shellless-impl';
+}
+
 export function createShelllessImpl(
-  argTypes: AnyData[],
+  argTypes: BaseData[],
   implementation: (...args: never[]) => unknown,
 ): ShelllessImpl {
-  const core = createFnCore(implementation, '');
+  const core = createFnCore(implementation, 'normal');
 
   return {
     [$internal]: true,
     [$getNameForward]: core,
     resourceType: 'shellless-impl' as const,
+    argTypes,
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       return core.resolve(ctx, argTypes, undefined);
     },
 
     toString(): string {
-      return `fn*:${getName(core) ?? '<unnamed>'}`;
+      return `fn*:${getName(core) ?? '<unnamed>'}(${argTypes.map((t) => t.toString()).join(', ')})`;
     },
   };
 }

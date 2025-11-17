@@ -1,5 +1,7 @@
 {
   "title": "XorDev \"Runner\"",
+  "description": "Recreates XorDev's Runner shader with an interactive camera moving through a repeating procedural fractal scene.",
   "category": "rendering",
-  "tags": ["experimental", "fragment shader", "fractal"]
+  "tags": ["camera", "fractal", "interaction", "math"],
+  "coolFactor": 7
 }

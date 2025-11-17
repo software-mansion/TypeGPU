@@ -1,0 +1,8 @@
+{
+  "title": "Three.js - Test Reused Functions",
+  "description": "Verifies that reusable TypeGPU functions resolve correctly when shared across multiple nodes in a Three.js material.",
+  "category": "threejs",
+  "dev": true,
+  "tags": ["math", "test"],
+  "coolFactor": 1
+}

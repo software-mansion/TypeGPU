@@ -1,5 +1,7 @@
 {
   "title": "Function Visualizer",
+  "description": "Plots a configurable mathematical function as a GPU-rendered line and updates the graph interactively.",
   "category": "rendering",
-  "tags": ["compute"]
+  "tags": ["interaction", "line-rendering", "math"],
+  "coolFactor": 6
 }

@@ -83,8 +83,7 @@
 
 @font-face {
   font-family: 'Aeonik';
-  src: url('./Aeonik-Medium.otf')
-    format('opentype'); /* no semi-bold unfortunately */
+  src: url('./Aeonik-Medium.otf') format('opentype'); /* no semi-bold unfortunately */
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -92,15 +91,14 @@
 
 @font-face {
   font-family: 'Aeonik';
-  src: url('./Aeonik-MediumItalic.otf')
-    format('opentype'); /* no semi-bold unfortunately */
+  src: url('./Aeonik-MediumItalic.otf') format('opentype'); /* no semi-bold unfortunately */
   font-weight: 600;
   font-style: italic;
   font-display: swap;
 }
 
 /* NOTE: Uncomment if needed */
-/* @font-face {
+@font-face {
   font-family: 'Aeonik';
   src: url('./Aeonik-Bold.otf') format('opentype');
   font-weight: 700;
@@ -108,6 +106,7 @@
   font-display: swap;
 }
 
+/*
 @font-face {
   font-family: 'Aeonik';
   src: url('./Aeonik-BoldItalic.otf') format('opentype');

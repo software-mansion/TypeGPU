@@ -1,8 +1,4 @@
-import {
-  compileShader,
-  getSupportedFormats,
-  init,
-} from 'wgsl-wasm-transpiler-bundler';
+import { compileShader, getSupportedFormats, init } from 'wgsl-wasm-transpiler-bundler';
 
 export function initializeWasm() {
   init();
