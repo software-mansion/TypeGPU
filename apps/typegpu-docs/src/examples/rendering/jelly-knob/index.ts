@@ -15,6 +15,7 @@ import {
   randomUniformSlot,
   rayMarchLayout,
   sampleLayout,
+  timeUniformSlot,
 } from './dataTypes.ts';
 import { createBackgroundTexture, createTextures } from './utils.ts';
 import { TAAResolver } from './taa.ts';
@@ -79,6 +80,8 @@ const darkModeUniform = root.createUniform(d.u32);
 
 const randomUniform = root.createUniform(d.vec2f);
 
+const timeUniform = root.createUniform(d.f32);
+
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -97,6 +100,7 @@ const rayMarchPipeline = root['~unstable']
   .with(jellyColorUniformSlot, jellyColorUniform)
   .with(darkModeUniformSlot, darkModeUniform)
   .with(randomUniformSlot, randomUniform)
+  .with(timeUniformSlot, timeUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
   .createPipeline();
@@ -134,6 +138,7 @@ function render(timestamp: number) {
   randomUniform.write(
     d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
   );
+  timeUniform.write(timestamp / 1000);
 
   knobBehavior.update(deltaTime);
 

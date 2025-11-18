@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { randf } from '@typegpu/noise';
+import { perlin3d, randf } from '@typegpu/noise';
 import {
   cameraUniformSlot,
   darkModeUniformSlot,
@@ -12,6 +12,7 @@ import {
   randomUniformSlot,
   Ray,
   RayMarchResult,
+  timeUniformSlot,
 } from './dataTypes.ts';
 import {
   getJellyBounds,
@@ -186,6 +187,7 @@ const rayMarchNoJelly = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
   maxSteps: number,
+  uv: d.v2f,
 ) => {
   'use gpu';
   let distanceFromOrigin = d.f32();
@@ -203,7 +205,7 @@ const rayMarchNoJelly = (
   let color = d.vec3f();
   if (distanceFromOrigin < MAX_DIST) {
     if (sdMeter(point) < SURF_DIST) {
-      color = renderMeter(rayOrigin, rayDirection, distanceFromOrigin).xyz;
+      color = renderMeter(rayOrigin, rayDirection, distanceFromOrigin, uv).xyz;
     } else {
       color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
     }
@@ -262,22 +264,46 @@ const renderBackground = (
   return d.vec4f(backgroundColor.xyz, 1);
 };
 
+const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
+  'use gpu';
+  const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
+  // Distorting UV coordinates
+  const uv2 = std.add(uv, distortion);
+  const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
+  return std.pow(d.vec3f(1 - noise), profile);
+};
+
 const renderMeter = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
   backgroundHitDist: number,
+  uv: d.v2f,
 ) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
   const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
+  const ambientColor = jellyColorUniformSlot.$.xyz;
 
-  return jellyColorUniformSlot.$.xyzw;
+  // caustics
+  const c1 = caustics(uv, timeUniformSlot.$ * 0.2, d.vec3f(4, 4, 1)).mul(0.05);
+  const c2 = caustics(uv.mul(2), timeUniformSlot.$ * 0.4, d.vec3f(16, 1, 4))
+    .mul(0.05);
+
+  const blendCoord = d.vec3f(
+    uv.mul(d.vec2f(5, 10)),
+    timeUniformSlot.$ * 0.2 + 5,
+  );
+  const blend = std.saturate(perlin3d.sample(blendCoord) + 0.3);
+
+  const color = std.mix(ambientColor, std.add(c1, c2), blend);
+
+  return d.vec4f(color, 1);
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
   // first, generate the scene without a jelly
-  const noJellyResult = rayMarchNoJelly(rayOrigin, rayDirection, MAX_STEPS);
+  const noJellyResult = rayMarchNoJelly(rayOrigin, rayDirection, MAX_STEPS, uv);
   const scene = d.vec4f(noJellyResult.color, 1);
   const sceneDist = std.distance(rayOrigin, noJellyResult.point);
 
@@ -324,7 +350,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
 
-        const env = rayMarchNoJelly(exitPos, refrDir, 6).color;
+        const env = rayMarchNoJelly(exitPos, refrDir, 6, uv).color;
         const jellyColor = jellyColorUniformSlot.$;
 
         const scatterTint = jellyColor.xyz.mul(1.5);
