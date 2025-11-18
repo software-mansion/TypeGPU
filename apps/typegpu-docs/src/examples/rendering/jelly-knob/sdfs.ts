@@ -3,7 +3,7 @@ import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
 import { GroundParams, JELLY_HALFSIZE } from './constants.ts';
 import { rotateY } from './utils.ts';
-import { knobBehaviorSlot } from './dataTypes.ts';
+import { BoundingBox, knobBehaviorSlot } from './dataTypes.ts';
 
 // background sdfs
 
@@ -149,4 +149,12 @@ export const getJellyDist = (position: d.v3f) => {
     ),
     0.01,
   );
+};
+
+export const getJellyBounds = () => {
+  'use gpu';
+  return BoundingBox({
+    min: d.vec3f(-1, -1, -1),
+    max: d.vec3f(1, 1, 1),
+  });
 };
