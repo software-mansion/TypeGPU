@@ -214,6 +214,16 @@ const getMainSceneDist = (position: d.v3f) => {
   return dist;
 };
 
+const sdMeter = (position: d.v3f) => {
+  'use gpu';
+  return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
+};
+
+const getMeterDist = (position: d.v3f) => {
+  'use gpu';
+  return sdMeter(position);
+};
+
 /**
  * Returns a transformed position.
  */
@@ -282,18 +292,26 @@ const getJellyDist = (position: d.v3f) => {
 
 const getSceneDist = (position: d.v3f) => {
   'use gpu';
-  const mainScene = getMainSceneDist(position);
   const jelly = getJellyDist(position);
+  const meter = getMeterDist(position);
+  const mainScene = getMainSceneDist(position);
 
   const hitInfo = HitInfo();
+  hitInfo.distance = 1e30;
 
-  if (jelly < mainScene) {
+  if (jelly < hitInfo.distance) {
     hitInfo.distance = jelly;
-    hitInfo.objectType = ObjectType.SLIDER;
-  } else {
+    hitInfo.objectType = ObjectType.JELLY;
+  }
+  if (meter < hitInfo.distance) {
+    hitInfo.distance = mainScene;
+    hitInfo.objectType = ObjectType.PROGRESS_METER;
+  }
+  if (mainScene < hitInfo.distance) {
     hitInfo.distance = mainScene;
     hitInfo.objectType = ObjectType.BACKGROUND;
   }
+
   return hitInfo;
 };
 
@@ -321,14 +339,6 @@ const getApproxNormal = (position: d.v3f, epsilon: number): d.v3f => {
   const gradient = sample1.add(sample2).add(sample3).add(sample4);
 
   return std.normalize(gradient);
-};
-
-const getNormal = (position: d.v3f) => {
-  'use gpu';
-  if (std.abs(position.z) > 0.6 || std.abs(position.x) > 1.02) {
-    return d.vec3f(0, 1, 0);
-  }
-  return getApproxNormal(position, 0.0001);
 };
 
 const sqLength = (a: d.v2f | d.v3f) => {
@@ -466,7 +476,7 @@ const renderBackground = (
   offsetX -= lightDir.x * causticScale;
   offsetZ += lightDir.z * causticScale;
 
-  const newNormal = getNormal(hitPosition);
+  const newNormal = getApproxNormal(hitPosition, 1e-4);
 
   // Calculate fake bounce lighting
   const switchX = 0;
@@ -484,6 +494,7 @@ const renderBackground = (
     DARK_GROUND_ALBEDO,
     darkModeUniform.$ === 1,
   );
+
   const backgroundColor = applyAO(
     albedo.mul(litColor),
     hitPosition,
@@ -497,14 +508,11 @@ const renderBackground = (
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
-  let totalSteps = d.u32();
-
   let backgroundDist = d.f32();
   for (let i = 0; i < MAX_STEPS; i++) {
     const p = rayOrigin.add(rayDirection.mul(backgroundDist));
     const hit = getMainSceneDist(p);
     backgroundDist += hit;
-    // AAA performance check
     if (hit < SURF_DIST) {
       break;
     }
@@ -521,24 +529,19 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    if (totalSteps >= MAX_STEPS) {
-      break;
-    }
-
     const currentPosition = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
 
     const hitInfo = getSceneDist(currentPosition);
     distanceFromOrigin += hitInfo.distance;
-    totalSteps++;
 
     if (hitInfo.distance < SURF_DIST) {
       const hitPosition = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
 
-      if (!(hitInfo.objectType === ObjectType.SLIDER)) {
+      if (!(hitInfo.objectType === ObjectType.JELLY)) {
         break;
       }
 
-      const N = getNormal(hitPosition);
+      const N = getApproxNormal(hitPosition, 1e-4);
       const I = rayDirection;
       const cosi = std.min(
         1.0,
