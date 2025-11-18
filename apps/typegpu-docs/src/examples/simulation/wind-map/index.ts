@@ -1,14 +1,13 @@
 import {
+  caps,
   endCapSlot,
-  joinSlot,
-  lineSegmentIndicesCapLevel1,
+  LineControlPoint,
+  lineSegmentIndices,
   lineSegmentVariableWidth,
-  LineSegmentVertex,
   startCapSlot,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
 import { arrayOf, builtin, f32, i32, struct, u16, u32, vec2f, vec4f } from 'typegpu/data';
-import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -85,9 +84,9 @@ const bindGroupWritable = root.createBindGroup(bindGroupLayoutWritable, {
   particles: particleTrailsBuffer,
 });
 
-const indexBuffer = root
-  .createBuffer(arrayOf(u16, lineSegmentIndicesCapLevel1.length), lineSegmentIndicesCapLevel1)
-  .$usage('index');
+const MAX_JOIN_COUNT = 3;
+const indices = lineSegmentIndices(MAX_JOIN_COUNT);
+const indexBuffer = root.createBuffer(arrayOf(u16, indices.length), indices).$usage('index');
 
 // const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
 //   return normalize(perlin2d.sampleWithGradient(pos).yz);
@@ -115,8 +114,8 @@ const advectCompute = tgpu.computeFn({
   const v0 = vectorField(pos);
   const v1 = vectorField(add(pos, mul(v0, 0.5 * stepSize)));
   const newPos = add(pos, mul(v1, stepSize));
-  particle.positions[currentPosIndex] = newPos;
-  bindGroupLayoutWritable.$.particles[particleIndex] = particle;
+  particle.positions[currentPosIndex] = vec2f(newPos);
+  bindGroupLayoutWritable.$.particles[particleIndex] = ParticleTrail(particle);
 });
 
 const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));
@@ -152,24 +151,24 @@ const mainVertex = tgpu.vertexFn({
   const iB = trailIndex;
   const iC = (TRAIL_LENGTH + trailIndex - 1) % TRAIL_LENGTH;
   const iD = (TRAIL_LENGTH + trailIndex - 2) % TRAIL_LENGTH;
-  const A = LineSegmentVertex({
+  const A = LineControlPoint({
     position: particle.positions[iA],
     radius: lineWidth(f32(trailIndexOriginal) / (TRAIL_LENGTH - 1)),
   });
-  const B = LineSegmentVertex({
+  const B = LineControlPoint({
     position: particle.positions[iB],
     radius: lineWidth(f32(trailIndexOriginal + 1) / (TRAIL_LENGTH - 1)),
   });
-  const C = LineSegmentVertex({
+  const C = LineControlPoint({
     position: particle.positions[iC],
     radius: lineWidth(f32(trailIndexOriginal + 2) / (TRAIL_LENGTH - 1)),
   });
-  const D = LineSegmentVertex({
+  const D = LineControlPoint({
     position: particle.positions[iD],
     radius: lineWidth(f32(trailIndexOriginal + 3) / (TRAIL_LENGTH - 1)),
   });
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D);
+  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, MAX_JOIN_COUNT);
 
   return {
     outPos: vec4f(result.vertexPosition, 0, 1),
@@ -206,9 +205,8 @@ function createPipelines() {
   const advect = root.createComputePipeline({ compute: advectCompute });
 
   const fill = root
-    .with(joinSlot, lineJoins.round)
-    .with(startCapSlot, lineCaps.arrow)
-    .with(endCapSlot, lineCaps.butt)
+    .with(startCapSlot, caps.arrow)
+    .with(endCapSlot, caps.butt)
     .createRenderPipeline({
       vertex: mainVertex,
       fragment: mainFragment,
@@ -237,7 +235,7 @@ const draw = () => {
       view: context,
       clearValue: [1, 1, 1, 1],
     })
-    .drawIndexed(lineSegmentIndicesCapLevel1.length, PARTICLE_COUNT * TRAIL_LENGTH);
+    .drawIndexed(indices.length, PARTICLE_COUNT * TRAIL_LENGTH);
 };
 
 let frameId = -1;
@@ -259,6 +257,8 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
+// #region Example controls & Cleanup
+
 export const controls = defineControls({
   Play: {
     initial: true,
@@ -273,3 +273,5 @@ export function onCleanup() {
   root.device.destroy();
   cancelAnimationFrame(frameId);
 }
+
+// #endregion
