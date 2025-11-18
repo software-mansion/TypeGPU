@@ -303,7 +303,8 @@ const renderMeter = (
 
   const color = std.mix(ambientColor, std.add(c1, c2), blend);
 
-  return d.vec4f(color, 1);
+  // make the color darker based on the progress
+  return d.vec4f(color.mul((1 + state.topProgress) / 3), 1);
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
