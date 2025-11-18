@@ -15,11 +15,11 @@ import {
   RayMarchResult,
 } from './dataTypes.ts';
 import {
-  getBackgroundDist,
   getJellyBounds,
-  getJellyDist,
-  getMeterDist,
+  sdBackground,
   sdFloorCutout,
+  sdJelly,
+  sdMeter,
 } from './sdfs.ts';
 import {
   AMBIENT_COLOR,
@@ -64,9 +64,9 @@ const getRay = (ndc: d.v2f) => {
 
 const getSceneDist = (position: d.v3f) => {
   'use gpu';
-  const jelly = getJellyDist(position);
-  const meter = getMeterDist(position);
-  const mainScene = getBackgroundDist(position);
+  const jelly = sdJelly(position);
+  const meter = sdMeter(position);
+  const mainScene = sdBackground(position);
 
   const hitInfo = HitInfo();
   hitInfo.distance = 1e30;
@@ -89,8 +89,8 @@ const getSceneDist = (position: d.v3f) => {
 
 const getSceneDistForAO = (position: d.v3f) => {
   'use gpu';
-  const mainScene = getBackgroundDist(position);
-  const jelly = getJellyDist(position);
+  const mainScene = sdBackground(position);
+  const jelly = sdJelly(position);
   return std.min(mainScene, jelly);
 };
 
@@ -218,7 +218,7 @@ const rayMarchNoJelly = (
 
   for (let i = 0; i < maxSteps; i++) {
     point = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
-    const hit = std.min(getBackgroundDist(point), getMeterDist(point));
+    const hit = std.min(sdBackground(point), sdMeter(point));
     distanceFromOrigin += hit;
     if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
       break;
@@ -227,7 +227,7 @@ const rayMarchNoJelly = (
 
   let color = d.vec3f();
   if (distanceFromOrigin < MAX_DIST) {
-    if (getMeterDist(point) < SURF_DIST) {
+    if (sdMeter(point) < SURF_DIST) {
       color = d.vec3f(0, 1, 0);
     } else {
       color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
