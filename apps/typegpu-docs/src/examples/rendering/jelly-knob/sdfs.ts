@@ -90,7 +90,19 @@ export const sdBackground = (position: d.v3f) => {
 
 export const sdMeter = (position: d.v3f) => {
   'use gpu';
-  return sdf.sdBox3d(position.sub(d.vec3f(0.7, 0, 0)), d.vec3f(0.1, 0.1, 0.1));
+  const groundRoundness = GroundParams.groundRoundness;
+  const meterCutoutRadius = GroundParams.meterCutoutRadius;
+  const meterCutoutGirth = GroundParams.meterCutoutGirth;
+  const angle = Math.PI / 2 * knobBehaviorSlot.$.stateUniform.$.topProgress;
+
+  const arc = sdf.sdArc(
+    rotateY(position, Math.PI / 2 - angle).xz,
+    d.vec2f(std.sin(angle), std.cos(angle)),
+    meterCutoutRadius,
+    meterCutoutGirth + groundRoundness,
+  );
+
+  return sdf.opExtrudeY(position, arc, 0);
 };
 
 // jelly sdfs
