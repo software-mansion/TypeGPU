@@ -27,7 +27,7 @@ describe('xor dev centrifuge example', () => {
       }
 
       @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3f, -1), vec2f(-1, 3f));
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
       }
 
@@ -57,7 +57,7 @@ describe('xor dev centrifuge example', () => {
 
       @fragment fn fragmentMain_3(_arg_0: fragmentMain_Input_13) -> @location(0) vec4f {
         var ratio = vec2f(aspectRatio_4, 1f);
-        var dir = normalize(vec3f((_arg_0.uv * ratio), -1));
+        var dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
         var z = 0f;
         var acc = vec3f();
         for (var i = 0; (i < tunnelDepth_5); i++) {
@@ -66,7 +66,7 @@ describe('xor dev centrifuge example', () => {
           p.y += cameraPos_6.y;
           var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5f * time_8)), (length(p.xy) - 11f));
           var coords2 = (cos((coords + cos((coords * smallStrips_10)))) - 1);
-          var dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
+          let dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
           acc = (acc + ((1.2 - cos((color_11 * p.z))) / dd));
           z += dd;
         }

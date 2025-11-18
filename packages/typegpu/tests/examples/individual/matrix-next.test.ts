@@ -51,40 +51,40 @@ describe('matrix(next) example', () => {
       }
 
       @compute @workgroup_size(16, 16) fn computeSharedMemory_0(input: computeSharedMemory_Input_10) {
-        var dimensions = dimensions_1;
-        var numTiles = u32((f32(((dimensions.firstColumnCount + 16u) - 1u)) / 16f));
-        var globalRow = ((input.wid.x * 16u) + input.lid.x);
-        var globalCol = ((input.wid.y * 16u) + input.lid.y);
-        var localRow = input.lid.x;
-        var localCol = input.lid.y;
-        var tileIdx = getTileIndex_3(localRow, localCol);
+        let dimensions = (&dimensions_1);
+        let numTiles = u32((f32((((*dimensions).firstColumnCount + 16u) - 1u)) / 16f));
+        let globalRow = ((input.wid.x * 16u) + input.lid.x);
+        let globalCol = ((input.wid.y * 16u) + input.lid.y);
+        let localRow = input.lid.x;
+        let localCol = input.lid.y;
+        let tileIdx = getTileIndex_3(localRow, localCol);
         var accumulatedResult = 0;
         for (var tileIndex = 0u; (tileIndex < numTiles); tileIndex++) {
-          var matrixACol = ((tileIndex * 16u) + localCol);
+          let matrixACol = ((tileIndex * 16u) + localCol);
           var valueA = 0;
-          if (((globalRow < dimensions.firstRowCount) && (matrixACol < dimensions.firstColumnCount))) {
-            var indexA = getIndex_4(globalRow, matrixACol, dimensions.firstColumnCount);
+          if (((globalRow < (*dimensions).firstRowCount) && (matrixACol < (*dimensions).firstColumnCount))) {
+            let indexA = getIndex_4(globalRow, matrixACol, (*dimensions).firstColumnCount);
             valueA = firstMatrix_5[indexA];
           }
           tileA_6[tileIdx] = valueA;
-          var matrixBRow = ((tileIndex * 16u) + localRow);
+          let matrixBRow = ((tileIndex * 16u) + localRow);
           var valueB = 0;
-          if (((matrixBRow < dimensions.firstColumnCount) && (globalCol < dimensions.secondColumnCount))) {
-            var indexB = getIndex_4(matrixBRow, globalCol, dimensions.secondColumnCount);
+          if (((matrixBRow < (*dimensions).firstColumnCount) && (globalCol < (*dimensions).secondColumnCount))) {
+            let indexB = getIndex_4(matrixBRow, globalCol, (*dimensions).secondColumnCount);
             valueB = secondMatrix_7[indexB];
           }
           tileB_8[tileIdx] = valueB;
           workgroupBarrier();
-          var effectiveTileSize = min(16u, (dimensions.firstColumnCount - (tileIndex * 16u)));
+          let effectiveTileSize = min(16u, ((*dimensions).firstColumnCount - (tileIndex * 16u)));
           for (var k = 0u; (k < effectiveTileSize); k++) {
-            var tileA_element = tileA_6[getTileIndex_3(localRow, k)];
-            var tileB_element = tileB_8[getTileIndex_3(k, localCol)];
+            let tileA_element = tileA_6[getTileIndex_3(localRow, k)];
+            let tileB_element = tileB_8[getTileIndex_3(k, localCol)];
             accumulatedResult += (tileA_element * tileB_element);
           }
           workgroupBarrier();
         }
-        if (((globalRow < dimensions.firstRowCount) && (globalCol < dimensions.secondColumnCount))) {
-          var outputIndex = getIndex_4(globalRow, globalCol, dimensions.secondColumnCount);
+        if (((globalRow < (*dimensions).firstRowCount) && (globalCol < (*dimensions).secondColumnCount))) {
+          let outputIndex = getIndex_4(globalRow, globalCol, (*dimensions).secondColumnCount);
           resultMatrix_9[outputIndex] = accumulatedResult;
         }
       }"

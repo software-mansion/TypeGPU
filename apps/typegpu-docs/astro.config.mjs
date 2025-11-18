@@ -278,6 +278,10 @@ export default defineConfig({
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
             },
+            DEV && {
+              label: 'Shader Generation',
+              slug: 'reference/shader-generation',
+            },
             typeDocSidebarGroup,
           ]),
         },
