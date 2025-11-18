@@ -28,6 +28,11 @@ export const Ray = d.struct({
   direction: d.vec3f,
 });
 
+export const RayMarchResult = d.struct({
+  point: d.vec3f,
+  color: d.vec3f,
+});
+
 export type BoundingBox = d.Infer<typeof BoundingBox>;
 export const BoundingBox = d.struct({
   min: d.vec3f,
