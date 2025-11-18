@@ -52,7 +52,7 @@ const sdArrowHead = (p: d.v3f) => {
   ) - 0.007;
 };
 
-export const getBackgroundDist = (position: d.v3f) => {
+export const sdBackground = (position: d.v3f) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
   const groundThickness = GroundParams.groundThickness;
@@ -83,15 +83,9 @@ export const getBackgroundDist = (position: d.v3f) => {
 
 // meter sdfs
 
-const sdMeter = (position: d.v3f) => {
+export const sdMeter = (position: d.v3f) => {
   'use gpu';
-  // return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
   return sdf.sdBox3d(position.sub(d.vec3f(0.7, 0, 0)), d.vec3f(0.1, 0.1, 0.1));
-};
-
-export const getMeterDist = (position: d.v3f) => {
-  'use gpu';
-  return sdMeter(position);
 };
 
 // jelly sdfs
@@ -127,7 +121,7 @@ const getJellySegment = (position: d.v3f) => {
   );
 };
 
-export const getJellyDist = (position: d.v3f) => {
+export const sdJelly = (position: d.v3f) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
   const origin = d.vec3f(0, 0.18, 0);
