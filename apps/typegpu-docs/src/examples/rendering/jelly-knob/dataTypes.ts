@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import type { KnobBehavior } from './knob.ts';
 
 export const DirectionalLight = d.struct({
   direction: d.vec3f,
@@ -66,3 +67,5 @@ export const sampleLayout = tgpu.bindGroupLayout({
     texture: d.texture2d(),
   },
 });
+
+export const knobBehaviorSlot = tgpu.slot<KnobBehavior>();

@@ -43,6 +43,17 @@ export const intersectBox = (
   return result;
 };
 
+/**
+ * Source: https://mini.gmshaders.com/p/3d-rotation
+ */
+export const rotateY = (p: d.v3f, angle: number) => {
+  'use gpu';
+  return std.add(
+    std.mix(d.vec3f(0, p.y, 0), p, std.cos(angle)),
+    std.cross(p, d.vec3f(0, 1, 0)).mul(std.sin(angle)),
+  );
+};
+
 export function createTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
     const texture = root['~unstable']
