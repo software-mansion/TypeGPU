@@ -14,6 +14,7 @@ import {
   ObjectType,
   Ray,
   rayMarchLayout,
+  RayMarchResult,
   sampleLayout,
 } from './dataTypes.ts';
 import {
@@ -216,7 +217,8 @@ const getBackgroundDist = (position: d.v3f) => {
 
 const sdMeter = (position: d.v3f) => {
   'use gpu';
-  return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
+  // return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
+  return sdf.sdBox3d(position.sub(d.vec3f(0.7, 0, 0)), d.vec3f(0.1, 0.1, 0.1));
 };
 
 const getMeterDist = (position: d.v3f) => {
@@ -435,29 +437,37 @@ const applyAO = (
   return d.vec4f(finalColor, 1.0);
 };
 
-// AAA what the hell is this
-const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
+const rayMarchNoJelly = (
+  rayOrigin: d.v3f,
+  rayDirection: d.v3f,
+  maxSteps: number,
+) => {
   'use gpu';
   let distanceFromOrigin = d.f32();
-  let hit = d.f32();
+  let point = d.vec3f();
 
-  for (let i = 0; i < 6; i++) {
-    const p = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
-    hit = getBackgroundDist(p);
+  for (let i = 0; i < maxSteps; i++) {
+    point = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
+    const hit = std.min(getBackgroundDist(point), getMeterDist(point));
     distanceFromOrigin += hit;
-    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST * 10) {
+    if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
       break;
     }
   }
 
+  let color = d.vec3f();
   if (distanceFromOrigin < MAX_DIST) {
-    return renderBackground(
-      rayOrigin,
-      rayDirection,
-      distanceFromOrigin,
-    ).xyz;
+    if (getMeterDist(point) < SURF_DIST) {
+      color = d.vec3f(0, 1, 0);
+    } else {
+      color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
+    }
   }
-  return d.vec3f();
+
+  return RayMarchResult({
+    color,
+    point,
+  });
 };
 
 const renderBackground = (
@@ -510,23 +520,9 @@ const renderBackground = (
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
   // first, generate the scene without a jelly
-
-  let sceneDist = d.f32();
-  let point = d.vec3f();
-  for (let i = 0; i < MAX_STEPS; i++) {
-    point = rayOrigin.add(rayDirection.mul(sceneDist));
-    const hit = std.min(getBackgroundDist(point), getMeterDist(point));
-    sceneDist += hit;
-    if (hit < SURF_DIST) {
-      break;
-    }
-  }
-  let scene = d.vec4f();
-  if (getBackgroundDist(point) < SURF_DIST) {
-    scene = renderBackground(rayOrigin, rayDirection, sceneDist);
-  } else {
-    scene = d.vec4f(0, 1, 0, 1);
-  }
+  const noJellyResult = rayMarchNoJelly(rayOrigin, rayDirection, MAX_STEPS);
+  const scene = d.vec4f(noJellyResult.color, 1);
+  const sceneDist = std.distance(rayOrigin, noJellyResult.point);
 
   // second, generate the jelly
   const bbox = getJellyBounds();
@@ -571,7 +567,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
 
-        const env = rayMarchNoJelly(exitPos, refrDir);
+        const env = rayMarchNoJelly(exitPos, refrDir, 6).color;
         const jellyColor = jellyColorUniform.$;
 
         const scatterTint = jellyColor.xyz.mul(1.5);
