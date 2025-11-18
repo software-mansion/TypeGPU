@@ -1,6 +1,7 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuUniform } from 'typegpu';
 import * as d from 'typegpu/data';
 import type { KnobBehavior } from './knob.ts';
+import type { Camera } from './camera.ts';
 
 export const DirectionalLight = d.struct({
   direction: d.vec3f,
@@ -69,3 +70,10 @@ export const sampleLayout = tgpu.bindGroupLayout({
 });
 
 export const knobBehaviorSlot = tgpu.slot<KnobBehavior>();
+export const cameraUniformSlot = tgpu.slot<TgpuUniform<typeof Camera>>();
+export const lightUniformSlot = tgpu.slot<
+  TgpuUniform<typeof DirectionalLight>
+>();
+export const jellyColorUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec4f>>();
+export const darkModeUniformSlot = tgpu.slot<TgpuUniform<typeof d.u32>>();
+export const randomUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec2f>>();
