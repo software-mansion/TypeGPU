@@ -1,8 +1,10 @@
+import type { TgpuRoot, TgpuUniform } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { CameraData } from './types.ts';
 
 export class Camera {
+  #root: TgpuRoot;
   #viewProjectionMatrix: d.m4x4f;
   #position: d.v3f;
   #target: d.v3f;
@@ -12,8 +14,15 @@ export class Camera {
   #far: number;
   #inverseViewProjectionMatrix: d.m4x4f;
   #data: d.Infer<CameraData>;
+  #uniform: TgpuUniform<CameraData>;
 
-  constructor(fov: number = 60, near: number = 0.1, far: number = 1000) {
+  constructor(
+    root: TgpuRoot,
+    fov: number = 60,
+    near: number = 0.1,
+    far: number = 1000,
+  ) {
+    this.#root = root;
     this.#viewProjectionMatrix = d.mat4x4f.identity();
     this.#position = d.vec3f(0, 0, 0);
     this.#target = d.vec3f(0, 0, -1);
@@ -26,6 +35,9 @@ export class Camera {
       viewProjectionMatrix: this.#viewProjectionMatrix,
       inverseViewProjectionMatrix: this.#inverseViewProjectionMatrix,
     });
+
+    // Create uniform buffer
+    this.#uniform = root.createUniform(CameraData, this.#data);
   }
 
   set position(pos: d.v3f) {
@@ -33,9 +45,17 @@ export class Camera {
     this.#recompute();
   }
 
+  get position(): d.v3f {
+    return this.#position;
+  }
+
   set target(tgt: d.v3f) {
     this.#target = tgt;
     this.#recompute();
+  }
+
+  get target(): d.v3f {
+    return this.#target;
   }
 
   set up(upVec: d.v3f) {
@@ -43,13 +63,25 @@ export class Camera {
     this.#recompute();
   }
 
+  get up(): d.v3f {
+    return this.#up;
+  }
+
   set fov(fovDegrees: number) {
     this.#fov = fovDegrees;
     this.#recompute();
   }
 
+  get fov(): number {
+    return this.#fov;
+  }
+
   get data(): d.Infer<CameraData> {
     return this.#data;
+  }
+
+  get uniform() {
+    return this.#uniform;
   }
 
   #recompute() {
@@ -74,5 +106,8 @@ export class Camera {
       viewProjectionMatrix: this.#viewProjectionMatrix,
       inverseViewProjectionMatrix: this.#inverseViewProjectionMatrix,
     });
+
+    // Update the uniform buffer
+    this.#uniform.write(this.#data);
   }
 }

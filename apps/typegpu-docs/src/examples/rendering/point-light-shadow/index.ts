@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { Camera } from './camera.ts';
 import { BoxGeometry } from './box-geometry.ts';
+import { PointLight } from './point-light.ts';
 import { CameraData, VertexData } from './types.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 
@@ -18,86 +19,29 @@ context.configure({
   format: presentationFormat,
 });
 
-const mainCamera = new Camera();
+// Create global vertex layout
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
+
+// Create main camera with buffers managed internally
+const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(10, 10, 10);
 mainCamera.target = d.vec3f(0, 0, 0);
-const cameraUniform = root.createUniform(CameraData, mainCamera.data);
 
-const cube = new BoxGeometry();
+// Create geometries with buffers managed internally
+const cube = new BoxGeometry(root);
 cube.scale = d.vec3f(3, 1, 0.2);
-const floorCube = new BoxGeometry();
+
+const floorCube = new BoxGeometry(root);
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
 
-const modelMatrixUniform = root.createUniform(d.mat4x4f);
-const pointLightWorldPosition = d.vec3f(2, 4, 1);
+// Create point light with shadow cameras and cubemap managed internally
+const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
+  far: 100.0,
+  shadowMapSize: 512,
+});
 
-const shadowCameras = {
-  right: new Camera(90, 0.1, 25), // +X
-  left: new Camera(90, 0.1, 25), // -X
-  up: new Camera(90, 0.1, 25), // +Y
-  down: new Camera(90, 0.1, 25), // -Y
-  forward: new Camera(90, 0.1, 25), // +Z
-  backward: new Camera(90, 0.1, 25), // -Z
-};
-
-// Configure each camera for cubemap faces
-// Right face (+X)
-shadowCameras.right.position = pointLightWorldPosition;
-shadowCameras.right.target = pointLightWorldPosition.add(d.vec3f(1, 0, 0));
-shadowCameras.right.up = d.vec3f(0, 1, 0);
-
-// Left face (-X)
-shadowCameras.left.position = pointLightWorldPosition;
-shadowCameras.left.target = pointLightWorldPosition.add(d.vec3f(-1, 0, 0));
-shadowCameras.left.up = d.vec3f(0, 1, 0);
-
-// Up face (+Y)
-shadowCameras.up.position = pointLightWorldPosition;
-shadowCameras.up.target = pointLightWorldPosition.add(d.vec3f(0, 1, 0));
-shadowCameras.up.up = d.vec3f(0, 0, 1);
-
-// Down face (-Y)
-shadowCameras.down.position = pointLightWorldPosition;
-shadowCameras.down.target = pointLightWorldPosition.add(d.vec3f(0, -1, 0));
-shadowCameras.down.up = d.vec3f(0, 0, -1);
-
-// Forward face (+Z)
-shadowCameras.forward.position = pointLightWorldPosition;
-shadowCameras.forward.target = pointLightWorldPosition.add(d.vec3f(0, 0, 1));
-shadowCameras.forward.up = d.vec3f(0, 1, 0);
-
-// Backward face (-Z)
-shadowCameras.backward.position = pointLightWorldPosition;
-shadowCameras.backward.target = pointLightWorldPosition.add(d.vec3f(0, 0, -1));
-shadowCameras.backward.up = d.vec3f(0, 1, 0);
-
-const cameraDepthCube = root['~unstable'].createTexture({
-  size: [512, 512, 6],
-  dimension: '2d',
-  format: 'depth24plus',
-}).$usage('render', 'sampled');
-
-const vertexData = tgpu.vertexLayout(d.arrayOf(VertexData));
-const cubeVertexBuffer = root
-  .createBuffer(
-    vertexData.schemaForCount(cube.vertices.length),
-    cube.vertices,
-  )
-  .$usage('vertex');
-const cubeIndexBuffer = root
-  .createBuffer(d.arrayOf(d.u16, cube.indices.length), cube.indices)
-  .$usage('index');
-
-const floorVertexBuffer = root
-  .createBuffer(
-    vertexData.schemaForCount(floorCube.vertices.length),
-    floorCube.vertices,
-  )
-  .$usage('vertex');
-const floorIndexBuffer = root
-  .createBuffer(d.arrayOf(d.u16, floorCube.indices.length), floorCube.indices)
-  .$usage('index');
+const modelMatrixUniform = root.createBuffer(d.mat4x4f).$usage('uniform');
 
 let depthTexture = root['~unstable']
   .createTexture({
@@ -106,6 +50,7 @@ let depthTexture = root['~unstable']
   })
   .$usage('render');
 
+// Bind group layouts
 const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraData },
   modelMatrix: { uniform: d.mat4x4f },
@@ -120,16 +65,13 @@ const renderLayoutWithShadow = tgpu.bindGroupLayout({
   lightPosition: { uniform: d.vec3f },
 });
 
+// Debug pipeline setup
 const debugSampler = root['~unstable'].createSampler({
   minFilter: 'nearest',
   magFilter: 'nearest',
 });
 
-const debugView = cameraDepthCube.createView(d.textureDepth2dArray(), {
-  baseArrayLayer: 0,
-  arrayLayerCount: 6,
-  aspect: 'depth-only',
-});
+const debugView = pointLight.createDebugArrayView();
 
 const debugFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -158,6 +100,7 @@ const debugPipeline = root['~unstable']
   .withFragment(debugFragment, { format: presentationFormat })
   .createPipeline();
 
+// Shadow depth pass shaders
 const vertexDepth = tgpu['~unstable'].vertexFn({
   in: {
     ...VertexData.propTypes,
@@ -178,8 +121,6 @@ const vertexDepth = tgpu['~unstable'].vertexFn({
   };
 });
 
-const lightFar = 25.0; // must match shadow camera far plane
-
 const fragmentDepth = tgpu['~unstable'].fragmentFn({
   in: {
     worldPos: d.vec3f,
@@ -192,11 +133,12 @@ const fragmentDepth = tgpu['~unstable'].fragmentFn({
   const dist = std.length(lightToFrag);
 
   // map [0, lightFar] -> [0, 1]
-  const depth = dist / lightFar;
+  const depth = dist / pointLight.far;
 
   return depth;
 });
 
+// Main render pass shaders
 const vertexMain = tgpu['~unstable'].vertexFn({
   in: {
     ...VertexData.propTypes,
@@ -222,8 +164,6 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const debugUniform = root.createUniform(d.f32, 0.0);
-
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: {
     worldPos: d.vec3f,
@@ -237,9 +177,10 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   // direction from light to fragment (for cubemap)
   const lightToFrag = worldPos.sub(lightPos);
   const dist = std.length(lightToFrag);
-  const dir = lightToFrag.div(dist); // normalized direction
+  let dir = lightToFrag.div(dist); // normalized direction
+  dir = d.vec3f(dir.x, -dir.y, dir.z); // invert for texture lookup
 
-  const depthRef = dist / 25.0; // must match lightFar used in depth pass
+  const depthRef = dist / pointLight.far;
 
   // Optional bias to reduce acne
   const bias = 0.002;
@@ -255,8 +196,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     debugSampler.$,
     dir,
   );
-
-  // return d.vec4f(d.vec3f(rawValue), 1.0);
+  return d.vec4f(rawValue, 0, 0, 1); // Visualize raw depth value from shadow map
 
   // calculate light direction
   const lightDir = std.normalize(lightPos.sub(worldPos));
@@ -271,29 +211,27 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return d.vec4f(color, 1.0);
 });
 
+// Samplers and views
 const shadowSampler = root['~unstable'].createComparisonSampler({
   compare: 'less-equal',
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const shadowCubeView = cameraDepthCube.createView(d.textureDepthCube());
+const shadowCubeView = pointLight.createCubeView();
 
-const lightPositionUniform = root.createUniform(
-  d.vec3f,
-  pointLightWorldPosition,
-);
-
+// Main render bind group
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
-  camera: cameraUniform.buffer,
-  modelMatrix: modelMatrixUniform.buffer,
+  camera: mainCamera.uniform.buffer,
+  modelMatrix: modelMatrixUniform,
   shadowDepthCube: shadowCubeView,
   shadowSampler: shadowSampler,
-  lightPosition: lightPositionUniform.buffer,
+  lightPosition: pointLight.positionUniform.buffer,
 });
 
+// Pipelines
 const pipelineMain = root['~unstable']
-  .withVertex(vertexMain, vertexData.attrib)
+  .withVertex(vertexMain, vertexLayout.attrib)
   .withFragment(fragmentMain, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
@@ -303,7 +241,7 @@ const pipelineMain = root['~unstable']
   .createPipeline();
 
 const pipelineDepthOne = root['~unstable']
-  .withVertex(vertexDepth, vertexData.attrib)
+  .withVertex(vertexDepth, vertexLayout.attrib)
   .withFragment(fragmentDepth, {} as never)
   .withDepthStencil({
     format: 'depth24plus',
@@ -312,77 +250,17 @@ const pipelineDepthOne = root['~unstable']
   })
   .createPipeline();
 
-const shadowCameraUniforms = Object.fromEntries(
-  Object.entries(shadowCameras).map(([key, cam]) => [
-    key,
-    root.createUniform(CameraData, cam.data),
-  ]),
-);
-
-const shadowBindGroups = Object.entries(shadowCameras).map(([key, cam]) => {
-  return [
-    key,
-    root.createBindGroup(renderLayout, {
-      camera: shadowCameraUniforms[key as keyof typeof shadowCameras].buffer,
-      modelMatrix: modelMatrixUniform.buffer,
-      lightPosition: lightPositionUniform.buffer,
-    }),
-  ] as const;
-});
-
-function updateShadowMaps() {
-  // Update all shadow camera uniforms
-  for (const [key, cam] of Object.entries(shadowCameras)) {
-    shadowCameraUniforms[key as keyof typeof shadowCameras].write(cam.data);
-  }
-
-  for (const [key, bindGroup] of shadowBindGroups) {
-    const view = cameraDepthCube.createView(d.textureDepth2d(), {
-      baseArrayLayer: {
-        right: 0, // +X
-        left: 1, // -X
-        up: 2, // +Y
-        down: 3, // -Y
-        forward: 4, // +Z
-        backward: 5, // -Z
-      }[key as keyof typeof shadowCameras],
-      arrayLayerCount: 1,
-    });
-
-    // Draw cube
-    modelMatrixUniform.write(cube.modelMatrix);
-    pipelineDepthOne
-      .withDepthStencilAttachment({
-        view: root.unwrap(view),
-        depthClearValue: 1,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-      })
-      .with(bindGroup)
-      .withIndexBuffer(cubeIndexBuffer)
-      .with(vertexData, cubeVertexBuffer)
-      .drawIndexed(cube.indices.length);
-
-    // Draw floor
-    modelMatrixUniform.write(floorCube.modelMatrix);
-    pipelineDepthOne
-      .withDepthStencilAttachment({
-        view: root.unwrap(view),
-        depthClearValue: 1,
-        depthLoadOp: 'load',
-        depthStoreOp: 'store',
-      })
-      .with(bindGroup)
-      .withIndexBuffer(floorIndexBuffer)
-      .with(vertexData, floorVertexBuffer)
-      .drawIndexed(floorCube.indices.length);
-  }
-}
-
 function render() {
-  // Update shadow maps every frame
-  updateShadowMaps();
+  // Render shadow maps using the point light abstraction
+  pointLight.renderShadowMaps(
+    pipelineDepthOne,
+    renderLayout,
+    modelMatrixUniform,
+    vertexLayout,
+    [cube, floorCube],
+  );
 
+  // Uncomment to see debug view of shadow maps
   // debugPipeline
   //   .withColorAttachment({
   //     view: context.getCurrentTexture().createView(),
@@ -393,6 +271,7 @@ function render() {
   // requestAnimationFrame(render);
   // return;
 
+  // Render cube
   modelMatrixUniform.write(cube.modelMatrix);
   pipelineMain
     .withDepthStencilAttachment({
@@ -407,10 +286,11 @@ function render() {
       storeOp: 'store',
     })
     .with(mainBindGroup)
-    .withIndexBuffer(cubeIndexBuffer)
-    .with(vertexData, cubeVertexBuffer)
-    .drawIndexed(cube.indices.length);
+    .withIndexBuffer(cube.indexBuffer)
+    .with(vertexLayout, cube.vertexBuffer)
+    .drawIndexed(cube.indexCount);
 
+  // Render floor
   modelMatrixUniform.write(floorCube.modelMatrix);
   pipelineMain
     .withDepthStencilAttachment({
@@ -425,9 +305,9 @@ function render() {
       storeOp: 'store',
     })
     .with(mainBindGroup)
-    .withIndexBuffer(floorIndexBuffer)
-    .with(vertexData, floorVertexBuffer)
-    .drawIndexed(floorCube.indices.length);
+    .withIndexBuffer(floorCube.indexBuffer)
+    .with(vertexLayout, floorCube.vertexBuffer)
+    .drawIndexed(floorCube.indexCount);
 
   requestAnimationFrame(render);
 }
@@ -475,7 +355,6 @@ function updateCameraPosition() {
   const z = radius * Math.sin(phi) * Math.sin(theta);
 
   mainCamera.position = d.vec3f(x, y, z);
-  cameraUniform.write(mainCamera.data);
 }
 
 canvas.addEventListener('mousedown', (e) => {
@@ -516,13 +395,43 @@ canvas.addEventListener('wheel', (e) => {
 });
 
 export const controls = {
-  'Debug Val': {
-    initial: 0,
-    min: 0,
-    max: 100,
-    step: 0.01,
+  'Light X': {
+    initial: 2,
+    min: -10,
+    max: 10,
+    step: 0.1,
     onSliderChange: (v: number) => {
-      debugUniform.write(v);
+      pointLight.position = d.vec3f(
+        v,
+        pointLight.position.y,
+        pointLight.position.z,
+      );
+    },
+  },
+  'Light Y': {
+    initial: 4,
+    min: 0.5,
+    max: 10,
+    step: 0.1,
+    onSliderChange: (v: number) => {
+      pointLight.position = d.vec3f(
+        pointLight.position.x,
+        v,
+        pointLight.position.z,
+      );
+    },
+  },
+  'Light Z': {
+    initial: 1,
+    min: -10,
+    max: 10,
+    step: 0.1,
+    onSliderChange: (v: number) => {
+      pointLight.position = d.vec3f(
+        pointLight.position.x,
+        pointLight.position.y,
+        v,
+      );
     },
   },
 };
