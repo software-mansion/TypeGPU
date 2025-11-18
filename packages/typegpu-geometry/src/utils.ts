@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
-import { add, dot, mul, normalize, select } from 'typegpu/std';
+import { add, dot, mix, mul, normalize, select } from 'typegpu/std';
 
 /** Shorthand for `add(a, mul(b, f))` due to lack of operators */
 export const addMul = tgpu.fn([vec2f, vec2f, f32], vec2f)((a, b, f) => {
@@ -54,4 +54,8 @@ export const bisectNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
 
 export const midPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
   return mul(0.5, add(a, b));
+});
+
+export const slerpApprox = tgpu.fn([vec2f, vec2f, f32], vec2f)((a, b, t) => {
+  return normalize(mix(a, b, t));
 });

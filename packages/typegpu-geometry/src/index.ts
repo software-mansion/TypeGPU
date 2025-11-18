@@ -6,3 +6,4 @@ export * from './lines/lines.ts';
 export * from './lines/types.ts';
 export { uvToLineSegment } from './lines/utils.ts';
 export { addMul } from './utils.ts';
+export * as lines2 from './lines2/index.ts';

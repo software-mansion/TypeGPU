@@ -1,9 +1,11 @@
 import {
   endCapSlot,
   joinSlot,
+  lineCaps,
+  LineControlPoint,
+  lineJoins,
   lineSegmentIndicesCapLevel1,
   lineSegmentVariableWidth,
-  LineSegmentVertex,
   startCapSlot,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
@@ -18,7 +20,6 @@ import {
   vec2f,
   vec4f,
 } from 'typegpu/data';
-import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
 
 const root = await tgpu.init({
@@ -165,19 +166,19 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   const iB = trailIndex;
   const iC = (TRAIL_LENGTH + trailIndex - 1) % TRAIL_LENGTH;
   const iD = (TRAIL_LENGTH + trailIndex - 2) % TRAIL_LENGTH;
-  const A = LineSegmentVertex({
+  const A = LineControlPoint({
     position: particle.positions[iA],
     radius: lineWidth(f32(trailIndexOriginal) / (TRAIL_LENGTH - 1)),
   });
-  const B = LineSegmentVertex({
+  const B = LineControlPoint({
     position: particle.positions[iB],
     radius: lineWidth(f32(trailIndexOriginal + 1) / (TRAIL_LENGTH - 1)),
   });
-  const C = LineSegmentVertex({
+  const C = LineControlPoint({
     position: particle.positions[iC],
     radius: lineWidth(f32(trailIndexOriginal + 2) / (TRAIL_LENGTH - 1)),
   });
-  const D = LineSegmentVertex({
+  const D = LineControlPoint({
     position: particle.positions[iD],
     radius: lineWidth(f32(trailIndexOriginal + 3) / (TRAIL_LENGTH - 1)),
   });
@@ -246,13 +247,13 @@ const draw = () => {
   uniformsBuffer.writePartial({ frameCount });
 
   pipelines.advect
-    .with(bindGroupLayoutWritable, bindGroupWritable)
+    .with(bindGroupWritable)
     .dispatchWorkgroups(
       Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE),
     );
 
   pipelines.fill
-    .with(bindGroupLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [1, 1, 1, 1],

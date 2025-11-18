@@ -1,4 +1,4 @@
-import { LineSegmentVertex } from '@typegpu/geometry';
+import { LineControlPoint } from '@typegpu/geometry';
 import { perlin2d, randf } from '@typegpu/noise';
 import tgpu from 'typegpu';
 import { arrayOf, f32, i32, mat2x2f, u32, vec2f } from 'typegpu/data';
@@ -15,7 +15,7 @@ import {
 } from 'typegpu/std';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 
-const testCaseShell = tgpu.fn([u32, f32], LineSegmentVertex);
+const testCaseShell = tgpu.fn([u32, f32], LineControlPoint);
 
 const segmentSide = tgpu.const(arrayOf(f32, 4), [-1, -1, 1, 1]);
 
@@ -25,7 +25,7 @@ export const segmentAlternate = testCaseShell(
     const side = segmentSide.$[vertexIndex];
     const r = sin(time + select(0, Math.PI / 2, side === -1));
     const radius = 0.4 * r * r;
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.5 * side * cos(time), 0.5 * side * sin(time)),
       radius,
     });
@@ -37,7 +37,7 @@ export const segmentStretch = testCaseShell(
     'use gpu';
     const side = segmentSide.$[vertexIndex];
     const distance = 0.5 * clamp(0.55 * sin(1.5 * time) + 0.5, 0, 1);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(distance * side * cos(time), distance * side * sin(time)),
       radius: 0.25,
     });
@@ -48,7 +48,7 @@ export const segmentContainsAnotherEnd = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const side = segmentSide.$[vertexIndex];
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(side * 0.25 * (1 + clamp(sin(time), -0.8, 1)), 0),
       radius: 0.25 + side * 0.125,
     });
@@ -60,7 +60,7 @@ export const caseVShapeSmall = testCaseShell(
     'use gpu';
     const side = clamp(f32(vertexIndex) - 2, -1, 1);
     const isMiddle = side === 0;
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.5 * side, select(0.5 * cos(t), 0, isMiddle)),
       radius: select(0.1, 0.2, isMiddle),
     });
@@ -72,7 +72,7 @@ export const caseVShapeBig = testCaseShell(
     'use gpu';
     const side = clamp(f32(vertexIndex) - 2, -1, 1);
     const isMiddle = side === 0;
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.5 * side, select(0.5 * cos(time), 0, isMiddle)),
       radius: select(0.3, 0.2, isMiddle),
     });
@@ -84,7 +84,7 @@ export const halfCircle = testCaseShell(
     'use gpu';
     const angle = Math.PI * clamp(f32(vertexIndex) - 1, 0, 50) / 50;
     const radius = 0.5 * cos(time);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(radius * cos(angle), radius * sin(angle)),
       radius: 0.2,
     });
@@ -108,7 +108,7 @@ export const bending = testCaseShell(
     const s = sin(time);
     const n = 10 * s * s * s * s + 0.25;
     const base = clamp(1 - pow(abs(x), n), 0, 1);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.5 * x, 0.5 * pow(base, 1 / n)),
       radius: 0.2,
     });
@@ -121,7 +121,7 @@ export const animateWidth = testCaseShell(
     const i = (f32(vertexIndex) % TEST_SEGMENT_COUNT) / TEST_SEGMENT_COUNT;
     const x = cos(4 * 2 * Math.PI * i + Math.PI / 2);
     const y = cos(5 * 2 * Math.PI * i);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.8 * x, 0.8 * y),
       radius: 0.05 * clamp(sin(8 * Math.PI * i - 3 * time), 0.1, 1),
     });
@@ -142,7 +142,7 @@ export const perlinTraces = testCaseShell(
       0.0625 * perlin2d.sample(vec2f(16 * x, time + 300 + 0.3 * n));
     const y = 0.125 * n - 0.5 + 0.5 * value;
     const radiusFactor = 0.025 * (n + 1);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.8 * x, y),
       radius: select(
         radiusFactor * radiusFactor,
@@ -161,7 +161,7 @@ export const bars = testCaseShell(
     const y = f32(clamp(vertexIndex % VERTS_PER_LINE, 1, 2) - 1);
     const x = 20 *
       (2 * f32(VERTS_PER_LINE) * lineIndex / TEST_SEGMENT_COUNT - 1);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: vec2f(0.8 * x, 0.8 * y * sin(x + time)),
       radius: select(
         clamp(0.08 * abs(sin(x + time)), 0, 0.01),
@@ -185,7 +185,7 @@ export const arms = testCaseShell(
       vec2f(-r * s + 0.25, r * c),
     ];
     const i = clamp(i32(vertexIndex) - 1, 0, 3);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: points[i],
       radius: 0.2,
     });
@@ -196,7 +196,7 @@ export const armsSmall = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const result = arms(vertexIndex, time);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: result.position,
       radius: select(0.1, 0.2, vertexIndex === 2 || vertexIndex === 3),
     });
@@ -207,7 +207,7 @@ export const armsBig = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const result = arms(vertexIndex, time);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: result.position,
       radius: select(0.275, 0.1, vertexIndex === 2 || vertexIndex === 3),
     });
@@ -227,7 +227,7 @@ export const armsRotating = testCaseShell(
       vec2f(-r * s + 0.25, -r * c),
     ];
     const i = clamp(i32(vertexIndex) - 1, 0, 3);
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: points[i],
       radius: 0.2,
     });
@@ -255,7 +255,7 @@ export const flyingSquares = testCaseShell(
     const x = 2.0 * randf.sample() - 1;
     const y = 2.0 * randf.sample() - 1;
     const transformedPoint = add(vec2f(x, y), mul(rotate, mul(point, r)));
-    return LineSegmentVertex({
+    return LineControlPoint({
       position: transformedPoint,
       radius: select(
         0.1 * r + 0.05 * randf.sample(),

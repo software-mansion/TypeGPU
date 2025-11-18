@@ -1,9 +1,9 @@
 import tgpu from 'typegpu';
+import { f32, type v2f, vec2f } from 'typegpu/data';
 import { add, dot, mul, normalize, select } from 'typegpu/std';
 import { addMul, bisectCcw } from '../../utils.ts';
 import { intersectLines, miterPoint } from '../utils.ts';
 import { joinShell } from './common.ts';
-import { f32, type v2f, vec2f } from 'typegpu/data';
 
 export const miterJoinLimitSlot = tgpu.slot(2);
 

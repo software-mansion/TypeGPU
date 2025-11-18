@@ -1,6 +1,6 @@
 import type { v2f } from 'typegpu/data';
-import { addMul, midPoint } from '../../utils.ts';
 import { add } from 'typegpu/std';
+import { addMul, midPoint } from '../../utils.ts';
 import { capShell } from './common.ts';
 
 export const swallowtailCap = capShell(

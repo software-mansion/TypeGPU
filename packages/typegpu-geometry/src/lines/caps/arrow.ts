@@ -1,5 +1,5 @@
-import { vec2f } from 'typegpu/data';
 import type { v2f } from 'typegpu/data';
+import { vec2f } from 'typegpu/data';
 import { addMul, rot90ccw, rot90cw } from '../../utils.ts';
 import { capShell } from './common.ts';
 

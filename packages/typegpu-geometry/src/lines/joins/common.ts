@@ -2,14 +2,14 @@ import tgpu from 'typegpu';
 import { bool, u32, vec2f } from 'typegpu/data';
 import { dot } from 'typegpu/std';
 import { cross2d } from '../../utils.ts';
+import { JoinPath, LineControlPoint } from '../types.ts';
 import { isCCW, rank3 } from '../utils.ts';
-import { JoinPath, LineSegmentVertex } from '../types.ts';
 
 export const joinShell = tgpu.fn([
   u32,
   u32,
   JoinPath,
-  LineSegmentVertex,
+  LineControlPoint,
   vec2f,
   vec2f,
   vec2f,

@@ -1,14 +1,14 @@
 import tgpu from 'typegpu';
-import { struct, u32, vec2f } from 'typegpu/data';
 import type { v2f } from 'typegpu/data';
+import { struct, u32, vec2f } from 'typegpu/data';
 import { dot, mul, normalize, sub } from 'typegpu/std';
 import { addMul, midPoint, rot90ccw, rot90cw } from '../utils.ts';
-import { externalNormals, limitTowardsMiddle, miterPoint } from './utils.ts';
-import { JoinPath, LineSegmentVertex } from './types.ts';
-import { joinSituationIndex } from './joins/common.ts';
-import { roundJoin } from './joins/round.ts';
 import { roundCap } from './caps/round.ts';
 import { JOIN_LIMIT } from './constants.ts';
+import { joinSituationIndex } from './joins/common.ts';
+import { roundJoin } from './joins/round.ts';
+import { JoinPath, LineControlPoint } from './types.ts';
+import { externalNormals, limitTowardsMiddle, miterPoint } from './utils.ts';
 
 export const joinSlot = tgpu.slot(roundJoin);
 export const startCapSlot = tgpu.slot(roundCap);
@@ -44,13 +44,11 @@ const LineSegmentOutput = struct({
 
 export const lineSegmentVariableWidth = tgpu.fn([
   u32,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
+  LineControlPoint,
+  LineControlPoint,
+  LineControlPoint,
+  LineControlPoint,
 ], LineSegmentOutput)((vertexIndex, A, B, C, D) => {
-  const joinPath = getJoinVertexPath(vertexIndex);
-
   const AB = sub(B.position, A.position);
   const BC = sub(C.position, B.position);
   const CD = sub(D.position, C.position);
@@ -75,9 +73,6 @@ export const lineSegmentVariableWidth = tgpu.fn([
   const eAB = externalNormals(AB, A.radius, B.radius);
   const eBC = externalNormals(BC, B.radius, C.radius);
   const eCD = externalNormals(CD, C.radius, D.radius);
-
-  const nBC = normalize(BC);
-  const nCB = mul(nBC, -1);
 
   let d0 = eBC.n1;
   let d4 = eBC.n2;
@@ -140,6 +135,7 @@ export const lineSegmentVariableWidth = tgpu.fn([
   v5 = limD.b;
 
   // after this point we need to process only one of the joins!
+  const joinPath = getJoinVertexPath(vertexIndex);
   const isCSide = joinPath.joinIndex >= 2;
 
   let situationIndex = situationIndexB;
@@ -184,6 +180,9 @@ export const lineSegmentVariableWidth = tgpu.fn([
 
   // deno-fmt-ignore
   if (isCap) {
+    const nBC = normalize(BC);
+    const nCB = mul(nBC, -1);
+
     if (isCSide) {
       vertexPosition =   endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
     } else {

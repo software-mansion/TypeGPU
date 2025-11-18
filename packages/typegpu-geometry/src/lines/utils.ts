@@ -4,7 +4,6 @@ import {
   add,
   clamp,
   dot,
-  length,
   max,
   mix,
   mul,
@@ -37,7 +36,6 @@ export const miterPointNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
  */
 export const miterPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
   const sin_ = cross2d(a, b);
-  const bisection = bisectCcw(a, b);
   const b2 = dot(b, b);
   const cos_ = dot(a, b);
   const diff = b2 - cos_;
@@ -48,6 +46,7 @@ export const miterPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
   }
   if (sin_ < 0) {
     // if the miter is at infinity, just make it super far
+    const bisection = bisectCcw(a, b);
     return mul(bisection, -1e6);
   }
   const t = diff / sin_;
@@ -67,13 +66,13 @@ export const externalNormals = tgpu.fn(
   [vec2f, f32, f32],
   ExternalNormals,
 )((distance, r1, r2) => {
-  const dNorm = normalize(distance);
-  const expCos = (r1 - r2) / length(distance);
-  const expSin = sqrt(max(0, 1 - expCos * expCos));
-  const a = dNorm.x * expCos;
-  const b = dNorm.y * expSin;
-  const c = dNorm.x * expSin;
-  const d = dNorm.y * expCos;
+  const dLenInv2 = 1 / dot(distance, distance);
+  const expCos = r1 - r2;
+  const expSin = sqrt(max(0, 1 - expCos * expCos * dLenInv2) * dLenInv2);
+  const a = distance.x * expCos * dLenInv2;
+  const b = distance.y * expSin;
+  const c = distance.x * expSin;
+  const d = distance.y * expCos * dLenInv2;
   const n1 = vec2f(a - b, c + d);
   const n2 = vec2f(a + b, -c + d);
   return ExternalNormals({ n1, n2 });
@@ -96,7 +95,7 @@ export const intersectLines = tgpu.fn(
     const AB = sub(B1, A1);
     const t = cross2d(AB, b) / axb;
     return {
-      valid: axb !== 0,
+      valid: axb !== 0 && t >= 0 && t <= 1,
       t,
       point: addMul(A1, a, t),
     };

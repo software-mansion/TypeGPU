@@ -1,5 +1,5 @@
-import { vec2f } from 'typegpu/data';
 import type { v2f } from 'typegpu/data';
+import { vec2f } from 'typegpu/data';
 import { dot, select } from 'typegpu/std';
 import { addMul, rot90ccw, rot90cw } from '../../utils.ts';
 import { intersectTangent, miterPointNoCheck } from '../utils.ts';
