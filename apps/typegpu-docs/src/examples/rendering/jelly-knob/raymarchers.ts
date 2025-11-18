@@ -5,6 +5,7 @@ import { perlin3d, randf } from '@typegpu/noise';
 import {
   cameraUniformSlot,
   darkModeUniformSlot,
+  effectTimeUniformSlot,
   jellyColorUniformSlot,
   knobBehaviorSlot,
   lightUniformSlot,
@@ -12,7 +13,6 @@ import {
   randomUniformSlot,
   Ray,
   RayMarchResult,
-  timeUniformSlot,
 } from './dataTypes.ts';
 import {
   getJellyBounds,
@@ -285,15 +285,21 @@ const renderMeter = (
   const ambientColor = jellyColorUniformSlot.$.xyz;
 
   // caustics
-  const c1 = caustics(uv, timeUniformSlot.$ * 0.2, d.vec3f(4, 4, 1)).mul(0.05);
-  const c2 = caustics(uv.mul(2), timeUniformSlot.$ * 0.4, d.vec3f(16, 1, 4))
-    .mul(0.05);
+  const c1 = caustics(uv, effectTimeUniformSlot.$ * 0.2, d.vec3f(4, 4, 1)).mul(
+    0.0001,
+  );
+  const c2 = caustics(
+    uv.mul(2),
+    effectTimeUniformSlot.$ * 0.4,
+    d.vec3f(16, 1, 4),
+  )
+    .mul(0.0001);
 
   const blendCoord = d.vec3f(
     uv.mul(d.vec2f(5, 10)),
-    timeUniformSlot.$ * 0.2 + 5,
+    effectTimeUniformSlot.$ * 0.2 + 5,
   );
-  const blend = std.saturate(perlin3d.sample(blendCoord) + 0.3);
+  const blend = std.saturate(perlin3d.sample(blendCoord.mul(0.5)));
 
   const color = std.mix(ambientColor, std.add(c1, c2), blend);
 
