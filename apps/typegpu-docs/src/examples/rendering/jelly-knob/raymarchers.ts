@@ -203,7 +203,7 @@ const rayMarchNoJelly = (
   let color = d.vec3f();
   if (distanceFromOrigin < MAX_DIST) {
     if (sdMeter(point) < SURF_DIST) {
-      color = d.vec3f(0, 1, 0);
+      color = renderMeter(rayOrigin, rayDirection, distanceFromOrigin).xyz;
     } else {
       color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
     }
@@ -260,6 +260,18 @@ const renderBackground = (
     .add(d.vec4f(sideBounceLight.mul(emission), 0));
 
   return d.vec4f(backgroundColor.xyz, 1);
+};
+
+const renderMeter = (
+  rayOrigin: d.v3f,
+  rayDirection: d.v3f,
+  backgroundHitDist: number,
+) => {
+  'use gpu';
+  const state = knobBehaviorSlot.$.stateUniform.$;
+  const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
+
+  return jellyColorUniformSlot.$.xyzw;
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
