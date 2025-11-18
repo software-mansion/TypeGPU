@@ -3,7 +3,12 @@ import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
 import { GroundParams, JELLY_HALFSIZE } from './constants.ts';
 import { rotateY } from './utils.ts';
-import { BoundingBox, knobBehaviorSlot } from './dataTypes.ts';
+import {
+  BoundingBox,
+  HitInfo,
+  knobBehaviorSlot,
+  ObjectType,
+} from './dataTypes.ts';
 
 // background sdfs
 
@@ -145,10 +150,37 @@ export const sdJelly = (position: d.v3f) => {
   );
 };
 
+// sdf helpers
+
 export const getJellyBounds = () => {
   'use gpu';
   return BoundingBox({
     min: d.vec3f(-1, -1, -1),
     max: d.vec3f(1, 1, 1),
   });
+};
+
+export const getSceneDist = (position: d.v3f) => {
+  'use gpu';
+  const jelly = sdJelly(position);
+  const meter = sdMeter(position);
+  const mainScene = sdBackground(position);
+
+  const hitInfo = HitInfo();
+  hitInfo.distance = 1e30;
+
+  if (jelly < hitInfo.distance) {
+    hitInfo.distance = jelly;
+    hitInfo.objectType = ObjectType.JELLY;
+  }
+  if (meter < hitInfo.distance) {
+    hitInfo.distance = mainScene;
+    hitInfo.objectType = ObjectType.PROGRESS_METER;
+  }
+  if (mainScene < hitInfo.distance) {
+    hitInfo.distance = mainScene;
+    hitInfo.objectType = ObjectType.BACKGROUND;
+  }
+
+  return hitInfo;
 };

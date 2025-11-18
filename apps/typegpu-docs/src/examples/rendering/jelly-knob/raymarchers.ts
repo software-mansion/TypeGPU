@@ -5,7 +5,6 @@ import { randf } from '@typegpu/noise';
 import {
   cameraUniformSlot,
   darkModeUniformSlot,
-  HitInfo,
   jellyColorUniformSlot,
   knobBehaviorSlot,
   lightUniformSlot,
@@ -16,6 +15,7 @@ import {
 } from './dataTypes.ts';
 import {
   getJellyBounds,
+  getSceneDist,
   sdBackground,
   sdFloorCutout,
   sdJelly,
@@ -60,31 +60,6 @@ const getRay = (ndc: d.v2f) => {
     origin: rayOrigin,
     direction: rayDir,
   });
-};
-
-const getSceneDist = (position: d.v3f) => {
-  'use gpu';
-  const jelly = sdJelly(position);
-  const meter = sdMeter(position);
-  const mainScene = sdBackground(position);
-
-  const hitInfo = HitInfo();
-  hitInfo.distance = 1e30;
-
-  if (jelly < hitInfo.distance) {
-    hitInfo.distance = jelly;
-    hitInfo.objectType = ObjectType.JELLY;
-  }
-  if (meter < hitInfo.distance) {
-    hitInfo.distance = mainScene;
-    hitInfo.objectType = ObjectType.PROGRESS_METER;
-  }
-  if (mainScene < hitInfo.distance) {
-    hitInfo.distance = mainScene;
-    hitInfo.objectType = ObjectType.BACKGROUND;
-  }
-
-  return hitInfo;
 };
 
 const getSceneDistForAO = (position: d.v3f) => {
