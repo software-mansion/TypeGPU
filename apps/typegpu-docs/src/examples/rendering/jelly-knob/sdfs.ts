@@ -1,7 +1,7 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
-import { GroundParams } from './constants.ts';
+import { GroundParams, JELLY_HALFSIZE } from './constants.ts';
 import { rotateY } from './utils.ts';
 import { knobBehaviorSlot } from './dataTypes.ts';
 
@@ -83,4 +83,70 @@ export const getBackgroundDist = (position: d.v3f) => {
 
 // meter sdfs
 
+const sdMeter = (position: d.v3f) => {
+  'use gpu';
+  // return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
+  return sdf.sdBox3d(position.sub(d.vec3f(0.7, 0, 0)), d.vec3f(0.1, 0.1, 0.1));
+};
+
+export const getMeterDist = (position: d.v3f) => {
+  'use gpu';
+  return sdMeter(position);
+};
+
 // jelly sdfs
+
+/**
+ * Returns a transformed position.
+ */
+const opCheapBend = (p: d.v3f, k: number) => {
+  'use gpu';
+  const c = std.cos(k * p.x);
+  const s = std.sin(k * p.x);
+  const m = d.mat2x2f(c, -s, s, c);
+  return d.vec3f(m.mul(p.xy), p.z);
+};
+
+/**
+ * Returns a transformed position.
+ */
+const opTwist = (p: d.v3f, k: number): d.v3f => {
+  'use gpu';
+  const c = std.cos(k * p.y);
+  const s = std.sin(k * p.y);
+  const m = d.mat2x2f(c, -s, s, c);
+  return d.vec3f(m.mul(p.xz), p.y);
+};
+
+const getJellySegment = (position: d.v3f) => {
+  'use gpu';
+  return sdf.sdRoundedBox3d(
+    opCheapBend(opCheapBend(position, 0.8).zyx, 0.8).zyx,
+    JELLY_HALFSIZE.sub(0.1 / 2),
+    0.1,
+  );
+};
+
+export const getJellyDist = (position: d.v3f) => {
+  'use gpu';
+  const state = knobBehaviorSlot.$.stateUniform.$;
+  const origin = d.vec3f(0, 0.18, 0);
+  const twist = state.bottomProgress - state.topProgress;
+  let localPos = rotateY(
+    position.sub(origin),
+    -(state.topProgress + twist * 0.5) * Math.PI,
+  );
+  localPos = opTwist(localPos, twist * 3).xzy;
+  const rotated1Pos = rotateY(localPos, Math.PI / 6);
+  const rotated2Pos = rotateY(localPos, Math.PI / 3);
+
+  return sdf.opSmoothUnion(
+    getJellySegment(localPos),
+    sdf.opSmoothUnion(
+      getJellySegment(rotated1Pos),
+      getJellySegment(rotated2Pos),
+      0.01,
+    ),
+    0.01,
+  );
+};
