@@ -185,7 +185,7 @@ const sdArrowHead = (p: d.v3f) => {
   ) - 0.007;
 };
 
-const getMainSceneDist = (position: d.v3f) => {
+const getBackgroundDist = (position: d.v3f) => {
   'use gpu';
   const state = knobBehavior.stateUniform.$;
   const groundThickness = GroundParams.groundThickness;
@@ -294,7 +294,7 @@ const getSceneDist = (position: d.v3f) => {
   'use gpu';
   const jelly = getJellyDist(position);
   const meter = getMeterDist(position);
-  const mainScene = getMainSceneDist(position);
+  const mainScene = getBackgroundDist(position);
 
   const hitInfo = HitInfo();
   hitInfo.distance = 1e30;
@@ -317,7 +317,7 @@ const getSceneDist = (position: d.v3f) => {
 
 const getSceneDistForAO = (position: d.v3f) => {
   'use gpu';
-  const mainScene = getMainSceneDist(position);
+  const mainScene = getBackgroundDist(position);
   const jelly = getJellyDist(position);
   return std.min(mainScene, jelly);
 };
@@ -435,6 +435,7 @@ const applyAO = (
   return d.vec4f(finalColor, 1.0);
 };
 
+// AAA what the hell is this
 const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   'use gpu';
   let distanceFromOrigin = d.f32();
@@ -442,7 +443,7 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
 
   for (let i = 0; i < 6; i++) {
     const p = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
-    hit = getMainSceneDist(p);
+    hit = getBackgroundDist(p);
     distanceFromOrigin += hit;
     if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST * 10) {
       break;
@@ -508,22 +509,31 @@ const renderBackground = (
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
-  let backgroundDist = d.f32();
+  // first, generate the scene without a jelly
+
+  let sceneDist = d.f32();
+  let point = d.vec3f();
   for (let i = 0; i < MAX_STEPS; i++) {
-    const p = rayOrigin.add(rayDirection.mul(backgroundDist));
-    const hit = getMainSceneDist(p);
-    backgroundDist += hit;
+    point = rayOrigin.add(rayDirection.mul(sceneDist));
+    const hit = std.min(getBackgroundDist(point), getMeterDist(point));
+    sceneDist += hit;
     if (hit < SURF_DIST) {
       break;
     }
   }
-  const background = renderBackground(rayOrigin, rayDirection, backgroundDist);
+  let scene = d.vec4f();
+  if (getBackgroundDist(point) < SURF_DIST) {
+    scene = renderBackground(rayOrigin, rayDirection, sceneDist);
+  } else {
+    scene = d.vec4f(0, 1, 0, 1);
+  }
 
+  // second, generate the jelly
   const bbox = getJellyBounds();
   const intersection = intersectBox(rayOrigin, rayDirection, bbox);
 
   if (!intersection.hit) {
-    return background;
+    return scene;
   }
 
   let distanceFromOrigin = std.max(d.f32(0.0), intersection.tMin);
@@ -596,12 +606,12 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
       return d.vec4f(jelly, 1.0);
     }
 
-    if (distanceFromOrigin > backgroundDist) {
+    if (distanceFromOrigin > sceneDist) {
       break;
     }
   }
 
-  return background;
+  return scene;
 };
 
 const raymarchFn = tgpu['~unstable'].fragmentFn({
