@@ -11,6 +11,14 @@ export const SURF_DIST = 0.001;
 export const LIGHT_GROUND_ALBEDO = d.vec3f(1);
 export const DARK_GROUND_ALBEDO = d.vec3f(0.2);
 
+export const GroundParams = {
+  groundThickness: 0.03,
+  groundRoundness: 0.02,
+  jellyCutoutRadius: 0.38,
+  meterCutoutRadius: 0.7,
+  meterCutoutGirth: 0.08,
+};
+
 // Lighting constants
 export const AMBIENT_COLOR = d.vec3f(0.6);
 export const AMBIENT_INTENSITY = 0.6;

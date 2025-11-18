@@ -11,6 +11,7 @@ import {
   BoundingBox,
   DirectionalLight,
   HitInfo,
+  knobBehaviorSlot,
   ObjectType,
   Ray,
   rayMarchLayout,
@@ -23,6 +24,7 @@ import {
   createTextures,
   fresnelSchlick,
   intersectBox,
+  rotateY,
 } from './utils.ts';
 import { TAAResolver } from './taa.ts';
 import {
@@ -34,6 +36,7 @@ import {
   AO_STEPS,
   DARK_GROUND_ALBEDO,
   DARK_MODE_LIGHT_DIR,
+  GroundParams,
   JELLY_HALFSIZE,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
@@ -45,6 +48,7 @@ import {
   SPECULAR_POWER,
   SURF_DIST,
 } from './constants.ts';
+import { getBackgroundDist, sdFloorCutout } from './sdfs.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -133,88 +137,6 @@ const getJellyBounds = () => {
   });
 };
 
-const GroundParams = {
-  groundThickness: 0.03,
-  groundRoundness: 0.02,
-  jellyCutoutRadius: 0.38,
-  meterCutoutRadius: 0.7,
-  meterCutoutGirth: 0.08,
-};
-
-const sdJellyCutout = (position: d.v2f) => {
-  'use gpu';
-  const groundRoundness = GroundParams.groundRoundness;
-  const groundRadius = GroundParams.jellyCutoutRadius;
-
-  return sdf.sdDisk(
-    position,
-    groundRadius + groundRoundness,
-  );
-};
-
-const sdMeterCutout = (position: d.v2f) => {
-  'use gpu';
-  const groundRoundness = GroundParams.groundRoundness;
-  const meterCutoutRadius = GroundParams.meterCutoutRadius;
-  const meterCutoutGirth = GroundParams.meterCutoutGirth;
-  const angle = Math.PI / 2;
-
-  return sdf.sdArc(
-    position,
-    d.vec2f(std.sin(angle), std.cos(angle)),
-    meterCutoutRadius,
-    meterCutoutGirth + groundRoundness,
-  );
-};
-
-const sdFloorCutout = (position: d.v2f) => {
-  'use gpu';
-  const jellyCutoutDistance = sdJellyCutout(position);
-  const meterCutoutDistance = sdMeterCutout(position);
-  return sdf.opUnion(jellyCutoutDistance, meterCutoutDistance);
-};
-
-const sdArrowHead = (p: d.v3f) => {
-  'use gpu';
-  return sdf.sdRhombus(
-    p,
-    // shorter on one end, longer on the other
-    std.select(0.15, 0.05, p.x > 0),
-    0.04, // width of the arrow head
-    0.001, // thickness
-    std.smoothstep(-0.1, 0.1, p.x) * 0.02,
-  ) - 0.007;
-};
-
-const getBackgroundDist = (position: d.v3f) => {
-  'use gpu';
-  const state = knobBehavior.stateUniform.$;
-  const groundThickness = GroundParams.groundThickness;
-  const groundRoundness = GroundParams.groundRoundness;
-
-  let dist = std.min(
-    sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.1), // the plane underneath the jelly
-    sdf.opExtrudeY(
-      position,
-      -sdFloorCutout(position.xz),
-      groundThickness - groundRoundness,
-    ) - groundRoundness,
-  );
-
-  // Axis
-  dist = std.min(
-    dist,
-    sdArrowHead(
-      rotateY(
-        position.sub(d.vec3f(0, 0.5, 0)),
-        -state.topProgress * Math.PI,
-      ),
-    ),
-  );
-
-  return dist;
-};
-
 const sdMeter = (position: d.v3f) => {
   'use gpu';
   // return sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.05);
@@ -235,17 +157,6 @@ const opCheapBend = (p: d.v3f, k: number) => {
   const s = std.sin(k * p.x);
   const m = d.mat2x2f(c, -s, s, c);
   return d.vec3f(m.mul(p.xy), p.z);
-};
-
-/**
- * Source: https://mini.gmshaders.com/p/3d-rotation
- */
-const rotateY = (p: d.v3f, angle: number) => {
-  'use gpu';
-  return std.add(
-    std.mix(d.vec3f(0, p.y, 0), p, std.cos(angle)),
-    std.cross(p, d.vec3f(0, 1, 0)).mul(std.sin(angle)),
-  );
 };
 
 /**
@@ -643,6 +554,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 });
 
 const rayMarchPipeline = root['~unstable']
+  .with(knobBehaviorSlot, knobBehavior)
   .withVertex(fullScreenTriangle, {})
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
   .createPipeline();
