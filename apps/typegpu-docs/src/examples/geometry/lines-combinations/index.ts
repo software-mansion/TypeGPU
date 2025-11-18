@@ -1,20 +1,13 @@
 import {
-  addMul,
+  caps,
   endCapSlot,
+  joins,
   joinSlot,
-  lineCaps,
-  lineJoins,
-  lineSegmentIndicesCapLevel0,
-  lineSegmentIndicesCapLevel1,
-  lineSegmentIndicesCapLevel2,
-  lineSegmentIndicesCapLevel3,
+  lineSegmentIndices,
+  lineSegmentLeftIndices,
   lineSegmentVariableWidth,
-  lineSegmentWireframeIndicesCapLevel0,
-  lineSegmentWireframeIndicesCapLevel1,
-  lineSegmentWireframeIndicesCapLevel2,
-  lineSegmentWireframeIndicesCapLevel3,
+  lineSegmentWireframeIndices,
   startCapSlot,
-  uvToLineSegment,
 } from '@typegpu/geometry';
 import tgpu, { type ColorAttachment } from 'typegpu';
 import {
@@ -29,9 +22,9 @@ import {
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
+import { add, clamp, cos, fwidth, min, mix, mul, select, sin, smoothstep } from 'typegpu/std';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
-import * as testCases from './testCases.ts';
+import { testCases } from './testCases.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -62,6 +55,26 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+let msaaTexture: GPUTexture;
+let msaaTextureView: GPUTextureView;
+
+const createDepthAndMsaaTextures = () => {
+  if (msaaTexture) {
+    msaaTexture.destroy();
+  }
+  msaaTexture = device.createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: presentationFormat,
+    sampleCount: 4,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  msaaTextureView = msaaTexture.createView();
+};
+
+createDepthAndMsaaTextures();
+const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
+resizeObserver.observe(canvas);
+
 const Uniforms = struct({
   time: f32,
   fillType: u32,
@@ -84,15 +97,19 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   uniforms: uniformsBuffer,
 });
 
-const indexBuffer = root
-  .createBuffer(arrayOf(u16, lineSegmentIndicesCapLevel3.length), lineSegmentIndicesCapLevel3)
+const MAX_JOIN_COUNT = 6;
+const indices = lineSegmentIndices(MAX_JOIN_COUNT);
+const indicesLeft = lineSegmentLeftIndices(MAX_JOIN_COUNT);
+const wireframeIndices = lineSegmentWireframeIndices(MAX_JOIN_COUNT);
+
+const indexBuffer = root.createBuffer(arrayOf(u16, indices.length), indices).$usage('index');
+
+const indexBufferLeft = root
+  .createBuffer(arrayOf(u16, indicesLeft.length), indicesLeft)
   .$usage('index');
 
 const outlineIndexBuffer = root
-  .createBuffer(
-    arrayOf(u16, lineSegmentWireframeIndicesCapLevel3.length),
-    lineSegmentWireframeIndicesCapLevel3,
-  )
+  .createBuffer(arrayOf(u16, wireframeIndices.length), wireframeIndices)
   .$usage('index');
 
 const testCaseSlot = tgpu.slot(testCases.arms);
@@ -130,20 +147,17 @@ const mainVertex = tgpu.vertexFn({
     };
   }
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D);
-  const uv = uvToLineSegment(B.position, C.position, result.vertexPosition);
+  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, MAX_JOIN_COUNT);
 
   return {
-    outPos: vec4f(result.vertexPosition, 0, 1),
+    outPos: vec4f(mul(result.vertexPosition, result.w), 0, result.w),
     position: result.vertexPosition,
-    uv: uv,
+    uv: vec2f(0, select(f32(0), f32(1), vertexIndex > 1)),
     instanceIndex,
     vertexIndex,
-    situationIndex: result.situationIndex,
+    situationIndex: 0,
   };
 });
-
-console.log(tgpu.resolve({ externals: { lineSegmentVariableWidth } }));
 
 const mainFragment = tgpu.fragmentFn({
   in: {
@@ -159,10 +173,6 @@ const mainFragment = tgpu.fragmentFn({
 })(({ instanceIndex, vertexIndex, situationIndex, frontFacing, screenPosition, position, uv }) => {
   'use gpu';
   const fillType = bindGroupLayout.$.uniforms.fillType;
-  if (fillType === 1) {
-    // typegpu gradient
-    return mix(vec4f(0.77, 0.39, 1, 0.5), vec4f(0.11, 0.44, 0.94, 0.5), position.x * 0.5 + 0.5);
-  }
   let color = vec3f();
   const colors = [
     vec3f(1, 0, 0), // 0
@@ -175,18 +185,25 @@ const mainFragment = tgpu.fragmentFn({
     vec3f(0.25, 0.75, 0.25), // 7
     vec3f(0.25, 0.25, 0.75), // 8
   ];
+  if (fillType === 1) {
+    // typegpu gradient
+    color = mix(vec3f(0.77, 0.39, 1), vec3f(0.11, 0.44, 0.94), position.x * 0.5 + 0.5);
+  }
   if (fillType === 2) {
-    color = colors[instanceIndex % colors.length];
+    let t = cos(uv.y * 10);
+    t = clamp(t / fwidth(t), 0, 1);
+    color = mix(vec3f(0.77, 0.39, 1), vec3f(0.11, 0.44, 0.94), t);
   }
   if (fillType === 3) {
-    color = colors[vertexIndex % colors.length];
+    color = vec3f(colors[vertexIndex % colors.length]);
   }
   if (fillType === 4) {
-    color = colors[situationIndex % colors.length];
+    color = vec3f(colors[instanceIndex % colors.length]);
   }
   if (fillType === 5) {
-    color = vec3f(uv.x, cos(uv.y * 100), 0);
+    color = vec3f(colors[situationIndex % colors.length]);
   }
+  color = mul(color, 0.8 + 0.2 * smoothstep(1, 0.5, uv.y));
   if (frontFacing) {
     return vec4f(color, 0.5);
   }
@@ -259,14 +276,14 @@ const circlesVertex = tgpu.vertexFn({
   const angle = min(2 * Math.PI, step * f32(vertexIndex));
   const unit = vec2f(cos(angle), sin(angle));
   return {
-    outPos: vec4f(addMul(vertex.position, unit, vertex.radius), 0, 1),
+    outPos: vec4f(add(vertex.position, mul(unit, vertex.radius)), 0, 1),
   };
 });
 
 let testCase = testCases.arms;
-let join = lineJoins.round;
-let startCap = lineCaps.round;
-let endCap = lineCaps.round;
+let join = joins.round;
+let startCap = caps.round;
+let endCap = caps.round;
 
 function createPipelines() {
   const fill = root
@@ -281,8 +298,9 @@ function createPipelines() {
       // primitive: {
       //   cullMode: 'back',
       // },
+      multisample: { count: multisample ? 4 : 1 },
     })
-    .withIndexBuffer(indexBuffer);
+    .withIndexBuffer(oneSided ? indexBufferLeft : indexBuffer);
 
   const outline = root
     .with(joinSlot, join)
@@ -296,6 +314,7 @@ function createPipelines() {
       primitive: {
         topology: 'line-list',
       },
+      multisample: { count: multisample ? 4 : 1 },
     })
     .withIndexBuffer(outlineIndexBuffer);
 
@@ -306,6 +325,7 @@ function createPipelines() {
     primitive: {
       topology: 'line-strip',
     },
+    multisample: { count: multisample ? 4 : 1 },
   });
 
   const circles = root.with(testCaseSlot, testCase).createRenderPipeline({
@@ -315,6 +335,7 @@ function createPipelines() {
     primitive: {
       topology: 'line-list',
     },
+    multisample: { count: multisample ? 4 : 1 },
   });
 
   return {
@@ -325,24 +346,23 @@ function createPipelines() {
   };
 }
 
-let pipelines = createPipelines();
-
+let multisample = true;
 let showRadii = false;
-let wireframe = true;
+let wireframe = false;
+let oneSided = false;
 let fillType = 1;
 let animationSpeed = 1;
 let reverse = false;
-let subdiv = {
-  fillCount: lineSegmentIndicesCapLevel3.length,
-  wireframeCount: lineSegmentWireframeIndicesCapLevel3.length,
-};
+
+let pipelines = createPipelines();
 
 const draw = (timeMs: number) => {
   uniformsBuffer.writePartial({
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
-    view: context,
+    view: multisample ? msaaTextureView : context.getCurrentTexture().createView(),
+    resolveTarget: multisample ? context.getCurrentTexture().createView() : undefined,
     clearValue: [1, 1, 1, 1],
     loadOp: 'load',
   };
@@ -354,13 +374,16 @@ const draw = (timeMs: number) => {
         console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
       }
     })
-    .drawIndexed(subdiv.fillCount, fillType === 0 ? 0 : TEST_SEGMENT_COUNT);
+    .drawIndexed(
+      oneSided ? indicesLeft.length : indices.length,
+      fillType === 0 ? 0 : TEST_SEGMENT_COUNT,
+    );
 
   if (wireframe) {
     pipelines.outline
       .with(uniformsBindGroup)
       .withColorAttachment(colorAttachment)
-      .drawIndexed(subdiv.wireframeCount, TEST_SEGMENT_COUNT);
+      .drawIndexed(wireframeIndices.length, TEST_SEGMENT_COUNT);
   }
   if (showRadii) {
     pipelines.circles
@@ -390,32 +413,22 @@ runAnimationFrame(0);
 const fillOptions = {
   none: 0,
   solid: 1,
-  instance: 2,
+  distanceToSegment: 2,
   triangle: 3,
-  situation: 4,
-  distanceToSegment: 5,
+  instance: 4,
+  // situation: 5,
 };
 
-const subdivs = [
-  {
-    fillCount: lineSegmentIndicesCapLevel0.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel0.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel1.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel1.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel2.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel2.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel3.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel3.length,
-  },
-];
+// #region Example controls & Cleanup
 
 export const controls = defineControls({
+  'MSAA x4': {
+    initial: multisample,
+    onToggleChange: (value: boolean) => {
+      multisample = value;
+      pipelines = createPipelines();
+    },
+  },
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
@@ -426,25 +439,25 @@ export const controls = defineControls({
   },
   'Start Cap': {
     initial: 'round',
-    options: Object.keys(lineCaps),
+    options: Object.keys(caps),
     onSelectChange: async (selected) => {
-      startCap = lineCaps[selected as keyof typeof lineCaps];
+      startCap = caps[selected as keyof typeof caps];
       pipelines = createPipelines();
     },
   },
   'End Cap': {
     initial: 'round',
-    options: Object.keys(lineCaps),
+    options: Object.keys(caps),
     onSelectChange: async (selected) => {
-      endCap = lineCaps[selected as keyof typeof lineCaps];
+      endCap = caps[selected as keyof typeof caps];
       pipelines = createPipelines();
     },
   },
   Join: {
     initial: 'round',
-    options: Object.keys(lineJoins),
+    options: Object.keys(joins),
     onSelectChange: async (selected) => {
-      join = lineJoins[selected as keyof typeof lineJoins];
+      join = joins[selected as keyof typeof joins];
       pipelines = createPipelines();
     },
   },
@@ -456,29 +469,27 @@ export const controls = defineControls({
       uniformsBuffer.writePartial({ fillType });
     },
   },
-  'Subdiv. Level': {
-    initial: 2,
-    min: 0,
-    step: 1,
-    max: 3,
-    onSliderChange: (value) => {
-      subdiv = subdivs[value];
-    },
-  },
   Wireframe: {
-    initial: true,
-    onToggleChange: (value) => {
+    initial: wireframe,
+    onToggleChange: (value: boolean) => {
       wireframe = value;
     },
   },
+  'One sided': {
+    initial: oneSided,
+    onToggleChange: (value: boolean) => {
+      oneSided = value;
+      pipelines = createPipelines();
+    },
+  },
   'Radius and centerline': {
-    initial: false,
-    onToggleChange: (value) => {
+    initial: showRadii,
+    onToggleChange: (value: boolean) => {
       showRadii = value;
     },
   },
   'Animation speed': {
-    initial: 1,
+    initial: animationSpeed,
     min: 0,
     step: 0.001,
     max: 5,
@@ -487,8 +498,8 @@ export const controls = defineControls({
     },
   },
   Reverse: {
-    initial: false,
-    onToggleChange: (value) => {
+    initial: reverse,
+    onToggleChange: (value: boolean) => {
       reverse = value;
     },
   },
@@ -498,3 +509,5 @@ export function onCleanup() {
   root.destroy();
   cancelAnimationFrame(frameId);
 }
+
+// #endregion
