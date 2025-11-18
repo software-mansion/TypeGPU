@@ -23,13 +23,13 @@ export const MODEL_HEIGHT = 320;
 export async function prepareSession(input: GPUBuffer, output: GPUBuffer) {
   const session = await ort.InferenceSession
     // .create('/TypeGPU/assets/background-segmentation/u2netp.onnx', {
-    .create('/TypeGPU/assets/background-segmentation/mobile_light_aug/model_90.onnx', {
+    .create('/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx', {
       executionProviders: ['webgpu'],
       graphOptimizationLevel: 'all',
       externalData: [
         {
-          data: '/TypeGPU/assets/background-segmentation/mobile_light_aug/model_90.onnx.data',
-          path: 'model_90.onnx.data',
+          data: '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx.data',
+          path: 'model_178.onnx.data',
         }
       ],
     });

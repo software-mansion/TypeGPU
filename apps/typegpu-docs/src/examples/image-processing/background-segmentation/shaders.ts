@@ -16,22 +16,8 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
   
-  // Get texture dimensions
-  const texDims = std.textureDimensions(prepareModelInputLayout.$.inputTexture);
-  const texWidth = d.f32(texDims.x);
-  const texHeight = d.f32(texDims.y);
-  
-  // Center crop to square using smallest dimension
-  const cropSize = std.min(texWidth, texHeight);
-  const xOffset = (texWidth - cropSize) / 2.0;
-  const yOffset = (texHeight - cropSize) / 2.0;
-  
-  // Map model coordinates to cropped region
-  const normalizedX = (d.f32(x) / d.f32(MODEL_WIDTH)) * cropSize + xOffset;
-  const normalizedY = (d.f32(y) / d.f32(MODEL_HEIGHT)) * cropSize + yOffset;
-  
-  // Sample from the center-cropped region
-  const uv = d.vec2f(normalizedX / texWidth, normalizedY / texHeight);
+  // Sample directly from the input with native aspect ratio
+  const uv = d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT));
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
@@ -147,32 +133,12 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  // Map UV coordinates to the center-cropped square region
-  const texDims = std.textureDimensions(drawWithMaskLayout.$.inputTexture);
-  const texWidth = d.f32(texDims.x);
-  const texHeight = d.f32(texDims.y);
-  
-  const cropSize = std.min(texWidth, texHeight);
-  const xOffset = (texWidth - cropSize) / 2.0;
-  const yOffset = (texHeight - cropSize) / 2.0;
-  
-  // Convert UV to pixel coordinates
-  const pixelX = input.uv.x * texWidth;
-  const pixelY = input.uv.y * texHeight;
-  
-  // Map to cropped region UV (0-1 within the crop)
-  const croppedU = (pixelX - xOffset) / cropSize;
-  const croppedV = (pixelY - yOffset) / cropSize;
-  
-  // Sample mask from the cropped region, or use 0 if outside
-  let mask = d.f32(0);
-  if (croppedU >= 0.0 && croppedU <= 1.0 && croppedV >= 0.0 && croppedV <= 1.0) {
-    mask = std.textureSampleBaseClampToEdge(
-      drawWithMaskLayout.$.maskTexture,
-      drawWithMaskLayout.$.sampler,
-      d.vec2f(croppedU, croppedV),
-    ).x;
-  }
+  // Sample mask directly at the same UV coordinates
+  const mask = std.textureSampleBaseClampToEdge(
+    drawWithMaskLayout.$.maskTexture,
+    drawWithMaskLayout.$.sampler,
+    input.uv,
+  ).x;
 
   return std.mix(blurredColor, originalColor, mask);
 });
