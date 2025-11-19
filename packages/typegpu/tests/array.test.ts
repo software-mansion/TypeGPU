@@ -8,7 +8,6 @@ import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -179,7 +178,7 @@ describe('array', () => {
       const defaultValue = Outer();
     });
 
-    expect(asWgsl(testFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFunction])).toMatchInlineSnapshot(`
       "fn testFunction() {
         var defaultValue = array<array<f32, 1>, 2>();
       }"
@@ -195,7 +194,7 @@ describe('array', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var myArray = array<u32, 1>(10u);
         var myClone = myArray;
@@ -213,10 +212,10 @@ describe('array', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
         var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
-        var myClone = myArrays[0];
+        var myClone = myArrays[0i];
         return;
       }"
     `);
@@ -227,7 +226,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)();
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 4>();
       }"
@@ -239,7 +238,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)();
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 4>();
       }"
@@ -251,11 +250,11 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, count)();
     });
 
-    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
-      - arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
+      - fn:arrayOf: Cannot create array schema with count unknown at compile-time: 'count']
     `);
   });
 
@@ -265,7 +264,7 @@ describe('array', () => {
     });
 
     expect(
-      tgpu.resolve({ externals: { ...testLayout.bound }, names: 'strict' }),
+      tgpu.resolve([...Object.values(testLayout.bound)]),
     ).toMatchInlineSnapshot(
       `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
     );
@@ -276,7 +275,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, 4)([1, 2, 3, 4]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 4>(1f, 2f, 3f, 4f);
       }"
@@ -288,7 +287,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32)(4)([4, 3, 2, 1]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
@@ -302,7 +301,7 @@ describe('array', () => {
       const result = d.arrayOf(d.f32, arraySizeSlot.$)([4, 3, 2, 1]);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
@@ -324,7 +323,7 @@ describe('array', () => {
       );
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
       }"
@@ -349,7 +348,7 @@ describe('array.length', () => {
       }
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
       fn foo() {
@@ -378,12 +377,12 @@ describe('array.length', () => {
       }
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> values: array<f32, 128>;
 
       fn foo() {
         var acc = 1f;
-        for (var i = 0; (i < 128); i++) {
+        for (var i = 0; (i < 128i); i++) {
           values[i] = acc;
           acc *= 2f;
         }
@@ -405,10 +404,8 @@ describe('array.length', () => {
         return arrayLength(layout.$.values);
       });
 
-      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read_write> values: array<f32, 5>;
-
-        fn testFn() -> i32 {
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn() -> i32 {
           return 5;
         }"
       `);
@@ -427,11 +424,11 @@ describe('array.length', () => {
         return arrayLength(layout.bound.values.value);
       });
 
-      expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<storage, read_write> values: array<f32>;
 
         fn testFn() -> u32 {
-          return arrayLength(&values);
+          return arrayLength((&values));
         }"
       `);
     });

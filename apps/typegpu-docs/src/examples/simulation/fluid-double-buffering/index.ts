@@ -43,13 +43,13 @@ const coordsToIndex = (x: number, y: number) => {
 
 const getCell = (x: number, y: number): d.v4f => {
   'use gpu';
-  return inputGridSlot.$[coordsToIndex(x, y)];
+  return d.vec4f(inputGridSlot.$[coordsToIndex(x, y)]);
 };
 
 const setCell = (x: number, y: number, value: d.v4f) => {
   'use gpu';
   const index = coordsToIndex(x, y);
-  outputGridSlot.$[index] = value;
+  outputGridSlot.$[index] = d.vec4f(value);
 };
 
 const setVelocity = (x: number, y: number, velocity: d.v2f) => {
@@ -179,7 +179,7 @@ const computeVelocity = (x: number, y: number): d.v2f => {
 
   const leastCostDir =
     dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
-  return leastCostDir;
+  return d.vec2f(leastCostDir);
 };
 
 const moveObstacles = () => {
@@ -340,7 +340,7 @@ const simulate = (xu: number, yu: number) => {
   const minInflow = getMinimumInFlow(x, y);
   next.z = std.max(minInflow, next.z);
 
-  outputGridSlot.$[index] = next;
+  outputGridSlot.$[index] = d.vec4f(next);
 };
 
 const OBSTACLE_BOX = 0;
@@ -474,7 +474,7 @@ function makePipelines(
         }
       }
 
-      outputGridSlot.$[index] = value;
+      outputGridSlot.$[index] = d.vec4f(value);
     });
 
   const simulatePipeline = root['~unstable']

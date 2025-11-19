@@ -18,621 +18,621 @@ describe('probability distribution plot example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      "@group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randUniformExclusive_9() -> f32 {
-        return ((item_7() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item_1() * 0.9999998f) + 1e-7f);
       }
 
-      fn randNormal_8(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586f * randUniformExclusive_9());
-        var R = sqrt((-2 * log(randUniformExclusive_9())));
+      fn randNormal(mu: f32, sigma: f32) -> f32 {
+        let theta = (6.283185307179586f * randUniformExclusive());
+        let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
-      fn randInUnitSphere_6() -> vec3f {
-        var u = item_7();
-        var v = vec3f(randNormal_8(0f, 1f), randNormal_8(0f, 1f), randNormal_8(0f, 1f));
+      fn randInUnitSphere() -> vec3f {
+        let u = item_1();
+        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
       }
 
-      struct item_10 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_10) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = randInUnitSphere_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = randInUnitSphere();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randOnUnitSphere_6() -> vec3f {
-        var z = ((2f * item_7()) - 1f);
-        var oneMinusZSq = sqrt((1f - (z * z)));
-        var theta = (6.283185307179586f * item_7());
-        var x = (cos(theta) * oneMinusZSq);
-        var y = (sin(theta) * oneMinusZSq);
+      fn randOnUnitSphere() -> vec3f {
+        let z = ((2f * item_1()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * item_1());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      struct item_8 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_8) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = randOnUnitSphere_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = randOnUnitSphere();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_8() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randInUnitCircle_7() -> vec2f {
-        var radius = sqrt(item_8());
-        var angle = (item_8() * 6.283185307179586f);
+      fn randInUnitCircle() -> vec2f {
+        let radius = sqrt(item_1());
+        let angle = (item_1() * 6.283185307179586f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randInUnitCircle_7(), 0.5f);
+      fn prng() -> vec3f {
+        return vec3f(randInUnitCircle(), 0.5f);
       }
 
-      struct item_9 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_9) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_8() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randOnUnitCircle_7() -> vec2f {
-        var angle = (item_8() * 6.283185307179586f);
+      fn randOnUnitCircle() -> vec2f {
+        let angle = (item_1() * 6.283185307179586f);
         return vec2f(cos(angle), sin(angle));
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randOnUnitCircle_7(), 0.5f);
+      fn prng() -> vec3f {
+        return vec3f(randOnUnitCircle(), 0.5f);
       }
 
-      struct item_9 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_9) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randInUnitCube_6() -> vec3f {
-        return vec3f(item_7(), item_7(), item_7());
+      fn randInUnitCube() -> vec3f {
+        return vec3f(item_1(), item_1(), item_1());
       }
 
-      struct item_8 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_8) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = randInUnitCube_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = randInUnitCube();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_7() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randOnUnitCube_6() -> vec3f {
-        var face = u32((item_7() * 6f));
-        var axis = (face % 3u);
+      fn randOnUnitCube() -> vec3f {
+        let face = u32((item_1() * 6f));
+        let axis = (face % 3u);
         var result = vec3f();
         result[axis] = f32(select(0, 1, (face > 2u)));
-        result[((axis + 1u) % 3u)] = item_7();
-        result[((axis + 2u) % 3u)] = item_7();
+        result[((axis + 1u) % 3u)] = item_1();
+        result[((axis + 2u) % 3u)] = item_1();
         return result;
       }
 
-      struct item_8 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_8) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = randOnUnitCube_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = randOnUnitCube();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randUniformExclusive_11() -> f32 {
-        return ((item_9() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item_1() * 0.9999998f) + 1e-7f);
       }
 
-      fn randNormal_10(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586f * randUniformExclusive_11());
-        var R = sqrt((-2 * log(randUniformExclusive_11())));
+      fn randNormal(mu: f32, sigma: f32) -> f32 {
+        let theta = (6.283185307179586f * randUniformExclusive());
+        let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
-      fn randInUnitSphere_8() -> vec3f {
-        var u = item_9();
-        var v = vec3f(randNormal_10(0f, 1f), randNormal_10(0f, 1f), randNormal_10(0f, 1f));
+      fn randInUnitSphere() -> vec3f {
+        let u = item_1();
+        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
       }
 
-      fn randInUnitHemisphere_7(normal: vec3f) -> vec3f {
-        var value = randInUnitSphere_8();
-        var alignment = dot(normal, value);
+      fn randInUnitHemisphere(normal: vec3f) -> vec3f {
+        var value = randInUnitSphere();
+        let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
 
-      fn prng_6() -> vec3f {
-        return randInUnitHemisphere_7(vec3f(1.409999966621399, 1.409999966621399, 0));
+      fn prng() -> vec3f {
+        return randInUnitHemisphere(vec3f(1.409999966621399, 1.409999966621399, 0));
       }
 
-      struct item_12 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_12) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randOnUnitSphere_8() -> vec3f {
-        var z = ((2f * item_9()) - 1f);
-        var oneMinusZSq = sqrt((1f - (z * z)));
-        var theta = (6.283185307179586f * item_9());
-        var x = (cos(theta) * oneMinusZSq);
-        var y = (sin(theta) * oneMinusZSq);
+      fn randOnUnitSphere() -> vec3f {
+        let z = ((2f * item_1()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * item_1());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      fn randOnUnitHemisphere_7(normal: vec3f) -> vec3f {
-        var value = randOnUnitSphere_8();
-        var alignment = dot(normal, value);
+      fn randOnUnitHemisphere(normal: vec3f) -> vec3f {
+        var value = randOnUnitSphere();
+        let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
 
-      fn prng_6() -> vec3f {
-        return randOnUnitHemisphere_7(vec3f(1.409999966621399, 1.409999966621399, 0));
+      fn prng() -> vec3f {
+        return randOnUnitHemisphere(vec3f(1.409999966621399, 1.409999966621399, 0));
       }
 
-      struct item_10 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_10) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_8() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randBernoulli_7(p: f32) -> f32 {
-        var u = item_8();
+      fn randBernoulli(p: f32) -> f32 {
+        let u = item_1();
         return step(u, p);
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randBernoulli_7(0.7f));
+      fn prng() -> vec3f {
+        return vec3f(randBernoulli(0.7f));
       }
 
-      struct item_9 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_9) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_8() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randFloat01_7() -> f32 {
-        return item_8();
+      fn randFloat01() -> f32 {
+        return item_1();
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randFloat01_7());
+      fn prng() -> vec3f {
+        return vec3f(randFloat01());
       }
 
-      struct item_9 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_9) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item_1() * 0.9999998f) + 1e-7f);
       }
 
-      fn randExponential_7(rate: f32) -> f32 {
-        var u = randUniformExclusive_8();
-        return ((-1 / rate) * log(u));
+      fn randExponential(rate: f32) -> f32 {
+        let u = randUniformExclusive();
+        return ((-1f / rate) * log(u));
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randExponential_7(1f));
+      fn prng() -> vec3f {
+        return vec3f(randExponential(1f));
       }
 
-      struct item_10 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_10) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item_1() * 0.9999998f) + 1e-7f);
       }
 
-      fn randNormal_7(mu: f32, sigma: f32) -> f32 {
-        var theta = (6.283185307179586f * randUniformExclusive_8());
-        var R = sqrt((-2 * log(randUniformExclusive_8())));
+      fn randNormal(mu: f32, sigma: f32) -> f32 {
+        let theta = (6.283185307179586f * randUniformExclusive());
+        let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randNormal_7(0f, 1f));
+      fn prng() -> vec3f {
+        return vec3f(randNormal(0f, 1f));
       }
 
-      struct item_10 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_10) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }
 
-      @group(0) @binding(1) var<storage, read_write> samplesBuffer_1: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;
 
-      @group(0) @binding(0) var<storage, read> seedBuffer_2: array<f32>;
+      @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
-      var<private> seed_5: vec2f;
+      var<private> seed_1: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed(value: f32) {
+        seed_1 = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed(seed);
       }
 
-      fn item_9() -> f32 {
-        var a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item_1() -> f32 {
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
-      fn randUniformExclusive_8() -> f32 {
-        return ((item_9() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item_1() * 0.9999998f) + 1e-7f);
       }
 
-      fn randCauchy_7(x0: f32, gamma: f32) -> f32 {
-        var u = randUniformExclusive_8();
+      fn randCauchy(x0: f32, gamma: f32) -> f32 {
+        let u = randUniformExclusive();
         return (x0 + (gamma * tan((3.141592653589793f * (u - 0.5f)))));
       }
 
-      fn prng_6() -> vec3f {
-        return vec3f(randCauchy_7(0f, 1f));
+      fn prng() -> vec3f {
+        return vec3f(randCauchy(0f, 1f));
       }
 
-      struct item_10 {
+      struct item_2 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn item_0(input: item_10) {
-        var id = input.gid.x;
-        if ((id >= arrayLength(&samplesBuffer_1))) {
+      @compute @workgroup_size(64) fn item(input: item_2) {
+        let id = input.gid.x;
+        if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
-        randSeed_3(seedBuffer_2[id]);
-        samplesBuffer_1[id] = prng_6();
+        randSeed(seedBuffer[id]);
+        samplesBuffer[id] = prng();
       }"
     `);
   });

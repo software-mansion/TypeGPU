@@ -1,5 +1,4 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { asWgsl } from './utils/parseResolved.ts';
 
 import tgpu from '../src/index.ts';
 
@@ -22,7 +21,7 @@ describe('TgpuBufferUniform', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: uniform });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
 
       fn main() { let y = param; }"
@@ -37,11 +36,11 @@ describe('TgpuBufferUniform', () => {
       const x = uniform.value;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -60,7 +59,7 @@ describe('TgpuBufferUniform', () => {
       const velX = uniform.value.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -69,8 +68,8 @@ describe('TgpuBufferUniform', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -91,7 +90,7 @@ describe('TgpuBufferMutable', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: mutable });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
 
       fn main() { let y = param; }"
@@ -106,11 +105,11 @@ describe('TgpuBufferMutable', () => {
       const x = mutable.value;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -131,7 +130,7 @@ describe('TgpuBufferMutable', () => {
       const velX = mutable.value.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -140,8 +139,8 @@ describe('TgpuBufferMutable', () => {
       @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -181,7 +180,7 @@ describe('TgpuBufferReadonly', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: readonly });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> param: f32;
 
       fn main() { let y = param; }"
@@ -196,11 +195,11 @@ describe('TgpuBufferReadonly', () => {
       const x = paramReadonly.value;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> paramBuffer: f32;
 
       fn func() {
-        var x = paramBuffer;
+        let x = paramBuffer;
       }"
     `);
   });
@@ -220,7 +219,7 @@ describe('TgpuBufferReadonly', () => {
       const velX = boidReadonly.value.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -229,8 +228,8 @@ describe('TgpuBufferReadonly', () => {
       @group(0) @binding(0) var<storage, read> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });

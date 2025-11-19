@@ -43,20 +43,14 @@ describe('tgpu.namespace', () => {
     });
 
     const updateBoid = tgpu.fn([d.ptrFn(Boid)])((boid) => {
-      boid.pos.x += 1;
+      boid.$.pos.x += 1;
     });
 
     const names = tgpu['~unstable'].namespace();
 
-    const code1 = tgpu.resolve({
-      names,
-      externals: { createBoid },
-    });
+    const code1 = tgpu.resolve([createBoid], { names });
 
-    const code2 = tgpu.resolve({
-      names,
-      externals: { updateBoid },
-    });
+    const code2 = tgpu.resolve([updateBoid], { names });
 
     expect(code1).toMatchInlineSnapshot(`
       "struct Boid_1 {
@@ -85,10 +79,7 @@ describe('tgpu.namespace', () => {
     const listener = vi.fn((event) => {});
     names.on('name', listener);
 
-    const code = tgpu.resolve({
-      names,
-      externals: { Boid },
-    });
+    const code = tgpu.resolve([Boid], { names });
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({ name: 'Boid_0', target: Boid });
@@ -99,10 +90,7 @@ describe('tgpu.namespace', () => {
       }"
     `);
 
-    const code2 = tgpu.resolve({
-      names,
-      externals: { Boid },
-    });
+    const code2 = tgpu.resolve([Boid], { names });
 
     // No more events
     expect(listener).toHaveBeenCalledTimes(1);
