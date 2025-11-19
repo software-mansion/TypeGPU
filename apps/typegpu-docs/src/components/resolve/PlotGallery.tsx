@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const plots = [
   'https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration-full.png',
@@ -26,44 +26,57 @@ const chevronUtilityClasses = 'w-4 h-4 sm:w-8 sm:h-8';
 
 export default function PlotGallery() {
   // this is for infinite effect
-  const extendedPlots = [plots[plots.length - 1], ...plots, plots[0]];
+  const extendedPlots = useMemo(
+    () => [plots[plots.length - 1], ...plots, plots[0]],
+    [],
+  );
 
   const [currentIndex, setCurrentIndex] = useState(1);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const currentIndexRef = useRef(currentIndex);
+  const [isTransitioning, setIsTransitioning] = useState(false); // this is necassary for dynamic css
+  const isTransitioningRef = useRef(isTransitioning); // this is necessary for useCallback empty deps
 
-  const nextSlide = () => {
-    if (isTransitioning) return;
+  const nextSlide = useCallback(() => {
+    if (isTransitioningRef.current) return;
     setIsTransitioning(true);
-    setCurrentIndex((prev) => prev + 1);
-  };
+    isTransitioningRef.current = true;
+    setCurrentIndex((prev) => prev + 1); // to avoid deps
+  }, []);
 
-  const prevSlide = () => {
-    if (isTransitioning) return;
+  const prevSlide = useCallback(() => {
+    if (isTransitioningRef.current) return;
     setIsTransitioning(true);
+    isTransitioningRef.current = true;
     setCurrentIndex((prev) => prev - 1);
-  };
+  }, []);
 
-  const handleTransitionEnd = () => {
+  const handleTransitionEnd = useCallback(() => {
     setIsTransitioning(false);
+    isTransitioningRef.current = false;
 
-    if (currentIndex === 0) {
+    if (currentIndexRef.current === 0) {
       setCurrentIndex(plots.length);
-    } else if (currentIndex === extendedPlots.length - 1) {
+    } else if (currentIndexRef.current === extendedPlots.length - 1) {
       setCurrentIndex(1);
     }
-  };
+  }, [extendedPlots]);
 
-  const goToSlide = (index: number) => {
-    if (isTransitioning) return;
+  const goToSlide = useCallback((index: number) => {
+    if (isTransitioningRef.current) return;
     setIsTransitioning(true);
+    isTransitioningRef.current = true;
     setCurrentIndex(index + 1);
-  };
+  }, []);
 
   const getActualIndex = (): number => {
     if (currentIndex === 0) return plots.length - 1;
     if (currentIndex === extendedPlots.length - 1) return 0;
     return currentIndex - 1;
-  };
+  }; // has to use actual state not the ref to not lag behind
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   useEffect(() => {
     // TODO: add touch handling
@@ -73,7 +86,7 @@ export default function PlotGallery() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [prevSlide, nextSlide]);
 
   return (
     <div className='relative flex-grow overflow-hidden'>
@@ -111,7 +124,7 @@ export default function PlotGallery() {
             key={`dot-${index}-${url}`}
             type='button'
             onClick={() => goToSlide(index)}
-            className={`h-4 w-4 rounded-full transition-all duration-300 ease-in-out ${
+            className={`h-4 w-4 rounded-full transition-all duration-200 ease-in-out ${
               index === getActualIndex()
                 ? 'scale-125 bg-gray-500'
                 : 'bg-gray-800 hover:bg-gray-700'
