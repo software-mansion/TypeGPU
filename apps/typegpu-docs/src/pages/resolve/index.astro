@@ -1,31 +1,19 @@
 ---
 import { Image } from "astro:assets";
 import PageLayout from "../../layouts/PageLayout.astro";
+import PlotGallery from "../../components/resolve/PlotGallery.tsx";
 import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
-
-const remotePlot = `https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration.png?t=${Date.now()}`;
-const title = "TypeGPU — resolve complexity";
 ---
 
 <PageLayout title="TypeGPU functions resolve complexity | TypeGPU" theme="dark">
-    <main class="flex flex-col h-screen overflow-hidden">
-        <h1 class="flex items-center justify-center p-1 min-w-2xs">
+    <main class="h-screen flex flex-col">
+        <h1 class="flex items-center justify-center">
             <a href="/TypeGPU">
-                <Image
-                    src={TypeGPULogoDark}
-                    alt="TypeGPU Logo"
-                    class="w-40 relative"
-                />
+                <Image src={TypeGPULogoDark} alt="TypeGPU Logo" class="w-40" />
             </a>
             <p class="text-lg font-sans text-gray-300">— resolve complexity</p>
         </h1>
 
-        <div class="w-[90%] max-w-2xl mx-auto">
-            <img
-                src={remotePlot}
-                alt="Combined Resolve Duration Plot"
-                class="w-full rounded-lg shadow-xl border border-gray-700 object-contain"
-            />
-        </div>
+        <PlotGallery client:only="react" />
     </main>
 </PageLayout>
