@@ -16,7 +16,9 @@ import PageLayout from "../../layouts/PageLayout.astro";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
-  <div class="text-blue-950 dark:text-gray-100 transition-colors duration-300">
+  <div
+    class="flex flex-col text-blue-950 dark:text-gray-100 gap-30 transition-colors duration-300"
+  >
     <main class="transition-colors duration-300">
       <header
         class="flex justify-between items-center self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5 h-24 transition-colors duration-300 shrink-0"
@@ -77,28 +79,25 @@ import PageLayout from "../../layouts/PageLayout.astro";
     <section
       class="flex flex-col items-center mx-auto lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="flex flex-col px-6 lg:px-0">
-        <div
-          class="font-extrabold text-blue-900 dark:text-gray-100 text-3xl lg:py-14 lg:text-7xl"
-        >
-          Type
-          <GradientTitle title="GPU" />
+      <div class="flex flex-col px-6 gap-12 lg:px-0">
+        <div class="font-extrabold text-[#001A72] dark:text-gray-100 text-6xl">
+          Type<GradientTitle title="GPU" />
         </div>
         <div
-          class="text-blue-950 dark:text-gray-200 lg:text-6xl text-pretty text-3xl"
+          class="text-blue-950 dark:text-gray-200 lg:text-3xl text-pretty text-4xl pr-40"
         >
           A modular and open-ended toolkit for WebGPU, with advanced type
           interface and ability to write shaders in TypeScript.
           <!-- <br class="hidden sm:block" /> -->
         </div>
-        <div class="flex sm:flex-row flex-col gap-4 my-20">
-          <GetStartedButton />
+        <div class="flex sm:flex-row flex-col gap-4 my-8">
+          <GetStartedButton class="h-18" />
           <a
             class="bg-position-[100%_100%] bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] p-[1px] w-full sm:w-auto bg-size-[200%_200%] no-underline"
             href="/TypeGPU/examples"
           >
             <span
-              class="box-border flex justify-center items-center bg-white dark:bg-gray-800 shadow px-6 md:px-7 lg:px-8 py-4 md:py-5 lg:py-8 text-black/75 hover:text-black dark:hover:text-white dark:text-gray-100 text-base md:text-xl lg:text-2xl text-center"
+              class="box-border flex justify-center items-center bg-white dark:bg-gray-800 shadow px-6 md:px-7 lg:px-8 py-4 md:py-5 text-black/75 hover:text-black dark:hover:text-white dark:text-gray-100 text-base md:text-xl lg:text-2xl text-center"
             >
               See examples
             </span>
@@ -109,21 +108,21 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
     {/* Code Showcase */}
     <div
-      class="mx-auto my-12 px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
+      class="flex flex-col gap-20 mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="mb-12">
+      <div class="flex flex-col gap-6">
         <h2
-          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+          class="font-medium text-blue-950 dark:text-gray-100 text-3xl center"
         >
           Ways to use TypeGPU
         </h2>
-        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+        <p class="text-blue-900 dark:text-gray-300 text-xl text-pretty">
           TypeGPU is a three-way toolkit that is easy for you to integrate
           granularly and doesn't restrict you in what you can do.
         </p>
       </div>
       <CodeShowcase />
-      <div class="flex md:flex-row flex-col md:justify-between mb-12 md:my-20">
+      <div class="flex md:flex-row flex-col md:justify-between">
         <h3
           class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
         >
@@ -143,10 +142,8 @@ import PageLayout from "../../layouts/PageLayout.astro";
     </div>
 
     {/* TypeGPU examples */}
-    <div
-      class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] md:py-6 transition-colors duration-300"
-    >
-      <div class="my-12">
+    <div class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]">
+      <div class="flex flex-col gap-6 pb-14">
         <h2
           class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
         >
