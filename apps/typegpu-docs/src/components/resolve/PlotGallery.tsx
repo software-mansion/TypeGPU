@@ -53,6 +53,18 @@ export default function PlotGallery() {
     }
   };
 
+  const goToSlide = (index: number) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentIndex(index + 1);
+  };
+
+  const getActualIndex = (): number => {
+    if (currentIndex === 0) return plots.length - 1;
+    if (currentIndex === extendedPlots.length - 1) return 0;
+    return currentIndex - 1;
+  };
+
   useEffect(() => {
     // TODO: add touch handling
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -89,7 +101,22 @@ export default function PlotGallery() {
         onTransitionEnd={handleTransitionEnd}
       >
         {extendedPlots.map((url, index) => (
-          <PlotSlide key={`${index}-${url}`} url={url} />
+          <PlotSlide key={`slide-${index}-${url}`} url={url} />
+        ))}
+      </div>
+
+      <div className='-translate-x-1/2 absolute bottom-17 left-1/2 flex space-x-3'>
+        {plots.map((url, index) => (
+          <button
+            key={`dot-${index}-${url}`}
+            type='button'
+            onClick={() => goToSlide(index)}
+            className={`h-4 w-4 rounded-full transition-all duration-300 ease-in-out ${
+              index === getActualIndex()
+                ? 'scale-125 bg-gray-500'
+                : 'bg-gray-800 hover:bg-gray-700'
+            }`}
+          />
         ))}
       </div>
     </div>
