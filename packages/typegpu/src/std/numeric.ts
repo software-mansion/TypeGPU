@@ -14,7 +14,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { snip } from '../data/snippet.ts';
+import { snip, Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -56,6 +56,31 @@ import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
+const unaryIdentitySignature = (arg: AnyData) => {
+  return {
+    argTypes: [arg],
+    returnType: arg,
+  };
+};
+
+function generalizeForVarArgs<T>(fn: (a: T, b: T) => T) {
+  return (fst: T, ...rest: T[]): T => {
+    let acc = fst;
+    for (const r of rest) {
+      acc = fn(acc, r);
+    }
+    return acc;
+  };
+}
+
+function varArgsWrapStitch(wrapper: string, fst: Snippet, ...rest: Snippet[]) {
+  let acc = stitch`${fst}`;
+  for (const r of rest) {
+    acc = stitch`${wrapper}(${acc}, ${r})`;
+  }
+  return acc;
+}
+
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
@@ -64,13 +89,6 @@ function cpuAbs<T extends NumVec | number>(value: T): T {
   }
   return VectorOps.abs[value.kind](value) as T;
 }
-
-const unaryIdentitySignature = (arg: AnyData) => {
-  return {
-    argTypes: [arg],
-    returnType: arg,
-  };
-};
 
 export const abs = dualImpl({
   name: 'abs',
@@ -789,6 +807,12 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   return VectorOps.min[a.kind](a, b as NumVec) as T;
 }
 
+type VarArgsOverload = {
+  (fst: number, ...rest: number[]): number;
+  <T extends NumVec>(fst: T, ...rest: T[]): T;
+};
+const cpuMinVarArgs = generalizeForVarArgs(cpuMin) as VarArgsOverload;
+
 export const min = dualImpl({
   name: 'min',
   signature: (...args) => {
@@ -798,8 +822,9 @@ export const min = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: cpuMin,
-  codegenImpl: (a, b) => stitch`min(${a}, ${b})`,
+  normalImpl: cpuMinVarArgs,
+  codegenImpl: (...args): string =>
+    varArgsWrapStitch('min', args[0], ...args.slice(1)),
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
