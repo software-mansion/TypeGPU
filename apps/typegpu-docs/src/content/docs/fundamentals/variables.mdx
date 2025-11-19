@@ -30,7 +30,7 @@ const increment = tgpu['~unstable'].computeFn({
 
 const pipeline = root['~unstable'].withCompute(increment).createPipeline();
 
-console.log(tgpu.resolve({ externals: { pipeline } }));
+console.log(tgpu.resolve([pipeline]));
 ```
 
 ```wgsl

@@ -2,7 +2,6 @@ import { beforeEach, expect, type MockInstance, vi } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 import tgpu from '../../src/index.ts';
 import * as d from '../../src/data/index.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 let warnSpy: MockInstance<typeof console.warn>;
 
@@ -17,7 +16,7 @@ it('implicitly casts right-hand side, with a warning', () => {
     return a;
   });
 
-  expect(asWgsl(foo)).toMatchInlineSnapshot(`
+  expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
     "fn foo(arg: f32) -> i32 {
       var a = 12;
       a = i32(arg);
