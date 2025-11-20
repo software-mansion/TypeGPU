@@ -1,5 +1,6 @@
 {
   "title": "Cubemap Reflection",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization", "compute"]
+  "tags": ["experimental", "3d", "rasterization", "compute"],
+  "expectedCalls": 3
 }

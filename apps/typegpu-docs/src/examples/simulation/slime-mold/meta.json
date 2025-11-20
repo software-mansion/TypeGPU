@@ -1,5 +1,6 @@
 {
   "title": "Slime Mold",
   "category": "simulation",
-  "tags": ["experimental", "compute", "double buffering"]
+  "tags": ["experimental", "compute", "double buffering"],
+  "expectedCalls": 4
 }

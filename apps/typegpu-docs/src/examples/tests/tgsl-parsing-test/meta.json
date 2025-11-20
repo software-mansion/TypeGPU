@@ -2,5 +2,7 @@
   "title": "TGSL Parsing Tests",
   "category": "tests",
   "tags": ["experimental"],
-  "dev": true
+  "dev": true,
+  "expectedCalls": 1,
+  "controlTriggers": ["Run tests"]
 }

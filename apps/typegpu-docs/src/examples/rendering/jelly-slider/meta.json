@@ -1,5 +1,6 @@
 {
   "title": "Jelly slider",
   "category": "rendering",
-  "tags": ["experimental"]
+  "tags": ["experimental"],
+  "expectedCalls": 6
 }

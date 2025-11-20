@@ -2,5 +2,22 @@
   "title": "Console Log Test",
   "category": "tests",
   "tags": ["experimental"],
-  "dev": true
+  "dev": true,
+  "expectedCalls": 14,
+  "controlTriggers": [
+    "One argument",
+    "Multiple arguments",
+    "String literals",
+    "Different types",
+    "Compound types",
+    "Two logs",
+    "Two threads",
+    "100 dispatches",
+    "Varying size logs",
+    "String interpolation",
+    "Different log functionalities",
+    "Render pipeline",
+    "Draw indexed",
+    "Too many logs"
+  ]
 }

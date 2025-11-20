@@ -1,5 +1,6 @@
 {
   "title": "Liquid Glass",
   "category": "simple",
-  "tags": ["rendering", "experimental"]
+  "tags": ["rendering", "experimental"],
+  "expectedCalls": 3
 }
