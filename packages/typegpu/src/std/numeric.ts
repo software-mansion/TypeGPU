@@ -73,8 +73,6 @@ const variadicUnifySignature = (...args: AnyData[]) => {
   });
 };
 
-// AAA use this min in examples
-
 function variadicReduce<T>(fn: (a: T, b: T) => T) {
   return (fst: T, ...rest: T[]): T => {
     let acc = fst;
