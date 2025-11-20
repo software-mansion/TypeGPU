@@ -1,5 +1,6 @@
 {
   "title": "Confetti",
   "category": "simulation",
-  "tags": ["experimental", "compute", "instancing"]
+  "tags": ["experimental", "compute", "instancing"],
+  "expectedCalls": 2
 }

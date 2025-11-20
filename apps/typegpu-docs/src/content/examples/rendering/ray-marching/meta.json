@@ -8,5 +8,6 @@
     "sdf",
     "ray marching",
     "sphere tracing"
-  ]
+  ],
+  "expectedCalls": 1
 }

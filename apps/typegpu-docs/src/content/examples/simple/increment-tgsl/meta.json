@@ -1,5 +1,6 @@
 {
   "title": "Increment (TGSL)",
   "category": "simple",
-  "tags": ["experimental", "compute"]
+  "tags": ["experimental", "compute"],
+  "expectedCalls": 1
 }

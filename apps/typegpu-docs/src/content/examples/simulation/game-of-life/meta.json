@@ -1,5 +1,6 @@
 {
   "title": "Game of Life",
   "category": "simulation",
-  "tags": ["cellular automata", "compute", "double buffering"]
+  "tags": ["cellular automata", "compute", "double buffering"],
+  "expectedCalls": 2
 }
