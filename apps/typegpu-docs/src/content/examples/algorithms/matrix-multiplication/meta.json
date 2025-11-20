@@ -1,5 +1,6 @@
 {
   "title": "Matrix Multiplication",
   "category": "algorithms",
-  "tags": ["compute"]
+  "tags": ["compute"],
+  "expectedCalls": 1
 }

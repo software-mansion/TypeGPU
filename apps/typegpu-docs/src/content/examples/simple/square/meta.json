@@ -1,5 +1,6 @@
 {
   "title": "Square",
   "category": "simple",
-  "tags": ["experimental", "index buffer"]
+  "tags": ["experimental", "index buffer"],
+  "expectedCalls": 1
 }

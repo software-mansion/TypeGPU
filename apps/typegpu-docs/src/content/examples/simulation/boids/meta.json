@@ -1,5 +1,6 @@
 {
   "title": "Boids",
   "category": "simulation",
-  "tags": ["compute", "instancing", "double buffering"]
+  "tags": ["compute", "instancing", "double buffering"],
+  "expectedCalls": 2
 }
