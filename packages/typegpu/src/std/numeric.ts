@@ -796,6 +796,11 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   return VectorOps.max[a.kind](a, b as NumVec) as T;
 }
 
+type VariadicOverload = {
+  (fst: number, ...rest: number[]): number;
+  <T extends NumVec>(fst: T, ...rest: T[]): T;
+};
+
 export const max = dualImpl({
   name: 'max',
   signature: variadicUnifySignature,
@@ -811,11 +816,6 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   }
   return VectorOps.min[a.kind](a, b as NumVec) as T;
 }
-
-type VariadicOverload = {
-  (fst: number, ...rest: number[]): number;
-  <T extends NumVec>(fst: T, ...rest: T[]): T;
-};
 
 export const min = dualImpl({
   name: 'min',
