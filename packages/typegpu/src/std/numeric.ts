@@ -66,6 +66,7 @@ const unaryIdentitySignature = (arg: AnyData) => {
 };
 
 // AAA signature for unify all
+// AAA use this min in examples
 
 function variadicReduce<T>(fn: (a: T, b: T) => T) {
   return (fst: T, ...rest: T[]): T => {
@@ -77,12 +78,14 @@ function variadicReduce<T>(fn: (a: T, b: T) => T) {
   };
 }
 
-function variadicStitch(wrapper: string, ...rest: Snippet[]) {
-  let acc = '';
-  for (const r of rest) {
-    acc = stitch`${wrapper}(${acc}, ${r})`;
-  }
-  return acc;
+function variadicStitch(wrapper: string) {
+  return (fst: Snippet, ...rest: Snippet[]): string => {
+    let acc = stitch`${fst}`;
+    for (const r of rest) {
+      acc = stitch`${wrapper}(${acc}, ${r})`;
+    }
+    return acc;
+  };
 }
 
 // std
@@ -800,8 +803,8 @@ export const max = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: cpuMax,
-  codegenImpl: (a, b) => stitch`max(${a}, ${b})`,
+  normalImpl: variadicReduce(cpuMax) as VariadicOverload,
+  codegenImpl: variadicStitch('max'),
 });
 
 function cpuMin(a: number, b: number): number;
@@ -828,7 +831,7 @@ export const min = dualImpl({
     });
   },
   normalImpl: variadicReduce(cpuMin) as VariadicOverload,
-  codegenImpl: (...args): string => variadicStitch('min', ...args),
+  codegenImpl: variadicStitch('min'),
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
