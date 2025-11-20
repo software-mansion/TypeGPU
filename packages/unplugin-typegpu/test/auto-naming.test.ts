@@ -11,6 +11,7 @@ describe('[BABEL] auto naming', () => {
       const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
       var fn = tgpu.fn([])(() => {});
       let shell = tgpu.fn([]);
+      const cst = tgpu.const(d.u32, 1);
 
       console.log(bindGroupLayout, vertexLayout);
     `;
@@ -30,6 +31,7 @@ describe('[BABEL] auto naming', () => {
           }
         }) && $.f)({})), "fn");
         let shell = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell");
+        const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst");
         console.log(bindGroupLayout, vertexLayout);"
       `);
   });
@@ -40,7 +42,7 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const cst = tgpu.const(d.u32, 1);
+      const hello = tgpu['~unstable'].comptime(() => 1 + 2);
 
       console.log(accessor, shell, fn, cst);
     `;
@@ -51,7 +53,7 @@ describe('[BABEL] auto naming', () => {
         import * as d from 'typegpu/data';
         let nothing,
           accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor");
-        const cst = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst");
+        const hello = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].comptime(() => 1 + 2), "hello");
         console.log(accessor, shell, fn, cst);"
       `);
   });

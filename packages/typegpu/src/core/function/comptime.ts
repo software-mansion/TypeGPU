@@ -2,9 +2,15 @@ import type { DualFn } from '../../data/dualFn.ts';
 import type { MapValueToSnippet } from '../../data/snippet.ts';
 import { WgslTypeError } from '../../errors.ts';
 import { inCodegenMode } from '../../execMode.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { setName, type TgpuNamable } from '../../shared/meta.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import { isKnownAtComptime } from '../../types.ts';
+
+type TgpuComptime<T extends (...args: never[]) => unknown> =
+  & DualFn<T>
+  & TgpuNamable
+  & { [$getNameForward]: unknown };
 
 /**
  * Creates a version of `func` that can called safely in a TypeGPU function to
@@ -28,7 +34,7 @@ import { isKnownAtComptime } from '../../types.ts';
  */
 export function comptime<T extends (...args: never[]) => unknown>(
   func: T,
-): T {
+): TgpuComptime<T> {
   const gpuImpl = (...args: MapValueToSnippet<Parameters<T>>) => {
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
 
@@ -50,9 +56,14 @@ export function comptime<T extends (...args: never[]) => unknown>(
       return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
     }
     return func(...args);
-  }) as T;
+  }) as TgpuComptime<T>;
 
   impl.toString = () => 'comptime';
+  impl[$getNameForward] = func;
+  impl.$name = (label: string) => {
+    setName(func, label);
+    return impl;
+  };
   Object.defineProperty(impl, $internal, {
     value: {
       jsImpl: func,
@@ -61,5 +72,5 @@ export function comptime<T extends (...args: never[]) => unknown>(
     },
   });
 
-  return impl as DualFn<T>;
+  return impl as TgpuComptime<T>;
 }
