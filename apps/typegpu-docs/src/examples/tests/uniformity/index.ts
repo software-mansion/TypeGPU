@@ -25,8 +25,8 @@ const pipelineCache = new Map<PRNG, TgpuRenderPipeline>();
 let prng: PRNG = c.initialPRNG;
 
 const redraw = (value: PRNG) => {
-  let pipeline: TgpuRenderPipeline;
-  if (!pipelineCache.has(value)) {
+  let pipeline = pipelineCache.get(value);
+  if (!pipeline) {
     pipeline = preparePipeline(
       root,
       presentationFormat,
@@ -35,9 +35,8 @@ const redraw = (value: PRNG) => {
       canvasRatioUniform,
     );
     pipelineCache.set(value, pipeline);
-  } else {
-    pipeline = pipelineCache.get(value);
   }
+
   executePipeline(pipeline as TgpuRenderPipeline, context);
 };
 
@@ -63,17 +62,17 @@ export const controls = {
     onButtonClick: () => {
       c.prngs
         .map((prng) =>
-          tgpu.resolve({
-            externals: {
-              f: preparePipeline(
+          tgpu.resolve(
+            [
+              preparePipeline(
                 root,
                 presentationFormat,
                 prng,
                 gridSizeUniform,
                 canvasRatioUniform,
               ),
-            },
-          })
+            ],
+          )
         )
         .map((r) => root.device.createShaderModule({ code: r }));
     },

@@ -1,7 +1,7 @@
+import type { StatefulGenerator } from '@typegpu/noise';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import type { StatefulGenerator } from '@typegpu/noise';
 
 export const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
