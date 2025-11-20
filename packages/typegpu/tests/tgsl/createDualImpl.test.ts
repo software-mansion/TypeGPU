@@ -7,7 +7,6 @@ import {
 import { getName } from '../../src/shared/meta.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('createDualImpl', () => {
   it('names functions created by createDualImpl', () => {
@@ -39,9 +38,9 @@ describe('dualImpl', () => {
       const a = dual(2);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
-        var a = 5;
+        const a = 5;
       }"
     `);
   });
@@ -75,9 +74,9 @@ describe('dualImpl', () => {
       const a = dual(2);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
-        var a = fallback(2);
+        let a = fallback(2);
       }"
     `);
   });
@@ -96,9 +95,9 @@ describe('dualImpl', () => {
       const a = dual(2);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
-        var a = fallback(2);
+        let a = fallback(2);
       }"
     `);
   });
@@ -118,11 +117,11 @@ describe('dualImpl', () => {
       const a = dual(0);
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn
-      - myDualImpl: Division by zero]
+      - fn:myDualImpl: Division by zero]
     `);
   });
 });

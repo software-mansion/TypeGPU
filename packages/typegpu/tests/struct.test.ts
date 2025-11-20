@@ -20,7 +20,6 @@ import {
 } from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { frexp } from '../src/std/numeric.ts';
 
 describe('struct', () => {
@@ -309,7 +308,7 @@ describe('struct', () => {
       const defaultValue = Outer();
     });
 
-    expect(asWgsl(testFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFunction])).toMatchInlineSnapshot(`
       "struct Nested {
         prop1: vec2f,
         prop2: u32,
@@ -337,14 +336,14 @@ describe('struct', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct TestStruct {
         x: u32,
         y: f32,
       }
 
       fn testFn() {
-        var myStruct = TestStruct(1, 2);
+        var myStruct = TestStruct(1u, 2f);
         var myClone = myStruct;
         return;
       }"
@@ -363,15 +362,15 @@ describe('struct', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct TestStruct {
         x: u32,
         y: f32,
       }
 
       fn testFn() {
-        var myStructs = array<TestStruct, 1>(TestStruct(1, 2));
-        var myClone = myStructs[0];
+        var myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
+        var myClone = myStructs[0i];
         return;
       }"
     `);
@@ -386,7 +385,7 @@ describe('abstruct', () => {
       return result.exp;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(x: f32) -> f32 {
         var result = frexp(x);
         return f32(result.exp);

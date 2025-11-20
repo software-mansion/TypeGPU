@@ -1,0 +1,205 @@
+---
+title: Shader Generation
+draft: true
+---
+
+TypeGPU houses a very powerful shader generator, capable of generating efficient WGSL code that closely matches the input
+JavaScript code.
+
+## The phases of code generation
+
+The whole end-to-end process of turning JS into WGSL can be split into two phases:
+- Parse the JS code into an AST.
+- Collapse each AST node into a [snippet](#snippets) depth first, gradually building up the final WGSL code.
+
+We found that we don't always have enough information to do both phases as a build step (before the code reaches the browser).
+For example, the type of a struct could only be known at runtime, or could be imported from another file, which complicates static analysis:
+
+```ts twoslash
+import * as d from 'typegpu/data';
+
+declare const getUserSettings: () => Promise<{ halfPrecision: boolean }>;
+// ---cut---
+const half = (await getUserSettings()).halfPrecision;
+
+// Determining the precision based on a runtime parameter
+const vec3 = half ? d.vec3h : d.vec3f;
+
+const Boid = d.struct({
+  pos: vec3,
+  vel: vec3,
+});
+
+const createBoid = () => {
+  'use gpu';
+  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
+};
+
+const boid = createBoid();
+//    ^?
+```
+
+:::caution
+We could do everything at runtime, transforming the code a bit so that the TypeGPU shader generator can have access to
+a function's JS source code, along with references to values referenced from the outer scope.
+
+The code shipped to the browser could look like so:
+```js
+const createBoid = () => {
+  'use gpu';
+  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
+};
+
+// Associate metadata with the function, which the TypeGPU generator can later use
+(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
+  v: 1,
+  name: 'createBoid',
+  code: `() => {
+    'use gpu';
+    return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
+  }`,
+  get externals() { return { Boid, vec3 }; },
+});
+```
+
+However, parsing code at runtime requires both shipping the parser to the end user, and having to spend time parsing the code,
+sacrificing load times and performance.
+:::
+
+In order to avoid parsing at runtime while keeping the desired flexibility, we parse the AST at build time and compress it into
+our custom format called [tinyest](https://npmjs.com/package/tinyest). It retains only information required for WGSL code
+generation.
+
+The code shipped to the browser looks more like this:
+```js
+const createBoid = () => {
+  'use gpu';
+  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
+};
+
+(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
+  v: 1,
+  name: 'createBoid',
+  // NOTE: Not meant to be read by humans
+  ast: {params:[],body:[0,[[10,[6,"Boid",[[104,{pos:[6,"vec3",[]],vel:[6,"vec3",[[5,"0"],[5,"1"],[5,"0"]]]}]]]]]],externalNames:["Boid","vec3"]},
+  get externals() { return { Boid, vec3 }; },
+});
+```
+
+## Snippets
+
+Snippets are the basis for TypeGPU shader code generation. They are immutable objects that hold three values:
+- *value*: A piece of WGSL code, or something "resolvable" to a piece of WGSL code
+- *dataType*: The inferred WGSL type of `value` [(more here)](#data-types)
+- *origin*: An enumerable of where `value` came from (if it's a reference to an existing value, or ephemeral)
+[(more here)](#origins)
+
+```ts
+// A simple snippet of a piece of WGSL code
+const foo = snip(
+  /* value */ 'vec3f(1, 2, 3)',
+  /* dataType */ d.vec3f,
+  /* origin */ 'constant'
+); // => Snippet
+
+// A simple snippet of something resolvable to a piece of WGSL code
+const bar = snip(
+  /* value */ d.vec3f(1, 2, 3),
+  /* dataType */ d.vec3f,
+  /* origin */ 'constant'
+); // => Snippet
+```
+
+If a snippet contains a value that isn't yet resolved WGSL, we defer that resolution as late as possible, so that we can
+perform optimizations as we generate. For example, if we're evaluating the given expression `3 * 4`, we first interpret
+both operands as snippets `snip(3, abstractInt, 'constant')` and `snip(4, abstractInt, 'constant')` respectively.
+Since both are not yet resolved (or in other words, known at compile time), we can perform the multiplication at compile time,
+resulting in a new snippet `snip(12, abstractInt, 'constant')`.
+
+:::note
+If we were instead resolving eagerly, the resulting snippet would be `snip('3 * 4', abstractInt, 'constant')`.
+:::
+
+### Data Types
+
+The data types that accompany snippets are just [TypeGPU Data Schemas](/TypeGPU/fundamentals/data-schemas). This information
+can be used by parent expressions to generate different code.
+
+:::note
+Data type inference is the basis for generating signatures for functions just from the arguments passed to them.
+:::
+
+### Origins
+
+Origins are enumerable values that describe where a value came from (or didn't come from). Used mainly for:
+- Determining if we're using a value that refers to something else (to create an implicit pointer). This mimics the behavior we
+  expect in JS, and doesn't perform unwanted copies on data. Example:
+  ```ts
+  const foo = () => {
+    'use gpu';
+    // The type of both expressions is `Boid`, yet one is a
+    // reference to an existing value, and the other is a
+    // value-type (ephemeral) and would disappear if we didn't
+    // assign it to a variable or use it.
+    const firstBoid = layout.$.boids[0];
+    const newBoid = Boid();
+    const copiedBoid = Boid(firstBoid);
+
+    const boidPos = newBoid.pos;
+  };
+  ```
+  Generates:
+  ```wgsl
+  fn foo() {
+    let firstBoid = (&boids[0]); // typed as ptr<storage, Boid, read_write>
+    var newBoid = Boid(); // typed as Boid
+    var copiedBoid = firstBoid; // typed as Boid
+
+    let boidPos = (&newBoid.pos); // typed as ptr<function, vec3f>
+  }
+  ```
+- Detecting illegal uses of our APIs. One example is mutating a value that was passed in as an argument. Since we want the developer to have control over
+  passing something as value or as reference (pointer), we have to limit the dev's ability to mutate values that were passed in as arguments if they didn't
+  use refs (pointer instances). Otherwise, the generated WGSL won't act as we expect.
+  ```ts
+  const advance = (pos: d.v3f) => {
+    'use gpu';
+    // `pos` has the origin 'argument'. Property accesses on arguments
+    // return snippets that also have the origin 'argument'.
+    //
+    // If we try to mutate a snippet that has the origin 'argument',
+    // we'll get a resolution error.
+    pos.x += 1;
+  };
+
+  const main = () => {
+    'use gpu';
+    const pos = d.vec3f(0, 0, 0);
+    advance(pos);
+    // pos.x === 1 in JS
+  };
+  ```
+  Would generate:
+  ```wgsl
+  fn advance(pos: vec3f) {
+    pos.x += 1;
+  }
+
+  fn main() {
+    let pos = vec3f(0, 0, 0);
+    advance(pos);
+    // pos.x === 0 in WGSL
+  }
+  ```
+
+There are essentially three types of origins:
+- **Ephemeral Origins**: These origins represent values that are created or derived from other values. They are typically used for creating new instances or
+  performing operations that produce new values. Examples include creating a new `Boid` instance or calculating a new position based on an existing one. These
+  include `'runtime'` and `'constant'`.
+- **Referential Origins**: These origins represent references to existing values. They are typically used for accessing or modifying existing data. Examples
+  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'`, `'constant-ref'` and `'this-function'`.
+    - `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` all reflect address spaces that values can belong to, and
+      we use them to determine what kind of pointer type they are.
+    - `'constant-ref'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
+    - `'this-function'` lets us track whether values originates from the function we're currently generating, or the function that called us.
+- **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.

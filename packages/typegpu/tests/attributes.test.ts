@@ -11,10 +11,7 @@ describe('attributes', () => {
         c: d.u32,
       });
 
-    expect(tgpu.resolve({
-      externals: { s1 },
-      names: 'strict',
-    })).toContain('@size(8) @align(16) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@size(8) @align(16) b: u32,');
 
     expectTypeOf(s1).toEqualTypeOf<
       d.WgslStruct<{

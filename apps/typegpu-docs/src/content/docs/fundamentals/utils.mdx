@@ -118,6 +118,16 @@ The default workgroup sizes are:
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
 
+:::tip
+`TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
+Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pipeline directly.
+
+```ts
+const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
+tgpu.resolve([innerPipeline]);
+```
+:::
+
 ## *console.log*
 
 Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!

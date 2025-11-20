@@ -2,6 +2,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
+import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
@@ -50,9 +51,12 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly defaultValue:
     | TgpuFn<() => T>
     | TgpuBufferUsage<T>
+    | TgpuBufferShorthand<T>
     | Infer<T>
     | undefined;
-  readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
+  readonly slot: TgpuSlot<
+    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
+  >;
 
   readonly [$gpuValueOf]: InferGPU<T>;
   readonly value: InferGPU<T>;

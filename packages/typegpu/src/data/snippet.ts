@@ -3,6 +3,48 @@ import type { AnyData, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { isNumericSchema } from './wgslTypes.ts';
 
+export type Origin =
+  | 'uniform'
+  | 'readonly' // equivalent to ptr<storage, ..., read>
+  | 'mutable' // equivalent to ptr<storage, ..., read-write>
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'this-function'
+  | 'handle'
+  // is an argument (or part of an argument) given to the
+  // function we're resolving. This includes primitives, to
+  // catch cases where we update an argument's primitive member
+  // prop, e.g.: `vec.x += 1;`
+  | 'argument'
+  // not a ref to anything, known at runtime
+  | 'runtime'
+  // not a ref to anything, known at pipeline creation time
+  // (not to be confused with 'comptime')
+  // note that this doesn't automatically mean the value can be stored in a `const`
+  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in JS shaders)
+  | 'constant'
+  | 'constant-ref';
+
+export function isEphemeralOrigin(space: Origin) {
+  return space === 'runtime' || space === 'constant' || space === 'argument';
+}
+
+export function isEphemeralSnippet(snippet: Snippet) {
+  return isEphemeralOrigin(snippet.origin);
+}
+
+export const originToPtrParams = {
+  uniform: { space: 'uniform', access: 'read' },
+  readonly: { space: 'storage', access: 'read' },
+  mutable: { space: 'storage', access: 'read-write' },
+  workgroup: { space: 'workgroup', access: 'read-write' },
+  private: { space: 'private', access: 'read-write' },
+  function: { space: 'function', access: 'read-write' },
+  'this-function': { space: 'function', access: 'read-write' },
+} as const;
+export type OriginToPtrParams = typeof originToPtrParams;
+
 export interface Snippet {
   readonly value: unknown;
   /**
@@ -10,6 +52,7 @@ export interface Snippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData | UnknownData;
+  readonly origin: Origin;
 }
 
 export interface ResolvedSnippet {
@@ -19,6 +62,7 @@ export interface ResolvedSnippet {
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
   readonly dataType: AnyData;
+  readonly origin: Origin;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
@@ -27,6 +71,7 @@ class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
     readonly dataType: AnyData | UnknownData,
+    readonly origin: Origin,
   ) {}
 }
 
@@ -38,11 +83,20 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(value: string, dataType: AnyData): ResolvedSnippet;
-export function snip(value: unknown, dataType: AnyData | UnknownData): Snippet;
+export function snip(
+  value: string,
+  dataType: AnyData,
+  origin: Origin,
+): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: AnyData | UnknownData,
+  origin: Origin,
+): Snippet;
+export function snip(
+  value: unknown,
+  dataType: AnyData | UnknownData,
+  origin: Origin,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -53,5 +107,6 @@ export function snip(
     value,
     // We don't care about attributes in snippet land, so we discard that information.
     undecorate(dataType as AnyData),
+    origin,
   );
 }

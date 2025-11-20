@@ -65,6 +65,7 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
@@ -149,6 +150,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
+    functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     returnType: AnyData | undefined,
@@ -156,6 +158,7 @@ class ItemStateStackImpl implements ItemStateStack {
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
       type: 'functionScope',
+      functionType,
       args,
       argAliases,
       returnType,
@@ -386,6 +389,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.pre;
   }
 
+  get topFunctionScope() {
+    return this._itemStateStack.topFunctionScope;
+  }
+
   get topFunctionReturnType() {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
@@ -448,6 +455,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     options: FnToWgslOptions,
   ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
     const scope = this._itemStateStack.pushFunctionScope(
+      options.functionType,
       options.args,
       options.argAliases,
       options.returnType,
@@ -653,7 +661,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       let result: ResolvedSnippet;
       if (isData(item)) {
-        result = snip(resolveData(this, item), Void);
+        // Ref is arbitrary, as we're resolving a schema
+        result = snip(resolveData(this, item), Void, /* origin */ 'runtime');
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
@@ -702,7 +711,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   resolve(
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
-    exact = false,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
@@ -719,7 +727,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isProviding(item)) {
       return this.withSlots(
         item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema, exact),
+        () => this.resolve(item[$providing].inner, schema),
       );
     }
 
@@ -732,6 +740,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           return snip(
             `${[...this._declarations].join('\n\n')}${result.value}`,
             Void,
+            /* origin */ 'runtime', // arbitrary
           );
         } finally {
           this.popMode('codegen');
@@ -743,53 +752,46 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      const reinterpretedType = exact
-        ? schema
-        : numericLiteralToSnippet(item).dataType;
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
-      invariant(
-        reinterpretedType,
-        'Schema has to be defined for resolving numbers',
-      );
       invariant(
         realSchema.type !== 'unknown',
         'Schema has to be known for resolving numbers',
       );
 
-      if (reinterpretedType.type === 'abstractInt') {
-        return snip(`${item}`, realSchema);
+      if (realSchema.type === 'abstractInt') {
+        return snip(`${item}`, realSchema, /* origin */ 'constant');
       }
-      if (reinterpretedType.type === 'u32') {
-        return snip(`${item}u`, realSchema);
+      if (realSchema.type === 'u32') {
+        return snip(`${item}u`, realSchema, /* origin */ 'constant');
       }
-      if (reinterpretedType.type === 'i32') {
-        return snip(`${item}i`, realSchema);
+      if (realSchema.type === 'i32') {
+        return snip(`${item}i`, realSchema, /* origin */ 'constant');
       }
 
       const exp = item.toExponential();
       const decimal =
-        reinterpretedType.type === 'abstractFloat' && Number.isInteger(item)
+        realSchema.type === 'abstractFloat' && Number.isInteger(item)
           ? `${item}.`
           : `${item}`;
 
       // Just picking the shorter one
       const base = exp.length < decimal.length ? exp : decimal;
-      if (reinterpretedType.type === 'f32') {
-        return snip(`${base}f`, realSchema);
+      if (realSchema.type === 'f32') {
+        return snip(`${base}f`, realSchema, /* origin */ 'constant');
       }
-      if (reinterpretedType.type === 'f16') {
-        return snip(`${base}h`, realSchema);
+      if (realSchema.type === 'f16') {
+        return snip(`${base}h`, realSchema, /* origin */ 'constant');
       }
-      return snip(base, realSchema);
+      return snip(base, realSchema, /* origin */ 'constant');
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool);
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
     }
 
     if (typeof item === 'string') {
       // Already resolved
-      return snip(item, Void);
+      return snip(item, Void, /* origin */ 'runtime');
     }
 
     if (schema && isWgslArray(schema)) {
@@ -808,9 +810,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const elementTypeString = this.resolve(schema.elementType);
       return snip(
         stitch`array<${elementTypeString}, ${schema.elementCount}>(${
-          item.map((element) => snip(element, schema.elementType as AnyData))
+          item.map((element) =>
+            snip(
+              element,
+              schema.elementType as AnyData,
+              /* origin */ 'runtime',
+            )
+          )
         })`,
         schema,
+        /* origin */ 'runtime',
       );
     }
 
@@ -818,6 +827,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return snip(
         stitch`array(${item.map((element) => this.resolve(element))})`,
         UnknownData,
+        /* origin */ 'runtime',
       ) as ResolvedSnippet;
     }
 
@@ -825,10 +835,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return snip(
         stitch`${this.resolve(schema)}(${
           Object.entries(schema.propTypes).map(([key, propType]) =>
-            snip((item as Infer<typeof schema>)[key], propType as AnyData)
+            snip(
+              (item as Infer<typeof schema>)[key],
+              propType as AnyData,
+              /* origin */ 'runtime',
+            )
           )
         })`,
         schema,
+        /* origin */ 'runtime', // a new struct, not referenced from anywhere
       );
     }
 

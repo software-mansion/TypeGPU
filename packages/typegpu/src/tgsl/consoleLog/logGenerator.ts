@@ -36,16 +36,18 @@ const defaultOptions: Required<LogGeneratorOptions> = {
   messagePrefix: ' GPU ',
 };
 
-const fallbackSnippet = snip('/* console.log() */', Void);
+const fallbackSnippet = snip(
+  '/* console.log() */',
+  Void,
+  /* origin */ 'runtime',
+);
 
 export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
     return undefined;
   }
   generateLog(): Snippet {
-    console.warn(
-      "'console.log' is currently only supported in compute pipelines.",
-    );
+    console.warn("'console.log' is only supported when resolving pipelines.");
     return fallbackSnippet;
   }
 }
@@ -114,7 +116,11 @@ export class LogGeneratorImpl implements LogGenerator {
 
     this.#logIdToMeta.set(id, { op: op as SupportedLogOps, argTypes });
 
-    return snip(stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`, Void);
+    return snip(
+      stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`,
+      Void,
+      /* origin */ 'runtime',
+    );
   }
 
   get logResources(): LogResources | undefined {
