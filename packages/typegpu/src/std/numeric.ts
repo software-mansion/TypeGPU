@@ -65,7 +65,14 @@ const unaryIdentitySignature = (arg: AnyData) => {
   };
 };
 
-// AAA signature for unify all
+const variadicUnifySignature = (...args: AnyData[]) => {
+  const uargs = unify(args) ?? args;
+  return ({
+    argTypes: uargs,
+    returnType: uargs[0] as AnyData,
+  });
+};
+
 // AAA use this min in examples
 
 function variadicReduce<T>(fn: (a: T, b: T) => T) {
@@ -258,10 +265,7 @@ function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
 
 export const clamp = dualImpl({
   name: 'clamp',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return { argTypes: uargs, returnType: uargs[0] };
-  },
+  signature: variadicUnifySignature,
   normalImpl: cpuClamp,
   codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
 });
@@ -796,13 +800,7 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
 
 export const max = dualImpl({
   name: 'max',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
+  signature: variadicUnifySignature,
   normalImpl: variadicReduce(cpuMax) as VariadicOverload,
   codegenImpl: variadicStitch('max'),
 });
@@ -823,13 +821,7 @@ type VariadicOverload = {
 
 export const min = dualImpl({
   name: 'min',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
+  signature: variadicUnifySignature,
   normalImpl: variadicReduce(cpuMin) as VariadicOverload,
   codegenImpl: variadicStitch('min'),
 });
@@ -860,13 +852,7 @@ function cpuMix<T extends AnyFloatVecInstance | number>(
 
 export const mix = dualImpl({
   name: 'mix',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
+  signature: variadicUnifySignature,
   normalImpl: cpuMix,
   codegenImpl: (e1, e2, e3) => stitch`mix(${e1}, ${e2}, ${e3})`,
 });
