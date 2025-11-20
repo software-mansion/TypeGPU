@@ -1,5 +1,7 @@
 {
   "title": "Probability Distribution Plot",
   "category": "algorithms",
-  "tags": ["experimental", "ecosystem", "@typegpu/noise"]
+  "tags": ["experimental", "ecosystem", "@typegpu/noise"],
+  "expectedCalls": 13,
+  "controlTriggers": ["Test Resolution"]
 }

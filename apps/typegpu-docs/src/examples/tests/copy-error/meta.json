@@ -2,5 +2,6 @@
   "title": "Struct Copying Test",
   "category": "tests",
   "tags": ["experimental"],
-  "dev": true
+  "dev": true,
+  "expectedCalls": 1
 }

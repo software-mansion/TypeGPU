@@ -1,5 +1,6 @@
 {
   "title": "Chroma Keying",
   "category": "image-processing",
-  "tags": ["camera", "filtering"]
+  "tags": ["camera", "filtering"],
+  "expectedCalls": 1
 }
