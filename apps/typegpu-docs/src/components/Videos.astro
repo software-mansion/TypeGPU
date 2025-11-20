@@ -1,125 +1,65 @@
 ---
 import YoutubeSvg from "../assets/youtube.svg";
+
+const videos = [
+	{
+		title: "Iwo Plaza – Your GPU is a JavaScript runtime* (TypeGPU deep-dive)",
+		src: "https://www.youtube.com/embed/pBRLqJaG4kk?si=-xaSG_MET9-Q1ZfK",
+		className: "md:col-span-2",
+	},
+	{
+		title: "TypeGPU: enhance your WebGPU project with type-safe API",
+		src: "https://www.youtube.com/embed/71TO3OIgStM?si=y96EGOPGKv0lL1D7",
+	},
+	{
+		title: "Simplifying Compute Shaders with TypeGPU: GPU Worklets & More",
+		src: "https://www.youtube.com/embed/QrHZXiXxu9A?si=CSaZznbx0hf3PlQj",
+	},
+	{
+		title: "Iwo Plaza – The Road to Type-Safety on the GPU | RNCK #15",
+		src: "https://www.youtube.com/embed/DysmnC1D2gQ?si=0pR77V9xatZdX2Co",
+	},
+	{
+		title: "Live-Coding a Liquid Glass Effect with TypeGPU",
+		src: "https://www.youtube.com/embed/5PREvbHirEY?si=N2Cs3xn9IG8_Wh9g",
+	},
+];
 ---
 
 <div
 	class="grid md:grid-cols-2 grid-cols-1 lg:grid-rows-3 grid-rows-1 gap-5 relative"
 >
-	<div class="relative md:col-span-2">
-		<div
-			class="bottom-6 inset-x-6 px-4 z-10 absolute flex items-center gap-3 bg-white h-16 text-blue-900"
-		>
-			<img
-				src={YoutubeSvg.src}
-				alt="Watch on YouTube"
-				class="h-6 w-6"
-				loading="lazy"
-			/>
-			<span
-				>Iwo Plaza – Your GPU is a JavaScript runtime* (TypeGPU
-				deep-dive)</span
-			>
-		</div>
-		<iframe
-			width="100%"
-			height="315"
-			src="https://www.youtube.com/embed/pBRLqJaG4kk?si=-xaSG_MET9-Q1ZfK"
-			title="YouTube video player"
-			frameborder="0"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-			referrerpolicy="strict-origin-when-cross-origin"
-			allowfullscreen></iframe>
-	</div>
-
-	<div class="relative">
-		<div
-			class="bottom-6 inset-x-6 px-4 z-10 overflow-hidden absolute flex items-center gap-3 bg-white h-16 text-blue-900"
-		>
-			<img
-				src={YoutubeSvg.src}
-				alt="Watch on YouTube"
-				class="h-6 w-6"
-				loading="lazy"
-			/>
-			<span>TypeGPU: enhance your WebGPU project with type-safe API</span>
-		</div>
-		<iframe
-			width="100%"
-			height="315"
-			src="https://www.youtube.com/embed/71TO3OIgStM?si=y96EGOPGKv0lL1D7"
-			title="YouTube video player"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture;"
-			referrerpolicy="strict-origin-when-cross-origin"
-			allowfullscreen></iframe>
-	</div>
-	<div class="relative">
-		<div
-			class="bottom-6 inset-x-6 px-4 z-10 overflow-hidden absolute flex items-center gap-3 bg-white h-16 text-blue-900"
-		>
-			<img
-				src={YoutubeSvg.src}
-				alt="Watch on YouTube"
-				class="h-6 w-6"
-				loading="lazy"
-			/>
-			<span
-				>Simplifying Compute Shaders with TypeGPU: GPU Worklets & More</span
-			>
-		</div>
-		<iframe
-			width="100%"
-			height="315"
-			src="https://www.youtube.com/embed/QrHZXiXxu9A?si=CSaZznbx0hf3PlQj"
-			title="YouTube video player"
-			frameborder="0"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-			referrerpolicy="strict-origin-when-cross-origin"
-			allowfullscreen></iframe>
-	</div>
-	<div class="relative">
-		<div
-			class="bottom-6 inset-x-6 px-4 z-10 overflow-hidden absolute flex items-center gap-3 bg-white h-16 text-blue-900"
-		>
-			<img
-				src={YoutubeSvg.src}
-				alt="Watch on YouTube"
-				class="h-6 w-6"
-				loading="lazy"
-			/>
-			<span
-				>Iwo Plaza – The Road to Type-Safety on the GPU | RNCK #15</span
-			>
-		</div>
-		<iframe
-			width="100%"
-			height="315"
-			src="https://www.youtube.com/embed/DysmnC1D2gQ?si=0pR77V9xatZdX2Co"
-			title="YouTube video player"
-			frameborder="0"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-			referrerpolicy="strict-origin-when-cross-origin"
-			allowfullscreen></iframe>
-	</div>
-	<div class="relative">
-		<div
-			class="bottom-6 inset-x-6 px-4 z-10 overflow-hidden absolute flex items-center gap-3 bg-white h-16 text-blue-900"
-		>
-			<img
-				src={YoutubeSvg.src}
-				alt="Watch on YouTube"
-				class="h-6 w-6"
-				loading="lazy"
-			/>
-			<span>Live-Coding a Liquid Glass Effect with TypeGPU</span>
-		</div>
-		<iframe
-			width="100%"
-			height="315"
-			src="https://www.youtube.com/embed/5PREvbHirEY?si=N2Cs3xn9IG8_Wh9g"
-			title="YouTube video player"
-			frameborder="0"
-			allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-			referrerpolicy="strict-origin-when-cross-origin"
-			allowfullscreen></iframe>
-	</div>
+	{
+		videos.map((video) => (
+			<div class:list={["relative", video.className]}>
+				<a
+					href={video.src.replace("embed/", "watch?v=").replace("?si=", "&si=")}
+					target="_blank"
+					rel="noopener noreferrer"
+					class:list={[
+						"no-underline bottom-6 inset-x-6 px-4 z-10 absolute flex items-center gap-3 bg-white h-16 text-blue-900",
+						{ "overflow-hidden": !video.className },
+					]}
+				>
+					<img
+						src={YoutubeSvg.src}
+						alt="Watch on YouTube"
+						class="h-6 w-6"
+						loading="lazy"
+					/>
+					<span>{video.title}</span>
+				</a>
+				<iframe
+					width="100%"
+					height="315"
+					src={video.src}
+					title="YouTube video player"
+					frameborder="0"
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+					referrerpolicy="strict-origin-when-cross-origin"
+					allowfullscreen
+				/>
+			</div>
+		))
+	}
 </div>
