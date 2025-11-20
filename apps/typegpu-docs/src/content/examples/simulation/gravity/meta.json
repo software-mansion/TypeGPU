@@ -1,5 +1,6 @@
 {
   "title": "Gravity",
   "category": "simulation",
-  "tags": ["experimental"]
+  "tags": ["experimental"],
+  "expectedCalls": 4
 }

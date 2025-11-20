@@ -1,5 +1,7 @@
 {
   "title": "Increment",
   "category": "simple",
-  "tags": ["compute"]
+  "tags": ["compute"],
+  "controlTriggers": ["Increment"],
+  "expectedCalls": 1
 }

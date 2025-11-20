@@ -1,5 +1,6 @@
 {
   "title": "Image Tuning",
   "category": "image-processing",
-  "tags": ["filtering"]
+  "tags": ["filtering"],
+  "expectedCalls": 1
 }
