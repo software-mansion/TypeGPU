@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const plots = [
   'https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration-full.png',
@@ -32,39 +32,34 @@ export default function PlotGallery() {
   );
 
   const [currentIndex, setCurrentIndex] = useState(1);
-  const currentIndexRef = useRef(currentIndex);
-  const [isTransitioning, setIsTransitioning] = useState(false); // this is necassary for dynamic css
-  const isTransitioningRef = useRef(isTransitioning); // this is necessary for useCallback empty deps
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const nextSlide = useCallback(() => {
-    if (isTransitioningRef.current) return;
+  const nextSlide = useCallback((isTransitioning: boolean) => {
+    if (isTransitioning) return;
     setIsTransitioning(true);
-    isTransitioningRef.current = true;
     setCurrentIndex((prev) => prev + 1); // to avoid deps
   }, []);
 
-  const prevSlide = useCallback(() => {
-    if (isTransitioningRef.current) return;
+  const prevSlide = useCallback((isTransitioning: boolean) => {
+    console.log(isTransitioning);
+    if (isTransitioning) return;
     setIsTransitioning(true);
-    isTransitioningRef.current = true;
     setCurrentIndex((prev) => prev - 1);
   }, []);
 
-  const handleTransitionEnd = useCallback(() => {
+  const handleTransitionEnd = useCallback((index: number) => {
     setIsTransitioning(false);
-    isTransitioningRef.current = false;
 
-    if (currentIndexRef.current === 0) {
+    if (index === 0) {
       setCurrentIndex(plots.length);
-    } else if (currentIndexRef.current === extendedPlots.length - 1) {
+    } else if (index === extendedPlots.length - 1) {
       setCurrentIndex(1);
     }
   }, [extendedPlots]);
 
-  const goToSlide = useCallback((index: number) => {
-    if (isTransitioningRef.current) return;
+  const goToSlide = useCallback((index: number, isTransitioning: boolean) => {
+    if (isTransitioning) return;
     setIsTransitioning(true);
-    isTransitioningRef.current = true;
     setCurrentIndex(index + 1);
   }, []);
 
@@ -72,28 +67,24 @@ export default function PlotGallery() {
     if (currentIndex === 0) return plots.length - 1;
     if (currentIndex === extendedPlots.length - 1) return 0;
     return currentIndex - 1;
-  }; // has to use actual state not the ref to not lag behind
-
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
+  };
 
   useEffect(() => {
     // TODO: add touch handling
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') prevSlide();
-      if (event.key === 'ArrowRight') nextSlide();
+      if (event.key === 'ArrowLeft') prevSlide(isTransitioning);
+      if (event.key === 'ArrowRight') nextSlide(isTransitioning);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [prevSlide, nextSlide]);
+  }, [prevSlide, nextSlide, isTransitioning]);
 
   return (
     <div className='relative flex-grow overflow-hidden'>
       <button
         className={`left-4 ${buttonUtilityClasses}`}
         type='button'
-        onClick={prevSlide}
+        onClick={() => prevSlide(isTransitioning)}
       >
         <ChevronLeft className={chevronUtilityClasses} />
       </button>
@@ -101,7 +92,7 @@ export default function PlotGallery() {
       <button
         className={`right-4 ${buttonUtilityClasses}`}
         type='button'
-        onClick={nextSlide}
+        onClick={() => nextSlide(isTransitioning)}
       >
         <ChevronRight className={chevronUtilityClasses} />
       </button>
@@ -111,7 +102,7 @@ export default function PlotGallery() {
           isTransitioning ? '' : 'transition-none' // this is necessary for smooth ending
         }`}
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-        onTransitionEnd={handleTransitionEnd}
+        onTransitionEnd={() => handleTransitionEnd(currentIndex)}
       >
         {extendedPlots.map((url, index) => (
           <PlotSlide key={`slide-${index}-${url}`} url={url} />
@@ -123,7 +114,7 @@ export default function PlotGallery() {
           <button
             key={`dot-${index}-${url}`}
             type='button'
-            onClick={() => goToSlide(index)}
+            onClick={() => goToSlide(index, isTransitioning)}
             className={`h-4 w-4 rounded-full transition-all duration-200 ease-in-out ${
               index === getActualIndex()
                 ? 'scale-125 bg-gray-500'
