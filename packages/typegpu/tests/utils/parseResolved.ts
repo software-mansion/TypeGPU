@@ -34,7 +34,7 @@ function extractSnippetFromFn(cb: () => unknown): Snippet {
           [],
           {},
           undefined,
-          meta.externals ?? {},
+          (meta.externals as () => Record<string, string>)() ?? {},
         );
         ctx.pushBlockScope();
         pushedFnScope = true;
