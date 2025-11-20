@@ -172,10 +172,13 @@ ${this.ctx.pre}}`;
     const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
 
     let varOrigin: Origin;
-    if (origin === 'constant-ref') {
+    if (
+      origin === 'constant-tgpu-const-ref' ||
+      origin === 'runtime-tgpu-const-ref'
+    ) {
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
-      varOrigin = 'constant-ref';
+      varOrigin = origin;
     } else if (origin === 'argument') {
       if (naturallyEphemeral) {
         varOrigin = 'runtime';
@@ -288,7 +291,9 @@ ${this.ctx.pre}}`;
 
       if (exprType === NODE.assignmentExpr) {
         if (
-          convLhs.origin === 'constant' || convLhs.origin === 'constant-ref'
+          convLhs.origin === 'constant' ||
+          convLhs.origin === 'constant-tgpu-const-ref' ||
+          convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
@@ -875,8 +880,10 @@ ${this.ctx.pre}else ${alternate}`;
           );
         }
 
-        if (eq.origin === 'constant-ref') {
+        if (eq.origin === 'constant-tgpu-const-ref') {
           varType = 'const';
+        } else if (eq.origin === 'runtime-tgpu-const-ref') {
+          varType = 'let';
         } else {
           varType = 'let';
           if (!wgsl.isPtr(dataType)) {

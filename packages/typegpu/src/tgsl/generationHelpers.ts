@@ -20,6 +20,7 @@ import {
 import {
   isEphemeralSnippet,
   isSnippet,
+  type Origin,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
@@ -156,10 +157,7 @@ export function accessProp(
   target: Snippet,
   propName: string,
 ): Snippet | undefined {
-  if (
-    infixKinds.includes(target.dataType.type) &&
-    propName in infixOperators
-  ) {
+  if (infixKinds.includes(target.dataType.type) && propName in infixOperators) {
     return snip(
       new InfixDispatch(
         propName,
@@ -174,11 +172,7 @@ export function accessProp(
   if (isWgslArray(target.dataType) && propName === 'length') {
     if (target.dataType.elementCount === 0) {
       // Dynamically-sized array
-      return snip(
-        stitch`arrayLength(&${target})`,
-        u32,
-        /* origin */ 'runtime',
-      );
+      return snip(stitch`arrayLength(&${target})`, u32, /* origin */ 'runtime');
     }
 
     return snip(
@@ -208,10 +202,10 @@ export function accessProp(
       propType,
       /* origin */ target.origin === 'argument'
         ? 'argument'
-        : !isEphemeralSnippet(target) &&
-            !isNaturallyEphemeral(propType)
+        : !isEphemeralSnippet(target) && !isNaturallyEphemeral(propType)
         ? target.origin
-        : target.origin === 'constant' || target.origin === 'constant-ref'
+        : target.origin === 'constant' ||
+            target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -231,11 +225,7 @@ export function accessProp(
   }
 
   const propLength = propName.length;
-  if (
-    isVec(target.dataType) &&
-    propLength >= 1 &&
-    propLength <= 4
-  ) {
+  if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
@@ -255,7 +245,7 @@ export function accessProp(
       /* origin */ target.origin === 'argument' && propLength === 1
         ? 'argument'
         : target.origin === 'constant' ||
-            target.origin === 'constant-ref'
+            target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -282,6 +272,28 @@ export function accessIndex(
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType as AnyData;
+    const isTargetEphemeral = isEphemeralSnippet(target);
+    const isElementNatEph = isNaturallyEphemeral(elementType);
+
+    let origin: Origin;
+
+    if (
+      target.origin === 'constant-tgpu-const-ref' &&
+      index.origin === 'constant'
+    ) {
+      origin = isElementNatEph ? 'constant' : 'constant-tgpu-const-ref';
+    } else if (
+      target.origin === 'constant-tgpu-const-ref' ||
+      target.origin === 'runtime-tgpu-const-ref'
+    ) {
+      origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
+    } else if (!isTargetEphemeral && !isElementNatEph) {
+      origin = target.origin;
+    } else if (target.origin === 'constant' && index.origin === 'constant') {
+      origin = 'constant';
+    } else {
+      origin = 'runtime';
+    }
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
@@ -289,12 +301,7 @@ export function accessIndex(
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
-      /* origin */ !isEphemeralSnippet(target) &&
-          !isNaturallyEphemeral(elementType)
-        ? target.origin
-        : target.origin === 'constant' || target.origin === 'constant-ref'
-        ? 'constant'
-        : 'runtime',
+      /* origin */ origin,
     );
   }
 
@@ -307,7 +314,7 @@ export function accessIndex(
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
       /* origin */ target.origin === 'constant' ||
-          target.origin === 'constant-ref'
+          target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
