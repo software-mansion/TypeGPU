@@ -82,4 +82,13 @@ describe('min', () => {
       }"
     `);
   });
+
+  it('cannot be called with invalid arguments', () => {
+    // @ts-expect-error
+    (() => std.min());
+    // @ts-expect-error
+    (() => std.min(1, d.vec2f()));
+    // @ts-expect-error
+    (() => std.min(d.vec3f(), d.vec2f()));
+  });
 });
