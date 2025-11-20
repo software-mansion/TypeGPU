@@ -1,41 +1,84 @@
 import { describe, expect, it } from 'vitest';
-import { min } from '../../../src/std/index.ts';
 import tgpu from '../../../src/index.ts';
-import { f32, i32 } from '../../../src/data/numeric.ts';
+import * as d from '../../../src/data/index.ts';
+import * as std from '../../../src/std/index.ts';
 
 describe('min', () => {
   it('acts as identity when called with one argument', () => {
-    const myMin = (a: number) => {
+    const myMin = tgpu.fn([d.f32], d.f32)((a: number) => {
       'use gpu';
-      return min(a);
-    };
+      return std.min(a);
+    });
 
-    const main = () => {
-      'use gpu';
-      const x = myMin(2);
-    };
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn myMin(a: i32) -> i32 {
+    expect(myMin(6)).toBe(6);
+    expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
+      "fn myMin(a: f32) -> f32 {
         return a;
-      }
+      }"
+    `);
+  });
 
-      fn main() {
-        let x = myMin(2i);
+  it('works with two arguments', () => {
+    const myMin = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+      'use gpu';
+      return std.min(a, b);
+    });
+
+    expect(myMin(1, 2)).toBe(1);
+    expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
+      "fn myMin(a: f32, b: f32) -> f32 {
+        return min(a, b);
       }"
     `);
   });
 
   it('works with multiple arguments', () => {
-    const myMin = tgpu.fn([f32, f32, f32, i32], f32)((a, b, c, d) => {
-      'use gpu';
-      return min(a, b, c, d, 7);
-    });
+    const myMin = tgpu.fn([d.f32, d.f32, d.f32, d.f32], d.f32)(
+      (a, b, c, d) => {
+        'use gpu';
+        return std.min(a, b, c, d);
+      },
+    );
 
     expect(myMin(2, 1, 4, 5)).toBe(1);
     expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
-      "fn myMin(a: f32, b: f32, c: f32, d: i32) -> f32 {
-        return min(min(min(min(a, b), c), f32(d)), 7f);
+      "fn myMin(a: f32, b: f32, c: f32, d2: f32) -> f32 {
+        return min(min(min(a, b), c), d2);
+      }"
+    `);
+  });
+
+  it('unifies arguments', () => {
+    const myMin = tgpu.fn([], d.f32)(() => {
+      'use gpu';
+      const a = d.u32(9);
+      const b = d.i32(1);
+      const c = d.f32(4);
+      return std.min(a, b, 3.3, c, 7);
+    });
+
+    expect(myMin()).toBe(1);
+    expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
+      "fn myMin() -> f32 {
+        const a = 9u;
+        const b = 1i;
+        const c = 4f;
+        return min(min(min(min(f32(a), f32(b)), 3.3f), c), 7f);
+      }"
+    `);
+  });
+
+  it('works with vectors', () => {
+    const myMin = tgpu.fn([d.vec3u, d.vec3u], d.vec3u)((a, b) => {
+      'use gpu';
+      return std.min(a, b);
+    });
+
+    expect(myMin(d.vec3u(1, 2, 3), d.vec3u(3, 2, 1)))
+      .toStrictEqual(d.vec3u(1, 2, 1));
+    expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
+      "fn myMin(a: vec3u, b: vec3u) -> vec3u {
+        return min(a, b);
       }"
     `);
   });
