@@ -254,7 +254,7 @@ export class VerletSimulation {
       const force = delta.mul(
         (dist - restLength) * this.stiffnessUniform.$ * 0.5 / dist,
       );
-      this.springForceBuffer.$[instanceIndex.$] = force;
+      this.springForceBuffer.$[instanceIndex.$] = d.vec3f(force);
     }).compute(springCount);
 
     // 2. computeVertexForces:
