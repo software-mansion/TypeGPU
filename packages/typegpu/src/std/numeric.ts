@@ -56,6 +56,8 @@ import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
+// helpers
+
 const unaryIdentitySignature = (arg: AnyData) => {
   return {
     argTypes: [arg],
@@ -63,7 +65,9 @@ const unaryIdentitySignature = (arg: AnyData) => {
   };
 };
 
-function generalizeForVarArgs<T>(fn: (a: T, b: T) => T) {
+// AAA signature for unify all
+
+function variadicReduce<T>(fn: (a: T, b: T) => T) {
   return (fst: T, ...rest: T[]): T => {
     let acc = fst;
     for (const r of rest) {
@@ -73,13 +77,15 @@ function generalizeForVarArgs<T>(fn: (a: T, b: T) => T) {
   };
 }
 
-function varArgsWrapStitch(wrapper: string, fst: Snippet, ...rest: Snippet[]) {
-  let acc = stitch`${fst}`;
+function variadicStitch(wrapper: string, ...rest: Snippet[]) {
+  let acc = '';
   for (const r of rest) {
     acc = stitch`${wrapper}(${acc}, ${r})`;
   }
   return acc;
 }
+
+// std
 
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
@@ -807,11 +813,10 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   return VectorOps.min[a.kind](a, b as NumVec) as T;
 }
 
-type VarArgsOverload = {
+type VariadicOverload = {
   (fst: number, ...rest: number[]): number;
   <T extends NumVec>(fst: T, ...rest: T[]): T;
 };
-const cpuMinVarArgs = generalizeForVarArgs(cpuMin) as VarArgsOverload;
 
 export const min = dualImpl({
   name: 'min',
@@ -822,9 +827,8 @@ export const min = dualImpl({
       returnType: uargs[0],
     });
   },
-  normalImpl: cpuMinVarArgs,
-  codegenImpl: (...args): string =>
-    varArgsWrapStitch('min', args[0], ...args.slice(1)),
+  normalImpl: variadicReduce(cpuMin) as VariadicOverload,
+  codegenImpl: (...args): string => variadicStitch('min', ...args),
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
