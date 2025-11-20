@@ -8,3 +8,5 @@ export const uv = tgpu['~unstable'].comptime((index?: number | undefined) =>
 );
 
 export const time = fromTSL(TSL.time, { type: d.f32 });
+
+export const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });

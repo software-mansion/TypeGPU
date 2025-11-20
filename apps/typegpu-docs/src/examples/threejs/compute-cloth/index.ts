@@ -4,7 +4,7 @@
 
 import * as d from 'typegpu/data';
 import * as THREE from 'three/webgpu';
-import { fromTSL, toTSL, uv } from '@typegpu/three';
+import { access, fromTSL, toTSL } from '@typegpu/three';
 import * as std from 'typegpu/std';
 
 import * as TSL from 'three/tsl';
@@ -248,7 +248,8 @@ function setupClothMesh(): THREE.Mesh {
 
   clothMaterial.colorNode = toTSL(() => {
     'use gpu';
-    const pattern = checkerBoard(uv().$.mul(5));
+    const uv = access.uv().$;
+    const pattern = checkerBoard(uv.mul(5));
     return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
   });
 
