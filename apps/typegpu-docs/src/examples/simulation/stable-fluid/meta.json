@@ -1,5 +1,6 @@
 {
   "title": "Stable Fluids",
   "category": "simulation",
-  "tags": ["experimental", "double buffering"]
+  "tags": ["experimental", "double buffering"],
+  "expectedCalls": 7
 }

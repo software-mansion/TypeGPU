@@ -2,5 +2,6 @@
   "title": "Texture Test",
   "category": "tests",
   "tags": ["experimental"],
+  "expectedCalls": 0,
   "dev": true
 }

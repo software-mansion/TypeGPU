@@ -1,5 +1,6 @@
 {
   "title": "Oklab (Color Space)",
   "category": "simple",
-  "tags": ["experimental"]
+  "tags": ["experimental"],
+  "expectedCalls": 1
 }

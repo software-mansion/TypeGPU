@@ -8,5 +8,7 @@
     "timestamp query",
     "subgroups",
     "experimental"
-  ]
+  ],
+  "expectedCalls": 2,
+  "controlTriggers": ["Test Resolution"]
 }

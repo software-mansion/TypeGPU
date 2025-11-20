@@ -1,5 +1,6 @@
 {
   "title": "Phong Reflection Model",
   "category": "rendering",
-  "tags": ["experimental", "3d"]
+  "tags": ["experimental", "3d"],
+  "expectedCalls": 1
 }

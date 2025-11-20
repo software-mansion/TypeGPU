@@ -1,5 +1,6 @@
 {
   "title": "Simple shadow",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization"]
+  "tags": ["experimental", "3d", "rasterization"],
+  "expectedCalls": 2
 }

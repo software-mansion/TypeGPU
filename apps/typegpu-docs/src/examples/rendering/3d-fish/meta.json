@@ -1,5 +1,12 @@
 {
   "title": "3D Fish",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization", "compute", "double buffering"]
+  "tags": [
+    "experimental",
+    "3d",
+    "rasterization",
+    "compute",
+    "double buffering"
+  ],
+  "expectedCalls": 3
 }

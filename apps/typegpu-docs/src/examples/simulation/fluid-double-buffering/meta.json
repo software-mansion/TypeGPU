@@ -1,5 +1,6 @@
 {
   "title": "Fluid (double-buffering)",
   "category": "simulation",
-  "tags": ["experimental", "compute", "cellular automata", "double buffering"]
+  "tags": ["experimental", "compute", "cellular automata", "double buffering"],
+  "expectedCalls": 4
 }

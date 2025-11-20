@@ -1,5 +1,6 @@
 {
   "title": "XorDev \"Centrifuge 2\"",
   "category": "rendering",
-  "tags": ["experimental", "fragment shader"]
+  "tags": ["experimental", "fragment shader"],
+  "expectedCalls": 1
 }
