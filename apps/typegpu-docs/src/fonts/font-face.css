@@ -100,7 +100,7 @@
 }
 
 /* NOTE: Uncomment if needed */
-/* @font-face {
+@font-face {
   font-family: 'Aeonik';
   src: url('./Aeonik-Bold.otf') format('opentype');
   font-weight: 700;
@@ -108,6 +108,7 @@
   font-display: swap;
 }
 
+/*
 @font-face {
   font-family: 'Aeonik';
   src: url('./Aeonik-BoldItalic.otf') format('opentype');

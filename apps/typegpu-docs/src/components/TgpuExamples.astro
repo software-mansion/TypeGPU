@@ -57,23 +57,20 @@ const galleryItems = [
 				data-example-card
 				style="touch-action: pan-x pan-y;"
 			>
-				<div class="bottom-1/40 inset-x-2 px-3 z-10 absolute flex items-center justify-between gap-3 bg-white h-16 text-blue-900">
+				<a
+					href={`/TypeGPU/examples/#example=${item.exampleKey}`}
+					class="bottom-6 no-underline inset-x-6 px-4 z-10 absolute flex items-center justify-between gap-3 bg-white h-16 text-blue-900"
+				>
 					<span class="truncate font-medium text-sm max-w-[70%]">
 						{item.title}
 					</span>
-					<a
-						href={`/TypeGPU/examples/#example=${item.exampleKey}`}
-						aria-label="Open examples list"
-						class="flex items-center"
-					>
-						<img
-							src={ExternalOpenSvg.src}
-							alt="Open example"
-							class="h-6 w-6 flex-shrink-0"
-							loading="lazy"
-						/>
-					</a>
-				</div>
+					<img
+						src={ExternalOpenSvg.src}
+						alt="Open example"
+						class="h-6 w-6 flex-shrink-0"
+						loading="lazy"
+					/>
+				</a>
 				<Image
 					src={item.asset}
 					alt="TypeGPU Example"
