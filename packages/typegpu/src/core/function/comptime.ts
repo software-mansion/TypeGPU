@@ -7,7 +7,7 @@ import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import { isKnownAtComptime } from '../../types.ts';
 
-type TgpuComptime<T extends (...args: never[]) => unknown> =
+export type TgpuComptime<T extends (...args: never[]) => unknown> =
   & DualFn<T>
   & TgpuNamable
   & { [$getNameForward]: unknown };

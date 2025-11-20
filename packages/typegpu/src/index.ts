@@ -175,6 +175,7 @@ export type {
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';
 export type { TgpuFn, TgpuFnShell } from './core/function/tgpuFn.ts';
+export type { TgpuComptime } from './core/function/comptime.ts';
 export type {
   TgpuVertexFn,
   TgpuVertexFnShell,
