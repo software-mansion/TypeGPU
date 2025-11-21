@@ -17,7 +17,7 @@ if (!context) {
 }
 
 const adapter = await navigator.gpu.requestAdapter();
-console.log(`Using ${adapter?.info.vendor} adapter`);
+// console.log(`Using ${adapter?.info.vendor} adapter`);
 const device = await adapter?.requestDevice({
   requiredFeatures: ['timestamp-query'],
 });
