@@ -1,7 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isNaturallyEphemeral,
+} from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -126,7 +130,11 @@ class TgpuFixedBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+    );
   }
 
   toString(): string {
@@ -135,11 +143,16 @@ class TgpuFixedBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType);
+        return snip(
+          this,
+          dataType,
+          isNaturallyEphemeral(dataType) ? 'runtime' : usage,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -246,7 +259,11 @@ export class TgpuLaidOutBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+    );
   }
 
   toString(): string {
@@ -254,12 +271,17 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as unknown as AnyData;
+    const schema = this.dataType as AnyData;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, schema);
+        return snip(
+          this,
+          schema,
+          isNaturallyEphemeral(schema) ? 'runtime' : usage,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

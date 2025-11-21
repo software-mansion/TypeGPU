@@ -96,11 +96,7 @@ export const controls = {
     onButtonClick() {
       c.distributions
         .map((dist) =>
-          tgpu.resolve({
-            externals: {
-              f: executor.cachedPipeline(getPRNG(dist).prng),
-            },
-          })
+          tgpu.resolve([executor.cachedPipeline(getPRNG(dist).prng)])
         )
         .map((r) => root.device.createShaderModule({ code: r }));
     },

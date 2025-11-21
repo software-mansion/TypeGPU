@@ -17,7 +17,7 @@ Imported functions from external sources are automatically resolved and embedded
 ## Defining a function
 
 :::note[WGSL enthusiasts!]
-Don't let the JavaScript scare you! TypeGPU functions can be implemented using either WGSL or JS, both being able to call one another.
+Don't let the JavaScript discourage you! TypeGPU functions can be implemented using either WGSL or JS, both being able to call one another.
 If you're planning on only using WGSL, you can skip right over to [Implementing functions in WGSL](#implementing-functions-in-wgsl),
 though we recommend reading through anyway.
 :::
@@ -53,7 +53,6 @@ const neighborhood = (a: number, r: number) => {
 // ---cut---
 const main = () => {
   'use gpu';
-  // Call from another function
   return neighborhood(1.1, 0.5);
 };
 
@@ -62,7 +61,7 @@ const range = main();
 //    ^?
 
 // #2) Used to generate WGSL
-const wgsl = tgpu.resolve({ externals: { main } });
+const wgsl = tgpu.resolve([main]);
 //    ^?
 
 // #3) Executed on the GPU (generates WGSL underneath)
@@ -91,12 +90,27 @@ You can already notice a few things about TypeGPU functions:
 - TS types are properly inferred, feel free to hover over the variables to see their types.
 - The generated code closely matches your source code.
 
+:::caution[Using numeric literals]
+Be mindful when using numeric literals. Numbers with nothing after the decimal point (those that pass the `Number.isInteger` test) are inferred as integers, the rest as floats.
+```js
+const foo = 1.1; // generates: const foo = 1.1f;
+const bar = 1.0; // generates: const bar = 1i;
+const baz = 123; // generates: const baz = 123i;
+```
+To ensure that a literal will be coerced to a specific type, you can wrap them in a schema:
+```js
+const foo = d.u32(1.1); // generates: const foo = 1u;
+const bar = d.f32(1.0); // generates: const bar = 1f;
+const baz = d.f16(123); // generates: const baz = 123h;
+```
+:::
+
 ### Code transformation
 
-To make this all work, we perform a small transformation to functions marked with `'use gpu'`, leaving all other code untouched. Every project's setup is different, and we want to be as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
+To make this all work, we perform a small transformation to functions marked with `'use gpu'`. Every project's setup is different, and we want to be as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
 
 :::tip
-If you wish for all WGSL generation to happen at build time, combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/fundamentals/resolve).
+If all your shader code is predetermined, or you want to precompute a set of variants ahead of time, you can combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/fundamentals/resolve).
 :::
 
 
@@ -191,25 +205,6 @@ const double = <T extends d.v2f | d.v3f | d.v4f>(a: T): T => {
   'use gpu';
   return std.mul(a, a);
 };
-```
-
-### Standard library
-
-TypeGPU provides a set of standard functions under `typegpu/std`, which you can use in your own TypeGPU functions. Our goal is for all functions to have matching
-behavior on the CPU and GPU, which unlocks many possibilities (shader unit testing, shared business logic, and more...).
-
-```ts twoslash
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-
-function manhattanDistance(a: d.v3f, b: d.v3f) {
-  'use gpu';
-  const dx = std.abs(a.x - b.x);
-  const dy = std.abs(a.y - b.y);
-  const dz = std.abs(a.z - b.z);
-
-  return std.max(dx, std.max(dy, dz));
-}
 ```
 
 You can explore the set of standard functions in the [API Reference](/TypeGPU/api/typegpu/std/functions/abs/).
@@ -310,6 +305,27 @@ you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, g
 
 * **Math.\*** --
 Utility functions on the `Math` object can't automatically run on the GPU, but can usually be swapped with functions exported from `typegpu/std`.
+Additionally, if you're able to pull the call to `Math.*` out of the function, you can store the result in a constant and use it in the function
+no problem.
+
+### Standard library
+
+TypeGPU provides a set of standard functions under `typegpu/std`, which you can use in your own TypeGPU functions. Our goal is for all functions to have matching
+behavior on the CPU and GPU, which unlocks many possibilities (shader unit testing, shared business logic, and more...).
+
+```ts twoslash
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+function manhattanDistance(a: d.v3f, b: d.v3f) {
+  'use gpu';
+  const dx = std.abs(a.x - b.x);
+  const dy = std.abs(a.y - b.y);
+  const dz = std.abs(a.z - b.z);
+
+  return std.max(dx, std.max(dy, dz));
+}
+```
 
 ## Function shells
 
@@ -417,7 +433,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
 You can see for yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
-// results of calling tgpu.resolve({ externals: { getGradientColor } })
+// results of calling tgpu.resolve([getGradientColor])
 
 fn getBlue_1() -> vec4f{
   return vec4f(0.114, 0.447, 0.941, 1);

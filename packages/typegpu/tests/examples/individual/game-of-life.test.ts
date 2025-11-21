@@ -17,22 +17,22 @@ describe('game of life example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> size_0: vec2u;
+      "@group(0) @binding(0) var<storage, read> size: vec2u;
 
-      @group(0) @binding(1) var<storage, read> current_1: array<u32>;
+      @group(0) @binding(1) var<storage, read> current: array<u32>;
 
-      @group(0) @binding(2) var<storage, read_write> next_2: array<u32>;
+      @group(0) @binding(2) var<storage, read_write> next: array<u32>;
       override blockSize = 8;
 
       fn getIndex(x: u32, y: u32) -> u32 {
-        let h = size_0.y;
-        let w = size_0.x;
+        let h = size.y;
+        let w = size.x;
 
         return (y % h) * w + (x % w);
       }
 
       fn getCell(x: u32, y: u32) -> u32 {
-        return current_1[getIndex(x, y)];
+        return current[getIndex(x, y)];
       }
 
       fn countNeighbors(x: u32, y: u32) -> u32 {
@@ -46,11 +46,11 @@ describe('game of life example', () => {
         let x = grid.x;
         let y = grid.y;
         let n = countNeighbors(x, y);
-        next_2[getIndex(x, y)] = select(u32(n == 3u), u32(n == 2u || n == 3u), getCell(x, y) == 1u);
+        next[getIndex(x, y)] = select(u32(n == 3u), u32(n == 2u || n == 3u), getCell(x, y) == 1u);
       }
 
 
-      @group(0) @binding(0) var<uniform> size_0: vec2u;
+      @group(0) @binding(0) var<uniform> size: vec2u;
       struct Out {
         @builtin(position) pos: vec4f,
         @location(0) cell: f32,
@@ -59,8 +59,8 @@ describe('game of life example', () => {
 
       @vertex
       fn vert(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
-        let w = size_0.x;
-        let h = size_0.y;
+        let w = size.x;
+        let h = size.y;
         let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
         let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
 

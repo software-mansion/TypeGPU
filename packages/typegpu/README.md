@@ -31,7 +31,7 @@ const main = () => {
   return neighborhood(1.1, 0.5);
 };
 
-const wgsl = tgpu.resolve({ externals: { main } });
+const wgsl = tgpu.resolve([main]);
 //    ^? string
 
 //
