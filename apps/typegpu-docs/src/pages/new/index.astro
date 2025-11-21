@@ -107,7 +107,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
     </section>
 
     {/* Code Showcase */}
-    <div
+    <section
       class="flex flex-col gap-20 mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
       <div class="flex flex-col gap-6">
@@ -139,10 +139,12 @@ import PageLayout from "../../layouts/PageLayout.astro";
           </span>
         </a>
       </div>
-    </div>
+    </section>
 
     {/* TypeGPU examples */}
-    <div class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]">
+    <section
+      class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]"
+    >
       <div class="flex flex-col gap-6 pb-14">
         <h2
           class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
@@ -155,10 +157,10 @@ import PageLayout from "../../layouts/PageLayout.astro";
         </p>
       </div>
       <TgpuExamples />
-    </div>
+    </section>
 
     {/* Videos */}
-    <div
+    <section
       class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]"
     >
       <div class="flex flex-col gap-6 pb-20">
@@ -171,112 +173,119 @@ import PageLayout from "../../layouts/PageLayout.astro";
         </p>
       </div>
       <Videos />
-    </div>
+    </section>
+
+    {/* Backlog */}
+    <section
+      class="mx-auto px-6 my-12 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
+    >
+      <div class="flex flex-col gap-6 pb-20">
+        <h2
+          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+        >
+          What's around the corner?
+        </h2>
+        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+          Our journey toward end-to-end type safety involves several
+          interoperating primitives – explore our live board to see what
+          features are coming next.
+        </p>
+      </div>
+      <Backlog />
+    </section>
+
+    {/* Call to Action */}
+    <section
+      class="flex flex-col items-center gap-16 mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]"
+    >
+      <h2
+        class="font-bold text-blue-950 dark:text-gray-100 text-3xl lg:text-5xl text-center leading-tight"
+      >
+        Ready to try out <GradientTitle title="TypeGPU" />?
+      </h2>
+      <GetStartedButton />
+    </section>
+
+    {/* Footer */}
+    <footer
+      class="flex flex-col items-center gap-10 md:gap-15 lg:gap-20 bg-gradient-to-b from-white dark:from-[#232736] dark:to-gray-800 mt-20 to-accent-50"
+    >
+      <div
+        class="flex flex-col items-center gap-12 mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] text-blue-950 dark:text-gray-100"
+      >
+        <h2 class="font-bold text-3xl lg:text-5xl text-center leading-tight">
+          We are <GradientTitle title="Software Mansion" />
+        </h2>
+        <div
+          class="mb-4 text-blue-900 dark:text-gray-300 text-center text-2xl text-pretty"
+        >
+          We’re a software company built around improving developer experience
+          and bringing to life the innovative ideas of our clients. Do you have
+          a software project that we can help you with?
+        </div>
+        <GetStartedButton
+          title="Hire us"
+          href="https://swmansion.com/contact/projects?utm_source=react-native-executorch&utm_medium=docs"
+        />
+
+        <div
+          class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white dark:bg-[#272B3C] py-8 w-full max-w-7xl text-center transition-colors duration-300"
+        >
+          <a
+            href="https://docs.swmansion.com/react-native-reanimated/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native Reanimated</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-gesture-handler/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native Gesture Handler</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-screens/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native Screens</a
+          >
+          <a
+            href="https://github.com/software-mansion/react-native-svg"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native SVG</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-audio-api/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native Audio API</a
+          >
+          <a
+            href="https://docs.swmansion.com/react-native-executorch/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >React Native ExecuTorch</a
+          >
+          <a
+            href="https://docs.swmansion.com/TypeGPU/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >TypeGPU</a
+          >
+          <a
+            href="https://ide.swmansion.com/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >Radon IDE</a
+          >
+          <a
+            href="https://docs.swmansion.com/byegl/"
+            class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
+            >byegl</a
+          >
+        </div>
+        <div
+          class="flex flex-col items-center gap-4 text-grayscale-100 pb-4 dark:text-gray-400 transition-colors duration-300"
+        >
+          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
+          copyrights belong to their respective owners.
+
+          <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
+        </div>
+      </div>
+    </footer>
   </div>
 </PageLayout>
-
-{/* Backlog */}
-<div
-  class="mx-auto px-6 my-12 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
->
-  <h2 class="font-normal text-blue-950 dark:text-gray-100 text-4xl center">
-    What's around the corner?
-  </h2>
-  <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
-    Our journey toward end-to-end type safety involves several interoperating
-    primitives – explore our live board to see what features are coming next.
-  </p>
-  <Backlog />
-</div>
-
-{/* Call to Action */}
-<section
-  class="flex flex-col items-center gap-16 mx-auto md:py-20 px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
->
-  <h2
-    class="font-bold text-blue-950 dark:text-gray-100 text-3xl lg:text-7xl text-center leading-tight"
-  >
-    Ready to try out <GradientTitle title="TypeGPU" />?
-  </h2>
-  <GetStartedButton />
-</section>
-
-{/* Footer */}
-<footer
-  class="flex flex-col items-center gap-10 md:gap-15 lg:gap-20 bg-gradient-to-b from-white dark:from-[#232736] dark:to-gray-800 mt-20 transition-colors duration-300 to-accent-50"
->
-  <div
-    class="flex flex-col items-center gap-12 mx-auto px-6 lg:px-72 py-10 max-w-138 md:max-w-214 lg:max-w-[1024px] text-blue-950 dark:text-gray-100 transition-colors duration-300"
-  >
-    <h2 class="font-bold text-3xl lg:text-7xl text-center leading-tight">
-      We are <GradientTitle title="Software Mansion" />
-    </h2>
-    <div class="mb-4 text-blue-900 dark:text-gray-300 text-2xl text-pretty">
-      We’re a software company built around improving developer experience and
-      bringing to life the innovative ideas of our clients. Do you have a
-      software project that we can help you with?
-    </div>
-    <GetStartedButton
-      title="Hire us"
-      href="https://swmansion.com/contact/projects?utm_source=react-native-executorch&utm_medium=docs"
-    />
-
-    <div
-      class="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 bg-white dark:bg-[#272B3C] py-8 w-full max-w-7xl text-center transition-colors duration-300"
-    >
-      <a
-        href="https://docs.swmansion.com/react-native-reanimated/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native Reanimated</a
-      >
-      <a
-        href="https://docs.swmansion.com/react-native-gesture-handler/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native Gesture Handler</a
-      >
-      <a
-        href="https://docs.swmansion.com/react-native-screens/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native Screens</a
-      >
-      <a
-        href="https://github.com/software-mansion/react-native-svg"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native SVG</a
-      >
-      <a
-        href="https://docs.swmansion.com/react-native-audio-api/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native Audio API</a
-      >
-      <a
-        href="https://docs.swmansion.com/react-native-executorch/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >React Native ExecuTorch</a
-      >
-      <a
-        href="https://docs.swmansion.com/TypeGPU/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >TypeGPU</a
-      >
-      <a
-        href="https://ide.swmansion.com/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >Radon IDE</a
-      >
-      <a
-        href="https://docs.swmansion.com/byegl/"
-        class="text-blue-950 dark:text-gray-100 no-underline transition-colors hover:text-accent-700 dark:hover:text-accent-200"
-        >byegl</a
-      >
-    </div>
-    <div
-      class="flex flex-col items-center gap-4 text-grayscale-100 pb-4 dark:text-gray-400 transition-colors duration-300"
-    >
-      &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
-      copyrights belong to their respective owners.
-
-      <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
-    </div>
-  </div>
-</footer>
