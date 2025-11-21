@@ -10,8 +10,6 @@ const createRandomBoid = tgpu.fn([], Boid)(() => {
   return { pos: randf.inUnitCube() };
 });
 
-const shaderCode = tgpu.resolve({
-  externals: { createRandomBoid },
-});
+const shaderCode = tgpu.resolve([createRandomBoid]);
 
 console.log(shaderCode);

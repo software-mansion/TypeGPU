@@ -9,7 +9,6 @@ import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
 import type { Prettify } from '../src/shared/utilityTypes.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 const empty = tgpu.fn([])`() {
   // do nothing
@@ -17,7 +16,7 @@ const empty = tgpu.fn([])`() {
 
 describe('tgpu.fn', () => {
   it('should inject function declaration', () => {
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "fn empty() {
         // do nothing
       }"
@@ -28,7 +27,7 @@ describe('tgpu.fn', () => {
     const main = tgpu.fn([])`() { empty(); empty(); }`
       .$uses({ empty });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn empty() {
         // do nothing
       }
@@ -44,7 +43,7 @@ describe('tgpu.fn', () => {
     const main = tgpu.fn([])`() { nestedA(); nestedB(); }`
       .$uses({ nestedA, nestedB });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn empty() {
         // do nothing
       }
@@ -106,7 +105,7 @@ describe('tgpu.computeFn', () => {
       const x = 2;
     });
 
-    expect(asWgsl(foo)).not.toContain('struct');
+    expect(tgpu.resolve([foo])).not.toContain('struct');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
@@ -117,7 +116,7 @@ describe('tgpu.computeFn', () => {
       },
     );
 
-    expect(asWgsl(foo)).not.toContain('struct');
+    expect(tgpu.resolve([foo])).not.toContain('struct');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 });
@@ -129,8 +128,8 @@ describe('tgpu.vertexFn', () => {
     })(() => ({
       pos: d.vec4f(),
     }));
-    expect(asWgsl(foo)).not.toContain('struct foo_In');
-    expect(asWgsl(foo)).toContain('struct foo_Out');
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_In');
+    expect(tgpu.resolve([foo])).toContain('struct foo_Out');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
@@ -143,8 +142,8 @@ describe('tgpu.vertexFn', () => {
         pos: d.vec4f(),
       };
     });
-    expect(asWgsl(foo)).not.toContain('struct foo_In');
-    expect(asWgsl(foo)).toContain('struct foo_Out');
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_In');
+    expect(tgpu.resolve([foo])).toContain('struct foo_Out');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 });
@@ -152,7 +151,7 @@ describe('tgpu.vertexFn', () => {
 describe('tgpu.fragmentFn', () => {
   it('does not create Out struct when the are no output parameters', () => {
     const foo = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
-    expect(asWgsl(foo)).not.toContain('struct foo_Out');
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_Out');
   });
 });
 

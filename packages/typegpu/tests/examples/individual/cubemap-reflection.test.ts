@@ -50,8 +50,8 @@ describe('cubemap reflection example', () => {
       @group(0) @binding(1) var<storage, read_write> nextVertices_7: array<ComputeVertex_2>;
 
       fn packVec2u_8(toPack: vec4f) -> vec2u {
-        var xy = pack2x16float(toPack.xy);
-        var zw = pack2x16float(toPack.zw);
+        let xy = pack2x16float(toPack.xy);
+        let zw = pack2x16float(toPack.zw);
         return vec2u(xy, zw);
       }
 
@@ -60,12 +60,12 @@ describe('cubemap reflection example', () => {
       }
 
       @compute @workgroup_size(256, 1, 1) fn computeFn_0(input: computeFn_Input_9) {
-        var triangleCount = u32((f32(arrayLength(&prevVertices_1)) / 3f));
-        var triangleIndex = (input.gid.x + (input.gid.y * 65535u));
+        let triangleCount = u32((f32(arrayLength(&prevVertices_1)) / 3f));
+        let triangleIndex = (input.gid.x + (input.gid.y * 65535u));
         if ((triangleIndex >= triangleCount)) {
           return;
         }
-        var baseIndexPrev = (triangleIndex * 3u);
+        let baseIndexPrev = (triangleIndex * 3u);
         var v1 = unpackVec2u_3(prevVertices_1[baseIndexPrev].position);
         var v2 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 1u)].position);
         var v3 = unpackVec2u_3(prevVertices_1[(baseIndexPrev + 2u)].position);
@@ -73,19 +73,18 @@ describe('cubemap reflection example', () => {
         var v23 = vec4f(normalize(calculateMidpoint_4(v2, v3).xyz), 1f);
         var v31 = vec4f(normalize(calculateMidpoint_4(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
-        var baseIndexNext = (triangleIndex * 12u);
+        let baseIndexNext = (triangleIndex * 12u);
         for (var i = 0u; (i < 12u); i++) {
-          var reprojectedVertex = newVertices[i];
-          var triBase = (i - (i % 3u));
-          var normal = reprojectedVertex;
+          let reprojectedVertex = (&newVertices[i]);
+          let triBase = (i - (i % 3u));
+          var normal = (*reprojectedVertex);
           if ((smoothFlag_5 == 0u)) {
             normal = getAverageNormal_6(newVertices[triBase], newVertices[(triBase + 1u)], newVertices[(triBase + 2u)]);
           }
-          var outIndex = (baseIndexNext + i);
-          var nextVertex = nextVertices_7[outIndex];
-          nextVertex.position = packVec2u_8(reprojectedVertex);
-          nextVertex.normal = packVec2u_8(normal);
-          nextVertices_7[outIndex] = nextVertex;
+          let outIndex = (baseIndexNext + i);
+          let nextVertex = (&nextVertices_7[outIndex]);
+          (*nextVertex).position = packVec2u_8((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u_8(normal);
         }
       }
 
@@ -178,11 +177,11 @@ describe('cubemap reflection example', () => {
         var normalizedNormal = normalize(input.normal.xyz);
         var normalizedLightDir = normalize(light_6.direction);
         var ambientLight = (material_8.ambient * (light_6.intensity * light_6.color));
-        var diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0f);
+        let diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0f);
         var diffuseLight = (diffuseFactor * (material_8.diffuse * (light_6.intensity * light_6.color)));
         var viewDirection = normalize((camera_1.position.xyz - input.worldPos.xyz));
         var reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
-        var specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0f), material_8.shininess);
+        let specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0f), material_8.shininess);
         var specularLight = (specularFactor * (material_8.specular * (light_6.intensity * light_6.color)));
         var reflectionVector = reflect(-(viewDirection), normalizedNormal);
         var environmentColor = textureSample(cubemap_10, texSampler_11, reflectionVector);

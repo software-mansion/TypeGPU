@@ -48,6 +48,7 @@ import {
   type VertexFlag,
 } from '../buffer/buffer.ts';
 import {
+  type TgpuBufferShorthand,
   TgpuBufferShorthandImpl,
   type TgpuMutable,
   type TgpuReadonly,
@@ -203,7 +204,12 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+    value:
+      | T
+      | TgpuFn<() => T>
+      | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
+      | Infer<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
