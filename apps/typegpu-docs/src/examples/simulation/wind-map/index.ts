@@ -1,6 +1,8 @@
 import {
   endCapSlot,
   joinSlot,
+  lineCaps,
+  lineJoins,
   lineSegmentIndicesCapLevel1,
   lineSegmentVariableWidth,
   LineSegmentVertex,
@@ -18,7 +20,6 @@ import {
   vec2f,
   vec4f,
 } from 'typegpu/data';
-import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
 
 const root = await tgpu.init({
@@ -123,8 +124,8 @@ const advectCompute = tgpu['~unstable'].computeFn({
   const v0 = vectorField(pos);
   const v1 = vectorField(add(pos, mul(v0, 0.5 * stepSize)));
   const newPos = add(pos, mul(v1, stepSize));
-  particle.positions[currentPosIndex] = newPos;
-  bindGroupLayoutWritable.$.particles[particleIndex] = particle;
+  particle.positions[currentPosIndex] = vec2f(newPos);
+  bindGroupLayoutWritable.$.particles[particleIndex] = ParticleTrail(particle);
 });
 
 const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));

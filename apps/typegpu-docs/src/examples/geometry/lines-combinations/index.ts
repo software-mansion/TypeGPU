@@ -32,7 +32,7 @@ import {
 import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
-import * as testCases from './testCases.ts';
+import { testCases } from './testCases.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -146,7 +146,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-console.log(tgpu.resolve({ externals: { lineSegmentVariableWidth } }));
+// console.log(tgpu.resolve([lineSegmentVariableWidth]));
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: {
@@ -192,13 +192,13 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
       vec3f(0.25, 0.25, 0.75), // 8
     ];
     if (fillType === 2) {
-      color = colors[instanceIndex % colors.length];
+      color = vec3f(colors[instanceIndex % colors.length]);
     }
     if (fillType === 3) {
-      color = colors[vertexIndex % colors.length];
+      color = vec3f(colors[vertexIndex % colors.length]);
     }
     if (fillType === 4) {
-      color = colors[situationIndex % colors.length];
+      color = vec3f(colors[situationIndex % colors.length]);
     }
     if (fillType === 5) {
       color = vec3f(uv.x, cos(uv.y * 100), 0);
@@ -308,7 +308,12 @@ function createPipelines() {
       // cullMode: 'back',
     })
     .createPipeline()
-    .withIndexBuffer(indexBuffer);
+    .withIndexBuffer(indexBuffer)
+    .withPerformanceCallback((start, end) => {
+      if (frameId % 20 === 0) {
+        console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
+      }
+    });
 
   const outline = root['~unstable']
     .with(joinSlot, join)
@@ -383,11 +388,6 @@ const draw = (timeMs: number) => {
   pipelines.fill
     .with(uniformsBindGroup)
     .withColorAttachment({ ...colorAttachment, loadOp: 'clear' })
-    .withPerformanceCallback((start, end) => {
-      if (frameId % 20 === 0) {
-        console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
-      }
-    })
     .drawIndexed(subdiv.fillCount, fillType === 0 ? 0 : TEST_SEGMENT_COUNT);
 
   if (wireframe) {
