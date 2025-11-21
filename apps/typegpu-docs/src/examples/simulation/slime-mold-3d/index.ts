@@ -103,15 +103,19 @@ const Params = d.struct({
   evaporationRate: d.f32,
 });
 
-const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
+const agentsDataBuffers = [0, 1].map(() =>
+  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage')
+);
 
+const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
 root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
   const center = resolution.div(2);
   const dir = std.normalize(center.sub(pos));
-  agentsData.$[x] = Agent({ position: pos, direction: dir });
+  mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
+  mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
 }).dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
@@ -134,7 +138,9 @@ const textures = [0, 1].map(() =>
 );
 
 const computeLayout = tgpu.bindGroupLayout({
+  oldAgents: { storage: d.arrayOf(Agent), access: 'readonly' },
   oldState: { storageTexture: d.textureStorage3d('r32float', 'read-only') },
+  newAgents: { storage: d.arrayOf(Agent), access: 'mutable' },
   newState: { storageTexture: d.textureStorage3d('r32float', 'write-only') },
 });
 
@@ -227,7 +233,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
   const dims = std.textureDimensions(computeLayout.$.oldState);
   const dimsf = d.vec3f(dims);
 
-  const agent = agentsData.$[gid.x];
+  const agent = computeLayout.$.oldAgents[gid.x];
   const random = randf.sample();
 
   let direction = std.normalize(agent.direction);
@@ -296,7 +302,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
     );
   }
 
-  agentsData.$[gid.x] = Agent({
+  computeLayout.$.newAgents[gid.x] = Agent({
     position: newPos,
     direction,
   });
@@ -466,7 +472,9 @@ const blurPipeline = root['~unstable']
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
+    oldAgents: agentsDataBuffers[i],
     oldState: textures[i],
+    newAgents: agentsDataBuffers[1 - i],
     newState: textures[1 - i],
   })
 );
