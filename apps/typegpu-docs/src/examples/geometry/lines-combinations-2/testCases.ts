@@ -8,6 +8,7 @@ import {
   clamp,
   cos,
   floor,
+  max,
   mul,
   pow,
   select,
@@ -178,7 +179,7 @@ export const armsSmall = testCaseShell((vertexIndex, time) => {
   });
 });
 
-export const aarmsBig = testCaseShell((vertexIndex, time) => {
+export const armsBig = testCaseShell((vertexIndex, time) => {
   'use gpu';
   const result = arms(vertexIndex, time);
   return LineControlPoint({
@@ -227,5 +228,17 @@ export const flyingSquares = testCaseShell((vertexIndex, time) => {
       -1,
       pointIndex === 7 || squareIndex > 50,
     ),
+  });
+});
+
+export const spring = testCaseShell((vertexIndex, time) => {
+  'use gpu';
+  const i = clamp(i32(vertexIndex - 1), 0, 20);
+  return LineControlPoint({
+    position: vec2f(
+      f32(max(0, i - 1)) * (0.1 + 0.09 * sin(time)) - 0.9,
+      select(-0.25, 0.25, (i & 0b1) === 0),
+    ),
+    radius: 0.05,
   });
 });

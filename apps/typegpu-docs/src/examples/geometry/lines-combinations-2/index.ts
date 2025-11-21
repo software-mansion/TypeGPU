@@ -72,7 +72,8 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   uniforms: uniformsBuffer,
 });
 
-const lineSegment = lineSegmentIndices(3);
+const MAX_JOIN_COUNT = 6;
+const lineSegment = lineSegmentIndices(MAX_JOIN_COUNT);
 
 const indexBuffer = root
   .createBuffer(
@@ -123,7 +124,14 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     };
   }
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D);
+  const result = lineSegmentVariableWidth(
+    vertexIndex,
+    A,
+    B,
+    C,
+    D,
+    MAX_JOIN_COUNT,
+  );
 
   return {
     outPos: vec4f(result.vertexPosition, 0, 1),
@@ -278,15 +286,15 @@ const circlesVertex = tgpu['~unstable'].vertexFn({
 });
 
 let testCase = testCases.arms;
-// let join = lineJoins.round;
-// let startCap = lineCaps.round;
-// let endCap = lineCaps.round;
+let join = lines2.joins.round;
+let startCap = lines2.caps.round;
+let endCap = lines2.caps.round;
 
 function createPipelines() {
   const fill = root['~unstable']
-    // .with(joinSlot, join)
-    // .with(startCapSlot, startCap)
-    // .with(endCapSlot, endCap)
+    .with(lines2.joinSlot, join)
+    .with(lines2.startCapSlot, startCap)
+    .with(lines2.endCapSlot, endCap)
     .with(testCaseSlot, testCase)
     .withVertex(mainVertex, {})
     .withFragment(mainFragment, {
@@ -300,9 +308,9 @@ function createPipelines() {
     .withIndexBuffer(indexBuffer);
 
   const outline = root['~unstable']
-    // .with(joinSlot, join)
-    // .with(startCapSlot, startCap)
-    // .with(endCapSlot, endCap)
+    .with(lines2.joinSlot, join)
+    .with(lines2.startCapSlot, startCap)
+    .with(lines2.endCapSlot, endCap)
     .with(testCaseSlot, testCase)
     .withVertex(mainVertex, {})
     .withFragment(outlineFragment, {
@@ -427,32 +435,32 @@ export const controls = {
       pipelines = createPipelines();
     },
   },
-  // 'Start Cap': {
-  //   initial: 'round',
-  //   options: Object.keys(lineCaps),
-  //   onSelectChange: async (selected: keyof typeof lineCaps) => {
-  //     startCap = lineCaps[selected];
-  //     pipelines = createPipelines();
-  //   },
-  // },
-  // 'End Cap': {
-  //   initial: 'round',
-  //   options: Object.keys(lineCaps),
-  //   onSelectChange: async (selected: keyof typeof lineCaps) => {
-  //     endCap = lineCaps[selected];
-  //     pipelines = createPipelines();
-  //   },
-  // },
-  // Join: {
-  //   initial: 'round',
-  //   options: Object.keys(lineJoins),
-  //   onSelectChange: async (selected: keyof typeof lineJoins) => {
-  //     join = lineJoins[selected];
-  //     pipelines = createPipelines();
-  //   },
-  // },
+  'Start Cap': {
+    initial: 'round',
+    options: Object.keys(lines2.caps),
+    onSelectChange: async (selected: keyof typeof lines2.caps) => {
+      startCap = lines2.caps[selected];
+      pipelines = createPipelines();
+    },
+  },
+  'End Cap': {
+    initial: 'round',
+    options: Object.keys(lines2.caps),
+    onSelectChange: async (selected: keyof typeof lines2.caps) => {
+      endCap = lines2.caps[selected];
+      pipelines = createPipelines();
+    },
+  },
+  Join: {
+    initial: 'round',
+    options: Object.keys(lines2.joins),
+    onSelectChange: async (selected: keyof typeof lines2.joins) => {
+      join = lines2.joins[selected];
+      pipelines = createPipelines();
+    },
+  },
   Fill: {
-    initial: 'situation',
+    initial: 'solid',
     options: Object.keys(fillOptions),
     onSelectChange: async (selected: keyof typeof fillOptions) => {
       fillType = fillOptions[selected];

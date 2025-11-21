@@ -1,13 +1,4 @@
-import {
-  endCapSlot,
-  joinSlot,
-  lineCaps,
-  LineControlPoint,
-  lineJoins,
-  lineSegmentIndicesCapLevel1,
-  lineSegmentVariableWidth,
-  startCapSlot,
-} from '@typegpu/geometry';
+import { lines2 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
 import {
   arrayOf,
@@ -21,6 +12,9 @@ import {
   vec4f,
 } from 'typegpu/data';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+
+const { lineSegmentIndices, lineSegmentVariableWidth, LineControlPoint } =
+  lines2;
 
 const root = await tgpu.init({
   adapter: {
@@ -96,9 +90,11 @@ const bindGroupWritable = root.createBindGroup(bindGroupLayoutWritable, {
   particles: particleTrailsBuffer,
 });
 
+const MAX_JOIN_COUNT = 3;
+const segmentMesh = lineSegmentIndices(MAX_JOIN_COUNT);
 const indexBuffer = root.createBuffer(
-  arrayOf(u16, lineSegmentIndicesCapLevel1.length),
-  lineSegmentIndicesCapLevel1,
+  arrayOf(u16, segmentMesh.indices.length),
+  segmentMesh.indices,
 ).$usage('index');
 
 // const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
@@ -124,8 +120,8 @@ const advectCompute = tgpu['~unstable'].computeFn({
   const v0 = vectorField(pos);
   const v1 = vectorField(add(pos, mul(v0, 0.5 * stepSize)));
   const newPos = add(pos, mul(v1, stepSize));
-  particle.positions[currentPosIndex] = newPos;
-  bindGroupLayoutWritable.$.particles[particleIndex] = particle;
+  particle.positions[currentPosIndex] = vec2f(newPos);
+  bindGroupLayoutWritable.$.particles[particleIndex] = ParticleTrail(particle);
 });
 
 const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));
@@ -183,7 +179,14 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     radius: lineWidth(f32(trailIndexOriginal + 3) / (TRAIL_LENGTH - 1)),
   });
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D);
+  const result = lineSegmentVariableWidth(
+    vertexIndex,
+    A,
+    B,
+    C,
+    D,
+    MAX_JOIN_COUNT,
+  );
 
   return {
     outPos: vec4f(result.vertexPosition, 0, 1),
@@ -224,9 +227,8 @@ function createPipelines() {
     .createPipeline();
 
   const fill = root['~unstable']
-    .with(joinSlot, lineJoins.round)
-    .with(startCapSlot, lineCaps.arrow)
-    .with(endCapSlot, lineCaps.butt)
+    .with(lines2.startCapSlot, lines2.caps.arrow)
+    .with(lines2.endCapSlot, lines2.caps.butt)
     .withVertex(mainVertex, {})
     .withFragment(mainFragment, {
       format: presentationFormat,
@@ -261,7 +263,7 @@ const draw = () => {
       storeOp: 'store',
     })
     .drawIndexed(
-      lineSegmentIndicesCapLevel1.length,
+      segmentMesh.indices.length,
       PARTICLE_COUNT * TRAIL_LENGTH,
     );
 };

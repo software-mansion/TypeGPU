@@ -1,5 +1,5 @@
 import type { Infer } from 'typegpu/data';
-import { f32, struct, u32, vec2f } from 'typegpu/data';
+import { bool, f32, struct, u32, vec2f } from 'typegpu/data';
 
 export type LineControlPoint = Infer<typeof LineControlPoint>;
 export const LineControlPoint = struct({
@@ -18,4 +18,16 @@ export const LineSegmentVertexData = struct({
   along: f32,
   cross: f32,
   join: f32,
+});
+
+export type JoinInput = Infer<typeof JoinInput>;
+export const JoinInput = struct({
+  C: LineControlPoint,
+  v: vec2f,
+  d: vec2f,
+  fw: vec2f,
+  start: vec2f,
+  end: vec2f,
+  shouldJoin: bool,
+  isCap: bool,
 });

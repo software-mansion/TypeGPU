@@ -44,9 +44,18 @@ export const bisectCcw = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
 });
 
 /**
+ * Finds the miter point of tangents to two points on a circle.
+ * The miter point is on the smaller arc.
+ */
+export const miterPointNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
+  const ab = add(a, b);
+  return mul(ab, 2 / dot(ab, ab));
+});
+
+/**
  * Finds bisector direction between two vectors.
  * There is no check done to be on the CW part, instead
- * it is assumed that a and b are well less than 180 degrees apart.
+ * it is assumed that a and b are significantly less than 180 degrees apart.
  */
 export const bisectNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
   return normalize(add(a, b));
@@ -57,5 +66,14 @@ export const midPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
 });
 
 export const slerpApprox = tgpu.fn([vec2f, vec2f, f32], vec2f)((a, b, t) => {
-  return normalize(mix(a, b, t));
+  const mid = bisectNoCheck(a, b);
+  let a_ = vec2f(a);
+  let b_ = vec2f(mid);
+  let t_ = 2 * t;
+  if (t > 0.5) {
+    a_ = vec2f(mid);
+    b_ = vec2f(b);
+    t_ -= 1;
+  }
+  return normalize(mix(a_, b_, t_));
 });

@@ -1,8 +1,10 @@
 import tgpu from 'typegpu';
+import type { Infer } from 'typegpu/data';
 import { f32, struct, vec2f } from 'typegpu/data';
 import { dot, max, sqrt } from 'typegpu/std';
 
-const ExternalNormals = struct({
+export type ExternalNormals = Infer<typeof ExternalNormals>;
+export const ExternalNormals = struct({
   /** Normal which is CW (left of) the distance vector */
   nL: vec2f,
   /** Normal which is CCW (right of) the distance vector */

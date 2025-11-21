@@ -35,16 +35,16 @@ export const miterPointNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
  * otherwise at "infinity".
  */
 export const miterPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
-  const sin_ = cross2d(a, b);
   const b2 = dot(b, b);
   const cos_ = dot(a, b);
+  const sin_ = cross2d(a, b);
   const diff = b2 - cos_;
   // TODO: make this check relative
   if (diff * diff < 1e-4) {
     // the vectors are almost colinear
     return midPoint(a, b);
   }
-  if (sin_ < 0) {
+  if (sin_ <= 0) {
     // if the miter is at infinity, just make it super far
     const bisection = bisectCcw(a, b);
     return mul(bisection, -1e6);
