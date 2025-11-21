@@ -59,21 +59,24 @@ describe('slime mold 3d example', () => {
         direction: vec3f,
       }
 
-      @group(0) @binding(1) var<storage, read_write> agentsData_10: array<Agent_11, 800000>;
+      @group(0) @binding(1) var<storage, read_write> item_10: array<Agent_11, 800000>;
+
+      @group(0) @binding(2) var<storage, read_write> item_12: array<Agent_11, 800000>;
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed_3((f32(x) / 8e+5f));
         var pos = ((randInUnitSphere_6() * 64.) + vec3f(128));
         var center = vec3f(128);
         var dir = normalize((center - pos));
-        agentsData_10[x] = Agent_11(pos, dir);
+        item_10[x] = Agent_11(pos, dir);
+        item_12[x] = Agent_11(pos, dir);
       }
 
-      struct mainCompute_Input_12 {
+      struct mainCompute_Input_13 {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_13)  {
         if (any(in.id >= sizeUniform_1)) {
           return;
         }
@@ -130,14 +133,14 @@ describe('slime mold 3d example', () => {
         seed_2(seed);
       }
 
-      @group(1) @binding(0) var oldState_4: texture_storage_3d<r32float, read>;
+      @group(1) @binding(1) var oldState_4: texture_storage_3d<r32float, read>;
 
       struct Agent_6 {
         position: vec3f,
         direction: vec3f,
       }
 
-      @group(0) @binding(0) var<storage, read_write> agentsData_5: array<Agent_6, 800000>;
+      @group(1) @binding(0) var<storage, read> oldAgents_5: array<Agent_6>;
 
       fn item_8() -> f32 {
         var a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
@@ -176,7 +179,7 @@ describe('slime mold 3d example', () => {
         evaporationRate: f32,
       }
 
-      @group(0) @binding(1) var<uniform> params_11: Params_12;
+      @group(0) @binding(0) var<uniform> params_11: Params_12;
 
       struct SenseResult_13 {
         weightedDir: vec3f,
@@ -227,20 +230,22 @@ describe('slime mold 3d example', () => {
         return (sign(alignment) * value);
       }
 
-      @group(1) @binding(1) var newState_18: texture_storage_3d<r32float, write>;
+      @group(1) @binding(2) var<storage, read_write> newAgents_18: array<Agent_6>;
 
-      struct updateAgents_Input_19 {
+      @group(1) @binding(3) var newState_19: texture_storage_3d<r32float, write>;
+
+      struct updateAgents_Input_20 {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_19) {
+      @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_20) {
         if ((_arg_0.gid.x >= 800000u)) {
           return;
         }
         randSeed_1(((f32(_arg_0.gid.x) / 8e+5f) + 0.1f));
         var dims = textureDimensions(oldState_4);
         var dimsf = vec3f(dims);
-        var agent = agentsData_5[_arg_0.gid.x];
+        var agent = oldAgents_5[_arg_0.gid.x];
         var random = randFloat01_7();
         var direction = normalize(agent.direction);
         var senseResult = sense3D_9(agent.position, direction);
@@ -285,10 +290,10 @@ describe('slime mold 3d example', () => {
           var toCenter = normalize((center - newPos));
           direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
         }
-        agentsData_5[_arg_0.gid.x] = Agent_6(newPos, direction);
+        newAgents_18[_arg_0.gid.x] = Agent_6(newPos, direction);
         var oldState = textureLoad(oldState_4, vec3u(newPos)).x;
         var newState = (oldState + 1f);
-        textureStore(newState_18, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
+        textureStore(newState_19, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
       }
 
       struct fullScreenTriangle_Input_1 {
