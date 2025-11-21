@@ -22,7 +22,8 @@ const segmentSide = tgpu.const(arrayOf(f32, 4), [-1, -1, 1, 1]);
 const segmentAlternate = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     const r = sin(time + select(0, Math.PI / 2, side === -1));
     const radius = 0.4 * r * r;
     return LineSegmentVertex({
@@ -35,7 +36,8 @@ const segmentAlternate = testCaseShell(
 const segmentStretch = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     const distance = 0.5 * clamp(0.55 * sin(1.5 * time) + 0.5, 0, 1);
     return LineSegmentVertex({
       position: vec2f(distance * side * cos(time), distance * side * sin(time)),
@@ -47,7 +49,8 @@ const segmentStretch = testCaseShell(
 const segmentContainsAnotherEnd = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     return LineSegmentVertex({
       position: vec2f(side * 0.25 * (1 + clamp(sin(time), -0.8, 1)), 0),
       radius: 0.25 + side * 0.125,

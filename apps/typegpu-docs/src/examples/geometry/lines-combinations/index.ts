@@ -449,6 +449,7 @@ const subdivs = [
   },
 ];
 
+// #region Example controls & Cleanup
 export const controls = {
   'Test Case': {
     initial: Object.keys(testCases)[0],
@@ -532,3 +533,4 @@ export function onCleanup() {
   root.destroy();
   cancelAnimationFrame(frameId);
 }
+// #endregion

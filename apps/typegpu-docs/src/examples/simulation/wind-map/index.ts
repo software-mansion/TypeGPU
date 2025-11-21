@@ -285,6 +285,7 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
+// #region Example controls & Cleanup
 export const controls = {
   'Play': {
     initial: true,
@@ -299,3 +300,4 @@ export function onCleanup() {
   root.device.destroy();
   cancelAnimationFrame(frameId);
 }
+// #endregion

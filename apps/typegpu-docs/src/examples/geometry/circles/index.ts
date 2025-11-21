@@ -137,7 +137,7 @@ const pipeline = root['~unstable']
 
 setTimeout(() => {
   pipeline
-    .with(bindGroupLayout, uniformsBindGroup)
+    .with(uniformsBindGroup)
     .withColorAttachment({
       ...(multisample
         ? {
@@ -157,6 +157,8 @@ setTimeout(() => {
     .draw(circleVertexCount(4), circleCount);
 }, 100);
 
+// #region Example controls & Cleanup
 export function onCleanup() {
   root.destroy();
 }
+// #endregion
