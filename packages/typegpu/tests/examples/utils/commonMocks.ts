@@ -27,10 +27,10 @@ export function setupCommonMocks() {
         value: (callback: VideoFrameRequestCallback) => {
           if (!callbackInvoked) {
             callbackInvoked = true;
-            callback(
-              0,
-              { width: 640, height: 480 } as VideoFrameCallbackMetadata,
-            );
+            callback(0, {
+              width: 640,
+              height: 480,
+            } as VideoFrameCallbackMetadata);
           }
           return 0; // Mock ID
         },
@@ -68,7 +68,8 @@ export function mockResizeObserver() {
 export function mockImageLoading({ width = 2, height = 2 } = {}) {
   vi.stubGlobal('fetch', async (url: string) => {
     if (
-      url.includes('.jpg') || url.includes('.png') ||
+      url.includes('.jpg') ||
+      url.includes('.png') ||
       url.startsWith('/TypeGPU/')
     ) {
       const mockImage = new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255]);
@@ -109,6 +110,109 @@ export function mockMnistWeights() {
       return new Response(totalBuffer);
     }
   });
+}
+
+export function mockAudioLoading() {
+  // Mock fetch for audio files
+  const originalFetch = global.fetch;
+  vi.stubGlobal('fetch', async (url: string) => {
+    if (
+      typeof url === 'string' &&
+      url.includes('/TypeGPU/assets/jelly-switch/') &&
+      (url.endsWith('.ogg') || url.endsWith('.wav'))
+    ) {
+      // Return a minimal valid audio file (empty WAV header + silence)
+      const wavHeader = new Uint8Array([
+        0x52,
+        0x49,
+        0x46,
+        0x46, // "RIFF"
+        0x24,
+        0x08,
+        0x00,
+        0x00, // File size
+        0x57,
+        0x41,
+        0x56,
+        0x45, // "WAVE"
+        0x66,
+        0x6d,
+        0x74,
+        0x20, // "fmt "
+        0x10,
+        0x00,
+        0x00,
+        0x00, // Chunk size
+        0x01,
+        0x00, // Audio format (PCM)
+        0x02,
+        0x00, // Number of channels
+        0x44,
+        0xac,
+        0x00,
+        0x00, // Sample rate (44100)
+        0x88,
+        0x58,
+        0x01,
+        0x00, // Byte rate
+        0x04,
+        0x00, // Block align
+        0x10,
+        0x00, // Bits per sample
+        0x64,
+        0x61,
+        0x74,
+        0x61, // "data"
+        0x00,
+        0x08,
+        0x00,
+        0x00, // Data size
+      ]);
+      const silence = new Uint8Array(2048); // 2048 bytes of silence
+      const audioData = new Uint8Array(wavHeader.length + silence.length);
+      audioData.set(wavHeader);
+      audioData.set(silence, wavHeader.length);
+
+      return new Response(audioData, {
+        headers: {
+          'Content-Type': url.endsWith('.ogg') ? 'audio/ogg' : 'audio/wav',
+        },
+      });
+    }
+
+    // Fall back to original fetch for other URLs
+    return originalFetch(url);
+  });
+
+  // Mock AudioContext with minimal methods needed for SwitchBehavior
+  vi.stubGlobal(
+    'AudioContext',
+    vi.fn(() => ({
+      createGain: vi.fn(() => ({
+        connect: vi.fn(),
+        gain: { value: 0, setTargetAtTime: vi.fn() },
+      })),
+      createBufferSource: vi.fn(() => ({
+        buffer: null,
+        loop: false,
+        playbackRate: { value: 1, setTargetAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+      })),
+      decodeAudioData: vi.fn(async () => ({
+        duration: 1,
+        length: 44100,
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        getChannelData: vi.fn(() => new Float32Array(44100)),
+        copyFromChannel: vi.fn(),
+        copyToChannel: vi.fn(),
+      })),
+      destination: {},
+    })),
+  );
 }
 
 export function mock3DModelLoading() {
