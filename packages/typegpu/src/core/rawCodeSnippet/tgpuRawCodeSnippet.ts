@@ -84,7 +84,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
   type: TDataType,
   origin: RawCodeSnippetOrigin | undefined = 'runtime',
 ): TgpuRawCodeSnippet<TDataType> {
-  return new TgpuRawCodeSnippetImpl(expression, type, 'runtime');
+  return new TgpuRawCodeSnippetImpl(expression, type, origin);
 }
 
 // --------------
