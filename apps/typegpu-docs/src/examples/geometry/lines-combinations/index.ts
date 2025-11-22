@@ -1,20 +1,11 @@
 import {
-  addMul,
+  caps,
   endCapSlot,
+  joins,
   joinSlot,
-  lineCaps,
-  lineJoins,
-  lineSegmentIndicesCapLevel0,
-  lineSegmentIndicesCapLevel1,
-  lineSegmentIndicesCapLevel2,
-  lineSegmentIndicesCapLevel3,
+  lineSegmentIndices,
   lineSegmentVariableWidth,
-  lineSegmentWireframeIndicesCapLevel0,
-  lineSegmentWireframeIndicesCapLevel1,
-  lineSegmentWireframeIndicesCapLevel2,
-  lineSegmentWireframeIndicesCapLevel3,
   startCapSlot,
-  uvToLineSegment,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
 import {
@@ -29,7 +20,7 @@ import {
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
+import { add, clamp, cos, min, mix, mul, select, sin } from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
@@ -84,17 +75,20 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   uniforms: uniformsBuffer,
 });
 
+const MAX_JOIN_COUNT = 6;
+const lineSegment = lineSegmentIndices(MAX_JOIN_COUNT);
+
 const indexBuffer = root
   .createBuffer(
-    arrayOf(u16, lineSegmentIndicesCapLevel3.length),
-    lineSegmentIndicesCapLevel3,
+    arrayOf(u16, lineSegment.indices.length),
+    lineSegment.indices,
   )
   .$usage('index');
 
 const outlineIndexBuffer = root
   .createBuffer(
-    arrayOf(u16, lineSegmentWireframeIndicesCapLevel3.length),
-    lineSegmentWireframeIndicesCapLevel3,
+    arrayOf(u16, lineSegment.wireframeIndices.length),
+    lineSegment.wireframeIndices,
   )
   .$usage('index');
 
@@ -133,13 +127,19 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     };
   }
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D);
-  const uv = uvToLineSegment(B.position, C.position, result.vertexPosition);
+  const result = lineSegmentVariableWidth(
+    vertexIndex,
+    A,
+    B,
+    C,
+    D,
+    MAX_JOIN_COUNT,
+  );
 
   return {
     outPos: vec4f(result.vertexPosition, 0, 1),
     position: result.vertexPosition,
-    uv: uv,
+    uv: vec2f(),
     instanceIndex,
     vertexIndex,
     situationIndex: result.situationIndex,
@@ -192,13 +192,13 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
       vec3f(0.25, 0.25, 0.75), // 8
     ];
     if (fillType === 2) {
-      color = colors[instanceIndex % colors.length];
+      color = vec3f(colors[instanceIndex % colors.length]);
     }
     if (fillType === 3) {
-      color = colors[vertexIndex % colors.length];
+      color = vec3f(colors[vertexIndex % colors.length]);
     }
     if (fillType === 4) {
-      color = colors[situationIndex % colors.length];
+      color = vec3f(colors[situationIndex % colors.length]);
     }
     if (fillType === 5) {
       color = vec3f(uv.x, cos(uv.y * 100), 0);
@@ -284,14 +284,14 @@ const circlesVertex = tgpu['~unstable'].vertexFn({
   const angle = min(2 * Math.PI, step * f32(vertexIndex));
   const unit = vec2f(cos(angle), sin(angle));
   return {
-    outPos: vec4f(addMul(vertex.position, unit, vertex.radius), 0, 1),
+    outPos: vec4f(add(vertex.position, mul(unit, vertex.radius)), 0, 1),
   };
 });
 
 let testCase = testCases.arms;
-let join = lineJoins.round;
-let startCap = lineCaps.round;
-let endCap = lineCaps.round;
+let join = joins.round;
+let startCap = caps.round;
+let endCap = caps.round;
 
 function createPipelines() {
   const fill = root['~unstable']
@@ -365,10 +365,6 @@ let wireframe = true;
 let fillType = 1;
 let animationSpeed = 1;
 let reverse = false;
-let subdiv = {
-  fillCount: lineSegmentIndicesCapLevel3.length,
-  wireframeCount: lineSegmentWireframeIndicesCapLevel3.length,
-};
 
 const draw = (timeMs: number) => {
   uniformsBuffer.writePartial({
@@ -388,13 +384,16 @@ const draw = (timeMs: number) => {
         console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
       }
     })
-    .drawIndexed(subdiv.fillCount, fillType === 0 ? 0 : TEST_SEGMENT_COUNT);
+    .drawIndexed(
+      lineSegment.indices.length,
+      fillType === 0 ? 0 : TEST_SEGMENT_COUNT,
+    );
 
   if (wireframe) {
     pipelines.outline
       .with(uniformsBindGroup)
       .withColorAttachment(colorAttachment)
-      .drawIndexed(subdiv.wireframeCount, TEST_SEGMENT_COUNT);
+      .drawIndexed(lineSegment.wireframeIndices.length, TEST_SEGMENT_COUNT);
   }
   if (showRadii) {
     pipelines.circles
@@ -430,25 +429,6 @@ const fillOptions = {
   distanceToSegment: 5,
 };
 
-const subdivs = [
-  {
-    fillCount: lineSegmentIndicesCapLevel0.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel0.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel1.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel1.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel2.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel2.length,
-  },
-  {
-    fillCount: lineSegmentIndicesCapLevel3.length,
-    wireframeCount: lineSegmentWireframeIndicesCapLevel3.length,
-  },
-];
-
 export const controls = {
   'Test Case': {
     initial: Object.keys(testCases)[0],
@@ -460,25 +440,25 @@ export const controls = {
   },
   'Start Cap': {
     initial: 'round',
-    options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      startCap = lineCaps[selected];
+    options: Object.keys(caps),
+    onSelectChange: async (selected: keyof typeof caps) => {
+      startCap = caps[selected];
       pipelines = createPipelines();
     },
   },
   'End Cap': {
     initial: 'round',
-    options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      endCap = lineCaps[selected];
+    options: Object.keys(caps),
+    onSelectChange: async (selected: keyof typeof caps) => {
+      endCap = caps[selected];
       pipelines = createPipelines();
     },
   },
   Join: {
     initial: 'round',
-    options: Object.keys(lineJoins),
-    onSelectChange: async (selected: keyof typeof lineJoins) => {
-      join = lineJoins[selected];
+    options: Object.keys(joins),
+    onSelectChange: async (selected: keyof typeof joins) => {
+      join = joins[selected];
       pipelines = createPipelines();
     },
   },
@@ -488,15 +468,6 @@ export const controls = {
     onSelectChange: async (selected: keyof typeof fillOptions) => {
       fillType = fillOptions[selected];
       uniformsBuffer.writePartial({ fillType });
-    },
-  },
-  'Subdiv. Level': {
-    initial: 2,
-    min: 0,
-    step: 1,
-    max: 3,
-    onSliderChange: (value: number) => {
-      subdiv = subdivs[value];
     },
   },
   Wireframe: {

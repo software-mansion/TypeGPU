@@ -1,57 +1,23 @@
-import type { v2f } from 'typegpu/data';
-import { add, dot, select } from 'typegpu/std';
-import { addMul, rot90ccw, rot90cw } from '../../utils.ts';
-import { miterPointNoCheck } from '../utils.ts';
-import { capShell } from './common.ts';
+import { vec2f } from 'typegpu/data';
+import { normalize, select, sign } from 'typegpu/std';
+import { addMul, cross2d, rot90ccw } from '../../utils.ts';
+import type { JoinInput } from '../types.ts';
 
-export const squareCap = capShell(
-  (
-    vertexIndex,
-    joinPath,
-    V,
-    vu,
-    vd,
-    right,
-    dir,
-    left,
-  ) => {
-    'use gpu';
-    const shouldJoin = dot(dir, right) < 0;
-    const dirRight = rot90cw(dir);
-    const dirLeft = rot90ccw(dir);
-    const u = select(
-      miterPointNoCheck(right, dir),
-      add(dir, dirRight),
-      shouldJoin,
-    );
-    const c = dir;
-    const d = select(
-      miterPointNoCheck(dir, left),
-      add(dir, dirLeft),
-      shouldJoin,
-    );
-
-    const joinIndex = joinPath.joinIndex;
-    if (joinPath.depth >= 0) {
-      const miterR = select(
-        right,
-        miterPointNoCheck(right, dirRight),
-        shouldJoin,
-      );
-      const miterL = select(
-        left,
-        miterPointNoCheck(dirLeft, left),
-        shouldJoin,
-      );
-      const parents = [miterR, miterL];
-      const dm = parents[joinIndex & 0b1] as v2f;
-      return addMul(V.position, dm, V.radius);
-    }
-
-    const v1 = addMul(V.position, u, V.radius);
-    const v2 = addMul(V.position, c, V.radius);
-    const v3 = addMul(V.position, d, V.radius);
-    const points = [vu, v1, v2, v3, vd];
-    return points[vertexIndex % 5] as v2f;
-  },
-);
+export function square(
+  join: JoinInput,
+  joinIndex: number,
+  _maxJoinCount: number,
+) {
+  'use gpu';
+  if (joinIndex === 0) {
+    return vec2f(join.v);
+  }
+  const fw = normalize(join.fw);
+  const vert = rot90ccw(fw);
+  const sgn = sign(cross2d(fw, join.d));
+  return addMul(
+    join.C.position,
+    select(addMul(fw, vert, sgn), fw, joinIndex > 1),
+    join.C.radius,
+  );
+}

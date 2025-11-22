@@ -1,4 +1,11 @@
-import { lines2 } from '@typegpu/geometry';
+import {
+  caps,
+  endCapSlot,
+  LineControlPoint,
+  lineSegmentIndices,
+  lineSegmentVariableWidth,
+  startCapSlot,
+} from '@typegpu/geometry';
 import tgpu from 'typegpu';
 import {
   arrayOf,
@@ -12,9 +19,6 @@ import {
   vec4f,
 } from 'typegpu/data';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
-
-const { lineSegmentIndices, lineSegmentVariableWidth, LineControlPoint } =
-  lines2;
 
 const root = await tgpu.init({
   adapter: {
@@ -227,8 +231,8 @@ function createPipelines() {
     .createPipeline();
 
   const fill = root['~unstable']
-    .with(lines2.startCapSlot, lines2.caps.arrow)
-    .with(lines2.endCapSlot, lines2.caps.butt)
+    .with(startCapSlot, caps.arrow)
+    .with(endCapSlot, caps.butt)
     .withVertex(mainVertex, {})
     .withFragment(mainFragment, {
       format: presentationFormat,

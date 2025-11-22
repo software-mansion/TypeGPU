@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
-import { f32, vec2f } from 'typegpu/data';
-import { add, dot, mix, mul, normalize, select } from 'typegpu/std';
+import { bool, f32, struct, vec2f } from 'typegpu/data';
+import { add, dot, mix, mul, normalize, select, sub } from 'typegpu/std';
 
 /** Shorthand for `add(a, mul(b, f))` due to lack of operators */
 export const addMul = tgpu.fn([vec2f, vec2f, f32], vec2f)((a, b, f) => {
@@ -77,3 +77,27 @@ export const slerpApprox = tgpu.fn([vec2f, vec2f, f32], vec2f)((a, b, t) => {
   }
   return normalize(mix(a_, b_, t_));
 });
+
+const Intersection = struct({
+  valid: bool,
+  t: f32,
+  point: vec2f,
+});
+
+export const intersectLines = tgpu.fn(
+  [vec2f, vec2f, vec2f, vec2f],
+  Intersection,
+)(
+  (A1, A2, B1, B2) => {
+    const a = sub(A2, A1);
+    const b = sub(B2, B1);
+    const axb = cross2d(a, b);
+    const AB = sub(B1, A1);
+    const t = cross2d(AB, b) / axb;
+    return {
+      valid: axb !== 0 && t >= 0 && t <= 1,
+      t,
+      point: addMul(A1, a, t),
+    };
+  },
+);
