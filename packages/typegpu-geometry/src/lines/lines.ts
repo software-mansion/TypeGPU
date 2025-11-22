@@ -34,14 +34,11 @@ export const lineSegmentVariableWidth = tgpu.fn(
   // segments where one end completely contains the other are skipped
   // TODO: we should probably render a circle in some cases
   if (dot(BC, BC) <= radiusBCDelta * radiusBCDelta) {
-    return {
-      vertexPosition: vec2f(0, 0),
-      situationIndex: 0,
-    };
+    return { vertexPosition: vec2f(0, 0), w: 1 };
   }
 
-  const isCapB = dot(AB, AB) <= radiusABDelta * radiusABDelta + 1e-12;
-  const isCapC = dot(DC, DC) <= radiusCDDelta * radiusCDDelta + 1e-12;
+  const isCapB = dot(AB, AB) <= radiusABDelta * radiusABDelta;
+  const isCapC = dot(DC, DC) <= radiusCDDelta * radiusCDDelta;
 
   const eAB = externalNormals(AB, A.radius, B.radius);
   const eBC = externalNormals(BC, B.radius, C.radius);
@@ -69,13 +66,11 @@ export const lineSegmentVariableWidth = tgpu.fn(
   const v3 = select(v3orig, limR.point, limR.valid);
   const v4 = select(v4orig, limR.point, limR.valid);
 
-  const situationIndex = u32(joinB.isHairpin) + u32(joinC.isHairpin);
-
-  if (vertexIndex < 2) {
-    return {
-      vertexPosition: select(B.position, C.position, vertexIndex === 1),
-      situationIndex,
-    };
+  if (vertexIndex === 0) {
+    return { vertexPosition: B.position, w: 1 / B.radius };
+  }
+  if (vertexIndex === 1) {
+    return { vertexPosition: C.position, w: 1 / C.radius };
   }
 
   const joinIndex = (vertexIndex - 2) & 0b11;
@@ -121,8 +116,8 @@ export const lineSegmentVariableWidth = tgpu.fn(
     vertexPosition = joinSlot.$(join, joinCount, maxJoinCount);
   }
 
-  return {
-    vertexPosition,
-    situationIndex,
-  };
+  // TODO: adjust for reverse miter
+  const w = select(1 / B.radius, 1 / C.radius, joinIndex >= 2);
+
+  return { vertexPosition, w };
 });

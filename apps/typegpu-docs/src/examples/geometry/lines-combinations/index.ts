@@ -4,7 +4,9 @@ import {
   joins,
   joinSlot,
   lineSegmentIndices,
+  lineSegmentLeftIndices,
   lineSegmentVariableWidth,
+  lineSegmentWireframeIndices,
   startCapSlot,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
@@ -20,7 +22,18 @@ import {
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import { add, clamp, cos, min, mix, mul, select, sin } from 'typegpu/std';
+import {
+  add,
+  clamp,
+  cos,
+  fwidth,
+  min,
+  mix,
+  mul,
+  select,
+  sin,
+  smoothstep,
+} from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
@@ -76,19 +89,28 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
 });
 
 const MAX_JOIN_COUNT = 6;
-const lineSegment = lineSegmentIndices(MAX_JOIN_COUNT);
+const indices = lineSegmentIndices(MAX_JOIN_COUNT);
+const indicesLeft = lineSegmentLeftIndices(MAX_JOIN_COUNT);
+const wireframeIndices = lineSegmentWireframeIndices(MAX_JOIN_COUNT);
 
 const indexBuffer = root
   .createBuffer(
-    arrayOf(u16, lineSegment.indices.length),
-    lineSegment.indices,
+    arrayOf(u16, indices.length),
+    indices,
+  )
+  .$usage('index');
+
+const indexBufferLeft = root
+  .createBuffer(
+    arrayOf(u16, indicesLeft.length),
+    indicesLeft,
   )
   .$usage('index');
 
 const outlineIndexBuffer = root
   .createBuffer(
-    arrayOf(u16, lineSegment.wireframeIndices.length),
-    lineSegment.wireframeIndices,
+    arrayOf(u16, wireframeIndices.length),
+    wireframeIndices,
   )
   .$usage('index');
 
@@ -137,12 +159,12 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   );
 
   return {
-    outPos: vec4f(result.vertexPosition, 0, 1),
+    outPos: vec4f(mul(result.vertexPosition, result.w), 0, result.w),
     position: result.vertexPosition,
-    uv: vec2f(),
+    uv: vec2f(0, select(f32(0), f32(1), vertexIndex > 1)),
     instanceIndex,
     vertexIndex,
-    situationIndex: result.situationIndex,
+    situationIndex: 0,
   };
 });
 
@@ -171,14 +193,6 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   }) => {
     'use gpu';
     const fillType = bindGroupLayout.$.uniforms.fillType;
-    if (fillType === 1) {
-      // typegpu gradient
-      return mix(
-        vec4f(0.77, 0.39, 1, 0.5),
-        vec4f(0.11, 0.44, 0.94, 0.5),
-        position.x * 0.5 + 0.5,
-      );
-    }
     let color = vec3f();
     const colors = [
       vec3f(1, 0, 0), // 0
@@ -191,18 +205,33 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
       vec3f(0.25, 0.75, 0.25), // 7
       vec3f(0.25, 0.25, 0.75), // 8
     ];
+    if (fillType === 1) {
+      // typegpu gradient
+      color = mix(
+        vec3f(0.77, 0.39, 1),
+        vec3f(0.11, 0.44, 0.94),
+        position.x * 0.5 + 0.5,
+      );
+    }
     if (fillType === 2) {
-      color = vec3f(colors[instanceIndex % colors.length]);
+      let t = cos(uv.y * 10);
+      t = clamp(t / fwidth(t), 0, 1);
+      color = mix(
+        vec3f(0.77, 0.39, 1),
+        vec3f(0.11, 0.44, 0.94),
+        t,
+      );
     }
     if (fillType === 3) {
       color = vec3f(colors[vertexIndex % colors.length]);
     }
     if (fillType === 4) {
-      color = vec3f(colors[situationIndex % colors.length]);
+      color = vec3f(colors[instanceIndex % colors.length]);
     }
     if (fillType === 5) {
-      color = vec3f(uv.x, cos(uv.y * 100), 0);
+      color = vec3f(colors[situationIndex % colors.length]);
     }
+    color = mul(color, 0.8 + 0.2 * smoothstep(1, 0.5, uv.y));
     if (frontFacing) {
       return vec4f(color, 0.5);
     }
@@ -308,7 +337,7 @@ function createPipelines() {
       // cullMode: 'back',
     })
     .createPipeline()
-    .withIndexBuffer(indexBuffer);
+    .withIndexBuffer(oneSided ? indexBufferLeft : indexBuffer);
 
   const outline = root['~unstable']
     .with(joinSlot, join)
@@ -358,13 +387,14 @@ function createPipelines() {
   };
 }
 
-let pipelines = createPipelines();
-
 let showRadii = false;
 let wireframe = true;
+let oneSided = false;
 let fillType = 1;
 let animationSpeed = 1;
 let reverse = false;
+
+let pipelines = createPipelines();
 
 const draw = (timeMs: number) => {
   uniformsBuffer.writePartial({
@@ -385,7 +415,7 @@ const draw = (timeMs: number) => {
       }
     })
     .drawIndexed(
-      lineSegment.indices.length,
+      oneSided ? indicesLeft.length : indices.length,
       fillType === 0 ? 0 : TEST_SEGMENT_COUNT,
     );
 
@@ -393,7 +423,7 @@ const draw = (timeMs: number) => {
     pipelines.outline
       .with(uniformsBindGroup)
       .withColorAttachment(colorAttachment)
-      .drawIndexed(lineSegment.wireframeIndices.length, TEST_SEGMENT_COUNT);
+      .drawIndexed(wireframeIndices.length, TEST_SEGMENT_COUNT);
   }
   if (showRadii) {
     pipelines.circles
@@ -423,10 +453,10 @@ runAnimationFrame(0);
 const fillOptions = {
   none: 0,
   solid: 1,
-  instance: 2,
+  distanceToSegment: 2,
   triangle: 3,
-  situation: 4,
-  distanceToSegment: 5,
+  instance: 4,
+  // situation: 5,
 };
 
 export const controls = {
@@ -474,6 +504,13 @@ export const controls = {
     initial: true,
     onToggleChange: (value: boolean) => {
       wireframe = value;
+    },
+  },
+  'One sided': {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      oneSided = value;
+      pipelines = createPipelines();
     },
   },
   'Radius and centerline': {

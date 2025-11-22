@@ -1,5 +1,5 @@
 import type { Infer } from 'typegpu/data';
-import { bool, f32, struct, u32, vec2f } from 'typegpu/data';
+import { bool, f32, struct, vec2f } from 'typegpu/data';
 
 export type LineControlPoint = Infer<typeof LineControlPoint>;
 export const LineControlPoint = struct({
@@ -10,7 +10,8 @@ export const LineControlPoint = struct({
 export type LineSegmentOutput = Infer<typeof LineSegmentOutput>;
 export const LineSegmentOutput = struct({
   vertexPosition: vec2f,
-  situationIndex: u32,
+  /** Homogeneous coordinate for scaling surface values */
+  w: f32,
 });
 
 export type LineSegmentVertexData = Infer<typeof LineSegmentVertexData>;

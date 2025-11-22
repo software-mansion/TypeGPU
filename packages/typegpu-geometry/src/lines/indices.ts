@@ -40,7 +40,6 @@ const lineSegmentWireframeIndicesBase = [
 
 export function lineSegmentIndices(joinTriangleCount: number) {
   const indices = [...lineSegmentIndicesBase];
-  const wireframeIndices = [...lineSegmentWireframeIndicesBase];
   for (let i = 0; i < joinTriangleCount; ++i) {
     for (let j = 0; j < 4; ++j) {
       const vertexIndex = i * 4 + j + 6;
@@ -48,9 +47,42 @@ export function lineSegmentIndices(joinTriangleCount: number) {
       const a = j % 2 === 0 ? end : vertexIndex - 4;
       const b = j % 2 === 0 ? vertexIndex - 4 : end;
       indices.push(vertexIndex, a, b);
+    }
+  }
+  return indices;
+}
+
+export function lineSegmentWireframeIndices(joinTriangleCount: number) {
+  const wireframeIndices = [...lineSegmentWireframeIndicesBase];
+  for (let i = 0; i < joinTriangleCount; ++i) {
+    for (let j = 0; j < 4; ++j) {
+      const vertexIndex = i * 4 + j + 6;
+      const end = j < 2 ? 0 : 1;
+      const a = j % 2 === 0 ? end : vertexIndex - 4;
+      const b = j % 2 === 0 ? vertexIndex - 4 : end;
       wireframeIndices.push(vertexIndex, a);
       wireframeIndices.push(vertexIndex, b);
     }
   }
-  return { indices, wireframeIndices };
+  return wireframeIndices;
+}
+
+// deno-fmt-ignore
+const lineSegmentLeftIndicesBase = [
+  0, 3, 1,
+  1, 3, 4,
+];
+
+export function lineSegmentLeftIndices(joinTriangleCount: number) {
+  const indices = [...lineSegmentLeftIndicesBase];
+  for (let i = 0; i < joinTriangleCount; ++i) {
+    for (let j = 1; j < 3; ++j) {
+      const vertexIndex = i * 4 + j + 6;
+      const end = j < 2 ? 0 : 1;
+      const a = j % 2 === 0 ? end : vertexIndex - 4;
+      const b = j % 2 === 0 ? vertexIndex - 4 : end;
+      indices.push(vertexIndex, a, b);
+    }
+  }
+  return indices;
 }

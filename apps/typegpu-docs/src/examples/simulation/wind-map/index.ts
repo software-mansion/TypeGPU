@@ -95,10 +95,10 @@ const bindGroupWritable = root.createBindGroup(bindGroupLayoutWritable, {
 });
 
 const MAX_JOIN_COUNT = 3;
-const segmentMesh = lineSegmentIndices(MAX_JOIN_COUNT);
+const indices = lineSegmentIndices(MAX_JOIN_COUNT);
 const indexBuffer = root.createBuffer(
-  arrayOf(u16, segmentMesh.indices.length),
-  segmentMesh.indices,
+  arrayOf(u16, indices.length),
+  indices,
 ).$usage('index');
 
 // const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
@@ -267,7 +267,7 @@ const draw = () => {
       storeOp: 'store',
     })
     .drawIndexed(
-      segmentMesh.indices.length,
+      indices.length,
       PARTICLE_COUNT * TRAIL_LENGTH,
     );
 };
