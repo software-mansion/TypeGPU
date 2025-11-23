@@ -66,6 +66,26 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+let msaaTexture: GPUTexture;
+let msaaTextureView: GPUTextureView;
+
+const createDepthAndMsaaTextures = () => {
+  if (msaaTexture) {
+    msaaTexture.destroy();
+  }
+  msaaTexture = device.createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: presentationFormat,
+    sampleCount: 4,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  msaaTextureView = msaaTexture.createView();
+};
+
+createDepthAndMsaaTextures();
+const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
+resizeObserver.observe(canvas);
+
 const Uniforms = struct({
   time: f32,
   fillType: u32,
@@ -336,6 +356,7 @@ function createPipelines() {
     .withPrimitive({
       // cullMode: 'back',
     })
+    .withMultisample({ count: multisample ? 4 : 1 })
     .createPipeline()
     .withIndexBuffer(oneSided ? indexBufferLeft : indexBuffer);
 
@@ -352,6 +373,7 @@ function createPipelines() {
     .withPrimitive({
       topology: 'line-list',
     })
+    .withMultisample({ count: multisample ? 4 : 1 })
     .createPipeline()
     .withIndexBuffer(outlineIndexBuffer);
 
@@ -365,6 +387,7 @@ function createPipelines() {
     .withPrimitive({
       topology: 'line-strip',
     })
+    .withMultisample({ count: multisample ? 4 : 1 })
     .createPipeline();
 
   const circles = root['~unstable']
@@ -377,6 +400,7 @@ function createPipelines() {
     .withPrimitive({
       topology: 'line-list',
     })
+    .withMultisample({ count: multisample ? 4 : 1 })
     .createPipeline();
 
   return {
@@ -387,8 +411,9 @@ function createPipelines() {
   };
 }
 
+let multisample = true;
 let showRadii = false;
-let wireframe = true;
+let wireframe = false;
 let oneSided = false;
 let fillType = 1;
 let animationSpeed = 1;
@@ -401,7 +426,12 @@ const draw = (timeMs: number) => {
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
-    view: context.getCurrentTexture().createView(),
+    view: multisample
+      ? msaaTextureView
+      : context.getCurrentTexture().createView(),
+    resolveTarget: multisample
+      ? context.getCurrentTexture().createView()
+      : undefined,
     clearValue: [1, 1, 1, 1],
     loadOp: 'load',
     storeOp: 'store',
@@ -460,6 +490,13 @@ const fillOptions = {
 };
 
 export const controls = {
+  'MSAA x4': {
+    initial: multisample,
+    onToggleChange: (value: boolean) => {
+      multisample = value;
+      pipelines = createPipelines();
+    },
+  },
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
@@ -501,26 +538,26 @@ export const controls = {
     },
   },
   Wireframe: {
-    initial: true,
+    initial: wireframe,
     onToggleChange: (value: boolean) => {
       wireframe = value;
     },
   },
   'One sided': {
-    initial: false,
+    initial: oneSided,
     onToggleChange: (value: boolean) => {
       oneSided = value;
       pipelines = createPipelines();
     },
   },
   'Radius and centerline': {
-    initial: false,
+    initial: showRadii,
     onToggleChange: (value: boolean) => {
       showRadii = value;
     },
   },
   'Animation speed': {
-    initial: 1,
+    initial: animationSpeed,
     min: 0,
     step: 0.001,
     max: 5,
@@ -529,7 +566,7 @@ export const controls = {
     },
   },
   Reverse: {
-    initial: false,
+    initial: reverse,
     onToggleChange: (value: boolean) => {
       reverse = value;
     },

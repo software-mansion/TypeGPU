@@ -14,7 +14,7 @@ import type { JoinInput } from '../types.ts';
 export const miterJoinLimitSlot = tgpu.slot(2);
 
 /**
- * Finds the miter point of tangents to two points on respective circles.
+ * Finds the miter point of tangents to two points on a circle.
  */
 function miterPointBisectorWhenClockwise(a: v2f, b: v2f) {
   'use gpu';

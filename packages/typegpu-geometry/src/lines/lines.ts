@@ -75,7 +75,6 @@ export const lineSegmentVariableWidth = tgpu.fn(
 
   const joinIndex = (vertexIndex - 2) & 0b11;
   const joinCount = (vertexIndex - 2) >> 2;
-
   let join = JoinInput();
 
   // deno-fmt-ignore

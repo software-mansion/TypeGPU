@@ -32,7 +32,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// Textures
 let msaaTexture: GPUTexture;
 let msaaTextureView: GPUTextureView;
 

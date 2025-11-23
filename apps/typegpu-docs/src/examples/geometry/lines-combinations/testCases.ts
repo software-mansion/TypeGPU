@@ -121,7 +121,7 @@ export const perlinTraces = testCaseShell((vertexIndex, time) => {
     0.25 * perlin2d.sample(vec2f(4 * x, time + 100 + 0.1 * n)) +
     0.125 * perlin2d.sample(vec2f(8 * x, time + 200 + 0.2 * n)) +
     0.0625 * perlin2d.sample(vec2f(16 * x, time + 300 + 0.3 * n));
-  const y = 0.125 * n - 0.5 + 0.5 * value;
+  const y = 0.15 * n - 0.75 + 0.5 * value;
   const radiusFactor = 0.025 * (n + 1);
   return LineControlPoint({
     position: vec2f(0.8 * x, y),
