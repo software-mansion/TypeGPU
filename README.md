@@ -103,7 +103,7 @@ one of the following problems:
 If implemented from scratch, interoperability with other libraries (ones that
 have a different focus, solve different problems) can be near impossible without
 going down to _untyped WebGPU land_, or copying data back to JS. Moreover, to
-keep up with demand from users, they can be tempted to go out of scope of their
+keep up with demand from users, they can be tempted to go out of the scope of their
 initial use-case, even though another library already solves that problem.
 
 > TypeGPU can be used as an interoperability layer between use-case specific
