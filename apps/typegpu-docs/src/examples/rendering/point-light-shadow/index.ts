@@ -22,7 +22,7 @@ context.configure({
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
 
 const mainCamera = new Camera(root);
-mainCamera.position = d.vec3f(10, 10, 10);
+mainCamera.position = d.vec3f(5, 5, -5);
 mainCamera.target = d.vec3f(0, 0, 0);
 
 const cube = new BoxGeometry(root);
@@ -34,7 +34,7 @@ floorCube.position = d.vec3f(0, -0.5, 0);
 
 const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
   far: 100.0,
-  shadowMapSize: 4096,
+  shadowMapSize: 2048,
 });
 
 const modelMatrixUniform = root.createBuffer(d.mat4x4f).$usage('uniform');
@@ -43,6 +43,14 @@ let depthTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
     format: 'depth24plus',
+    sampleCount: 4,
+  })
+  .$usage('render');
+let msaaTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: presentationFormat,
+    sampleCount: 4,
   })
   .$usage('render');
 
@@ -75,7 +83,7 @@ const debugFragment = tgpu['~unstable'].fragmentFn({
 })(({ uv }) => {
   const tiled = d.vec2f(
     std.fract(uv.x * 3),
-    1.0 - std.fract(uv.y * 2),
+    std.fract(uv.y * 2),
   );
 
   const col = std.floor(uv.x * 3);
@@ -172,8 +180,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
   const lightToFrag = worldPos.sub(lightPos);
   const dist = std.length(lightToFrag);
-  let dir = std.normalize(lightToFrag);
-  dir = d.vec3f(dir.x, -dir.y, dir.z);
+  const dir = std.normalize(lightToFrag);
 
   const depthRef = dist / pointLight.far;
 
@@ -222,6 +229,9 @@ const pipelineMain = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
+  .withMultisample({
+    count: 4,
+  })
   .createPipeline();
 
 const pipelineDepthOne = root['~unstable']
@@ -267,7 +277,8 @@ function render() {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      resolveTarget: context.getCurrentTexture().createView(),
+      view: root.unwrap(msaaTexture).createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -286,7 +297,8 @@ function render() {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      resolveTarget: context.getCurrentTexture().createView(),
+      view: root.unwrap(msaaTexture).createView(),
       loadOp: 'load',
       storeOp: 'store',
     })
@@ -318,6 +330,14 @@ const resizeObserver = new ResizeObserver((entries) => {
       .createTexture({
         size: [canvas.width, canvas.height],
         format: 'depth24plus',
+        sampleCount: 4,
+      })
+      .$usage('render');
+    msaaTexture = root['~unstable']
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: presentationFormat,
+        sampleCount: 4,
       })
       .$usage('render');
   }

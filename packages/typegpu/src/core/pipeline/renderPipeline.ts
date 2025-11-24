@@ -217,6 +217,7 @@ export interface DepthStencilAttachment {
       & TgpuTexture<{
         size: [number, number];
         format: 'depth24plus' | 'depth24plus-stencil8' | 'depth32float';
+        sampleCount?: number;
       }>
       & RenderFlag
     )

@@ -1,6 +1,7 @@
 import type {
   RenderFlag,
   SampledFlag,
+  TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuBuffer,
   TgpuRenderPipeline,
@@ -35,6 +36,7 @@ export class PointLight {
     backward: Camera;
   };
   #positionUniform: TgpuUniform<d.Vec3f>;
+  #bindGroups: Map<string, TgpuBindGroup> = new Map();
 
   constructor(
     root: TgpuRoot,
@@ -75,44 +77,35 @@ export class PointLight {
   }
 
   #configureCameras() {
-    // WebGPU cubemap face orientations based on spec diagram
-    // For lookAt: right = cross(forward, worldUp), so we need to find worldUp such that right matches +U direction
-
-    // [0] +X face: forward=+X, +U=-Z, +V=-Y
-    // cross(+X, worldUp) = -Z → cross((1,0,0), (0,a,b)) = (0,-b,a) = (0,0,-1) → a=-1, b=0
+    // +X (Right)
     this.#shadowCameras.right.position = this.#position;
     this.#shadowCameras.right.target = this.#position.add(d.vec3f(1, 0, 0));
-    this.#shadowCameras.right.up = d.vec3f(0, -1, 0);
+    this.#shadowCameras.right.up = d.vec3f(0, 1, 0);
 
-    // [1] -X face: forward=-X, +U=+Z, +V=-Y
-    // cross(-X, worldUp) = +Z → cross((-1,0,0), (0,a,b)) = (0,b,-a) = (0,0,1) → b=0, a=-1
+    // -X (Left)
     this.#shadowCameras.left.position = this.#position;
     this.#shadowCameras.left.target = this.#position.add(d.vec3f(-1, 0, 0));
-    this.#shadowCameras.left.up = d.vec3f(0, -1, 0);
+    this.#shadowCameras.left.up = d.vec3f(0, 1, 0);
 
-    // [2] +Y face: forward=+Y, +U=+X, +V=+Z
-    // cross(+Y, worldUp) = +X → cross((0,1,0), (a,0,c)) = (c,0,-a) = (1,0,0) → c=1, a=0
+    // +Y (Top)
     this.#shadowCameras.up.position = this.#position;
-    this.#shadowCameras.up.target = this.#position.add(d.vec3f(0, -1, 0));
+    this.#shadowCameras.up.target = this.#position.add(d.vec3f(0, 1, 0));
     this.#shadowCameras.up.up = d.vec3f(0, 0, -1);
 
-    // [3] -Y face: +U points +X, +V points -Z
-    // Camera right should be +X, camera up should be -Z
+    // -Y (Bottom)
     this.#shadowCameras.down.position = this.#position;
-    this.#shadowCameras.down.target = this.#position.add(d.vec3f(0, 1, 0));
+    this.#shadowCameras.down.target = this.#position.add(d.vec3f(0, -1, 0));
     this.#shadowCameras.down.up = d.vec3f(0, 0, 1);
 
-    // [4] +Z face: +U points +X, +V points -Y
-    // Camera right should be +X, camera up should be -Y
+    // +Z (Front)
     this.#shadowCameras.forward.position = this.#position;
     this.#shadowCameras.forward.target = this.#position.add(d.vec3f(0, 0, 1));
-    this.#shadowCameras.forward.up = d.vec3f(0, -1, 0);
+    this.#shadowCameras.forward.up = d.vec3f(0, 1, 0);
 
-    // [5] -Z face: +U points -X, +V points -Y
-    // Camera right should be -X, camera up should be -Y
+    // -Z (Back)
     this.#shadowCameras.backward.position = this.#position;
     this.#shadowCameras.backward.target = this.#position.add(d.vec3f(0, 0, -1));
-    this.#shadowCameras.backward.up = d.vec3f(0, -1, 0);
+    this.#shadowCameras.backward.up = d.vec3f(0, 1, 0);
   }
 
   set position(pos: d.v3f) {
@@ -171,11 +164,15 @@ export class PointLight {
         arrayLayerCount: 1,
       });
 
-      const bindGroup = this.#root.createBindGroup(bindGroupLayout, {
-        camera: camera.uniform.buffer,
-        modelMatrix: modelMatrixUniform,
-        lightPosition: this.#positionUniform.buffer,
-      });
+      let bindGroup = this.#bindGroups.get(key);
+      if (!bindGroup) {
+        bindGroup = this.#root.createBindGroup(bindGroupLayout, {
+          camera: camera.uniform.buffer,
+          modelMatrix: modelMatrixUniform,
+          lightPosition: this.#positionUniform.buffer,
+        });
+        this.#bindGroups.set(key, bindGroup);
+      }
 
       // Render each geometry
       for (let i = 0; i < geometries.length; i++) {
