@@ -5,6 +5,7 @@ export const ExampleMetadata = type({
   title: 'string',
   category: 'string',
   'tags?': 'string[]',
+  'dev?': 'boolean',
 });
 
 export const exampleCategories = [
@@ -13,6 +14,7 @@ export const exampleCategories = [
   { key: 'image-processing', label: 'Image processing' },
   { key: 'simulation', label: 'Simulation' },
   { key: 'algorithms', label: 'Algorithms' },
+  { key: 'geometry', label: 'Geometry' },
   { key: 'tests', label: 'Tests' },
 ];
 

@@ -87,8 +87,8 @@ export class LGemm implements NNLayer {
       { kind: 'relu', fn: relu },
     );
     pipeline
-      .with(ioLayout, ioBindGroup)
-      .with(weightsBiasesLayout, this.paramsBindGroup)
+      .with(ioBindGroup)
+      .with(this.paramsBindGroup)
       .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
     await this.root.device.queue.onSubmittedWorkDone();

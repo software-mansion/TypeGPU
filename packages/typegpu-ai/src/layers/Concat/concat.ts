@@ -78,8 +78,8 @@ export class LConcat implements NNLayer {
         }, { kind: 'identity', fn: identity });
 
         pipeline
-            .with(ioLayout, ioBindGroup)
-            .with(concatParamsLayout, paramsBindGroup)
+            .with(ioBindGroup)
+            .with(paramsBindGroup)
             .dispatchWorkgroups(Math.ceil(this.inSize / workgroupSize));
 
         await this.root.device.queue.onSubmittedWorkDone();

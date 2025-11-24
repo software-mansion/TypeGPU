@@ -3,19 +3,20 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import { setName } from '../src/shared/meta.ts';
 import {
+  $gpuValueOf,
   $internal,
-  $runtimeResource,
-  $wgslDataType,
+  $ownSnippet,
+  $resolve,
 } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
-import { parse } from './utils/parseResolved.ts';
+import { snip } from '../src/data/snippet.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
     const resolved = tgpu.resolve({
       template: 'fn foo() { var g: Gradient; }',
@@ -24,11 +25,12 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(parse(resolved)).toBe(
-      parse(
-        'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
-      ),
-    );
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct Gradient {
+        start: vec3f,
+        end: vec3f,
+      }fn foo() { var g: Gradient; }"
+    `);
   });
 
   it('should resolve a nested external JS struct', () => {
@@ -52,51 +54,47 @@ describe('tgpu resolve', () => {
     const intensity = {
       [$internal]: true,
 
-      get value(): number {
-        return {
-          [$internal]: true,
-          [$runtimeResource]: true,
-          [$wgslDataType]: d.f32,
-          '~resolve'(ctx: ResolutionCtx) {
-            return ctx.resolve(intensity);
-          },
-        } as unknown as number;
-      },
+      [$gpuValueOf]: {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, d.f32, /* origin */ 'runtime');
+        },
+        [$resolve]: (ctx: ResolutionCtx) => ctx.resolve(intensity),
+      } as unknown as number,
 
-      '~resolve'(ctx: ResolutionCtx) {
-        const name = ctx.names.makeUnique('intensity');
+      [$resolve](ctx: ResolutionCtx) {
+        const name = ctx.getUniqueName(this);
         ctx.addDeclaration(
           `@group(0) @binding(0) var<uniform> ${name}: f32;`,
         );
-        return name;
+        return snip(name, d.f32, /* origin */ 'runtime');
+      },
+
+      get value(): number {
+        return this[$gpuValueOf];
       },
     };
     setName(intensity, 'intensity');
 
     const fragment1 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1))
-      .$name('fragment1');
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1));
 
     const fragment2 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1))
-      .$name('fragment2');
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1));
 
-    const resolved = tgpu.resolve({
-      externals: { fragment1, fragment2 },
-      names: 'strict',
-    });
+    const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });
 
-    expect(parse(resolved)).toBe(
-      parse(
-        `@group(0) @binding(0) var<uniform> intensity: f32;
-        @fragment fn fragment1() -> @location(0) vec4f {
-          return vec4f(0, intensity, 0, 1);
-        }
-        @fragment fn fragment2() -> @location(0) vec4f {
-          return vec4f(intensity, 0, 0, 1);
-        }`,
-      ),
-    );
+    expect(resolved).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> intensity: f32;
+
+      @fragment fn fragment1() -> @location(0) vec4f {
+        return vec4f(0f, intensity, 0f, 1f);
+      }
+
+      @fragment fn fragment2() -> @location(0) vec4f {
+        return vec4f(intensity, 0f, 0f, 1f);
+      }"
+    `);
   });
 
   it('properly resolves a combination of functions, structs and strings', () => {
@@ -108,19 +106,17 @@ describe('tgpu resolve', () => {
 
     const getPlayerHealth = tgpu.fn([PlayerData], d.f32)((pInfo) => {
       return pInfo.health;
-    })
-      .$name('getPlayerHealthTest');
-
-    const shaderLogic = `
-      @compute @workgroup_size(1)
-      fn main() {
-        var player: PlayerData;
-        player.health = 100;
-        let health = getPlayerHealth(player);
-      }`;
+    });
 
     const resolved = tgpu.resolve({
-      template: shaderLogic,
+      template: `
+@compute @workgroup_size(1)
+fn main() {
+  var player: PlayerData;
+  player.health = 100;
+  let health = getPlayerHealth(player);
+}
+`,
       externals: {
         PlayerData,
         getPlayerHealth,
@@ -128,26 +124,24 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct PlayerData {
-          position: vec3f,
-          velocity: vec3f,
-          health: f32,
-        }
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct PlayerData {
+        position: vec3f,
+        velocity: vec3f,
+        health: f32,
+      }
 
-        fn getPlayerHealthTest(pInfo: PlayerData) -> f32 {
-          return pInfo.health;
-        }
-
-        @compute @workgroup_size(1)
-        fn main() {
-          var player: PlayerData;
-          player.health = 100;
-          let health = getPlayerHealthTest(player);
-        }
-      `),
-    );
+      fn getPlayerHealth(pInfo: PlayerData) -> f32 {
+        return pInfo.health;
+      }
+      @compute @workgroup_size(1)
+      fn main() {
+        var player: PlayerData;
+        player.health = 100;
+        let health = getPlayerHealth(player);
+      }
+      "
+    `);
   });
 
   it('should resolve a function with its dependencies', () => {
@@ -178,28 +172,25 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Random {
-          seed: vec2f,
-          range: vec2f,
-        }
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct Random {
+        seed: vec2f,
+        range: vec2f,
+      }
 
-        fn random() -> f32 {
-          var r: Random;
-          r.seed = vec2<f32>(3.14, 1.59);
-          r.range = vec2<f32>(0.0, 1.0);
-          r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
-          r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
-          return clamp(r.seed.y, r.range.x, r.range.y);
-        }
-
-        @compute @workgroup_size(1)
-        fn main() {
-          var value = random();
-        }
-      `),
-    );
+      fn random() -> f32{
+              var r: Random;
+              r.seed = vec2<f32>(3.14, 1.59);
+              r.range = vec2<f32>(0.0, 1.0);
+              r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
+              r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
+              return clamp(r.seed.y, r.range.x, r.range.y);
+            }
+            @compute @workgroup_size(1)
+            fn main() {
+              var value = random();
+            }"
+    `);
   });
 
   it('should resolve an unstruct to its corresponding struct', () => {
@@ -215,16 +206,14 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct VertexInfo {
-          color: vec4f,
-          colorHDR: vec4f,
-          position2d: vec2f,
-        }
-        fn foo() { var v: VertexInfo; }
-      `),
-    );
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct VertexInfo {
+        color: vec4f,
+        colorHDR: vec4f,
+        position2d: vec2f,
+
+      }fn foo() { var v: VertexInfo; }"
+    `);
   });
 
   it('should resolve an unstruct with a disarray to its corresponding struct', () => {
@@ -241,17 +230,15 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct VertexInfo {
-          color: vec4f,
-          colorHDR: vec4f,
-          position2d: vec2f,
-          extra: array<vec4f, 16>,
-        }
-        fn foo() { var v: VertexInfo; }
-      `),
-    );
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct VertexInfo {
+        color: vec4f,
+        colorHDR: vec4f,
+        position2d: vec2f,
+        extra: array<vec4f, 16>,
+
+      }fn foo() { var v: VertexInfo; }"
+    `);
   });
 
   it('should resolve an unstruct with a complex nested structure', () => {
@@ -280,30 +267,29 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-        struct Extra {
-          a: f32,
-          b: vec4f,
-          c: vec2f,
-        }
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct Extra {
+        a: f32,
+        b: vec4f,
+        c: vec2f,
 
-        struct More {
-          a: f32,
-          b: vec4f,
-        }
+      }
 
-        struct VertexInfo {
-          color: vec4f,
-          colorHDR: vec4f,
-          position2d: vec2f,
-          extra: Extra,
-          more: array<More, 16>,
-        }
+      struct More {
+        a: f32,
+        b: vec4f,
 
-        fn foo() { var v: VertexInfo; }
-      `),
-    );
+      }
+
+      struct VertexInfo {
+        color: vec4f,
+        colorHDR: vec4f,
+        position2d: vec2f,
+        extra: Extra,
+        more: array<More, 16>,
+
+      }fn foo() { var v: VertexInfo; }"
+    `);
   });
 
   it('should resolve object externals and replace their usages in template', () => {
@@ -329,33 +315,28 @@ describe('tgpu resolve', () => {
       names: 'strict',
     });
 
-    expect(parse(resolved)).toBe(
-      parse(`
-      @group(0) @binding(0) var<uniform> intensity: u32;
+    expect(resolved).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() -> vec3f {
-        let color = vec3f();
-        return color;
-      }
-
-      fn main() {
-        let c = get_color() * intensity;
-      }
-    `),
-    );
+      fn get_color() -> vec3f{
+              let color = vec3f();
+              return color;
+            }
+            fn main () {
+              let c = get_color() * intensity;
+            }"
+    `);
   });
 
   it('should resolve only used object externals and ignore non-existing', () => {
-    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
-        let color = vec3f();
-        return color;
-      }`)
-      .$name('get_color');
+    const getColor = tgpu.fn([], d.vec3f)`() {
+      let color = vec3f();
+      return color;
+    }`;
 
-    const getIntensity = tgpu.fn([], d.vec3f)(`() -> vec3f {
-        return 1;
-      }`)
-      .$name('get_intensity');
+    const getIntensity = tgpu.fn([], d.vec3f)`() {
+      return 1;
+    }`;
 
     const layout = tgpu.bindGroupLayout({
       intensity: { uniform: d.u32 },
@@ -379,82 +360,73 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve deeply nested objects', () => {
-    expect(
-      parse(
-        tgpu.resolve({
-          template: 'fn main () { let x = a.b.c.d + a.e; }',
-          externals: {
-            a: {
-              b: {
-                c: {
-                  d: 2,
-                },
-              },
-              e: 3,
+    expect(tgpu.resolve({
+      template: 'fn main () { let x = a.b.c.d + a.e; }',
+      externals: {
+        a: {
+          b: {
+            c: {
+              d: 2,
             },
           },
-          names: 'strict',
-        }),
-      ),
-    ).toBe(parse('fn main() { let x = 2 + 3; }'));
+          e: 3,
+        },
+      },
+      names: 'strict',
+    })).toMatchInlineSnapshot(`"fn main () { let x = 2 + 3; }"`);
   });
 
   it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
-    expect(
-      parse(
-        tgpu.resolve({
-          template: `
-        fn main () {
-          let x = a.b;
-          let y = axb;
-        }`,
-          externals: {
-            a: {
-              b: 3,
-            },
-            axb: 2,
-          },
-          names: 'strict',
-        }),
-      ),
-    ).toBe(
-      parse(`
-        fn main () {
-          let x = 3;
-          let y = 2;
-        }`),
-    );
+    expect(tgpu.resolve({
+      template: `
+fn main () {
+  let x = a.b;
+  let y = axb;
+}`,
+      externals: {
+        a: {
+          b: 3,
+        },
+        axb: 2,
+      },
+      names: 'strict',
+    })).toMatchInlineSnapshot(`
+      "
+      fn main () {
+        let x = 3;
+        let y = 2;
+      }"
+    `);
   });
 });
 
 describe('tgpu resolveWithContext', () => {
   it('should resolve a template with external values', () => {
     const Gradient = d.struct({
-      from: d.vec3f,
-      to: d.vec3f,
+      start: d.vec3f,
+      end: d.vec3f,
     });
 
     const { code } = tgpu.resolveWithContext({
       template: `
         fn getGradientAngle(gradient: Gradient) -> f32 {
-          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+          return atan(gradient.end.y - gradient.start.y, gradient.end.x - gradient.start.x);
         }
       `,
       externals: { Gradient },
       names: 'strict',
     });
 
-    expect(parse(code)).toBe(
-      parse(`
-        struct Gradient {
-          from: vec3f,
-          to: vec3f,
-        }
-        fn getGradientAngle(gradient: Gradient) -> f32 {
-          return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
-        }
-      `),
-    );
+    expect(code).toMatchInlineSnapshot(`
+      "struct Gradient {
+        start: vec3f,
+        end: vec3f,
+      }
+              fn getGradientAngle(gradient: Gradient) -> f32 {
+                return atan(gradient.end.y - gradient.start.y, gradient.end.x - gradient.start.x);
+              }
+            "
+    `);
   });
 
   it('should resolve a template with additional config', () => {
@@ -475,17 +447,16 @@ describe('tgpu resolveWithContext', () => {
       config: (cfg) => cfg.pipe(configSpy),
     });
 
-    expect(parse(code)).toBe(
-      parse(`
-          struct Voxel {
-            position: vec3f,
-            color: vec4f,
-          }
-          fn getVoxelColor(voxel: Voxel) -> vec4f {
-            return voxel.color;
-          }
-        `),
-    );
+    expect(code).toMatchInlineSnapshot(`
+      "struct Voxel {
+        position: vec3f,
+        color: vec4f,
+      }
+                fn getVoxelColor(voxel: Voxel) -> vec4f {
+                  return voxel.color;
+                }
+              "
+    `);
 
     // verify resolveWithContext::config impl is being called
     expect(configSpy.mock.lastCall?.[0]).toBeDefined();
@@ -512,17 +483,16 @@ describe('tgpu resolveWithContext', () => {
       config: (cfg) => cfg.with(colorSlot, v).pipe(configSpy),
     });
 
-    expect(parse(code)).toBe(
-      parse(`
-          struct Voxel {
-            position: vec3f,
-            color: vec4f,
-          }
-          fn getVoxelColor(voxel: Voxel) -> vec4f {
-            return voxel.color * vec4f(1, 0, 1, 0);
-          }
-        `),
-    );
+    expect(code).toMatchInlineSnapshot(`
+      "struct Voxel {
+        position: vec3f,
+        color: vec4f,
+      }
+                fn getVoxelColor(voxel: Voxel) -> vec4f {
+                  return voxel.color * vec4f(1, 0, 1, 0);
+                }
+              "
+    `);
     // verify resolveWithContext::config impl is actually working
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
       [[colorSlot, v]],
@@ -593,5 +563,104 @@ describe('tgpu resolveWithContext', () => {
     );
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe('resolve without template', () => {
+  it('warns when using deprecated resolve API', () => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    tgpu.resolve({ externals: { Boid }, template: '' });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+    );
+  });
+
+  it('resolves one item', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    expect(tgpu.resolve([Boid])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }"
+    `);
+  });
+
+  it('resolves items with dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
+      }"
+    `);
+  });
+
+  it('resolves multiple items', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+    const Player = d.struct({ hp: d.u32, str: d.f32 });
+
+    expect(tgpu.resolve([Boid, Player])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      struct Player {
+        hp: u32,
+        str: f32,
+      }"
+    `);
+  });
+
+  it('does not duplicate dependencies', () => {
+    const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
+
+    const myFn1 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
+    });
+
+    const myFn2 = tgpu.fn([], Boid)(() => {
+      return Boid({ pos: d.vec2f(10, 20), vel: d.vec2f(30, 40) });
+    });
+
+    expect(tgpu.resolve([myFn1, myFn2])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2f,
+        vel: vec2f,
+      }
+
+      fn myFn1() -> Boid {
+        return Boid(vec2f(1, 2), vec2f(3, 4));
+      }
+
+      fn myFn2() -> Boid {
+        return Boid(vec2f(10, 20), vec2f(30, 40));
+      }"
+    `);
+  });
+
+  it('resolves unnamed items', () => {
+    expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })]))
+      .toMatchInlineSnapshot(`
+        "struct item {
+          pos: vec2f,
+          vel: vec2f,
+        }"
+      `);
   });
 });

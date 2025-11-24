@@ -118,8 +118,8 @@ export class LConvTranspose implements NNLayer {
         });
 
         pipeline
-            .with(ioLayout, ioBindGroup)
-            .with(convWeightsLayout, this.paramsBindGroup)
+            .with(ioBindGroup)
+            .with(this.paramsBindGroup)
             .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
         await this.root.device.queue.onSubmittedWorkDone();

@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/ai",
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Executorch but for typegpu.",
   "exports": {
     ".": "./src/index.ts",
@@ -31,7 +31,7 @@
   "keywords": [],
   "license": "MIT",
   "peerDependencies": {
-    "typegpu": "^0.7.1"
+    "typegpu": "^0.8.2"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",

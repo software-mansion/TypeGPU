@@ -55,8 +55,8 @@ export class LClip implements NNLayer {
         }, { kind: 'identity', fn: identity });
 
         pipeline
-            .with(ioLayout, ioBindGroup)
-            .with(clipParamsLayout, this.paramsBindGroup)
+            .with(ioBindGroup)
+            .with(this.paramsBindGroup)
             .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
         await this.root.device.queue.onSubmittedWorkDone();

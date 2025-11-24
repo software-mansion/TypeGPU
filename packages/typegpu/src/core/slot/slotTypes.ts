@@ -1,8 +1,8 @@
-import type { ResolutionCtx } from '../../types.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
+import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
@@ -18,7 +18,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T>;
+  readonly [$gpuValueOf]: GPUValueOf<T>;
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 }
@@ -27,7 +27,7 @@ export interface TgpuDerived<T> {
   readonly [$internal]: true;
   readonly resourceType: 'derived';
 
-  [$gpuValueOf](ctx: ResolutionCtx): GPUValueOf<T>;
+  readonly [$gpuValueOf]: GPUValueOf<T>;
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
@@ -51,11 +51,14 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly defaultValue:
     | TgpuFn<() => T>
     | TgpuBufferUsage<T>
+    | TgpuBufferShorthand<T>
     | Infer<T>
     | undefined;
-  readonly slot: TgpuSlot<TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>>;
+  readonly slot: TgpuSlot<
+    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
+  >;
 
-  [$gpuValueOf](ctx: ResolutionCtx): InferGPU<T>;
+  readonly [$gpuValueOf]: InferGPU<T>;
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
 }

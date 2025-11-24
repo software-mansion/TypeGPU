@@ -1,8 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu from '../../../src/index.ts';
 import * as d from '../../../src/data/index.ts';
+import tgpu from '../../../src/index.ts';
 import { div, isCloseTo } from '../../../src/std/index.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {
@@ -77,9 +76,9 @@ describe('div', () => {
         const foo = tgpu.fn([], d.f32)(() => 1 / 2);
         expect(foo()).toBe(0.5);
 
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -87,9 +86,9 @@ describe('div', () => {
       it('const u32 / const u32', () => {
         const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.u32(2));
         expect(foo()).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -97,9 +96,9 @@ describe('div', () => {
       it('const i32 / const i32', () => {
         const foo = tgpu.fn([], d.f32)(() => d.i32(1) / d.i32(2));
         expect(foo()).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -107,7 +106,7 @@ describe('div', () => {
       it('var u32 / var u32', () => {
         const foo = tgpu.fn([d.u32, d.u32], d.f32)((a, b) => a / b);
         expect(foo(1, 2)).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo(a: u32, b: u32) -> f32 {
             return (f32(a) / f32(b));
           }"
@@ -117,7 +116,7 @@ describe('div', () => {
       it('var u32 / const', () => {
         const foo = tgpu.fn([d.u32], d.f32)((a) => a / 2);
         expect(foo(1)).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo(a: u32) -> f32 {
             return (f32(a) / 2f);
           }"
@@ -127,7 +126,7 @@ describe('div', () => {
       it('const / var u32', () => {
         const foo = tgpu.fn([d.u32], d.f32)((a) => 1 / a);
         expect(foo(2)).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo(a: u32) -> f32 {
             return (1f / f32(a));
           }"
@@ -137,9 +136,9 @@ describe('div', () => {
       it('const f32 / const i32', () => {
         const foo = tgpu.fn([], d.f32)(() => d.f32(1.0) / d.i32(2.0));
         expect(foo()).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -147,9 +146,9 @@ describe('div', () => {
       it('const u32 / const i32', () => {
         const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.i32(2));
         expect(foo()).toBe(0.5);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.5;
+            return 0.5f;
           }"
         `);
       });
@@ -157,9 +156,9 @@ describe('div', () => {
       it('const f16 / const f32', () => {
         const foo = tgpu.fn([], d.f32)(() => d.f16(0.5) / d.f32(4));
         expect(foo()).toBe(0.125);
-        expect(asWgsl(foo)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
           "fn foo() -> f32 {
-            return 0.125;
+            return 0.125f;
           }"
         `);
       });
@@ -170,9 +169,9 @@ describe('div', () => {
         const bar = tgpu.fn([], d.u32)(() => 1 / 2);
         expect(bar()).toBe(0);
 
-        expect(asWgsl(bar)).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([bar])).toMatchInlineSnapshot(`
           "fn bar() -> u32 {
-            return 0;
+            return 0u;
           }"
         `);
       });
@@ -187,12 +186,6 @@ describe('div overload', () => {
     expectTypeOf(div(d.vec2f(), 1)).toEqualTypeOf<d.v2f>();
     expectTypeOf(div(d.vec4f(), d.vec4f())).toEqualTypeOf<d.v4f>();
     expectTypeOf(div(d.vec3u(), d.vec3u())).toEqualTypeOf<d.v3u>();
-  });
-
-  it('accepts union', () => {
-    // expect no errors
-    div(1 as number | d.v2f, d.vec2f() as d.v2f);
-    div(d.vec3f() as d.v3f | d.v4f, 1 as number | d.v3f | d.v4f);
   });
 
   it('rejects when incompatible types', () => {

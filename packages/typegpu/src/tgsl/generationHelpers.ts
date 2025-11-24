@@ -1,10 +1,12 @@
 import {
   type AnyData,
+  InfixDispatch,
   isDisarray,
   isUnstruct,
+  MatrixColumnsAccess,
+  undecorate,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import {
   abstractFloat,
@@ -15,6 +17,12 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import {
+  isEphemeralSnippet,
+  isSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -34,17 +42,28 @@ import {
 } from '../data/vector.ts';
 import {
   type AnyWgslData,
-  hasInternalDataType,
+  type F32,
+  type I32,
+  isMat,
   isMatInstance,
+  isNaturallyEphemeral,
+  isPtr,
   isVec,
   isVecInstance,
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $wgslDataType } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
-import { isNumericSchema } from '../data/wgslTypes.ts';
-import { MAX_INT32, MIN_INT32 } from '../shared/constants.ts';
+import {
+  type FunctionScopeLayer,
+  getOwnSnippet,
+  isKnownAtComptime,
+  type ResolutionCtx,
+} from '../types.ts';
+import type { ShelllessRepository } from './shellless.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
+import { $internal } from '../shared/symbols.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { derefSnippet, isRef } from '../data/ref.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -106,85 +125,252 @@ const kindToSchema = {
   mat4x4f: mat4x4f,
 } as const;
 
+const infixKinds = [
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+];
+
+export const infixOperators = {
+  add,
+  sub,
+  mul,
+  div,
+} as const;
+
+export type InfixOperator = keyof typeof infixOperators;
+
+export function accessProp(
+  target: Snippet,
+  propName: string,
+): Snippet | undefined {
+  if (
+    infixKinds.includes(target.dataType.type) &&
+    propName in infixOperators
+  ) {
+    return snip(
+      new InfixDispatch(
+        propName,
+        target,
+        infixOperators[propName as InfixOperator][$internal].gpuImpl,
+      ),
+      UnknownData,
+      /* origin */ target.origin,
+    );
+  }
+
+  if (isWgslArray(target.dataType) && propName === 'length') {
+    if (target.dataType.elementCount === 0) {
+      // Dynamically-sized array
+      return snip(
+        stitch`arrayLength(&${target})`,
+        u32,
+        /* origin */ 'runtime',
+      );
+    }
+
+    return snip(
+      target.dataType.elementCount,
+      abstractInt,
+      /* origin */ 'constant',
+    );
+  }
+
+  if (isMat(target.dataType) && propName === 'columns') {
+    return snip(
+      new MatrixColumnsAccess(target),
+      UnknownData,
+      /* origin */ target.origin,
+    );
+  }
+
+  if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
+    let propType = target.dataType.propTypes[propName];
+    if (!propType) {
+      return undefined;
+    }
+    propType = undecorate(propType);
+
+    return snip(
+      stitch`${target}.${propName}`,
+      propType,
+      /* origin */ target.origin === 'argument'
+        ? 'argument'
+        : !isEphemeralSnippet(target) &&
+            !isNaturallyEphemeral(propType)
+        ? target.origin
+        : target.origin === 'constant' || target.origin === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
+    );
+  }
+
+  if (isPtr(target.dataType)) {
+    const derefed = derefSnippet(target);
+
+    if (propName === '$') {
+      // Dereference pointer
+      return derefed;
+    }
+
+    // Sometimes values that are typed as pointers aren't instances of `d.ref`, so we
+    // allow access to member props as if it wasn't a pointer.
+    return accessProp(derefed, propName);
+  }
+
+  const propLength = propName.length;
+  if (
+    isVec(target.dataType) &&
+    propLength >= 1 &&
+    propLength <= 4
+  ) {
+    const swizzleTypeChar = target.dataType.type.includes('bool')
+      ? 'b'
+      : (target.dataType.type[4] as SwizzleableType);
+    const swizzleType =
+      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
+    if (!swizzleType) {
+      return undefined;
+    }
+
+    return snip(
+      isKnownAtComptime(target)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, the prop is there
+        ? (target.value as any)[propName]
+        : stitch`${target}.${propName}`,
+      swizzleType,
+      // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
+      /* origin */ target.origin === 'argument' && propLength === 1
+        ? 'argument'
+        : target.origin === 'constant' ||
+            target.origin === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
+    );
+  }
+
+  if (isKnownAtComptime(target) || target.dataType.type === 'unknown') {
+    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
+    return coerceToSnippet((target.value as any)[propName]);
+  }
+
+  return undefined;
+}
+
 const indexableTypeToResult = {
-  vec2f: f32,
-  vec2h: f16,
-  vec2i: i32,
-  vec2u: u32,
-  'vec2<bool>': bool,
-  vec3f: f32,
-  vec3h: f16,
-  vec3i: i32,
-  vec3u: u32,
-  'vec3<bool>': bool,
-  vec4f: f32,
-  vec4h: f16,
-  vec4i: i32,
-  vec4u: u32,
-  'vec4<bool>': bool,
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
 } as const;
 
-export function getTypeForPropAccess(
-  targetType: AnyData,
-  propName: string,
-): AnyData | UnknownData {
-  if (isWgslStruct(targetType) || isUnstruct(targetType)) {
-    return targetType.propTypes[propName] as AnyData ?? UnknownData;
-  }
-
-  if (targetType === bool || isNumericSchema(targetType)) {
-    // No props to be accessed here
-    return UnknownData;
-  }
-
-  const propLength = propName.length;
-  if (
-    isVec(targetType) &&
-    propLength >= 1 &&
-    propLength <= 4
-  ) {
-    const swizzleTypeChar = targetType.type.includes('bool')
-      ? 'b'
-      : (targetType.type[4] as SwizzleableType);
-    const swizzleType =
-      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
-    if (swizzleType) {
-      return swizzleType;
-    }
-  }
-
-  return UnknownData;
-}
-
-export function getTypeForIndexAccess(
-  dataType: AnyData,
-): AnyData | UnknownData {
+export function accessIndex(
+  target: Snippet,
+  index: Snippet,
+): Snippet | undefined {
   // array
-  if (isWgslArray(dataType) || isDisarray(dataType)) {
-    return dataType.elementType as AnyData;
+  if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
+    const elementType = target.dataType.elementType as AnyData;
+
+    return snip(
+      isKnownAtComptime(target) && isKnownAtComptime(index)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        ? (target.value as any)[index.value as number]
+        : stitch`${target}[${index}]`,
+      elementType,
+      /* origin */ !isEphemeralSnippet(target) &&
+          !isNaturallyEphemeral(elementType)
+        ? target.origin
+        : target.origin === 'constant' || target.origin === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
+    );
   }
 
-  // vector or matrix
-  if (dataType.type in indexableTypeToResult) {
-    return indexableTypeToResult[
-      dataType.type as keyof typeof indexableTypeToResult
+  // vector
+  if (isVec(target.dataType)) {
+    return snip(
+      isKnownAtComptime(target) && isKnownAtComptime(index)
+        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        ? (target.value as any)[index.value as any]
+        : stitch`${target}[${index}]`,
+      target.dataType.primitive,
+      /* origin */ target.origin === 'constant' ||
+          target.origin === 'constant-ref'
+        ? 'constant'
+        : 'runtime',
+    );
+  }
+
+  if (isPtr(target.dataType)) {
+    // Sometimes values that are typed as pointers aren't instances of `d.ref`, so we
+    // allow indexing as if it wasn't a pointer.
+    return accessIndex(derefSnippet(target), index);
+  }
+
+  // matrix.columns
+  if (target.value instanceof MatrixColumnsAccess) {
+    const propType = indexableTypeToResult[
+      target.value.matrix.dataType.type as keyof typeof indexableTypeToResult
     ];
+
+    return snip(
+      stitch`${target.value.matrix}[${index}]`,
+      propType,
+      /* origin */ target.origin,
+    );
   }
 
-  return UnknownData;
+  // matrix
+  if (target.dataType.type in indexableTypeToResult) {
+    throw new Error(
+      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+    );
+  }
+
+  if (
+    (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
+    target.dataType.type === 'unknown'
+  ) {
+    // No idea what the type is, so we act on the snippet's value and try to guess
+    return coerceToSnippet(
+      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+      (target.value as any)[index.value as number],
+    );
+  }
+
+  return undefined;
 }
 
 export function numericLiteralToSnippet(value: number): Snippet {
-  if (Number.isInteger(value) && value >= MIN_INT32 && value <= MAX_INT32) {
-    return snip(value, abstractInt);
+  if (value >= 2 ** 63 || value < -(2 ** 63)) {
+    return snip(value, abstractFloat, /* origin */ 'constant');
   }
-  return snip(value, abstractFloat);
+  // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
+  // Warn when values exceed this range to prevent precision loss.
+  if (Number.isInteger(value)) {
+    if (!Number.isSafeInteger(value)) {
+      console.warn(
+        `The integer ${value} exceeds the safe integer range and may have lost precision.`,
+      );
+    }
+    return snip(value, abstractInt, /* origin */ 'constant');
+  }
+  return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
-export function concretize(type: AnyWgslData): AnyWgslData {
+export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -196,24 +382,46 @@ export function concretize(type: AnyWgslData): AnyWgslData {
   return type;
 }
 
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map((snippet) =>
+    snip(
+      snippet.value,
+      concretize(snippet.dataType as AnyWgslData),
+      /* origin */ snippet.origin,
+    )
+  );
+}
+
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   /**
-   * Used by `generateTypedExpression` to signal downstream
+   * Used by `typedExpression` to signal downstream
    * expression resolution what type is expected of them.
    *
    * It is used exclusively for inferring the types of structs and arrays.
-   * It is modified exclusively by `generateTypedExpression` function.
+   * It is modified exclusively by `typedExpression` function.
    */
   expectedType: AnyData | undefined;
 
-  readonly topFunctionReturnType: AnyData;
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
+  readonly topFunctionReturnType: AnyData | undefined;
+
   indent(): string;
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
+  generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
-  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Snippet;
+  defineVariable(id: string, snippet: Snippet): void;
+
+  /**
+   * Types that are used in `return` statements are
+   * reported using this function, and used to infer
+   * the return type of the owning function.
+   */
+  reportReturnType(dataType: AnyData): void;
+
+  readonly shelllessRepo: ShelllessRepository;
 };
 
 export function coerceToSnippet(value: unknown): Snippet {
@@ -222,13 +430,18 @@ export function coerceToSnippet(value: unknown): Snippet {
     return value;
   }
 
-  if (hasInternalDataType(value)) {
-    // The value knows better about what type it is
-    return snip(value, value[$wgslDataType] as AnyData);
+  if (isRef(value)) {
+    throw new Error('Cannot use refs (d.ref(...)) from the outer scope.');
+  }
+
+  // Maybe the value can tell us what snippet it is
+  const ownSnippet = getOwnSnippet(value);
+  if (ownSnippet) {
+    return ownSnippet;
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, kindToSchema[value.kind]);
+    return snip(value, kindToSchema[value.kind], /* origin */ 'constant');
   }
 
   if (
@@ -237,7 +450,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData);
+    return snip(value, UnknownData, /* origin */ 'constant');
   }
 
   if (typeof value === 'number') {
@@ -245,8 +458,8 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool);
+    return snip(value, bool, /* origin */ 'constant');
   }
 
-  return snip(value, UnknownData);
+  return snip(value, UnknownData, /* origin */ 'constant');
 }

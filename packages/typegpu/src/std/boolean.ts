@@ -1,6 +1,8 @@
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { isSnippetNumeric, snip } from '../data/snippet.ts';
+import type { AnyData } from '../data/dataTypes.ts';
 import { bool, f32 } from '../data/numeric.ts';
+import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -16,10 +18,9 @@ import {
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
-import { sub } from './operators.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { unify } from '../tgsl/conversion.ts';
+import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: AnyData) {
   if (dataType.type.includes('2')) {
@@ -270,7 +271,7 @@ export const isCloseTo = dualImpl({
     lhs: T,
     rhs: T,
     precision = 0.01,
-  ) => {
+  ): boolean => {
     if (typeof lhs === 'number' && typeof rhs === 'number') {
       return Math.abs(lhs - rhs) < precision;
     }
@@ -283,7 +284,11 @@ export const isCloseTo = dualImpl({
     return false;
   },
   // GPU implementation
-  codegenImpl: (lhs, rhs, precision = snip(0.01, f32)) => {
+  codegenImpl: (
+    lhs,
+    rhs,
+    precision = snip(0.01, f32, /* origin */ 'constant'),
+  ) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
@@ -296,16 +301,31 @@ export const isCloseTo = dualImpl({
   },
 });
 
-export type SelectOverload = {
-  <T extends number | boolean | AnyVecInstance>(f: T, t: T, cond: boolean): T;
-  <T extends AnyVecInstance>(
-    f: T,
-    t: T,
-    cond: T extends AnyVec2Instance ? v2b
+function cpuSelect(f: boolean, t: boolean, cond: boolean): boolean;
+function cpuSelect(f: number, t: number, cond: boolean): number;
+function cpuSelect<T extends AnyVecInstance>(
+  f: T,
+  t: T,
+  cond:
+    | boolean
+    | (T extends AnyVec2Instance ? v2b
       : T extends AnyVec3Instance ? v3b
-      : v4b,
-  ): T;
-};
+      : v4b),
+): T;
+function cpuSelect<T extends number | boolean | AnyVecInstance>(
+  f: T,
+  t: T,
+  cond: AnyBooleanVecInstance | boolean,
+) {
+  if (typeof cond === 'boolean') {
+    return cond ? t : f;
+  }
+  return VectorOps.select[(f as AnyVecInstance).kind](
+    f as AnyVecInstance,
+    t as AnyVecInstance,
+    cond,
+  );
+}
 
 /**
  * Returns `t` if `cond` is `true`, and `f` otherwise.
@@ -316,22 +336,12 @@ export type SelectOverload = {
  * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
  * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
  */
-export const select: SelectOverload = dualImpl({
+export const select = dualImpl({
   name: 'select',
-  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
-  normalImpl<T extends number | boolean | AnyVecInstance>(
-    f: T,
-    t: T,
-    cond: AnyBooleanVecInstance | boolean,
-  ) {
-    if (typeof cond === 'boolean') {
-      return cond ? t : f;
-    }
-    return VectorOps.select[(f as AnyVecInstance).kind](
-      f as AnyVecInstance,
-      t as AnyVecInstance,
-      cond,
-    );
+  signature: (f, t, cond) => {
+    const [uf, ut] = unify([f, t]) ?? [f, t] as const;
+    return ({ argTypes: [uf, ut, cond], returnType: uf });
   },
+  normalImpl: cpuSelect,
   codegenImpl: (f, t, cond) => stitch`select(${f}, ${t}, ${cond})`,
 });

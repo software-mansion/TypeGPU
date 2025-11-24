@@ -2,7 +2,10 @@
  * @module typegpu/data
  */
 
-import { type InfixOperator, infixOperators } from '../tgsl/wgslGenerator.ts';
+import {
+  type InfixOperator,
+  infixOperators,
+} from '../tgsl/generationHelpers.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
@@ -124,6 +127,51 @@ export type {
   Unstruct,
 } from './dataTypes.ts';
 export {
+  texture1d,
+  texture2d,
+  texture2dArray,
+  texture3d,
+  textureCube,
+  textureCubeArray,
+  textureDepth2d,
+  textureDepth2dArray,
+  textureDepthCube,
+  textureDepthCubeArray,
+  textureDepthMultisampled2d,
+  textureExternal,
+  textureMultisampled2d,
+  textureStorage1d,
+  textureStorage2d,
+  textureStorage2dArray,
+  textureStorage3d,
+  type WgslExternalTexture,
+  type WgslStorageTexture,
+  type WgslStorageTexture1d,
+  type WgslStorageTexture2d,
+  type WgslStorageTexture2dArray,
+  type WgslStorageTexture3d,
+  type WgslStorageTextureProps,
+  type WgslTexture,
+  type WgslTexture1d,
+  type WgslTexture2d,
+  type WgslTexture2dArray,
+  type WgslTexture3d,
+  type WgslTextureCube,
+  type WgslTextureCubeArray,
+  type WgslTextureDepth2d,
+  type WgslTextureDepth2dArray,
+  type WgslTextureDepthCube,
+  type WgslTextureDepthCubeArray,
+  type WgslTextureDepthMultisampled2d,
+  type WgslTextureMultisampled2d,
+} from './texture.ts';
+export {
+  comparisonSampler,
+  sampler,
+  type WgslComparisonSampler,
+  type WgslSampler,
+} from './sampler.ts';
+export {
   vec2b,
   vec2f,
   vec2h,
@@ -145,6 +193,7 @@ export { unstruct } from './unstruct.ts';
 export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
+export { ref } from './ref.ts';
 export {
   align,
   type AnyAttribute,
@@ -166,6 +215,7 @@ export {
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';
+export { deepEqual } from './deepEqual.ts';
 export type {
   AnyBuiltin,
   BuiltinClipDistances,

@@ -1,4 +1,5 @@
-import type { TgpuNamable } from '../shared/meta.ts';
+import { setName, type TgpuNamable } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
@@ -19,9 +20,15 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
+import type {
+  WgslExternalTexture,
+  WgslStorageTexture,
+  WgslTexture,
+} from './texture.ts';
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
+import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -128,6 +135,13 @@ export function undecorate(data: AnyData): AnyData {
   return data;
 }
 
+export function unptr(data: AnyData | UnknownData): AnyData | UnknownData {
+  if (data.type === 'ptr') {
+    return data.inner as AnyData;
+  }
+  return data;
+}
+
 const looseTypeLiterals = [
   'unstruct',
   'disarray',
@@ -141,7 +155,7 @@ export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return (
-    (data as AnyLooseData)?.[$internal] &&
+    isMarkedInternal(data) &&
     looseTypeLiterals.includes((data as AnyLooseData)?.type)
   );
 }
@@ -162,7 +176,7 @@ export function isLooseData(data: unknown): data is AnyLooseData {
 export function isDisarray<T extends Disarray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'disarray';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'disarray';
 }
 
 /**
@@ -181,13 +195,13 @@ export function isDisarray<T extends Disarray>(
 export function isUnstruct<T extends Unstruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.[$internal] && (schema as T)?.type === 'unstruct';
+  return isMarkedInternal(schema) && (schema as T)?.type === 'unstruct';
 }
 
 export function isLooseDecorated<T extends LooseDecorated>(
   value: T | unknown,
 ): value is T {
-  return (value as T)?.[$internal] && (value as T)?.type === 'loose-decorated';
+  return isMarkedInternal(value) && (value as T)?.type === 'loose-decorated';
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
@@ -215,7 +229,14 @@ export function isData(value: unknown): value is AnyData {
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
 export type AnyConcreteData = Exclude<
   AnyData,
-  wgsl.AbstractInt | wgsl.AbstractFloat | wgsl.Void
+  | wgsl.AbstractInt
+  | wgsl.AbstractFloat
+  | wgsl.Void
+  | WgslTexture
+  | WgslStorageTexture
+  | WgslExternalTexture
+  | WgslSampler
+  | WgslComparisonSampler
 >;
 
 export interface UnknownData {
@@ -235,4 +256,17 @@ export class InfixDispatch {
     readonly lhs: Snippet,
     readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
   ) {}
+}
+
+export class MatrixColumnsAccess {
+  constructor(
+    readonly matrix: Snippet,
+  ) {}
+}
+
+export class ConsoleLog {
+  [$internal] = true;
+  constructor(readonly op: string) {
+    setName(this, 'consoleLog');
+  }
 }

@@ -37,7 +37,7 @@ export class LFlatten implements NNLayer {
     }, { kind: 'identity', fn: identity });
 
     pipeline
-      .with(ioLayout, ioBindGroup)
+      .with(ioBindGroup)
       .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
     await this.root.device.queue.onSubmittedWorkDone();

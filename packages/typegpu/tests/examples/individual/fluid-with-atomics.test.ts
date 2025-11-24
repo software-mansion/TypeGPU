@@ -17,239 +17,239 @@ describe('fluid with atomics example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct compute_Input_1 {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
+      "@group(0) @binding(0) var<uniform> size_6: vec2u;
 
-      @group(0) @binding(0) var<storage, read_write> nextState_5: array<atomic<u32>, 1048576>;
-
-      @group(0) @binding(1) var<uniform> size_7: vec2u;
-
-      fn getIndex_6(x: u32, y: u32) -> u32 {
-        var h = size_7.y;
-        var w = size_7.x;
+      fn getIndex_5(x: u32, y: u32) -> u32 {
+        let h = size_6.y;
+        let w = size_6.x;
         return (((y % h) * w) + (x % w));
       }
 
-      fn updateCell_4(x: u32, y: u32, value: u32) {
-        atomicStore(&nextState_5[getIndex_6(x, y)], value);
+      @group(0) @binding(1) var<storage, read> currentStateBuffer_7: array<u32, 1048576>;
+
+      fn getCell_4(x: u32, y: u32) -> u32 {
+        return currentStateBuffer_7[getIndex_5(x, y)];
       }
 
-      @group(0) @binding(2) var<storage, read> currentStateBuffer_10: array<u32, 1048576>;
-
-      fn getCell_9(x: u32, y: u32) -> u32 {
-        return currentStateBuffer_10[getIndex_6(x, y)];
+      fn isClearCell_3(x: u32, y: u32) -> bool {
+        return ((getCell_4(x, y) >> 24u) == 4u);
       }
 
-      fn isClearCell_8(x: u32, y: u32) -> bool {
-        return ((getCell_9(x, y) >> 24) == 4);
+      @group(0) @binding(2) var<storage, read_write> nextState_9: array<atomic<u32>, 1048576>;
+
+      fn updateCell_8(x: u32, y: u32, value: u32) {
+        atomicStore(&nextState_9[getIndex_5(x, y)], value);
       }
 
-      const MAX_WATER_LEVEL_12: u32 = 16777215;
+      fn isWall_10(x: u32, y: u32) -> bool {
+        return ((getCell_4(x, y) >> 24u) == 1u);
+      }
+
+      const MAX_WATER_LEVEL_12: u32 = 16777215u;
 
       fn persistFlags_11(x: u32, y: u32) {
-        var cell = getCell_9(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var flags = (cell >> 24);
-        updateCell_4(x, y, ((flags << 24) | waterLevel));
+        let cell = getCell_4(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let flags = (cell >> 24u);
+        updateCell_8(x, y, ((flags << 24u) | waterLevel));
       }
 
-      fn isWall_13(x: u32, y: u32) -> bool {
-        return ((getCell_9(x, y) >> 24) == 1);
+      fn isWaterSource_13(x: u32, y: u32) -> bool {
+        return ((getCell_4(x, y) >> 24u) == 2u);
       }
 
       fn getCellNext_15(x: u32, y: u32) -> u32 {
-        return atomicLoad(&nextState_5[getIndex_6(x, y)]);
+        return atomicLoad(&nextState_9[getIndex_5(x, y)]);
       }
 
       fn addToCell_14(x: u32, y: u32, value: u32) {
-        var cell = getCellNext_15(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL_12);
-        atomicAdd(&nextState_5[getIndex_6(x, y)], (newWaterLevel - waterLevel));
+        let cell = getCellNext_15(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL_12);
+        atomicAdd(&nextState_9[getIndex_5(x, y)], (newWaterLevel - waterLevel));
       }
 
-      fn isWaterSource_16(x: u32, y: u32) -> bool {
-        return ((getCell_9(x, y) >> 24) == 2);
+      fn isWaterDrain_16(x: u32, y: u32) -> bool {
+        return ((getCell_4(x, y) >> 24u) == 3u);
       }
 
-      fn isWaterDrain_17(x: u32, y: u32) -> bool {
-        return ((getCell_9(x, y) >> 24) == 3);
+      fn getWaterLevel_17(x: u32, y: u32) -> u32 {
+        return (getCell_4(x, y) & MAX_WATER_LEVEL_12);
       }
 
       fn subtractFromCell_18(x: u32, y: u32, value: u32) {
-        var cell = getCellNext_15(x, y);
-        var waterLevel = (cell & MAX_WATER_LEVEL_12);
-        var newWaterLevel = max((waterLevel - min(value, waterLevel)), 0);
-        atomicSub(&nextState_5[getIndex_6(x, y)], (waterLevel - newWaterLevel));
+        let cell = getCellNext_15(x, y);
+        let waterLevel = (cell & MAX_WATER_LEVEL_12);
+        let newWaterLevel = max((waterLevel - min(value, waterLevel)), 0u);
+        atomicSub(&nextState_9[getIndex_5(x, y)], (waterLevel - newWaterLevel));
       }
 
-      fn getWaterLevel_19(x: u32, y: u32) -> u32 {
-        return (getCell_9(x, y) & MAX_WATER_LEVEL_12);
-      }
-
-      fn checkForFlagsAndBounds_3(x: u32, y: u32) -> bool {
-        if (isClearCell_8(x, y)) {
-          updateCell_4(x, y, 0);
+      fn checkForFlagsAndBounds_2(x: u32, y: u32) -> bool {
+        if (isClearCell_3(x, y)) {
+          updateCell_8(x, y, 0u);
           return true;
         }
-        if (isWall_13(x, y)) {
+        if (isWall_10(x, y)) {
           persistFlags_11(x, y);
           return true;
         }
-        if (isWaterSource_16(x, y)) {
+        if (isWaterSource_13(x, y)) {
           persistFlags_11(x, y);
-          addToCell_14(x, y, 20);
+          addToCell_14(x, y, 20u);
           return false;
         }
-        if (isWaterDrain_17(x, y)) {
+        if (isWaterDrain_16(x, y)) {
           persistFlags_11(x, y);
-          updateCell_4(x, y, (3 << 24));
+          updateCell_8(x, y, (3 << 24));
           return true;
         }
-        if (((((y == 0) || (y == (size_7.y - 1))) || (x == 0)) || (x == (size_7.x - 1)))) {
-          subtractFromCell_18(x, y, getWaterLevel_19(x, y));
+        if (((((y == 0u) || (y == (size_6.y - 1u))) || (x == 0u)) || (x == (size_6.x - 1u)))) {
+          subtractFromCell_18(x, y, getWaterLevel_17(x, y));
           return true;
         }
         return false;
       }
 
-      const MAX_WATER_LEVEL_UNPRESSURIZED_21: u32 = 255;
+      const MAX_WATER_LEVEL_UNPRESSURIZED_20: u32 = 255u;
 
-      const MAX_PRESSURE_22: u32 = 12;
+      const MAX_PRESSURE_21: u32 = 12u;
 
-      fn getStableStateBelow_20(upper: u32, lower: u32) -> u32 {
-        var totalMass = (upper + lower);
-        if ((totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED_21)) {
+      fn getStableStateBelow_19(upper: u32, lower: u32) -> u32 {
+        let totalMass = (upper + lower);
+        if ((totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED_20)) {
           return totalMass;
         }
-        if (((totalMass >= (MAX_WATER_LEVEL_UNPRESSURIZED_21 * 2)) && (upper > lower))) {
-          return (u32((f32(totalMass) / 2f)) + MAX_PRESSURE_22);
+        if (((totalMass >= (MAX_WATER_LEVEL_UNPRESSURIZED_20 * 2u)) && (upper > lower))) {
+          return (u32((f32(totalMass) / 2f)) + MAX_PRESSURE_21);
         }
-        return MAX_WATER_LEVEL_UNPRESSURIZED_21;
+        return MAX_WATER_LEVEL_UNPRESSURIZED_20;
       }
 
-      @group(0) @binding(3) var<uniform> viscosity_23: u32;
+      @group(0) @binding(3) var<uniform> viscosity_22: u32;
 
-      fn decideWaterLevel_2(x: u32, y: u32) {
-        if (checkForFlagsAndBounds_3(x, y)) {
+      fn decideWaterLevel_1(x: u32, y: u32) {
+        if (checkForFlagsAndBounds_2(x, y)) {
           return;
         }
-        var remainingWater = getWaterLevel_19(x, y);
-        if ((remainingWater == 0)) {
+        var remainingWater = getWaterLevel_17(x, y);
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_13(x, (y - 1))) {
-          var waterLevelBelow = getWaterLevel_19(x, (y - 1));
-          var stable = getStableStateBelow_20(remainingWater, waterLevelBelow);
+        if (!isWall_10(x, (y - 1u))) {
+          let waterLevelBelow = getWaterLevel_17(x, (y - 1u));
+          let stable = getStableStateBelow_19(remainingWater, waterLevelBelow);
           if ((waterLevelBelow < stable)) {
-            var change = (stable - waterLevelBelow);
-            var flow = min(change, viscosity_23);
+            let change = (stable - waterLevelBelow);
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
-            addToCell_14(x, (y - 1), flow);
+            addToCell_14(x, (y - 1u), flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        var waterLevelBefore = remainingWater;
-        if (!isWall_13((x - 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_19((x - 1), y)));
-          if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
-            var flow = min(change, viscosity_23);
+        let waterLevelBefore = remainingWater;
+        if (!isWall_10((x - 1u), y)) {
+          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x - 1u), y)));
+          if ((flowRaw > 0i)) {
+            let change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
-            addToCell_14((x - 1), y, flow);
+            addToCell_14((x - 1u), y, flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_13((x + 1), y)) {
-          var flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_19((x + 1), y)));
-          if ((flowRaw > 0)) {
-            var change = max(min(4, remainingWater), u32((f32(flowRaw) / 4f)));
-            var flow = min(change, viscosity_23);
+        if (!isWall_10((x + 1u), y)) {
+          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel_17((x + 1u), y)));
+          if ((flowRaw > 0i)) {
+            let change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
+            let flow = min(change, viscosity_22);
             subtractFromCell_18(x, y, flow);
-            addToCell_14((x + 1), y, flow);
+            addToCell_14((x + 1u), y, flow);
             remainingWater -= flow;
           }
         }
-        if ((remainingWater == 0)) {
+        if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall_13(x, (y + 1))) {
-          var stable = getStableStateBelow_20(getWaterLevel_19(x, (y + 1)), remainingWater);
+        if (!isWall_10(x, (y + 1u))) {
+          let stable = getStableStateBelow_19(getWaterLevel_17(x, (y + 1u)), remainingWater);
           if ((stable < remainingWater)) {
-            var flow = min((remainingWater - stable), viscosity_23);
+            let flow = min((remainingWater - stable), viscosity_22);
             subtractFromCell_18(x, y, flow);
-            addToCell_14(x, (y + 1), flow);
+            addToCell_14(x, (y + 1u), flow);
             remainingWater -= flow;
           }
         }
       }
 
-      @compute @workgroup_size(1, 1) fn compute_0(input: compute_Input_1) {
-        decideWaterLevel_2(input.gid.x, input.gid.y);
+      struct compute_Input_23 {
+        @builtin(global_invocation_id) gid: vec3u,
       }
 
-      struct vertex_Input_25 {
+      @compute @workgroup_size(1, 1) fn compute_0(input: compute_Input_23) {
+        decideWaterLevel_1(input.gid.x, input.gid.y);
+      }
+
+      @group(0) @binding(0) var<uniform> size_1: vec2u;
+
+      struct vertex_Output_2 {
+        @builtin(position) pos: vec4f,
+        @location(0) cell: f32,
+      }
+
+      struct vertex_Input_3 {
         @location(0) squareData: vec2f,
         @location(1) currentStateData: u32,
         @builtin(instance_index) idx: u32,
       }
 
-      struct vertex_Output_26 {
-        @builtin(position) pos: vec4f,
+      @vertex fn vertex_0(input: vertex_Input_3) -> vertex_Output_2 {
+        let w = size_1.x;
+        let h = size_1.y;
+        let gridX = (input.idx % w);
+        let gridY = u32((f32(input.idx) / f32(w)));
+        let maxDim = max(w, h);
+        let x = (((2f * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
+        let y = (((2f * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
+        let cellFlags = (input.currentStateData >> 24u);
+        var cell = f32((input.currentStateData & 16777215u));
+        if ((cellFlags == 1u)) {
+          cell = -1f;
+        }
+        if ((cellFlags == 2u)) {
+          cell = -2f;
+        }
+        if ((cellFlags == 3u)) {
+          cell = -3f;
+        }
+        return vertex_Output_2(vec4f(x, y, 0f, 1f), cell);
+      }
+
+      struct fragment_Input_5 {
         @location(0) cell: f32,
       }
 
-      @group(0) @binding(0) var<uniform> size_27: vec2u;
-
-      @vertex fn vertex_24(input: vertex_Input_25) -> vertex_Output_26 {
-        var w = size_27.x;
-        var h = size_27.y;
-        var gridX = (input.idx % w);
-        var gridY = u32((f32(input.idx) / f32(w)));
-        var maxDim = max(w, h);
-        var x = (((2 * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
-        var y = (((2 * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
-        var cellFlags = (input.currentStateData >> 24);
-        var cell = f32((input.currentStateData & 16777215));
-        if ((cellFlags == 1)) {
-          cell = -1;
-        }
-        if ((cellFlags == 2)) {
-          cell = -2;
-        }
-        if ((cellFlags == 3)) {
-          cell = -3;
-        }
-        return vertex_Output_26(vec4f(x, y, 0, 1), cell);
-      }
-
-      struct fragment_Input_29 {
-        @location(0) cell: f32,
-      }
-
-      @fragment fn fragment_28(input: fragment_Input_29) -> @location(0) vec4f {
-        if ((input.cell == -1)) {
+      @fragment fn fragment_4(input: fragment_Input_5) -> @location(0) vec4f {
+        if ((input.cell == -1f)) {
           return vec4f(0.5, 0.5, 0.5, 1);
         }
-        if ((input.cell == -2)) {
+        if ((input.cell == -2f)) {
           return vec4f(0, 1, 0, 1);
         }
-        if ((input.cell == -3)) {
+        if ((input.cell == -3f)) {
           return vec4f(1, 0, 0, 1);
         }
-        var normalized = min((input.cell / 255f), 1);
-        if ((normalized == 0)) {
+        let normalized = min((input.cell / 255f), 1f);
+        if ((normalized == 0f)) {
           return vec4f();
         }
-        var res = (1f / (1 + exp((-(normalized - 0.2) * 10))));
-        return vec4f(0, 0, res, res);
+        let res = (1f / (1f + exp((-((normalized - 0.2f)) * 10f))));
+        return vec4f(0f, 0f, res, res);
       }"
     `);
   });

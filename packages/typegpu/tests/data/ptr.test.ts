@@ -14,20 +14,19 @@ describe('d.ptrFn', () => {
   it('resolves to matching WGSL', () => {
     const ptrToU32 = d.ptrFn(d.u32);
 
-    expect(
-      tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }),
-    ).toMatchInlineSnapshot(`"ptr<function, u32>"`);
+    expect(tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }))
+      .toMatchInlineSnapshot(`"ptr<function, u32>"`);
   });
 
   it('modifies reference types in JS', () => {
     const modifyVec = tgpu.fn([d.ptrFn(d.vec2f)])((ptr) => {
-      ptr.x += 1;
+      ptr.$.x += 1;
     });
 
     const testFn = tgpu.fn([], d.vec2f)(() => {
-      const vec = d.vec2f(1, 2);
+      const vec = d.ref(d.vec2f(1, 2));
       modifyVec(vec);
-      return vec;
+      return vec.$;
     });
 
     expect(testFn()).toStrictEqual(d.vec2f(2, 2));
@@ -46,9 +45,8 @@ describe('d.ptrPrivate', () => {
   it('resolves to matching WGSL', () => {
     const ptrToU32 = d.ptrPrivate(d.u32);
 
-    expect(
-      tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }),
-    ).toMatchInlineSnapshot(`"ptr<private, u32>"`);
+    expect(tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }))
+      .toMatchInlineSnapshot(`"ptr<private, u32>"`);
   });
 });
 
@@ -68,8 +66,7 @@ describe('d.ptrStorage', () => {
   it('resolves to matching WGSL', () => {
     const ptrToU32 = d.ptrStorage(d.u32);
 
-    expect(
-      tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }),
-    ).toMatchInlineSnapshot(`"ptr<storage, u32, read>"`);
+    expect(tgpu.resolve({ externals: { ptrToU32 }, template: 'ptrToU32' }))
+      .toMatchInlineSnapshot(`"ptr<storage, u32, read>"`);
   });
 });

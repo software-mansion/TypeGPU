@@ -1,4 +1,8 @@
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import {
+  type AnyWgslData,
+  isNaturallyEphemeral,
+} from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -6,8 +10,8 @@ import type { InferGPU } from '../../shared/repr.ts';
 import {
   $gpuValueOf,
   $internal,
-  $runtimeResource,
-  $wgslDataType,
+  $ownSnippet,
+  $resolve,
 } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -16,11 +20,17 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 // Public API
 // ----------
 
+type DeepReadonly<T> = T extends { [$internal]: unknown } ? T
+  : T extends unknown[] ? ReadonlyArray<DeepReadonly<T[number]>>
+  : T extends Record<string, unknown>
+    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : T;
+
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
-  [$gpuValueOf](): InferGPU<TDataType>;
-  readonly value: InferGPU<TDataType>;
-  readonly $: InferGPU<TDataType>;
+  readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  readonly value: DeepReadonly<InferGPU<TDataType>>;
+  readonly $: DeepReadonly<InferGPU<TDataType>>;
 
   readonly [$internal]: {
     /** Makes it differentiable on the type level. Does not exist at runtime. */
@@ -42,16 +52,35 @@ export function constant<TDataType extends AnyWgslData>(
 // Implementation
 // --------------
 
+function deepFreeze<T extends object>(object: T): T {
+  // Retrieve the property names defined on object
+  const propNames = Reflect.ownKeys(object);
+
+  // Freeze properties before freezing self
+  for (const name of propNames) {
+    // biome-ignore lint/suspicious/noExplicitAny: chill TypeScript
+    const value = (object as any)[name];
+
+    if ((value && typeof value === 'object') || typeof value === 'function') {
+      deepFreeze(value);
+    }
+  }
+
+  return Object.freeze(object);
+}
+
 class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
-  #value: InferGPU<TDataType>;
+  readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
   constructor(
     public readonly dataType: TDataType,
     value: InferGPU<TDataType>,
   ) {
-    this.#value = value;
+    this.#value = value && typeof value === 'object'
+      ? deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>
+      : value as DeepReadonly<InferGPU<TDataType>>;
   }
 
   $name(label: string) {
@@ -59,42 +88,50 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return this;
   }
 
-  '~resolve'(ctx: ResolutionCtx): string {
-    const id = ctx.names.makeUnique(getName(this));
-    const resolvedValue = ctx.resolve(this.#value, this.dataType);
-    const resolvedDataType = ctx.resolve(this.dataType);
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    const id = ctx.getUniqueName(this);
+    const resolvedDataType = ctx.resolve(this.dataType).value;
+    const resolvedValue = ctx.resolve(this.#value, this.dataType).value;
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
-    return id;
+    return snip(
+      id,
+      this.dataType,
+      isNaturallyEphemeral(this.dataType) ? 'constant' : 'constant-ref',
+    );
   }
 
   toString() {
     return `const:${getName(this) ?? '<unnamed>'}`;
   }
 
-  [$gpuValueOf](): InferGPU<TDataType> {
-    return new Proxy(
-      {
-        [$internal]: true,
-        [$runtimeResource]: true,
-        [$wgslDataType]: this.dataType,
-        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
-        toString: () => `.value:${getName(this) ?? '<unnamed>'}`,
+  get [$gpuValueOf](): DeepReadonly<InferGPU<TDataType>> {
+    const dataType = this.dataType;
+
+    return new Proxy({
+      [$internal]: true,
+      get [$ownSnippet]() {
+        return snip(
+          this,
+          dataType,
+          isNaturallyEphemeral(dataType) ? 'constant' : 'constant-ref',
+        );
       },
-      valueProxyHandler,
-    ) as InferGPU<TDataType>;
+      [$resolve]: (ctx) => ctx.resolve(this),
+      toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
+    }, valueProxyHandler) as DeepReadonly<InferGPU<TDataType>>;
   }
 
-  get value(): InferGPU<TDataType> {
+  get $(): DeepReadonly<InferGPU<TDataType>> {
     if (inCodegenMode()) {
-      return this[$gpuValueOf]();
+      return this[$gpuValueOf];
     }
 
     return this.#value;
   }
 
-  get $(): InferGPU<TDataType> {
-    return this.value;
+  get value(): DeepReadonly<InferGPU<TDataType>> {
+    return this.$;
   }
 }

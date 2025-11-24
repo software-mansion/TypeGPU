@@ -1,11 +1,11 @@
 import type { Block, FuncParameter } from 'tinyest';
-import { $getNameForward, $internal } from './symbols.ts';
 import { DEV, TEST } from './env.ts';
+import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
 export interface MetaData {
+  v?: number;
   name?: string | undefined;
   ast?: {
-    v: number;
     params: FuncParameter[];
     body: Block;
     externalNames: string[];
@@ -30,11 +30,12 @@ export type INTERNAL_GlobalExt = typeof globalThis & {
 };
 
 Object.assign(globalThis, {
-  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T =>
-    isNamable(exp) &&
-      (exp as unknown as { [$internal]: unknown })?.[$internal] && !getName(exp)
-      ? exp.$name(label)
-      : exp,
+  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T => {
+    if (isNamable(exp) && isMarkedInternal(exp) && !getName(exp)) {
+      exp.$name(label);
+    }
+    return exp;
+  },
 });
 
 const globalWithMeta = globalThis as INTERNAL_GlobalExt;
@@ -70,6 +71,9 @@ export function getName(definition: unknown): string | undefined {
 }
 
 export function setName(definition: object, name: string): void {
+  if (isForwarded(definition)) {
+    setName(definition[$getNameForward] as object, name);
+  }
   setMetaData(definition, { name });
 }
 
@@ -85,6 +89,15 @@ export interface TgpuNamable {
 
 export function isNamable(value: unknown): value is TgpuNamable {
   return !!(value as TgpuNamable)?.$name;
+}
+
+/**
+ * AST's are given to functions with a 'use gpu' directive, which this function checks for.
+ */
+export function hasTinyestMetadata(
+  value: unknown,
+): value is (...args: never[]) => unknown {
+  return !!getMetaData(value)?.ast;
 }
 
 export function getMetaData(

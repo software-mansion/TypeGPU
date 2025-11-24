@@ -59,8 +59,8 @@ export class LAdd implements NNLayer {
         }, { kind: 'identity', fn: identity });
 
         pipeline
-            .with(ioLayout, ioBindGroup)
-            .with(addParamsLayout, this.paramsBindGroup)
+            .with(ioBindGroup)
+            .with(this.paramsBindGroup)
             .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
         await this.root.device.queue.onSubmittedWorkDone();

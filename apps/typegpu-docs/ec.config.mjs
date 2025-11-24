@@ -8,6 +8,12 @@ export default {
       twoslashOptions: {
         strict: true,
         compilerOptions: { moduleResolution: ts.ModuleResolutionKind.Bundler },
+        extraFiles: {
+          'global.d.ts': `
+            /// <reference lib="dom" />
+            /// <reference types="@webgpu/types" />
+          `,
+        },
       },
     }),
   ],

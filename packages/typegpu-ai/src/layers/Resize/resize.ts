@@ -76,8 +76,8 @@ export class LResize implements NNLayer {
         }, { kind: 'identity', fn: identity });
 
         pipeline
-            .with(ioLayout, ioBindGroup)
-            .with(resizeParamsLayout, this.paramsBindGroup)
+            .with(ioBindGroup)
+            .with(this.paramsBindGroup)
             .dispatchWorkgroups(Math.ceil(this.outSize / workgroupSize));
 
         await this.root.device.queue.onSubmittedWorkDone();

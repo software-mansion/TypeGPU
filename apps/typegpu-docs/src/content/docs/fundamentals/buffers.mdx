@@ -195,7 +195,7 @@ Since the buffer is already created, you are responsible for the buffer's lifecy
 
 ## Writing to a buffer
 
-To write data to a buffer, you can use the `.write(value)` method. The typed schema enables auto-complete as well as static validation of this
+To write data to a buffer from the CPU, you can use the `.write(value)` method. The typed schema enables auto-complete as well as static validation of this
 method's arguments.
 
 ```ts twoslash
@@ -285,7 +285,7 @@ backupParticleBuffer.copyFrom(particleBuffer);
 
 ## Reading from a buffer
 
-To read data from a buffer, you can use the `.read()` method.
+To read data from a buffer on the CPU, you can use the `.read()` method.
 It returns a promise that resolves to the data read from the buffer.
 
 ```ts twoslash
@@ -315,3 +315,89 @@ import ListItem from '../../../components/ListItem.astro';
   data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
 </ListItem>
 :::
+
+## Index Buffers
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+You may refer to the [pipelines](/TypeGPU/fundamentals/pipelines/#drawing-with-drawindexed) section for usage details.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+
+```
+
+## Binding buffers
+
+To use a buffer in a shader, it needs to be bound using a bind group.
+There are two approaches provided by TypeGPU.
+
+### Manual binding
+
+The default option is to create bind group layouts and bind your buffers via bind groups.
+Read more in the chapter dedicated to [bind groups](/TypeGPU/fundamentals/bind-groups).
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const layout = tgpu.bindGroupLayout({
+  points: { storage: d.arrayOf(d.vec2i), access: 'mutable' },
+});
+
+const pipeline = root['~unstable'].createGuardedComputePipeline((x) => {
+  'use gpu';
+  // Access and modify the bound buffer via the layout
+  layout.$.points[x] = d.vec2i(1, 2);
+});
+
+const pointsBuffer = root
+  .createBuffer(d.arrayOf(d.vec2i, 100))
+  .$usage('storage');
+
+const bindGroup = root.createBindGroup(layout, {
+  points: pointsBuffer
+});
+
+pipeline.with(bindGroup).dispatchThreads(100);
+```
+
+### Using fixed resources
+
+For scenarios where buffers remain consistent across multiple compute or render operations,
+TypeGPU offers fixed resources that appear bindless from a code perspective.
+Fixed buffers are created using dedicated root methods.
+
+| WGSL type                  | TypeGPU constructor     |
+|----------------------------|-------------------------|
+| `var<uniform>`             | `root.createUniform()`  |
+| `var<storage, read>`       | `root.createReadonly()` |
+| `var<storage, read_write>` | `root.createMutable()`  |
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ---cut---
+const pointsMutable = root.createMutable(d.arrayOf(d.vec2i, 100));
+
+const pipeline = root['~unstable'].createGuardedComputePipeline((x) => {
+  'use gpu';
+  // Access and modify the fixed buffer directly
+  pointsMutable.$[x] = d.vec2i();
+});
+
+pipeline.dispatchThreads(100);
+```
+
+TypeGPU automatically generates a "catch-all" bind group and populates it with the fixed resources.
+
+You can also use [`resolveWithContext`](/TypeGPU/fundamentals/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.

@@ -277,7 +277,7 @@ renderPipeline
 
 ### Resource bindings
 
-Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts a pair of arguments: [a bind group layout and a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
+Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts either [a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
 
 ```ts
 // vertex layout
@@ -305,11 +305,11 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 // binding and execution
 renderPipeline
   .with(vertexLayout, vertexBuffer)
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .draw(8);
 
 computePipeline
-  .with(bindGroupLayout, bindGroup)
+  .with(bindGroup)
   .dispatchWorkgroups(1);
 ```
 
@@ -325,9 +325,65 @@ It accepts the number of vertices and optionally the instance count, first verte
 After calling the method, the shader is set for execution immediately.
 
 Compute pipelines are executed using the `dispatchWorkgroups` method, which accepts the number of workgroups in each dimension.
-Unlike render pipelines, after running this method, the execution is not submitted to the GPU immediately.
-In order to do so, `root['~unstable'].flush()` needs to be run.
-However, that is usually not necessary, as it is done automatically when trying to read the result of computation.
+
+### Drawing with `drawIndexed`
+
+The `drawIndexed` is analogous to draw, but takes advantage of [index buffer](/TypeGPU/fundamentals/buffers/#index-buffers) to explicitly map vertex data onto primitives. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+const presentationFormat = "rgba8unorm";
+
+const colorBuffer = root
+  .createBuffer(d.arrayOf(d.vec4f, 4), [
+    d.vec4f(1, 0, 0, 1), // Red
+    d.vec4f(0, 1, 0, 1), // Green
+    d.vec4f(0, 0, 1, 1), // Blue
+    d.vec4f(1, 1, 0, 1), // Yellow
+  ])
+  .$usage('vertex');
+
+const vertex = tgpu['~unstable'].vertexFn({
+  in: {
+    idx: d.builtin.vertexIndex,
+    color: d.vec4f,
+  },
+  out: {
+    color: d.vec4f,
+    pos: d.builtin.position,
+  },
+})(({ idx, color }) => {
+  return {
+    color,
+    pos: d.vec4f(d.vec2f(1, 1), 1, 1),
+  };
+});
+
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: {
+    color: d.vec4f,
+  },
+  out: d.vec4f,
+})((input) => input.color);
+// ---cut---
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+
+const pipeline = root['~unstable']
+  .withVertex(vertex, { color: vertexLayout.attrib })
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline()
+  .withIndexBuffer(indexBuffer);
+
+  pipeline
+    .with(vertexLayout, colorBuffer)
+    .drawIndexed(6);
+```
 
 ## Low-level render pipeline execution API
 
@@ -348,8 +404,6 @@ root['~unstable'].beginRenderPass(
     pass.draw(3);
   },
 );
-
-root['~unstable'].flush();
 ```
 
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.

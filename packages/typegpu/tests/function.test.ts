@@ -9,7 +9,6 @@ import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
 import type { Prettify } from '../src/shared/utilityTypes.ts';
-import { parse, parseResolved } from './utils/parseResolved.ts';
 
 const empty = tgpu.fn([])`() {
   // do nothing
@@ -17,52 +16,44 @@ const empty = tgpu.fn([])`() {
 
 describe('tgpu.fn', () => {
   it('should inject function declaration', () => {
-    expect(parseResolved({ empty })).toBe(parse('fn empty() {}'));
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
+      "fn empty() {
+        // do nothing
+      }"
+    `);
   });
 
   it('should inject function declaration only once', () => {
-    const main = tgpu.fn([])`() {
-        empty();
-        empty();
-      }`
+    const main = tgpu.fn([])`() { empty(); empty(); }`
       .$uses({ empty });
 
-    expect(parseResolved({ main })).toBe(parse(`
-      fn empty() {}
-
-      fn main() {
-        empty();
-        empty();
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn empty() {
+        // do nothing
       }
-    `));
+
+      fn main() { empty(); empty(); }"
+    `);
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
     const nestedA = tgpu.fn([])`() { empty(); }`.$uses({ empty });
     const nestedB = tgpu.fn([])`() { empty(); }`.$uses({ empty });
 
-    const main = tgpu.fn([])`() {
-        nestedA();
-        nestedB();
-      }`
+    const main = tgpu.fn([])`() { nestedA(); nestedB(); }`
       .$uses({ nestedA, nestedB });
 
-    expect(parseResolved({ main })).toBe(parse(`
-      fn empty() {}
-
-      fn nestedA() {
-        empty();
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn empty() {
+        // do nothing
       }
 
-      fn nestedB() {
-        empty();
-      }
+      fn nestedA() { empty(); }
 
-      fn main() {
-        nestedA();
-        nestedB();
-      }
-    `));
+      fn nestedB() { empty(); }
+
+      fn main() { nestedA(); nestedB(); }"
+    `);
   });
 
   it('creates typed shell from parameters', () => {
@@ -114,7 +105,7 @@ describe('tgpu.computeFn', () => {
       const x = 2;
     });
 
-    expect(parseResolved({ foo })).not.toContain('struct');
+    expect(tgpu.resolve([foo])).not.toContain('struct');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
@@ -125,7 +116,7 @@ describe('tgpu.computeFn', () => {
       },
     );
 
-    expect(parseResolved({ foo })).not.toContain(parse('struct'));
+    expect(tgpu.resolve([foo])).not.toContain('struct');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 });
@@ -137,8 +128,8 @@ describe('tgpu.vertexFn', () => {
     })(() => ({
       pos: d.vec4f(),
     }));
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
-    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_In');
+    expect(tgpu.resolve([foo])).toContain('struct foo_Out');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 
@@ -151,8 +142,8 @@ describe('tgpu.vertexFn', () => {
         pos: d.vec4f(),
       };
     });
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_In'));
-    expect(parseResolved({ foo })).toContain(parse('struct foo_Out'));
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_In');
+    expect(tgpu.resolve([foo])).toContain('struct foo_Out');
     expect(foo.shell.argTypes).toStrictEqual([]);
   });
 });
@@ -160,7 +151,7 @@ describe('tgpu.vertexFn', () => {
 describe('tgpu.fragmentFn', () => {
   it('does not create Out struct when the are no output parameters', () => {
     const foo = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
-    expect(parseResolved({ foo })).not.toContain(parse('struct foo_Out'));
+    expect(tgpu.resolve([foo])).not.toContain('struct foo_Out');
   });
 });
 

@@ -171,9 +171,7 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button
-                    onClick={() => openInStackBlitz(example)}
-                  >
+                  <Button onClick={() => openInStackBlitz(example)}>
                     <span className='font-bold'>Edit on</span>
                     <img
                       src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
@@ -245,26 +243,27 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
 
       for (const prop of canvas.style) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas.style[prop] = canvas.style[prop];
       }
       for (const attribute of canvas.attributes) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas[attribute.name] = attribute.value;
       }
       newCanvas.className = 'absolute w-full h-full';
 
       canvas.parentElement?.replaceChild(container, canvas);
 
-      const onResize = () => {
-        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
-        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      const onResize: ResizeObserverCallback = (entries) => {
+        const size = entries[0]?.devicePixelContentBoxSize[0];
+        if (size) {
+          newCanvas.width = size.inlineSize;
+          newCanvas.height = size.blockSize;
+        }
       };
 
-      onResize();
-
       const observer = new ResizeObserver(onResize);
-      observer.observe(container);
+      observer.observe(newCanvas);
       observers.push(observer);
     }
 

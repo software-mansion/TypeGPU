@@ -1,6 +1,6 @@
 import Fuse from 'fuse.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { examples } from '../utils/examples/exampleContent.ts';
+import { examples } from '../examples/exampleContent.ts';
 import { type Example, exampleCategories } from '../utils/examples/types.ts';
 import { ExampleCard } from './ExampleCard.tsx';
 
@@ -11,6 +11,9 @@ function ExamplesGrid({ examples }: { examples: Example[] }) {
     </div>
   );
 }
+
+const DEV = process.env.NODE_ENV === 'development';
+const TEST = process.env.NODE_ENV === 'test';
 
 export function SearchableExampleList(
   { excludeTags = [], scrollContainerRef }: {
@@ -23,7 +26,8 @@ export function SearchableExampleList(
   const allExamples = useMemo(
     () =>
       Object.values(examples).filter((ex) =>
-        !ex.metadata.tags?.some((tag) => excludeTags.includes(tag))
+        !ex.metadata.tags?.some((tag) => excludeTags.includes(tag)) &&
+        (DEV || TEST || !ex.metadata.dev)
       ),
     [excludeTags],
   );

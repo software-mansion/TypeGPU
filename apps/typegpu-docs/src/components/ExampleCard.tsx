@@ -20,6 +20,7 @@ export function ExampleCard({ example }: { example: Example }) {
                 src={example.thumbnails.large}
                 alt={example.metadata.title}
                 className='h-full w-full object-cover'
+                loading='lazy'
               />
             </picture>
           )
@@ -35,6 +36,11 @@ export function ExampleCard({ example }: { example: Example }) {
         </h3>
         {example.metadata.tags && example.metadata.tags.length > 0 && (
           <div className='flex flex-wrap gap-1'>
+            {example.metadata.dev && (
+              <span className='rounded-full bg-rose-700 px-2 py-1 text-white text-xs'>
+                DEV
+              </span>
+            )}
             {example.metadata.tags.map((tag: string) => (
               <span
                 key={tag}

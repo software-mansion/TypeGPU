@@ -34,7 +34,7 @@
     "node": ">=12.20.0"
   },
   "keywords": ["webgpu", "wgpu", "wgsl", "parser", "ast"],
-  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "dependencies": {
     "nearley": "^2.20.1"
   },
@@ -44,7 +44,7 @@
     "@webgpu/types": "catalog:types",
     "moo": "^0.5.2",
     "tsup": "catalog:build",
-    "tsx": "^4.16.2",
+    "tsx": "^4.20.6",
     "typescript": "catalog:types",
     "vitest": "catalog:test",
     "@typegpu/tgpu-dev-cli": "workspace:*"

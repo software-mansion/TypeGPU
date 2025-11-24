@@ -19,109 +19,88 @@ describe('blur example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct Settings_1 {
+      "struct Settings_2 {
         filterDim: i32,
         blockDim: u32,
       }
 
-      @group(0) @binding(0) var<uniform> settings_0: Settings_1;
+      @group(0) @binding(0) var<uniform> settingsUniform_1: Settings_2;
 
-      @group(0) @binding(1) var sampling_2: sampler;
+      @group(1) @binding(1) var inTexture_3: texture_2d<f32>;
 
-      @group(1) @binding(0) var<uniform> flip_3: u32;
+      @group(1) @binding(0) var<uniform> flip_4: u32;
 
-      @group(1) @binding(1) var inTexture_4: texture_2d<f32>;
+      var<workgroup> tileData_5: array<array<vec3f, 128>, 4>;
 
-      @group(1) @binding(2) var outTexture_5: texture_storage_2d<rgba8unorm, write>;
+      @group(0) @binding(1) var sampler_6: sampler;
 
-      var<workgroup> tile: array<array<vec3f, 128>, 4>;
+      @group(1) @binding(2) var outTexture_7: texture_storage_2d<rgba8unorm, write>;
 
-      @compute @workgroup_size(32, 1)
-      fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
-        let filterOffset = (settings_0.filterDim - 1) / 2;
-        let dims = vec2i(textureDimensions(inTexture_4, 0));
-        let baseIndex = vec2i(wid.xy * vec2(settings_0.blockDim, 4) +
-                                  lid.xy * vec2(4, 1))
-                        - vec2(filterOffset, 0);
+      struct computeFn_Input_8 {
+        @builtin(workgroup_id) wid: vec3u,
+        @builtin(local_invocation_id) lid: vec3u,
+      }
 
-        for (var r = 0; r < 4; r++) {
-          for (var c = 0; c < 4; c++) {
-            var loadIndex = baseIndex + vec2(c, r);
-            if (flip_3 != 0) {
+      @compute @workgroup_size(32, 1, 1) fn computeFn_0(_arg_0: computeFn_Input_8) {
+        let settings2 = (&settingsUniform_1);
+        let filterOffset = i32((f32(((*settings2).filterDim - 1i)) / 2f));
+        var dims = vec2i(textureDimensions(inTexture_3));
+        var baseIndex = (vec2i(((_arg_0.wid.xy * vec2u((*settings2).blockDim, 4u)) + (_arg_0.lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
+        for (var r = 0; (r < 4i); r++) {
+          for (var c = 0; (c < 4i); c++) {
+            var loadIndex = (baseIndex + vec2i(c, r));
+            if ((flip_4 != 0u)) {
               loadIndex = loadIndex.yx;
             }
-
-            tile[r][4 * lid.x + u32(c)] = textureSampleLevel(
-              inTexture_4,
-              sampling_2,
-              (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
-              0.0
-            ).rgb;
+            tileData_5[r][((_arg_0.lid.x * 4u) + u32(c))] = textureSampleLevel(inTexture_3, sampler_6, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).xyz;
           }
         }
-
         workgroupBarrier();
-
-        for (var r = 0; r < 4; r++) {
-          for (var c = 0; c < 4; c++) {
-            var writeIndex = baseIndex + vec2(c, r);
-            if (flip_3 != 0) {
+        for (var r = 0; (r < 4i); r++) {
+          for (var c = 0; (c < 4i); c++) {
+            var writeIndex = (baseIndex + vec2i(c, r));
+            if ((flip_4 != 0u)) {
               writeIndex = writeIndex.yx;
             }
-
-            let center = i32(4 * lid.x) + c;
-            if (center >= filterOffset &&
-                center < 128 - filterOffset &&
-                all(writeIndex < dims)) {
-              var acc = vec3(0.0, 0.0, 0.0);
-              for (var f = 0; f < settings_0.filterDim; f++) {
-                var i = center + f - filterOffset;
-                acc = acc + (1.0 / f32(settings_0.filterDim)) * tile[r][i];
+            let center = (i32((4u * _arg_0.lid.x)) + c);
+            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+              var acc = vec3f();
+              for (var f = 0; (f < (*settings2).filterDim); f++) {
+                let i = ((center + f) - filterOffset);
+                acc = (acc + (tileData_5[r][i] * (1f / f32((*settings2).filterDim))));
               }
-              textureStore(outTexture_5, writeIndex, vec4(acc, 1.0));
+              textureStore(outTexture_7, writeIndex, vec4f(acc, 1f));
             }
           }
         }
       }
 
-      struct VertexOutput_0 {
-        @builtin(position) position: vec4f,
+      struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
+        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @group(0) @binding(0) var texture_1: texture_2d<f32>;
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @group(0) @binding(1) var sampling_2: sampler;
-
-      @vertex
-      fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput_0 {
-        const pos = array(
-          vec2( 1.0,  1.0),
-          vec2( 1.0, -1.0),
-          vec2(-1.0, -1.0),
-          vec2( 1.0,  1.0),
-          vec2(-1.0, -1.0),
-          vec2(-1.0,  1.0),
-        );
-
-        const uv = array(
-          vec2(1.0, 0.0),
-          vec2(1.0, 1.0),
-          vec2(0.0, 1.0),
-          vec2(1.0, 0.0),
-          vec2(0.0, 1.0),
-          vec2(0.0, 0.0),
-        );
-
-        var output: VertexOutput_0;
-        output.position = vec4(pos[index], 0.0, 1.0);
-        output.uv = uv[index];
-        return output;
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @fragment
-      fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(texture_1, sampling_2, uv);
+      @group(0) @binding(0) var renderView_4: texture_2d<f32>;
+
+      @group(0) @binding(1) var sampler_5: sampler;
+
+      struct renderFragment_Input_6 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn renderFragment_3(input: renderFragment_Input_6) -> @location(0) vec4f {
+        return textureSample(renderView_4, sampler_5, input.uv);
       }"
     `);
   });
