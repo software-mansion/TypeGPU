@@ -3,13 +3,11 @@ import {
   type Graph,
   type OnnxLoadOptions,
   type Tensor,
-  WireType
+  WireType,
 } from '../../types.ts';
 import { decodeNode } from './node.ts';
 import { decodeTensor } from './tensor.ts';
 import { decodeValueInfo } from './valueInfo.ts';
-
-
 
 export function decodeGraph(
   bytes: Uint8Array,

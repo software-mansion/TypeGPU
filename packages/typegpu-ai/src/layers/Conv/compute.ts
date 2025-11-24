@@ -1,6 +1,12 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { activationFunctionSlot, convWeightsLayout, ioLayout, calculateIndex, workgroupSize } from '../../schemas.ts';
+import {
+  activationFunctionSlot,
+  calculateIndex,
+  convWeightsLayout,
+  ioLayout,
+  workgroupSize,
+} from '../../schemas.ts';
 
 // Convolution compute kernel.
 // Assumes N=1 (batch size 1), standard 2D convolution without dilation.
@@ -44,20 +50,25 @@ export const conv2dCompute = tgpu['~unstable'].computeFn({
   for (let ic = d.u32(0); ic < inC; ic = ic + d.u32(1)) {
     for (let kh = d.u32(0); kh < kH; kh = kh + d.u32(1)) {
       for (let kw = d.u32(0); kw < kW; kw = kw + d.u32(1)) {
-        const inY = oh * strideH + kh - padH;
-        const inX = ow * strideW + kw - padW;
-        if (inY < d.u32(0) || inY >= inH || inX < d.u32(0) || inX >= inW) {
-          continue; // outside padded region
+        const inY = d.i32(oh * strideH + kh) - d.i32(padH);
+        const inX = d.i32(ow * strideW + kw) - d.i32(padW);
+
+        if (
+          inY >= d.i32(0) && inY < d.i32(inH) && inX >= d.i32(0) &&
+          inX < d.i32(inW)
+        ) {
+          // Input index: ((ic * inH) + inY) * inW + inX
+          const inputIndex = ((ic * inH) + d.u32(inY)) * inW + d.u32(inX);
+          // Weight index: ((((oc * inC) + ic) * kH) + kh) * kW + kw
+          const weightIndex = ((((oc * inC) + ic) * kH) + kh) * kW + kw;
+          sum = sum +
+            (ioLayout.$.input[inputIndex] as number) *
+              (convWeightsLayout.$.weights[d.u32(weightIndex)] as number);
         }
-        // Input index: ((ic * inH) + inY) * inW + inX
-        const inputIndex = ((ic * inH) + inY) * inW + inX;
-        // Weight index: ((((oc * inC) + ic) * kH) + kh) * kW + kw
-        const weightIndex = ((((oc * inC) + ic) * kH) + kh) * kW + kw;
-        sum = sum + (ioLayout.$.input[inputIndex] as number) * (convWeightsLayout.$.weights[weightIndex] as number);
       }
     }
   }
   // Add bias
-  sum = sum + (convWeightsLayout.$.biases[oc] as number);
+  sum = sum + (convWeightsLayout.$.biases[d.u32(oc)] as number);
   ioLayout.$.output[linearIndex] = activationFunctionSlot.$(sum);
 });

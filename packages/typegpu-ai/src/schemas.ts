@@ -51,6 +51,13 @@ export const convWeightsLayout = tgpu.bindGroupLayout({
 
 export const activationFunctionSlot = tgpu.slot<TgpuFn>();
 
+export const maxPoolParamsLayout = tgpu.bindGroupLayout({
+  dims: {
+    storage: d.arrayOf(d.u32),
+    access: 'readonly',
+  },
+});
+
 // Generic GPU layer representation (will expand with Conv, etc.)
 export type GpuLayer =
   | {
@@ -88,6 +95,34 @@ export type GpuLayer =
     params: TgpuBindGroup; // conv-specific params + weights/biases
     compute: TgpuComputeFn;
     activation: Activation;
+  }
+  | {
+    kind: 'MaxPool';
+    inSize: number;
+    outSize: number;
+    dims: {
+      channels: number;
+      inH: number;
+      inW: number;
+      kH: number;
+      kW: number;
+      strideH: number;
+      strideW: number;
+      padH: number;
+      padW: number;
+      outH: number;
+      outW: number;
+    };
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Flatten';
+    inSize: number;
+    outSize: number;
+    io: TgpuBindGroup;
+    compute: TgpuComputeFn;
   };
 
 export interface NetworkRunner {

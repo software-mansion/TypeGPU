@@ -3,10 +3,8 @@ import {
   type OnnxLoadOptions,
   TensorDataType,
   type ValueInfo,
-  WireType
+  WireType,
 } from '../../types.ts';
-
-
 
 export function decodeValueInfo(
   bytes: Uint8Array,

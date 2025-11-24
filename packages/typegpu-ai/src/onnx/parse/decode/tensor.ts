@@ -3,13 +3,15 @@ import {
   type OnnxLoadOptions,
   type Tensor,
   TensorDataType,
-  WireType
+  WireType,
 } from '../../types.ts';
-import { bfloat16ToFloat32, elementSize, float16ToFloat32 } from '../convert.ts';
+import {
+  bfloat16ToFloat32,
+  elementSize,
+  float16ToFloat32,
+} from '../convert.ts';
 import { readDoubleFromFixed64, readFloatFromVarint } from '../io.ts';
 import { decodeRawData } from './rawData.ts';
-
-
 
 export function decodeTensor(
   bytes: Uint8Array,

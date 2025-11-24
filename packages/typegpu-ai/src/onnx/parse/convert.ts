@@ -63,9 +63,6 @@ export function dataTypeName(dt: TensorDataType): string {
   return TensorDataType[dt] ?? 'UNKNOWN';
 }
 
-
-
-
 export function bitsToFloat32(bits: number): number {
   const float32Scratch = new ArrayBuffer(4);
   const float32View = new DataView(float32Scratch);
@@ -77,4 +74,3 @@ export function normalizeInt64(value: bigint): number | bigint {
   const asNumber = Number(value);
   return BigInt(asNumber) === value ? asNumber : value;
 }
-

@@ -1,11 +1,6 @@
 import { ProtobuffReader } from '../../protobuf.ts';
-import {
-  type Node,
-  type OnnxLoadOptions,
-  WireType
-} from '../../types.ts';
+import { type Node, type OnnxLoadOptions, WireType } from '../../types.ts';
 import { decodeAttribute } from './attribute.ts';
-
 
 export function decodeNode(
   bytes: Uint8Array,

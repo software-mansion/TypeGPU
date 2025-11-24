@@ -1,9 +1,5 @@
-import {
-  TensorDataType
-} from '../../types.ts';
+import { TensorDataType } from '../../types.ts';
 import { bfloat16ToFloat32, float16ToFloat32 } from '../convert.ts';
-
-
 
 export function decodeRawData(
   raw: Uint8Array,

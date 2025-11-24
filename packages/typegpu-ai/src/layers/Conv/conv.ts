@@ -1,16 +1,16 @@
 import {
   type StorageFlag,
+  TgpuBindGroup,
   type TgpuBuffer,
   type TgpuRoot,
-  TgpuBindGroup,
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import { NNLayer } from '../gpuLayer';
 import { PipelineCache } from '../../pipelineCache.ts';
 import { conv2dCompute } from './compute.ts';
 import { convWeightsLayout, ioLayout, workgroupSize } from '../../schemas.ts';
-import type { Layer } from '../../pipelineCache.ts';
-import { relu } from '../activations/activationFunctions.ts';
+import type { Activation, Layer } from '../../pipelineCache.ts';
+import { identity, relu } from '../activations/activationFunctions.ts';
 
 export interface ConvDimensions {
   inputChannels: number;
@@ -27,7 +27,6 @@ export interface ConvDimensions {
   outputWidth: number;
 }
 
-
 export class LConv implements NNLayer {
   public readonly inSize: number;
   public readonly outSize: number;
@@ -43,7 +42,6 @@ export class LConv implements NNLayer {
     dims: ConvDimensions,
     activation?: string,
   ) {
-    console.log('japierdole');
     this.activation = activation ?? 'identity';
 
     const expectedWeights = dims.outputChannels * dims.inputChannels *
@@ -111,7 +109,14 @@ export class LConv implements NNLayer {
       outLength: this.root.createBuffer(d.u32, this.outSize).$usage('uniform'),
     });
 
-    const pipeline = this.pipelineCache.get({ kind: 'Conv', compute: conv2dCompute }, { kind: 'relu', fn: relu });
+    const activationFn = this.activation === 'relu' ? relu : identity;
+    const pipeline = this.pipelineCache.get({
+      kind: 'Conv',
+      compute: conv2dCompute,
+    }, {
+      kind: (this.activation ?? 'identity') as Activation['kind'],
+      fn: activationFn,
+    });
 
     pipeline
       .with(ioLayout, ioBindGroup)

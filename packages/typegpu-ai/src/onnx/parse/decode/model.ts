@@ -4,10 +4,9 @@ import {
   type OnnxLoadOptions,
   type OnnxModel,
   type Tensor,
-  WireType
+  WireType,
 } from '../../types.ts';
 import { decodeGraph } from './graph.ts';
-
 
 export function decodeModel(
   buffer: Uint8Array,

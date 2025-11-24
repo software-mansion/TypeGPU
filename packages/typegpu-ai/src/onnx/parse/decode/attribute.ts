@@ -4,7 +4,7 @@ import {
   type NodeAttribute,
   type OnnxLoadOptions,
   type Tensor,
-  WireType
+  WireType,
 } from '../../types.ts';
 import { bitsToFloat32, normalizeInt64 } from '../convert.ts';
 import { readFloat32Values, readInt64Values } from '../io.ts';
@@ -28,7 +28,6 @@ export const ATTRIBUTE_TYPE_NAMES: Record<number, string> = {
   13: 'TYPE_PROTO',
   14: 'TYPE_PROTOS',
 };
-
 
 export function decodeAttribute(
   bytes: Uint8Array,

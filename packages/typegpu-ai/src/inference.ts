@@ -1,11 +1,13 @@
 import { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { OnnxModel } from './onnx/types.ts';
+import type { Node, OnnxModel } from './onnx/types.ts';
 import { PipelineCache } from './pipelineCache.ts';
 import { type NetworkRunner } from './schemas.ts';
 import { LGemm } from './layers/Gemm/gemm.ts';
 import { NNLayer } from './layers/gpuLayer.ts';
 import { LConv } from './layers/Conv/conv.ts';
+import { LMaxPool } from './layers/MaxPool/maxPool.ts';
+import { LFlatten } from './layers/Flatten/flatten.ts';
 
 export class Inference {
   private layers: NNLayer[] = [];
@@ -18,10 +20,45 @@ export class Inference {
 
   createNetwork(): NetworkRunner {
     let maxBufferSize = 0;
+    console.log('Processing model:', this.model);
+
+    // Initialize current shape from graph input
+    // Assuming [batch, channels, height, width] or [batch, channels]
+    const inputInfo = this.model.graph.inputs[0];
+    if (!inputInfo || !inputInfo.shape) {
+      throw new Error('Model input shape not found');
+    }
+
+    // We assume NCHW layout for image inputs
+    // shape[0] is batch (usually symbolic or 1), shape[1] is C, shape[2] is H, shape[3] is W
+    let currentShape = {
+      channels: Number(inputInfo.shape[1]),
+      height: Number(inputInfo.shape[2]),
+      width: Number(inputInfo.shape[3]),
+    };
+
+    console.log('Initial shape:', currentShape);
+
     for (const node of this.model.graph.nodes) {
       switch (node.opType) {
-        case 'Flatten':
-          continue;
+        case 'Flatten': {
+          // Flatten is usually a reshape. Since we operate on flat buffers, we just need to ensure
+          // the size is propagated. We use a copy layer to be explicit.
+          // We assume input size matches the output size of the previous layer.
+          const prevLayer = this.layers[this.layers.length - 1];
+          if (!prevLayer) {
+            throw new Error('Flatten layer cannot be the first layer');
+          }
+
+          const layer = new LFlatten(
+            this.root,
+            this.pipelineCache,
+            prevLayer.outSize,
+          );
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
         case 'Gemm': {
           const layer = new LGemm(
             this.root,
@@ -33,40 +70,116 @@ export class Inference {
           maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
           break;
         }
-        case 'Conv':
-          {
-            console.log('Processing Conv node:', node);
-            const layer = new LConv(
-              this.root,
-              this.pipelineCache,
-              this.model.tensorMap.get(node.inputs[1]!)!.data as Float32Array,
-              this.model.tensorMap.get(node.inputs[2]!)!.data as Float32Array,
+        case 'Conv': {
+          const pads = getAttr(node, 'pads')?.value as number[] | undefined;
+          const strides = getAttr(node, 'strides')?.value as number[] | undefined;
+          const group = getAttr(node, 'group')?.value as number | undefined;
+          const dilations = getAttr(node, 'dilations')?.value as number[] | undefined;
 
-              {
-                inputChannels: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[1]),
-                inputHeight: Number(this.model.tensorMap.get(node.inputs[0]!)!.dims[2]),
-                inputWidth: Number(this.model.tensorMap.get(node.inputs[0]!)!.dims[3]),
-                kernelHeight: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[2]),
-                kernelWidth: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[3]),
-                strideH: 1,
-                strideW: 1,
-                padH: 0,
-                padW: 0,
-                outputChannels: Number(this.model.tensorMap.get(node.inputs[1]!)!.dims[0]),
-                outputHeight: Number(this.model.tensorMap.get(node.outputs[0]!)!.dims[2]),
-                outputWidth: Number(this.model.tensorMap.get(node.outputs[0]!)!.dims[3]),
-              },
-              'relu',
-            );
+          if (group && group !== 1) throw new Error('Grouped convolution not supported');
+          if (dilations && (dilations[0] !== 1 || dilations[1] !== 1)) throw new Error('Dilated convolution not supported');
 
-            this.layers.push(layer);
-            console.log('Pghwdp');
+          const weightsTensor = this.model.tensorMap.get(node.inputs[1]!);
+          if (!weightsTensor) throw new Error(`Weights not found for ${node.name}`);
 
-            maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-            console.log('Added Conv layer:', layer);
-            break;
+          const biasTensor = this.model.tensorMap.get(node.inputs[2]!);
+          if (!biasTensor) throw new Error(`Bias not found for ${node.name}`);
 
+          const outputChannels = Number(weightsTensor.dims[0]);
+          const kernelHeight = Number(weightsTensor.dims[2]);
+          const kernelWidth = Number(weightsTensor.dims[3]);
+
+          const padH = pads?.[0] ?? 0;
+          const padW = pads?.[1] ?? 0;
+          const padH_bottom = pads?.[2] ?? padH;
+          const padW_right = pads?.[3] ?? padW;
+          const strideH = strides?.[0] ?? 1;
+          const strideW = strides?.[1] ?? 1;
+
+          const outputHeight = Math.floor((currentShape.height + padH + padH_bottom - kernelHeight) / strideH) + 1;
+          const outputWidth = Math.floor((currentShape.width + padW + padW_right - kernelWidth) / strideW) + 1;
+
+          const layer = new LConv(
+            this.root,
+            this.pipelineCache,
+            weightsTensor.data as Float32Array,
+            biasTensor.data as Float32Array,
+            {
+              inputChannels: currentShape.channels,
+              inputHeight: currentShape.height,
+              inputWidth: currentShape.width,
+              kernelHeight,
+              kernelWidth,
+              strideH,
+              strideW,
+              padH,
+              padW,
+              outputChannels,
+              outputHeight,
+              outputWidth,
+            },
+            'relu', // TODO: parse activation from fused operator or subsequent node?
+          );
+
+          currentShape = {
+            channels: outputChannels,
+            height: outputHeight,
+            width: outputWidth,
+          };
+
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'MaxPool': {
+          const pads = getAttr(node, 'pads')?.value as number[] | undefined;
+          const strides = getAttr(node, 'strides')?.value as number[] | undefined;
+          const kernelShape = getAttr(node, 'kernel_shape')?.value as number[] | undefined;
+
+          if (!kernelShape) {
+            throw new Error('MaxPool node missing kernel_shape attribute');
           }
+
+          const kH = kernelShape[0] ?? 1;
+          const kW = kernelShape[1] ?? 1;
+          const strideH = strides?.[0] ?? 1;
+          const strideW = strides?.[1] ?? 1;
+          const padH = pads?.[0] ?? 0;
+          const padW = pads?.[1] ?? 0;
+          const padH_bottom = pads?.[2] ?? padH;
+          const padW_right = pads?.[3] ?? padW;
+
+          const outputHeight = Math.floor((currentShape.height + padH + padH_bottom - kH) / strideH) + 1;
+          const outputWidth = Math.floor((currentShape.width + padW + padW_right - kW) / strideW) + 1;
+
+          const layer = new LMaxPool(
+            this.root,
+            this.pipelineCache,
+            {
+              channels: currentShape.channels,
+              inH: currentShape.height,
+              inW: currentShape.width,
+              kH,
+              kW,
+              strideH,
+              strideW,
+              padH,
+              padW,
+              outH: outputHeight,
+              outW: outputWidth,
+            },
+          );
+
+          currentShape = {
+            channels: currentShape.channels,
+            height: outputHeight,
+            width: outputWidth,
+          };
+
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
         default:
           continue;
       }
@@ -135,4 +248,8 @@ function softmax(arr: number[]): number[] {
   const exps = arr.map((x) => Math.exp(x - max));
   const sum = exps.reduce((a, b) => a + b, 0);
   return exps.map((x) => x / sum);
+}
+
+function getAttr(node: Node, name: string) {
+  return node.attributes.find((a) => a.name === name);
 }

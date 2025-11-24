@@ -7,7 +7,9 @@ import { relu } from './layers/activations/activationFunctions';
 
 export type Layer =
   | { kind: 'Gemm'; compute: TgpuComputeFn }
-  | { kind: 'Conv'; compute: TgpuComputeFn };
+  | { kind: 'Conv'; compute: TgpuComputeFn }
+  | { kind: 'MaxPool'; compute: TgpuComputeFn }
+  | { kind: 'Flatten'; compute: TgpuComputeFn };
 export type Activation =
   | { kind: 'relu'; fn: TgpuFn }
   | { kind: 'identity'; fn: TgpuFn }
