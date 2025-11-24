@@ -19,15 +19,12 @@ context.configure({
   format: presentationFormat,
 });
 
-// Create global vertex layout
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
 
-// Create main camera with buffers managed internally
 const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(10, 10, 10);
 mainCamera.target = d.vec3f(0, 0, 0);
 
-// Create geometries with buffers managed internally
 const cube = new BoxGeometry(root);
 cube.scale = d.vec3f(3, 1, 0.2);
 
@@ -35,10 +32,9 @@ const floorCube = new BoxGeometry(root);
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
 
-// Create point light with shadow cameras and cubemap managed internally
 const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
   far: 100.0,
-  shadowMapSize: 512,
+  shadowMapSize: 4096,
 });
 
 const modelMatrixUniform = root.createBuffer(d.mat4x4f).$usage('uniform');
@@ -77,9 +73,9 @@ const debugFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const localUV = d.vec2f(
+  const tiled = d.vec2f(
     std.fract(uv.x * 3),
-    std.fract(uv.y * 2),
+    1.0 - std.fract(uv.y * 2),
   );
 
   const col = std.floor(uv.x * 3);
@@ -89,10 +85,10 @@ const debugFragment = tgpu['~unstable'].fragmentFn({
   const depth = std.textureSample(
     debugView.$,
     debugSampler.$,
-    localUV,
+    tiled,
     arrayIndex,
   );
-  return d.vec4f(d.vec3f(depth), 1.0);
+  return d.vec4f(d.vec3f(depth ** 0.5), 1.0);
 });
 
 const debugPipeline = root['~unstable']
@@ -174,16 +170,14 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 })(({ worldPos, normal }) => {
   const lightPos = renderLayoutWithShadow.$.lightPosition;
 
-  // direction from light to fragment (for cubemap)
   const lightToFrag = worldPos.sub(lightPos);
   const dist = std.length(lightToFrag);
-  let dir = lightToFrag.div(dist); // normalized direction
-  dir = d.vec3f(dir.x, -dir.y, dir.z); // invert for texture lookup
+  let dir = std.normalize(lightToFrag);
+  dir = d.vec3f(dir.x, -dir.y, dir.z);
 
   const depthRef = dist / pointLight.far;
 
-  // Optional bias to reduce acne
-  const bias = 0.002;
+  const bias = 0.001 * (1.0 - std.dot(normal, std.normalize(lightToFrag)));
   const visibility = std.textureSampleCompare(
     renderLayoutWithShadow.$.shadowDepthCube,
     renderLayoutWithShadow.$.shadowSampler,
@@ -191,29 +185,19 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     depthRef - bias,
   );
 
-  const rawValue = std.textureSample(
-    renderLayoutWithShadow.$.shadowDepthCube,
-    debugSampler.$,
-    dir,
-  );
-  return d.vec4f(rawValue, 0, 0, 1); // Visualize raw depth value from shadow map
-
-  // calculate light direction
   const lightDir = std.normalize(lightPos.sub(worldPos));
-
-  // diffuse shading
-  const diff = std.max(std.dot(normal, lightDir), 0.0);
+  const diffuse = std.max(std.dot(normal, lightDir), 0.0);
 
   const baseColor = d.vec3f(1.0, 0.5, 0.31);
   const ambient = 0.1;
-  const color = baseColor.mul(diff * visibility + ambient);
+  const color = baseColor.mul(diffuse * visibility + ambient);
 
   return d.vec4f(color, 1.0);
 });
 
 // Samplers and views
 const shadowSampler = root['~unstable'].createComparisonSampler({
-  compare: 'less-equal',
+  compare: 'less',
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -261,15 +245,15 @@ function render() {
   );
 
   // Uncomment to see debug view of shadow maps
-  // debugPipeline
-  //   .withColorAttachment({
-  //     view: context.getCurrentTexture().createView(),
-  //     loadOp: 'clear',
-  //     storeOp: 'store',
-  //   })
-  //   .draw(3);
-  // requestAnimationFrame(render);
-  // return;
+  debugPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
+  requestAnimationFrame(render);
+  return;
 
   // Render cube
   modelMatrixUniform.write(cube.modelMatrix);

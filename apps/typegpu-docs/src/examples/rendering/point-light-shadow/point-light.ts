@@ -93,14 +93,14 @@ export class PointLight {
     // [2] +Y face: forward=+Y, +U=+X, +V=+Z
     // cross(+Y, worldUp) = +X → cross((0,1,0), (a,0,c)) = (c,0,-a) = (1,0,0) → c=1, a=0
     this.#shadowCameras.up.position = this.#position;
-    this.#shadowCameras.up.target = this.#position.add(d.vec3f(0, 1, 0));
-    this.#shadowCameras.up.up = d.vec3f(0, 0, 1);
+    this.#shadowCameras.up.target = this.#position.add(d.vec3f(0, -1, 0));
+    this.#shadowCameras.up.up = d.vec3f(0, 0, -1);
 
     // [3] -Y face: +U points +X, +V points -Z
     // Camera right should be +X, camera up should be -Z
     this.#shadowCameras.down.position = this.#position;
-    this.#shadowCameras.down.target = this.#position.add(d.vec3f(0, -1, 0));
-    this.#shadowCameras.down.up = d.vec3f(0, 0, -1);
+    this.#shadowCameras.down.target = this.#position.add(d.vec3f(0, 1, 0));
+    this.#shadowCameras.down.up = d.vec3f(0, 0, 1);
 
     // [4] +Z face: +U points +X, +V points -Y
     // Camera right should be +X, camera up should be -Y
