@@ -58,6 +58,43 @@ export const maxPoolParamsLayout = tgpu.bindGroupLayout({
   },
 });
 
+export const resizeParamsLayout = tgpu.bindGroupLayout({
+  scales: {
+    storage: d.arrayOf(d.f32),
+    access: 'readonly',
+  },
+  dims: {
+    storage: d.arrayOf(d.u32),
+    access: 'readonly',
+  },
+});
+
+export const clipParamsLayout = tgpu.bindGroupLayout({
+  bounds: {
+    storage: d.arrayOf(d.f32),
+    access: 'readonly',
+  },
+});
+
+export const addParamsLayout = tgpu.bindGroupLayout({
+  // For now, assuming adding a constant bias vector or similar
+  other: {
+    storage: d.arrayOf(d.f32),
+    access: 'readonly',
+  },
+});
+
+export const concatParamsLayout = tgpu.bindGroupLayout({
+  offset: { uniform: d.u32 },
+});
+
+export const shapeParamsLayout = tgpu.bindGroupLayout({
+  dims: {
+    storage: d.arrayOf(d.f32), // Outputting shape as floats for compatibility
+    access: 'readonly',
+  },
+});
+
 // Generic GPU layer representation (will expand with Conv, etc.)
 export type GpuLayer =
   | {
@@ -123,6 +160,68 @@ export type GpuLayer =
     outSize: number;
     io: TgpuBindGroup;
     compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Resize';
+    inSize: number;
+    outSize: number;
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Concat';
+    outSize: number;
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Add';
+    inSize: number;
+    outSize: number;
+    io: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Clip';
+    inSize: number;
+    outSize: number;
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'Shape';
+    outSize: number;
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+  }
+  | {
+    kind: 'ConvTranspose';
+    inSize: number;
+    outSize: number;
+    weights: Float32Array<ArrayBufferLike>;
+    biases: Float32Array<ArrayBufferLike>;
+    dims: {
+      inChannels: number;
+      outChannels: number;
+      inH: number;
+      inW: number;
+      kH: number;
+      kW: number;
+      strideH: number;
+      strideW: number;
+      padH: number;
+      padW: number;
+      outH: number;
+      outW: number;
+    };
+    io: TgpuBindGroup;
+    params: TgpuBindGroup;
+    compute: TgpuComputeFn;
+    activation: Activation;
   };
 
 export interface NetworkRunner {

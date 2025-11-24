@@ -9,7 +9,13 @@ export type Layer =
   | { kind: 'Gemm'; compute: TgpuComputeFn }
   | { kind: 'Conv'; compute: TgpuComputeFn }
   | { kind: 'MaxPool'; compute: TgpuComputeFn }
-  | { kind: 'Flatten'; compute: TgpuComputeFn };
+  | { kind: 'Flatten'; compute: TgpuComputeFn }
+  | { kind: 'Resize'; compute: TgpuComputeFn }
+  | { kind: 'Concat'; compute: TgpuComputeFn }
+  | { kind: 'Add'; compute: TgpuComputeFn }
+  | { kind: 'Clip'; compute: TgpuComputeFn }
+  | { kind: 'Shape'; compute: TgpuComputeFn }
+  | { kind: 'ConvTranspose'; compute: TgpuComputeFn };
 export type Activation =
   | { kind: 'relu'; fn: TgpuFn }
   | { kind: 'identity'; fn: TgpuFn }
@@ -23,7 +29,7 @@ export class PipelineCache {
   >();
   constructor(
     private readonly root: TgpuRoot,
-  ) {}
+  ) { }
 
   get(layer: Layer, activation: Activation): TgpuComputePipeline {
     let layerObj = this.cache.get(layer);
