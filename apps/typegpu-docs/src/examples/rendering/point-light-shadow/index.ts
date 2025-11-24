@@ -1,11 +1,17 @@
 import tgpu from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { Camera } from './camera.ts';
 import { BoxGeometry } from './box-geometry.ts';
+import { Camera } from './camera.ts';
 import { PointLight } from './point-light.ts';
-import { CameraData, VertexData } from './types.ts';
-import { fullScreenTriangle } from 'typegpu/common';
+import {
+  CameraData,
+  InstanceData,
+  instanceLayout,
+  VertexData,
+  vertexLayout,
+} from './types.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -19,11 +25,14 @@ context.configure({
   format: presentationFormat,
 });
 
-const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
-
 const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(5, 5, -5);
 mainCamera.target = d.vec3f(0, 0, 0);
+
+const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
+  far: 100.0,
+  shadowMapSize: 2048,
+});
 
 const cube = new BoxGeometry(root);
 cube.scale = d.vec3f(3, 1, 0.2);
@@ -32,13 +41,6 @@ const floorCube = new BoxGeometry(root);
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
 
-const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
-  far: 100.0,
-  shadowMapSize: 2048,
-});
-
-const modelMatrixUniform = root.createBuffer(d.mat4x4f).$usage('uniform');
-
 let depthTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
@@ -46,6 +48,7 @@ let depthTexture = root['~unstable']
     sampleCount: 4,
   })
   .$usage('render');
+
 let msaaTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
@@ -54,118 +57,69 @@ let msaaTexture = root['~unstable']
   })
   .$usage('render');
 
-// Bind group layouts
+const shadowSampler = root['~unstable'].createComparisonSampler({
+  compare: 'less',
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const shadowCubeView = pointLight.createCubeView();
+
 const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraData },
-  modelMatrix: { uniform: d.mat4x4f },
   lightPosition: { uniform: d.vec3f },
 });
 
 const renderLayoutWithShadow = tgpu.bindGroupLayout({
   camera: { uniform: CameraData },
-  modelMatrix: { uniform: d.mat4x4f },
   shadowDepthCube: { texture: d.textureDepthCube() },
   shadowSampler: { sampler: 'comparison' },
   lightPosition: { uniform: d.vec3f },
 });
 
-// Debug pipeline setup
-const debugSampler = root['~unstable'].createSampler({
-  minFilter: 'nearest',
-  magFilter: 'nearest',
-});
-
-const debugView = pointLight.createDebugArrayView();
-
-const debugFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  const tiled = d.vec2f(
-    std.fract(uv.x * 3),
-    std.fract(uv.y * 2),
-  );
-
-  const col = std.floor(uv.x * 3);
-  const row = std.floor(uv.y * 2);
-  const arrayIndex = d.i32(row * 3 + col);
-
-  const depth = std.textureSample(
-    debugView.$,
-    debugSampler.$,
-    tiled,
-    arrayIndex,
-  );
-  return d.vec4f(d.vec3f(depth ** 0.5), 1.0);
-});
-
-const debugPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(debugFragment, { format: presentationFormat })
-  .createPipeline();
-
-// Shadow depth pass shaders
 const vertexDepth = tgpu['~unstable'].vertexFn({
-  in: {
-    ...VertexData.propTypes,
-  },
+  in: { ...VertexData.propTypes, ...InstanceData.propTypes },
   out: {
     pos: d.builtin.position,
     worldPos: d.vec3f,
   },
-})(({ position }) => {
-  const worldPos = renderLayout.$.modelMatrix.mul(d.vec4f(position, 1)).xyz;
+})(({ position, column1, column2, column3, column4 }) => {
+  const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
+  const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
   const pos = renderLayout.$.camera.viewProjectionMatrix.mul(
     d.vec4f(worldPos, 1),
   );
 
-  return {
-    pos,
-    worldPos,
-  };
+  return { pos, worldPos };
 });
 
 const fragmentDepth = tgpu['~unstable'].fragmentFn({
-  in: {
-    worldPos: d.vec3f,
-  },
+  in: { worldPos: d.vec3f },
   out: d.builtin.fragDepth,
 })(({ worldPos }) => {
   const lightPos = renderLayout.$.lightPosition;
-
   const lightToFrag = worldPos.sub(lightPos);
   const dist = std.length(lightToFrag);
 
-  // map [0, lightFar] -> [0, 1]
-  const depth = dist / pointLight.far;
-
-  return depth;
+  return dist / pointLight.far;
 });
 
-// Main render pass shaders
 const vertexMain = tgpu['~unstable'].vertexFn({
-  in: {
-    ...VertexData.propTypes,
-  },
+  in: { ...VertexData.propTypes, ...InstanceData.propTypes },
   out: {
     pos: d.builtin.position,
     worldPos: d.vec3f,
     uv: d.vec2f,
     normal: d.vec3f,
   },
-})(({ position, uv, normal }) => {
-  const worldPos =
-    renderLayoutWithShadow.$.modelMatrix.mul(d.vec4f(position, 1)).xyz;
+})(({ position, uv, normal, column1, column2, column3, column4 }) => {
+  const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
+  const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
   const pos = renderLayoutWithShadow.$.camera.viewProjectionMatrix.mul(
     d.vec4f(worldPos, 1),
   );
 
-  return {
-    pos,
-    worldPos,
-    uv,
-    normal,
-  };
+  return { pos, worldPos, uv, normal };
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -202,40 +156,37 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return d.vec4f(color, 1.0);
 });
 
-// Samplers and views
-const shadowSampler = root['~unstable'].createComparisonSampler({
-  compare: 'less',
-  magFilter: 'linear',
-  minFilter: 'linear',
+const previewSampler = root['~unstable'].createSampler({
+  minFilter: 'nearest',
+  magFilter: 'nearest',
 });
 
-const shadowCubeView = pointLight.createCubeView();
+const previewView = pointLight.createDepthArrayView();
 
-// Main render bind group
-const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
-  camera: mainCamera.uniform.buffer,
-  modelMatrix: modelMatrixUniform,
-  shadowDepthCube: shadowCubeView,
-  shadowSampler: shadowSampler,
-  lightPosition: pointLight.positionUniform.buffer,
+const previewFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const tiled = d.vec2f(
+    std.fract(uv.x * 3),
+    std.fract(uv.y * 2),
+  );
+
+  const col = std.floor(uv.x * 3);
+  const row = std.floor(uv.y * 2);
+  const arrayIndex = d.i32(row * 3 + col);
+
+  const depth = std.textureSample(
+    previewView.$,
+    previewSampler.$,
+    tiled,
+    arrayIndex,
+  );
+  return d.vec4f(d.vec3f(depth ** 0.5), 1.0);
 });
-
-// Pipelines
-const pipelineMain = root['~unstable']
-  .withVertex(vertexMain, vertexLayout.attrib)
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  })
-  .withMultisample({
-    count: 4,
-  })
-  .createPipeline();
 
 const pipelineDepthOne = root['~unstable']
-  .withVertex(vertexDepth, vertexLayout.attrib)
+  .withVertex(vertexDepth, { ...vertexLayout.attrib, ...instanceLayout.attrib })
   .withFragment(fragmentDepth, {})
   .withDepthStencil({
     format: 'depth24plus',
@@ -244,19 +195,49 @@ const pipelineDepthOne = root['~unstable']
   })
   .createPipeline();
 
-let renderDepthMap = false;
+const pipelineMain = root['~unstable']
+  .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
+  .withFragment(fragmentMain, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
+  .withMultisample({ count: 4 })
+  .createPipeline();
+
+const pipelinePreview = root['~unstable']
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(previewFragment, { format: presentationFormat })
+  .createPipeline();
+
+const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
+  camera: mainCamera.uniform.buffer,
+  shadowDepthCube: shadowCubeView,
+  shadowSampler: shadowSampler,
+  lightPosition: pointLight.positionUniform.buffer,
+});
+
+const instanceBuffer = root.createBuffer(d.arrayOf(InstanceData, 2), [
+  cube.instanceData,
+  floorCube.instanceData,
+]).$usage('vertex');
+
+let showDepthPreview = false;
 
 function render() {
   pointLight.renderShadowMaps(
     pipelineDepthOne,
     renderLayout,
-    modelMatrixUniform,
-    vertexLayout,
-    [cube, floorCube],
+    cube.vertexBuffer,
+    instanceBuffer,
+    cube.indexBuffer,
+    cube.indexCount,
+    2,
   );
 
-  if (renderDepthMap) {
-    debugPipeline
+  if (showDepthPreview) {
+    pipelinePreview
       .withColorAttachment({
         view: context.getCurrentTexture().createView(),
         loadOp: 'clear',
@@ -267,8 +248,7 @@ function render() {
     return;
   }
 
-  // Render cube
-  modelMatrixUniform.write(cube.modelMatrix);
+  // Render cubes
   pipelineMain
     .withDepthStencilAttachment({
       view: depthTexture,
@@ -285,27 +265,8 @@ function render() {
     .with(mainBindGroup)
     .withIndexBuffer(cube.indexBuffer)
     .with(vertexLayout, cube.vertexBuffer)
-    .drawIndexed(cube.indexCount);
-
-  // Render floor
-  modelMatrixUniform.write(floorCube.modelMatrix);
-  pipelineMain
-    .withDepthStencilAttachment({
-      view: depthTexture,
-      depthClearValue: 1,
-      depthLoadOp: 'load',
-      depthStoreOp: 'store',
-    })
-    .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
-      view: root.unwrap(msaaTexture).createView(),
-      loadOp: 'load',
-      storeOp: 'store',
-    })
-    .with(mainBindGroup)
-    .withIndexBuffer(floorCube.indexBuffer)
-    .with(vertexLayout, floorCube.vertexBuffer)
-    .drawIndexed(floorCube.indexCount);
+    .with(instanceLayout, instanceBuffer)
+    .drawIndexed(cube.indexCount, 2);
 
   requestAnimationFrame(render);
 }
@@ -325,7 +286,6 @@ const resizeObserver = new ResizeObserver((entries) => {
       Math.min(height, device.limits.maxTextureDimension2D),
     );
 
-    // Recreate depth texture with new size
     depthTexture = root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
@@ -345,7 +305,6 @@ const resizeObserver = new ResizeObserver((entries) => {
 
 resizeObserver.observe(canvas);
 
-// Orbit controls
 let theta = Math.atan2(10, 10);
 let phi = Math.acos(10 / Math.sqrt(10 * 10 + 10 * 10 + 10 * 10));
 let radius = Math.sqrt(10 * 10 + 10 * 10 + 10 * 10);
@@ -384,7 +343,6 @@ canvas.addEventListener('mousemove', (e) => {
   theta -= deltaX * 0.01;
   phi -= deltaY * 0.01;
 
-  // Clamp phi to avoid gimbal lock
   phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
 
   updateCameraPosition();
@@ -439,10 +397,10 @@ export const controls = {
       );
     },
   },
-  'Depth map view': {
+  'Show Depth Preview': {
     initial: false,
     onToggleChange: (v: boolean) => {
-      renderDepthMap = v;
+      showDepthPreview = v;
     },
   },
 };

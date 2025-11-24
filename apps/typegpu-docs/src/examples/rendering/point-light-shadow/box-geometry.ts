@@ -1,7 +1,7 @@
 import type { IndexFlag, TgpuBuffer, TgpuRoot, VertexFlag } from 'typegpu';
 import * as d from 'typegpu/data';
 import type { GeometryData } from './types.ts';
-import { VertexData } from './types.ts';
+import { InstanceData, VertexData } from './types.ts';
 
 export class BoxGeometry {
   #modelMatrix: d.m4x4f;
@@ -67,8 +67,13 @@ export class BoxGeometry {
     return this.#rotation;
   }
 
-  get modelMatrix(): d.m4x4f {
-    return this.#modelMatrix;
+  get instanceData(): d.Infer<InstanceData> {
+    return InstanceData({
+      column1: this.#modelMatrix.columns[0],
+      column2: this.#modelMatrix.columns[1],
+      column3: this.#modelMatrix.columns[2],
+      column4: this.#modelMatrix.columns[3],
+    });
   }
 
   get vertices(): GeometryData {

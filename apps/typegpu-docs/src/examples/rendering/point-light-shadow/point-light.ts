@@ -1,4 +1,5 @@
 import type {
+  IndexFlag,
   RenderFlag,
   SampledFlag,
   TgpuBindGroup,
@@ -8,12 +9,16 @@ import type {
   TgpuRoot,
   TgpuTexture,
   TgpuUniform,
-  TgpuVertexLayout,
-  UniformFlag,
+  VertexFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
+import {
+  type InstanceData,
+  instanceLayout,
+  type VertexData,
+  vertexLayout,
+} from './types.ts';
 
 export class PointLight {
   #root: TgpuRoot;
@@ -51,7 +56,6 @@ export class PointLight {
     this.#far = options.far ?? 100.0;
     this.#shadowMapSize = options.shadowMapSize ?? 512;
 
-    // Create cubemap depth texture
     this.#depthCubeTexture = root['~unstable']
       .createTexture({
         size: [this.#shadowMapSize, this.#shadowMapSize, 6],
@@ -60,10 +64,8 @@ export class PointLight {
       })
       .$usage('render', 'sampled');
 
-    // Create position uniform
     this.#positionUniform = root.createUniform(d.vec3f, this.#position);
 
-    // Create shadow cameras for each cubemap face
     this.#shadowCameras = {
       right: new Camera(root, 90, 0.1, this.#far),
       left: new Camera(root, 90, 0.1, this.#far),
@@ -134,7 +136,7 @@ export class PointLight {
     return this.#depthCubeTexture.createView(d.textureDepthCube());
   }
 
-  createDebugArrayView() {
+  createDepthArrayView() {
     return this.#depthCubeTexture.createView(d.textureDepth2dArray(), {
       baseArrayLayer: 0,
       arrayLayerCount: 6,
@@ -145,9 +147,11 @@ export class PointLight {
   renderShadowMaps(
     pipeline: TgpuRenderPipeline,
     bindGroupLayout: TgpuBindGroupLayout,
-    modelMatrixUniform: TgpuBuffer<d.Mat4x4f> & UniformFlag,
-    vertexLayout: TgpuVertexLayout,
-    geometries: BoxGeometry[],
+    vertexBuffer: TgpuBuffer<d.WgslArray<VertexData>> & VertexFlag,
+    instanceBuffer: TgpuBuffer<d.WgslArray<InstanceData>> & VertexFlag,
+    indexBuffer: TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag,
+    vertexCount: number,
+    instanceCount: number,
   ) {
     const faceIndices = {
       right: 0,
@@ -168,29 +172,26 @@ export class PointLight {
       if (!bindGroup) {
         bindGroup = this.#root.createBindGroup(bindGroupLayout, {
           camera: camera.uniform.buffer,
-          modelMatrix: modelMatrixUniform,
           lightPosition: this.#positionUniform.buffer,
         });
         this.#bindGroups.set(key, bindGroup);
       }
 
-      // Render each geometry
-      for (let i = 0; i < geometries.length; i++) {
-        const geometry = geometries[i];
-        modelMatrixUniform.write(geometry.modelMatrix);
-
-        pipeline
-          .withDepthStencilAttachment({
-            view: this.#root.unwrap(view),
-            depthClearValue: 1,
-            depthLoadOp: i === 0 ? 'clear' : 'load',
-            depthStoreOp: 'store',
-          })
-          .with(vertexLayout, geometry.vertexBuffer)
-          .with(bindGroup)
-          .withIndexBuffer(geometry.indexBuffer)
-          .drawIndexed(geometry.indexCount);
-      }
+      pipeline
+        .withDepthStencilAttachment({
+          view: this.#root.unwrap(view),
+          depthClearValue: 1,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+        })
+        .with(vertexLayout, vertexBuffer)
+        .with(instanceLayout, instanceBuffer)
+        .with(bindGroup)
+        .withIndexBuffer(indexBuffer)
+        .drawIndexed(
+          vertexCount,
+          instanceCount,
+        );
     }
   }
 }

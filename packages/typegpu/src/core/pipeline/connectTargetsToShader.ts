@@ -14,7 +14,6 @@ export function connectTargetsToShader(
   shaderOutputLayout: FragmentOutConstrained,
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
-  console.log('Connecting targets to shader...', shaderOutputLayout, targets);
   if (isData(shaderOutputLayout)) {
     if (isVoid(shaderOutputLayout)) {
       return [];
