@@ -4,7 +4,6 @@ import * as m from 'wgpu-matrix';
 import { CameraData } from './types.ts';
 
 export class Camera {
-  #root: TgpuRoot;
   #viewProjectionMatrix: d.m4x4f;
   #position: d.v3f;
   #target: d.v3f;
@@ -22,7 +21,6 @@ export class Camera {
     near: number = 0.1,
     far: number = 1000,
   ) {
-    this.#root = root;
     this.#viewProjectionMatrix = d.mat4x4f.identity();
     this.#position = d.vec3f(0, 0, 0);
     this.#target = d.vec3f(0, 0, -1);
@@ -36,7 +34,6 @@ export class Camera {
       inverseViewProjectionMatrix: this.#inverseViewProjectionMatrix,
     });
 
-    // Create uniform buffer
     this.#uniform = root.createUniform(CameraData, this.#data);
   }
 
@@ -107,7 +104,6 @@ export class Camera {
       inverseViewProjectionMatrix: this.#inverseViewProjectionMatrix,
     });
 
-    // Update the uniform buffer
     this.#uniform.write(this.#data);
   }
 }

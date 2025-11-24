@@ -4,7 +4,6 @@ import type { GeometryData } from './types.ts';
 import { VertexData } from './types.ts';
 
 export class BoxGeometry {
-  #root: TgpuRoot;
   #modelMatrix: d.m4x4f;
   #position: d.v3f;
   #scale: d.v3f;
@@ -19,7 +18,6 @@ export class BoxGeometry {
     root: TgpuRoot,
     size: [number, number, number] = [1, 1, 1],
   ) {
-    this.#root = root;
     this.#modelMatrix = d.mat4x4f.identity();
     this.#position = d.vec3f(0, 0, 0);
     this.#scale = d.vec3f(1, 1, 1);
@@ -30,7 +28,6 @@ export class BoxGeometry {
 
     this.#generateGeometry();
 
-    // Create GPU buffers
     this.#vertexBuffer = root
       .createBuffer(
         d.arrayOf(VertexData, this.#vertices.length),
@@ -193,7 +190,6 @@ export class BoxGeometry {
       );
     });
 
-    // Two triangles per face
     this.#indices.push(startIndex, startIndex + 1, startIndex + 2);
     this.#indices.push(startIndex, startIndex + 2, startIndex + 3);
   }

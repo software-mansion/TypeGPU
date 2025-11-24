@@ -11,6 +11,7 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { WgslTexture } from '../../data/texture.ts';
 import {
   type AnyWgslData,
+  type Decorated,
   isWgslData,
   type U16,
   type U32,
@@ -141,15 +142,23 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
 }
 
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
-  ? GPUColorTargetState
-  : T extends Record<string, unknown>
-    ? { [Key in keyof T]: GPUColorTargetState }
+  ? T extends Decorated ? Record<string, never>
+  : GPUColorTargetState
+  : T extends Record<string, unknown> ? {
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
+        GPUColorTargetState;
+    }
   : T extends { type: 'void' } ? Record<string, never>
   : never;
 
 export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData
-  ? ColorAttachment
-  : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
+  ? T extends Decorated ? Record<string, never>
+  : ColorAttachment
+  : T extends Record<string, unknown> ? {
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
+        ColorAttachment;
+    }
+  : T extends { type: 'void' } ? Record<string, never>
   : never;
 
 export type AnyFragmentTargets =

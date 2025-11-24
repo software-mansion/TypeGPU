@@ -1,5 +1,5 @@
 import type * as tinyest from 'tinyest';
-import type { BuiltinClipDistances, BuiltinFragDepth } from '../../builtin.ts';
+import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
   Bool,

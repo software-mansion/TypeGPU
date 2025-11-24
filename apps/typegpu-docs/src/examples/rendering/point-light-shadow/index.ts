@@ -226,7 +226,7 @@ const pipelineMain = root['~unstable']
 
 const pipelineDepthOne = root['~unstable']
   .withVertex(vertexDepth, vertexLayout.attrib)
-  .withFragment(fragmentDepth, {} as never)
+  .withFragment(fragmentDepth, {})
   .withDepthStencil({
     format: 'depth24plus',
     depthWriteEnabled: true,
@@ -234,8 +234,9 @@ const pipelineDepthOne = root['~unstable']
   })
   .createPipeline();
 
+let renderDepthMap = false;
+
 function render() {
-  // Render shadow maps using the point light abstraction
   pointLight.renderShadowMaps(
     pipelineDepthOne,
     renderLayout,
@@ -244,16 +245,17 @@ function render() {
     [cube, floorCube],
   );
 
-  // Uncomment to see debug view of shadow maps
-  debugPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
-  requestAnimationFrame(render);
-  return;
+  if (renderDepthMap) {
+    debugPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .draw(3);
+    requestAnimationFrame(render);
+    return;
+  }
 
   // Render cube
   modelMatrixUniform.write(cube.modelMatrix);
@@ -297,7 +299,6 @@ function render() {
 }
 requestAnimationFrame(render);
 
-// Resize observer
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const width = entry.contentBoxSize[0].inlineSize;
@@ -416,6 +417,12 @@ export const controls = {
         pointLight.position.y,
         v,
       );
+    },
+  },
+  'Depth map view': {
+    initial: false,
+    onToggleChange: (v: boolean) => {
+      renderDepthMap = v;
     },
   },
 };

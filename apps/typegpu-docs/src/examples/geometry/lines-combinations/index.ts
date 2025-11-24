@@ -454,6 +454,7 @@ export const controls = {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
     onSelectChange: async (selected: keyof typeof testCases) => {
+      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: this is intended
       testCase = testCases[selected];
       pipelines = createPipelines();
     },
