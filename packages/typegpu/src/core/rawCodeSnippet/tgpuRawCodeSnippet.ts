@@ -54,7 +54,7 @@ export type RawCodeSnippetOrigin = Exclude<
  * Usually 'runtime' (the default) is a safe bet, but if you're sure that the expression or
  * computation is constant (either a reference to a constant, a numeric literal,
  * or an operation on constants), then pass 'constant' as it might lead to better
- * optimisations.
+ * optimizations.
  *
  * If what the expression is a direct reference to an existing value (e.g. a uniform, a
  * storage binding, ...), then choose from 'uniform', 'mutable', 'readonly', 'workgroup',
