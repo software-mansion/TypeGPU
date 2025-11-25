@@ -128,6 +128,32 @@ tgpu.resolve([innerPipeline]);
 ```
 :::
 
+## *tgpu.comptime*
+
+`tgpu['~unstable'].comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
+This can be used to precompute and inject a value into the final shader code.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const hsvToRgb = tgpu.fn([d.f32, d.f32, d.f32], d.vec3f)``;
+
+// ---cut---
+const injectRand01 = tgpu['~unstable']
+  .comptime(() => Math.random());
+
+const getColor = (diffuse: d.v3f) => {
+  'use gpu';
+  const albedo = hsvToRgb(injectRand01(), 1, 0.5);
+  return albedo.mul(diffuse);
+};
+```
+
+Note how the function passed into `comptime` doesn't have to be marked with
+'use gpu' and can use 'Math'. That's because the function doesn't execute on the GPU, it gets
+executed before the shader code gets sent to the GPU.
+
 ## *console.log*
 
 Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
