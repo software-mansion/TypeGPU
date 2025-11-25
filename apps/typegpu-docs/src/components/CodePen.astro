@@ -25,12 +25,12 @@ const formattedCode = code.trim();
 ---
 
 <div class="w-full">
-  <div class:list={["overflow-x-auto", "text-sm font-mono"]}>
+  <div class:list={["overflow-x-auto", "text-[0.5rem] md:text-sm font-mono"]}>
     <Code
       code={formattedCode}
       lang={language}
-      theme="nord"
-      class={"px-4 py-4"}
+      theme="one-dark-pro"
+      class={"p-4"}
     />
   </div>
 </div>
@@ -50,7 +50,7 @@ const formattedCode = code.trim();
     content: counter(step);
     counter-increment: step;
     width: 1rem;
-    margin-right: 1.5rem;
+    margin-right: 1rem;
     display: inline-block;
   }
 </style>

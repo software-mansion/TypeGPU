@@ -17,7 +17,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
   <div
-    class="flex flex-col text-blue-950 dark:text-gray-100 gap-30 transition-colors duration-300"
+    class="flex flex-col text-blue-950 dark:text-gray-100 gap-14 md:gap-30 transition-colors duration-300"
   >
     <main class="transition-colors duration-300">
       <header
@@ -79,18 +79,18 @@ import PageLayout from "../../layouts/PageLayout.astro";
     <section
       class="flex flex-col items-center mx-auto lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="flex flex-col px-6 gap-12 lg:px-0">
-        <div class="font-bold text-[#001A72] dark:text-gray-100 text-6xl">
+      <div class="flex flex-col px-6 gap-4 md:gap-12 lg:px-0">
+        <div class="font-bold text-[#001A72] dark:text-gray-100 text-2xl md:text-6xl">
           Type<GradientTitle title="GPU" />
         </div>
         <div
-          class="text-blue-950 dark:text-gray-200 lg:text-3xl text-pretty text-4xl pr-40"
+          class="text-blue-950 dark:text-gray-200 text-2xl md:text-3xl text-pretty md:pr-40"
         >
           A modular and open-ended toolkit for WebGPU, with advanced type
           interface and ability to write shaders in TypeScript.
           <!-- <br class="hidden sm:block" /> -->
         </div>
-        <div class="flex sm:flex-row flex-col gap-4 my-8">
+        <div class="flex sm:flex-row flex-col gap-4 my-4 md:my-8">
           <GetStartedButton class="h-18" />
           <a
             class="bg-position-[100%_100%] bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] p-[1px] w-full sm:w-auto bg-size-[200%_200%] no-underline"
@@ -108,23 +108,23 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
     {/* Code Showcase */}
     <section
-      class="flex flex-col gap-20 mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
+      class="flex flex-col gap-10 md:gap-20 mx-auto px-6 md:px-72 max-w-90 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-4 md:gap-6">
         <h2
-          class="font-medium text-blue-950 dark:text-gray-100 text-4xl center"
+          class="font-medium text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
         >
           Ways to use TypeGPU
         </h2>
-        <p class="text-blue-900 dark:text-gray-300 text-xl text-pretty">
+        <p class="text-blue-950 dark:text-gray-300 text-lg md:text-xl text-pretty">
           TypeGPU is a three-way toolkit that is easy for you to integrate
           granularly and doesn't restrict you in what you can do.
         </p>
       </div>
       <CodeShowcase />
-      <div class="flex md:flex-row flex-col md:justify-between">
+      <div class="flex md:flex-row flex-col md:justify-between gap-6 md:gap-0 ">
         <h3
-          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+          class="font-normal text-blue-950 dark:text-gray-100 text-xl md:text-4xl center"
         >
           Read more about TypeGPU
         </h3>
@@ -147,11 +147,11 @@ import PageLayout from "../../layouts/PageLayout.astro";
     >
       <div class="flex flex-col gap-6 pb-14">
         <h2
-          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+          class="font-normal text-blue-950 dark:text-gray-100 text-2xlmd:text-4xl center"
         >
           Explore TypeGPU examples
         </h2>
-        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+        <p class="text-blue-950 dark:text-gray-300 text-lg md:text-2xl text-pretty">
           From interactive 3D apps to custom shaders and type-safe libraries,
           TypeGPU gives you the tools to build anything WebGPU can do.
         </p>
@@ -164,10 +164,10 @@ import PageLayout from "../../layouts/PageLayout.astro";
       class="mx-auto px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px]"
     >
       <div class="flex flex-col gap-6 pb-20">
-        <h2 class="font-normal text-blue-950 dark:text-white text-4xl center">
+        <h2 class="font-normal text-blue-950 dark:text-white text-2xlmd:text-4xl center">
           Get to know TypeGPU
         </h2>
-        <p class="text-blue-900 dark:text-white text-2xl text-pretty">
+        <p class="text-blue-950 dark:text-white text-lg md:text-2xl text-pretty">
           Dive into guides, tutorials, and videos to see how TypeGPU can change
           the way you work with GPU rendering and computing.
         </p>
@@ -181,11 +181,11 @@ import PageLayout from "../../layouts/PageLayout.astro";
     >
       <div class="flex flex-col gap-6 pb-20">
         <h2
-          class="font-normal text-blue-950 dark:text-gray-100 text-4xl center"
+          class="font-normal text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
         >
           What's around the corner?
         </h2>
-        <p class="text-blue-900 dark:text-gray-300 text-2xl text-pretty">
+        <p class="text-blue-950 dark:text-gray-300 text-lg md:text-2xl text-pretty">
           Our journey toward end-to-end type safety involves several
           interoperating primitives – explore our live board to see what
           features are coming next.
