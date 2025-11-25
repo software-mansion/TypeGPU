@@ -74,7 +74,7 @@ export async function loadCubemap(
   chosenCubemap: CubemapNames,
 ) {
   const images = await Promise.all(
-    getCubemapUrls(chosenCubemap).map(async (url, i) => {
+    getCubemapUrls(chosenCubemap).map(async (url) => {
       const response = await fetch(url);
       const blob = await response.blob();
       return await createImageBitmap(blob);

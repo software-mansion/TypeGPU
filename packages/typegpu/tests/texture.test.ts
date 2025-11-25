@@ -473,7 +473,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
             texture: expect.anything(),
             mipLevel: 0,
           }),
-          data,
+          data.buffer,
           expect.objectContaining({
             bytesPerRow: 16, // 4 pixels * 4 bytes per pixel
             rowsPerImage: 4,
@@ -494,7 +494,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
 
         expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
           { texture: expect.anything(), mipLevel: 2 },
-          data,
+          data.buffer,
           { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
           [2, 2, 1], // Mip level 2 dimensions
         );
