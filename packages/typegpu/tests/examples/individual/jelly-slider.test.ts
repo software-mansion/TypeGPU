@@ -516,7 +516,7 @@ describe('jelly-slider example', () => {
         return exp((sigma * -(dist)));
       }
 
-      fn rayMarch_12(rayOrigin: vec3f, rayDirection: vec3f, uv: vec2f) -> vec4f {
+      fn rayMarch_12(rayOrigin: vec3f, rayDirection: vec3f, _uv: vec2f) -> vec4f {
         var totalSteps = 0u;
         var backgroundDist = 0f;
         for (var i = 0; (i < 64i); i++) {
