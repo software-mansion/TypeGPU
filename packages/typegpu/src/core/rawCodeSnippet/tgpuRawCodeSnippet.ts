@@ -21,7 +21,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 // ----------
 
 /**
- * Extra declaration that shall be included in final WGSL code,
+ * Extra declaration that will be included in final WGSL code
  * when resolving objects that use it.
  */
 export interface TgpuRawCodeSnippet<TDataType extends AnyData> {
