@@ -83,6 +83,20 @@ describe('max', () => {
     `);
   });
 
+  it('does comptime reduction', () => {
+    const myMax = tgpu.fn([], d.u32)(() => {
+      'use gpu';
+      return std.max(12, 33, 12333, 444);
+    });
+
+    expect(myMax()).toBe(12333);
+    expect(tgpu.resolve([myMax])).toMatchInlineSnapshot(`
+      "fn myMax() -> u32 {
+        return 12333u;
+      }"
+    `);
+  });
+
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
     (() => std.max());

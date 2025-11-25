@@ -83,6 +83,20 @@ describe('min', () => {
     `);
   });
 
+  it('does comptime reduction', () => {
+    const myMin = tgpu.fn([], d.u32)(() => {
+      'use gpu';
+      return std.min(33, 12, 444, 12333);
+    });
+
+    expect(myMin()).toBe(12);
+    expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
+      "fn myMin() -> u32 {
+        return 12u;
+      }"
+    `);
+  });
+
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
     (() => std.min());
