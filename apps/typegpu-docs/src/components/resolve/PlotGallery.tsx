@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const plots = [
   'https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration-full.png',
@@ -7,6 +7,9 @@ const plots = [
   'https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration-latest5.png',
   'https://raw.githubusercontent.com/software-mansion-labs/typegpu-benchmarker/main/plots/combined-resolveDuration-under10k.png',
 ];
+const slideCount = plots.length;
+const extendedPlots = [plots[slideCount - 1], ...plots, plots[0]];
+const extendedSlideCount = extendedPlots.length;
 
 function PlotSlide({ url }: { url: string }) {
   return (
@@ -25,12 +28,6 @@ const buttonUtilityClasses =
 const chevronUtilityClasses = 'w-4 h-4 sm:w-8 sm:h-8';
 
 export default function PlotGallery() {
-  // this is for infinite effect
-  const extendedPlots = useMemo(
-    () => [plots[plots.length - 1], ...plots, plots[0]],
-    [],
-  );
-
   const [currentIndex, setCurrentIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -41,7 +38,6 @@ export default function PlotGallery() {
   }, []);
 
   const prevSlide = useCallback((isTransitioning: boolean) => {
-    console.log(isTransitioning);
     if (isTransitioning) return;
     setIsTransitioning(true);
     setCurrentIndex((prev) => prev - 1);
@@ -49,13 +45,12 @@ export default function PlotGallery() {
 
   const handleTransitionEnd = useCallback((index: number) => {
     setIsTransitioning(false);
-
     if (index === 0) {
-      setCurrentIndex(plots.length);
-    } else if (index === extendedPlots.length - 1) {
+      setCurrentIndex(slideCount);
+    } else if (index === extendedSlideCount - 1) {
       setCurrentIndex(1);
     }
-  }, [extendedPlots]);
+  }, []);
 
   const goToSlide = useCallback((index: number, isTransitioning: boolean) => {
     if (isTransitioning) return;
@@ -64,8 +59,8 @@ export default function PlotGallery() {
   }, []);
 
   const getActualIndex = (): number => {
-    if (currentIndex === 0) return plots.length - 1;
-    if (currentIndex === extendedPlots.length - 1) return 0;
+    if (currentIndex === 0) return slideCount - 1;
+    if (currentIndex === extendedSlideCount - 1) return 0;
     return currentIndex - 1;
   };
 
@@ -99,7 +94,7 @@ export default function PlotGallery() {
 
       <div
         className={`flex h-full w-full transition-transform duration-200 ease-in-out ${
-          isTransitioning ? '' : 'transition-none' // this is necessary for smooth ending
+          isTransitioning ? '' : 'transition-none' // this is necessary for smooth wrapping
         }`}
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         onTransitionEnd={() => handleTransitionEnd(currentIndex)}
