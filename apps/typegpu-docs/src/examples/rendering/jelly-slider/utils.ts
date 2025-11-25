@@ -33,8 +33,8 @@ export const intersectBox = (
   const tMinVec = std.min(t1, t2);
   const tMaxVec = std.max(t1, t2);
 
-  const tMin = std.max(std.max(tMinVec.x, tMinVec.y), tMinVec.z);
-  const tMax = std.min(std.min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
+  const tMin = std.max(tMinVec.x, tMinVec.y, tMinVec.z);
+  const tMax = std.min(tMaxVec.x, tMaxVec.y, tMaxVec.z);
 
   const result = BoxIntersection();
   result.hit = tMax >= tMin && tMax >= 0.0;
