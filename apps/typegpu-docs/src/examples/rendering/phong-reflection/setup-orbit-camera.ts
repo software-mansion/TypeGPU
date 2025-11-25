@@ -119,6 +119,7 @@ export function setupOrbitCamera(
   let isDragging = false;
   let prevX = 0;
   let prevY = 0;
+  let lastPinchDist = 0;
 
   // mouse/touch events
   canvas.addEventListener('wheel', (event: WheelEvent) => {
@@ -138,6 +139,11 @@ export function setupOrbitCamera(
       isDragging = true;
       prevX = event.touches[0].clientX;
       prevY = event.touches[0].clientY;
+    } else if (event.touches.length === 2) {
+      isDragging = false;
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
     }
   }, { passive: false });
 
@@ -164,7 +170,7 @@ export function setupOrbitCamera(
   window.addEventListener('mousemove', mouseMoveEventListener);
 
   const touchMoveEventListener = (event: TouchEvent) => {
-    if (isDragging && event.touches.length === 1) {
+    if (event.touches.length === 1 && isDragging) {
       event.preventDefault();
       const dx = event.touches[0].clientX - prevX;
       const dy = event.touches[0].clientY - prevY;
@@ -177,6 +183,17 @@ export function setupOrbitCamera(
   window.addEventListener('touchmove', touchMoveEventListener, {
     passive: false,
   });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      zoomCamera((lastPinchDist - pinchDist) * 0.5);
+      lastPinchDist = pinchDist;
+    }
+  }, { passive: false });
 
   function cleanupCamera() {
     window.removeEventListener('mouseup', mouseUpEventListener);

@@ -5,6 +5,7 @@ import * as std from 'typegpu/std';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
 import { PointLight } from './point-light.ts';
+import { Scene } from './scene.ts';
 import {
   CameraData,
   InstanceData,
@@ -17,34 +18,49 @@ const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device,
-  format: presentationFormat,
-});
+context.configure({ device, format: presentationFormat });
 
 const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(5, 5, -5);
 mainCamera.target = d.vec3f(0, 0, 0);
 
-const pointLight = new PointLight(root, d.vec3f(2, 4, 1), {
+const pointLight = new PointLight(root, d.vec3f(4.5, 1, 4), {
   far: 100.0,
   shadowMapSize: 2048,
 });
 
+const scene = new Scene(root);
+
 const cube = new BoxGeometry(root);
 cube.scale = d.vec3f(3, 1, 0.2);
+scene.add(cube);
+
+const orbitingCubes: BoxGeometry[] = [];
+for (let i = 0; i < 10; i++) {
+  const orbitingCube = new BoxGeometry(root);
+  const angle = (i / 10) * Math.PI * 2;
+  const radius = 4;
+  orbitingCube.position = d.vec3f(
+    Math.cos(angle) * radius,
+    0.5,
+    Math.sin(angle) * radius,
+  );
+  orbitingCube.scale = d.vec3f(0.5, 0.5, 0.5);
+  orbitingCubes.push(orbitingCube);
+  scene.add(orbitingCube);
+}
 
 const floorCube = new BoxGeometry(root);
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
+scene.add(floorCube);
 
 let depthTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
-    format: 'depth24plus',
+    format: 'depth32float',
     sampleCount: 4,
   })
   .$usage('render');
@@ -58,12 +74,10 @@ let msaaTexture = root['~unstable']
   .$usage('render');
 
 const shadowSampler = root['~unstable'].createComparisonSampler({
-  compare: 'less',
+  compare: 'less-equal',
   magFilter: 'linear',
   minFilter: 'linear',
 });
-
-const shadowCubeView = pointLight.createCubeView();
 
 const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraData },
@@ -79,17 +93,13 @@ const renderLayoutWithShadow = tgpu.bindGroupLayout({
 
 const vertexDepth = tgpu['~unstable'].vertexFn({
   in: { ...VertexData.propTypes, ...InstanceData.propTypes },
-  out: {
-    pos: d.builtin.position,
-    worldPos: d.vec3f,
-  },
+  out: { pos: d.builtin.position, worldPos: d.vec3f },
 })(({ position, column1, column2, column3, column4 }) => {
   const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
   const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
   const pos = renderLayout.$.camera.viewProjectionMatrix.mul(
     d.vec4f(worldPos, 1),
   );
-
   return { pos, worldPos };
 });
 
@@ -97,10 +107,7 @@ const fragmentDepth = tgpu['~unstable'].fragmentFn({
   in: { worldPos: d.vec3f },
   out: d.builtin.fragDepth,
 })(({ worldPos }) => {
-  const lightPos = renderLayout.$.lightPosition;
-  const lightToFrag = worldPos.sub(lightPos);
-  const dist = std.length(lightToFrag);
-
+  const dist = std.length(worldPos.sub(renderLayout.$.lightPosition));
   return dist / pointLight.far;
 });
 
@@ -118,64 +125,118 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   const pos = renderLayoutWithShadow.$.camera.viewProjectionMatrix.mul(
     d.vec4f(worldPos, 1),
   );
-
-  return { pos, worldPos, uv, normal };
+  const worldNormal = std.normalize(modelMatrix.mul(d.vec4f(normal, 0)).xyz);
+  return { pos, worldPos, uv, normal: worldNormal };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
-  in: {
-    worldPos: d.vec3f,
-    uv: d.vec2f,
-    normal: d.vec3f,
+const shadowParams = root.createUniform(
+  d.struct({
+    pcfSamples: d.u32,
+    diskRadius: d.f32,
+    normalBiasBase: d.f32,
+    normalBiasSlope: d.f32,
+  }),
+  {
+    pcfSamples: 32,
+    diskRadius: 0.01,
+    normalBiasBase: 0.027,
+    normalBiasSlope: 0.335,
   },
+);
+
+const fragmentMain = tgpu['~unstable'].fragmentFn({
+  in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
 })(({ worldPos, normal }) => {
   const lightPos = renderLayoutWithShadow.$.lightPosition;
+  const toLight = lightPos.sub(worldPos);
+  const dist = std.length(toLight);
+  const lightDir = toLight.div(dist);
+  const ndotl = std.max(std.dot(normal, lightDir), 0.0);
 
-  const lightToFrag = worldPos.sub(lightPos);
-  const dist = std.length(lightToFrag);
-  const dir = std.normalize(lightToFrag);
+  const normalBiasWorld = shadowParams.$.normalBiasBase +
+    shadowParams.$.normalBiasSlope * (1.0 - ndotl);
+  const biasedPos = worldPos.add(normal.mul(normalBiasWorld));
+  const toLightBiased = biasedPos.sub(lightPos);
+  const distBiased = std.length(toLightBiased);
+  const dir = toLightBiased.div(distBiased);
+  const depthRef = distBiased / pointLight.far;
 
-  const depthRef = dist / pointLight.far;
+  const up = std.select(
+    d.vec3f(1, 0, 0),
+    d.vec3f(0, 1, 0),
+    std.abs(dir.y) < d.f32(0.9999),
+  );
+  const right = std.normalize(std.cross(up, dir));
+  const realUp = std.cross(dir, right);
 
-  const bias = 0.001 * (1.0 - std.dot(normal, std.normalize(lightToFrag)));
-  const visibility = std.textureSampleCompare(
-    renderLayoutWithShadow.$.shadowDepthCube,
-    renderLayoutWithShadow.$.shadowSampler,
-    dir,
-    depthRef - bias,
+  const PCF_SAMPLES = shadowParams.$.pcfSamples;
+  const diskRadius = shadowParams.$.diskRadius;
+
+  let visibilityAcc = 0.0;
+  for (let i = 0; i < PCF_SAMPLES; i++) {
+    const index = d.f32(i);
+    const theta = index * 2.3999632; // golden angle
+    const r = std.sqrt(index / d.f32(PCF_SAMPLES)) * diskRadius;
+
+    const sampleDir = std.normalize(
+      dir.add(right.mul(std.cos(theta) * r)).add(
+        realUp.mul(std.sin(theta) * r),
+      ),
+    );
+
+    visibilityAcc += std.textureSampleCompare(
+      renderLayoutWithShadow.$.shadowDepthCube,
+      renderLayoutWithShadow.$.shadowSampler,
+      sampleDir,
+      depthRef,
+    );
+  }
+
+  const rawNdotl = std.dot(normal, lightDir);
+  const visibility = std.select(
+    visibilityAcc / d.f32(PCF_SAMPLES),
+    0.0,
+    rawNdotl < 0.0,
   );
 
-  const lightDir = std.normalize(lightPos.sub(worldPos));
-  const diffuse = std.max(std.dot(normal, lightDir), 0.0);
-
   const baseColor = d.vec3f(1.0, 0.5, 0.31);
-  const ambient = 0.1;
-  const color = baseColor.mul(diffuse * visibility + ambient);
-
+  const color = baseColor.mul(ndotl * visibility + 0.1);
   return d.vec4f(color, 1.0);
 });
+
+const lightIndicatorLayout = tgpu.bindGroupLayout({
+  camera: { uniform: CameraData },
+  lightPosition: { uniform: d.vec3f },
+});
+
+const vertexLightIndicator = tgpu['~unstable'].vertexFn({
+  in: { position: d.vec3f },
+  out: { pos: d.builtin.position },
+})(({ position }) => {
+  const worldPos = position.mul(0.15).add(lightIndicatorLayout.$.lightPosition);
+  const pos = lightIndicatorLayout.$.camera.viewProjectionMatrix.mul(
+    d.vec4f(worldPos, 1),
+  );
+  return { pos };
+});
+
+const fragmentLightIndicator = tgpu['~unstable'].fragmentFn({
+  out: d.vec4f,
+})(() => d.vec4f(1.0, 1.0, 0.5, 1.0));
 
 const previewSampler = root['~unstable'].createSampler({
   minFilter: 'nearest',
   magFilter: 'nearest',
 });
-
 const previewView = pointLight.createDepthArrayView();
 
 const previewFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const tiled = d.vec2f(
-    std.fract(uv.x * 3),
-    std.fract(uv.y * 2),
-  );
-
-  const col = std.floor(uv.x * 3);
-  const row = std.floor(uv.y * 2);
-  const arrayIndex = d.i32(row * 3 + col);
-
+  const tiled = d.vec2f(std.fract(uv.x * 3), std.fract(uv.y * 2));
+  const arrayIndex = d.i32(std.floor(uv.y * 2) * 3 + std.floor(uv.x * 3));
   const depth = std.textureSample(
     previewView.$,
     previewSampler.$,
@@ -189,7 +250,7 @@ const pipelineDepthOne = root['~unstable']
   .withVertex(vertexDepth, { ...vertexLayout.attrib, ...instanceLayout.attrib })
   .withFragment(fragmentDepth, {})
   .withDepthStencil({
-    format: 'depth24plus',
+    format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
@@ -199,7 +260,7 @@ const pipelineMain = root['~unstable']
   .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
   .withFragment(fragmentMain, { format: presentationFormat })
   .withDepthStencil({
-    format: 'depth24plus',
+    format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
@@ -211,30 +272,51 @@ const pipelinePreview = root['~unstable']
   .withFragment(previewFragment, { format: presentationFormat })
   .createPipeline();
 
+const pipelineLightIndicator = root['~unstable']
+  .withVertex(vertexLightIndicator, vertexLayout.attrib)
+  .withFragment(fragmentLightIndicator, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth32float',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
+  .withMultisample({ count: 4 })
+  .createPipeline();
+
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
   camera: mainCamera.uniform.buffer,
-  shadowDepthCube: shadowCubeView,
-  shadowSampler: shadowSampler,
+  shadowDepthCube: pointLight.createCubeView(),
+  shadowSampler,
   lightPosition: pointLight.positionUniform.buffer,
 });
 
-const instanceBuffer = root.createBuffer(d.arrayOf(InstanceData, 2), [
-  cube.instanceData,
-  floorCube.instanceData,
-]).$usage('vertex');
+const lightIndicatorBindGroup = root.createBindGroup(lightIndicatorLayout, {
+  camera: mainCamera.uniform.buffer,
+  lightPosition: pointLight.positionUniform.buffer,
+});
 
 let showDepthPreview = false;
+let lastTime = performance.now();
+let time = 0;
 
-function render() {
-  pointLight.renderShadowMaps(
-    pipelineDepthOne,
-    renderLayout,
-    cube.vertexBuffer,
-    instanceBuffer,
-    cube.indexBuffer,
-    cube.indexCount,
-    2,
-  );
+function render(timestamp: number) {
+  const dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  time += dt;
+
+  for (let i = 0; i < orbitingCubes.length; i++) {
+    const offset = (i / orbitingCubes.length) * Math.PI * 2;
+    const angle = time * 0.5 + offset;
+    const radius = 4 + Math.sin(time * 2 + offset * 3) * 0.5;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const y = 2 + Math.sin(time * 1.5 + offset * 2) * 1.5;
+    orbitingCubes[i].position = d.vec3f(x, y, z);
+    orbitingCubes[i].rotation = d.vec3f(time, time * 0.5, 0);
+  }
+
+  scene.update();
+  pointLight.renderShadowMaps(pipelineDepthOne, renderLayout, scene);
 
   if (showDepthPreview) {
     pipelinePreview
@@ -248,7 +330,6 @@ function render() {
     return;
   }
 
-  // Render cubes
   pipelineMain
     .withDepthStencilAttachment({
       view: depthTexture,
@@ -263,10 +344,27 @@ function render() {
       storeOp: 'store',
     })
     .with(mainBindGroup)
-    .withIndexBuffer(cube.indexBuffer)
-    .with(vertexLayout, cube.vertexBuffer)
-    .with(instanceLayout, instanceBuffer)
-    .drawIndexed(cube.indexCount, 2);
+    .withIndexBuffer(BoxGeometry.indexBuffer)
+    .with(vertexLayout, BoxGeometry.vertexBuffer)
+    .with(instanceLayout, scene.instanceBuffer)
+    .drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
+
+  pipelineLightIndicator
+    .withDepthStencilAttachment({
+      view: depthTexture,
+      depthLoadOp: 'load',
+      depthStoreOp: 'store',
+    })
+    .withColorAttachment({
+      resolveTarget: context.getCurrentTexture().createView(),
+      view: root.unwrap(msaaTexture).createView(),
+      loadOp: 'load',
+      storeOp: 'store',
+    })
+    .with(lightIndicatorBindGroup)
+    .withIndexBuffer(BoxGeometry.indexBuffer)
+    .with(vertexLayout, BoxGeometry.vertexBuffer)
+    .drawIndexed(BoxGeometry.indexCount);
 
   requestAnimationFrame(render);
 }
@@ -276,7 +374,6 @@ const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const width = entry.contentBoxSize[0].inlineSize;
     const height = entry.contentBoxSize[0].blockSize;
-
     canvas.width = Math.max(
       1,
       Math.min(width, device.limits.maxTextureDimension2D),
@@ -289,7 +386,7 @@ const resizeObserver = new ResizeObserver((entries) => {
     depthTexture = root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
-        format: 'depth24plus',
+        format: 'depth32float',
         sampleCount: 4,
       })
       .$usage('render');
@@ -302,64 +399,119 @@ const resizeObserver = new ResizeObserver((entries) => {
       .$usage('render');
   }
 });
-
 resizeObserver.observe(canvas);
 
-let theta = Math.atan2(10, 10);
-let phi = Math.acos(10 / Math.sqrt(10 * 10 + 10 * 10 + 10 * 10));
-let radius = Math.sqrt(10 * 10 + 10 * 10 + 10 * 10);
+const initialCamPos = { x: 5, y: 5, z: -5 };
+let theta = Math.atan2(initialCamPos.z, initialCamPos.x);
+let phi = Math.acos(
+  initialCamPos.y /
+    Math.sqrt(
+      initialCamPos.x ** 2 + initialCamPos.y ** 2 + initialCamPos.z ** 2,
+    ),
+);
+let radius = Math.sqrt(
+  initialCamPos.x ** 2 + initialCamPos.y ** 2 + initialCamPos.z ** 2,
+);
 
 let isDragging = false;
-let lastMouseX = 0;
-let lastMouseY = 0;
+let prevX = 0;
+let prevY = 0;
+let lastPinchDist = 0;
 
 function updateCameraPosition() {
-  const x = radius * Math.sin(phi) * Math.cos(theta);
-  const y = radius * Math.cos(phi);
-  const z = radius * Math.sin(phi) * Math.sin(theta);
-
-  mainCamera.position = d.vec3f(x, y, z);
+  mainCamera.position = d.vec3f(
+    radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta),
+  );
 }
 
-canvas.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
-});
-
-canvas.addEventListener('mouseup', () => {
-  isDragging = false;
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-
-  const deltaX = e.clientX - lastMouseX;
-  const deltaY = e.clientY - lastMouseY;
-
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
-
-  theta -= deltaX * 0.01;
-  phi -= deltaY * 0.01;
-
-  phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
-
+function updateCameraOrbit(dx: number, dy: number) {
+  theta -= dx * 0.01;
+  phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.01));
   updateCameraPosition();
-});
+}
+
+function zoomCamera(delta: number) {
+  radius = Math.max(1, Math.min(50, radius + delta));
+  updateCameraPosition();
+}
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
+  zoomCamera(e.deltaY * 0.01);
+}, { passive: false });
 
-  radius += e.deltaY * 0.01;
-  radius = Math.max(1, Math.min(50, radius));
-
-  updateCameraPosition();
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  prevX = e.clientX;
+  prevY = e.clientY;
 });
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    isDragging = true;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+  }
+}, { passive: false });
+
+const mouseUpEventListener = () => {
+  isDragging = false;
+};
+window.addEventListener('mouseup', mouseUpEventListener);
+
+const touchEndEventListener = () => {
+  isDragging = false;
+};
+window.addEventListener('touchend', touchEndEventListener);
+
+const mouseMoveEventListener = (e: MouseEvent) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevX;
+  const dy = e.clientY - prevY;
+  prevX = e.clientX;
+  prevY = e.clientY;
+  updateCameraOrbit(dx, dy);
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
+
+const touchMoveEventListener = (e: TouchEvent) => {
+  if (e.touches.length === 1 && isDragging) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - prevX;
+    const dy = e.touches[0].clientY - prevY;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+    updateCameraOrbit(dx, dy);
+  }
+};
+window.addEventListener('touchmove', touchMoveEventListener, {
+  passive: false,
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const pinchDist = Math.sqrt(dx * dx + dy * dy);
+    zoomCamera((lastPinchDist - pinchDist) * 0.05);
+    lastPinchDist = pinchDist;
+  }
+}, { passive: false });
+
+// #region Example controls and cleanup
 
 export const controls = {
   'Light X': {
-    initial: 2,
+    initial: 4.5,
     min: -10,
     max: 10,
     step: 0.1,
@@ -372,7 +524,7 @@ export const controls = {
     },
   },
   'Light Y': {
-    initial: 4,
+    initial: 1,
     min: 0.5,
     max: 10,
     step: 0.1,
@@ -385,7 +537,7 @@ export const controls = {
     },
   },
   'Light Z': {
-    initial: 1,
+    initial: 4,
     min: -10,
     max: 10,
     step: 0.1,
@@ -403,4 +555,52 @@ export const controls = {
       showDepthPreview = v;
     },
   },
+  'PCF Samples': {
+    initial: 32,
+    min: 1,
+    max: 128,
+    step: 1,
+    onSliderChange: (v: number) => {
+      shadowParams.writePartial({ pcfSamples: v });
+    },
+  },
+  'PCF Disk Radius': {
+    initial: 0.01,
+    min: 0.0,
+    max: 0.1,
+    step: 0.001,
+    onSliderChange: (v: number) => {
+      shadowParams.writePartial({ diskRadius: v });
+    },
+  },
+  'Normal Bias Base': {
+    initial: 0.027,
+    min: 0.0,
+    max: 0.1,
+    step: 0.0001,
+    onSliderChange: (v: number) => {
+      shadowParams.writePartial({ normalBiasBase: v });
+    },
+  },
+  'Normal Bias Slope': {
+    initial: 0.335,
+    min: 0.0,
+    max: 0.5,
+    step: 0.0005,
+    onSliderChange: (v: number) => {
+      shadowParams.writePartial({ normalBiasSlope: v });
+    },
+  },
 };
+
+export function onCleanup() {
+  BoxGeometry.clearBuffers();
+  window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
+  window.removeEventListener('touchend', touchEndEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
+  resizeObserver.disconnect();
+  root.destroy();
+}
+
+// #endregion
