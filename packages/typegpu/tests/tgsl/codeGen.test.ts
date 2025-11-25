@@ -35,7 +35,7 @@ describe('codeGen', () => {
     });
   });
 
-  it('should properly resolve this', ({ root }) => {
+  it('should properly resolve the "this" keyword', ({ root }) => {
     class MyController {
       myBuffer = root.createUniform(d.u32);
       myFn = tgpu.fn([], d.u32)(() => {
