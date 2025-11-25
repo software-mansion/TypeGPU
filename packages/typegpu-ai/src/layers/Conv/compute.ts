@@ -36,8 +36,10 @@ export const conv2dCompute = tgpu['~unstable'].computeFn({
   const strideW = convWeightsLayout.$.dims[d.u32(7)] as number;
   const padH = convWeightsLayout.$.dims[d.u32(8)] as number;
   const padW = convWeightsLayout.$.dims[d.u32(9)] as number;
-  const outH = convWeightsLayout.$.dims[d.u32(10)] as number;
-  const outW = convWeightsLayout.$.dims[d.u32(11)] as number;
+  const dilationH = convWeightsLayout.$.dims[d.u32(10)] as number;
+  const dilationW = convWeightsLayout.$.dims[d.u32(11)] as number;
+  const outH = convWeightsLayout.$.dims[d.u32(12)] as number;
+  const outW = convWeightsLayout.$.dims[d.u32(13)] as number;
 
   // Decompose linearIndex into (oc, oh, ow)
   const ow = linearIndex % outW;
@@ -50,8 +52,8 @@ export const conv2dCompute = tgpu['~unstable'].computeFn({
   for (let ic = d.u32(0); ic < inC; ic = ic + d.u32(1)) {
     for (let kh = d.u32(0); kh < kH; kh = kh + d.u32(1)) {
       for (let kw = d.u32(0); kw < kW; kw = kw + d.u32(1)) {
-        const inY = d.i32(oh * strideH + kh) - d.i32(padH);
-        const inX = d.i32(ow * strideW + kw) - d.i32(padW);
+        const inY = d.i32(oh * strideH + kh * dilationH) - d.i32(padH);
+        const inX = d.i32(ow * strideW + kw * dilationW) - d.i32(padW);
 
         if (
           inY >= d.i32(0) && inY < d.i32(inH) && inX >= d.i32(0) &&

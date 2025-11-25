@@ -8,5 +8,6 @@ export interface NNLayer {
   run(
     input: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
     output: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+    context?: Map<string, TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag>,
   ): Promise<void>;
 }

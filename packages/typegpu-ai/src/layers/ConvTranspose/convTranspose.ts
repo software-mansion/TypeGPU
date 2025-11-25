@@ -22,6 +22,8 @@ export interface ConvTransposeDimensions {
     strideW: number;
     padH: number;
     padW: number;
+    dilationH: number;
+    dilationW: number;
     outputChannels: number;
     outputHeight: number;
     outputWidth: number;
@@ -81,6 +83,8 @@ export class LConvTranspose implements NNLayer {
             dims.strideW,
             dims.padH,
             dims.padW,
+            dims.dilationH,
+            dims.dilationW,
             dims.outputHeight,
             dims.outputWidth,
         ];

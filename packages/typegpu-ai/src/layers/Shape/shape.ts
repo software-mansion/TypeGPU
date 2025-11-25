@@ -21,8 +21,8 @@ export class LShape implements NNLayer {
     constructor(
         private readonly root: TgpuRoot,
         private readonly pipelineCache: PipelineCache,
-        inputSize: number, // Size of input tensor (elements) - not used for shape output content but for validation
-        shape: number[], // The actual shape dimensions to output
+        inputSize: number,
+        shape: number[],
     ) {
         this.inSize = inputSize;
         this.outSize = shape.length;

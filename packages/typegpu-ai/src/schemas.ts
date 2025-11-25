@@ -225,5 +225,8 @@ export type GpuLayer =
   };
 
 export interface NetworkRunner {
-  run(input: number[] | Float32Array): Promise<number[]>;
+  run(
+    input: number[] | Float32Array | (TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag),
+    output?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+  ): Promise<number[] | void>;
 }

@@ -1,6 +1,6 @@
-import { type TgpuRoot } from 'typegpu';
+import { type StorageFlag, type TgpuBuffer, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { Node, OnnxModel } from './onnx/types.ts';
+import type { Node, OnnxModel, Tensor } from './onnx/types.ts';
 import { PipelineCache } from './pipelineCache.ts';
 import { type NetworkRunner } from './schemas.ts';
 import { LGemm } from './layers/Gemm/gemm.ts';
@@ -8,12 +8,9 @@ import { NNLayer } from './layers/gpuLayer.ts';
 import { LConv } from './layers/Conv/conv.ts';
 import { LMaxPool } from './layers/MaxPool/maxPool.ts';
 import { LFlatten } from './layers/Flatten/flatten.ts';
-import { LResize } from './layers/Resize/resize.ts';
-import { LClip } from './layers/Clip/clip.ts';
-import { LAdd } from './layers/Add/add.ts';
-import { LConcat } from './layers/Concat/concat.ts';
 import { LShape } from './layers/Shape/shape.ts';
 import { LConvTranspose } from './layers/ConvTranspose/convTranspose.ts';
+import { LClip } from './layers/Clip/clip.ts';
 
 export class Inference {
   private layers: NNLayer[] = [];
@@ -47,6 +44,17 @@ export class Inference {
 
     for (const node of this.model.graph.nodes) {
       switch (node.opType) {
+        case 'Constant': {
+          const valueAttr = getAttr(node, 'value');
+          if (!valueAttr) {
+            throw new Error('Constant node missing value attribute');
+          }
+          const tensor = valueAttr.value as Tensor;
+          if (node.outputs.length > 0 && tensor) {
+            this.model.tensorMap.set(node.outputs[0] as string, tensor);
+          }
+          break;
+        }
         case 'Flatten': {
           // Flatten is usually a reshape. Since we operate on flat buffers, we just need to ensure
           // the size is propagated. We use a copy layer to be explicit.
@@ -83,7 +91,6 @@ export class Inference {
           const dilations = getAttr(node, 'dilations')?.value as number[] | undefined;
 
           if (group && group !== 1) throw new Error('Grouped convolution not supported');
-          if (dilations && (dilations[0] !== 1 || dilations[1] !== 1)) throw new Error('Dilated convolution not supported');
 
           const weightsTensor = this.model.tensorMap.get(node.inputs[1]!);
           if (!weightsTensor) throw new Error(`Weights not found for ${node.name}`);
@@ -101,9 +108,11 @@ export class Inference {
           const padW_right = pads?.[3] ?? padW;
           const strideH = strides?.[0] ?? 1;
           const strideW = strides?.[1] ?? 1;
+          const dilationH = dilations?.[0] ?? 1;
+          const dilationW = dilations?.[1] ?? 1;
 
-          const outputHeight = Math.floor((currentShape.height + padH + padH_bottom - kernelHeight) / strideH) + 1;
-          const outputWidth = Math.floor((currentShape.width + padW + padW_right - kernelWidth) / strideW) + 1;
+          const outputHeight = Math.floor((currentShape.height + padH + padH_bottom - (dilationH * (kernelHeight - 1) + 1)) / strideH) + 1;
+          const outputWidth = Math.floor((currentShape.width + padW + padW_right - (dilationW * (kernelWidth - 1) + 1)) / strideW) + 1;
 
           const layer = new LConv(
             this.root,
@@ -120,11 +129,121 @@ export class Inference {
               strideW,
               padH,
               padW,
+              dilationH,
+              dilationW,
               outputChannels,
               outputHeight,
               outputWidth,
             },
             'relu', // TODO: parse activation from fused operator or subsequent node?
+          );
+
+          currentShape = {
+            channels: outputChannels,
+            height: outputHeight,
+            width: outputWidth,
+          };
+
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'Clip': {
+          const minTensor = this.model.tensorMap.get(node.inputs[1]!);
+          const maxTensor = this.model.tensorMap.get(node.inputs[2]!);
+
+          // Assuming scalar min/max for now
+          const minVal = minTensor ? (minTensor.data as Float32Array)[0] ?? -3.402823466e+38 : -3.402823466e+38;
+          const maxVal = maxTensor ? (maxTensor.data as Float32Array)[0] ?? 3.402823466e+38 : 3.402823466e+38;
+
+          const layer = new LClip(
+            this.root,
+            this.pipelineCache,
+            currentShape.channels * currentShape.height * currentShape.width,
+            minVal,
+            maxVal,
+          );
+
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'Shape': {
+          const layer = new LShape(
+            this.root,
+            this.pipelineCache,
+            currentShape.channels * currentShape.height * currentShape.width,
+            [currentShape.channels, currentShape.height, currentShape.width], // Assuming NCHW without batch? Or just CHW
+          );
+
+          // Output of Shape is a 1D tensor of size [rank]
+          currentShape = {
+            channels: 3, // Rank is 3 (CHW)
+            height: 1,
+            width: 1,
+          };
+
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'ConvTranspose': {
+          const pads = getAttr(node, 'pads')?.value as number[] | undefined;
+          const strides = getAttr(node, 'strides')?.value as number[] | undefined;
+          const outputPadding = getAttr(node, 'output_padding')?.value as number[] | undefined;
+          const group = getAttr(node, 'group')?.value as number | undefined;
+          const dilations = getAttr(node, 'dilations')?.value as number[] | undefined;
+
+          if (group && group !== 1) throw new Error('Grouped ConvTranspose not supported');
+
+          const weightsTensor = this.model.tensorMap.get(node.inputs[1]!);
+          if (!weightsTensor) throw new Error(`Weights not found for ${node.name}`);
+
+          const biasTensor = this.model.tensorMap.get(node.inputs[2]!);
+          if (!biasTensor) throw new Error(`Bias not found for ${node.name}`);
+
+          const inputChannels = Number(weightsTensor.dims[0]);
+          const outputChannels = Number(weightsTensor.dims[1]);
+          const kernelHeight = Number(weightsTensor.dims[2]);
+          const kernelWidth = Number(weightsTensor.dims[3]);
+
+          const padH = pads?.[0] ?? 0;
+          const padW = pads?.[1] ?? 0;
+          const padH_bottom = pads?.[2] ?? padH;
+          const padW_right = pads?.[3] ?? padW;
+          const strideH = strides?.[0] ?? 1;
+          const strideW = strides?.[1] ?? 1;
+          const outPadH = outputPadding?.[0] ?? 0;
+          const outPadW = outputPadding?.[1] ?? 0;
+          const dilationH = dilations?.[0] ?? 1;
+          const dilationW = dilations?.[1] ?? 1;
+
+          // H_out = (H_in - 1) * strideH - padH - padH_bottom + kH + outPadH
+          const outputHeight = (currentShape.height - 1) * strideH - padH - padH_bottom + (dilationH * (kernelHeight - 1) + 1) + outPadH;
+          const outputWidth = (currentShape.width - 1) * strideW - padW - padW_right + (dilationW * (kernelWidth - 1) + 1) + outPadW;
+
+          const layer = new LConvTranspose(
+            this.root,
+            this.pipelineCache,
+            weightsTensor.data as Float32Array,
+            biasTensor.data as Float32Array,
+            {
+              inputChannels: currentShape.channels,
+              inputHeight: currentShape.height,
+              inputWidth: currentShape.width,
+              kernelHeight,
+              kernelWidth,
+              strideH,
+              strideW,
+              padH,
+              padW,
+              dilationH,
+              dilationW,
+              outputChannels,
+              outputHeight,
+              outputWidth,
+            },
+            'relu', // TODO: parse activation
           );
 
           currentShape = {
@@ -186,198 +305,8 @@ export class Inference {
           maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
           break;
         }
-        case 'Resize': {
-          // Inputs: X, roi, scales, sizes
-          // We assume scales are provided as initializer
-          const scalesTensor = this.model.tensorMap.get(node.inputs[2]!);
-          if (!scalesTensor) {
-            throw new Error('Resize: scales tensor not found (dynamic scales not supported)');
-          }
-          const scales = Array.from(scalesTensor.data as Float32Array);
-
-          // NCHW scales: [batch, channel, height, width]
-          // We are interested in height and width scales (idx 2 and 3)
-          const scaleH = scales[2] ?? 1;
-          const scaleW = scales[3] ?? 1;
-
-          const outputHeight = Math.floor(currentShape.height * scaleH);
-          const outputWidth = Math.floor(currentShape.width * scaleW);
-
-          const layer = new LResize(
-            this.root,
-            this.pipelineCache,
-            {
-              channels: currentShape.channels,
-              inH: currentShape.height,
-              inW: currentShape.width,
-              outH: outputHeight,
-              outW: outputWidth,
-            },
-            scales,
-          );
-
-          currentShape = {
-            channels: currentShape.channels,
-            height: outputHeight,
-            width: outputWidth,
-          };
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
-        case 'Clip': {
-          const minTensor = this.model.tensorMap.get(node.inputs[1]!);
-          const maxTensor = this.model.tensorMap.get(node.inputs[2]!);
-
-          // Assuming scalar min/max for now
-          const minVal = minTensor ? (minTensor.data as Float32Array)[0] ?? -3.402823466e+38 : -3.402823466e+38;
-          const maxVal = maxTensor ? (maxTensor.data as Float32Array)[0] ?? 3.402823466e+38 : 3.402823466e+38;
-
-          const layer = new LClip(
-            this.root,
-            this.pipelineCache,
-            currentShape.channels * currentShape.height * currentShape.width,
-            minVal,
-            maxVal,
-          );
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
-        case 'Add': {
-          const biasTensor = this.model.tensorMap.get(node.inputs[1]!);
-          if (!biasTensor) {
-            throw new Error('Add: second input must be constant (bias) in this simple inference engine');
-          }
-
-          const layer = new LAdd(
-            this.root,
-            this.pipelineCache,
-            currentShape.channels * currentShape.height * currentShape.width,
-            biasTensor.data as Float32Array,
-          );
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
-        case 'Concat': {
-          // Concat usually takes multiple inputs.
-          // In this linear engine, we assume input 0 is the stream, and others are constants?
-          // Or maybe we just support concatenating the stream with itself? (unlikely)
-          // For now, we will just implement it as a pass-through (copy) if we can't handle multiple inputs,
-          // OR if we assume the user wants the class to be instantiated.
-
-          // Let's assume we are concatenating along channel axis (axis 1 usually).
-          // If we have multiple inputs, we need to know their sizes.
-          // Since we don't have access to other inputs in this linear chain, we can't fully implement it.
-          // However, to satisfy "add Concat ... the same way", we will instantiate LConcat
-          // assuming it might be used later or with some default behavior.
-
-          // We'll just use the current shape and offset 0 (copy).
-          // This is effectively a no-op Concat (Identity) for the first input.
-
-          const layer = new LConcat(
-            this.root,
-            this.pipelineCache,
-            currentShape.channels * currentShape.height * currentShape.width,
-            currentShape.channels * currentShape.height * currentShape.width, // Output size same as input for now
-            0, // Offset 0
-          );
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
-        case 'Shape': {
-          const layer = new LShape(
-            this.root,
-            this.pipelineCache,
-            currentShape.channels * currentShape.height * currentShape.width,
-            [currentShape.channels, currentShape.height, currentShape.width], // Assuming NCHW without batch? Or just CHW
-          );
-
-          // Output of Shape is a 1D tensor of size [rank]
-          currentShape = {
-            channels: 3, // Rank is 3 (CHW)
-            height: 1,
-            width: 1,
-          };
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
-        case 'ConvTranspose': {
-          const pads = getAttr(node, 'pads')?.value as number[] | undefined;
-          const strides = getAttr(node, 'strides')?.value as number[] | undefined;
-          const outputPadding = getAttr(node, 'output_padding')?.value as number[] | undefined;
-          const group = getAttr(node, 'group')?.value as number | undefined;
-          const dilations = getAttr(node, 'dilations')?.value as number[] | undefined;
-
-          if (group && group !== 1) throw new Error('Grouped ConvTranspose not supported');
-          if (dilations && (dilations[0] !== 1 || dilations[1] !== 1)) throw new Error('Dilated ConvTranspose not supported');
-
-          const weightsTensor = this.model.tensorMap.get(node.inputs[1]!);
-          if (!weightsTensor) throw new Error(`Weights not found for ${node.name}`);
-
-          const biasTensor = this.model.tensorMap.get(node.inputs[2]!);
-          if (!biasTensor) throw new Error(`Bias not found for ${node.name}`);
-
-          // Weights: [inChannels, outChannels, kH, kW] (standard ONNX for ConvTranspose)
-          // Note: our LConvTranspose expects this layout in constructor but flattened.
-          const inputChannels = Number(weightsTensor.dims[0]);
-          const outputChannels = Number(weightsTensor.dims[1]);
-          const kernelHeight = Number(weightsTensor.dims[2]);
-          const kernelWidth = Number(weightsTensor.dims[3]);
-
-          const padH = pads?.[0] ?? 0;
-          const padW = pads?.[1] ?? 0;
-          const padH_bottom = pads?.[2] ?? padH;
-          const padW_right = pads?.[3] ?? padW;
-          const strideH = strides?.[0] ?? 1;
-          const strideW = strides?.[1] ?? 1;
-          const outPadH = outputPadding?.[0] ?? 0;
-          const outPadW = outputPadding?.[1] ?? 0;
-
-          // H_out = (H_in - 1) * strideH - padH - padH_bottom + kH + outPadH
-          const outputHeight = (currentShape.height - 1) * strideH - padH - padH_bottom + kernelHeight + outPadH;
-          const outputWidth = (currentShape.width - 1) * strideW - padW - padW_right + kernelWidth + outPadW;
-
-          const layer = new LConvTranspose(
-            this.root,
-            this.pipelineCache,
-            weightsTensor.data as Float32Array,
-            biasTensor.data as Float32Array,
-            {
-              inputChannels: currentShape.channels,
-              inputHeight: currentShape.height,
-              inputWidth: currentShape.width,
-              kernelHeight,
-              kernelWidth,
-              strideH,
-              strideW,
-              padH,
-              padW,
-              outputChannels,
-              outputHeight,
-              outputWidth,
-            },
-            'relu', // TODO: parse activation
-          );
-
-          currentShape = {
-            channels: outputChannels,
-            height: outputHeight,
-            width: outputWidth,
-          };
-
-          this.layers.push(layer);
-          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
-          break;
-        }
+        default:
+          continue;
       }
     }
 

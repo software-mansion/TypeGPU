@@ -28,7 +28,7 @@ export interface MaxPoolDimensions {
 export class LMaxPool implements NNLayer {
   public readonly inSize: number;
   public readonly outSize: number;
-  // MaxPool doesn't usually have activation, but keeping it for consistency if needed later
+  // MaxPool doesn't usually have activation, but keeping it for consistency
   public readonly activation = 'identity';
 
   private readonly paramsBindGroup: TgpuBindGroup;
