@@ -43,7 +43,7 @@ export class PointLight {
       .createTexture({
         size: [shadowMapSize, shadowMapSize, 6],
         dimension: '2d',
-        format: 'depth32float',
+        format: 'depth24plus',
       })
       .$usage('render', 'sampled');
 

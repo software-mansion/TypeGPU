@@ -28,7 +28,7 @@ mainCamera.target = d.vec3f(0, 0, 0);
 
 const pointLight = new PointLight(root, d.vec3f(4.5, 1, 4), {
   far: 100.0,
-  shadowMapSize: 2048,
+  shadowMapSize: 1024,
 });
 
 const scene = new Scene(root);
@@ -60,7 +60,7 @@ scene.add(floorCube);
 let depthTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
-    format: 'depth32float',
+    format: 'depth24plus',
     sampleCount: 4,
   })
   .$usage('render');
@@ -144,6 +144,17 @@ const shadowParams = root.createUniform(
   },
 );
 
+const MAX_PCF_SAMPLES = 64;
+const samplesUniform = root.createUniform(
+  d.arrayOf(d.vec4f, MAX_PCF_SAMPLES),
+  Array.from({ length: MAX_PCF_SAMPLES }, (_, i) => {
+    const index = i;
+    const theta = index * 2.3999632; // golden angle
+    const r = std.sqrt(index / d.f32(MAX_PCF_SAMPLES));
+    return d.vec4f(d.vec2f(std.cos(theta) * r, std.sin(theta) * r), 0, 0);
+  }),
+);
+
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
@@ -175,15 +186,11 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
   let visibilityAcc = 0.0;
   for (let i = 0; i < PCF_SAMPLES; i++) {
-    const index = d.f32(i);
-    const theta = index * 2.3999632; // golden angle
-    const r = std.sqrt(index / d.f32(PCF_SAMPLES)) * diskRadius;
+    const o = samplesUniform.$[i].xy.mul(diskRadius);
 
-    const sampleDir = std.normalize(
-      dir.add(right.mul(std.cos(theta) * r)).add(
-        realUp.mul(std.sin(theta) * r),
-      ),
-    );
+    const sampleDir = dir
+      .add(right.mul(o.x))
+      .add(realUp.mul(o.y));
 
     visibilityAcc += std.textureSampleCompare(
       renderLayoutWithShadow.$.shadowDepthCube,
@@ -250,7 +257,7 @@ const pipelineDepthOne = root['~unstable']
   .withVertex(vertexDepth, { ...vertexLayout.attrib, ...instanceLayout.attrib })
   .withFragment(fragmentDepth, {})
   .withDepthStencil({
-    format: 'depth32float',
+    format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
@@ -260,7 +267,7 @@ const pipelineMain = root['~unstable']
   .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
   .withFragment(fragmentMain, { format: presentationFormat })
   .withDepthStencil({
-    format: 'depth32float',
+    format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
@@ -276,7 +283,7 @@ const pipelineLightIndicator = root['~unstable']
   .withVertex(vertexLightIndicator, vertexLayout.attrib)
   .withFragment(fragmentLightIndicator, { format: presentationFormat })
   .withDepthStencil({
-    format: 'depth32float',
+    format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
@@ -386,7 +393,7 @@ const resizeObserver = new ResizeObserver((entries) => {
     depthTexture = root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
-        format: 'depth32float',
+        format: 'depth24plus',
         sampleCount: 4,
       })
       .$usage('render');
@@ -556,9 +563,9 @@ export const controls = {
     },
   },
   'PCF Samples': {
-    initial: 32,
+    initial: 16,
     min: 1,
-    max: 128,
+    max: 64,
     step: 1,
     onSliderChange: (v: number) => {
       shadowParams.writePartial({ pcfSamples: v });
