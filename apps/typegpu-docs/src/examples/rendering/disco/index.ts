@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import { mainVertex } from './shaders/vertex.ts';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,
@@ -32,7 +32,7 @@ const resolutionUniform = root.createUniform(
 );
 
 const fragmentShaders = [
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,

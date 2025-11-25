@@ -62,27 +62,25 @@ describe('disco example', () => {
         return (acc + (col * weight));
       }
 
-      struct mainFragment_Input_9 {
+      struct mainFragment1_Input_9 {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment_3(_arg_0: mainFragment_Input_9) -> @location(0) vec4f {
-      {
-          var originalUv = aspectCorrected_4(_arg_0.uv);
-          var aspectUv = originalUv;
-          var accumulatedColor = vec3f();
-          for (var iteration = 0; (iteration < 5i); iteration++) {
-            aspectUv = (fract((aspectUv * (1.3f * sin(time_6)))) - 0.5);
-            var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
-            radialLength = (sin(((radialLength * 8f) + time_6)) / 8f);
-            radialLength = abs(radialLength);
-            radialLength = smoothstep(0, 0.1, radialLength);
-            radialLength = (0.06f / radialLength);
-            var paletteColor = palette_7((length(originalUv) + (time_6 * 0.9f)));
-            accumulatedColor = accumulate_8(accumulatedColor, paletteColor, radialLength);
-          }
-          return vec4f(accumulatedColor, 1f);
+      @fragment fn mainFragment1_3(_arg_0: mainFragment1_Input_9) -> @location(0) vec4f {
+        var originalUv = aspectCorrected_4(_arg_0.uv);
+        var aspectUv = originalUv;
+        var accumulatedColor = vec3f();
+        for (var iteration = 0; (iteration < 5i); iteration++) {
+          aspectUv = (fract((aspectUv * (1.3f * sin(time_6)))) - 0.5);
+          var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
+          radialLength = (sin(((radialLength * 8f) + time_6)) / 8f);
+          radialLength = abs(radialLength);
+          radialLength = smoothstep(0, 0.1, radialLength);
+          radialLength = (0.06f / radialLength);
+          var paletteColor = palette_7((length(originalUv) + (time_6 * 0.9f)));
+          accumulatedColor = accumulate_8(accumulatedColor, paletteColor, radialLength);
         }
+        return vec4f(accumulatedColor, 1f);
       }"
     `);
   });
