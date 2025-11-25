@@ -97,7 +97,7 @@ describe('tgsl parsing test example', () => {
 
       @group(0) @binding(1) var<storage, read_write> mutable_3: atomic<u32>;
 
-      fn wrappedCallback_2(x: u32, y: u32, z: u32) {
+      fn wrappedCallback_2(_x: u32, _y: u32, _z: u32) {
         atomicAdd(&mutable_3, 1u);
       }
 
@@ -136,7 +136,7 @@ describe('tgsl parsing test example', () => {
       @group(1) @binding(0) var<storage, read_write> buffer_3: array<u32>;
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        for (var i = 0u; (i < arrayLength(&buffer_3)); i++) {
+        for (var i = 0u; (i < arrayLength((&buffer_3))); i++) {
           buffer_3[i] *= 2u;
         }
       }

@@ -49,7 +49,10 @@ export default defineConfig({
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
     optimizeDeps: {
-      exclude: ['@rolldown/browser'],
+      exclude: [
+        '@rolldown/browser',
+        'onnxruntime-web',
+      ],
     },
     // Allowing query params, for invalidation
     plugins: [
@@ -68,6 +71,7 @@ export default defineConfig({
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
         '@rolldown/browser',
+        'onnxruntime-web',
       ],
     },
   },
@@ -276,6 +280,10 @@ export default defineConfig({
             DEV && {
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
+            },
+            DEV && {
+              label: 'Shader Generation',
+              slug: 'reference/shader-generation',
             },
             typeDocSidebarGroup,
           ]),

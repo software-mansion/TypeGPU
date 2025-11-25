@@ -7,12 +7,11 @@ import type {
   RenderFlag,
   SampledFlag,
 } from '../src/core/texture/usageExtension.ts';
-import tgpu from '../src/index.ts';
-import { StrictNameRegistry } from '../src/nameRegistry.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
 import { attest } from '@ark/attest';
+import tgpu from '../src/index.ts';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -184,20 +183,12 @@ describe('TgpuTexture', () => {
       })
       .$usage('sampled');
 
-    const opts = {
-      names: new StrictNameRegistry(),
-    };
-
     const sampled1 = texture.createView(d.texture2d(d.i32));
     const sampled2 = texture.createView(d.texture2dArray(d.f32));
 
-    expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
-      'texture_2d<i32>',
-    );
+    expect(tgpu.resolve([sampled1])).toContain('texture_2d<i32>');
 
-    expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
-      'texture_2d_array<f32>',
-    );
+    expect(tgpu.resolve([sampled2])).toContain('texture_2d_array<f32>');
   });
 
   it('does not allow for creation of view when usage requirement is not met', ({ root }) => {
@@ -482,7 +473,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
             texture: expect.anything(),
             mipLevel: 0,
           }),
-          data,
+          data.buffer,
           expect.objectContaining({
             bytesPerRow: 16, // 4 pixels * 4 bytes per pixel
             rowsPerImage: 4,
@@ -503,7 +494,7 @@ Overload 2 of 2, '(schema: "(Error) Storage texture format 'rgba8snorm' incompat
 
         expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
           { texture: expect.anything(), mipLevel: 2 },
-          data,
+          data.buffer,
           { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
           [2, 2, 1], // Mip level 2 dimensions
         );

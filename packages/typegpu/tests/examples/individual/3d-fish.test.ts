@@ -40,8 +40,8 @@ describe('3d fish example', () => {
       }
 
       fn item_8() -> f32 {
-        var a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
         seed_6.x = fract((cos(a) * 136.8168f));
         seed_6.y = fract((cos(b) * 534.7645f));
         return seed_6.y;
@@ -122,7 +122,7 @@ describe('3d fish example', () => {
 
       fn projectPointOnLine_10(point: vec3f, line: Line3_9) -> vec3f {
         var pointVector = (point - line.origin);
-        var projection = dot(pointVector, line.dir);
+        let projection = dot(pointVector, line.dir);
         return (line.origin + (line.dir * projection));
       }
 
@@ -131,7 +131,7 @@ describe('3d fish example', () => {
       @group(1) @binding(1) var<storage, read_write> nextFishData_12: array<ModelData_4>;
 
       fn simulate_2(fishIndex: u32, _arg_1: u32, _arg_2: u32) {
-        var fishData = ModelData_4(currentFishData_3[fishIndex].position, currentFishData_3[fishIndex].direction, currentFishData_3[fishIndex].scale, currentFishData_3[fishIndex].variant, currentFishData_3[fishIndex].applySinWave, currentFishData_3[fishIndex].applySeaFog, currentFishData_3[fishIndex].applySeaDesaturation);
+        let fishData = (&currentFishData_3[fishIndex]);
         var separation = vec3f();
         var alignment = vec3f();
         var alignmentCount = 0;
@@ -143,57 +143,59 @@ describe('3d fish example', () => {
           if ((u32(i) == fishIndex)) {
             continue;
           }
-          var other = ModelData_4(currentFishData_3[i].position, currentFishData_3[i].direction, currentFishData_3[i].scale, currentFishData_3[i].variant, currentFishData_3[i].applySinWave, currentFishData_3[i].applySeaFog, currentFishData_3[i].applySeaDesaturation);
-          var dist = length((fishData.position - other.position));
+          let other = (&currentFishData_3[i]);
+          let dist = length(((*fishData).position - (*other).position));
           if ((dist < fishBehavior_5.separationDist)) {
-            separation = (separation + (fishData.position - other.position));
+            separation = (separation + ((*fishData).position - (*other).position));
           }
           if ((dist < fishBehavior_5.alignmentDist)) {
-            alignment = (alignment + other.direction);
+            alignment = (alignment + (*other).direction);
             alignmentCount = (alignmentCount + 1i);
           }
           if ((dist < fishBehavior_5.cohesionDist)) {
-            cohesion = (cohesion + other.position);
+            cohesion = (cohesion + (*other).position);
             cohesionCount = (cohesionCount + 1i);
           }
         }
         if ((alignmentCount > 0i)) {
-          alignment = ((1f / f32(alignmentCount)) * alignment);
+          alignment = (alignment * (1f / f32(alignmentCount)));
         }
         if ((cohesionCount > 0i)) {
-          cohesion = (((1f / f32(cohesionCount)) * cohesion) - fishData.position);
+          cohesion = (((1f / f32(cohesionCount)) * cohesion) - (*fishData).position);
         }
         for (var i = 0; (i < 3i); i += 1i) {
           var repulsion = vec3f();
           repulsion[i] = 1f;
-          var axisAquariumSize = (vec3f(10, 4, 10)[i] / 2f);
-          var axisPosition = fishData.position[i];
-          var distance = 0.1;
+          let axisAquariumSize = (vec3f(10, 4, 10)[i] / 2f);
+          let axisPosition = (*fishData).position[i];
+          const distance = 0.1;
           if ((axisPosition > (axisAquariumSize - distance))) {
-            var str = (axisPosition - (axisAquariumSize - distance));
-            wallRepulsion = (wallRepulsion - (str * repulsion));
+            let str = (axisPosition - (axisAquariumSize - distance));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
           }
-          if ((axisPosition < (-axisAquariumSize + distance))) {
-            var str = ((-axisAquariumSize + distance) - axisPosition);
-            wallRepulsion = (wallRepulsion + (str * repulsion));
+          if ((axisPosition < (-(axisAquariumSize) + distance))) {
+            let str = ((-(axisAquariumSize) + distance) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
         if ((mouseRay_7.activated == 1u)) {
-          var proj = projectPointOnLine_10(fishData.position, mouseRay_7.line);
-          var diff = (fishData.position - proj);
-          var limit = 0.9;
-          var str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
-          rayRepulsion = (str * normalize(diff));
+          var proj = projectPointOnLine_10((*fishData).position, mouseRay_7.line);
+          var diff = ((*fishData).position - proj);
+          const limit = 0.9;
+          let str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
+          rayRepulsion = (normalize(diff) * str);
         }
-        fishData.direction = (fishData.direction + (fishBehavior_5.separationStr * separation));
-        fishData.direction = (fishData.direction + (fishBehavior_5.alignmentStr * alignment));
-        fishData.direction = (fishData.direction + (fishBehavior_5.cohesionStr * cohesion));
-        fishData.direction = (fishData.direction + (1e-4 * wallRepulsion));
-        fishData.direction = (fishData.direction + (5e-4 * rayRepulsion));
-        fishData.direction = (clamp(length(fishData.direction), 0f, 0.01f) * normalize(fishData.direction));
-        var translation = ((min(999f, timePassed_11) / 8f) * fishData.direction);
-        fishData.position = (fishData.position + translation);
-        nextFishData_12[fishIndex] = fishData;
+        var direction = (*fishData).direction;
+        direction = (direction + (separation * fishBehavior_5.separationStr));
+        direction = (direction + (alignment * fishBehavior_5.alignmentStr));
+        direction = (direction + (cohesion * fishBehavior_5.cohesionStr));
+        direction = (direction + (wallRepulsion * 1e-4));
+        direction = (direction + (rayRepulsion * 5e-4));
+        direction = (normalize(direction) * clamp(length((*fishData).direction), 0f, 0.01f));
+        var translation = (direction * (min(999f, timePassed_11) / 8f));
+        let nextFishData = (&nextFishData_12[fishIndex]);
+        (*nextFishData).position = ((*fishData).position + translation);
+        (*nextFishData).direction = direction;
       }
 
       struct mainCompute_Input_13 {
@@ -225,14 +227,14 @@ describe('3d fish example', () => {
       }
 
       fn applySinWave_4(index: u32, vertex: PosAndNormal_3, time: f32) -> PosAndNormal_3 {
-        var a = -60.1;
-        var b = 0.8;
-        var c = 6.1;
+        const a = -60.1;
+        const b = 0.8;
+        const c = 6.1;
         var posMod = vec3f();
         posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
-        var coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
+        let coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
         var newOX = normalize(vec3f(1f, 0f, coeff));
-        var newOZ = vec3f(-newOX.z, 0f, newOX.x);
+        var newOZ = vec3f(-(newOX.z), 0f, newOX.x);
         var newNormalXZ = ((newOX * vertex.normal.x) + (newOZ * vertex.normal.z));
         var wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
         var wavedPosition = (vertex.position + posMod);
@@ -268,23 +270,23 @@ describe('3d fish example', () => {
       }
 
       @vertex fn vertexShader_0(input: vertexShader_Input_9) -> vertexShader_Output_8 {
-        var currentModelData = ModelData_2(modelData_1[input.instanceIndex].position, modelData_1[input.instanceIndex].direction, modelData_1[input.instanceIndex].scale, modelData_1[input.instanceIndex].variant, modelData_1[input.instanceIndex].applySinWave, modelData_1[input.instanceIndex].applySeaFog, modelData_1[input.instanceIndex].applySeaDesaturation);
+        let currentModelData = (&modelData_1[input.instanceIndex]);
         var wavedVertex = PosAndNormal_3(input.modelPosition, input.modelNormal);
-        if ((currentModelData.applySinWave == 1u)) {
+        if (((*currentModelData).applySinWave == 1u)) {
           wavedVertex = applySinWave_4(input.instanceIndex, PosAndNormal_3(input.modelPosition, input.modelNormal), currentTime_5);
         }
-        var direction = normalize(currentModelData.direction);
-        var yaw = (-atan2(direction.z, direction.x) + 3.141592653589793f);
-        var pitch = asin(-direction.y);
-        var scaleMatrix = mat4x4f(vec3f(currentModelData.scale).x, 0, 0, 0, 0, vec3f(currentModelData.scale).y, 0, 0, 0, 0, vec3f(currentModelData.scale).z, 0, 0, 0, 0, 1);
+        var direction = normalize((*currentModelData).direction);
+        let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
+        let pitch = asin(-(direction.y));
+        var scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
         var pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         var yawMatrix = mat4x4f(cos(yaw), 0, -sin(yaw), 0, 0, 1, 0, 0, sin(yaw), 0, cos(yaw), 0, 0, 0, 0, 1);
-        var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, currentModelData.position.x, currentModelData.position.y, currentModelData.position.z, 1);
+        var translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, (*currentModelData).position.x, (*currentModelData).position.y, (*currentModelData).position.z, 1);
         var worldPosition = (translationMatrix * (yawMatrix * (pitchMatrix * (scaleMatrix * vec4f(wavedVertex.position, 1f)))));
         var worldNormal = normalize((yawMatrix * (pitchMatrix * vec4f(wavedVertex.normal, 1f))).xyz);
-        var worldPositionUniform = worldPosition;
-        var canvasPosition = (camera_6.projection * (camera_6.view * worldPositionUniform));
-        return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, currentModelData.variant, input.textureUV, currentModelData.applySeaFog, currentModelData.applySeaDesaturation);
+        let worldPositionUniform = (&worldPosition);
+        var canvasPosition = (camera_6.projection * (camera_6.view * (*worldPositionUniform)));
+        return vertexShader_Output_8(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, input.textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
       }
 
       @group(0) @binding(1) var modelTexture_11: texture_2d<f32>;
@@ -292,12 +294,12 @@ describe('3d fish example', () => {
       @group(0) @binding(3) var sampler_12: sampler;
 
       fn rgbToHsv_13(rgb: vec3f) -> vec3f {
-        var r = rgb.x;
-        var g = rgb.y;
-        var b = rgb.z;
-        var maxC = max(r, max(g, b));
-        var minC = min(r, min(g, b));
-        var delta = (maxC - minC);
+        let r = rgb.x;
+        let g = rgb.y;
+        let b = rgb.z;
+        let maxC = max(r, max(g, b));
+        let minC = min(r, min(g, b));
+        let delta = (maxC - minC);
         var h = 0f;
         var s = 0f;
         if ((maxC == 0f)) {
@@ -306,7 +308,7 @@ describe('3d fish example', () => {
         else {
           s = (delta / maxC);
         }
-        var v = maxC;
+        let v = maxC;
         if ((maxC == minC)) {
           h = 0f;
         }
@@ -339,14 +341,14 @@ describe('3d fish example', () => {
       }
 
       fn hsvToRgb_14(hsv: vec3f) -> vec3f {
-        var h = hsv.x;
-        var s = hsv.y;
-        var v = hsv.z;
-        var i = floor((h * 6f));
-        var f = ((h * 6f) - i);
-        var p = (v * (1f - s));
-        var q = (v * (1f - (f * s)));
-        var t = (v * (1f - ((1f - f) * s)));
+        let h = hsv.x;
+        let s = hsv.y;
+        let v = hsv.z;
+        let i = floor((h * 6f));
+        let f = ((h * 6f) - i);
+        let p = (v * (1f - s));
+        let q = (v * (1f - (f * s)));
+        let t = (v * (1f - ((1f - f) * s)));
         var r = 0f;
         var g = 0f;
         var b = 0f;
@@ -405,17 +407,17 @@ describe('3d fish example', () => {
         var textureColorWithAlpha = textureSample(modelTexture_11, sampler_12, input.textureUV);
         var textureColor = textureColorWithAlpha.xyz;
         var ambient = (0.5 * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
-        var cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
+        let cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
         var diffuse = (max(0f, cosTheta) * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         var viewSource = normalize((camera_6.position.xyz - input.worldPosition));
-        var reflectSource = normalize(reflect((-1 * vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972)), input.worldNormal));
-        var specularStrength = pow(max(0f, dot(viewSource, reflectSource)), 16f);
+        var reflectSource = normalize(reflect(vec3f(0.2357022613286972, -0.9428090453147888, 0.2357022613286972), input.worldNormal));
+        let specularStrength = pow(max(0f, dot(viewSource, reflectSource)), 16f);
         var specular = (specularStrength * vec3f(0.800000011920929, 0.800000011920929, 1));
         var lightedColor = (ambient + (diffuse + specular));
-        var distanceFromCamera = length((camera_6.position.xyz - input.worldPosition));
+        let distanceFromCamera = length((camera_6.position.xyz - input.worldPosition));
         var desaturatedColor = lightedColor;
         if ((input.applySeaDesaturation == 1u)) {
-          var desaturationFactor = (-atan2(((distanceFromCamera - 5f) / 10f), 1f) / 3f);
+          let desaturationFactor = (-(atan2(((distanceFromCamera - 5f) / 10f), 1f)) / 3f);
           var hsv = rgbToHsv_13(desaturatedColor);
           hsv.y += (desaturationFactor / 2f);
           hsv.z += desaturationFactor;
@@ -424,8 +426,8 @@ describe('3d fish example', () => {
         }
         var foggedColor = desaturatedColor;
         if ((input.applySeaFog == 1u)) {
-          var fogParameter = max(0f, ((distanceFromCamera - 1.5f) * 0.2f));
-          var fogFactor = (fogParameter / (1f + fogParameter));
+          let fogParameter = max(0f, ((distanceFromCamera - 1.5f) * 0.2f));
+          let fogFactor = (fogParameter / (1f + fogParameter));
           foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);
         }
         return vec4f(foggedColor.xyz, 1f);
