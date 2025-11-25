@@ -304,9 +304,9 @@ function createPipelines() {
       format: presentationFormat,
       blend: alphaBlend,
     })
-    .withPrimitive({
-      // cullMode: 'back',
-    })
+    // .withPrimitive({
+    //   cullMode: 'back',
+    // })
     .createPipeline()
     .withIndexBuffer(indexBuffer)
     .withPerformanceCallback((start, end) => {
@@ -454,7 +454,7 @@ export const controls = {
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
-    onSelectChange: async (selected: keyof typeof testCases) => {
+    onSelectChange: (selected: keyof typeof testCases) => {
       testCase = testCases[selected];
       pipelines = createPipelines();
     },
@@ -462,7 +462,7 @@ export const controls = {
   'Start Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
+    onSelectChange: (selected: keyof typeof lineCaps) => {
       startCap = lineCaps[selected];
       pipelines = createPipelines();
     },
@@ -470,7 +470,7 @@ export const controls = {
   'End Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
+    onSelectChange: (selected: keyof typeof lineCaps) => {
       endCap = lineCaps[selected];
       pipelines = createPipelines();
     },
@@ -478,7 +478,7 @@ export const controls = {
   Join: {
     initial: 'round',
     options: Object.keys(lineJoins),
-    onSelectChange: async (selected: keyof typeof lineJoins) => {
+    onSelectChange: (selected: keyof typeof lineJoins) => {
       join = lineJoins[selected];
       pipelines = createPipelines();
     },
@@ -486,7 +486,7 @@ export const controls = {
   Fill: {
     initial: 'solid',
     options: Object.keys(fillOptions),
-    onSelectChange: async (selected: keyof typeof fillOptions) => {
+    onSelectChange: (selected: keyof typeof fillOptions) => {
       fillType = fillOptions[selected];
       uniformsBuffer.writePartial({ fillType });
     },
@@ -525,6 +525,52 @@ export const controls = {
     initial: false,
     onToggleChange: (value: boolean) => {
       reverse = value;
+    },
+  },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () => {
+      const prevShowRadii = showRadii;
+      const prevStartCap = startCap;
+      const prevEndCap = endCap;
+      const prevJoin = join;
+      const prevTestCase = testCase;
+
+      showRadii = true;
+
+      const capsOptions = Object.keys(lineCaps);
+      const joinOptions = Object.keys(lineJoins);
+
+      const { animateWidth, bending, segmentAlternate } = testCases;
+      const testCasesReduced = { animateWidth, bending, segmentAlternate }; // semi-random subset
+
+      Object.entries(testCasesReduced).map(([_, t], i) => {
+        testCase = t;
+        startCap = lineCaps[
+          capsOptions[i % capsOptions.length] as keyof typeof lineCaps
+        ];
+        endCap = lineCaps[
+          capsOptions[
+            (i + 3) % capsOptions.length // greater coverage
+          ] as keyof typeof lineCaps
+        ];
+        join = lineJoins[
+          joinOptions[i % joinOptions.length] as keyof typeof lineJoins
+        ];
+        const namespace = tgpu['~unstable'].namespace();
+        return Object.entries(createPipelines()).map(([_, pipeline]) =>
+          root.device.createShaderModule({
+            code: tgpu.resolve([pipeline], {
+              names: namespace,
+            }),
+          })
+        );
+      });
+
+      testCase = prevTestCase;
+      startCap = prevStartCap;
+      endCap = prevEndCap;
+      join = prevJoin;
+      showRadii = prevShowRadii;
     },
   },
 };
