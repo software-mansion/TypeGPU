@@ -24,7 +24,7 @@ describe('extension based pruning', () => {
           return 6.599609375f;
         }
       }"
-      `);
+    `);
 
     expect(tgpu.resolve([someFn])).toMatchInlineSnapshot(`
       "fn someFn() -> f32 {
