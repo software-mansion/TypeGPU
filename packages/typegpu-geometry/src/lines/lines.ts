@@ -18,7 +18,7 @@ const getJoinParent = tgpu.fn([u32], u32)((i) => (i - 4) >> 1);
 
 const getJoinVertexPath = tgpu.fn([u32], JoinPath)((vertexIndex) => {
   // deno-fmt-ignore
-  const lookup = [u32(), u32(), /* dont care */ u32(), u32(1), u32(1), u32(2), u32(2), /* dont care */ u32(2), u32(3), u32(3)];
+  const lookup = [u32(0), u32(0), /* dont care */ u32(0), u32(1), u32(1), u32(2), u32(2), /* dont care */ u32(2), u32(3), u32(3)];
   if (vertexIndex < 10) {
     return JoinPath({
       joinIndex: lookup[vertexIndex] as number,
@@ -28,7 +28,7 @@ const getJoinVertexPath = tgpu.fn([u32], JoinPath)((vertexIndex) => {
   }
   let joinIndex = vertexIndex - 10;
   let depth = 0;
-  let path = u32();
+  let path = u32(0);
   while (joinIndex >= 4) {
     path = (path << 1) | (joinIndex & 1);
     joinIndex = getJoinParent(joinIndex);
@@ -63,8 +63,8 @@ export const lineSegmentVariableWidth = tgpu.fn([
   // TODO: we should probably render a circle in some cases
   if (dot(BC, BC) <= radiusBCDelta * radiusBCDelta) {
     return {
-      vertexPosition: vec2f(),
-      uv: vec2f(),
+      vertexPosition: vec2f(0, 0),
+      uv: vec2f(0, 0),
       situationIndex: 0,
     };
   }

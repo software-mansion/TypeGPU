@@ -25,7 +25,7 @@ export const buttCap = capShell(
       dirRight,
       shouldJoin,
     );
-    const c = vec2f();
+    const c = vec2f(0, 0);
     const d = select(
       intersectTangent(left, dirLeft),
       dirLeft,
