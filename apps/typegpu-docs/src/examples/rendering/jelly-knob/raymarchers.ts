@@ -183,7 +183,7 @@ const applyAO = (
   return d.vec4f(finalColor, 1.0);
 };
 
-const rayMarchNoJelly = (
+const rayMarchScene = (
   rayOrigin: d.v3f,
   rayDirection: d.v3f,
   maxSteps: number,
@@ -309,12 +309,19 @@ const renderMeter = (
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
   'use gpu';
-  // first, generate the scene without a jelly
-  const noJellyResult = rayMarchNoJelly(rayOrigin, rayDirection, MAX_STEPS, uv);
-  const scene = d.vec4f(noJellyResult.color, 1);
-  const sceneDist = std.distance(rayOrigin, noJellyResult.point);
+  // first, generate the scene without a jelly or shadow
+  const sceneResult = rayMarchScene(
+    rayOrigin,
+    rayDirection,
+    MAX_STEPS,
+    uv,
+  );
+  const scene = d.vec4f(sceneResult.color, 1);
+  const sceneDist = std.distance(rayOrigin, sceneResult.point);
 
-  // second, generate the jelly
+  // second, generate the jelly shadow
+
+  // third, generate the jelly
   const bbox = getJellyBounds();
   const intersection = intersectBox(rayOrigin, rayDirection, bbox);
 
@@ -357,7 +364,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
         const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
 
-        const env = rayMarchNoJelly(exitPos, refrDir, 6, uv).color;
+        const env = rayMarchScene(exitPos, refrDir, 6, uv).color;
         const jellyColor = jellyColorUniformSlot.$;
 
         const scatterTint = jellyColor.xyz.mul(1.5);

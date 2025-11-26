@@ -129,7 +129,7 @@ const opTwist = (p: d.v3f, k: number): d.v3f => {
   return d.vec3f(m.mul(p.xz), p.y);
 };
 
-const getJellySegment = (position: d.v3f) => {
+const sdJellySegment = (position: d.v3f) => {
   'use gpu';
   return sdf.sdRoundedBox3d(
     opCheapBend(opCheapBend(position, 0.8).zyx, 0.8).zyx,
@@ -152,14 +152,22 @@ export const sdJelly = (position: d.v3f) => {
   const rotated2Pos = rotateY(localPos, Math.PI / 3);
 
   return sdf.opSmoothUnion(
-    getJellySegment(localPos),
+    sdJellySegment(localPos),
     sdf.opSmoothUnion(
-      getJellySegment(rotated1Pos),
-      getJellySegment(rotated2Pos),
+      sdJellySegment(rotated1Pos),
+      sdJellySegment(rotated2Pos),
       0.01,
     ),
     0.01,
   );
+};
+
+// fake shadow
+
+export const sdShadow = (position: d.v3f) => {
+  'use gpu';
+
+  return sdf.sdSphere(position, 0.5);
 };
 
 // sdf helpers

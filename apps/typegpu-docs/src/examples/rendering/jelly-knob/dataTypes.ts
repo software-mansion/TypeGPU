@@ -12,6 +12,7 @@ export const ObjectType = {
   JELLY: 1,
   PROGRESS_METER: 2,
   BACKGROUND: 3,
+  SHADOW: 4,
 } as const;
 
 export const HitInfo = d.struct({
