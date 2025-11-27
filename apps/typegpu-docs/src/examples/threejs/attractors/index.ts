@@ -20,12 +20,13 @@ import {
   vec4,
 } from 'three/tsl';
 
-import { Inspector } from 'three/addons/inspector/Inspector.js';
-
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 let camera, scene, renderer, controls, updateCompute;
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+console.log(canvas);
 
 init();
 
@@ -56,12 +57,11 @@ async function init() {
 
   // renderer
 
-  renderer = new THREE.WebGPURenderer({ antialias: true });
+  renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setAnimationLoop(animate);
   renderer.setClearColor('#000000');
-  renderer.inspector = new Inspector();
   document.body.appendChild(renderer.domElement);
 
   await renderer.init();
@@ -324,74 +324,6 @@ async function init() {
   const geometry = new THREE.PlaneGeometry(1, 1);
   const mesh = new THREE.InstancedMesh(geometry, material, count);
   scene.add(mesh);
-
-  // debug
-
-  const gui = renderer.inspector.createParameters('Parameters');
-
-  gui.add(
-    {
-      attractorMassExponent: attractorMass.value.toString().length - 1,
-    },
-    'attractorMassExponent',
-    1,
-    10,
-    1,
-  ).onChange((value) => attractorMass.value = Number(`1e${value}`));
-  gui.add(
-    {
-      particleGlobalMassExponent: particleGlobalMass.value.toString().length -
-        1,
-    },
-    'particleGlobalMassExponent',
-    1,
-    10,
-    1,
-  ).onChange((value) => particleGlobalMass.value = Number(`1e${value}`));
-  gui.add(maxSpeed, 'value', 0, 10, 0.01).name('maxSpeed');
-  gui.add(velocityDamping, 'value', 0, 0.1, 0.001).name(
-    'velocityDamping',
-  );
-  gui.add(spinningStrength, 'value', 0, 10, 0.01).name(
-    'spinningStrength',
-  );
-  gui.add(scale, 'value', 0, 0.1, 0.001).name('scale');
-  gui.add(boundHalfExtent, 'value', 0, 20, 0.01).name(
-    'boundHalfExtent',
-  );
-  gui.addColor({
-    color: colorA.value.getHexString(THREE.SRGBColorSpace),
-  }, 'color').name('colorA').onChange((value) => colorA.value.set(value));
-  gui.addColor({
-    color: colorB.value.getHexString(THREE.SRGBColorSpace),
-  }, 'color').name('colorB').onChange((value) => colorB.value.set(value));
-  gui.add(
-    { controlsMode: attractors[0].controls.mode },
-    'controlsMode',
-    ['translate', 'rotate', 'none'],
-  ).onChange((value) => {
-    for (const attractor of attractors) {
-      if (value === 'none') {
-        attractor.controls.visible = false;
-        attractor.controls.enabled = false;
-      } else {
-        attractor.controls.visible = true;
-        attractor.controls.enabled = true;
-        attractor.controls.mode = value;
-      }
-    }
-  });
-
-  gui.add(
-    { helperVisible: attractors[0].helper.visible },
-    'helperVisible',
-  ).onChange((value) => {
-    for (const attractor of attractors) {
-      attractor.helper.visible = value;
-    }
-  });
-
-  gui.add({ reset }, 'reset');
 }
 
 function onWindowResize() {
