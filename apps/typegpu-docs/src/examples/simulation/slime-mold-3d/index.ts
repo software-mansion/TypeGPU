@@ -234,23 +234,17 @@ const updateAgents = tgpu['~unstable'].computeFn({
   const dimsf = d.vec3f(dims);
 
   const agent = computeLayout.$.oldAgents[gid.x];
-  const random = randf.sample();
 
   let direction = std.normalize(agent.direction);
   const senseResult = sense3D(agent.position, direction);
-
-  if (senseResult.totalWeight > 0.01) {
-    const targetDir = std.normalize(senseResult.weightedDir);
-    direction = std.normalize(
-      direction.add(targetDir.mul(params.$.turnSpeed * params.$.deltaTime)),
-    );
-  } else {
-    const perp = getPerpendicular(direction);
-    const randomOffset = perp.mul(
-      (random * 2 - 1) * params.$.turnSpeed * params.$.deltaTime,
-    );
-    direction = std.normalize(direction.add(randomOffset));
-  }
+  const targetDirection = std.select(
+    randf.onHemisphere(direction),
+    std.normalize(senseResult.weightedDir),
+    senseResult.totalWeight > 0.01,
+  );
+  direction = std.normalize(direction.add(
+    targetDirection.mul(params.$.turnSpeed * params.$.deltaTime),
+  ));
 
   const newPos = agent.position.add(
     direction.mul(params.$.moveSpeed * params.$.deltaTime),
