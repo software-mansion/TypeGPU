@@ -236,19 +236,83 @@ const previewSampler = root['~unstable'].createSampler({
 });
 const previewView = pointLight.createDepthArrayView();
 
+const depthToColor = tgpu.fn([d.f32], d.vec3f)((depth) => {
+  const linear = std.clamp(1 - depth * 6, 0, 1);
+  const t = linear * linear;
+  const r = std.clamp(t * 2 - 0.5, 0, 1);
+  const g = std.clamp(1 - std.abs(t - 0.5) * 2, 0, 0.9) * t;
+  const b = std.clamp(1 - t * 1.5, 0, 1) * t;
+  return d.vec3f(r, g, b);
+});
+
+const fragmentDistanceView = tgpu['~unstable'].fragmentFn({
+  in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
+  out: d.vec4f,
+})(({ worldPos }) => {
+  const lightPos = renderLayoutWithShadow.$.lightPosition;
+  const dist = std.length(worldPos.sub(lightPos));
+  const color = depthToColor(dist / pointLight.far);
+  return d.vec4f(color, 1.0);
+});
+
 const previewFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const tiled = d.vec2f(std.fract(uv.x * 3), std.fract(uv.y * 2));
-  const arrayIndex = d.i32(std.floor(uv.y * 2) * 3 + std.floor(uv.x * 3));
+  const gridX = d.i32(std.floor(uv.x * 4));
+  const gridY = d.i32(std.floor(uv.y * 3));
+
+  const localU = std.fract(uv.x * 4);
+  const localV = std.fract(uv.y * 3);
+  const localUV = d.vec2f(localU, localV);
+
+  const bgColor = d.vec3f(0.1, 0.1, 0.12);
+
+  let faceIndex = d.i32(-1);
+
+  // Top row: +Y (index 2)
+  if (gridY === 0 && gridX === 1) {
+    faceIndex = 2;
+  }
+  // Middle row: -X, +Z, +X, -Z
+  if (gridY === 1) {
+    if (gridX === 0) {
+      faceIndex = 0; // -X
+    }
+    if (gridX === 1) {
+      faceIndex = 4; // +Z
+    }
+    if (gridX === 2) {
+      faceIndex = 1; // +X
+    }
+    if (gridX === 3) {
+      faceIndex = 5; // -Z
+    }
+  }
+  // Bottom row: -Y (index 3)
+  if (gridY === 2 && gridX === 1) {
+    faceIndex = 3;
+  }
+
   const depth = std.textureSample(
     previewView.$,
     previewSampler.$,
-    tiled,
-    arrayIndex,
+    localUV,
+    faceIndex,
   );
-  return d.vec4f(d.vec3f(depth ** 0.5), 1.0);
+
+  if (faceIndex < 0) {
+    return d.vec4f(bgColor, 1.0);
+  }
+
+  const color = depthToColor(depth);
+
+  const border = 0.02;
+  const isBorder = localU < border || localU > 1 - border || localV < border ||
+    localV > 1 - border;
+  const finalColor = std.select(color, std.mul(0.5, color), isBorder);
+
+  return d.vec4f(finalColor, 1.0);
 });
 
 const pipelineDepthOne = root['~unstable']
@@ -288,6 +352,17 @@ const pipelineLightIndicator = root['~unstable']
   .withMultisample({ count: 4 })
   .createPipeline();
 
+const pipelineDistanceView = root['~unstable']
+  .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
+  .withFragment(fragmentDistanceView, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
+  .withMultisample({ count: 4 })
+  .createPipeline();
+
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
   camera: mainCamera.uniform.buffer,
   shadowDepthCube: pointLight.createCubeView(),
@@ -301,6 +376,7 @@ const lightIndicatorBindGroup = root.createBindGroup(lightIndicatorLayout, {
 });
 
 let showDepthPreview = false;
+let showDistanceView = false;
 let lastTime = performance.now();
 let time = 0;
 
@@ -335,7 +411,9 @@ function render(timestamp: number) {
     return;
   }
 
-  pipelineMain
+  const mainPipeline = showDistanceView ? pipelineDistanceView : pipelineMain;
+
+  mainPipeline
     .withDepthStencilAttachment({
       view: depthTexture,
       depthClearValue: 1,
@@ -554,10 +632,16 @@ export const controls = {
       );
     },
   },
-  'Show Depth Preview': {
+  'Show Depth Cubemap': {
     initial: false,
     onToggleChange: (v: boolean) => {
       showDepthPreview = v;
+    },
+  },
+  'Show Distance View': {
+    initial: false,
+    onToggleChange: (v: boolean) => {
+      showDistanceView = v;
     },
   },
   'PCF Samples': {
