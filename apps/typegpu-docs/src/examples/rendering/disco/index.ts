@@ -109,9 +109,10 @@ export const controls = {
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
+      const namespace = tgpu['~unstable'].namespace();
       Array.from({ length: 6 }).map((_, i) =>
         root.device.createShaderModule({
-          code: tgpu.resolve([pipelines[i + 1]]),
+          code: tgpu.resolve([pipelines[i + 1]], { names: namespace }),
         })
       );
     },
