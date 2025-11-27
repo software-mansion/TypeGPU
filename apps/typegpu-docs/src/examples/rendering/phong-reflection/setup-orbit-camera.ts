@@ -152,8 +152,14 @@ export function setupOrbitCamera(
   };
   window.addEventListener('mouseup', mouseUpEventListener);
 
-  const touchEndEventListener = () => {
-    isDragging = false;
+  const touchEndEventListener = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      prevX = e.touches[0].clientX;
+      prevY = e.touches[0].clientY;
+    } else {
+      isDragging = false;
+    }
   };
   window.addEventListener('touchend', touchEndEventListener);
 

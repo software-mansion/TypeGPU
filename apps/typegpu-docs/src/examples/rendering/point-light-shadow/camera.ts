@@ -62,12 +62,11 @@ export class Camera {
 
   #computeData() {
     const view = m.mat4.lookAt(
-      d.vec3f(-this.#position.x, this.#position.y, this.#position.z),
-      d.vec3f(-this.#target.x, this.#target.y, this.#target.z),
-      d.vec3f(-this.#up.x, this.#up.y, this.#up.z),
+      this.#position,
+      this.#target,
+      this.#up,
       d.mat4x4f(),
     );
-    m.mat4.scale(view, d.vec3f(-1, 1, 1), view);
 
     const projection = m.mat4.perspective(
       (this.#fov * Math.PI) / 180,

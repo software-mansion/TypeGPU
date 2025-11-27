@@ -35,7 +35,6 @@ const scene = new Scene(root);
 
 const cube = new BoxGeometry(root);
 cube.scale = d.vec3f(3, 1, 0.2);
-scene.add(cube);
 
 const orbitingCubes: BoxGeometry[] = [];
 for (let i = 0; i < 10; i++) {
@@ -49,13 +48,12 @@ for (let i = 0; i < 10; i++) {
   );
   orbitingCube.scale = d.vec3f(0.5, 0.5, 0.5);
   orbitingCubes.push(orbitingCube);
-  scene.add(orbitingCube);
 }
 
 const floorCube = new BoxGeometry(root);
 floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
-scene.add(floorCube);
+scene.add([cube, floorCube, ...orbitingCubes]);
 
 let depthTexture = root['~unstable']
   .createTexture({
@@ -170,7 +168,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const biasedPos = worldPos.add(normal.mul(normalBiasWorld));
   const toLightBiased = biasedPos.sub(lightPos);
   const distBiased = std.length(toLightBiased);
-  const dir = toLightBiased.div(distBiased);
+  const dir = toLightBiased.div(distBiased).mul(d.vec3f(-1, 1, 1));
   const depthRef = distBiased / pointLight.far;
 
   const up = std.select(
@@ -434,7 +432,7 @@ function updateCameraPosition() {
 }
 
 function updateCameraOrbit(dx: number, dy: number) {
-  theta -= dx * 0.01;
+  theta += dx * 0.01;
   phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.01));
   updateCameraPosition();
 }

@@ -11,8 +11,8 @@ import type { Scene } from './scene.ts';
 import { instanceLayout, vertexLayout } from './types.ts';
 
 const FACE_CONFIGS = [
-  { name: 'right', dir: d.vec3f(1, 0, 0), up: d.vec3f(0, 1, 0) },
-  { name: 'left', dir: d.vec3f(-1, 0, 0), up: d.vec3f(0, 1, 0) },
+  { name: 'right', dir: d.vec3f(-1, 0, 0), up: d.vec3f(0, 1, 0) },
+  { name: 'left', dir: d.vec3f(1, 0, 0), up: d.vec3f(0, 1, 0) },
   { name: 'up', dir: d.vec3f(0, 1, 0), up: d.vec3f(0, 0, -1) },
   { name: 'down', dir: d.vec3f(0, -1, 0), up: d.vec3f(0, 0, 1) },
   { name: 'forward', dir: d.vec3f(0, 0, 1), up: d.vec3f(0, 1, 0) },

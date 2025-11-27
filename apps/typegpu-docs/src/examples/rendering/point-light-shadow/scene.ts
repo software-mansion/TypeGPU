@@ -16,17 +16,26 @@ export class Scene {
       .$usage('vertex');
   }
 
-  add(object: BoxGeometry) {
-    this.#objects.push(object);
+  add(object: BoxGeometry | BoxGeometry[]) {
+    const items = Array.isArray(object) ? object : [object];
+    if (items.length === 0) {
+      return;
+    }
+    this.#objects.push(...items);
     this.#rebuildBuffer();
   }
 
-  remove(object: BoxGeometry) {
-    const index = this.#objects.indexOf(object);
-    if (index !== -1) {
-      this.#objects.splice(index, 1);
-      this.#rebuildBuffer();
+  remove(object: BoxGeometry | BoxGeometry[]) {
+    const items = Array.isArray(object) ? object : [object];
+    if (items.length === 0) {
+      return;
     }
+    this.#objects.splice(
+      0,
+      this.#objects.length,
+      ...this.#objects.filter((obj) => !items.includes(obj)),
+    );
+    this.#rebuildBuffer();
   }
 
   update() {
