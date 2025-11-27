@@ -321,33 +321,32 @@ const sampler = root['~unstable'].createSampler({
   minFilter: canFilter ? 'linear' : 'nearest',
 });
 
+const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
+  std.textureSampleLevel(
+    blurLayout.$.oldState,
+    blurLayout.$.sampler,
+    uv.add(offset),
+    0,
+  ).x
+);
+
 const blur = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
-  const dims = std.textureDimensions(blurLayout.$.oldState);
+  const dims = d.vec3u(std.textureDimensions(blurLayout.$.oldState));
   if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) return;
 
   const uv = d.vec3f(gid).add(0.5).div(d.vec3f(dims));
-  const offset = d.vec3f(1).div(d.vec3f(dims));
 
   let sum = d.f32();
 
-  for (let axis = 0; axis < 3; axis++) {
-    for (let sign = -1; sign <= 1; sign += 2) {
-      const offsetVec = d.vec3f(
-        std.select(0, offset.x * sign, axis === 0),
-        std.select(0, offset.y * sign, axis === 1),
-        std.select(0, offset.z * sign, axis === 2),
-      );
-      sum = sum + std.textureSampleLevel(
-        blurLayout.$.oldState,
-        blurLayout.$.sampler,
-        uv.add(offsetVec),
-        0,
-      ).x;
-    }
-  }
+  sum += getSummand(uv, d.vec3f(-1, 0, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(1, 0, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, -1, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 1, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 0, -1).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 0, 1).div(d.vec3f(dims)));
 
   const blurred = sum / 6.0;
   const newValue = std.saturate(blurred - params.$.evaporationRate);
