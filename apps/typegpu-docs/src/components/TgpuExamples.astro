@@ -1,11 +1,12 @@
 ---
 import { Image } from "astro:assets";
 import ExternalOpenSvg from "../assets/externalopen.svg";
-import CausticsGif from "../assets/hero/caustics_bg.gif";
-import RayMarchingGif from "../assets/hero/ray_march_bg.gif";
-import JellySliderGif from "../assets/hero/jelly_slider_bg.png";
-import FishGif from "../assets/hero/fish_bg.gif";
-import ReflectionGif from "../assets/hero/reflection_bg.png";
+import CausticsGif from "../assets/hero/caustics_bg.webp";
+import RayMarchingGif from "../assets/hero/rayMarch_bg.webp";
+import JellySliderGif from "../assets/hero/jellySlider_bg.jpg";
+import FishGif from "../assets/hero/fish_bg.webp";
+import ReflectionGif from "../assets/hero/reflection_bg.jpg";
+import vaporRaveGif from "../assets/hero/rave_bg.webp";
 
 import HoverExampleIsland from "./HoverExampleIsland";
 
@@ -16,7 +17,12 @@ const galleryItems = [
 		exampleKey: "rendering--cubemap-reflection",
 	},
 	{
-		asset: FishGif,
+		asset: JellySliderGif,
+		title: "Jelly Slider",
+		exampleKey: "rendering--jelly-slider",
+	},
+	{
+		asset: vaporRaveGif,
 		title: "VaporRave",
 		exampleKey: "simple--vaporrave",
 	},
@@ -29,11 +35,6 @@ const galleryItems = [
 		asset: FishGif,
 		title: "3D Fish",
 		exampleKey: "rendering--3d-fish",
-	},
-	{
-		asset: JellySliderGif,
-		title: "Jelly Slider",
-		exampleKey: "rendering--jelly-slider",
 	},
 	{
 		asset: CausticsGif,
