@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,
@@ -32,7 +32,7 @@ const resolutionUniform = root.createUniform(
 );
 
 const fragmentShaders = [
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,
@@ -109,9 +109,10 @@ export const controls = {
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
+      const namespace = tgpu['~unstable'].namespace();
       Array.from({ length: 6 }).map((_, i) =>
         root.device.createShaderModule({
-          code: tgpu.resolve([pipelines[i + 1]]),
+          code: tgpu.resolve([pipelines[i + 1]], { names: namespace }),
         })
       );
     },
