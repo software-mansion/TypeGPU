@@ -102,17 +102,19 @@ describe('perlin noise example', () => {
 
       @group(0) @binding(0) var<uniform> shadowParams_7: item_8;
 
-      @group(1) @binding(1) var shadowDepthCube_9: texture_depth_cube;
+      @group(0) @binding(1) var<uniform> samplesUniform_9: array<vec4f, 64>;
 
-      @group(1) @binding(2) var shadowSampler_10: sampler_comparison;
+      @group(1) @binding(1) var shadowDepthCube_10: texture_depth_cube;
 
-      struct fragmentMain_Input_11 {
+      @group(1) @binding(2) var shadowSampler_11: sampler_comparison;
+
+      struct fragmentMain_Input_12 {
         @location(0) worldPos: vec3f,
         @location(1) uv: vec2f,
         @location(2) normal: vec3f,
       }
 
-      @fragment fn fragmentMain_5(_arg_0: fragmentMain_Input_11) -> @location(0) vec4f {
+      @fragment fn fragmentMain_5(_arg_0: fragmentMain_Input_12) -> @location(0) vec4f {
         let lightPos = (&lightPosition_6);
         var toLight = ((*lightPos) - _arg_0.worldPos);
         let dist = length(toLight);
@@ -131,11 +133,9 @@ describe('perlin noise example', () => {
         let diskRadius = shadowParams_7.diskRadius;
         var visibilityAcc = 0;
         for (var i = 0; (i < i32(PCF_SAMPLES)); i++) {
-          let index = f32(i);
-          let theta2 = (index * 2.3999632f);
-          let r = (sqrt((index / f32(PCF_SAMPLES))) * diskRadius);
-          var sampleDir = normalize(((dir + (right * (cos(theta2) * r))) + (realUp * (sin(theta2) * r))));
-          visibilityAcc += i32(textureSampleCompare(shadowDepthCube_9, shadowSampler_10, sampleDir, depthRef));
+          var o = (samplesUniform_9[i].xy * diskRadius);
+          var sampleDir = ((dir + (right * o.x)) + (realUp * o.y));
+          visibilityAcc += i32(textureSampleCompare(shadowDepthCube_10, shadowSampler_11, sampleDir, depthRef));
         }
         let rawNdotl = dot(_arg_0.normal, lightDir);
         let visibility = select((f32(visibilityAcc) / f32(PCF_SAMPLES)), 0f, (rawNdotl < 0f));
