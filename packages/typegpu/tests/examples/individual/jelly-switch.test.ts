@@ -325,7 +325,7 @@ describe('jelly switch example', () => {
         return exp((sigma * -(dist)));
       }
 
-      fn rayMarch_12(rayOrigin: vec3f, rayDirection: vec3f, uv: vec2f) -> vec4f {
+      fn rayMarch_12(rayOrigin: vec3f, rayDirection: vec3f, _uv: vec2f) -> vec4f {
         var totalSteps = 0u;
         var backgroundDist = 0f;
         for (var i = 0; (i < 64i); i++) {
@@ -430,7 +430,6 @@ describe('jelly switch example', () => {
           }
         }
         var historyColorClamped = clamp(historyColor.xyz, minColor, maxColor);
-        var uv = (vec2f(_arg_0.gid.xy) / vec2f(dimensions.xy));
         const blendFactor = 0.8999999761581421f;
         var resolvedColor = vec4f(mix(currentColor.xyz, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture_3, vec2u(_arg_0.gid.x, _arg_0.gid.y), resolvedColor);
