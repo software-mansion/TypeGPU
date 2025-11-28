@@ -1,10 +1,12 @@
 /*
  * Based on: https://github.com/mrdoob/three.js/blob/master/examples/webgpu_compute_particles.html
  */
-
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { fromTSL, toTSL } from '@typegpu/three';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
@@ -14,12 +16,21 @@ renderer.setClearColor(0X000000);
 await renderer.init();
 
 const particleCount = 200000;
+let isOrbitControlsActive = false;
+
+// TSL
 const gravity = TSL.uniform(-0.00098);
 const bounce = TSL.uniform(0.8);
 const friction = TSL.uniform(0.99);
 const size = TSL.uniform(0.12);
 const clickPosition = TSL.uniform(new THREE.Vector3());
-let isOrbitControlsActive = false;
+
+// TypeGPU
+const gravityUniform = fromTSL(gravity, { type: d.f32 });
+const bounceUniform = fromTSL(bounce, { type: d.f32 });
+const frictionUniform = fromTSL(friction, { type: d.f32 });
+const sizeUniform = fromTSL(size, { type: d.f32 });
+const clickPositionUniform = fromTSL(clickPosition, { type: d.vec3f });
 
 const camera = new THREE.PerspectiveCamera(
   50,
@@ -27,7 +38,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000,
 );
-camera.position.set(0, 5, 20);
+camera.position.set(0, 10, 20);
 
 const scene = new THREE.Scene();
 
@@ -36,22 +47,32 @@ const velocities = TSL.instancedArray(particleCount, 'vec3');
 const colors = TSL.instancedArray(particleCount, 'vec3');
 const separation = 0.2;
 const amount = Math.sqrt(particleCount);
-const offset = TSL.float(amount / 2);
+const offset = amount / 2;
 
-const computeInit = TSL.Fn(() => {
-  const position = positions.element(TSL.instanceIndex);
-  const color = colors.element(TSL.instanceIndex);
+// TypeGPU
+const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });
+const positionsBuffer = fromTSL(positions, { type: d.arrayOf(d.vec3f) });
+const colorsBuffer = fromTSL(colors, { type: d.arrayOf(d.vec3f) });
+const computeInitTgpu = toTSL(() => {
+  'use gpu';
+  const instanceIdx = instanceIndex.$;
+  const position = positionsBuffer.$[instanceIdx];
+  const color = colorsBuffer.$[instanceIdx];
 
-  const x = TSL.instanceIndex.mod(amount);
-  const z = TSL.instanceIndex.div(amount);
+  const x = instanceIdx % d.u32(amount);
+  const z = instanceIdx / amount;
 
-  position.x = offset.sub(x).mul(separation);
-  position.z = offset.sub(z).mul(separation);
+  position.x = (offset - d.f32(x)) * separation;
+  position.z = (offset - d.f32(z)) * separation;
+  positionsBuffer.$[instanceIdx] = d.vec3f(position);
 
-  color.x = TSL.hash(TSL.instanceIndex);
-  color.y = TSL.hash(TSL.instanceIndex.add(2));
-})().compute(particleCount).setName('Init Particles');
-renderer.compute(computeInit);
+  randf.seed(d.f32(instanceIdx / amount));
+  color.x = randf.sample();
+  randf.seed(d.f32(instanceIdx / amount) + 2);
+  color.y = randf.sample();
+  colorsBuffer.$[instanceIdx] = d.vec3f(color);
+}).compute(particleCount).setName('Init Particles TypeGPU');
+renderer.compute(computeInitTgpu);
 
 const computeUpdate = TSL.Fn(() => {
   const position = positions.element(TSL.instanceIndex);
@@ -70,6 +91,10 @@ const computeUpdate = TSL.Fn(() => {
     velocity.z = velocity.z.mul(.9);
   });
 });
+
+const vertexIndex = fromTSL(TSL.attribute('vertexIndex'), { type: d.u32 });
+const velocitiesBuffer = fromTSL(velocities, { type: d.arrayOf(d.vec3f) });
+// TODO implement update with typegpu
 
 const computeParticles = computeUpdate().compute(particleCount).setName(
   'Update Particles',
