@@ -14,10 +14,10 @@ renderer.setClearColor(0X000000);
 await renderer.init();
 
 const particleCount = 200000;
-const gravity = TSL.uniform(-.00098);
-const bounce = TSL.uniform(.8);
-const friction = TSL.uniform(.99);
-const size = TSL.uniform(.12);
+const gravity = TSL.uniform(-0.00098);
+const bounce = TSL.uniform(0.8);
+const friction = TSL.uniform(0.99);
+const size = TSL.uniform(0.12);
 const clickPosition = TSL.uniform(new THREE.Vector3());
 let isOrbitControlsActive = false;
 
@@ -142,21 +142,21 @@ function onMove(event: PointerEvent) {
 
 canvas.addEventListener('pointermove', onMove);
 
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.minDistance = 5;
-controls.maxDistance = 200;
-controls.target.set(0, -8, 0);
-controls.update();
+const cameraControls = new OrbitControls(camera, canvas);
+cameraControls.enableDamping = true;
+cameraControls.minDistance = 5;
+cameraControls.maxDistance = 200;
+cameraControls.target.set(0, -8, 0);
+cameraControls.update();
 
-controls.addEventListener('start', () => {
+cameraControls.addEventListener('start', () => {
   isOrbitControlsActive = true;
 });
-controls.addEventListener('end', () => {
+cameraControls.addEventListener('end', () => {
   isOrbitControlsActive = false;
 });
 
-controls.touches = {
+cameraControls.touches = {
   ONE: null,
   TWO: THREE.TOUCH.DOLLY_PAN,
 };
@@ -169,7 +169,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 const animate = () => {
-  controls.update();
+  cameraControls.update();
 
   renderer.compute(computeParticles);
   renderer.render(scene, camera);
@@ -177,7 +177,48 @@ const animate = () => {
 
 renderer.setAnimationLoop(animate);
 
+// #region Example controls and cleanup
+export const controls = {
+  'gravity': {
+    initial: -0.00098,
+    min: -0.00098,
+    max: 0,
+    step: 0.0001,
+    onSliderChange: (value: number) => {
+      gravity.value = value;
+    },
+  },
+  'bounce': {
+    initial: 0.8,
+    min: 0.1,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      bounce.value = value;
+    },
+  },
+  'friction': {
+    initial: 0.99,
+    min: 0.96,
+    max: 0.99,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      friction.value = value;
+    },
+  },
+  'size': {
+    initial: 0.12,
+    min: 0.12,
+    max: 0.5,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      size.value = value;
+    },
+  },
+};
+
 export function onCleanup() {
-  resizeObserver.unobserve(canvas);
   renderer.dispose();
+  resizeObserver.unobserve(canvas);
 }
+// #endregion
