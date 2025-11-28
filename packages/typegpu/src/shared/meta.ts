@@ -10,7 +10,12 @@ export interface MetaData {
     body: Block;
     externalNames: string[];
   } | undefined;
-  externals?: Record<string, unknown> | undefined;
+  externals?:
+    // Passing a record happens prior to version 0.9.0
+    // TODO: Support for this can be removed down the line
+    | Record<string, unknown>
+    | (() => Record<string, unknown>)
+    | undefined;
 }
 
 /**

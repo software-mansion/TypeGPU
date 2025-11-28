@@ -176,7 +176,7 @@ describe('wgslGenerator', () => {
       [],
       {},
       d.u32,
-      astInfo.externals ?? {},
+      (astInfo.externals as () => Record<string, unknown>)() ?? {},
     );
 
     provideCtx(ctx, () => {
@@ -243,7 +243,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.u32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: return testUsage.value[3];
@@ -320,7 +320,7 @@ describe('wgslGenerator', () => {
         args,
         {},
         d.vec4f,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
@@ -478,7 +478,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.vec4u,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       wgslGenerator.initGenerator(ctx);
@@ -515,7 +515,7 @@ describe('wgslGenerator', () => {
         [snip('idx', d.u32, /* origin */ 'runtime')],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: return derivedV2f.value[idx];
@@ -559,7 +559,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.u32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const arr = [1, 2, 3]
@@ -656,7 +656,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
@@ -745,7 +745,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       wgslGenerator.initGenerator(ctx);
@@ -791,7 +791,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const value = testSlot.value.value;
