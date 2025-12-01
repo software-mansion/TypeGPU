@@ -1,7 +1,4 @@
-import {
-  getDeviceTextureFormatInfo,
-  textureFormats,
-} from './textureFormats.ts';
+import { getTextureFormatInfo } from './textureFormats.ts';
 import type { ExternalImageSource } from './texture.ts';
 
 export function getImageSourceDimensions(
@@ -81,7 +78,7 @@ export function generateTextureMipmaps(
   }
 
   const actualMipLevels = mipLevels ?? (texture.mipLevelCount - baseMipLevel);
-  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
+  const formatInfo = getTextureFormatInfo(texture.format);
 
   const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
     type === 'float' || type === 'unfilterable-float'
@@ -126,7 +123,7 @@ export function resampleImage(
     );
   }
 
-  const formatInfo = textureFormats[targetTexture.format];
+  const formatInfo = getTextureFormatInfo(targetTexture.format);
 
   const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
     type === 'float' || type === 'unfilterable-float'
@@ -153,7 +150,7 @@ function resampleWithRenderPipeline(
   image: ExternalImageSource,
   layer = 0,
 ) {
-  const formatInfo = textureFormats[targetTexture.format];
+  const formatInfo = getTextureFormatInfo(targetTexture.format);
   const canFilter = [...formatInfo.sampleTypes].includes('float');
 
   const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;
@@ -330,7 +327,7 @@ function generateMipmapLevel(
   dstMipLevel: number,
   layer?: number,
 ) {
-  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
+  const formatInfo = getTextureFormatInfo(texture.format);
   const canFilter = [...formatInfo.sampleTypes].includes('float');
 
   const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;

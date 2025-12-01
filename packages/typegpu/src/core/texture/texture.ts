@@ -12,9 +12,11 @@ import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
-import type {
-  TextureFormatInfo,
-  ViewDimensionToDimension,
+import {
+  getTextureFormatInfo,
+  type TextureFormatInfo,
+  type TextureFormats,
+  type ViewDimensionToDimension,
 } from './textureFormats.ts';
 import {
   $gpuValueOf,
@@ -32,7 +34,6 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
-import { type TextureFormats, textureFormats } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
 import {
@@ -134,7 +135,7 @@ function getDescriptorForProps<T extends TextureProps>(
 ): WgslTextureProps {
   return {
     dimension: (props.dimension ?? '2d') as Default<T['dimension'], '2d'>,
-    sampleType: textureFormats[props.format].channelType,
+    sampleType: getTextureFormatInfo(props.format).channelType,
     multisampled: !((props.sampleCount ?? 1) === 1) as Default<
       T['sampleCount'],
       1
@@ -289,7 +290,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
     const format = props.format as TProps['format'];
 
     this.#branch = branch;
-    this.#formatInfo = textureFormats[format];
+    this.#formatInfo = getTextureFormatInfo(format);
     this.#byteSize = (props.size[0] as number) *
       (props.size[1] ?? 1) *
       (props.size[2] ?? 1) *
