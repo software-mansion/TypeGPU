@@ -23,6 +23,12 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import { fromTSL, toTSL } from '@typegpu/three';
+import { randf } from '@typegpu/noise';
+
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
 let renderer: THREE.WebGPURenderer;
@@ -200,46 +206,62 @@ async function init() {
   const positionBuffer = instancedArray(count, 'vec3');
   const velocityBuffer = instancedArray(count, 'vec3');
 
-  const sphericalToVec3 = Fn(([phi, theta]) => {
-    const sinPhiRadius = sin(phi);
+  const sphericalToVec3 = (phi: number, theta: number) => {
+    'use gpu';
+    const sinPhiRadius = std.sin(phi);
 
-    return vec3(
-      sinPhiRadius.mul(sin(theta)),
-      cos(phi),
-      sinPhiRadius.mul(cos(theta)),
+    return d.vec3f(
+      sinPhiRadius * std.sin(theta),
+      std.cos(phi),
+      sinPhiRadius * std.cos(theta),
     );
-  });
+  };
 
   // init compute
 
-  const init = Fn(() => {
-    const position = positionBuffer.element(instanceIndex);
-    const velocity = velocityBuffer.element(instanceIndex);
-
-    const basePosition = vec3(
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-    ).sub(0.5).mul(vec3(5, 0.2, 5));
-    position.assign(basePosition);
-
-    const phi = hash(
-      instanceIndex.add(uint(Math.random() * 0xffffff)),
-    ).mul(PI).mul(2);
-    const theta = hash(
-      instanceIndex.add(uint(Math.random() * 0xffffff)),
-    ).mul(PI);
-    const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
-    velocity.assign(baseVelocity);
+  const instanceIndexAccessor = fromTSL(instanceIndex, { type: d.u32 });
+  const positionBufferAccessor = fromTSL(positionBuffer, {
+    type: d.arrayOf(d.vec3f),
+  });
+  const velocityBufferAccessor = fromTSL(velocityBuffer, {
+    type: d.arrayOf(d.vec3f),
   });
 
-  const initCompute = init().compute(count);
+  const basePositionAccessor = fromTSL(
+    vec3(
+      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
+      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
+      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
+    ),
+    { type: d.vec3f },
+  );
 
-  const reset = () => {
-    renderer.compute(initCompute);
-  };
+  const phiAccessor = fromTSL(
+    hash(instanceIndex.add(uint(Math.random() * 0xffffff))).mul(PI).mul(2),
+    { type: d.f32 },
+  );
 
-  reset();
+  const thetaAccessor = fromTSL(
+    hash(instanceIndex.add(uint(Math.random() * 0xffffff))).mul(PI),
+    { type: d.f32 },
+  );
+
+  const computeFn = toTSL(() => {
+    'use gpu';
+
+    const basePosition = basePositionAccessor.$.sub(0.5).mul(
+      d.vec3f(5, 0.2, 5),
+    );
+    positionBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(basePosition);
+
+    const phi = phiAccessor.$;
+    const theta = thetaAccessor.$;
+    const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
+    velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(baseVelocity);
+    return;
+  });
+
+  renderer.compute(computeFn.compute(count));
 
   // update compute
 
@@ -262,8 +284,7 @@ async function init() {
 
     Loop(attractorsLength, ({ i }) => {
       const attractorPosition = attractorsPositions.element(i);
-      const attractorRotationAxis = attractorsRotationAxes
-        .element(i);
+      const attractorRotationAxis = attractorsRotationAxes.element(i);
       const toAttractor = attractorPosition.sub(position);
       const distance = toAttractor.length();
       const direction = toAttractor.normalize();
