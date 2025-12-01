@@ -23,7 +23,11 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-let camera, scene, renderer, controls, updateCompute;
+let camera: THREE.PerspectiveCamera;
+let scene: THREE.Scene;
+let renderer: THREE.WebGPURenderer;
+let controls: OrbitControls;
+let updateCompute: THREE.TSL.ShaderNodeObject<THREE.ComputeNode>;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const canvasResizeContainer = canvas.parentElement
@@ -95,7 +99,6 @@ async function init() {
     attractorsPositions.array.length,
     'uint',
   );
-  const attractors = [];
   const helpersRingGeometry = new THREE.RingGeometry(
     1,
     1.02,
@@ -116,66 +119,62 @@ async function init() {
   });
 
   for (let i = 0; i < attractorsPositions.array.length; i++) {
-    const attractor = {};
-
-    attractor.position = attractorsPositions.array[i];
-    attractor.orientation = attractorsRotationAxes.array[i];
-    attractor.reference = new THREE.Object3D();
-    attractor.reference.position.copy(attractor.position);
-    attractor.reference.quaternion.setFromUnitVectors(
+    const position = attractorsPositions.array[i] as THREE.Vector3;
+    const orientation = attractorsRotationAxes.array[i] as THREE.Vector3;
+    const reference = new THREE.Object3D();
+    reference.position.copy(position);
+    reference.quaternion.setFromUnitVectors(
       new THREE.Vector3(0, 1, 0),
-      attractor.orientation,
+      orientation,
     );
-    scene.add(attractor.reference);
+    scene.add(reference);
 
-    attractor.helper = new THREE.Group();
-    attractor.helper.scale.setScalar(0.325);
-    attractor.reference.add(attractor.helper);
+    const helper = new THREE.Group();
+    helper.scale.setScalar(0.325);
+    reference.add(helper);
 
-    attractor.ring = new THREE.Mesh(
+    const ring = new THREE.Mesh(
       helpersRingGeometry,
       helpersMaterial,
     );
-    attractor.ring.rotation.x = -Math.PI * 0.5;
-    attractor.helper.add(attractor.ring);
+    ring.rotation.x = -Math.PI * 0.5;
+    helper.add(ring);
 
-    attractor.arrow = new THREE.Mesh(
+    const arrow = new THREE.Mesh(
       helpersArrowGeometry,
       helpersMaterial,
     );
-    attractor.arrow.position.x = 1;
-    attractor.arrow.position.z = 0.2;
-    attractor.arrow.rotation.x = Math.PI * 0.5;
-    attractor.helper.add(attractor.arrow);
+    arrow.position.x = 1;
+    arrow.position.z = 0.2;
+    arrow.rotation.x = Math.PI * 0.5;
+    helper.add(arrow);
 
-    attractor.controls = new TransformControls(
+    const attractorControls = new TransformControls(
       camera,
       renderer.domElement,
     );
-    attractor.controls.mode = 'rotate';
-    attractor.controls.size = 0.5;
-    attractor.controls.attach(attractor.reference);
-    attractor.controls.visible = true;
-    attractor.controls.enabled = attractor.controls.visible;
-    scene.add(attractor.controls.getHelper());
 
-    attractor.controls.addEventListener(
+    attractorControls.mode = 'rotate';
+    attractorControls.size = 0.5;
+    attractorControls.attach(reference);
+    attractorControls.enabled = true;
+    scene.add(attractorControls.getHelper());
+
+    attractorControls.addEventListener(
       'dragging-changed',
       (event) => {
         controls.enabled = !event.value;
       },
     );
 
-    attractor.controls.addEventListener('change', () => {
-      attractor.position.copy(attractor.reference.position);
-      attractor.orientation.copy(
+    attractorControls.addEventListener('change', () => {
+      position.copy(reference.position);
+      orientation.copy(
         new THREE.Vector3(0, 1, 0).applyQuaternion(
-          attractor.reference.quaternion,
+          reference.quaternion,
         ),
       );
     });
-
-    attractors.push(attractor);
   }
 
   // particles
