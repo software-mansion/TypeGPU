@@ -1,18 +1,13 @@
+/*
+ * Based on: https://github.com/mrdoob/three.js/blob/master/examples/webgpu_compute_geometry.html
+ */
 import * as THREE from 'three/webgpu';
-import {
-  attribute,
-  color,
-  Fn,
-  If,
-  instanceIndex,
-  objectWorldMatrix,
-  screenUV,
-  storage,
-  uniform,
-  vec4,
-} from 'three/tsl';
+import * as TSL from 'three/tsl';
 import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { fromTSL, toTSL } from '@typegpu/three';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
@@ -30,20 +25,25 @@ camera.position.set(0, 0, 1);
 const scene = new THREE.Scene();
 
 // top left is (0,0) - just recalling
-const bgColor = screenUV.y.mix(color(0x9f87f7), color(0xf2cdcd));
-const bgVignette = screenUV.distance(0.5).remapClamp(0.3, 0.8).oneMinus();
+const bgColor = TSL.screenUV.y.mix(TSL.color(0x9f87f7), TSL.color(0xf2cdcd));
+const bgVignette = TSL.screenUV.distance(0.5).remapClamp(0.3, 0.8).oneMinus();
 const bgIntensity = 4;
 scene.backgroundNode = bgColor.mul(
-  bgVignette.mul(color(0xa78ff6).mul(bgIntensity)),
+  bgVignette.mul(TSL.color(0xa78ff6).mul(bgIntensity)),
 );
 
-const pointerPosition = uniform(vec4(0));
-const elasticity = uniform(0.4); // elasticity ( how "strong" the spring is )
-const damping = uniform(0.94); // damping factor ( energy loss )
-const brushSize = uniform(0.25);
-const brushStrength = uniform(0.22);
+const pointerPosition = TSL.uniform(TSL.vec4(0));
+const elasticity = TSL.uniform(0.4);
+const damping = TSL.uniform(0.94);
+const brushSize = TSL.uniform(0.25);
+const brushStrength = TSL.uniform(0.22);
+const pointerPositionUniform = fromTSL(pointerPosition, { type: d.vec4f });
+const elasticityUniform = fromTSL(elasticity, { type: d.f32 });
+const dampingUniform = fromTSL(damping, { type: d.f32 });
+const brushSizeUniform = fromTSL(brushSize, { type: d.f32 });
+const brushStrengthUniform = fromTSL(brushStrength, { type: d.f32 });
 
-const jelly = Fn(({ renderer, geometry, object }) => {
+const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   const count = geometry.attributes.position.count;
 
   // Create storage buffer attribute for modified position.
@@ -59,40 +59,40 @@ const jelly = Fn(({ renderer, geometry, object }) => {
 
   // Attributes
 
-  const positionAttribute = storage(
+  const positionAttribute = TSL.storage(
     // @ts-ignore
     positionBaseAttribute,
     'vec3',
     count,
   );
-  const positionStorageAttribute = storage(
+  const positionStorageAttribute = TSL.storage(
     positionStorageBufferAttribute,
     'vec3',
     count,
   );
 
-  const speedAttribute = storage(speedBufferAttribute, 'vec3', count);
+  const speedAttribute = TSL.storage(speedBufferAttribute, 'vec3', count);
 
   // Vectors
 
   // Base vec3 position of the mesh vertices.
-  const basePosition = positionAttribute.element(instanceIndex);
+  const basePosition = positionAttribute.element(TSL.instanceIndex);
   // Mesh vertices after compute modification.
-  const currentPosition = positionStorageAttribute.element(instanceIndex);
+  const currentPosition = positionStorageAttribute.element(TSL.instanceIndex);
   // Speed of each mesh vertex.
-  const currentSpeed = speedAttribute.element(instanceIndex);
+  const currentSpeed = speedAttribute.element(TSL.instanceIndex);
 
-  const computeInit = Fn(() => {
+  const computeInit = TSL.Fn(() => {
     // Modified storage position starts out the same as the base position.
 
     currentPosition.assign(basePosition);
   })().compute(count);
 
-  const computeUpdate = Fn(() => {
+  const computeUpdate = TSL.Fn(() => {
     // pinch
 
-    If(pointerPosition.w.equal(1), () => {
-      const worldPosition = objectWorldMatrix(object).mul(currentPosition);
+    TSL.If(pointerPosition.w.equal(1), () => {
+      const worldPosition = TSL.objectWorldMatrix(object).mul(currentPosition);
 
       const dist = worldPosition.distance(pointerPosition.xyz);
       const direction = pointerPosition.xyz.sub(worldPosition).normalize();
@@ -130,7 +130,7 @@ new GLTFLoader().load(
   (gltf: GLTF) => {
     const material = new THREE.MeshNormalNodeMaterial();
     material.geometryNode = jelly() as unknown as () => THREE.Node;
-    material.positionNode = attribute('storagePosition'); // global
+    material.positionNode = TSL.attribute('storagePosition'); // global
 
     const mesh = gltf.scene.children[0] as THREE.Mesh;
     mesh.scale.setScalar(0.1);
