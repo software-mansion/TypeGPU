@@ -26,7 +26,15 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 let camera, scene, renderer, controls, updateCompute;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-console.log(canvas);
+const canvasResizeContainer = canvas.parentElement
+  ?.parentElement as HTMLDivElement;
+
+const getTargetSize = () => {
+  return [
+    canvasResizeContainer.clientWidth,
+    canvasResizeContainer.clientHeight,
+  ] as [number, number];
+};
 
 init();
 
@@ -59,10 +67,8 @@ async function init() {
 
   renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setAnimationLoop(animate);
   renderer.setClearColor('#000000');
-  document.body.appendChild(renderer.domElement);
 
   await renderer.init();
 
@@ -327,14 +333,25 @@ async function init() {
 }
 
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const targetSize = getTargetSize();
+
+  camera.aspect = targetSize[0] / targetSize[1];
   camera.updateProjectionMatrix();
 
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(...targetSize);
 }
 
 async function animate() {
   controls.update();
+
+  const targetSize = getTargetSize();
+  const rendererSize = renderer.getSize(new THREE.Vector2());
+  if (
+    targetSize[0] !== rendererSize.width ||
+    targetSize[1] !== rendererSize.height
+  ) {
+    onWindowResize();
+  }
 
   renderer.compute(updateCompute);
   renderer.render(scene, camera);
