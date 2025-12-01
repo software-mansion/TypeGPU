@@ -185,7 +185,7 @@ async function init() {
 
   // particles
 
-  const count = Math.pow(2, 18);
+  const count = 2 ** 18;
   const material = new THREE.SpriteNodeMaterial({
     blending: THREE.AdditiveBlending,
     depthWrite: false,
@@ -227,41 +227,22 @@ async function init() {
     type: d.arrayOf(d.vec3f),
   });
 
-  const basePositionAccessor = fromTSL(
-    vec3(
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-      hash(instanceIndex.add(uint(Math.random() * 0xffffff))),
-    ),
-    { type: d.vec3f },
-  );
-
-  const phiAccessor = fromTSL(
-    hash(instanceIndex.add(uint(Math.random() * 0xffffff))).mul(PI).mul(2),
-    { type: d.f32 },
-  );
-
-  const thetaAccessor = fromTSL(
-    hash(instanceIndex.add(uint(Math.random() * 0xffffff))).mul(PI),
-    { type: d.f32 },
-  );
-
-  const computeFn = toTSL(() => {
+  const initCompute = toTSL(() => {
     'use gpu';
+    randf.seed(instanceIndexAccessor.$ / count);
 
-    const basePosition = basePositionAccessor.$.sub(0.5).mul(
-      d.vec3f(5, 0.2, 5),
-    );
+    const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
+      .sub(0.5)
+      .mul(d.vec3f(5, 0.2, 5));
     positionBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(basePosition);
 
-    const phi = phiAccessor.$;
-    const theta = thetaAccessor.$;
+    const phi = randf.sample() * 2 * Math.PI;
+    const theta = randf.sample() * 2;
     const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
     velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(baseVelocity);
-    return;
   });
 
-  renderer.compute(computeFn.compute(count));
+  renderer.compute(initCompute.compute(count));
 
   // update compute
 
