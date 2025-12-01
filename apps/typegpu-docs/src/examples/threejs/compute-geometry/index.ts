@@ -11,7 +11,7 @@ import {
   uniform,
   vec4,
 } from 'three/tsl';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -31,17 +31,17 @@ const scene = new THREE.Scene();
 
 // top left is (0,0) - just recalling
 const bgColor = screenUV.y.mix(color(0x9f87f7), color(0xf2cdcd));
-const bgVignette = screenUV.distance(.5).remapClamp(0.3, .8).oneMinus();
+const bgVignette = screenUV.distance(0.5).remapClamp(0.3, 0.8).oneMinus();
 const bgIntensity = 4;
 scene.backgroundNode = bgColor.mul(
   bgVignette.mul(color(0xa78ff6).mul(bgIntensity)),
 );
 
 const pointerPosition = uniform(vec4(0));
-const elasticity = uniform(.4); // elasticity ( how "strong" the spring is )
-const damping = uniform(.94); // damping factor ( energy loss )
-const brushSize = uniform(.25);
-const brushStrength = uniform(.22);
+const elasticity = uniform(0.4); // elasticity ( how "strong" the spring is )
+const damping = uniform(0.94); // damping factor ( energy loss )
+const brushSize = uniform(0.25);
+const brushStrength = uniform(0.22);
 
 const jelly = Fn(({ renderer, geometry, object }) => {
   const count = geometry.attributes.position.count;
@@ -105,15 +105,17 @@ const jelly = Fn(({ renderer, geometry, object }) => {
     // compute ( jelly )
 
     const distance = basePosition.distance(currentPosition);
-    const force = elasticity.mul(distance).mul(
-      basePosition.sub(currentPosition),
-    );
+    const force = elasticity
+      .mul(distance)
+      .mul(basePosition.sub(currentPosition));
 
     currentSpeed.addAssign(force);
     currentSpeed.mulAssign(damping);
 
     currentPosition.addAssign(currentSpeed);
-  })().compute(count).setName('Update Jelly');
+  })()
+    .compute(count)
+    .setName('Update Jelly');
 
   // initialize the storage buffer with the base position
 
@@ -124,17 +126,14 @@ const jelly = Fn(({ renderer, geometry, object }) => {
 
 new GLTFLoader().load(
   '/TypeGPU/assets/threejs/compute-geometry/LeePerrySmith.glb',
-  function (gltf) {
+  // on successful load
+  (gltf: GLTF) => {
     const material = new THREE.MeshNormalNodeMaterial();
-    // @ts-ignore
-    material.geometryNode = jelly();
-    material.positionNode = attribute('storagePosition');
+    material.geometryNode = jelly() as unknown as () => THREE.Node;
+    material.positionNode = attribute('storagePosition'); // global
 
-    // apply the material to the mesh
-
-    const mesh = gltf.scene.children[0];
-    mesh.scale.setScalar(.1);
-    // @ts-ignore
+    const mesh = gltf.scene.children[0] as THREE.Mesh;
+    mesh.scale.setScalar(0.1);
     mesh.material = material;
     scene.add(mesh);
   },
@@ -170,9 +169,9 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-const controls = new OrbitControls(camera, canvas);
-controls.minDistance = .7;
-controls.maxDistance = 2;
+const orbitControls = new OrbitControls(camera, canvas);
+orbitControls.minDistance = 0.7;
+orbitControls.maxDistance = 2;
 
 function animate() {
   renderer.render(scene, camera);
@@ -180,11 +179,44 @@ function animate() {
 renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
-
-// gui.add(elasticity, 'value', 0, .5).name('elasticity');
-// gui.add(damping, 'value', .9, .98).name('damping');
-// gui.add(brushSize, 'value', .1, .5).name('brush size');
-// gui.add(brushStrength, 'value', .1, .3).name('brush strength');
+export const controls = {
+  elasticity: {
+    initial: 0.4,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      elasticity.value = value;
+    },
+  },
+  damping: {
+    initial: 0.94,
+    min: 0.9,
+    max: 0.98,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      damping.value = value;
+    },
+  },
+  'brush size': {
+    initial: 0.25,
+    min: 0.1,
+    max: 0.5,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      brushSize.value = value;
+    },
+  },
+  'brush strength': {
+    initial: 0.22,
+    min: 0.1,
+    max: 0.3,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      brushStrength.value = value;
+    },
+  },
+};
 
 export function onCleanup() {
   renderer.dispose();
