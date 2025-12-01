@@ -623,6 +623,9 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
           if (this.#descriptor?.arrayLayerCount !== undefined) {
             descriptor.arrayLayerCount = this.#descriptor.arrayLayerCount;
           }
+          if (this.#descriptor?.baseArrayLayer !== undefined) {
+            descriptor.baseArrayLayer = this.#descriptor.baseArrayLayer;
+          }
 
           this.#view = this.#baseTexture[$internal]
             .unwrap()
