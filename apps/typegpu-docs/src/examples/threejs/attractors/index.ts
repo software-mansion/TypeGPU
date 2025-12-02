@@ -11,7 +11,10 @@ import {
 } from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import {
+  TransformControls,
+  type TransformControlsMode,
+} from 'three/addons/controls/TransformControls.js';
 
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -111,7 +114,8 @@ const helpersMaterial = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
 });
 
-const attractors = [];
+const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] =
+  [];
 for (let i = 0; i < attractorsPositions.array.length; i++) {
   const position = attractorsPositions.array[i] as THREE.Vector3;
   const orientation = attractorsRotationAxes.array[i] as THREE.Vector3;
@@ -123,16 +127,16 @@ for (let i = 0; i < attractorsPositions.array.length; i++) {
   );
   scene.add(reference);
 
-  const helper = new THREE.Group();
-  helper.scale.setScalar(0.325);
-  reference.add(helper);
+  const arrowHelper = new THREE.Group();
+  arrowHelper.scale.setScalar(0.325);
+  reference.add(arrowHelper);
 
   const ring = new THREE.Mesh(
     helpersRingGeometry,
     helpersMaterial,
   );
   ring.rotation.x = -Math.PI * 0.5;
-  helper.add(ring);
+  arrowHelper.add(ring);
 
   const arrow = new THREE.Mesh(
     helpersArrowGeometry,
@@ -141,7 +145,7 @@ for (let i = 0; i < attractorsPositions.array.length; i++) {
   arrow.position.x = 1;
   arrow.position.z = 0.2;
   arrow.rotation.x = Math.PI * 0.5;
-  helper.add(arrow);
+  arrowHelper.add(arrow);
 
   const attractorControls = new TransformControls(
     camera,
@@ -169,6 +173,8 @@ for (let i = 0; i < attractorsPositions.array.length; i++) {
       ),
     );
   });
+
+  attractorsHelpers.push({ controls: attractorControls, arrow: arrowHelper });
 }
 
 // particles
@@ -378,6 +384,34 @@ async function animate() {
 // #region Example controls and cleanup
 
 export const controls = {
+  'Controls Mode': {
+    initial: 'translate',
+    options: [
+      'translate',
+      'rotate',
+      'none',
+    ],
+    onSelectChange: (value: string) => {
+      for (const { controls } of attractorsHelpers) {
+        if (value === 'none') {
+          controls.getHelper().visible = false;
+          controls.enabled = false;
+        } else {
+          controls.getHelper().visible = true;
+          controls.enabled = true;
+          controls.setMode(value as TransformControlsMode);
+        }
+      }
+    },
+  },
+  'Arrow visible': {
+    initial: true,
+    onToggleChange: (value: boolean) => {
+      for (const { arrow } of attractorsHelpers) {
+        arrow.visible = value;
+      }
+    },
+  },
   'Attractor Mass Exponent': {
     initial: 7,
     min: 1,
