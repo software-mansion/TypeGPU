@@ -2,7 +2,13 @@
  * Based on: https://threejs.org/examples/?q=tsl#webgpu_tsl_compute_attractors_particles
  */
 
-import * as THREE from 'three/webgpu';
+import { randf } from '@typegpu/noise';
+import { fromTSL, toTSL } from '@typegpu/three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {
+  TransformControls,
+  type TransformControlsMode,
+} from 'three/addons/controls/TransformControls.js';
 import {
   color,
   instancedArray,
@@ -10,29 +16,26 @@ import {
   uniform,
   uniformArray,
 } from 'three/tsl';
-
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {
-  TransformControls,
-  type TransformControlsMode,
-} from 'three/addons/controls/TransformControls.js';
-
+import * as THREE from 'three/webgpu';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { fromTSL, toTSL } from '@typegpu/three';
-import { randf } from '@typegpu/noise';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const canvasResizeContainer = canvas.parentElement
-  ?.parentElement as HTMLDivElement;
 
 const getTargetSize = () => {
+  const canvasResizeContainer = canvas.parentElement
+    ?.parentElement as HTMLDivElement;
+
   return [
     canvasResizeContainer.clientWidth,
     canvasResizeContainer.clientHeight,
   ] as [number, number];
 };
+
+const scene = new THREE.Scene();
+
+// camera
 
 const camera = new THREE.PerspectiveCamera(
   25,
@@ -42,8 +45,6 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(3, 5, 8);
 
-const scene = new THREE.Scene();
-
 // ambient light
 
 const ambientLight = new THREE.AmbientLight('#ffffff', 0.5);
@@ -51,10 +52,7 @@ scene.add(ambientLight);
 
 // directional light
 
-const directionalLight = new THREE.DirectionalLight(
-  '#ffffff',
-  1.5,
-);
+const directionalLight = new THREE.DirectionalLight('#ffffff', 1.5);
 directionalLight.position.set(4, 2, 0);
 scene.add(directionalLight);
 
@@ -66,6 +64,8 @@ renderer.setAnimationLoop(animate);
 renderer.setClearColor('#000000');
 
 await renderer.init();
+
+// attractor controls
 
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
@@ -86,10 +86,7 @@ const attractorsRotationAxes = uniformArray([
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(1, 0, -0.5).normalize(),
 ]);
-const attractorsLength = uniform(
-  attractorsPositions.array.length,
-  'uint',
-);
+const attractorsLength = uniform(attractorsPositions.array.length, 'uint');
 const helpersRingGeometry = new THREE.RingGeometry(
   1,
   1.02,
@@ -98,16 +95,8 @@ const helpersRingGeometry = new THREE.RingGeometry(
   0,
   Math.PI * 1.5,
 );
-const helpersArrowGeometry = new THREE.ConeGeometry(
-  0.1,
-  0.4,
-  12,
-  1,
-  false,
-);
-const helpersMaterial = new THREE.MeshBasicMaterial({
-  side: THREE.DoubleSide,
-});
+const helpersArrowGeometry = new THREE.ConeGeometry(0.1, 0.4, 12, 1, false);
+const helpersMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 
 const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] =
   [];
@@ -194,17 +183,6 @@ const colorB = uniform(color('#ffa575'));
 const positionBuffer = instancedArray(count, 'vec3');
 const velocityBuffer = instancedArray(count, 'vec3');
 
-const sphericalToVec3 = (phi: number, theta: number) => {
-  'use gpu';
-  const sinPhiRadius = std.sin(phi);
-
-  return d.vec3f(
-    sinPhiRadius * std.sin(theta),
-    std.cos(phi),
-    sinPhiRadius * std.cos(theta),
-  );
-};
-
 // typegpu accessors
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
@@ -238,6 +216,17 @@ const velocityBufferAttributeTA = fromTSL(velocityBuffer.toAttribute(), {
 });
 
 // init compute
+
+const sphericalToVec3 = (phi: number, theta: number) => {
+  'use gpu';
+  const sinPhiRadius = std.sin(phi);
+
+  return d.vec3f(
+    sinPhiRadius * std.sin(theta),
+    std.cos(phi),
+    sinPhiRadius * std.cos(theta),
+  );
+};
 
 const initCompute = toTSL(() => {
   'use gpu';
@@ -280,7 +269,6 @@ const update = toTSL(() => {
   let velocity = d.vec3f(velocityBufferTA.$[instanceIndexTA.$]);
 
   // force
-
   let force = d.vec3f();
 
   for (let i = d.u32(); i < attractorsLengthTA.$; i++) {
@@ -308,7 +296,6 @@ const update = toTSL(() => {
   }
 
   // velocity
-
   velocity = velocity.add(force.mul(delta));
   const speed = std.length(velocity);
   if (speed > maxSpeedTA.$) {
@@ -317,16 +304,13 @@ const update = toTSL(() => {
   velocity = velocity.mul(1 - velocityDampingTA.$);
 
   // position
-
   position = position.add(velocity.mul(delta));
 
   // box loop
-
   const halfHalfExtent = boundHalfExtentTA.$ / 2;
   position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtentTA.$).sub(
-      halfHalfExtent,
-    );
+    .mod(position.add(halfHalfExtent), boundHalfExtentTA.$)
+    .sub(halfHalfExtent);
 
   positionBufferTA.$[instanceIndexTA.$] = d.vec3f(position);
   velocityBufferTA.$[instanceIndexTA.$] = d.vec3f(velocity);
