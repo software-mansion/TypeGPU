@@ -24,10 +24,10 @@ const bounce = TSL.uniform(0.8);
 const friction = TSL.uniform(0.99);
 const size = TSL.uniform(0.12);
 const clickPosition = TSL.uniform(new THREE.Vector3());
-const gravityUniform = fromTSL(gravity, { type: d.f32 });
-const bounceUniform = fromTSL(bounce, { type: d.f32 });
-const frictionUniform = fromTSL(friction, { type: d.f32 });
-const clickPositionUniform = fromTSL(clickPosition, { type: d.vec3f });
+const gravityAccessor = fromTSL(gravity, { type: d.f32 });
+const bounceAccessor = fromTSL(bounce, { type: d.f32 });
+const frictionAccessor = fromTSL(friction, { type: d.f32 });
+const clickPositionAccessor = fromTSL(clickPosition, { type: d.vec3f });
 
 const camera = new THREE.PerspectiveCamera(
   50,
@@ -46,56 +46,60 @@ const separation = 0.2;
 const amount = Math.sqrt(particleCount);
 const offset = amount / 2;
 
-const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });
-const positionsBuffer = fromTSL(positions, { type: d.arrayOf(d.vec3f) });
-const colorsBuffer = fromTSL(colors, { type: d.arrayOf(d.vec3f) });
+const instanceIndexAccessor = fromTSL(TSL.instanceIndex, { type: d.u32 });
+const positionsAccessor = fromTSL(positions, { type: d.arrayOf(d.vec3f) });
+const colorsAccessor = fromTSL(colors, { type: d.arrayOf(d.vec3f) });
 
 const computeInit = toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndex.$;
-  const position = positionsBuffer.$[instanceIdx];
-  const color = colorsBuffer.$[instanceIdx];
+  const instanceIdx = instanceIndexAccessor.$;
+  const position = positionsAccessor.$[instanceIdx];
+  const color = colorsAccessor.$[instanceIdx];
 
   const x = instanceIdx % d.u32(amount);
   const z = instanceIdx / amount;
 
   position.x = (offset - d.f32(x)) * separation;
   position.z = (offset - d.f32(z)) * separation;
-  positionsBuffer.$[instanceIdx] = d.vec3f(position);
+  positionsAccessor.$[instanceIdx] = d.vec3f(position);
 
   randf.seed(d.f32(instanceIdx / amount));
   color.x = randf.sample();
   randf.seed(d.f32(instanceIdx / amount) + 2);
   color.y = randf.sample();
-  colorsBuffer.$[instanceIdx] = d.vec3f(color);
+  colorsAccessor.$[instanceIdx] = d.vec3f(color);
 }).compute(particleCount).setName('Init Particles TypeGPU');
 renderer.compute(computeInit);
 
-const velocitiesBuffer = fromTSL(velocities, { type: d.arrayOf(d.vec3f) });
-const computeParticles = toTSL(() => {
+const velocitiesAccessor = fromTSL(velocities, { type: d.arrayOf(d.vec3f) });
+const computeAccessor = toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndex.$;
-  let position = positionsBuffer.$[instanceIdx];
-  let velocity = velocitiesBuffer.$[instanceIdx];
+  const instanceIdx = instanceIndexAccessor.$;
+  let position = positionsAccessor.$[instanceIdx];
+  let velocity = velocitiesAccessor.$[instanceIdx];
 
-  velocity = velocity.add(d.vec3f(0, gravityUniform.$, 0));
+  velocity = velocity.add(d.vec3f(0, gravityAccessor.$, 0));
   position = position.add(velocity);
-  velocity = velocity.mul(frictionUniform.$);
+  velocity = velocity.mul(frictionAccessor.$);
 
   if (position.y < 0) {
     position.y = 0;
-    velocity.y = -velocity.y * bounceUniform.$;
+    velocity.y = -velocity.y * bounceAccessor.$;
     velocity = velocity.mul(d.vec3f(0.9, 1, 0.9));
   }
 
-  positionsBuffer.$[instanceIdx] = d.vec3f(position);
-  velocitiesBuffer.$[instanceIdx] = d.vec3f(velocity);
+  positionsAccessor.$[instanceIdx] = d.vec3f(position);
+  velocitiesAccessor.$[instanceIdx] = d.vec3f(velocity);
 }).compute(particleCount).setName('Update Particles TypeGPU');
 
 const material = new THREE.SpriteNodeMaterial();
 material.colorNode = toTSL(() => {
   'use gpu';
-  return d.vec4f(uv().$.mul(colorsBuffer.$[instanceIndex.$].xy), 0, 1);
+  return d.vec4f(
+    uv().$.mul(colorsAccessor.$[instanceIndexAccessor.$].xy),
+    0,
+    1,
+  );
 });
 material.positionNode = positions.toAttribute();
 material.scaleNode = size;
@@ -125,12 +129,12 @@ const pointer = new THREE.Vector2();
 
 const computeHit = toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndex.$;
-  const position = positionsBuffer.$[instanceIdx];
-  let velocity = velocitiesBuffer.$[instanceIdx];
+  const instanceIdx = instanceIndexAccessor.$;
+  const position = positionsAccessor.$[instanceIdx];
+  let velocity = velocitiesAccessor.$[instanceIdx];
 
-  const dist = std.distance(position, clickPositionUniform.$);
-  const dir = std.normalize(position.sub(clickPositionUniform.$));
+  const dist = std.distance(position, clickPositionAccessor.$);
+  const dir = std.normalize(position.sub(clickPositionAccessor.$));
   const distArea = std.max(0, 3 - dist);
 
   const power = distArea * 0.01;
@@ -138,7 +142,7 @@ const computeHit = toTSL(() => {
   const relativePower = power * (1.5 * randf.sample() + 0.5);
 
   velocity = velocity.add(dir.mul(relativePower));
-  velocitiesBuffer.$[instanceIdx] = d.vec3f(velocity);
+  velocitiesAccessor.$[instanceIdx] = d.vec3f(velocity);
 }).compute(particleCount).setName('Hit Particles TypeGPU');
 
 function onMove(event: PointerEvent) {
@@ -195,7 +199,7 @@ resizeObserver.observe(canvas);
 const animate = () => {
   cameraControls.update();
 
-  renderer.compute(computeParticles);
+  renderer.compute(computeAccessor);
   renderer.render(scene, camera);
 };
 
