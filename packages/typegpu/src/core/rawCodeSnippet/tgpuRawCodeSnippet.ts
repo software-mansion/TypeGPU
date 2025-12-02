@@ -22,10 +22,14 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 /**
 <<<<<<< HEAD
+<<<<<<< HEAD
  * Extra declaration that shall be included in final WGSL code,
 =======
  * Extra declaration that will be included in final WGSL code
 >>>>>>> main
+=======
+ * Extra declaration that will be included in final WGSL code
+>>>>>>> feat/three-compute-particles
  * when resolving objects that use it.
  */
 export interface TgpuRawCodeSnippet<TDataType extends AnyData> {
@@ -92,11 +96,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
   type: TDataType,
   origin: RawCodeSnippetOrigin | undefined = 'runtime',
 ): TgpuRawCodeSnippet<TDataType> {
-<<<<<<< HEAD
-  return new TgpuRawCodeSnippetImpl(expression, type, 'runtime');
-=======
   return new TgpuRawCodeSnippetImpl(expression, type, origin);
->>>>>>> main
 }
 
 // --------------
