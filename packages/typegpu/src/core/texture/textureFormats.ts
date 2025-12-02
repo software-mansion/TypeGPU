@@ -169,3 +169,17 @@ function parseSampleTypes(format: string): readonly GPUTextureSampleType[] {
   if (format.includes('snorm')) return ['float', 'unfilterable-float'];
   return ['float', 'unfilterable-float'];
 }
+
+const FLOAT32_FORMATS = new Set(['r32float', 'rg32float', 'rgba32float']);
+
+export function getEffectiveSampleTypes(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+): readonly GPUTextureSampleType[] {
+  if (
+    FLOAT32_FORMATS.has(format) && !device.features.has('float32-filterable')
+  ) {
+    return ['unfilterable-float'];
+  }
+  return getTextureFormatInfo(format).sampleTypes;
+}

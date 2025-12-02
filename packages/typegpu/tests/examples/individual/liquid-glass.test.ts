@@ -29,26 +29,20 @@ describe('liquid-glass example', () => {
       }
 
       @vertex
-      fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-        let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        var output: VertexOutput;
-        output.pos = vec4f(pos[vertexIndex], 0, 1);
-        output.uv = uv[vertexIndex];
-        return output;
+      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
+        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
       }
-            
 
 
-      @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-      @group(0) @binding(1) var inputSampler: sampler;
+      @group(0) @binding(0) var src: texture_2d<f32>;
+      @group(0) @binding(1) var samp: sampler;
 
       @fragment
       fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(inputTexture, inputSampler, uv);
+        return textureSample(src, samp, uv);
       }
-            
 
       struct fullScreenTriangle_Input_1 {
         @builtin(vertex_index) vertexIndex: u32,

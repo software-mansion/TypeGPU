@@ -8,7 +8,11 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { WgslTexture } from '../../data/texture.ts';
+import type {
+  WgslTexture,
+  WgslTextureDepth2d,
+  WgslTextureDepthMultisampled2d,
+} from '../../data/texture.ts';
 import {
   type AnyWgslData,
   type Decorated,
@@ -51,7 +55,9 @@ import type { TgpuSlot } from '../slot/slotTypes.ts';
 import {
   isTexture,
   isTextureView,
+  type TextureInternals,
   type TgpuTexture,
+  type TgpuTextureRenderView,
   type TgpuTextureView,
 } from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
@@ -165,15 +171,22 @@ export type AnyFragmentTargets =
   | GPUColorTargetState
   | Record<string, GPUColorTargetState>;
 
+interface ColorTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: GPUTextureFormat };
+}
+
 export interface ColorAttachment {
   /**
    * A {@link GPUTextureView} describing the texture subresource that will be output to for this
    * color attachment.
    */
   view:
-    | (TgpuTexture & RenderFlag)
+    | (ColorTextureConstraint & RenderFlag)
     | GPUTextureView
-    | TgpuTextureView<WgslTexture>;
+    | TgpuTextureView<WgslTexture>
+    | TgpuTextureRenderView;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -207,20 +220,26 @@ export interface ColorAttachment {
   storeOp: GPUStoreOp;
 }
 
+export type DepthStencilFormat =
+  | 'depth24plus'
+  | 'depth24plus-stencil8'
+  | 'depth32float';
+
+interface DepthStencilTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: DepthStencilFormat };
+}
+
 export interface DepthStencilAttachment {
   /**
    * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
   view:
-    | (
-      & TgpuTexture<{
-        size: [number, number];
-        format: 'depth24plus' | 'depth24plus-stencil8' | 'depth32float';
-        sampleCount?: number;
-      }>
-      & RenderFlag
-    )
+    | (DepthStencilTextureConstraint & RenderFlag)
+    | TgpuTextureView<WgslTextureDepth2d | WgslTextureDepthMultisampled2d>
+    | TgpuTextureRenderView
     | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
