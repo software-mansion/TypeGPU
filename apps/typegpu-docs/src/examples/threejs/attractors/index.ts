@@ -1,22 +1,12 @@
 import * as THREE from 'three/webgpu';
 import {
   color,
-  cos,
-  float,
   Fn,
-  hash,
-  If,
   instancedArray,
   instanceIndex,
-  Loop,
   mix,
-  mod,
-  PI,
-  sin,
-  uint,
   uniform,
   uniformArray,
-  vec3,
   vec4,
 } from 'three/tsl';
 
@@ -191,12 +181,12 @@ const material = new THREE.SpriteNodeMaterial({
 const attractorMass = uniform(Number(`1e${7}`));
 const particleGlobalMass = uniform(Number(`1e${4}`));
 const timeScale = 1;
-const spinningStrength = 2.75;
-const maxSpeed = 8;
+const spinningStrength = uniform(2.75);
+const maxSpeed = uniform(8);
 const gravityConstant = 6.67e-11;
-const velocityDamping = 0.1;
+const velocityDamping = uniform(0.1);
 const scale = uniform(0.008);
-const boundHalfExtent = 8;
+const boundHalfExtent = uniform(8);
 const colorA = uniform(color('#5900ff'));
 const colorB = uniform(color('#ffa575'));
 
@@ -256,6 +246,10 @@ const particleGlobalMassAccessor = fromTSL(particleGlobalMass, {
   type: d.f32,
 });
 const attractorMassAccessor = fromTSL(attractorMass, { type: d.f32 });
+const maxSpeedAccessor = fromTSL(maxSpeed, { type: d.f32 });
+const velocityDampingAccessor = fromTSL(velocityDamping, { type: d.f32 });
+const spinningStrengthAccessor = fromTSL(spinningStrength, { type: d.f32 });
+const boundHalfExtentAccessor = fromTSL(boundHalfExtent, { type: d.f32 });
 
 const getParticleMassMultiplier = () => {
   'use gpu';
@@ -300,7 +294,7 @@ const update = toTSL(() => {
     // spinning
     const spinningForce = attractorRotationAxis
       .mul(gravityStrength)
-      .mul(spinningStrength);
+      .mul(spinningStrengthAccessor.$);
     const spinningVelocity = std.cross(spinningForce, toAttractor);
     force = force.add(spinningVelocity);
   }
@@ -309,10 +303,10 @@ const update = toTSL(() => {
 
   velocity = velocity.add(force.mul(delta));
   const speed = std.length(velocity);
-  if (speed > maxSpeed) {
-    velocity = std.normalize(velocity).mul(maxSpeed);
+  if (speed > maxSpeedAccessor.$) {
+    velocity = std.normalize(velocity).mul(maxSpeedAccessor.$);
   }
-  velocity = velocity.mul(1 - velocityDamping);
+  velocity = velocity.mul(1 - velocityDampingAccessor.$);
 
   // position
 
@@ -320,9 +314,11 @@ const update = toTSL(() => {
 
   // box loop
 
-  const halfHalfExtent = boundHalfExtent / 2;
+  const halfHalfExtent = boundHalfExtentAccessor.$ / 2;
   position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtent).sub(halfHalfExtent);
+    .mod(position.add(halfHalfExtent), boundHalfExtentAccessor.$).sub(
+      halfHalfExtent,
+    );
 
   positionBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(position);
   velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(velocity);
@@ -383,11 +379,65 @@ async function animate() {
 export const controls = {
   'Attractor Mass Exponent': {
     initial: 7,
-    min: 0,
+    min: 1,
     max: 10,
     step: 1,
     onSliderChange: (newValue: number) => {
       attractorMass.value = Number(`1e${newValue}`);
+    },
+  },
+  'Particle Global Mass Exponent': {
+    initial: 4,
+    min: 1,
+    max: 10,
+    step: 1,
+    onSliderChange: (newValue: number) => {
+      particleGlobalMass.value = Number(`1e${newValue}`);
+    },
+  },
+  'Max Speed': {
+    initial: 8,
+    min: 0,
+    max: 10,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      maxSpeed.value = newValue;
+    },
+  },
+  'Velocity Damping': {
+    initial: 0.1,
+    min: 0,
+    max: 0.1,
+    step: 0.001,
+    onSliderChange: (newValue: number) => {
+      velocityDamping.value = newValue;
+    },
+  },
+  'Spinning Strength': {
+    initial: 2.75,
+    min: 0,
+    max: 10,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      spinningStrength.value = newValue;
+    },
+  },
+  'Scale': {
+    initial: 0.008,
+    min: 0,
+    max: 0.1,
+    step: 0.001,
+    onSliderChange: (newValue: number) => {
+      scale.value = newValue;
+    },
+  },
+  'Bound Half Extent': {
+    initial: 8,
+    min: 0,
+    max: 20,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      boundHalfExtent.value = newValue;
     },
   },
 };
