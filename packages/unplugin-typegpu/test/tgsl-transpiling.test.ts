@@ -179,6 +179,48 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       }) && $.f)({}));"
     `);
   });
+
+  it('correctly lists "this" in externals', () => {
+    const code = `
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(() => {
+          return this.myBuffer.$;
+        });
+      }
+
+      const myController = new MyController();
+
+      console.log(tgpu.resolve([myController.myFn]));`;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+      const root = await tgpu.init();
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          return this.myBuffer.$;
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[],"body":[0,[[10,[7,[7,"this","myBuffer"],"$"]]]],"externalNames":["this"]},
+          externals: () => {
+            return {
+              this: this
+            };
+          }
+        }) && $.f)({}));
+      }
+      const myController = new MyController();
+      console.log(tgpu.resolve([myController.myFn]));"
+    `);
+  });
 });
 
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
@@ -289,6 +331,49 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       import * as d from 'typegpu/data';
 
       tgpu.x()(d.arrayOf(d.u32));
+      "
+    `);
+  });
+
+  it('correctly lists "this" in externals', async () => {
+    const code = `
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        myBuffer = root.createUniform(d.u32);
+        myFn = tgpu.fn([], d.u32)(() => {
+          return this.myBuffer.$;
+        });
+      }
+
+      const myController = new MyController();
+
+      console.log(tgpu.resolve([myController.myFn]));`;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+            class MyController {
+              myBuffer = root.createUniform(d.u32);
+              myFn = tgpu.fn([], d.u32)((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                return this.myBuffer.$;
+              }), {
+                    v: 1,
+                    name: undefined,
+                    ast: {"params":[],"body":[0,[[10,[7,[7,"this","myBuffer"],"$"]]]],"externalNames":["this"]},
+                    externals: () => ({"this": this}),
+                  }) && $.f)({})));
+            }
+
+            const myController = new MyController();
+
+            console.log(tgpu.resolve([myController.myFn]));
       "
     `);
   });

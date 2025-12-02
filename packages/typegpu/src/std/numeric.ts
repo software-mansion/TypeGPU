@@ -14,7 +14,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { snip } from '../data/snippet.ts';
+import { snip, Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -56,6 +56,45 @@ import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
+// helpers
+
+const unaryIdentitySignature = (arg: AnyData) => {
+  return {
+    argTypes: [arg],
+    returnType: arg,
+  };
+};
+
+const variadicUnifySignature = (...args: AnyData[]) => {
+  const uargs = unify(args) ?? args;
+  return ({
+    argTypes: uargs,
+    returnType: uargs[0] as AnyData,
+  });
+};
+
+function variadicReduce<T>(fn: (a: T, b: T) => T) {
+  return (fst: T, ...rest: T[]): T => {
+    let acc = fst;
+    for (const r of rest) {
+      acc = fn(acc, r);
+    }
+    return acc;
+  };
+}
+
+function variadicStitch(wrapper: string) {
+  return (fst: Snippet, ...rest: Snippet[]): string => {
+    let acc = stitch`${fst}`;
+    for (const r of rest) {
+      acc = stitch`${wrapper}(${acc}, ${r})`;
+    }
+    return acc;
+  };
+}
+
+// std
+
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
@@ -64,13 +103,6 @@ function cpuAbs<T extends NumVec | number>(value: T): T {
   }
   return VectorOps.abs[value.kind](value) as T;
 }
-
-const unaryIdentitySignature = (arg: AnyData) => {
-  return {
-    argTypes: [arg],
-    returnType: arg,
-  };
-};
 
 export const abs = dualImpl({
   name: 'abs',
@@ -231,10 +263,7 @@ function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
 
 export const clamp = dualImpl({
   name: 'clamp',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return { argTypes: uargs, returnType: uargs[0] };
-  },
+  signature: variadicUnifySignature,
   normalImpl: cpuClamp,
   codegenImpl: (value, low, high) => stitch`clamp(${value}, ${low}, ${high})`,
 });
@@ -767,17 +796,16 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   return VectorOps.max[a.kind](a, b as NumVec) as T;
 }
 
+type VariadicOverload = {
+  (fst: number, ...rest: number[]): number;
+  <T extends NumVec>(fst: T, ...rest: T[]): T;
+};
+
 export const max = dualImpl({
   name: 'max',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
-  normalImpl: cpuMax,
-  codegenImpl: (a, b) => stitch`max(${a}, ${b})`,
+  signature: variadicUnifySignature,
+  normalImpl: variadicReduce(cpuMax) as VariadicOverload,
+  codegenImpl: variadicStitch('max'),
 });
 
 function cpuMin(a: number, b: number): number;
@@ -791,15 +819,9 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
 
 export const min = dualImpl({
   name: 'min',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
-  normalImpl: cpuMin,
-  codegenImpl: (a, b) => stitch`min(${a}, ${b})`,
+  signature: variadicUnifySignature,
+  normalImpl: variadicReduce(cpuMin) as VariadicOverload,
+  codegenImpl: variadicStitch('min'),
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
@@ -828,13 +850,7 @@ function cpuMix<T extends AnyFloatVecInstance | number>(
 
 export const mix = dualImpl({
   name: 'mix',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: uargs[0],
-    });
-  },
+  signature: variadicUnifySignature,
   normalImpl: cpuMix,
   codegenImpl: (e1, e2, e3) => stitch`mix(${e1}, ${e2}, ${e3})`,
 });
