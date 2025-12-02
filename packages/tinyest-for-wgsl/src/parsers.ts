@@ -143,6 +143,11 @@ const Transpilers: Partial<
     return node.name;
   },
 
+  ThisExpression(ctx) {
+    ctx.externalNames.add('this');
+    return 'this';
+  },
+
   BinaryExpression(ctx, node) {
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;

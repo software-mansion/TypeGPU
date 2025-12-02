@@ -145,12 +145,13 @@ const resourceConstructors: string[] = [
   // tgpu
   'bindGroupLayout',
   'vertexLayout',
-  // tgpu['~unstable']
-  'slot',
-  'accessor',
   'privateVar',
   'workgroupVar',
   'const',
+  // tgpu['~unstable']
+  'slot',
+  'accessor',
+  'comptime',
   ...fnShellFunctionNames,
   // d
   'struct',
