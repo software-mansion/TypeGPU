@@ -109,7 +109,7 @@ export class PointLight {
 
       pipeline
         .withDepthStencilAttachment({
-          view: this.#root.unwrap(view),
+          view,
           depthClearValue: 1,
           depthLoadOp: 'clear',
           depthStoreOp: 'store',

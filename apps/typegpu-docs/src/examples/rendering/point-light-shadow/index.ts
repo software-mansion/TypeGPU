@@ -439,7 +439,7 @@ function render(timestamp: number) {
     })
     .withColorAttachment({
       resolveTarget: context.getCurrentTexture().createView(),
-      view: root.unwrap(msaaTexture).createView(),
+      view: msaaTexture,
       loadOp: 'load',
       storeOp: 'store',
     })

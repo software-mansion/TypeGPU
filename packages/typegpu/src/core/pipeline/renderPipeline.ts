@@ -572,17 +572,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       ),
     };
 
-    if (internals.priors.depthStencilAttachment !== undefined) {
-      const attachment = internals.priors.depthStencilAttachment;
-      if (isTexture(attachment.view)) {
-        renderPassDescriptor.depthStencilAttachment = {
-          ...attachment,
-          view: branch.unwrap(attachment.view).createView(),
-        };
-      } else {
-        renderPassDescriptor.depthStencilAttachment =
-          attachment as GPURenderPassDepthStencilAttachment;
-      }
+    const depthStencil = internals.priors.depthStencilAttachment;
+    if (depthStencil !== undefined) {
+      const view = isTexture(depthStencil.view)
+        ? branch.unwrap(depthStencil.view).createView()
+        : isTextureView(depthStencil.view)
+        ? branch.unwrap(depthStencil.view)
+        : depthStencil.view;
+
+      renderPassDescriptor.depthStencilAttachment = {
+        ...depthStencil,
+        view,
+      } as GPURenderPassDepthStencilAttachment;
     }
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
