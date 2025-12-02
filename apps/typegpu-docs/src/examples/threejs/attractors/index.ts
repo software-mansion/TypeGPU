@@ -238,7 +238,8 @@ const initCompute = toTSL(() => {
   velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(baseVelocity);
 });
 
-renderer.compute(initCompute.compute(count));
+const reset = () => renderer.compute(initCompute.compute(count));
+reset();
 
 // update compute
 
@@ -486,6 +487,9 @@ export const controls = {
     onColorChange: (newValue: [number, number, number]) => {
       colorB.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
+  },
+  'Reset Particles': {
+    onButtonClick: reset,
   },
 };
 
