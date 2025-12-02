@@ -24,7 +24,6 @@ camera.position.set(0, 0, 1);
 
 const scene = new THREE.Scene();
 
-// top left is (0,0) - just recalling
 const bgColor = TSL.screenUV.y.mix(TSL.color(0x9f87f7), TSL.color(0xf2cdcd));
 const bgVignette = TSL.screenUV.distance(0.5).remapClamp(0.3, 0.8).oneMinus();
 const bgIntensity = 4;
@@ -37,86 +36,100 @@ const elasticity = TSL.uniform(0.4);
 const damping = TSL.uniform(0.94);
 const brushSize = TSL.uniform(0.25);
 const brushStrength = TSL.uniform(0.22);
-const pointerPositionUniform = fromTSL(pointerPosition, { type: d.vec4f });
-const elasticityUniform = fromTSL(elasticity, { type: d.f32 });
-const dampingUniform = fromTSL(damping, { type: d.f32 });
-const brushSizeUniform = fromTSL(brushSize, { type: d.f32 });
-const brushStrengthUniform = fromTSL(brushStrength, { type: d.f32 });
+const pointerPositionAccessor = fromTSL(pointerPosition, { type: d.vec4f });
+const elasticityAccessor = fromTSL(elasticity, { type: d.f32 });
+const dampingAccessor = fromTSL(damping, { type: d.f32 });
+const brushSizeAccessor = fromTSL(brushSize, { type: d.f32 });
+const brushStrengthAccessor = fromTSL(brushStrength, { type: d.f32 });
 
 const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   const count = geometry.attributes.position.count;
 
-  // Create storage buffer attribute for modified position.
-
-  const positionBaseAttribute = geometry.attributes.position;
   const positionStorageBufferAttribute = new THREE.StorageBufferAttribute(
     count,
     3,
   );
-  const speedBufferAttribute = new THREE.StorageBufferAttribute(count, 3);
-
   geometry.setAttribute('storagePosition', positionStorageBufferAttribute);
 
-  // Attributes
-
-  const positionAttribute = TSL.storage(
-    positionBaseAttribute as THREE.BufferAttribute,
-    'vec3',
-    count,
+  const instanceIndexAccessor = fromTSL(TSL.instanceIndex, { type: d.u32 });
+  const basePositionAccessor = fromTSL(
+    TSL.storage(
+      geometry.attributes.position as THREE.BufferAttribute,
+      'vec3',
+      count,
+    ),
+    {
+      type: d.arrayOf(d.vec3f),
+    },
   );
-  const positionStorageAttribute = TSL.storage(
-    positionStorageBufferAttribute,
-    'vec3',
-    count,
+  const positionAccessor = fromTSL(
+    TSL.storage(
+      positionStorageBufferAttribute,
+      'vec3',
+      count,
+    ),
+    {
+      type: d.arrayOf(d.vec3f),
+    },
+  );
+  const speedAccessor = fromTSL(
+    TSL.storage(
+      new THREE.StorageBufferAttribute(count, 3),
+      'vec3',
+      count,
+    ),
+    {
+      type: d.arrayOf(d.vec3f),
+    },
   );
 
-  const speedAttribute = TSL.storage(speedBufferAttribute, 'vec3', count);
+  const computeInit = toTSL(() => {
+    'use gpu';
+    positionAccessor.$[instanceIndexAccessor.$] =
+      basePositionAccessor.$[instanceIndexAccessor.$];
+  }).compute(count).setName('Init Mesh');
 
-  // Vectors
+  const modelMatrixAccessor = fromTSL(TSL.objectWorldMatrix(object), {
+    type: d.mat4x4f,
+  });
 
-  // Base vec3 position of the mesh vertices.
-  const basePosition = positionAttribute.element(TSL.instanceIndex);
-  // Mesh vertices after compute modification.
-  const currentPosition = positionStorageAttribute.element(TSL.instanceIndex);
-  // Speed of each mesh vertex.
-  const currentSpeed = speedAttribute.element(TSL.instanceIndex);
+  const computeUpdate = toTSL(() => {
+    'use gpu';
+    const instanceIdx = instanceIndexAccessor.$;
+    const basePosition = basePositionAccessor.$[instanceIdx];
+    let position = positionAccessor.$[instanceIdx];
 
-  const computeInit = TSL.Fn(() => {
-    // Modified storage position starts out the same as the base position.
+    if (pointerPositionAccessor.$.w === 1) {
+      const worldPosition = modelMatrixAccessor.$.mul(
+        d.vec4f(position, 1),
+      ).xyz;
+      const dist = std.distance(worldPosition, pointerPositionAccessor.$.xyz);
+      const direction = std.normalize(
+        pointerPositionAccessor.$.xyz.sub(worldPosition),
+      );
+      const power = std.max(brushSizeAccessor.$ - dist, 0) *
+        brushStrengthAccessor.$;
 
-    currentPosition.assign(basePosition);
-  })().compute(count);
+      positionAccessor.$[instanceIndexAccessor.$] = position.add(
+        direction.mul(power),
+      );
+      position = positionAccessor.$[instanceIdx];
+    }
 
-  const computeUpdate = TSL.Fn(() => {
-    // pinch
+    const dist = std.distance(
+      basePosition,
+      position,
+    );
+    const force = basePosition
+      .sub(position)
+      .mul(elasticityAccessor.$ * dist);
+    const speed = speedAccessor.$[instanceIdx]
+      .add(force)
+      .mul(dampingAccessor.$);
 
-    TSL.If(pointerPosition.w.equal(1), () => {
-      const worldPosition = TSL.objectWorldMatrix(object).mul(currentPosition);
-
-      const dist = worldPosition.distance(pointerPosition.xyz);
-      const direction = pointerPosition.xyz.sub(worldPosition).normalize();
-
-      const power = brushSize.sub(dist).max(0).mul(brushStrength);
-
-      currentPosition.addAssign(direction.mul(power));
-    });
-
-    // compute ( jelly )
-
-    const distance = basePosition.distance(currentPosition);
-    const force = elasticity
-      .mul(distance)
-      .mul(basePosition.sub(currentPosition));
-
-    currentSpeed.addAssign(force);
-    currentSpeed.mulAssign(damping);
-
-    currentPosition.addAssign(currentSpeed);
-  })()
-    .compute(count)
-    .setName('Update Jelly');
-
-  // initialize the storage buffer with the base position
+    speedAccessor.$[instanceIdx] = d.vec3f(speed);
+    positionAccessor.$[instanceIdx] = position.add(speed);
+  }).compute(count).setName('Update Jelly');
 
   computeUpdate.onInit(() => renderer.compute(computeInit));
 
