@@ -191,15 +191,15 @@ async function init() {
     depthWrite: false,
   });
 
-  const attractorMass = uniform(Number(`1e${7}`));
+  const attractorMass = 1e7;
   const particleGlobalMass = uniform(Number(`1e${4}`));
-  const timeScale = uniform(1);
-  const spinningStrength = uniform(2.75);
-  const maxSpeed = uniform(8);
+  const timeScale = 1;
+  const spinningStrength = 2.75;
+  const maxSpeed = 8;
   const gravityConstant = 6.67e-11;
-  const velocityDamping = uniform(0.1);
+  const velocityDamping = 0.1;
   const scale = uniform(0.008);
-  const boundHalfExtent = uniform(8);
+  const boundHalfExtent = 8;
   const colorA = uniform(color('#5900ff'));
   const colorB = uniform(color('#ffa575'));
 
@@ -248,6 +248,13 @@ async function init() {
 
   // update compute
 
+  const attractorsPositionsAccess = fromTSL(attractorsPositions, {
+    type: d.arrayOf(d.vec3f),
+  });
+  const attractorsRotationAxesAccess = fromTSL(attractorsRotationAxes, {
+    type: d.arrayOf(d.vec3f),
+  });
+  const attractorsLengthAccess = fromTSL(attractorsLength, { type: d.u32 });
   const particleGlobalMassAccessor = fromTSL(particleGlobalMass, {
     type: d.f32,
   });
@@ -266,61 +273,64 @@ async function init() {
     return getParticleMassMultiplier() * particleGlobalMassAccessor.$;
   };
 
-  const update = Fn(() => {
-    // const delta = timerDelta().mul( timeScale ).min( 1 / 30 ).toVar();
-    const delta = float(1 / 60).mul(timeScale).toVar(); // uses fixed delta to consistent result
-    const position = positionBuffer.element(instanceIndex);
-    const velocity = velocityBuffer.element(instanceIndex);
+  const update = toTSL(() => {
+    'use gpu';
+    const delta = 1 / 60 * timeScale;
+    let position = d.vec3f(positionBufferAccessor.$[instanceIndexAccessor.$]);
+    let velocity = d.vec3f(velocityBufferAccessor.$[instanceIndexAccessor.$]);
 
     // force
 
-    const force = vec3(0).toVar();
+    let force = d.vec3f();
 
-    Loop(attractorsLength, ({ i }) => {
-      const attractorPosition = attractorsPositions.element(i);
-      const attractorRotationAxis = attractorsRotationAxes.element(i);
+    for (let i = d.u32(); i < attractorsLengthAccess.$; i++) {
+      const attractorPosition = attractorsPositionsAccess.$[i].xyz;
+      const attractorRotationAxis = attractorsRotationAxesAccess.$[i].xyz;
+
       const toAttractor = attractorPosition.sub(position);
-      const distance = toAttractor.length();
-      const direction = toAttractor.normalize();
+      const distance = std.length(toAttractor);
+      const direction = std.normalize(toAttractor);
 
       // gravity
-      const gravityStrength = attractorMass.mul(toTSL(getParticleMass)).mul(
-        gravityConstant,
-      ).div(distance.pow(2)).toVar();
+      const gravityStrength = attractorMass *
+        getParticleMass() *
+        gravityConstant /
+        (distance ** 2);
       const gravityForce = direction.mul(gravityStrength);
-      force.addAssign(gravityForce);
+      force = force.add(gravityForce);
 
       // spinning
-      const spinningForce = attractorRotationAxis.mul(
-        gravityStrength,
-      ).mul(spinningStrength);
-      const spinningVelocity = spinningForce.cross(toAttractor);
-      force.addAssign(spinningVelocity);
-    });
+      const spinningForce = attractorRotationAxis
+        .mul(gravityStrength)
+        .mul(spinningStrength);
+      const spinningVelocity = std.cross(spinningForce, toAttractor);
+      force = force.add(spinningVelocity);
+    }
 
     // velocity
 
-    velocity.addAssign(force.mul(delta));
-    const speed = velocity.length();
-    If(speed.greaterThan(maxSpeed), () => {
-      velocity.assign(velocity.normalize().mul(maxSpeed));
-    });
-    velocity.mulAssign(velocityDamping.oneMinus());
+    velocity = velocity.add(force.mul(delta));
+    const speed = std.length(velocity);
+    if (speed > maxSpeed) {
+      velocity = std.normalize(velocity).mul(maxSpeed);
+    }
+    velocity = velocity.mul(1 - velocityDamping);
 
     // position
 
-    position.addAssign(velocity.mul(delta));
+    position = position.add(velocity.mul(delta));
 
     // box loop
 
-    const halfHalfExtent = boundHalfExtent.div(2).toVar();
-    position.assign(
-      mod(position.add(halfHalfExtent), boundHalfExtent).sub(
-        halfHalfExtent,
-      ),
-    );
+    const halfHalfExtent = boundHalfExtent / 2;
+    position = std
+      .mod(position.add(halfHalfExtent), boundHalfExtent).sub(halfHalfExtent);
+
+    positionBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(position);
+    velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(velocity);
   });
-  updateCompute = update().compute(count).setName(
+
+  updateCompute = update.compute(count).setName(
     'Update Particles',
   );
 
