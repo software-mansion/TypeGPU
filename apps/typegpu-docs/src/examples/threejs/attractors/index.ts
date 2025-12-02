@@ -187,12 +187,8 @@ const velocityBuffer = instancedArray(count, 'vec3');
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
-const positionBufferTA = fromTSL(positionBuffer, {
-  type: d.arrayOf(d.vec3f),
-});
-const velocityBufferTA = fromTSL(velocityBuffer, {
-  type: d.arrayOf(d.vec3f),
-});
+const positionBufferTA = fromTSL(positionBuffer, { type: d.arrayOf(d.vec3f) });
+const velocityBufferTA = fromTSL(velocityBuffer, { type: d.arrayOf(d.vec3f) });
 const attractorsPositionsTA = fromTSL(attractorsPositions, {
   type: d.arrayOf(d.vec3f),
 });
@@ -201,9 +197,7 @@ const attractorsRotationAxesTA = fromTSL(attractorsRotationAxes, {
 });
 const attractorsLengthTA = fromTSL(attractorsLength, { type: d.u32 });
 const attractorMassTA = fromTSL(attractorMass, { type: d.f32 });
-const particleGlobalMassTA = fromTSL(particleGlobalMass, {
-  type: d.f32,
-});
+const particleGlobalMassTA = fromTSL(particleGlobalMass, { type: d.f32 });
 const spinningStrengthTA = fromTSL(spinningStrength, { type: d.f32 });
 const maxSpeedTA = fromTSL(maxSpeed, { type: d.f32 });
 const velocityDampingTA = fromTSL(velocityDamping, { type: d.f32 });
