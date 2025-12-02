@@ -60,8 +60,7 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   // Attributes
 
   const positionAttribute = TSL.storage(
-    // @ts-ignore
-    positionBaseAttribute,
+    positionBaseAttribute as THREE.BufferAttribute,
     'vec3',
     count,
   );
