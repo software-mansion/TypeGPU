@@ -37,9 +37,10 @@ const scene = new THREE.Scene();
 
 // camera
 
+const targetSize = getTargetSize();
 const camera = new THREE.PerspectiveCamera(
   25,
-  window.innerWidth / window.innerHeight,
+  targetSize[0] / targetSize[1],
   0.1,
   100,
 );
@@ -136,7 +137,7 @@ for (let i = 0; i < attractorsPositions.array.length; i++) {
     renderer.domElement,
   );
 
-  attractorControls.mode = 'rotate';
+  attractorControls.mode = 'translate';
   attractorControls.size = 0.5;
   attractorControls.attach(reference);
   attractorControls.enabled = true;
@@ -469,5 +470,10 @@ export const controls = {
     onButtonClick: reset,
   },
 };
+
+export function onCleanup() {
+  window.removeEventListener('resize', onWindowResize);
+  renderer.dispose();
+}
 
 // #endregion
