@@ -4,12 +4,12 @@ import tgpu, { type TgpuFn } from 'typegpu';
 class FragmentNode extends THREE.CodeNode {
   private tgslFn: TgpuFn;
   private functionName: string | null | undefined;
-  private threeVars: THREE.TSL.ShaderNodeObject<THREE.Node>[] | undefined;
+  private threeVars: THREE.TSL.NodeObject<THREE.Node>[] | undefined;
   private argNames: string[] | undefined;
 
   constructor(
     tgslFn: TgpuFn,
-    threeRequirements?: THREE.TSL.ShaderNodeObject<THREE.Node>[] | undefined,
+    threeRequirements?: THREE.TSL.NodeObject<THREE.Node>[] | undefined,
   ) {
     const resolved = tgpu.resolve({
       template: '___ID___ fnName',
@@ -96,14 +96,12 @@ class FragmentNode extends THREE.CodeNode {
 export class TypeGPUMaterial extends THREE.NodeMaterial {
   constructor(
     fragmentFn: TgpuFn,
-    threeRequirements?: THREE.TSL.ShaderNodeObject<
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    threeRequirements?: THREE.TSL.NodeObject<
       THREE.Node | THREE.UniformNode<any>
     >[] | undefined,
   ) {
     super();
 
-    // @ts-expect-error
     this.fragmentNode = new FragmentNode(fragmentFn, threeRequirements);
   }
 }
