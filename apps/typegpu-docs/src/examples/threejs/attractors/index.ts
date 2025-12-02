@@ -1,13 +1,14 @@
+/*
+ * Based on: https://threejs.org/examples/?q=tsl#webgpu_tsl_compute_attractors_particles
+ */
+
 import * as THREE from 'three/webgpu';
 import {
   color,
-  Fn,
   instancedArray,
   instanceIndex,
-  mix,
   uniform,
   uniformArray,
-  vec4,
 } from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -22,12 +23,6 @@ import * as std from 'typegpu/std';
 import { fromTSL, toTSL } from '@typegpu/three';
 import { randf } from '@typegpu/noise';
 
-let camera: THREE.PerspectiveCamera;
-let scene: THREE.Scene;
-let renderer: THREE.WebGPURenderer;
-let orbitControls: OrbitControls;
-let updateCompute: THREE.TSL.ShaderNodeObject<THREE.ComputeNode>;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const canvasResizeContainer = canvas.parentElement
   ?.parentElement as HTMLDivElement;
@@ -39,7 +34,7 @@ const getTargetSize = () => {
   ] as [number, number];
 };
 
-camera = new THREE.PerspectiveCamera(
+const camera = new THREE.PerspectiveCamera(
   25,
   window.innerWidth / window.innerHeight,
   0.1,
@@ -47,7 +42,7 @@ camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(3, 5, 8);
 
-scene = new THREE.Scene();
+const scene = new THREE.Scene();
 
 // ambient light
 
@@ -65,14 +60,14 @@ scene.add(directionalLight);
 
 // renderer
 
-renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
+const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setAnimationLoop(animate);
 renderer.setClearColor('#000000');
 
 await renderer.init();
 
-orbitControls = new OrbitControls(camera, renderer.domElement);
+const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.minDistance = 0.1;
 orbitControls.maxDistance = 50;
@@ -332,22 +327,28 @@ const update = toTSL(() => {
   velocityBufferAccessor.$[instanceIndexAccessor.$] = d.vec3f(velocity);
 });
 
-updateCompute = update.compute(count).setName(
-  'Update Particles',
-);
+const updateCompute = update.compute(count).setName('Update Particles');
 
 // nodes
 
 material.positionNode = positionBuffer.toAttribute();
 
-material.colorNode = Fn(() => {
-  const velocity = velocityBuffer.toAttribute();
-  const speed = velocity.length();
-  const colorMix = speed.div(maxSpeed).smoothstep(0, 0.5);
-  const finalColor = mix(colorA, colorB, colorMix);
+const colorAAccessor = fromTSL(colorA, { type: d.vec3f });
+const colorBAccessor = fromTSL(colorB, { type: d.vec3f });
 
-  return vec4(finalColor, 1);
-})();
+const velocityBufferAttributeAccessor = fromTSL(velocityBuffer.toAttribute(), {
+  type: d.vec4f,
+});
+
+material.colorNode = toTSL(() => {
+  'use gpu';
+  const velocity = velocityBufferAttributeAccessor.$.xyz;
+  const speed = std.length(velocity);
+  const colorMix = std.smoothstep(0, 0.5, speed / maxSpeedAccessor.$);
+  const finalColor = std.mix(colorAAccessor.$, colorBAccessor.$, colorMix);
+
+  return d.vec4f(finalColor, 1);
+});
 
 material.scaleNode = toTSL(getParticleMassMultiplier).mul(scale);
 
