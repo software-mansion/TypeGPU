@@ -219,6 +219,8 @@ async function init() {
 
   // init compute
 
+  const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
+
   const instanceIndexAccessor = fromTSL(instanceIndex, { type: d.u32 });
   const positionBufferAccessor = fromTSL(positionBuffer, {
     type: d.arrayOf(d.vec3f),
@@ -229,7 +231,7 @@ async function init() {
 
   const initCompute = toTSL(() => {
     'use gpu';
-    randf.seed(instanceIndexAccessor.$ / count);
+    randf.seed(instanceIndexAccessor.$ / count + comptimeRandom());
 
     const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
       .sub(0.5)
@@ -246,12 +248,23 @@ async function init() {
 
   // update compute
 
-  const particleMassMultiplier = hash(
-    instanceIndex.add(uint(Math.random() * 0xffffff)),
-  ).remap(0.25, 1).toVar();
-  const particleMass = particleMassMultiplier.mul(
-    particleGlobalMass,
-  ).toVar();
+  const particleGlobalMassAccessor = fromTSL(particleGlobalMass, {
+    type: d.f32,
+  });
+
+  const getParticleMassMultiplier = () => {
+    'use gpu';
+    const instanceIndex = instanceIndexAccessor.$;
+    randf.seed(instanceIndex / count + comptimeRandom());
+    // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
+    const base = 0.25 + randf.sample() * 3 / 4;
+    return base;
+  };
+
+  const getParticleMass = () => {
+    'use gpu';
+    return getParticleMassMultiplier() * particleGlobalMassAccessor.$;
+  };
 
   const update = Fn(() => {
     // const delta = timerDelta().mul( timeScale ).min( 1 / 30 ).toVar();
@@ -271,7 +284,7 @@ async function init() {
       const direction = toAttractor.normalize();
 
       // gravity
-      const gravityStrength = attractorMass.mul(particleMass).mul(
+      const gravityStrength = attractorMass.mul(toTSL(getParticleMass)).mul(
         gravityConstant,
       ).div(distance.pow(2)).toVar();
       const gravityForce = direction.mul(gravityStrength);
@@ -324,7 +337,7 @@ async function init() {
     return vec4(finalColor, 1);
   })();
 
-  material.scaleNode = particleMassMultiplier.mul(scale);
+  material.scaleNode = toTSL(getParticleMassMultiplier).mul(scale);
 
   // mesh
 
