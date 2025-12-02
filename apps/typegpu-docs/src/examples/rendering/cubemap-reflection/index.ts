@@ -352,21 +352,14 @@ resizeObserver.observe(canvas);
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
+let lastPinchDist = 0;
 let orbitRadius = std.length(cameraInitialPos);
 
 // Yaw and pitch angles facing the origin.
 let orbitYaw = Math.atan2(cameraInitialPos.x, cameraInitialPos.z);
 let orbitPitch = Math.asin(cameraInitialPos.y / orbitRadius);
 
-function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += dy * orbitSensitivity;
-  // Clamp pitch to avoid flipping
-  const maxPitch = Math.PI / 2 - 0.01;
-  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // Convert spherical coordinates to cartesian coordinates
+function updateCameraPosition() {
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
@@ -381,21 +374,24 @@ function updateCameraOrbit(dx: number, dy: number) {
   cameraBuffer.writePartial({ view: newView, position: newCameraPos });
 }
 
-canvas.addEventListener('wheel', (event: WheelEvent) => {
-  event.preventDefault();
-  const zoomSensitivity = 0.05;
-  orbitRadius = std.clamp(orbitRadius + event.deltaY * zoomSensitivity, 3, 100);
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    d.vec3f(0, 0, 0),
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
+function updateCameraOrbit(dx: number, dy: number) {
+  orbitYaw += -dx * 0.005;
+  orbitPitch = std.clamp(
+    orbitPitch + dy * 0.005,
+    -Math.PI / 2 + 0.01,
+    Math.PI / 2 - 0.01,
   );
-  cameraBuffer.writePartial({ view: newView, position: newCameraPos });
+  updateCameraPosition();
+}
+
+function zoomCamera(delta: number) {
+  orbitRadius = std.clamp(orbitRadius + delta, 3, 100);
+  updateCameraPosition();
+}
+
+canvas.addEventListener('wheel', (e: WheelEvent) => {
+  e.preventDefault();
+  zoomCamera(e.deltaY * 0.05);
 }, { passive: false });
 
 canvas.addEventListener('mousedown', (event) => {
@@ -404,12 +400,17 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
-canvas.addEventListener('touchstart', (event) => {
-  event.preventDefault();
-  if (event.touches.length === 1) {
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
     isDragging = true;
-    prevX = event.touches[0].clientX;
-    prevY = event.touches[0].clientY;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx * dx + dy * dy);
   }
 }, { passive: false });
 
@@ -418,8 +419,14 @@ const mouseUpEventListener = () => {
 };
 window.addEventListener('mouseup', mouseUpEventListener);
 
-const touchEndEventListener = () => {
-  isDragging = false;
+const touchEndEventListener = (e: TouchEvent) => {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+  } else {
+    isDragging = false;
+  }
 };
 window.addEventListener('touchend', touchEndEventListener);
 
@@ -435,20 +442,30 @@ const mouseMoveEventListener = (event: MouseEvent) => {
 };
 window.addEventListener('mousemove', mouseMoveEventListener);
 
-const touchMoveEventListener = (event: TouchEvent) => {
-  if (isDragging && event.touches.length === 1) {
-    event.preventDefault();
-    const dx = event.touches[0].clientX - prevX;
-    const dy = event.touches[0].clientY - prevY;
-    prevX = event.touches[0].clientX;
-    prevY = event.touches[0].clientY;
-
+const touchMoveEventListener = (e: TouchEvent) => {
+  if (e.touches.length === 1 && isDragging) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - prevX;
+    const dy = e.touches[0].clientY - prevY;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
     updateCameraOrbit(dx, dy);
   }
 };
 window.addEventListener('touchmove', touchMoveEventListener, {
   passive: false,
 });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const pinchDist = Math.sqrt(dx * dx + dy * dy);
+    zoomCamera((lastPinchDist - pinchDist) * 0.05);
+    lastPinchDist = pinchDist;
+  }
+}, { passive: false });
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
