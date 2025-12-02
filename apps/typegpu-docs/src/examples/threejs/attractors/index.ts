@@ -111,6 +111,7 @@ const helpersMaterial = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
 });
 
+const attractors = [];
 for (let i = 0; i < attractorsPositions.array.length; i++) {
   const position = attractorsPositions.array[i] as THREE.Vector3;
   const orientation = attractorsRotationAxes.array[i] as THREE.Vector3;
@@ -438,6 +439,18 @@ export const controls = {
     step: 0.01,
     onSliderChange: (newValue: number) => {
       boundHalfExtent.value = newValue;
+    },
+  },
+  'Color A': {
+    initial: [colorA.value.r, colorA.value.g, colorA.value.b],
+    onColorChange: (newValue: [number, number, number]) => {
+      colorA.value.setRGB(newValue[0], newValue[1], newValue[2]);
+    },
+  },
+  'Color B': {
+    initial: [colorB.value.r, colorB.value.g, colorB.value.b],
+    onColorChange: (newValue: [number, number, number]) => {
+      colorB.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
 };
