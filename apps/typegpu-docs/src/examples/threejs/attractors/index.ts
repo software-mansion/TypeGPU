@@ -182,7 +182,6 @@ const material = new THREE.SpriteNodeMaterial({
 
 const attractorMass = uniform(Number(`1e${7}`));
 const particleGlobalMass = uniform(Number(`1e${4}`));
-const timeScale = 1;
 const spinningStrength = uniform(2.75);
 const maxSpeed = uniform(8);
 const gravityConstant = 6.67e-11;
@@ -270,7 +269,7 @@ const getParticleMass = () => {
 
 const update = toTSL(() => {
   'use gpu';
-  const delta = 1 / 60 * timeScale;
+  const delta = 1 / 60;
   let position = d.vec3f(positionBufferAccessor.$[instanceIndexAccessor.$]);
   let velocity = d.vec3f(velocityBufferAccessor.$[instanceIndexAccessor.$]);
 
@@ -416,7 +415,7 @@ export const controls = {
   },
   'Attractor Mass Exponent': {
     initial: 7,
-    min: 1,
+    min: 0,
     max: 10,
     step: 1,
     onSliderChange: (newValue: number) => {
@@ -425,7 +424,7 @@ export const controls = {
   },
   'Particle Global Mass Exponent': {
     initial: 4,
-    min: 1,
+    min: 0,
     max: 10,
     step: 1,
     onSliderChange: (newValue: number) => {
