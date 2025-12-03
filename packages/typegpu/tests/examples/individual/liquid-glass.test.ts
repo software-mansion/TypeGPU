@@ -5,7 +5,11 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import { mockImageLoading, mockResizeObserver } from '../utils/commonMocks.ts';
+import {
+  mockCreateImageBitmap,
+  mockImageLoading,
+  mockResizeObserver,
+} from '../utils/commonMocks.ts';
 
 describe('liquid-glass example', () => {
   setupCommonMocks();
@@ -17,6 +21,7 @@ describe('liquid-glass example', () => {
       setupMocks: () => {
         mockResizeObserver();
         mockImageLoading();
+        mockCreateImageBitmap();
       },
       expectedCalls: 3,
     }, device);

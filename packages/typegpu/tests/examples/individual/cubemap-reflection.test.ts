@@ -5,7 +5,11 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import { mockImageLoading, mockResizeObserver } from '../utils/commonMocks.ts';
+import {
+  mockCreateImageBitmap,
+  mockImageLoading,
+  mockResizeObserver,
+} from '../utils/commonMocks.ts';
 
 describe('cubemap reflection example', () => {
   setupCommonMocks();
@@ -15,7 +19,8 @@ describe('cubemap reflection example', () => {
       category: 'rendering',
       name: 'cubemap-reflection',
       setupMocks: () => {
-        mockImageLoading({ width: 2048, height: 2048 });
+        mockImageLoading();
+        mockCreateImageBitmap({ width: 2048, height: 2048 });
         mockResizeObserver();
       },
       expectedCalls: 3,
