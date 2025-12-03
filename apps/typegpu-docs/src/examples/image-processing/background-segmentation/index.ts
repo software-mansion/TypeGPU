@@ -7,7 +7,7 @@ import tgpu, {
 } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
-import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
+import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
@@ -127,10 +127,28 @@ const prepareModelInputPipeline = root['~unstable']
     prepareModelInput,
   );
 
-const session = await prepareSession(
+let currentModelIndex = 0;
+let session = await prepareSession(
   root.unwrap(modelInputBuffer),
   root.unwrap(modelOutputBuffer),
+  MODELS[currentModelIndex],
 );
+let isLoadingModel = false;
+
+async function switchModel(modelIndex: number) {
+  if (isLoadingModel || modelIndex === currentModelIndex) return;
+  isLoadingModel = true;
+  
+  session.release();
+  currentModelIndex = modelIndex;
+  session = await prepareSession(
+    root.unwrap(modelInputBuffer),
+    root.unwrap(modelOutputBuffer),
+    MODELS[currentModelIndex],
+  );
+  
+  isLoadingModel = false;
+}
 
 const generateMaskFromOutputPipeline = root['~unstable']
   .createGuardedComputePipeline(
@@ -153,7 +171,7 @@ const drawWithMaskPipeline = root['~unstable']
 let calculateMaskCallbackId: number | undefined;
 
 async function processCalculateMask() {
-  if (video.readyState < 2) {
+  if (video.readyState < 2 || isLoadingModel) {
     calculateMaskCallbackId = video.requestVideoFrameCallback(
       processCalculateMask,
     );
@@ -287,6 +305,16 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 // #region Example controls & Cleanup
 
 export const controls = {
+  model: {
+    initial: MODELS[0].name,
+    options: MODELS.map((m) => m.name),
+    async onSelectChange(value: string) {
+      const index = MODELS.findIndex((m) => m.name === value);
+      if (index !== -1) {
+        await switchModel(index);
+      }
+    },
+  },
   'blur type': {
     initial: 'mipmaps',
     options: ['mipmaps', 'gaussian'],
