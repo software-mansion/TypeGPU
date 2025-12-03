@@ -1,4 +1,8 @@
-import tgpu from 'typegpu';
+import tgpu, {
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuTexture,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
@@ -54,6 +58,14 @@ const sampleLayout = tgpu.bindGroupLayout({
   floodTexture: { texture: d.texture2d() },
 });
 
+type FloodTexture =
+  & TgpuTexture<{
+    size: [number, number, 2];
+    format: 'rgba16float';
+  }>
+  & SampledFlag
+  & StorageFlag;
+
 function createTextures() {
   return [0, 1].map(() =>
     root['~unstable']
@@ -62,10 +74,10 @@ function createTextures() {
         format: 'rgba16float',
       })
       .$usage('sampled', 'storage')
-  );
+  ) as [FloodTexture, FloodTexture];
 }
 
-function createFloodBindGroups(textures: ReturnType<typeof createTextures>) {
+function createFloodBindGroups(textures: [FloodTexture, FloodTexture]) {
   return [0, 1].map((i) =>
     root.createBindGroup(floodLayout, {
       writeView: textures[1 - i],
