@@ -139,14 +139,14 @@ async function switchModel(modelIndex: number) {
   if (isLoadingModel || modelIndex === currentModelIndex) return;
   isLoadingModel = true;
   
-  session.release();
+  const oldSession = session;
   currentModelIndex = modelIndex;
   session = await prepareSession(
     root.unwrap(modelInputBuffer),
     root.unwrap(modelOutputBuffer),
     MODELS[currentModelIndex],
   );
-  
+  oldSession.release();
   isLoadingModel = false;
 }
 

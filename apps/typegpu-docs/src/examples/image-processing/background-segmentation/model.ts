@@ -9,6 +9,7 @@ export interface ModelConfig {
   inputName: string;
   outputName: string;
   externalData?: { data: string; path: string }[];
+  description?: string;
 }
 
 export const MODELS: ModelConfig[] = [
@@ -17,6 +18,7 @@ export const MODELS: ModelConfig[] = [
     path: '/TypeGPU/assets/background-segmentation/u2netp.onnx',
     inputName: 'input.1',
     outputName: '1964',
+    description: 'Original u2netp model, U-Squared-net architecture',
   },
   {
     name: 'mobile_light',
@@ -29,6 +31,7 @@ export const MODELS: ModelConfig[] = [
         path: 'model_178.onnx.data',
       },
     ],
+    description: 'MobileNetV2 based lightweight model, light augmentation, 200 epochs',
   },
 ];
 
