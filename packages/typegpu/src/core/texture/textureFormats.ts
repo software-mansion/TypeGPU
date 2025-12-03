@@ -86,12 +86,32 @@ export type TextureFormats = {
 
 // Runtime
 
+export type AspectInfo = {
+  readonly channelType: F32 | I32 | U32;
+  readonly vectorType: Vec4f | Vec4i | Vec4u;
+  readonly sampleTypes: readonly GPUTextureSampleType[];
+};
+
 export type TextureFormatInfo = {
   readonly channelType: F32 | I32 | U32;
   readonly vectorType: Vec4f | Vec4i | Vec4u;
   readonly texelSize: number;
   readonly sampleTypes: readonly GPUTextureSampleType[];
   readonly canRenderAttachment: boolean;
+  readonly depthAspect?: AspectInfo;
+  readonly stencilAspect?: AspectInfo;
+};
+
+const DEPTH_ASPECT: AspectInfo = {
+  channelType: f32,
+  vectorType: vec4f,
+  sampleTypes: ['depth', 'unfilterable-float'],
+};
+
+const STENCIL_ASPECT: AspectInfo = {
+  channelType: u32,
+  vectorType: vec4u,
+  sampleTypes: ['uint'],
 };
 
 const formatInfoCache = new Map<GPUTextureFormat, TextureFormatInfo>();
@@ -109,6 +129,9 @@ export function getTextureFormatInfo(
 
 function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
   const channelType = parseChannelType(format);
+  const hasDepthAndStencil = format === 'depth24plus-stencil8' ||
+    format === 'depth32float-stencil8';
+
   return {
     channelType,
     vectorType: channelType === u32
@@ -119,6 +142,10 @@ function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
     texelSize: parseTexelSize(format),
     sampleTypes: parseSampleTypes(format),
     canRenderAttachment: canRenderAttachment(format),
+    ...(hasDepthAndStencil && {
+      depthAspect: DEPTH_ASPECT,
+      stencilAspect: STENCIL_ASPECT,
+    }),
   };
 }
 
@@ -136,6 +163,7 @@ function canRenderAttachment(format: GPUTextureFormat): boolean {
 }
 
 function parseChannelType(format: GPUTextureFormat): F32 | I32 | U32 {
+  if (format === 'stencil8') return u32;
   if (format.includes('uint')) return u32;
   if (format.includes('sint')) return i32;
   return f32;
@@ -163,6 +191,7 @@ function parseTexelSize(format: GPUTextureFormat): number {
 }
 
 function parseSampleTypes(format: string): readonly GPUTextureSampleType[] {
+  if (format === 'stencil8') return ['uint'];
   if (format.includes('uint')) return ['uint'];
   if (format.includes('sint')) return ['sint'];
   if (format.includes('depth')) return ['depth', 'unfilterable-float'];

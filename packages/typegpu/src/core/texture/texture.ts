@@ -582,35 +582,18 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       unwrap: () => {
         if (!this.#view) {
           const schema = this.schema;
-          let descriptor: GPUTextureViewDescriptor;
-          if (isWgslStorageTexture(schema)) {
-            descriptor = {
-              label: getName(this) ?? '<unnamed>',
-              format: this.#descriptor?.format ?? schema.format,
-              dimension: schema.dimension,
-            };
-          } else {
-            descriptor = {
-              label: getName(this) ?? '<unnamed>',
-              format: this.#descriptor?.format ??
-                this.#baseTexture.props.format,
-              dimension: schema.dimension,
-            };
-          }
-
-          if (this.#descriptor?.mipLevelCount !== undefined) {
-            descriptor.mipLevelCount = this.#descriptor.mipLevelCount;
-          }
-          if (this.#descriptor?.arrayLayerCount !== undefined) {
-            descriptor.arrayLayerCount = this.#descriptor.arrayLayerCount;
-          }
-          if (this.#descriptor?.baseArrayLayer !== undefined) {
-            descriptor.baseArrayLayer = this.#descriptor.baseArrayLayer;
-          }
+          const format = isWgslStorageTexture(schema)
+            ? schema.format
+            : this.#baseTexture.props.format;
 
           this.#view = this.#baseTexture[$internal]
             .unwrap()
-            .createView(descriptor);
+            .createView({
+              ...this.#descriptor,
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ?? format,
+              dimension: schema.dimension,
+            });
         }
         return this.#view;
       },

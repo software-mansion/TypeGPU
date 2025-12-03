@@ -221,9 +221,12 @@ export interface ColorAttachment {
 }
 
 export type DepthStencilFormat =
+  | 'stencil8'
+  | 'depth16unorm'
   | 'depth24plus'
   | 'depth24plus-stencil8'
-  | 'depth32float';
+  | 'depth32float'
+  | 'depth32float-stencil8';
 
 interface DepthStencilTextureConstraint {
   readonly [$internal]: TextureInternals;

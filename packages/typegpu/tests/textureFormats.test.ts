@@ -160,7 +160,7 @@ describe('getTextureFormatInfo', () => {
   describe('depth/stencil formats', () => {
     it.each(
       [
-        ['stencil8', 1, f32, vec4f, ['float', 'unfilterable-float'], true],
+        ['stencil8', 1, u32, vec4u, ['uint'], true],
         ['depth16unorm', 2, f32, vec4f, ['depth', 'unfilterable-float'], true],
         ['depth24plus', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
         [
@@ -195,6 +195,38 @@ describe('getTextureFormatInfo', () => {
         expect(info.canRenderAttachment).toBe(canRenderAttachment);
       },
     );
+
+    it.each(
+      [
+        'depth24plus-stencil8',
+        'depth32float-stencil8',
+      ] as const,
+    )('%s has per-aspect sample type info', (format) => {
+      const info = getTextureFormatInfo(format);
+      expect(info.depthAspect).toEqual({
+        channelType: f32,
+        vectorType: vec4f,
+        sampleTypes: ['depth', 'unfilterable-float'],
+      });
+      expect(info.stencilAspect).toEqual({
+        channelType: u32,
+        vectorType: vec4u,
+        sampleTypes: ['uint'],
+      });
+    });
+
+    it.each(
+      [
+        'stencil8',
+        'depth16unorm',
+        'depth24plus',
+        'depth32float',
+      ] as const,
+    )('%s does not have per-aspect info (single aspect)', (format) => {
+      const info = getTextureFormatInfo(format);
+      expect(info.depthAspect).toBeUndefined();
+      expect(info.stencilAspect).toBeUndefined();
+    });
   });
 
   describe('BC compressed formats', () => {
