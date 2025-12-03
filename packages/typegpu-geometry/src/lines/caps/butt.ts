@@ -55,6 +55,6 @@ export const buttCap = capShell(
     const v3 = addMul(V.position, d, V.radius);
     const v4 = select(v3, vd, shouldJoin);
     const points = [v0, v1, v2, v3, v4];
-    return points[vertexIndex % 5] as v2f;
+    return vec2f(points[vertexIndex % 5] as v2f);
   },
 );
