@@ -268,7 +268,7 @@ export function resampleImage(
     throw new Error('Resampling only supports 2D textures.');
   }
 
-  const { filterable, sampleType } = validateBlitFormat(
+  const { filterable } = validateBlitFormat(
     device,
     targetTexture.format,
     'resample',

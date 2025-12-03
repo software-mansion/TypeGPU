@@ -8,11 +8,11 @@ describe('getTextureFormatInfo', () => {
     it.each(
       [
         ['r8unorm', 1, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['r8snorm', 1, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['r8snorm', 1, f32, vec4f, ['float', 'unfilterable-float'], true],
         ['r8uint', 1, u32, vec4u, ['uint'], true],
         ['r8sint', 1, i32, vec4i, ['sint'], true],
         ['rg8unorm', 2, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rg8snorm', 2, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['rg8snorm', 2, f32, vec4f, ['float', 'unfilterable-float'], true],
         ['rg8uint', 2, u32, vec4u, ['uint'], true],
         ['rg8sint', 2, i32, vec4i, ['sint'], true],
         ['rgba8unorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
@@ -24,7 +24,7 @@ describe('getTextureFormatInfo', () => {
           ['float', 'unfilterable-float'],
           true,
         ],
-        ['rgba8snorm', 4, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['rgba8snorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
         ['rgba8uint', 4, u32, vec4u, ['uint'], true],
         ['rgba8sint', 4, i32, vec4i, ['sint'], true],
         ['bgra8unorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
@@ -60,18 +60,18 @@ describe('getTextureFormatInfo', () => {
   describe('16-bit formats', () => {
     it.each(
       [
-        ['r16unorm', 2, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['r16snorm', 2, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['r16unorm', 2, f32, vec4f, ['unfilterable-float'], true],
+        ['r16snorm', 2, f32, vec4f, ['unfilterable-float'], true],
         ['r16uint', 2, u32, vec4u, ['uint'], true],
         ['r16sint', 2, i32, vec4i, ['sint'], true],
         ['r16float', 2, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rg16unorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rg16snorm', 4, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['rg16unorm', 4, f32, vec4f, ['unfilterable-float'], true],
+        ['rg16snorm', 4, f32, vec4f, ['unfilterable-float'], true],
         ['rg16uint', 4, u32, vec4u, ['uint'], true],
         ['rg16sint', 4, i32, vec4i, ['sint'], true],
         ['rg16float', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rgba16unorm', 8, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rgba16snorm', 8, f32, vec4f, ['float', 'unfilterable-float'], false],
+        ['rgba16unorm', 8, f32, vec4f, ['unfilterable-float'], true],
+        ['rgba16snorm', 8, f32, vec4f, ['unfilterable-float'], true],
         ['rgba16uint', 8, u32, vec4u, ['uint'], true],
         ['rgba16sint', 8, i32, vec4i, ['sint'], true],
         ['rgba16float', 8, f32, vec4f, ['float', 'unfilterable-float'], true],
@@ -135,7 +135,7 @@ describe('getTextureFormatInfo', () => {
         ['rgb10a2uint', 4, u32, vec4u, ['uint'], true],
         ['rgb10a2unorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
         ['rg11b10ufloat', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
-        ['rgb9e5ufloat', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
+        ['rgb9e5ufloat', 4, f32, vec4f, ['float', 'unfilterable-float'], false],
       ] as const,
     )(
       '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
@@ -172,10 +172,14 @@ describe('getTextureFormatInfo', () => {
           true,
         ],
         ['depth32float', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
-        ['depth32float-stencil8', 8, f32, vec4f, [
-          'depth',
-          'unfilterable-float',
-        ], true],
+        [
+          'depth32float-stencil8',
+          8,
+          f32,
+          vec4f,
+          ['depth', 'unfilterable-float'],
+          true,
+        ],
       ] as const,
     )(
       '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
@@ -201,7 +205,7 @@ describe('getTextureFormatInfo', () => {
         'depth24plus-stencil8',
         'depth32float-stencil8',
       ] as const,
-    )('%s has per-aspect sample type info', (format) => {
+    )('%s has both depth and stencil aspect info', (format) => {
       const info = getTextureFormatInfo(format);
       expect(info.depthAspect).toEqual({
         channelType: f32,
@@ -217,15 +221,28 @@ describe('getTextureFormatInfo', () => {
 
     it.each(
       [
-        'stencil8',
         'depth16unorm',
         'depth24plus',
         'depth32float',
       ] as const,
-    )('%s does not have per-aspect info (single aspect)', (format) => {
+    )('%s has only depth aspect info', (format) => {
       const info = getTextureFormatInfo(format);
-      expect(info.depthAspect).toBeUndefined();
+      expect(info.depthAspect).toEqual({
+        channelType: f32,
+        vectorType: vec4f,
+        sampleTypes: ['depth', 'unfilterable-float'],
+      });
       expect(info.stencilAspect).toBeUndefined();
+    });
+
+    it('stencil8 has only stencil aspect info', () => {
+      const info = getTextureFormatInfo('stencil8');
+      expect(info.depthAspect).toBeUndefined();
+      expect(info.stencilAspect).toEqual({
+        channelType: u32,
+        vectorType: vec4u,
+        sampleTypes: ['uint'],
+      });
     });
   });
 

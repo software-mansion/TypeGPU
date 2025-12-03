@@ -129,8 +129,8 @@ export function getTextureFormatInfo(
 
 function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
   const channelType = parseChannelType(format);
-  const hasDepthAndStencil = format === 'depth24plus-stencil8' ||
-    format === 'depth32float-stencil8';
+  const hasDepth = format.startsWith('depth');
+  const hasStencil = format.includes('stencil');
 
   return {
     channelType,
@@ -142,10 +142,8 @@ function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
     texelSize: parseTexelSize(format),
     sampleTypes: parseSampleTypes(format),
     canRenderAttachment: canRenderAttachment(format),
-    ...(hasDepthAndStencil && {
-      depthAspect: DEPTH_ASPECT,
-      stencilAspect: STENCIL_ASPECT,
-    }),
+    ...(hasDepth && { depthAspect: DEPTH_ASPECT }),
+    ...(hasStencil && { stencilAspect: STENCIL_ASPECT }),
   };
 }
 
@@ -158,7 +156,7 @@ function canRenderAttachment(format: GPUTextureFormat): boolean {
   ) {
     return false;
   }
-  if (format.includes('snorm')) return false;
+  if (format === 'rgb9e5ufloat') return false;
   return true;
 }
 
@@ -195,7 +193,7 @@ function parseSampleTypes(format: string): readonly GPUTextureSampleType[] {
   if (format.includes('uint')) return ['uint'];
   if (format.includes('sint')) return ['sint'];
   if (format.includes('depth')) return ['depth', 'unfilterable-float'];
-  if (format.includes('snorm')) return ['float', 'unfilterable-float'];
+  if (/^(r|rg|rgba)16(u|s)norm$/.test(format)) return ['unfilterable-float'];
   return ['float', 'unfilterable-float'];
 }
 
