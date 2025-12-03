@@ -40,3 +40,12 @@ export const drawWithMaskLayout = tgpu.bindGroupLayout({
 
 export const useGaussianSlot = tgpu.slot<TgpuUniform<d.U32>>();
 export const sampleBiasSlot = tgpu.slot<TgpuUniform<d.F32>>();
+
+export interface ModelConfig {
+  name: string;
+  path: string;
+  inputName: string;
+  outputName: string;
+  externalData?: { data: string; path: string }[];
+  description?: string;
+}

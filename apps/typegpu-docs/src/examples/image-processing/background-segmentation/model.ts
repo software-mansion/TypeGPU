@@ -1,16 +1,10 @@
 import * as ort from 'onnxruntime-web/webgpu';
+import type { ModelConfig } from './schemas.ts';
 
 export const MODEL_WIDTH = 320;
 export const MODEL_HEIGHT = 320;
 
-export interface ModelConfig {
-  name: string;
-  path: string;
-  inputName: string;
-  outputName: string;
-  externalData?: { data: string; path: string }[];
-  description?: string;
-}
+const modelCache = new Map<string, ArrayBuffer>();
 
 export const MODELS: ModelConfig[] = [
   {
@@ -22,21 +16,60 @@ export const MODELS: ModelConfig[] = [
   },
   {
     name: 'mobile_light',
-    path: '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx',
+    path:
+      '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
-        data: '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx.data',
+        data:
+          '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx.data',
         path: 'model_178.onnx.data',
       },
     ],
-    description: 'MobileNetV2 based lightweight model, light augmentation, 200 epochs',
+    description:
+      'MobileNetV2 based lightweight model, light augmentation, 200 epochs',
   },
 ];
 
+async function fetchWithCache(url: string): Promise<ArrayBuffer> {
+  const cached = modelCache.get(url);
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+  }
+
+  const data = await response.arrayBuffer();
+  modelCache.set(url, data);
+  return data;
+}
+
+async function loadModelData(modelConfig: ModelConfig): Promise<{
+  modelData: ArrayBuffer;
+  externalData?: { data: ArrayBuffer; path: string }[];
+}> {
+  const modelPromise = fetchWithCache(modelConfig.path);
+
+  const externalDataPromises = modelConfig.externalData?.map(async (ext) => ({
+    data: await fetchWithCache(ext.data),
+    path: ext.path,
+  }));
+
+  const [modelData, externalData] = await Promise.all([
+    modelPromise,
+    externalDataPromises ? Promise.all(externalDataPromises) : undefined,
+  ]);
+
+  return { modelData, externalData };
+}
+
 /**
  * Prepares an ONNX Runtime inference session for calculating background segmentation mask.
+ * The model and its external data files are dynamically loaded and cached for future use.
  *
  * @param input - GPU buffer containing the input image data (an array of length MODEL_WIDTH * MODEL_HEIGHT * 3, filled with red, green and blue images one after another)
  * @param output - GPU buffer that will receive the segmentation mask output (an array of length MODEL_WIDTH * MODEL_HEIGHT)
@@ -58,10 +91,13 @@ export async function prepareSession(
   output: GPUBuffer,
   modelConfig: ModelConfig = MODELS[0],
 ) {
-  const session = await ort.InferenceSession.create(modelConfig.path, {
+  // Dynamically load model data with caching
+  const { modelData, externalData } = await loadModelData(modelConfig);
+
+  const session = await ort.InferenceSession.create(modelData, {
     executionProviders: ['webgpu'],
     graphOptimizationLevel: 'all',
-    externalData: modelConfig.externalData,
+    externalData,
   });
 
   const myPreAllocatedInputTensor = ort.Tensor.fromGpuBuffer(input, {

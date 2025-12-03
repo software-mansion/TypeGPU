@@ -138,7 +138,7 @@ let isLoadingModel = false;
 async function switchModel(modelIndex: number) {
   if (isLoadingModel || modelIndex === currentModelIndex) return;
   isLoadingModel = true;
-  
+
   const oldSession = session;
   currentModelIndex = modelIndex;
   session = await prepareSession(
