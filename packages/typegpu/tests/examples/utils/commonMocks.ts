@@ -27,10 +27,10 @@ export function setupCommonMocks() {
         value: (callback: VideoFrameRequestCallback) => {
           if (!callbackInvoked) {
             callbackInvoked = true;
-            callback(
-              0,
-              { width: 640, height: 480 } as VideoFrameCallbackMetadata,
-            );
+            callback(0, {
+              width: 640,
+              height: 480,
+            } as VideoFrameCallbackMetadata);
           }
           return 0; // Mock ID
         },
@@ -43,6 +43,8 @@ export function setupCommonMocks() {
       get: () => 4, // HAVE_ENOUGH_DATA
       configurable: true,
     });
+
+    vi.stubGlobal('fetch', mockFetch);
   });
 }
 
@@ -65,26 +67,12 @@ export function mockResizeObserver() {
   );
 }
 
-export function mockImageLoading({ width = 2, height = 2 } = {}) {
-  vi.stubGlobal('fetch', async (url: string) => {
-    if (
-      url.includes('.jpg') || url.includes('.png') ||
-      url.startsWith('/TypeGPU/')
-    ) {
-      const mockImage = new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255]);
-      return new Response(mockImage, {
-        headers: {
-          'Content-Type': 'image/png',
-        },
-      });
-    }
-  });
-
+export function mockCreateImageBitmap({ width = 2, height = 2 } = {}) {
   vi.stubGlobal('createImageBitmap', async () => {
     return {
       width,
       height,
-      close: () => {},
+      close: vi.fn(),
       getImageData: () => {
         return {
           data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
@@ -96,19 +84,83 @@ export function mockImageLoading({ width = 2, height = 2 } = {}) {
   });
 }
 
-export function mockMnistWeights() {
-  vi.stubGlobal('fetch', async (url: string) => {
-    if (url.startsWith('/TypeGPU/assets/mnist-weights/')) {
-      // https://numpy.org/devdocs/reference/generated/numpy.lib.format.html
-      const mockHeader =
-        "{'descr': '<f4', 'fortran_order': False, 'shape': (0, 0)}";
-      const headerBuffer = new TextEncoder().encode(mockHeader);
-      const totalBuffer = new ArrayBuffer(headerBuffer.length + 100);
-      const view = new Uint8Array(totalBuffer);
-      view.set(headerBuffer, 0);
-      return new Response(totalBuffer);
+const audioRegExp = /\.ogg$|\.wav$/;
+const imageRegExp = /(\.jpg$|\.png$)/;
+const mnistRegExp = /^\/TypeGPU\/assets\/mnist-weights\//;
+const objRegExp = /\.obj$/;
+const fetchMockMap = new Map<RegExp, () => Response>();
+async function mockFetch(url: string): Promise<Response> {
+  for (const [pattern, handler] of fetchMockMap) {
+    if (pattern.test(url)) {
+      return handler();
     }
-  });
+  }
+  return new Response();
+}
+
+export function mockImageLoading() {
+  const mockImage = new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255]);
+  if (fetchMockMap.has(imageRegExp)) return;
+  fetchMockMap.set(
+    imageRegExp,
+    () =>
+      new Response(mockImage, {
+        headers: {
+          'Content-Type': 'image/png',
+        },
+      }),
+  );
+}
+
+export function mockMnistWeights() {
+  if (fetchMockMap.has(mnistRegExp)) return;
+
+  // https://numpy.org/devdocs/reference/generated/numpy.lib.format.html
+  const mockHeader =
+    "{'descr': '<f4', 'fortran_order': False, 'shape': (0, 0)}";
+  const headerBuffer = new TextEncoder().encode(mockHeader);
+  const totalBuffer = new ArrayBuffer(headerBuffer.length + 100);
+  const view = new Uint8Array(totalBuffer);
+  view.set(headerBuffer, 0);
+
+  fetchMockMap.set(mnistRegExp, () => new Response(totalBuffer));
+}
+const mockAudioParam = { value: 0, setTargetAtTime: vi.fn() };
+
+const mockGainNode = {
+  connect: vi.fn(),
+  gain: mockAudioParam,
+};
+
+const mockAudioBufferSourceNode = {
+  buffer: null,
+  loop: false,
+  playbackRate: mockAudioParam,
+  connect: vi.fn(),
+  start: vi.fn(),
+};
+
+export function mockAudioLoading() {
+  vi.stubGlobal(
+    'AudioContext',
+    vi.fn(() => ({
+      createGain: vi.fn(() => mockGainNode),
+      destination: {},
+      createBufferSource: vi.fn(() => mockAudioBufferSourceNode),
+      decodeAudioData: vi.fn(async () => null),
+    })),
+  );
+
+  if (fetchMockMap.has(audioRegExp)) return;
+  fetchMockMap.set(
+    audioRegExp,
+    () =>
+      new Response(null, {
+        headers: {
+          'Content-Type': 'audio/wav',
+        },
+      }),
+  );
 }
 
 export function mock3DModelLoading() {
@@ -132,29 +184,12 @@ export function mock3DModelLoading() {
     OBJLoader: {},
   }));
 
-  vi.stubGlobal('fetch', async (url: string) => {
-    if (url.includes('.jpg') || url.includes('.png')) {
-      const mockImage = new Uint8Array();
-      return new Response(mockImage, {
-        headers: {
-          'Content-Type': 'image/png',
-        },
-      });
-    }
-    if (url.includes('.obj')) {
-      return new Response('', {
-        headers: {
-          'Content-Type': 'text/plain',
-        },
-      });
-    }
-  });
-
-  vi.stubGlobal('createImageBitmap', async () => {
-    return {
-      width: 2,
-      height: 2,
-      close: () => {},
-    } as ImageBitmap;
-  });
+  mockImageLoading();
+  if (fetchMockMap.has(objRegExp)) return;
+  fetchMockMap.set(objRegExp, () =>
+    new Response('', {
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+    }));
 }

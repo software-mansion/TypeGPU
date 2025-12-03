@@ -7,6 +7,7 @@ import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import {
   mock3DModelLoading,
+  mockCreateImageBitmap,
   mockResizeObserver,
 } from '../utils/commonMocks.ts';
 
@@ -19,6 +20,7 @@ describe('phong reflection example', () => {
       name: 'phong-reflection',
       setupMocks: () => {
         mockResizeObserver();
+        mockCreateImageBitmap();
         mock3DModelLoading();
       },
       expectedCalls: 1,

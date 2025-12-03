@@ -7,6 +7,7 @@ import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import {
   mock3DModelLoading,
+  mockCreateImageBitmap,
   mockResizeObserver,
 } from '../utils/commonMocks.ts';
 
@@ -20,6 +21,7 @@ describe('3d fish example', () => {
       setupMocks: () => {
         mockResizeObserver();
         mock3DModelLoading();
+        mockCreateImageBitmap();
       },
       expectedCalls: 3,
     }, device);

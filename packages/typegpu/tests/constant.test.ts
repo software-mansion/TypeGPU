@@ -91,4 +91,34 @@ describe('tgpu.const', () => {
       `[TypeError: Cannot assign to read only property 'pos' of object '#<Object>']`,
     );
   });
+
+  it('looses its `constant` origin when indexing with runtime value', () => {
+    const positions = tgpu.const(d.arrayOf(d.vec3f, 3), [
+      d.vec3f(0),
+      d.vec3f(1),
+      d.vec3f(2),
+    ]);
+
+    const foo = (idx: number) => {
+      'use gpu';
+      const pos = positions.$[idx];
+    };
+
+    const main = () => {
+      'use gpu';
+      foo(0);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const positions: array<vec3f, 3> = array<vec3f, 3>(vec3f(), vec3f(1), vec3f(2));
+
+      fn foo(idx: i32) {
+        let pos = positions[idx];
+      }
+
+      fn main() {
+        foo(0i);
+      }"
+    `);
+  });
 });

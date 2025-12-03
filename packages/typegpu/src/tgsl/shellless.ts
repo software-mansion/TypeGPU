@@ -67,7 +67,10 @@ export class ShelllessRepository {
 
       let type = concretize(s.dataType as AnyData);
 
-      if (s.origin === 'constant-ref') {
+      if (
+        s.origin === 'constant-tgpu-const-ref' ||
+        s.origin === 'runtime-tgpu-const-ref'
+      ) {
         // biome-ignore lint/style/noNonNullAssertion: it's there
         const ctx = getResolutionCtx()!;
         throw new Error(

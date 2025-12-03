@@ -7,6 +7,7 @@ import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import {
   mock3DModelLoading,
+  mockCreateImageBitmap,
   mockImageLoading,
   mockResizeObserver,
 } from '../utils/commonMocks.ts';
@@ -21,6 +22,7 @@ describe('gravity example', () => {
       setupMocks: () => {
         mockImageLoading();
         mock3DModelLoading();
+        mockCreateImageBitmap();
         mockResizeObserver();
       },
       expectedCalls: 6,
