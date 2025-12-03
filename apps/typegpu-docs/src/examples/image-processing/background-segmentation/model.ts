@@ -15,15 +15,15 @@ export const MODELS: ModelConfig[] = [
     description: 'Original u2netp model, U-Squared-net architecture',
   },
   {
-    name: 'mobile_light',
+    name: 'mobileV2 - 11mb',
     path:
-      '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx',
+      'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
         data:
-          '/TypeGPU/assets/background-segmentation/moblie_light_aug_200/model_178.onnx.data',
+          'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx.data',
         path: 'model_178.onnx.data',
       },
     ],
