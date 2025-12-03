@@ -3,7 +3,6 @@ import * as d from '../src/data/index.ts';
 import tgpu, { type TgpuDerived } from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
@@ -18,7 +17,7 @@ describe('TgpuDerived', () => {
       return a.$ + b.$;
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> i32 {
         return 7;
       }"
@@ -46,7 +45,7 @@ describe('TgpuDerived', () => {
       c();
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
         return 4f;
       }
@@ -88,7 +87,7 @@ describe('TgpuDerived', () => {
     })
       .with(gridSizeSlot, 1);
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn fill(arr: array<f32, 1>) {
 
       }
@@ -140,7 +139,7 @@ describe('TgpuDerived', () => {
       const velX_ = derivedDerivedUniformSlot.value.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -150,11 +149,11 @@ describe('TgpuDerived', () => {
 
       fn func() {
         var pos = vec3f(2, 4, 6);
-        var posX = 2;
-        var vel = boid.vel;
-        var velX = boid.vel.x;
-        var vel_ = boid.vel;
-        var velX_ = boid.vel.x;
+        const posX = 2f;
+        let vel = (&boid.vel);
+        let velX = boid.vel.x;
+        let vel_ = (&boid.vel);
+        let velX_ = boid.vel.x;
       }"
     `);
   });
@@ -178,7 +177,7 @@ describe('TgpuDerived', () => {
       derivedFnWith2.$();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn innerFn() -> f32 {
         return 1f;
       }
@@ -203,7 +202,7 @@ describe('TgpuDerived', () => {
     );
     const fn = tgpu.fn([], d.u32)(() => absGridSize.$);
 
-    expect(() => asWgsl(fn)).toThrow(
+    expect(() => tgpu.resolve([fn])).toThrow(
       'Cannot create tgpu.derived objects at the resolution stage.',
     );
   });
@@ -231,7 +230,7 @@ describe('TgpuDerived', () => {
       TgpuDerived<d.WgslArray<d.F16 | d.F32>>
     >();
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn foo() {
         var array = array<f32, 4>();
       }

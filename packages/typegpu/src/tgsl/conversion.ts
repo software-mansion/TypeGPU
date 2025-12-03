@@ -1,6 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
+import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -9,6 +10,7 @@ import {
   type I32,
   isMat,
   isVec,
+  type Ptr,
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
@@ -72,6 +74,8 @@ function getImplicitConversionRank(
 
   if (
     trueSrc.type === 'ptr' &&
+    // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
+    trueSrc.implicit &&
     getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
@@ -182,16 +186,15 @@ function findBestType(
   if (!bestResult) {
     return undefined;
   }
-  const actions: ConversionResultAction[] = bestResult.details.map((
-    detail,
-    index,
-  ) => ({
-    sourceIndex: index,
-    action: detail.action,
-    ...(detail.action === 'cast' && {
-      targetType: detail.targetType as U32 | F32 | I32 | F16,
+  const actions: ConversionResultAction[] = bestResult.details.map(
+    (detail, index) => ({
+      sourceIndex: index,
+      action: detail.action,
+      ...(detail.action === 'cast' && {
+        targetType: detail.targetType as U32 | F32 | I32 | F16,
+      }),
     }),
-  }));
+  );
 
   return {
     targetType: bestResult.type,
@@ -229,14 +232,23 @@ function applyActionToSnippet(
   targetType: AnyData,
 ): Snippet {
   if (action.action === 'none') {
-    return snip(snippet.value, targetType);
+    return snip(
+      snippet.value,
+      targetType,
+      // if it was a ref, then it's still a ref
+      /* origin */ snippet.origin,
+    );
   }
 
   switch (action.action) {
     case 'ref':
-      return snip(stitch`&${snippet}`, targetType);
+      return snip(
+        new RefOperator(snippet, targetType as Ptr),
+        targetType,
+        snippet.origin,
+      );
     case 'deref':
-      return snip(stitch`*${snippet}`, targetType);
+      return derefSnippet(snippet);
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
       return (targetType as unknown as (val: Snippet) => Snippet)(snippet);
@@ -313,19 +325,25 @@ export function tryConvertSnippet(
   verbose = true,
 ): Snippet {
   if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType);
+    return snip(snippet.value, targetDataType, snippet.origin);
   }
 
   if (snippet.dataType.type === 'unknown') {
     // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(stitch`${snip(snippet.value, targetDataType)}`, targetDataType);
+    return snip(
+      stitch`${snip(snippet.value, targetDataType, snippet.origin)}`,
+      targetDataType,
+      snippet.origin,
+    );
   }
 
   const converted = convertToCommonType([snippet], [targetDataType], verbose);
 
   if (!converted) {
     throw new WgslTypeError(
-      `Cannot convert value of type '${snippet.dataType.type}' to type '${targetDataType.type}'`,
+      `Cannot convert value of type '${
+        String(snippet.dataType)
+      }' to type '${targetDataType.type}'`,
     );
   }
 

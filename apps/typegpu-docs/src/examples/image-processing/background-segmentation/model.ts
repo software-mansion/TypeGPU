@@ -91,7 +91,6 @@ export async function prepareSession(
   output: GPUBuffer,
   modelConfig: ModelConfig = MODELS[0],
 ) {
-  // Dynamically load model data with caching
   const { modelData, externalData } = await loadModelData(modelConfig);
 
   const session = await ort.InferenceSession.create(modelData, {

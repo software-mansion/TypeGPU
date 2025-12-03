@@ -15,19 +15,12 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
-
-  // Sample directly from the input with native aspect ratio
-  const uv = d.vec2f(d.f32(x), d.f32(y)).div(
-    d.vec2f(MODEL_WIDTH, MODEL_HEIGHT),
-  );
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
-    uv,
+    d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT)),
   );
 
-  // Color space is already RGB from the video texture
-  // Normalize to [0, 1] range (texture values are already normalized)
   prepareModelInputLayout.$
     .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
   prepareModelInputLayout.$
@@ -38,23 +31,11 @@ export const prepareModelInput = (x: number, y: number) => {
 
 export const generateMaskFromOutput = (x: number, y: number) => {
   'use gpu';
-  const rawValue = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
-
-  // Apply threshold with slight smoothing
-  const threshold = 0.55;
-
-  // Instead of hard binary, use smoothstep for softer edges
-  const smoothness = 0.1;
-  const maskValue = std.smoothstep(
-    threshold - smoothness,
-    threshold + smoothness,
-    rawValue,
-  );
-
+  const color = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
   std.textureStore(
     generateMaskLayout.$.maskTexture,
     d.vec2u(x, y),
-    d.vec4f(maskValue),
+    d.vec4f(color),
   );
 };
 
@@ -139,7 +120,6 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  // Sample mask directly at the same UV coordinates
   const mask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,

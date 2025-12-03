@@ -34,19 +34,19 @@ describe('perlin noise example', () => {
       }
 
       fn item_10() -> f32 {
-        var a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
+        let a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
         seed_8.x = fract((cos(a) * 136.8168f));
         seed_8.y = fract((cos(b) * 534.7645f));
         return seed_8.y;
       }
 
       fn randOnUnitSphere_9() -> vec3f {
-        var z = ((2f * item_10()) - 1f);
-        var oneMinusZSq = sqrt((1f - (z * z)));
-        var theta = (6.283185307179586f * item_10());
-        var x = (cos(theta) * oneMinusZSq);
-        var y = (sin(theta) * oneMinusZSq);
+        let z = ((2f * item_10()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * item_10());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
@@ -56,8 +56,8 @@ describe('perlin noise example', () => {
       }
 
       fn mainCompute_2(x: u32, y: u32, z: u32) {
-        var size = size_3;
-        var idx = ((x + (y * size.x)) + ((z * size.x) * size.y));
+        let size = (&size_3);
+        let idx = ((x + (y * (*size).x)) + ((z * (*size).x) * (*size).y));
         memory_4[idx] = computeJunctionGradient_5(vec3i(i32(x), i32(y), i32(z)));
       }
 
@@ -98,9 +98,9 @@ describe('perlin noise example', () => {
 
       fn getJunctionGradient_8(pos: vec3i) -> vec3f {
         var size = vec3i(perlin3dCache__size_9.xyz);
-        var x = (((pos.x % size.x) + size.x) % size.x);
-        var y = (((pos.y % size.y) + size.y) % size.y);
-        var z = (((pos.z % size.z) + size.z) % size.z);
+        let x = (((pos.x % size.x) + size.x) % size.x);
+        let y = (((pos.y % size.y) + size.y) % size.y);
+        let z = (((pos.z % size.z) + size.z) % size.z);
         return perlin3dCache__memory_10[((x + (y * size.x)) + ((z * size.x) * size.y))];
       }
 
@@ -116,22 +116,22 @@ describe('perlin noise example', () => {
 
       fn sample_6(pos: vec3f) -> f32 {
         var minJunction = floor(pos);
-        var xyz = dotProdGrid_7(pos, minJunction);
-        var xyZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 0, 1)));
-        var xYz = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 0)));
-        var xYZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 1)));
-        var Xyz = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 0)));
-        var XyZ = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 1)));
-        var XYz = dotProdGrid_7(pos, (minJunction + vec3f(1, 1, 0)));
-        var XYZ = dotProdGrid_7(pos, (minJunction + vec3f(1)));
+        let xyz = dotProdGrid_7(pos, minJunction);
+        let xyZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 0, 1)));
+        let xYz = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 0)));
+        let xYZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 1)));
+        let Xyz = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 0)));
+        let XyZ = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 1)));
+        let XYz = dotProdGrid_7(pos, (minJunction + vec3f(1, 1, 0)));
+        let XYZ = dotProdGrid_7(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
         var smoothPartial = quinticInterpolationImpl_11(partial);
-        var xy = mix(xyz, xyZ, smoothPartial.z);
-        var xY = mix(xYz, xYZ, smoothPartial.z);
-        var Xy = mix(Xyz, XyZ, smoothPartial.z);
-        var XY = mix(XYz, XYZ, smoothPartial.z);
-        var x = mix(xy, xY, smoothPartial.y);
-        var X = mix(Xy, XY, smoothPartial.y);
+        let xy = mix(xyz, xyZ, smoothPartial.z);
+        let xY = mix(xYz, xYZ, smoothPartial.z);
+        let Xy = mix(Xyz, XyZ, smoothPartial.z);
+        let XY = mix(XYz, XYZ, smoothPartial.z);
+        let x = mix(xy, xY, smoothPartial.y);
+        let X = mix(Xy, XY, smoothPartial.y);
         return mix(x, X, smoothPartial.x);
       }
 
@@ -147,9 +147,9 @@ describe('perlin noise example', () => {
 
       @fragment fn mainFragment_3(input: mainFragment_Input_14) -> @location(0) vec4f {
         var uv = (gridSize_4 * input.uv);
-        var n = sample_6(vec3f(uv, time_5));
-        var sharp = exponentialSharpen_12(n, sharpness_13);
-        var n01 = ((sharp * 0.5f) + 0.5f);
+        let n = sample_6(vec3f(uv, time_5));
+        let sharp = exponentialSharpen_12(n, sharpness_13);
+        let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);
         var light = vec3f(1, 0.30000001192092896, 0.5);
         return vec4f(mix(dark, light, n01), 1f);

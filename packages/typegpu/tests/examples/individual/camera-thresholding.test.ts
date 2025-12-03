@@ -54,9 +54,9 @@ describe('camera thresholding example', () => {
         var col = textureSampleBaseClampToEdge(inputTexture_5, sampler_6, uv2);
         var ycbcr = (col.xyz * rgbToYcbcrMatrix_7);
         var colycbcr = (colorUniform_8 * rgbToYcbcrMatrix_7);
-        var crDiff = abs((ycbcr.y - colycbcr.y));
-        var cbDiff = abs((ycbcr.z - colycbcr.z));
-        var distance = length(vec2f(crDiff, cbDiff));
+        let crDiff = abs((ycbcr.y - colycbcr.y));
+        let cbDiff = abs((ycbcr.z - colycbcr.z));
+        let distance = length(vec2f(crDiff, cbDiff));
         if ((distance < pow(thresholdBuffer_9, 2f))) {
           col = vec4f();
         }
