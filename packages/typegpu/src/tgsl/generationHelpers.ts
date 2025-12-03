@@ -272,26 +272,30 @@ export function accessIndex(
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType as AnyData;
-    const isTargetEphemeral = isEphemeralSnippet(target);
     const isElementNatEph = isNaturallyEphemeral(elementType);
+    const isTargetEphemeral = isEphemeralSnippet(target);
+    const isIndexConstant = index.origin === 'constant';
 
     let origin: Origin;
 
-    if (
-      target.origin === 'constant-tgpu-const-ref' &&
-      index.origin === 'constant'
-    ) {
-      origin = isElementNatEph ? 'constant' : 'constant-tgpu-const-ref';
-    } else if (
-      target.origin === 'constant-tgpu-const-ref' ||
-      target.origin === 'runtime-tgpu-const-ref'
-    ) {
+    if (target.origin === 'constant-tgpu-const-ref') {
+      // Constant refs stay const unless the element/index forces runtime materialization
+      if (isIndexConstant) {
+        origin = isElementNatEph ? 'constant' : 'constant-tgpu-const-ref';
+      } else {
+        origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
+      }
+    } else if (target.origin === 'runtime-tgpu-const-ref') {
+      // Runtime refs keep their ref semantics unless the element is ephemeral only
       origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
     } else if (!isTargetEphemeral && !isElementNatEph) {
+      // Stable containers can forward their origin information
       origin = target.origin;
-    } else if (target.origin === 'constant' && index.origin === 'constant') {
+    } else if (isIndexConstant && target.origin === 'constant') {
+      // Plain constants indexed with constants stay constant
       origin = 'constant';
     } else {
+      // Everything else must be produced at runtime
       origin = 'runtime';
     }
 
