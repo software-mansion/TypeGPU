@@ -15,7 +15,7 @@ export const MODELS: ModelConfig[] = [
     description: 'Original u2netp model, U-Squared-net architecture',
   },
   {
-    name: 'mobileV2 - 11mb',
+    name: 'mobileV2 - [11mb]',
     path:
       'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx',
     inputName: 'input',
