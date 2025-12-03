@@ -98,7 +98,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return snip(
       id,
       this.dataType,
-      isNaturallyEphemeral(this.dataType) ? 'constant' : 'constant-ref',
+      isNaturallyEphemeral(this.dataType)
+        ? 'constant'
+        : 'constant-tgpu-const-ref',
     );
   }
 
@@ -115,7 +117,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
         return snip(
           this,
           dataType,
-          isNaturallyEphemeral(dataType) ? 'constant' : 'constant-ref',
+          isNaturallyEphemeral(dataType)
+            ? 'constant'
+            : 'constant-tgpu-const-ref',
         );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
