@@ -6,6 +6,7 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import {
+  mockCreateImageBitmap,
   mockFonts,
   mockImageLoading,
   mockResizeObserver,
@@ -22,6 +23,7 @@ describe('jelly-slider example', () => {
         mockFonts();
         mockImageLoading();
         mockResizeObserver();
+        mockCreateImageBitmap();
       },
       expectedCalls: 6,
     }, device);
