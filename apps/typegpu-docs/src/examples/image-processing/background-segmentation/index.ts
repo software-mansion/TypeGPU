@@ -11,6 +11,7 @@ import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
+  cropBoundsSlot,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
@@ -76,11 +77,13 @@ context.configure({
 
 let blurStrength = 5;
 let useGaussianBlur = false;
+let useSquareCrop = false;
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
 const useGaussianUniform = root.createUniform(d.u32, 0);
 const sampleBiasUniform = root.createUniform(d.f32, 0);
+const cropBoundsUniform = root.createUniform(d.vec4f, d.vec4f(0, 0, 1, 1));
 
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -123,6 +126,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
+  .with(cropBoundsSlot, cropBoundsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -160,6 +164,7 @@ const blurPipeline = root['~unstable']
   .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
+  .with(cropBoundsSlot, cropBoundsUniform)
   .with(useGaussianSlot, useGaussianUniform)
   .with(sampleBiasSlot, sampleBiasUniform)
   .withVertex(fullScreenTriangle, {})
@@ -199,6 +204,27 @@ async function processCalculateMask() {
 calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
 
 // frame
+function updateCropBounds(aspectRatio: number) {
+  let uvMinX = 0;
+  let uvMinY = 0;
+  let uvMaxX = 1;
+  let uvMaxY = 1;
+
+  if (useSquareCrop) {
+    if (aspectRatio > 1) {
+      // wide (e.g. 16:9) - crop horizontally
+      const cropWidth = 1 / aspectRatio; // width of square in UV space
+      uvMinX = (1 - cropWidth) / 2;
+      uvMaxX = uvMinX + cropWidth;
+    } else if (aspectRatio < 1) {
+      // tall - crop vertically
+      const cropHeight = aspectRatio; // height of square in UV space
+      uvMinY = (1 - cropHeight) / 2;
+      uvMaxY = uvMinY + cropHeight;
+    }
+  }
+  cropBoundsUniform.write(d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY));
+}
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -208,6 +234,9 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+
+  updateCropBounds(aspectRatio);
+
   blurredTextures = [0, 1].map(() =>
     root['~unstable'].createTexture({
       size: [size.width, size.height],
@@ -331,6 +360,15 @@ export const controls = {
     onSliderChange(newValue: number) {
       blurStrength = newValue;
       sampleBiasUniform.write(blurStrength);
+    },
+  },
+  'square crop': {
+    initial: useSquareCrop,
+    onToggleChange(value: boolean) {
+      useSquareCrop = value;
+      if (lastFrameSize) {
+        updateCropBounds(lastFrameSize.width / lastFrameSize.height);
+      }
     },
   },
 };
