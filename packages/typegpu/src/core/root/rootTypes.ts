@@ -112,9 +112,7 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = keyof T extends never ? true
-  : T extends Record<string, never> ? true
-  : false;
+type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
 
 type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
