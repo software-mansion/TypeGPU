@@ -687,7 +687,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* origin */ 'runtime'); // arbitrary ref
+      return snip(expression[1], UnknownData, /* origin */ 'constant');
     }
 
     if (expression[0] === NODE.preUpdate) {
