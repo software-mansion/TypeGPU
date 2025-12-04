@@ -16,21 +16,21 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 TSL:
 ```ts
-const computeShader = Fn(() => {
+const simulate = Fn(() => {
   //
   // ... TSL code ...
   //
-}).compute(threadCount);
+});
 ```
 
 TypeGPU:
 ```ts
-const computeShader = toTSL(() => {
+const simulate = toTSL(() => {
   'use gpu';
   //
   // ... TypeGPU code ...
   // 
-}).compute(threadCount);
+});
 ```
 
 ## Function definition
@@ -38,7 +38,7 @@ const computeShader = toTSL(() => {
 TSL:
 ```ts
 const oscSine = Fn(([t = time]) => {
-	return t.add(0.75).mul(Math.PI * 2).sin().mul(0.5).add(0.5);
+  return t.add(0.75).mul(Math.PI * 2).sin().mul(0.5).add(0.5);
 });
 ```
 
@@ -46,7 +46,7 @@ TypeGPU:
 ```ts
 const oscSine = (t: number) => {
   'use gpu';
-	return std.sin((t + 0.75) * Math.PI * 2) * 0.5 + 0.5;
+  return std.sin((t + 0.75) * Math.PI * 2) * 0.5 + 0.5;
 };
 ```
 
@@ -55,7 +55,7 @@ const oscSine = (t: number) => {
 TSL:
 ```ts
 If(instanceIndex.greaterThanEqual(uint(vertexCount)), () => {
-	Return();
+  Return();
 });
 ```
 

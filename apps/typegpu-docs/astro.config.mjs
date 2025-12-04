@@ -209,7 +209,7 @@ export default defineConfig({
           items: stripFalsy([
             {
               label: '@typegpu/noise',
-j              slug: 'ecosystem/typegpu-noise',
+              slug: 'ecosystem/typegpu-noise',
             },
             {
               label: '@typegpu/three',
