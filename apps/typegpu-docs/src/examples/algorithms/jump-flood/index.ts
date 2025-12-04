@@ -466,13 +466,14 @@ export const controls = {
       render();
     },
   },
-  'Seed density (%)': {
-    initial: 0.1,
-    min: 0.0001,
-    max: 0.1,
-    step: 0.0001,
+  'Seed density': {
+    initial: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.01,
     onSliderChange(value: number) {
-      seedThreshold = 1 - value / 100;
+      const density = 10 ** (-5 + 4 * value);
+      seedThreshold = 1 - density;
       seedThresholdUniform.write(seedThreshold);
       reset();
     },

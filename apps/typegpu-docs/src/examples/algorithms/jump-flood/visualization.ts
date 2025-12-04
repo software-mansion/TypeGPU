@@ -43,6 +43,10 @@ export const distanceFrag = tgpu['~unstable'].fragmentFn({
     uv,
   ).xy;
 
+  if (seedCoord.x < 0) {
+    std.discard();
+  }
+
   const pixelPos = uv.mul(d.vec2f(size));
   const seedPos = seedCoord.mul(d.vec2f(size));
   const dist = std.distance(pixelPos, seedPos);
