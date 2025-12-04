@@ -17,7 +17,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
   <div
-    class="flex flex-col text-blue-950 dark:text-gray-100 gap-14 md:gap-30 transition-colors duration-300"
+    class="flex flex-col gap-14 md:gap-30 text-blue-950 dark:text-gray-100 transition-colors duration-300"
   >
     <main class="transition-colors duration-300">
       <header
@@ -26,7 +26,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
           <Image
             src={TypeGPULogoLight}
-            class="block md:hidden w-auto h-14"
+            class="md:hidden block w-auto h-14"
             alt="Software Mansion Logo (Mobile)"
           />
           <Image
@@ -36,7 +36,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
           />
           <Image
             src={SwmLogoSvg}
-            class="hidden md:block md:dark:hidden w-auto h-14"
+            class="hidden md:dark:hidden md:block w-auto h-14"
             alt="Software Mansion Logo (Desktop)"
           />
         </a>
@@ -79,12 +79,12 @@ import PageLayout from "../../layouts/PageLayout.astro";
     <section
       class="flex flex-col items-center mx-auto lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="flex flex-col px-6 gap-4 md:gap-12 lg:px-0">
+      <div class="flex flex-col gap-4 md:gap-12 px-6 lg:px-0">
         <div class="font-bold text-[#001A72] dark:text-gray-100 text-2xl md:text-6xl">
           Type<GradientTitle title="GPU" />
         </div>
         <div
-          class="text-blue-950 dark:text-gray-200 text-2xl md:text-3xl text-pretty md:pr-40"
+          class="md:pr-40 text-blue-950 dark:text-gray-200 text-2xl md:text-3xl text-pretty"
         >
           A modular and open-ended toolkit for WebGPU, with advanced type
           interface and ability to write shaders in TypeScript.
@@ -108,9 +108,9 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
     {/* Code Showcase */}
     <section
-      class="flex flex-col gap-10 md:gap-20 mx-auto md:px-72 max-w-90 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
+      class="flex flex-col gap-10 md:gap-20 md:mx-auto px-6 md:px-72 sm:max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
-      <div class="flex flex-col gap-4 px-6 md:gap-6">
+      <div class="flex flex-col gap-4 md:gap-6">
         <h2
           class="font-medium text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
         >
@@ -122,7 +122,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
         </p>
       </div>
       <CodeShowcase />
-      <div class="flex md:flex-row flex-col md:justify-between px-6 gap-6 md:gap-0 ">
+      <div class="flex md:flex-row flex-col md:justify-between gap-6 md:gap-0">
         <h3
           class="font-normal text-blue-950 dark:text-gray-100 text-xl md:text-4xl center"
         >
@@ -177,7 +177,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
     {/* Backlog */}
     <section
-      class="mx-auto px-6 my-12 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
+      class="mx-auto my-12 px-6 lg:px-72 max-w-138 md:max-w-214 lg:max-w-[1024px] transition-colors duration-300"
     >
       <div class="flex flex-col gap-6 pb-20">
         <h2
@@ -217,7 +217,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
           We are <GradientTitle title="Software Mansion" />
         </h2>
         <div
-          class="mb-4 text-blue-900 dark:text-gray-300 text-center text-2xl text-pretty"
+          class="mb-4 text-blue-900 dark:text-gray-300 text-2xl text-center text-pretty"
         >
           We’re a software company built around improving developer experience
           and bringing to life the innovative ideas of our clients. Do you have
