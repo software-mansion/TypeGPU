@@ -7,6 +7,12 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
+import {
+  colorSampleLayout,
+  coordSampleLayout,
+  distanceFrag,
+  voronoiFrag,
+} from './visualization.ts';
 
 const root = await tgpu.init();
 
@@ -19,10 +25,16 @@ context.configure({
   format: presentationFormat,
 });
 
-let stepDelayMs = 500;
+let stepDelayMs = 50;
 let seedThreshold = 0.999;
 let startingRangePercent = 1;
 let currentRunId = 0;
+let visualizationMode: 'voronoi' | 'distance' = 'voronoi';
+let brushSize = 10;
+let brushColor = d.vec3f(0x8b / 255, 0x5c / 255, 0xf6 / 255);
+let isDrawing = false;
+let lastDrawPos: { x: number; y: number } | null = null;
+let sourceIdx = 0;
 
 const palette = tgpu.const(d.arrayOf(d.vec3f, 4), [
   d.vec3f(0xeb / 255, 0xcf / 255, 0xff / 255),
@@ -33,6 +45,9 @@ const palette = tgpu.const(d.arrayOf(d.vec3f, 4), [
 
 const seedThresholdUniform = root.createUniform(d.f32, seedThreshold);
 const offsetUniform = root.createUniform(d.i32);
+const brushPosUniform = root.createUniform(d.vec2f);
+const brushSizeUniform = root.createUniform(d.f32, brushSize);
+const brushColorUniform = root.createUniform(d.vec3f, brushColor);
 
 const SampleResult = d.struct({
   color: d.vec4f,
@@ -45,17 +60,13 @@ const initLayout = tgpu.bindGroupLayout({
   },
 });
 
-const floodLayout = tgpu.bindGroupLayout({
+const pingPongLayout = tgpu.bindGroupLayout({
   writeView: {
     storageTexture: d.textureStorage2dArray('rgba16float', 'write-only'),
   },
   readView: {
     storageTexture: d.textureStorage2dArray('rgba16float', 'read-only'),
   },
-});
-
-const sampleLayout = tgpu.bindGroupLayout({
-  floodTexture: { texture: d.texture2d() },
 });
 
 type FloodTexture =
@@ -77,20 +88,37 @@ function createTextures() {
   ) as [FloodTexture, FloodTexture];
 }
 
-function createFloodBindGroups(textures: [FloodTexture, FloodTexture]) {
+function createPingPongBindGroups(textures: [FloodTexture, FloodTexture]) {
   return [0, 1].map((i) =>
-    root.createBindGroup(floodLayout, {
-      writeView: textures[1 - i],
+    root.createBindGroup(pingPongLayout, {
       readView: textures[i],
+      writeView: textures[1 - i],
     })
   );
 }
 
 let textures = createTextures();
-let floodBindGroups = createFloodBindGroups(textures);
-let initBindGroup = root.createBindGroup(initLayout, {
-  writeView: textures[0],
-});
+let pingPongBindGroups = createPingPongBindGroups(textures);
+let renderBindGroups: ReturnType<typeof createRenderBindGroups>;
+
+function createRenderBindGroups(textures: [FloodTexture, FloodTexture]) {
+  return textures.map((tex) => ({
+    color: root.createBindGroup(colorSampleLayout, {
+      floodTexture: tex.createView(d.texture2d(), {
+        baseArrayLayer: 0,
+        arrayLayerCount: 1,
+      }),
+      sampler: filteringSampler,
+    }),
+    coord: root.createBindGroup(coordSampleLayout, {
+      coordTexture: tex.createView(d.texture2d(), {
+        baseArrayLayer: 1,
+        arrayLayerCount: 1,
+      }),
+      sampler: filteringSampler,
+    }),
+  }));
+}
 
 const initializeRandom = root['~unstable'].createGuardedComputePipeline(
   (x, y) => {
@@ -156,7 +184,7 @@ const sampleWithOffset = (
 const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   'use gpu';
   const offset = offsetUniform.$;
-  const size = std.textureDimensions(floodLayout.$.readView);
+  const size = std.textureDimensions(pingPongLayout.$.readView);
 
   let minDist = 1e20;
   let bestSample = SampleResult({ color: d.vec4f(), coord: d.vec2f(-1) });
@@ -164,7 +192,7 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const sample = sampleWithOffset(
-        floodLayout.$.readView,
+        pingPongLayout.$.readView,
         d.vec2i(x, y),
         d.vec2i(dx * offset, dy * offset),
       );
@@ -181,12 +209,51 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
     }
   }
 
-  std.textureStore(floodLayout.$.writeView, d.vec2i(x, y), 0, bestSample.color);
   std.textureStore(
-    floodLayout.$.writeView,
+    pingPongLayout.$.writeView,
+    d.vec2i(x, y),
+    0,
+    bestSample.color,
+  );
+  std.textureStore(
+    pingPongLayout.$.writeView,
     d.vec2i(x, y),
     1,
     d.vec4f(bestSample.coord, 0, 0),
+  );
+});
+
+const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const size = std.textureDimensions(pingPongLayout.$.writeView);
+  const pos = d.vec2f(x, y);
+  const inBrush = std.distance(pos, brushPosUniform.$) <= brushSizeUniform.$;
+
+  const existingColor = std.textureLoad(
+    pingPongLayout.$.readView,
+    d.vec2i(x, y),
+    0,
+  );
+  const existingCoord = std.textureLoad(
+    pingPongLayout.$.readView,
+    d.vec2i(x, y),
+    1,
+  );
+
+  const newColor = d.vec4f(brushColorUniform.$, 1);
+  const newCoord = d.vec4f(pos.div(d.vec2f(size)), 0, 0);
+
+  std.textureStore(
+    pingPongLayout.$.writeView,
+    d.vec2i(x, y),
+    0,
+    std.select(existingColor, newColor, inBrush),
+  );
+  std.textureStore(
+    pingPongLayout.$.writeView,
+    d.vec2i(x, y),
+    1,
+    std.select(existingCoord, newCoord, inBrush),
   );
 });
 
@@ -195,46 +262,106 @@ const filteringSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const sampleFrag = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) =>
-  std.textureSample(sampleLayout.$.floodTexture, filteringSampler.$, uv)
-);
+renderBindGroups = createRenderBindGroups(textures);
 
-const renderPipeline = root['~unstable']
+const voronoiPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
-  .withFragment(sampleFrag, { format: presentationFormat })
+  .withFragment(voronoiFrag, { format: presentationFormat })
+  .createPipeline();
+
+const distancePipeline = root['~unstable']
+  .withVertex(fullScreenTriangle, {})
+  .withFragment(distanceFrag, { format: presentationFormat })
   .createPipeline();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function render(textureIndex: number) {
-  renderPipeline
-    .with(
-      root.createBindGroup(sampleLayout, {
-        floodTexture: textures[textureIndex],
-      }),
-    )
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+function swap() {
+  sourceIdx = 1 - sourceIdx;
+}
+
+function render() {
+  const colorAttachment = {
+    view: context.getCurrentTexture().createView(),
+    loadOp: 'clear' as const,
+    storeOp: 'store' as const,
+  };
+
+  if (visualizationMode === 'voronoi') {
+    voronoiPipeline
+      .with(renderBindGroups[sourceIdx].color)
+      .withColorAttachment(colorAttachment)
+      .draw(3);
+  } else {
+    distancePipeline
+      .with(renderBindGroups[sourceIdx].coord)
+      .withColorAttachment(colorAttachment)
+      .draw(3);
+  }
+}
+
+function drawAtPosition(canvasX: number, canvasY: number) {
+  const rect = canvas.getBoundingClientRect();
+  brushPosUniform.write(d.vec2f(
+    canvasX * canvas.width / rect.width,
+    canvasY * canvas.height / rect.height,
+  ));
+  brushSizeUniform.write(brushSize);
+  drawSeed.with(pingPongBindGroups[sourceIdx]).dispatchThreads(
+    canvas.width,
+    canvas.height,
+  );
+  swap();
+  render();
+}
+
+function interpolateAndDraw(x: number, y: number) {
+  if (lastDrawPos) {
+    const dx = x - lastDrawPos.x;
+    const dy = y - lastDrawPos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.ceil(dist / Math.max(1, brushSize / 3));
+    for (let i = 0; i <= steps; i++) {
+      const t = steps > 0 ? i / steps : 0;
+      drawAtPosition(lastDrawPos.x + dx * t, lastDrawPos.y + dy * t);
+    }
+  } else {
+    drawAtPosition(x, y);
+  }
+  lastDrawPos = { x, y };
+}
+
+const clearTexture = root['~unstable'].createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, d.vec4f());
+  std.textureStore(
+    initLayout.$.writeView,
+    d.vec2i(x, y),
+    1,
+    d.vec4f(-1, -1, 0, 0),
+  );
+});
+
+function clearCanvas() {
+  clearTexture
+    .with(root.createBindGroup(initLayout, { writeView: textures[0] }))
+    .dispatchThreads(canvas.width, canvas.height);
+  clearTexture
+    .with(root.createBindGroup(initLayout, { writeView: textures[1] }))
+    .dispatchThreads(canvas.width, canvas.height);
+  sourceIdx = 0;
+  render();
 }
 
 async function runFloodAnimated(runId: number) {
-  render(0);
+  render();
   await sleep(stepDelayMs);
-
   if (runId !== currentRunId) {
     return;
   }
 
   const maxRange = Math.floor(Math.max(canvas.width, canvas.height) / 2);
   let offset = Math.floor(maxRange * startingRangePercent);
-  let i = 0;
 
   while (offset >= 1) {
     if (runId !== currentRunId) {
@@ -242,16 +369,15 @@ async function runFloodAnimated(runId: number) {
     }
 
     offsetUniform.write(offset);
-    jumpFlood.with(floodBindGroups[i % 2]).dispatchThreads(
+    jumpFlood.with(pingPongBindGroups[sourceIdx]).dispatchThreads(
       canvas.width,
       canvas.height,
     );
-
-    render((i + 1) % 2);
+    swap();
+    render();
     await sleep(stepDelayMs);
 
     offset = Math.floor(offset / 2);
-    i++;
   }
 }
 
@@ -260,16 +386,25 @@ function recreateResources() {
     t.destroy();
   }
   textures = createTextures();
-  floodBindGroups = createFloodBindGroups(textures);
-  initBindGroup = root.createBindGroup(initLayout, { writeView: textures[0] });
+  pingPongBindGroups = createPingPongBindGroups(textures);
+  renderBindGroups = createRenderBindGroups(textures);
+  sourceIdx = 0;
 }
 
-function reset() {
-  currentRunId++;
+function initRandom() {
+  const initBindGroup = root.createBindGroup(initLayout, {
+    writeView: textures[0],
+  });
   initializeRandom.with(initBindGroup).dispatchThreads(
     canvas.width,
     canvas.height,
   );
+  sourceIdx = 0;
+}
+
+function reset() {
+  currentRunId++;
+  initRandom();
   runFloodAnimated(currentRunId);
 }
 
@@ -287,15 +422,70 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+const onMouseDown = (e: MouseEvent) => {
+  if (e.button !== 0) return;
+  isDrawing = true;
+  lastDrawPos = null;
+  const rect = canvas.getBoundingClientRect();
+  interpolateAndDraw(e.clientX - rect.left, e.clientY - rect.top);
+};
+const onMouseMove = (e: MouseEvent) => {
+  if (!isDrawing) return;
+  const rect = canvas.getBoundingClientRect();
+  interpolateAndDraw(e.clientX - rect.left, e.clientY - rect.top);
+};
+const onMouseUp = () => {
+  isDrawing = false;
+  lastDrawPos = null;
+};
+
+canvas.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mousemove', onMouseMove);
+canvas.addEventListener('mouseup', onMouseUp);
+canvas.addEventListener('mouseleave', onMouseUp);
+
 export const controls = {
-  Reset: {
+  'Run Algorithm': {
+    onButtonClick: () => {
+      currentRunId++;
+      runFloodAnimated(currentRunId);
+    },
+  },
+  'Random Seeds': {
     onButtonClick: reset,
+  },
+  Clear: {
+    onButtonClick: clearCanvas,
+  },
+  'Brush size': {
+    initial: brushSize,
+    min: 1,
+    max: 50,
+    step: 1,
+    onSliderChange(value: number) {
+      brushSize = value;
+    },
+  },
+  'Brush color': {
+    initial: brushColor,
+    onColorChange(value: readonly [number, number, number]) {
+      brushColor = d.vec3f(...value);
+      brushColorUniform.write(brushColor);
+    },
+  },
+  Visualization: {
+    initial: 'Voronoi',
+    options: ['Voronoi', 'Distance'],
+    onSelectChange(value: string) {
+      visualizationMode = value.toLowerCase() as 'voronoi' | 'distance';
+      render();
+    },
   },
   'Seed density (%)': {
     initial: 0.1,
-    min: 0.001,
-    max: 5,
-    step: 0.001,
+    min: 0.0001,
+    max: 0.1,
+    step: 0.0001,
     onSliderChange(value: number) {
       seedThreshold = 1 - value / 100;
       seedThresholdUniform.write(seedThreshold);
