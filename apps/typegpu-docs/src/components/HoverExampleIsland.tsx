@@ -3,6 +3,8 @@ import type {
   PointerEvent as ReactPointerEvent,
   TouchEvent as ReactTouchEvent,
 } from 'react';
+import { useAtom } from 'jotai';
+import { activeExampleAtom } from '../utils/examples/activeExampleAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import type { Example } from '../utils/examples/types.ts';
@@ -41,7 +43,8 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<CleanupFn | undefined>(undefined);
   const twoFingerActiveRef = useRef(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
+  const isHovered = activeExample === exampleKey;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -55,13 +58,13 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
 
   const handlePointerEnter = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'touch') {
-      setIsHovered(true);
+      setActiveExample(exampleKey);
     }
   };
 
   const handlePointerLeave = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'touch') {
-      setIsHovered(false);
+      setActiveExample((prev) => (prev === exampleKey ? null : prev));
     }
   };
 
@@ -85,7 +88,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       }
 
       twoFingerActiveRef.current = false;
-      setIsHovered((prev) => !prev);
+      setActiveExample((prev) => (prev === exampleKey ? null : exampleKey));
     }
   };
 
@@ -102,7 +105,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) {
         twoFingerActiveRef.current = false;
-        setIsHovered(false);
+        setActiveExample((prev) => (prev === exampleKey ? null : prev));
       }
     });
 
@@ -142,6 +145,9 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         }
 
         const example = await loadExample(exampleKey);
+        if (cancelled) {
+          return;
+        }
         if (!containerRef.current) {
           return;
         }
@@ -184,22 +190,22 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className='order h-full w-full overflow-hidden'
+      className='w-full h-full overflow-hidden order'
     >
       {error
         ? (
-          <p className='text-center font-medium text-sm text-white'>
+          <p className='font-medium text-white text-sm text-center'>
             {error}
           </p>
         )
         : (
-          <div className='flex h-full w-full items-center justify-center'>
+          <div className='flex justify-center items-center w-full h-full'>
             {isLoading && (
-              <span className='animate-pulse text-center font-medium text-white/60 text-xs uppercase tracking-widest'>
+              <span className='font-medium text-white/60 text-xs text-center uppercase tracking-widest animate-pulse'>
                 Loading…
               </span>
             )}
-            <div ref={containerRef} className='h-full w-full' />
+            <div ref={containerRef} className='w-full h-full' />
           </div>
         )}
     </div>
