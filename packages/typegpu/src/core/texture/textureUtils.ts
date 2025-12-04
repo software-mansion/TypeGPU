@@ -264,7 +264,7 @@ export function resampleImage(
   image: ExternalImageSource,
   layer = 0,
 ): void {
-  if (targetTexture.dimension === '3d') {
+  if (targetTexture.dimension !== '2d') {
     throw new Error('Resampling only supports 2D textures.');
   }
 
