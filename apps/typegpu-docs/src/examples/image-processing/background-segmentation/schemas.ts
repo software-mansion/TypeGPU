@@ -15,6 +15,8 @@ export const prepareModelInputLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
+export const cropBoundsSlot = tgpu.slot<TgpuUniform<d.Vec4f>>();
+
 export const generateMaskLayout = tgpu.bindGroupLayout({
   outputBuffer: { storage: d.arrayOf(d.f32), access: 'readonly' },
   maskTexture: {
@@ -40,3 +42,12 @@ export const drawWithMaskLayout = tgpu.bindGroupLayout({
 
 export const useGaussianSlot = tgpu.slot<TgpuUniform<d.U32>>();
 export const sampleBiasSlot = tgpu.slot<TgpuUniform<d.F32>>();
+
+export interface ModelConfig {
+  name: string;
+  path: string;
+  inputName: string;
+  outputName: string;
+  externalData?: { data: string; path: string }[];
+  description?: string;
+}

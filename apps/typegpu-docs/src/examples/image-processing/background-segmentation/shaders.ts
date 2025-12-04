@@ -4,6 +4,7 @@ import * as std from 'typegpu/std';
 import {
   blockDim,
   blurLayout,
+  cropBoundsSlot,
   drawWithMaskLayout,
   filterDim,
   generateMaskLayout,
@@ -15,10 +16,19 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
+  const modelUV = d.vec2f(d.f32(x), d.f32(y)).div(
+    d.vec2f(MODEL_WIDTH, MODEL_HEIGHT),
+  );
+
+  const cropBounds = cropBoundsSlot.$;
+  const uvMin = cropBounds.xy;
+  const uvMax = cropBounds.zw;
+  const videoUV = std.mix(uvMin, uvMax, modelUV);
+
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
-    d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT)),
+    videoUV,
   );
 
   prepareModelInputLayout.$
@@ -120,11 +130,22 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  const mask = std.textureSampleBaseClampToEdge(
+  const cropBounds = cropBoundsSlot.$;
+  const uvMin = cropBounds.xy;
+  const uvMax = cropBounds.zw;
+  const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));
+  const sampledMask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    maskUV,
   ).x;
+
+  const inCropRegion = input.uv.x >= uvMin.x &&
+    input.uv.x <= uvMax.x &&
+    input.uv.y >= uvMin.y &&
+    input.uv.y <= uvMax.y;
+  // use mask only inside the crop region
+  const mask = std.select(0, sampledMask, inCropRegion);
 
   return std.mix(blurredColor, originalColor, mask);
 });

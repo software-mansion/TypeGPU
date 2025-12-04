@@ -7,10 +7,11 @@ import tgpu, {
 } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
-import { MODEL_HEIGHT, MODEL_WIDTH, prepareSession } from './model.ts';
+import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
+  cropBoundsSlot,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
@@ -76,11 +77,13 @@ context.configure({
 
 let blurStrength = 5;
 let useGaussianBlur = false;
+let useSquareCrop = false;
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
 const useGaussianUniform = root.createUniform(d.u32, 0);
 const sampleBiasUniform = root.createUniform(d.f32, 0);
+const cropBoundsUniform = root.createUniform(d.vec4f, d.vec4f(0, 0, 1, 1));
 
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -123,14 +126,33 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
+  .with(cropBoundsSlot, cropBoundsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
 
-const session = await prepareSession(
+let currentModelIndex = 0;
+let session = await prepareSession(
   root.unwrap(modelInputBuffer),
   root.unwrap(modelOutputBuffer),
+  MODELS[currentModelIndex],
 );
+let isLoadingModel = false;
+
+async function switchModel(modelIndex: number) {
+  if (isLoadingModel || modelIndex === currentModelIndex) return;
+  isLoadingModel = true;
+
+  const oldSession = session;
+  currentModelIndex = modelIndex;
+  session = await prepareSession(
+    root.unwrap(modelInputBuffer),
+    root.unwrap(modelOutputBuffer),
+    MODELS[currentModelIndex],
+  );
+  oldSession.release();
+  isLoadingModel = false;
+}
 
 const generateMaskFromOutputPipeline = root['~unstable']
   .createGuardedComputePipeline(
@@ -142,6 +164,7 @@ const blurPipeline = root['~unstable']
   .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
+  .with(cropBoundsSlot, cropBoundsUniform)
   .with(useGaussianSlot, useGaussianUniform)
   .with(sampleBiasSlot, sampleBiasUniform)
   .withVertex(fullScreenTriangle, {})
@@ -153,7 +176,7 @@ const drawWithMaskPipeline = root['~unstable']
 let calculateMaskCallbackId: number | undefined;
 
 async function processCalculateMask() {
-  if (video.readyState < 2) {
+  if (video.readyState < 2 || isLoadingModel) {
     calculateMaskCallbackId = video.requestVideoFrameCallback(
       processCalculateMask,
     );
@@ -181,6 +204,27 @@ async function processCalculateMask() {
 calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
 
 // frame
+function updateCropBounds(aspectRatio: number) {
+  let uvMinX = 0;
+  let uvMinY = 0;
+  let uvMaxX = 1;
+  let uvMaxY = 1;
+
+  if (useSquareCrop) {
+    if (aspectRatio > 1) {
+      // wide (e.g. 16:9) - crop horizontally
+      const cropWidth = 1 / aspectRatio; // width of square in UV space
+      uvMinX = (1 - cropWidth) / 2;
+      uvMaxX = uvMinX + cropWidth;
+    } else if (aspectRatio < 1) {
+      // tall - crop vertically
+      const cropHeight = aspectRatio; // height of square in UV space
+      uvMinY = (1 - cropHeight) / 2;
+      uvMaxY = uvMinY + cropHeight;
+    }
+  }
+  cropBoundsUniform.write(d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY));
+}
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -190,6 +234,9 @@ function onVideoChange(size: { width: number; height: number }) {
     canvas.parentElement.style.height =
       `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
+
+  updateCropBounds(aspectRatio);
+
   blurredTextures = [0, 1].map(() =>
     root['~unstable'].createTexture({
       size: [size.width, size.height],
@@ -287,6 +334,16 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 // #region Example controls & Cleanup
 
 export const controls = {
+  model: {
+    initial: MODELS[0].name,
+    options: MODELS.map((m) => m.name),
+    async onSelectChange(value: string) {
+      const index = MODELS.findIndex((m) => m.name === value);
+      if (index !== -1) {
+        await switchModel(index);
+      }
+    },
+  },
   'blur type': {
     initial: 'mipmaps',
     options: ['mipmaps', 'gaussian'],
@@ -303,6 +360,15 @@ export const controls = {
     onSliderChange(newValue: number) {
       blurStrength = newValue;
       sampleBiasUniform.write(blurStrength);
+    },
+  },
+  'square crop': {
+    initial: useSquareCrop,
+    onToggleChange(value: boolean) {
+      useSquareCrop = value;
+      if (lastFrameSize) {
+        updateCropBounds(lastFrameSize.width / lastFrameSize.height);
+      }
     },
   },
 };
