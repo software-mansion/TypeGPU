@@ -63,7 +63,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       | Infer<T>
       | undefined = undefined,
   ) {
-    // TODO: find out why unplugin runs on package typegpu and remove this workaround
+    // NOTE: unplugin runs on package typegpu, so we have to avoid auto-naming triggering here
     this.slot = slotConstructor(defaultValue);
     this[$getNameForward] = this.slot;
   }
