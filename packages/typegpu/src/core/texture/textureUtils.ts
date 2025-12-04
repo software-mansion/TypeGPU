@@ -73,62 +73,86 @@ type BlitResources = {
   sampler: GPUSampler;
 };
 
-const blitCache = new WeakMap<GPUDevice, Map<string, BlitResources>>();
+type DeviceCache = {
+  vertexModule: GPUShaderModule;
+  filterableResources: Map<
+    boolean,
+    { fragmentModule: GPUShaderModule; sampler: GPUSampler }
+  >;
+  layoutResources: Map<
+    string,
+    { bindGroupLayout: GPUBindGroupLayout; pipelineLayout: GPUPipelineLayout }
+  >;
+};
+
+const blitCache = new WeakMap<GPUDevice, DeviceCache>();
+
+function getOrCreateDeviceCache(device: GPUDevice): DeviceCache {
+  let cache = blitCache.get(device);
+  if (!cache) {
+    cache = {
+      vertexModule: device.createShaderModule({
+        code: FULLSCREEN_VERTEX_SHADER,
+      }),
+      filterableResources: new Map(),
+      layoutResources: new Map(),
+    };
+    blitCache.set(device, cache);
+  }
+  return cache;
+}
 
 function getBlitResources(
   device: GPUDevice,
   filterable: boolean,
   sampleType: GPUTextureSampleType,
 ): BlitResources {
-  let cache = blitCache.get(device);
-  if (!cache) {
-    cache = new Map();
-    blitCache.set(device, cache);
+  const cache = getOrCreateDeviceCache(device);
+
+  let filterableRes = cache.filterableResources.get(filterable);
+  if (!filterableRes) {
+    filterableRes = {
+      fragmentModule: device.createShaderModule({
+        code: filterable ? SAMPLE_FRAGMENT_SHADER : GATHER_FRAGMENT_SHADER,
+      }),
+      sampler: device.createSampler(
+        filterable ? { magFilter: 'linear', minFilter: 'linear' } : {},
+      ),
+    };
+    cache.filterableResources.set(filterable, filterableRes);
   }
 
-  const key = `${filterable}:${sampleType}`;
-  let resources = cache.get(key);
-  if (resources) {
-    return resources;
+  const layoutKey = `${filterable}:${sampleType}`;
+  let layoutRes = cache.layoutResources.get(layoutKey);
+  if (!layoutRes) {
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: filterable ? 'filtering' : 'non-filtering' },
+        },
+      ],
+    });
+    layoutRes = {
+      bindGroupLayout,
+      pipelineLayout: device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+    };
+    cache.layoutResources.set(layoutKey, layoutRes);
   }
 
-  const vertexModule = device.createShaderModule({
-    code: FULLSCREEN_VERTEX_SHADER,
-  });
-  const fragmentModule = device.createShaderModule({
-    code: filterable ? SAMPLE_FRAGMENT_SHADER : GATHER_FRAGMENT_SHADER,
-  });
-
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: { type: filterable ? 'filtering' : 'non-filtering' },
-      },
-    ],
-  });
-  const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout],
-  });
-  const sampler = device.createSampler(
-    filterable ? { magFilter: 'linear', minFilter: 'linear' } : {},
-  );
-
-  resources = {
-    vertexModule,
-    fragmentModule,
-    bindGroupLayout,
-    pipelineLayout,
-    sampler,
+  return {
+    vertexModule: cache.vertexModule,
+    ...filterableRes,
+    ...layoutRes,
   };
-  cache.set(key, resources);
-  return resources;
 }
 
 type BlitOptions = {
@@ -182,7 +206,7 @@ function blit(options: BlitOptions): void {
 }
 
 export function clearTextureUtilsCache(device: GPUDevice): void {
-  blitCache.get(device)?.clear();
+  blitCache.delete(device);
 }
 
 function validateBlitFormat(

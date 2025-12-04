@@ -453,6 +453,55 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(device.mock.queue.submit).toHaveBeenCalled();
       });
 
+      it('caches blit resources appropriately per level', ({ root, device }) => {
+        const createTex = (format: GPUTextureFormat) =>
+          root.createTexture({ size: [32, 32], format, mipLevelCount: 2 })
+            .$usage('render');
+
+        const getCalls = () => ({
+          shaderModule: device.mock.createShaderModule.mock.calls.length,
+          sampler: device.mock.createSampler.mock.calls.length,
+          bindGroupLayout: device.mock.createBindGroupLayout.mock.calls.length,
+          pipelineLayout: device.mock.createPipelineLayout.mock.calls.length,
+        });
+
+        // First filterable texture
+        createTex('rgba8unorm').generateMipmaps();
+        expect(getCalls()).toEqual({
+          shaderModule: 2,
+          sampler: 1,
+          bindGroupLayout: 1,
+          pipelineLayout: 1,
+        });
+
+        // Same format - all cached
+        createTex('rgba8unorm').generateMipmaps();
+        expect(getCalls()).toEqual({
+          shaderModule: 2,
+          sampler: 1,
+          bindGroupLayout: 1,
+          pipelineLayout: 1,
+        });
+
+        // Different filterable format - still uses same cache (both filterable floats)
+        createTex('rgba16float').generateMipmaps();
+        expect(getCalls()).toEqual({
+          shaderModule: 2,
+          sampler: 1,
+          bindGroupLayout: 1,
+          pipelineLayout: 1,
+        });
+
+        // Unfilterable format - new fragment shader, sampler, and layouts (vertex module reused)
+        createTex('r32float').generateMipmaps();
+        expect(getCalls()).toEqual({
+          shaderModule: 3,
+          sampler: 2,
+          bindGroupLayout: 2,
+          pipelineLayout: 2,
+        });
+      });
+
       it('calls queue.writeTexture when write is called with buffer data', ({ root, device }) => {
         const texture = root.createTexture({
           size: [4, 4],
