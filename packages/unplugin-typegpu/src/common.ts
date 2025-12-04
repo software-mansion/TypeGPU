@@ -280,6 +280,9 @@ function tryFindIdentifier(
   if (node.type === 'Identifier') {
     return node.name;
   }
+  if (node.type === 'MemberExpression') {
+    return tryFindIdentifier(node.property);
+  }
 }
 
 export const useGpuDirective = 'use gpu';

@@ -397,7 +397,7 @@ describe('[BABEL] auto naming', () => {
         } = {
           myBuffer: undefined
         };
-        items.myBuffer = root.createUniform(d.u32);"
+        items.myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");"
       `);
   });
 
@@ -424,7 +424,7 @@ describe('[BABEL] auto naming', () => {
         class MyController {
           myBuffer: TgpuUniform<d.U32>;
           constructor() {
-            this.myBuffer = root.createUniform(d.u32);
+            this.myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");
           }
         }"
       `);
@@ -832,7 +832,7 @@ describe('[ROLLUP] auto naming', () => {
 
               const items = { myBuffer: undefined };
 
-              items.myBuffer = root.createUniform(d.u32);
+              items.myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
 
               console.log(items.myBuffer);
         "
@@ -867,7 +867,7 @@ describe('[ROLLUP] auto naming', () => {
                 myBuffer;
 
                 constructor() {
-                  this.myBuffer = root.createUniform(d.u32);
+                  this.myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
                 }
               }
 
