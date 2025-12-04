@@ -1,4 +1,4 @@
-import { access, fromTSL, toTSL, type TSLAccessor } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import * as TSL from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import * as d from 'typegpu/data';
@@ -25,11 +25,14 @@ export const clothNumSegmentsY = 30;
 
 interface VerletSimulationOptions {
   sphereRadius: number;
-  sphereUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
-  spherePositionUniform: TSLAccessor<d.Vec3f, THREE.UniformNode<THREE.Vector3>>;
+  sphereUniform: t3.TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  spherePositionUniform: t3.TSLAccessor<
+    d.Vec3f,
+    THREE.UniformNode<THREE.Vector3>
+  >;
 }
 
-type TSLStorageAccessor<T extends d.AnyWgslData> = TSLAccessor<
+type TSLStorageAccessor<T extends d.AnyWgslData> = t3.TSLAccessor<
   T,
   THREE.StorageBufferNode
 >;
@@ -39,9 +42,9 @@ export class VerletSimulation {
   readonly springs: Spring[];
   readonly vertexColumns: Vertex[][];
 
-  readonly stiffnessUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
-  readonly windUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
-  readonly dampeningUniform: TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  readonly stiffnessUniform: t3.TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  readonly windUniform: t3.TSLAccessor<d.F32, THREE.UniformNode<number>>;
+  readonly dampeningUniform: t3.TSLAccessor<d.F32, THREE.UniformNode<number>>;
 
   readonly vertexPositionBuffer: TSLStorageAccessor<d.WgslArray<d.Vec3f>>;
   readonly vertexForceBuffer: TSLStorageAccessor<d.WgslArray<d.Vec3f>>;
@@ -63,9 +66,9 @@ export class VerletSimulation {
     this.springs = [];
     this.vertexColumns = [];
 
-    this.stiffnessUniform = fromTSL(TSL.uniform(0.2), { type: d.f32 });
-    this.windUniform = fromTSL(TSL.uniform(1.0), { type: d.f32 });
-    this.dampeningUniform = fromTSL(TSL.uniform(0.99), { type: d.f32 });
+    this.stiffnessUniform = t3.fromTSL(TSL.uniform(0.2), { type: d.f32 });
+    this.windUniform = t3.fromTSL(TSL.uniform(1.0), { type: d.f32 });
+    this.dampeningUniform = t3.fromTSL(TSL.uniform(0.99), { type: d.f32 });
 
     // this function sets up the geometry of the verlet system, a grid of vertices connected by springs
 
@@ -161,21 +164,24 @@ export class VerletSimulation {
       }
     }
 
-    this.vertexPositionBuffer = fromTSL(
+    this.vertexPositionBuffer = t3.fromTSL(
       TSL.instancedArray(vertexPositionArray, 'vec3'),
       { type: d.arrayOf(d.vec3f) },
     );
 
-    this.vertexForceBuffer = fromTSL(TSL.instancedArray(vertexCount, 'vec3'), {
-      type: d.arrayOf(d.vec3f),
-    });
+    this.vertexForceBuffer = t3.fromTSL(
+      TSL.instancedArray(vertexCount, 'vec3'),
+      {
+        type: d.arrayOf(d.vec3f),
+      },
+    );
 
-    this.vertexParamsBuffer = fromTSL(
+    this.vertexParamsBuffer = t3.fromTSL(
       TSL.instancedArray(vertexParamsArray, 'uvec3'),
       { type: d.arrayOf(d.vec3u) },
     );
 
-    this.springListBuffer = fromTSL(
+    this.springListBuffer = t3.fromTSL(
       TSL.instancedArray(new Uint32Array(springListArray), 'uint').setPBO(true),
       { type: d.arrayOf(d.u32) },
     );
@@ -196,17 +202,17 @@ export class VerletSimulation {
       );
     }
 
-    this.springVertexIdBuffer = fromTSL(
+    this.springVertexIdBuffer = t3.fromTSL(
       TSL.instancedArray(springVertexIdArray, 'uvec2').setPBO(true),
       { type: d.arrayOf(d.vec2u) },
     );
 
-    this.springRestLengthBuffer = fromTSL(
+    this.springRestLengthBuffer = t3.fromTSL(
       TSL.instancedArray(springRestLengthArray, 'float'),
       { type: d.arrayOf(d.f32) },
     );
 
-    this.springForceBuffer = fromTSL(
+    this.springForceBuffer = t3.fromTSL(
       TSL.instancedArray(springCount * 3, 'vec3').setPBO(true),
       { type: d.arrayOf(d.vec3f) },
     );
@@ -217,10 +223,10 @@ export class VerletSimulation {
     // 1. computeSpringForces:
     // This shader computes a force for each spring, depending on the distance between the two vertices connected by that spring and the targeted rest length
 
-    this.computeSpringForces = toTSL(() => {
+    this.computeSpringForces = t3.toTSL(() => {
       'use gpu';
 
-      const idx = access.instanceIndex.$;
+      const idx = t3.instanceIndex.$;
       if (idx >= springCount) {
         // compute Shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of springs.
         // in that case, return.
@@ -247,9 +253,9 @@ export class VerletSimulation {
     // Then it adds a gravital force, wind force, and the collision with the sphere.
     // In the end it adds the force to the vertex' position.
 
-    this.computeVertexForces = toTSL(() => {
+    this.computeVertexForces = t3.toTSL(() => {
       'use gpu';
-      const idx = access.instanceIndex.$;
+      const idx = t3.instanceIndex.$;
 
       if (idx >= vertexCount) {
         // compute shaders are executed in groups of 64, so instanceIndex might be bigger than the amount of vertices.
@@ -285,7 +291,7 @@ export class VerletSimulation {
       force.y -= 0.00005;
 
       // wind
-      const time = access.time.$;
+      const time = t3.time.$;
       const noise = (triNoise3D(position, 1, time) - 0.2) * 0.0001;
       const windForce = noise * this.windUniform.$;
       force.z -= windForce;

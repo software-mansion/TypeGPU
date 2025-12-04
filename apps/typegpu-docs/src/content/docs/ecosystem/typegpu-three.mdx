@@ -25,7 +25,7 @@ const simulate = Fn(() => {
 
 TypeGPU:
 ```ts
-const simulate = toTSL(() => {
+const simulate = t3.toTSL(() => {
   'use gpu';
   //
   // ... TypeGPU code ...
@@ -61,7 +61,7 @@ If(instanceIndex.greaterThanEqual(uint(vertexCount)), () => {
 
 TypeGPU:
 ```ts
-if (access.instanceIndex.$ >= vertexCount) {
+if (t3.instanceIndex.$ >= vertexCount) {
   return;
 }
 ```
