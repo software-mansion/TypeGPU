@@ -203,4 +203,36 @@ describe('autonaming', () => {
       }"
     `);
   });
+
+  it('autonames class properties', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames object member assignment', ({ root }) => {
+    const items: { myBuffer: unknown } = { myBuffer: undefined };
+
+    items.myBuffer = root.createUniform(d.u32);
+
+    expect(getName(items.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames this prop assignment', ({ root }) => {
+    class MyController {
+      myBuffer;
+
+      constructor() {
+        this.myBuffer = root.createUniform(d.u32);
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
 });

@@ -116,7 +116,7 @@ describe('jelly switch example', () => {
         wiggleX: f32,
       }
 
-      @group(0) @binding(2) var<uniform> item_20: SwitchState_21;
+      @group(0) @binding(2) var<uniform> stateUniform_20: SwitchState_21;
 
       struct DirectionalLight_23 {
         direction: vec3f,
@@ -142,7 +142,7 @@ describe('jelly switch example', () => {
       }
 
       fn getJellyDist_27(position: vec3f) -> f32 {
-        let state = (&item_20);
+        let state = (&stateUniform_20);
         var jellyOrigin = vec3f(((((*state).progress - 0.5f) * 0.4f) - (((*state).squashX * ((*state).progress - 0.5f)) * 0.2f)), 0.15000000596046448f, 0f);
         var jellyInvScale = vec3f((1f - (*state).squashX), 1f, (1f - (*state).squashZ));
         var localPos = opRotateAxisAngle_28(((position - jellyOrigin) * jellyInvScale), vec3f(0, 0, 1), (*state).wiggleX);
@@ -249,7 +249,7 @@ describe('jelly switch example', () => {
       }
 
       fn renderBackground_19(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32) -> vec4f {
-        let state = (&item_20);
+        let state = (&stateUniform_20);
         var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
         var offsetX = 0f;
         var offsetZ = 0.05000000074505806f;
@@ -373,7 +373,7 @@ describe('jelly switch example', () => {
               var scatterTint = ((*jellyColor).xyz * 1.5);
               const density = 20f;
               var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
-              let state = (&item_20);
+              let state = (&stateUniform_20);
               let progress = (saturate(mix(1f, 0.6f, ((hitPosition.y * 1.6666666004392863f) + 0.25f))) * (*state).progress);
               var T = beerLambert_46((absorb * pow(progress, 2f)), 0.08f);
               var lightDir = -(lightUniform_22.direction);
