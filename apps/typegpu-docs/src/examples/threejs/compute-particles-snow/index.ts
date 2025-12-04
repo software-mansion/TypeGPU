@@ -22,6 +22,10 @@ import {
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
 import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { fromTSL, toTSL } from '@typegpu/three';
+import * as d from 'typegpu/data';
+import * as o from './sceneObjects.ts';
+import { randf } from '@typegpu/noise';
 
 const maxParticleCount = 100000;
 
@@ -34,7 +38,7 @@ renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
 const camera = new THREE.PerspectiveCamera(
   60,
-  innerWidth / innerHeight,
+  canvas.clientWidth / canvas.clientHeight,
   .1,
   100,
 );
@@ -43,53 +47,22 @@ camera.layers.enable(2); // renders only objects within layer 2
 camera.lookAt(0, 40, 0);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0f3c37, 5, 40);
-
-const dirLight = new THREE.DirectionalLight(0xf9ff9b, 9);
-dirLight.castShadow = true;
-dirLight.position.set(10, 10, 0);
-dirLight.castShadow = true;
-Object.assign(dirLight.shadow.camera, {
-  near: 1,
-  far: 30,
-  right: 30,
-  left: -30,
-  top: 30,
-  bottom: -30,
-});
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
-dirLight.shadow.bias = -0.009;
-scene.add(dirLight);
-
-scene.add(new THREE.HemisphereLight(0x0f3c37, 0x080d10, 100));
-
-const collisionCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 50);
-collisionCamera.position.y = 50;
-collisionCamera.lookAt(0, 0, 0);
-collisionCamera.layers.enable(1);
-
-const collisionPosRT = new THREE.RenderTarget(1024, 1024);
-collisionPosRT.texture.type = THREE.HalfFloatType;
-collisionPosRT.texture.magFilter = THREE.NearestFilter;
-collisionPosRT.texture.minFilter = THREE.NearestFilter;
-collisionPosRT.texture.generateMipmaps = false;
-
-const collisionPosMaterial = new THREE.MeshBasicNodeMaterial();
-collisionPosMaterial.fog = false;
-collisionPosMaterial.toneMapped = false;
-collisionPosMaterial.colorNode = positionWorld.y;
+scene.fog = o.fog;
+scene.add(o.dirLight);
+scene.add(o.hemisphereLight);
 
 const positionBuffer = instancedArray(maxParticleCount, 'vec3');
 const scaleBuffer = instancedArray(maxParticleCount, 'vec3');
 const staticPositionBuffer = instancedArray(maxParticleCount, 'vec3');
 const dataBuffer = instancedArray(maxParticleCount, 'vec4');
 
-// compute
+const positionBufferAccessor = fromTSL(positionBuffer, { type: d.vec3f });
+const scaleBufferAccessor = fromTSL(scaleBuffer, { type: d.vec3f });
+const staticPositionAccessor = fromTSL(staticPositionBuffer, { type: d.vec3f });
+const dataBufferAccessor = fromTSL(dataBuffer, { type: d.vec4f });
+const instanceIndexAccessor = fromTSL(instanceIndex, { type: d.u32 });
 
-const randUint = () => uint(Math.random() * 0xFFFFFF);
-
-const computeInit = Fn(() => {
+const computeInit1 = Fn(() => {
   const position = positionBuffer.element(instanceIndex);
   const scale = scaleBuffer.element(instanceIndex);
   const particleData = dataBuffer.element(instanceIndex);
@@ -113,7 +86,26 @@ const computeInit = Fn(() => {
   particleData.w = randX;
 })().compute(maxParticleCount).setName('Init Particles');
 
-//
+const computeInit = toTSL(() => {
+  'use gpu';
+  const position =
+});
+
+const collisionCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, .1, 50);
+collisionCamera.position.y = 50;
+collisionCamera.lookAt(0, 0, 0);
+collisionCamera.layers.enable(1);
+
+const collisionPosRT = new THREE.RenderTarget(1024, 1024);
+collisionPosRT.texture.type = THREE.HalfFloatType;
+collisionPosRT.texture.magFilter = THREE.NearestFilter;
+collisionPosRT.texture.minFilter = THREE.NearestFilter;
+collisionPosRT.texture.generateMipmaps = false;
+
+const collisionPosMaterial = new THREE.MeshBasicNodeMaterial();
+collisionPosMaterial.fog = false;
+collisionPosMaterial.toneMapped = false;
+collisionPosMaterial.colorNode = positionWorld.y;
 
 const surfaceOffset = .2;
 const speed = .4;
@@ -158,7 +150,7 @@ computeParticles.name = 'Update Particles';
 
 const geometry = new THREE.SphereGeometry(surfaceOffset, 5, 5);
 
-function particle(staticParticles) {
+function particle(staticParticles?: boolean) {
   const posBuffer = staticParticles ? staticPositionBuffer : positionBuffer;
   const layer = staticParticles ? 1 : 2;
 
@@ -181,10 +173,10 @@ function particle(staticParticles) {
 }
 
 const dynamicParticles = particle();
-const staticParticles = particle(true);
+// const staticParticles = particle(true);
 
 scene.add(dynamicParticles);
-scene.add(staticParticles);
+// scene.add(staticParticles);
 
 // floor geometry
 
@@ -325,10 +317,10 @@ function animate() {
 
   // position
 
-  scene.name = 'Collider Position';
-  scene.overrideMaterial = collisionPosMaterial;
-  renderer.setRenderTarget(collisionPosRT);
-  renderer.render(scene, collisionCamera);
+  // scene.name = 'Collider Position';
+  // scene.overrideMaterial = collisionPosMaterial;
+  // renderer.setRenderTarget(collisionPosRT);
+  // renderer.render(scene, collisionCamera);
 
   // compute
 
