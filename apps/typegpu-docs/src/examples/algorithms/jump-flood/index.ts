@@ -44,6 +44,7 @@ const palette = tgpu.const(d.arrayOf(d.vec3f, 4), [
 ]);
 
 const seedThresholdUniform = root.createUniform(d.f32, seedThreshold);
+const timeUniform = root.createUniform(d.f32, 0);
 const offsetUniform = root.createUniform(d.i32);
 const brushPosUniform = root.createUniform(d.vec2f);
 const brushSizeUniform = root.createUniform(d.f32, brushSize);
@@ -126,7 +127,7 @@ const initializeRandom = root['~unstable'].createGuardedComputePipeline(
   (x, y) => {
     'use gpu';
     const size = std.textureDimensions(initLayout.$.writeView);
-    randf.seed2(d.vec2f(x, y).div(d.vec2f(size)));
+    randf.seed2(d.vec2f(x, y).div(d.vec2f(size)).add(timeUniform.$));
 
     const randomVal = randf.sample();
     const isSeed = randomVal >= seedThresholdUniform.$;
@@ -378,6 +379,7 @@ function recreateResources() {
 }
 
 function initRandom() {
+  timeUniform.write((performance.now() % 10000) / 10000 - 1);
   initializeRandom.with(resources.initBindGroups[0]).dispatchThreads(
     canvas.width,
     canvas.height,
