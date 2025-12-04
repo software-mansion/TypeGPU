@@ -697,7 +697,7 @@ const renderBackground = (
   );
 };
 
-const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
+const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
   'use gpu';
   let totalSteps = d.u32();
 

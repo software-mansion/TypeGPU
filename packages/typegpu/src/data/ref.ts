@@ -44,7 +44,10 @@ export interface ref<T> {
   $: T;
 }
 
-export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
+// biome has issues with this type being inline
+type RefFn = <T>(value: T) => ref<T>;
+
+export const ref = (() => {
   const gpuImpl = (value: Snippet) => {
     if (value.origin === 'argument') {
       throw new WgslTypeError(
@@ -98,7 +101,7 @@ export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
     },
   });
 
-  return impl as unknown as DualFn<<T>(value: T) => ref<T>>;
+  return impl as unknown as DualFn<RefFn>;
 })();
 
 export function isRef<T>(value: unknown | ref<T>): value is ref<T> {

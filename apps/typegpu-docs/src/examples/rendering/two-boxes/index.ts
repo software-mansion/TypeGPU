@@ -319,6 +319,7 @@ let isRightDragging = false;
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
+let lastPinchDist = 0;
 let orbitRadius = Math.sqrt(
   cameraInitialPos.x * cameraInitialPos.x +
     cameraInitialPos.y * cameraInitialPos.y +
@@ -355,16 +356,7 @@ function updateCubesRotation(dx: number, dy: number) {
   secondTransformBuffer.write({ model: cube2Transform });
 }
 
-function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += dy * orbitSensitivity;
-  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
-  const maxPitch = Math.PI / 2 - 0.01;
-  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // basically converting spherical coordinates to cartesian.
-  // like sampling points on a unit sphere and then scaling them by the radius.
+function updateCameraPosition() {
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
@@ -377,6 +369,20 @@ function updateCameraOrbit(dx: number, dy: number) {
     d.mat4x4f(),
   );
   cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+}
+
+function updateCameraOrbit(dx: number, dy: number) {
+  orbitYaw += -dx * 0.005;
+  orbitPitch = Math.max(
+    -Math.PI / 2 + 0.01,
+    Math.min(Math.PI / 2 - 0.01, orbitPitch + dy * 0.005),
+  );
+  updateCameraPosition();
+}
+
+function zoomCamera(delta: number) {
+  orbitRadius = Math.max(1, orbitRadius + delta);
+  updateCameraPosition();
 }
 
 // Prevent the context menu from appearing on right click.
@@ -398,34 +404,34 @@ canvas.addEventListener('touchend', () => {
   helpInfo.style.opacity = '1';
 });
 
-canvas.addEventListener('wheel', (event: WheelEvent) => {
-  event.preventDefault();
-  const zoomSensitivity = 0.05;
-  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    target,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
-  cameraBuffer.writePartial({ view: newView });
+canvas.addEventListener('wheel', (e: WheelEvent) => {
+  e.preventDefault();
+  zoomCamera(e.deltaY * 0.05);
 }, { passive: false });
 
-canvas.addEventListener('mousedown', (event) => {
-  if (event.button === 0) {
-    // Left Mouse Button controls Camera Orbit.
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button === 0) {
     isDragging = true;
-  } else if (event.button === 2) {
-    // Right Mouse Button controls Cube Rotation.
+  } else if (e.button === 2) {
     isRightDragging = true;
   }
-  prevX = event.clientX;
-  prevY = event.clientY;
+  prevX = e.clientX;
+  prevY = e.clientY;
 });
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    isDragging = true;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+  }
+}, { passive: false });
 
 const mouseUpEventListener = () => {
   isRightDragging = false;
@@ -433,11 +439,16 @@ const mouseUpEventListener = () => {
 };
 window.addEventListener('mouseup', mouseUpEventListener);
 
-canvas.addEventListener('mousemove', (event) => {
-  const dx = event.clientX - prevX;
-  const dy = event.clientY - prevY;
-  prevX = event.clientX;
-  prevY = event.clientY;
+const touchEndEventListener = () => {
+  isDragging = false;
+};
+window.addEventListener('touchend', touchEndEventListener);
+
+const mouseMoveEventListener = (e: MouseEvent) => {
+  const dx = e.clientX - prevX;
+  const dy = e.clientY - prevY;
+  prevX = e.clientX;
+  prevY = e.clientY;
 
   if (isDragging) {
     updateCameraOrbit(dx, dy);
@@ -445,47 +456,33 @@ canvas.addEventListener('mousemove', (event) => {
   if (isRightDragging) {
     updateCubesRotation(dx, dy);
   }
-});
+};
+window.addEventListener('mousemove', mouseMoveEventListener);
 
-// Mobile touch support.
-canvas.addEventListener('touchstart', (event: TouchEvent) => {
-  event.preventDefault();
-  if (event.touches.length === 1) {
-    // Single touch controls Camera Orbit.
-    isDragging = true;
-  } else if (event.touches.length === 2) {
-    // Two-finger touch controls Cube Rotation.
-    isRightDragging = true;
-  }
-  // Use the first touch for rotation.
-  prevX = event.touches[0].clientX;
-  prevY = event.touches[0].clientY;
-}, { passive: false });
-
-canvas.addEventListener('touchmove', (event: TouchEvent) => {
-  event.preventDefault();
-  const touch = event.touches[0];
-  const dx = touch.clientX - prevX;
-  const dy = touch.clientY - prevY;
-  prevX = touch.clientX;
-  prevY = touch.clientY;
-
-  if (isDragging && event.touches.length === 1) {
+const touchMoveEventListener = (e: TouchEvent) => {
+  if (e.touches.length === 1 && isDragging) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - prevX;
+    const dy = e.touches[0].clientY - prevY;
+    prevX = e.touches[0].clientX;
+    prevY = e.touches[0].clientY;
     updateCameraOrbit(dx, dy);
   }
-  if (isRightDragging && event.touches.length === 2) {
-    updateCubesRotation(dx, dy);
+};
+window.addEventListener('touchmove', touchMoveEventListener, {
+  passive: false,
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const pinchDist = Math.sqrt(dx * dx + dy * dy);
+    zoomCamera((lastPinchDist - pinchDist) * 0.05);
+    lastPinchDist = pinchDist;
   }
 }, { passive: false });
-
-const touchEndEventListener = (event: TouchEvent) => {
-  event.preventDefault();
-  if (event.touches.length === 0) {
-    isRightDragging = false;
-    isDragging = false;
-  }
-};
-window.addEventListener('touchend', touchEndEventListener);
 
 const resizeObserver = new ResizeObserver(() => {
   createDepthAndMsaaTextures();
@@ -495,7 +492,9 @@ resizeObserver.observe(canvas);
 export function onCleanup() {
   disposed = true;
   window.removeEventListener('mouseup', mouseUpEventListener);
+  window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
+  window.removeEventListener('touchmove', touchMoveEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

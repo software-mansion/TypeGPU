@@ -146,7 +146,6 @@ describe('box raytracing example', () => {
         }
         var density = 0f;
         var invColor = vec3f();
-        var tMin = 0f;
         var intersectionFound = false;
         for (var i = 0; (i < 7i); i++) {
           for (var j = 0; (j < 7i); j++) {
@@ -160,7 +159,6 @@ describe('box raytracing example', () => {
                 let boxDensity = (max(0f, (intersection.tMax - intersection.tMin)) * pow(uniforms_1.materialDensity, 2f));
                 density += boxDensity;
                 invColor = (invColor + (boxDensity * (vec3f(1) / boxMatrix_10[i][j][k].albedo)));
-                tMin = intersection.tMin;
                 intersectionFound = true;
               }
             }

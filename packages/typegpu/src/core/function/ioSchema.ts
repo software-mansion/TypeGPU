@@ -76,6 +76,8 @@ export function createIoSchema<
     isData(layout)
       ? isVoid(layout)
         ? layout
+        : isBuiltin(layout)
+        ? layout
         : getCustomLocation(layout) !== undefined
         ? layout
         : location(0, layout)

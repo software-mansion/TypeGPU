@@ -21,33 +21,32 @@ const accumulate = tgpu.fn(
   d.vec3f,
 )((acc, col, weight) => acc.add(col.mul(weight)));
 
-export const mainFragment = tgpu['~unstable'].fragmentFn({
+// Variation1
+export const mainFragment1 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  {
-    const originalUv = aspectCorrected(uv);
+  const originalUv = aspectCorrected(uv);
 
-    let aspectUv = d.vec2f(originalUv);
-    let accumulatedColor = d.vec3f();
-    for (let iteration = 0.0; iteration < 5.0; iteration++) {
-      aspectUv = std.fract(aspectUv.mul(1.3 * std.sin(timeAccess.$))).sub(0.5);
-      let radialLength = std.length(aspectUv) *
-        std.exp(-std.length(originalUv) * 2);
-      radialLength = std.sin(radialLength * 8 + timeAccess.$) / 8;
-      radialLength = std.abs(radialLength);
-      radialLength = std.smoothstep(0.0, 0.1, radialLength);
-      radialLength = 0.06 / radialLength;
+  let aspectUv = d.vec2f(originalUv);
+  let accumulatedColor = d.vec3f();
+  for (let iteration = 0.0; iteration < 5.0; iteration++) {
+    aspectUv = std.fract(aspectUv.mul(1.3 * std.sin(timeAccess.$))).sub(0.5);
+    let radialLength = std.length(aspectUv) *
+      std.exp(-std.length(originalUv) * 2);
+    radialLength = std.sin(radialLength * 8 + timeAccess.$) / 8;
+    radialLength = std.abs(radialLength);
+    radialLength = std.smoothstep(0.0, 0.1, radialLength);
+    radialLength = 0.06 / radialLength;
 
-      const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
-      accumulatedColor = accumulate(
-        accumulatedColor,
-        paletteColor,
-        radialLength,
-      );
-    }
-    return d.vec4f(accumulatedColor, 1.0);
+    const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
+    accumulatedColor = accumulate(
+      accumulatedColor,
+      paletteColor,
+      radialLength,
+    );
   }
+  return d.vec4f(accumulatedColor, 1.0);
 });
 
 // Variation2
@@ -55,28 +54,26 @@ export const mainFragment2 = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  {
-    const originalUv = aspectCorrected(uv);
-    let aspectUv = d.vec2f(originalUv);
+  const originalUv = aspectCorrected(uv);
+  let aspectUv = d.vec2f(originalUv);
 
-    let accumulatedColor = d.vec3f();
-    for (let iteration = 0.0; iteration < 3.0; iteration++) {
-      aspectUv = std.fract(aspectUv.mul(-0.9)).sub(0.5);
-      let radialLength = std.length(aspectUv) *
-        std.exp(-std.length(originalUv) * 0.5);
-      const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
-      radialLength = std.sin(radialLength * 8 + timeAccess.$) / 8;
-      radialLength = std.abs(radialLength);
-      radialLength = std.smoothstep(0.0, 0.1, radialLength);
-      radialLength = 0.1 / radialLength;
-      accumulatedColor = accumulate(
-        accumulatedColor,
-        paletteColor,
-        radialLength,
-      );
-    }
-    return d.vec4f(accumulatedColor, 1.0);
+  let accumulatedColor = d.vec3f();
+  for (let iteration = 0.0; iteration < 3.0; iteration++) {
+    aspectUv = std.fract(aspectUv.mul(-0.9)).sub(0.5);
+    let radialLength = std.length(aspectUv) *
+      std.exp(-std.length(originalUv) * 0.5);
+    const paletteColor = palette(std.length(originalUv) + timeAccess.$ * 0.9);
+    radialLength = std.sin(radialLength * 8 + timeAccess.$) / 8;
+    radialLength = std.abs(radialLength);
+    radialLength = std.smoothstep(0.0, 0.1, radialLength);
+    radialLength = 0.1 / radialLength;
+    accumulatedColor = accumulate(
+      accumulatedColor,
+      paletteColor,
+      radialLength,
+    );
   }
+  return d.vec4f(accumulatedColor, 1.0);
 });
 
 // Variation3

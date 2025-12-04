@@ -365,8 +365,8 @@ const rayBoxIntersection = (
   const t1 = boxMax.sub(rayOrigin).mul(invDir);
   const tmin = std.min(t0, t1);
   const tmax = std.max(t0, t1);
-  const tNear = std.max(std.max(tmin.x, tmin.y), tmin.z);
-  const tFar = std.min(std.min(tmax.x, tmax.y), tmax.z);
+  const tNear = std.max(tmin.x, tmin.y, tmin.z);
+  const tFar = std.min(tmax.x, tmax.y, tmax.z);
   const hit = tFar >= tNear && tFar >= 0;
   return RayBoxResult({ tNear, tFar, hit });
 };

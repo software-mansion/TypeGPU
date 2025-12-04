@@ -67,8 +67,8 @@ export class VerletSimulation {
     THREE.StorageBufferNode
   >;
 
-  readonly computeSpringForces: TSL.ShaderNodeObject<THREE.ComputeNode>;
-  readonly computeVertexForces: TSL.ShaderNodeObject<THREE.ComputeNode>;
+  readonly computeSpringForces: THREE.TSL.NodeObject<THREE.ComputeNode>;
+  readonly computeVertexForces: THREE.TSL.NodeObject<THREE.ComputeNode>;
 
   constructor(
     { sphereRadius, sphereUniform, spherePositionUniform }:

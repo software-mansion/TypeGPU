@@ -20,7 +20,7 @@ import tgpu3, { uv } from '@typegpu/three';
 const material = new THREE.MeshBasicNodeMaterial();
 // We reexport builtin TSL nodes as `accessors`
 material.colorNode = toTSL(() => {
-  'kernel';
+  'use gpu';
   return fract(uv.$.mul(4));
 });
 
@@ -28,7 +28,7 @@ material.colorNode = toTSL(() => {
 const pattern = TSL.texture(detailMap, TSL.uv().mul(10));
 const patternAccess = fromTSL(pattern, { type: d.vec4f });
 material.colorNode = toTSL(() => {
-  'kernel';
+  'use gpu';
   return patternAccess.$;
 });
 ```

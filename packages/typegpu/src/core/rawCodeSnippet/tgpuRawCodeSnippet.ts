@@ -21,7 +21,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 // ----------
 
 /**
- * Extra declaration that shall be included in final WGSL code,
+ * Extra declaration that will be included in final WGSL code
  * when resolving objects that use it.
  */
 export interface TgpuRawCodeSnippet<TDataType extends AnyData> {
@@ -54,7 +54,11 @@ export type RawCodeSnippetOrigin = Exclude<
  * Usually 'runtime' (the default) is a safe bet, but if you're sure that the expression or
  * computation is constant (either a reference to a constant, a numeric literal,
  * or an operation on constants), then pass 'constant' as it might lead to better
+<<<<<<< HEAD
  * optimisations.
+=======
+ * optimizations.
+>>>>>>> main
  *
  * If what the expression is a direct reference to an existing value (e.g. a uniform, a
  * storage binding, ...), then choose from 'uniform', 'mutable', 'readonly', 'workgroup',
@@ -84,7 +88,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
   type: TDataType,
   origin: RawCodeSnippetOrigin | undefined = 'runtime',
 ): TgpuRawCodeSnippet<TDataType> {
-  return new TgpuRawCodeSnippetImpl(expression, type, 'runtime');
+  return new TgpuRawCodeSnippetImpl(expression, type, origin);
 }
 
 // --------------

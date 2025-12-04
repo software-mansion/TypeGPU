@@ -69,7 +69,7 @@ async function test3d(): Promise<boolean> {
 
 async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.atomic(d.u32));
-  root['~unstable'].createGuardedComputePipeline((x, y, z) => {
+  root['~unstable'].createGuardedComputePipeline((_x, _y, _z) => {
     'use gpu';
     std.atomicAdd(mutable.$, 1);
   }).dispatchThreads(4, 3, 2);

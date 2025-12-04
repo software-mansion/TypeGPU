@@ -144,10 +144,7 @@ const Transpilers: Partial<
   },
 
   ThisExpression(ctx) {
-    if (ctx.ignoreExternalDepth === 0) {
-      ctx.externalNames.add('this');
-    }
-
+    ctx.externalNames.add('this');
     return 'this';
   },
 

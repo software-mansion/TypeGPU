@@ -1,9 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { mainVertex } from './shaders/vertex.ts';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,
@@ -11,6 +10,7 @@ import {
   mainFragment6,
   mainFragment7,
 } from './shaders/fragment.ts';
+import { mainVertex } from './shaders/vertex.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -32,7 +32,7 @@ const resolutionUniform = root.createUniform(
 );
 
 const fragmentShaders = [
-  mainFragment,
+  mainFragment1,
   mainFragment2,
   mainFragment3,
   mainFragment4,
@@ -105,6 +105,16 @@ export const controls = {
       if (patternIndex !== undefined) {
         currentPipeline = pipelines[patternIndex];
       }
+    },
+  },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick() {
+      const namespace = tgpu['~unstable'].namespace();
+      Array.from({ length: 6 }).map((_, i) =>
+        root.device.createShaderModule({
+          code: tgpu.resolve([pipelines[i + 1]], { names: namespace }),
+        })
+      );
     },
   },
 };

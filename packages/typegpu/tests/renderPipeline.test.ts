@@ -139,6 +139,52 @@ describe('TgpuRenderPipeline', () => {
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
+  it('properly handles custom depth output in fragment functions', ({ root }) => {
+    const vertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
+      d.vec2f(-1, -1),
+      d.vec2f(3, -1),
+      d.vec2f(-1, 3),
+    ]);
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      in: { vid: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position },
+      // biome-ignore lint/style/noNonNullAssertion: it's fine
+    })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
+
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f, depth: d.builtin.fragDepth },
+    })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
+
+    const pipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { color: { format: 'rgba8unorm' } })
+      .createPipeline();
+
+    pipeline.withColorAttachment({
+      color: {
+        view: {} as unknown as GPUTextureView,
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    });
+
+    expect(() => {
+      pipeline.withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+        // @ts-expect-error
+        depth: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+    });
+  });
+
   it('type checks passed bind groups', ({ root }) => {
     const vertexMain = tgpu['~unstable'].vertexFn({
       out: { bar: d.location(0, d.vec3f) },

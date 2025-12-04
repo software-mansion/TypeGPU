@@ -34,4 +34,23 @@ describe('codeGen', () => {
       `);
     });
   });
+
+  it('should properly resolve the "this" keyword', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+      myFn = tgpu.fn([], d.u32)(() => {
+        return this.myBuffer.$;
+      });
+    }
+
+    const myController = new MyController();
+
+    expect(tgpu.resolve([myController.myFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> item_1: u32;
+
+      fn item() -> u32 {
+        return item_1;
+      }"
+    `);
+  });
 });

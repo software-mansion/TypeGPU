@@ -339,3 +339,7 @@ async function render() {
 
   await renderer.renderAsync(scene, camera);
 }
+
+export function onCleanup() {
+  renderer.dispose();
+}
