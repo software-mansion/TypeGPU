@@ -23,7 +23,7 @@ import {
   getGpuValueRecursively,
   valueProxyHandler,
 } from '../valueProxyUtils.ts';
-import { slot } from './slot.ts';
+import { slot as slotConstructor } from './slot.ts';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
@@ -63,7 +63,8 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       | Infer<T>
       | undefined = undefined,
   ) {
-    this.slot = slot(defaultValue);
+    // TODO: find out why unplugin runs on package typegpu and remove this workaround
+    this.slot = slotConstructor(defaultValue);
     this[$getNameForward] = this.slot;
   }
 
