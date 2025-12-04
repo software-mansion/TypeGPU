@@ -371,7 +371,7 @@ describe('[BABEL] auto naming', () => {
         import * as d from 'typegpu/data';
         const root = await tgpu.init();
         class MyController {
-          myBuffer = root.createUniform(d.u32);
+          myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");
         }"
       `);
   });
@@ -802,7 +802,7 @@ describe('[ROLLUP] auto naming', () => {
         const root = await tgpu.init();
 
               class MyController {
-                myBuffer = root.createUniform(d.u32);
+                myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
               }
 
               console.log(MyController);

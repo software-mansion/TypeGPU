@@ -262,6 +262,13 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
     containsResourceConstructorCall(node.value, ctx)
   ) {
     namingCallback(node.value as ExpressionFor<T>, node.key.name);
+  } else if (
+    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
+    node.value &&
+    node.key.type === 'Identifier' &&
+    containsResourceConstructorCall(node.value, ctx)
+  ) {
+    namingCallback(node.value as ExpressionFor<T>, node.key.name);
   }
 }
 
