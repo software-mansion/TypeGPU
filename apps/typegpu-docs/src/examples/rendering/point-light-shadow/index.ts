@@ -60,13 +60,12 @@ let depthTexture = root['~unstable']
     size: [canvas.width, canvas.height],
     format: 'depth24plus',
     sampleCount: 4,
-  })
-  .$usage('render');
+  }).$usage('render');
 
 let msaaTexture = root['~unstable']
   .createTexture({
     size: [canvas.width, canvas.height],
-    format: presentationFormat,
+    format: presentationFormat as 'bgra8unorm' | 'rgba8unorm',
     sampleCount: 4,
   })
   .$usage('render');
@@ -317,7 +316,7 @@ const previewFragment = tgpu['~unstable'].fragmentFn({
 
 const pipelineDepthOne = root['~unstable']
   .withVertex(vertexDepth, { ...vertexLayout.attrib, ...instanceLayout.attrib })
-  .withFragment(fragmentDepth, {})
+  .withFragment(fragmentDepth)
   .withDepthStencil({
     format: 'depth24plus',
     depthWriteEnabled: true,
@@ -337,7 +336,7 @@ const pipelineMain = root['~unstable']
   .createPipeline();
 
 const pipelinePreview = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(fullScreenTriangle)
   .withFragment(previewFragment, { format: presentationFormat })
   .createPipeline();
 
@@ -422,7 +421,7 @@ function render(timestamp: number) {
     })
     .withColorAttachment({
       resolveTarget: context.getCurrentTexture().createView(),
-      view: root.unwrap(msaaTexture).createView(),
+      view: msaaTexture,
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -440,7 +439,7 @@ function render(timestamp: number) {
     })
     .withColorAttachment({
       resolveTarget: context.getCurrentTexture().createView(),
-      view: root.unwrap(msaaTexture).createView(),
+      view: msaaTexture,
       loadOp: 'load',
       storeOp: 'store',
     })
@@ -476,7 +475,7 @@ const resizeObserver = new ResizeObserver((entries) => {
     msaaTexture = root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
-        format: presentationFormat,
+        format: presentationFormat as 'bgra8unorm' | 'rgba8unorm',
         sampleCount: 4,
       })
       .$usage('render');

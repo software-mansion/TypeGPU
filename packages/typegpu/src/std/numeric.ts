@@ -14,7 +14,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { snip, Snippet } from '../data/snippet.ts';
+import { snip, type Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
