@@ -9,6 +9,8 @@ import type {
   Interpolate,
   Location,
   Vec4f,
+  Vec4i,
+  Vec4u,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
@@ -41,9 +43,11 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
+type FragmentColorValue = Vec4f | Vec4i | Vec4u;
+
 export type FragmentOutConstrained = IOLayout<
-  | Vec4f
-  | Decorated<Vec4f, (Location | Interpolate)[]>
+  | FragmentColorValue
+  | Decorated<FragmentColorValue, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
 >;
 
