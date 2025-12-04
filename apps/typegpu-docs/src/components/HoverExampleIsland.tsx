@@ -13,35 +13,11 @@ type Props = {
   exampleKey: string;
 };
 
-type CleanupFn = () => void;
-
-async function loadExample(exampleKey: string): Promise<Example> {
-  const exampleContent = await import('../examples/exampleContent.ts');
-  const examples = exampleContent.examples as Record<string, Example>;
-
-  const example = examples[exampleKey] as Example | undefined;
-  if (!example) {
-    throw new Error(`Example "${exampleKey}" not found.`);
-  }
-
-  return example;
-}
-
-function resizeCanvases(container: HTMLElement) {
-  for (const canvas of container.querySelectorAll('canvas')) {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr * 2;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-  }
-}
 
 export default function HoverExampleIsland({ exampleKey }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const cleanupRef = useRef<CleanupFn | undefined>(undefined);
+  const cleanupRef = useRef<() => void | undefined>(undefined);
   const twoFingerActiveRef = useRef(false);
   const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
   const isHovered = activeExample === exampleKey;
@@ -210,4 +186,27 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         )}
     </div>
   );
+}
+
+async function loadExample(exampleKey: string): Promise<Example> {
+  const exampleContent = await import('../examples/exampleContent.ts');
+  const examples = exampleContent.examples as Record<string, Example>;
+
+  const example = examples[exampleKey] as Example | undefined;
+  if (!example) {
+    throw new Error(`Example "${exampleKey}" not found.`);
+  }
+
+  return example;
+}
+
+function resizeCanvases(container: HTMLElement) {
+  for (const canvas of container.querySelectorAll('canvas')) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr * 2;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+  }
 }
