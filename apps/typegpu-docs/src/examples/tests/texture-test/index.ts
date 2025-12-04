@@ -116,7 +116,7 @@ function createPipelineForFormat(format: TestFormat) {
   });
 
   const pipeline = root['~unstable']
-    .withVertex(fullScreenTriangle, {})
+    .withVertex(fullScreenTriangle)
     .withFragment(fragmentFunction, { format: presentationFormat })
     .createPipeline();
 
