@@ -63,7 +63,7 @@ function createTestTexture(
 
   return root['~unstable']
     .createTexture({
-      size: [size[0], size[1]],
+      size,
       format,
       mipLevelCount: mipLevels,
     })
