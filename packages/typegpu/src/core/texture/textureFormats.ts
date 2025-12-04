@@ -95,24 +95,42 @@ export type AspectInfo = {
 export type TextureFormatInfo = {
   readonly channelType: F32 | I32 | U32;
   readonly vectorType: Vec4f | Vec4i | Vec4u;
-  readonly texelSize: number;
+  readonly texelSize: number | 'non-copyable';
   readonly sampleTypes: readonly GPUTextureSampleType[];
   readonly canRenderAttachment: boolean;
-  readonly depthAspect?: AspectInfo;
-  readonly stencilAspect?: AspectInfo;
+  readonly depthAspect?: AspectInfo & {
+    readonly texelSize: number | 'non-copyable';
+  };
+  readonly stencilAspect?: AspectInfo & { readonly texelSize: number };
 };
 
-const DEPTH_ASPECT: AspectInfo = {
+const DEPTH_ASPECT_NON_COPYABLE = {
   channelType: f32,
   vectorType: vec4f,
   sampleTypes: ['depth', 'unfilterable-float'],
-};
+  texelSize: 'non-copyable',
+} as const;
 
-const STENCIL_ASPECT: AspectInfo = {
+const DEPTH_ASPECT_16 = {
+  channelType: f32,
+  vectorType: vec4f,
+  sampleTypes: ['depth', 'unfilterable-float'],
+  texelSize: 2,
+} as const;
+
+const DEPTH_ASPECT_32 = {
+  channelType: f32,
+  vectorType: vec4f,
+  sampleTypes: ['depth', 'unfilterable-float'],
+  texelSize: 4,
+} as const;
+
+const STENCIL_ASPECT = {
   channelType: u32,
   vectorType: vec4u,
   sampleTypes: ['uint'],
-};
+  texelSize: 1,
+} as const;
 
 const formatInfoCache = new Map<GPUTextureFormat, TextureFormatInfo>();
 
@@ -129,7 +147,7 @@ export function getTextureFormatInfo(
 
 function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
   const channelType = parseChannelType(format);
-  const hasDepth = format.startsWith('depth');
+  const depthAspect = getDepthAspect(format);
   const hasStencil = format.includes('stencil');
 
   return {
@@ -142,9 +160,20 @@ function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
     texelSize: parseTexelSize(format),
     sampleTypes: parseSampleTypes(format),
     canRenderAttachment: canRenderAttachment(format),
-    ...(hasDepth && { depthAspect: DEPTH_ASPECT }),
+    ...(depthAspect && { depthAspect }),
     ...(hasStencil && { stencilAspect: STENCIL_ASPECT }),
   };
+}
+
+function getDepthAspect(format: GPUTextureFormat) {
+  if (format === 'depth16unorm') return DEPTH_ASPECT_16;
+  if (format === 'depth32float' || format === 'depth32float-stencil8') {
+    return DEPTH_ASPECT_32;
+  }
+  if (format === 'depth24plus' || format === 'depth24plus-stencil8') {
+    return DEPTH_ASPECT_NON_COPYABLE;
+  }
+  return undefined;
 }
 
 function canRenderAttachment(format: GPUTextureFormat): boolean {
@@ -167,7 +196,7 @@ function parseChannelType(format: GPUTextureFormat): F32 | I32 | U32 {
   return f32;
 }
 
-function parseTexelSize(format: GPUTextureFormat): number {
+function parseTexelSize(format: GPUTextureFormat): number | 'non-copyable' {
   // Standard formats: channel count encoded in prefix length (r=1, rg=2, rgba/bgra=4)
   const [, channels, bits] = format.match(/^(rgba|bgra|rg|r)(8|16|32)/) ?? [];
   if (channels && bits) {
@@ -176,8 +205,13 @@ function parseTexelSize(format: GPUTextureFormat): number {
 
   // Depth/stencil
   if (format === 'stencil8') return 1;
-  if (format === 'depth32float-stencil8') return 8;
-  if (format.startsWith('depth')) return format.includes('16') ? 2 : 4;
+  if (format === 'depth16unorm') return 2;
+  if (format === 'depth32float') return 4;
+  if (format === 'depth32float-stencil8') return 5;
+  // depth24plus formats have undefined copy size
+  if (format === 'depth24plus' || format === 'depth24plus-stencil8') {
+    return 'non-copyable';
+  }
 
   // Compressed: 8-byte blocks (bc1, bc4, etc2-rgb8*, eac-r11*)
   if (/^(bc[14]-|etc2-rgb8|eac-r11)/.test(format)) return 8;

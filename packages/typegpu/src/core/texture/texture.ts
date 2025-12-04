@@ -250,7 +250,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
 
   #formatInfo: TextureFormatInfo;
   // biome-ignore lint/correctness/noUnusedPrivateClassMembers: wdym, it is used 10 lines below
-  #byteSize: number;
+  #byteSize: number | 'non-copyable';
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   #texture: GPUTexture | null = null;
@@ -264,10 +264,13 @@ class TgpuTextureImpl<TProps extends TextureProps>
 
     this.#branch = branch;
     this.#formatInfo = getTextureFormatInfo(format);
-    this.#byteSize = (props.size[0] as number) *
-      (props.size[1] ?? 1) *
-      (props.size[2] ?? 1) *
-      this.#formatInfo.texelSize;
+    const texelSize = this.#formatInfo.texelSize;
+    this.#byteSize = texelSize === 'non-copyable'
+      ? 'non-copyable'
+      : (props.size[0] as number) *
+        (props.size[1] ?? 1) *
+        (props.size[2] ?? 1) *
+        texelSize;
 
     this[$internal] = {
       unwrap: () => {
@@ -359,10 +362,17 @@ class TgpuTextureImpl<TProps extends TextureProps>
       Math.max(1, Math.floor((this.props.size[2] ?? 1) / scale)),
     ];
 
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
     this.#branch.device.queue.writeTexture(
       { texture: this[$internal].unwrap(), mipLevel: mip },
-      new Uint8Array(width * height * depth * this.#formatInfo.texelSize),
-      { bytesPerRow: this.#formatInfo.texelSize * width, rowsPerImage: height },
+      new Uint8Array(width * height * depth * texelSize),
+      { bytesPerRow: texelSize * width, rowsPerImage: height },
       [width, height, depth],
     );
   }
@@ -460,8 +470,14 @@ class TgpuTextureImpl<TProps extends TextureProps>
     const mipHeight = Math.max(1, (this.props.size[1] ?? 1) >> mipLevel);
     const mipDepth = Math.max(1, (this.props.size[2] ?? 1) >> mipLevel);
 
-    const expectedSize = mipWidth * mipHeight * mipDepth *
-      this.#formatInfo.texelSize;
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const expectedSize = mipWidth * mipHeight * mipDepth * texelSize;
     const actualSize = source.byteLength ?? (source as ArrayBuffer).byteLength;
 
     if (actualSize !== expectedSize) {
@@ -477,7 +493,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
       },
       'buffer' in source ? source.buffer : source,
       {
-        bytesPerRow: this.#formatInfo.texelSize * mipWidth,
+        bytesPerRow: texelSize * mipWidth,
         rowsPerImage: mipHeight,
       },
       [mipWidth, mipHeight, mipDepth],

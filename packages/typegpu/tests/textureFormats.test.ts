@@ -162,10 +162,17 @@ describe('getTextureFormatInfo', () => {
       [
         ['stencil8', 1, u32, vec4u, ['uint'], true],
         ['depth16unorm', 2, f32, vec4f, ['depth', 'unfilterable-float'], true],
-        ['depth24plus', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
+        [
+          'depth24plus',
+          'non-copyable',
+          f32,
+          vec4f,
+          ['depth', 'unfilterable-float'],
+          true,
+        ],
         [
           'depth24plus-stencil8',
-          4,
+          'non-copyable',
           f32,
           vec4f,
           ['depth', 'unfilterable-float'],
@@ -174,7 +181,7 @@ describe('getTextureFormatInfo', () => {
         ['depth32float', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
         [
           'depth32float-stencil8',
-          8,
+          5,
           f32,
           vec4f,
           ['depth', 'unfilterable-float'],
@@ -200,37 +207,67 @@ describe('getTextureFormatInfo', () => {
       },
     );
 
-    it.each(
-      [
-        'depth24plus-stencil8',
-        'depth32float-stencil8',
-      ] as const,
-    )('%s has both depth and stencil aspect info', (format) => {
-      const info = getTextureFormatInfo(format);
+    it('depth24plus-stencil8 has both depth and stencil aspect info', () => {
+      const info = getTextureFormatInfo('depth24plus-stencil8');
       expect(info.depthAspect).toEqual({
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
+        texelSize: 'non-copyable',
       });
       expect(info.stencilAspect).toEqual({
         channelType: u32,
         vectorType: vec4u,
         sampleTypes: ['uint'],
+        texelSize: 1,
       });
     });
 
-    it.each(
-      [
-        'depth16unorm',
-        'depth24plus',
-        'depth32float',
-      ] as const,
-    )('%s has only depth aspect info', (format) => {
-      const info = getTextureFormatInfo(format);
+    it('depth32float-stencil8 has both depth and stencil aspect info', () => {
+      const info = getTextureFormatInfo('depth32float-stencil8');
       expect(info.depthAspect).toEqual({
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
+        texelSize: 4,
+      });
+      expect(info.stencilAspect).toEqual({
+        channelType: u32,
+        vectorType: vec4u,
+        sampleTypes: ['uint'],
+        texelSize: 1,
+      });
+    });
+
+    it('depth16unorm has only depth aspect info', () => {
+      const info = getTextureFormatInfo('depth16unorm');
+      expect(info.depthAspect).toEqual({
+        channelType: f32,
+        vectorType: vec4f,
+        sampleTypes: ['depth', 'unfilterable-float'],
+        texelSize: 2,
+      });
+      expect(info.stencilAspect).toBeUndefined();
+    });
+
+    it('depth24plus has only depth aspect info', () => {
+      const info = getTextureFormatInfo('depth24plus');
+      expect(info.depthAspect).toEqual({
+        channelType: f32,
+        vectorType: vec4f,
+        sampleTypes: ['depth', 'unfilterable-float'],
+        texelSize: 'non-copyable',
+      });
+      expect(info.stencilAspect).toBeUndefined();
+    });
+
+    it('depth32float has only depth aspect info', () => {
+      const info = getTextureFormatInfo('depth32float');
+      expect(info.depthAspect).toEqual({
+        channelType: f32,
+        vectorType: vec4f,
+        sampleTypes: ['depth', 'unfilterable-float'],
+        texelSize: 4,
       });
       expect(info.stencilAspect).toBeUndefined();
     });
@@ -242,6 +279,7 @@ describe('getTextureFormatInfo', () => {
         channelType: u32,
         vectorType: vec4u,
         sampleTypes: ['uint'],
+        texelSize: 1,
       });
     });
   });
