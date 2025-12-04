@@ -250,16 +250,35 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
     namingCallback(node.init as ExpressionFor<T>, node.id.name);
   } else if (
     node.type === 'AssignmentExpression' &&
-    node.left.type === 'Identifier' &&
     containsResourceConstructorCall(node.right, ctx)
   ) {
-    namingCallback(node.right as ExpressionFor<T>, node.left.name);
+    const maybeName = tryFindIdentifier(node.left);
+    if (maybeName) {
+      namingCallback(node.right as ExpressionFor<T>, maybeName);
+    }
   } else if (
     (node.type === 'Property' || node.type === 'ObjectProperty') &&
     node.key.type === 'Identifier' &&
     containsResourceConstructorCall(node.value, ctx)
   ) {
     namingCallback(node.value as ExpressionFor<T>, node.key.name);
+  }
+}
+
+/**
+ * Tries to find an identifier in a node.
+ *
+ * @example
+ * tryFindIdentifier('myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('buffers.myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('[a, b]'); // undefined
+ */
+function tryFindIdentifier(
+  node: acorn.AnyNode | babel.Node,
+): string | undefined {
+  if (node.type === 'Identifier') {
+    return node.name;
   }
 }
 
