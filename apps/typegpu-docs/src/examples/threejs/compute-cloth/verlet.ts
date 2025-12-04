@@ -247,8 +247,6 @@ export class VerletSimulation {
     // Then it adds a gravital force, wind force, and the collision with the sphere.
     // In the end it adds the force to the vertex' position.
 
-    const time = fromTSL(TSL.time, { type: d.f32 });
-
     this.computeVertexForces = toTSL(() => {
       'use gpu';
       const idx = access.instanceIndex.$;
@@ -279,19 +277,16 @@ export class VerletSimulation {
         const springId = this.springListBuffer.$[i];
         const springForce = this.springForceBuffer.$[springId];
         const springVertexIds = this.springVertexIdBuffer.$[springId];
-        const factor = std.select(
-          d.f32(-1),
-          d.f32(1),
-          springVertexIds.x === idx,
-        );
-        force = force.add(springForce.mul(factor));
+        const factor = std.select(-1, 1, springVertexIds.x === idx);
+        force = force.add(springForce.mul(d.f32(factor)));
       }
 
       // gravity
       force.y -= 0.00005;
 
       // wind
-      const noise = (triNoise3D(position, 1, time.$) - 0.2) * 0.0001;
+      const time = access.time.$;
+      const noise = (triNoise3D(position, 1, time) - 0.2) * 0.0001;
       const windForce = noise * this.windUniform.$;
       force.z -= windForce;
 
