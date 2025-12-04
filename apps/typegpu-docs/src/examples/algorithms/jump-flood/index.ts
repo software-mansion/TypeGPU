@@ -70,15 +70,17 @@ const pingPongLayout = tgpu.bindGroupLayout({
 });
 
 type FloodTexture =
-  & TgpuTexture<{
-    size: [number, number, 2];
-    format: 'rgba16float';
-  }>
+  & TgpuTexture<{ size: [number, number, 2]; format: 'rgba16float' }>
   & SampledFlag
   & StorageFlag;
 
-function createTextures() {
-  return [0, 1].map(() =>
+const filteringSampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+function createResources() {
+  const textures = [0, 1].map(() =>
     root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height, 2],
@@ -86,23 +88,19 @@ function createTextures() {
       })
       .$usage('sampled', 'storage')
   ) as [FloodTexture, FloodTexture];
-}
 
-function createPingPongBindGroups(textures: [FloodTexture, FloodTexture]) {
-  return [0, 1].map((i) =>
+  const initBindGroups = textures.map((tex) =>
+    root.createBindGroup(initLayout, { writeView: tex })
+  );
+
+  const pingPongBindGroups = [0, 1].map((i) =>
     root.createBindGroup(pingPongLayout, {
       readView: textures[i],
       writeView: textures[1 - i],
     })
   );
-}
 
-let textures = createTextures();
-let pingPongBindGroups = createPingPongBindGroups(textures);
-let renderBindGroups: ReturnType<typeof createRenderBindGroups>;
-
-function createRenderBindGroups(textures: [FloodTexture, FloodTexture]) {
-  return textures.map((tex) => ({
+  const renderBindGroups = textures.map((tex) => ({
     color: root.createBindGroup(colorSampleLayout, {
       floodTexture: tex.createView(d.texture2d(), {
         baseArrayLayer: 0,
@@ -118,7 +116,11 @@ function createRenderBindGroups(textures: [FloodTexture, FloodTexture]) {
       sampler: filteringSampler,
     }),
   }));
+
+  return { textures, initBindGroups, pingPongBindGroups, renderBindGroups };
 }
+
+let resources = createResources();
 
 const initializeRandom = root['~unstable'].createGuardedComputePipeline(
   (x, y) => {
@@ -257,12 +259,16 @@ const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const filteringSampler = root['~unstable'].createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
+const clearTexture = root['~unstable'].createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, d.vec4f());
+  std.textureStore(
+    initLayout.$.writeView,
+    d.vec2i(x, y),
+    1,
+    d.vec4f(-1, -1, 0, 0),
+  );
 });
-
-renderBindGroups = createRenderBindGroups(textures);
 
 const voronoiPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
@@ -289,12 +295,12 @@ function render() {
 
   if (visualizationMode === 'voronoi') {
     voronoiPipeline
-      .with(renderBindGroups[sourceIdx].color)
+      .with(resources.renderBindGroups[sourceIdx].color)
       .withColorAttachment(colorAttachment)
       .draw(3);
   } else {
     distancePipeline
-      .with(renderBindGroups[sourceIdx].coord)
+      .with(resources.renderBindGroups[sourceIdx].coord)
       .withColorAttachment(colorAttachment)
       .draw(3);
   }
@@ -307,7 +313,7 @@ function drawAtPosition(canvasX: number, canvasY: number) {
     canvasY * canvas.height / rect.height,
   ));
   brushSizeUniform.write(brushSize);
-  drawSeed.with(pingPongBindGroups[sourceIdx]).dispatchThreads(
+  drawSeed.with(resources.pingPongBindGroups[sourceIdx]).dispatchThreads(
     canvas.width,
     canvas.height,
   );
@@ -331,24 +337,10 @@ function interpolateAndDraw(x: number, y: number) {
   lastDrawPos = { x, y };
 }
 
-const clearTexture = root['~unstable'].createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, d.vec4f());
-  std.textureStore(
-    initLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    d.vec4f(-1, -1, 0, 0),
-  );
-});
-
 function clearCanvas() {
-  clearTexture
-    .with(root.createBindGroup(initLayout, { writeView: textures[0] }))
-    .dispatchThreads(canvas.width, canvas.height);
-  clearTexture
-    .with(root.createBindGroup(initLayout, { writeView: textures[1] }))
-    .dispatchThreads(canvas.width, canvas.height);
+  for (const bg of resources.initBindGroups) {
+    clearTexture.with(bg).dispatchThreads(canvas.width, canvas.height);
+  }
   sourceIdx = 0;
   render();
 }
@@ -356,20 +348,16 @@ function clearCanvas() {
 async function runFloodAnimated(runId: number) {
   render();
   await sleep(stepDelayMs);
-  if (runId !== currentRunId) {
-    return;
-  }
+  if (runId !== currentRunId) return;
 
   const maxRange = Math.floor(Math.max(canvas.width, canvas.height) / 2);
   let offset = Math.floor(maxRange * startingRangePercent);
 
   while (offset >= 1) {
-    if (runId !== currentRunId) {
-      return;
-    }
+    if (runId !== currentRunId) return;
 
     offsetUniform.write(offset);
-    jumpFlood.with(pingPongBindGroups[sourceIdx]).dispatchThreads(
+    jumpFlood.with(resources.pingPongBindGroups[sourceIdx]).dispatchThreads(
       canvas.width,
       canvas.height,
     );
@@ -382,20 +370,15 @@ async function runFloodAnimated(runId: number) {
 }
 
 function recreateResources() {
-  for (const t of textures) {
+  for (const t of resources.textures) {
     t.destroy();
   }
-  textures = createTextures();
-  pingPongBindGroups = createPingPongBindGroups(textures);
-  renderBindGroups = createRenderBindGroups(textures);
+  resources = createResources();
   sourceIdx = 0;
 }
 
 function initRandom() {
-  const initBindGroup = root.createBindGroup(initLayout, {
-    writeView: textures[0],
-  });
-  initializeRandom.with(initBindGroup).dispatchThreads(
+  initializeRandom.with(resources.initBindGroups[0]).dispatchThreads(
     canvas.width,
     canvas.height,
   );
