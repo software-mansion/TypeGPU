@@ -9,7 +9,7 @@ import {
   TransformControls,
   type TransformControlsMode,
 } from 'three/addons/controls/TransformControls.js';
-import { color, instancedArray, instanceIndex, uniform } from 'three/tsl';
+import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -172,28 +172,21 @@ const particleGlobalMass = t3.uniform(1e4, d.f32);
 const spinningStrength = t3.uniform(2.75, d.f32);
 const maxSpeed = t3.uniform(8, d.f32);
 const gravityConstant = 6.67e-11;
-const velocityDamping = uniform(0.1);
+const velocityDamping = t3.uniform(0.1, d.f32);
 const scale = uniform(0.008);
-const boundHalfExtent = uniform(8);
-const colorA = uniform(color('#5900ff'));
-const colorB = uniform(color('#ffa575'));
+const boundHalfExtent = t3.uniform(8, d.f32);
+const colorA = t3.uniform(color('#5900ff'), d.vec3f);
+const colorB = t3.uniform(color('#ffa575'), d.vec3f);
 
-const positionBuffer = instancedArray(count, 'vec3');
-const velocityBuffer = instancedArray(count, 'vec3');
+const positionBuffer = t3.instancedArray(count, d.vec3f);
+const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 // typegpu accessors
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
-const positionBufferTA = t3.fromTSL(positionBuffer, d.arrayOf(d.vec3f));
-const velocityBufferTA = t3.fromTSL(velocityBuffer, d.arrayOf(d.vec3f));
-const velocityDampingTA = t3.fromTSL(velocityDamping, d.f32);
-const boundHalfExtentTA = t3.fromTSL(boundHalfExtent, d.f32);
-const colorATA = t3.fromTSL(colorA, d.vec3f);
-const colorBTA = t3.fromTSL(colorB, d.vec3f);
-const instanceIndexTA = t3.fromTSL(instanceIndex, d.u32);
 const velocityBufferAttributeTA = t3.fromTSL(
-  velocityBuffer.toAttribute(),
+  velocityBuffer.node.toAttribute(),
   d.vec4f,
 );
 
@@ -212,17 +205,18 @@ const sphericalToVec3 = (phi: number, theta: number) => {
 
 const initCompute = t3.toTSL(() => {
   'use gpu';
-  randf.seed(instanceIndexTA.$ / count + comptimeRandom());
+  const instanceIndex = t3.instanceIndex.$;
+  randf.seed(instanceIndex / count + comptimeRandom());
 
   const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
     .sub(0.5)
     .mul(d.vec3f(5, 0.2, 5));
-  positionBufferTA.$[instanceIndexTA.$] = d.vec3f(basePosition);
+  positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
 
   const phi = randf.sample() * 2 * Math.PI;
   const theta = randf.sample() * 2;
   const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
-  velocityBufferTA.$[instanceIndexTA.$] = d.vec3f(baseVelocity);
+  velocityBuffer.$[instanceIndex] = d.vec3f(baseVelocity);
 });
 
 const reset = () => renderer.compute(initCompute.compute(count));
@@ -232,8 +226,7 @@ reset();
 
 const getParticleMassMultiplier = () => {
   'use gpu';
-  const instanceIndex = instanceIndexTA.$;
-  randf.seed(instanceIndex / count + comptimeRandom());
+  randf.seed(t3.instanceIndex.$ / count + comptimeRandom());
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
   const base = 0.25 + randf.sample() * 3 / 4;
   return base;
@@ -247,8 +240,8 @@ const getParticleMass = () => {
 const update = t3.toTSL(() => {
   'use gpu';
   const delta = 1 / 60;
-  let position = d.vec3f(positionBufferTA.$[instanceIndexTA.$]);
-  let velocity = d.vec3f(velocityBufferTA.$[instanceIndexTA.$]);
+  let position = d.vec3f(positionBuffer.$[t3.instanceIndex.$]);
+  let velocity = d.vec3f(velocityBuffer.$[t3.instanceIndex.$]);
 
   // force
   let force = d.vec3f();
@@ -283,33 +276,33 @@ const update = t3.toTSL(() => {
   if (speed > maxSpeed.$) {
     velocity = std.normalize(velocity).mul(maxSpeed.$);
   }
-  velocity = velocity.mul(1 - velocityDampingTA.$);
+  velocity = velocity.mul(1 - velocityDamping.$);
 
   // position
   position = position.add(velocity.mul(delta));
 
   // box loop
-  const halfHalfExtent = boundHalfExtentTA.$ / 2;
+  const halfHalfExtent = boundHalfExtent.$ / 2;
   position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtentTA.$)
+    .mod(position.add(halfHalfExtent), boundHalfExtent.$)
     .sub(halfHalfExtent);
 
-  positionBufferTA.$[instanceIndexTA.$] = d.vec3f(position);
-  velocityBufferTA.$[instanceIndexTA.$] = d.vec3f(velocity);
+  positionBuffer.$[t3.instanceIndex.$] = d.vec3f(position);
+  velocityBuffer.$[t3.instanceIndex.$] = d.vec3f(velocity);
 });
 
 const updateCompute = update.compute(count).setName('Update Particles');
 
 // nodes
 
-material.positionNode = positionBuffer.toAttribute();
+material.positionNode = positionBuffer.node.toAttribute();
 
 material.colorNode = t3.toTSL(() => {
   'use gpu';
   const velocity = velocityBufferAttributeTA.$.xyz;
   const speed = std.length(velocity);
   const colorMix = std.smoothstep(0, 0.5, speed / maxSpeed.$);
-  const finalColor = std.mix(colorATA.$, colorBTA.$, colorMix);
+  const finalColor = std.mix(colorA.$, colorB.$, colorMix);
 
   return d.vec4f(finalColor, 1);
 });
@@ -411,7 +404,7 @@ export const controls = {
     max: 0.1,
     step: 0.001,
     onSliderChange: (newValue: number) => {
-      velocityDamping.value = newValue;
+      velocityDamping.node.value = newValue;
     },
   },
   'Spinning Strength': {
@@ -438,19 +431,19 @@ export const controls = {
     max: 20,
     step: 0.01,
     onSliderChange: (newValue: number) => {
-      boundHalfExtent.value = newValue;
+      boundHalfExtent.node.value = newValue;
     },
   },
   'Color A': {
-    initial: [colorA.value.r, colorA.value.g, colorA.value.b],
+    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
     onColorChange: (newValue: [number, number, number]) => {
-      colorA.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.value.r, colorB.value.g, colorB.value.b],
+    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
     onColorChange: (newValue: [number, number, number]) => {
-      colorB.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Reset Particles': {

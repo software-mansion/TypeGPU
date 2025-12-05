@@ -1,9 +1,10 @@
 import type InputNode from 'three/src/nodes/core/InputNode.js';
 import {
+  ShaderNodeObject,
   uniform as uniformImpl,
   uniformArray as uniformArrayImpl,
 } from 'three/tsl';
-import type { UniformArrayNode, UniformNode } from 'three/webgpu';
+import type { Node, UniformArrayNode, UniformNode } from 'three/webgpu';
 import * as d from 'typegpu/data';
 import { wgslTypeToGlslType } from './common.ts';
 import { fromTSL, type TSLAccessor } from './typegpu-node.ts';
@@ -25,8 +26,13 @@ export function uniform<TValue, TDataType extends d.AnyWgslData>(
   value: TValue | InputNode<TValue>,
   dataType: TDataType,
 ): TSLAccessor<TDataType, UniformNode<TValue>> {
-  const glslType =
+  let glslType: string | undefined =
     wgslTypeToGlslType[dataType.type as keyof typeof wgslTypeToGlslType];
+
+  if ((value as ShaderNodeObject<Node>).isNode) {
+    // The type sometimes interferes with the node's inherent type
+    glslType = undefined;
+  }
 
   return fromTSL(uniformImpl(value, glslType), dataType);
 }
