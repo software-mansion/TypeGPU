@@ -3,7 +3,7 @@
  */
 
 import { randf } from '@typegpu/noise';
-import { fromTSL, toTSL } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
   TransformControls,
@@ -188,24 +188,27 @@ const velocityBuffer = instancedArray(count, 'vec3');
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
-const positionBufferTA = fromTSL(positionBuffer, d.arrayOf(d.vec3f));
-const velocityBufferTA = fromTSL(velocityBuffer, d.arrayOf(d.vec3f));
-const attractorsPositionsTA = fromTSL(attractorsPositions, d.arrayOf(d.vec3f));
-const attractorsRotationAxesTA = fromTSL(
+const positionBufferTA = t3.fromTSL(positionBuffer, d.arrayOf(d.vec3f));
+const velocityBufferTA = t3.fromTSL(velocityBuffer, d.arrayOf(d.vec3f));
+const attractorsPositionsTA = t3.fromTSL(
+  attractorsPositions,
+  d.arrayOf(d.vec3f),
+);
+const attractorsRotationAxesTA = t3.fromTSL(
   attractorsRotationAxes,
   d.arrayOf(d.vec3f),
 );
-const attractorsLengthTA = fromTSL(attractorsLength, d.u32);
-const attractorMassTA = fromTSL(attractorMass, d.f32);
-const particleGlobalMassTA = fromTSL(particleGlobalMass, d.f32);
-const spinningStrengthTA = fromTSL(spinningStrength, d.f32);
-const maxSpeedTA = fromTSL(maxSpeed, d.f32);
-const velocityDampingTA = fromTSL(velocityDamping, d.f32);
-const boundHalfExtentTA = fromTSL(boundHalfExtent, d.f32);
-const colorATA = fromTSL(colorA, d.vec3f);
-const colorBTA = fromTSL(colorB, d.vec3f);
-const instanceIndexTA = fromTSL(instanceIndex, d.u32);
-const velocityBufferAttributeTA = fromTSL(
+const attractorsLengthTA = t3.fromTSL(attractorsLength, d.u32);
+const attractorMassTA = t3.fromTSL(attractorMass, d.f32);
+const particleGlobalMassTA = t3.fromTSL(particleGlobalMass, d.f32);
+const spinningStrengthTA = t3.fromTSL(spinningStrength, d.f32);
+const maxSpeedTA = t3.fromTSL(maxSpeed, d.f32);
+const velocityDampingTA = t3.fromTSL(velocityDamping, d.f32);
+const boundHalfExtentTA = t3.fromTSL(boundHalfExtent, d.f32);
+const colorATA = t3.fromTSL(colorA, d.vec3f);
+const colorBTA = t3.fromTSL(colorB, d.vec3f);
+const instanceIndexTA = t3.fromTSL(instanceIndex, d.u32);
+const velocityBufferAttributeTA = t3.fromTSL(
   velocityBuffer.toAttribute(),
   d.vec4f,
 );
@@ -223,7 +226,7 @@ const sphericalToVec3 = (phi: number, theta: number) => {
   );
 };
 
-const initCompute = toTSL(() => {
+const initCompute = t3.toTSL(() => {
   'use gpu';
   randf.seed(instanceIndexTA.$ / count + comptimeRandom());
 
@@ -257,7 +260,7 @@ const getParticleMass = () => {
   return getParticleMassMultiplier() * particleGlobalMassTA.$;
 };
 
-const update = toTSL(() => {
+const update = t3.toTSL(() => {
   'use gpu';
   const delta = 1 / 60;
   let position = d.vec3f(positionBufferTA.$[instanceIndexTA.$]);
@@ -317,7 +320,7 @@ const updateCompute = update.compute(count).setName('Update Particles');
 
 material.positionNode = positionBuffer.toAttribute();
 
-material.colorNode = toTSL(() => {
+material.colorNode = t3.toTSL(() => {
   'use gpu';
   const velocity = velocityBufferAttributeTA.$.xyz;
   const speed = std.length(velocity);
@@ -327,7 +330,7 @@ material.colorNode = toTSL(() => {
   return d.vec4f(finalColor, 1);
 });
 
-material.scaleNode = toTSL(getParticleMassMultiplier).mul(scale);
+material.scaleNode = t3.toTSL(getParticleMassMultiplier).mul(scale);
 
 // mesh
 
