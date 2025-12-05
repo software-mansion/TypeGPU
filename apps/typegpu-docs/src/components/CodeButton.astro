@@ -9,20 +9,20 @@ const { title, message, icon } = Astro.props as Props;
 ---
 
 <div
-  class="p-0.5 bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] aspect-square"
+  class="bg-position-[100%_100%] bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] p-0.5 bg-size-[200%_200%] aspect-square"
 >
-  <div class="flex flex-col items-start p-8 bg-accent-50 dark:bg-[#30354A] aspect-square">
+  <div class="flex flex-col items-start dark:bg-[#30354A] p-8 aspect-square bg-accent-50">
     <div
-      class="flex justify-center items-center mb-6 w-16 h-16 bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%]"
+      class="flex justify-center items-center bg-position-[100%_100%] bg-gradient-to-tl from-gradient-blue via-gradient-purple to-[#f8f7dd] mb-6 w-16 h-16 bg-size-[200%_200%]"
     >
       {icon && <img src={icon.src} alt="Icon" class="w-8 h-8" />}
     </div>
 
-    <h3 class="mb-4 font-semibold text-gray-800 dark:text-white text-2xl">
+    <h3 class="mb-4 font-semibold text-gray-800 dark:text-white sm:text-lg md:text-2xl">
       {title}
     </h3>
 
-    <p class="text-gray-600 dark:text-white text-lg leading-relaxed">
+    <p class="text-base text-gray-600 dark:text-white leading-relaxed">
       {message}
     </p>
   </div>
