@@ -24,7 +24,9 @@ const simulate = Fn(() => {
 ```
 
 TypeGPU:
-```ts
+```ts twoslash
+import * as t3 from '@typegpu/three';
+// ---cut---
 const simulate = t3.toTSL(() => {
   'use gpu';
   //
@@ -43,7 +45,9 @@ const oscSine = Fn(([t = time]) => {
 ```
 
 TypeGPU:
-```ts
+```ts twoslash
+import * as std from 'typegpu/std';
+// ---cut---
 const oscSine = (t: number) => {
   'use gpu';
   return std.sin((t + 0.75) * Math.PI * 2) * 0.5 + 0.5;
@@ -60,10 +64,16 @@ If(instanceIndex.greaterThanEqual(uint(vertexCount)), () => {
 ```
 
 TypeGPU:
-```ts
+```ts twoslash
+import * as t3 from '@typegpu/three';
+declare const vertexCount: number;
+const some = () => {
+// ---cut-before---
 if (t3.instanceIndex.$ >= vertexCount) {
   return;
 }
+// ---cut-after---
+};
 ```
 
 ## For loops
