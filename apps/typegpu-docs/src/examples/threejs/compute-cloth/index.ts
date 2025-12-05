@@ -4,7 +4,7 @@
 
 import * as d from 'typegpu/data';
 import * as THREE from 'three/webgpu';
-import { fromTSL, toTSL, uv } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import * as std from 'typegpu/std';
 
 import * as TSL from 'three/tsl';
@@ -19,10 +19,8 @@ import {
 } from './verlet.ts';
 
 const sphereRadius = 0.15;
-const spherePositionUniform = fromTSL(TSL.uniform(new THREE.Vector3(0, 0, 0)), {
-  type: d.vec3f,
-});
-const sphereUniform = fromTSL(TSL.uniform(1.0), { type: d.f32 });
+const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
+const sphereUniform = t3.uniform(1.0, d.f32);
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
@@ -138,11 +136,10 @@ function setupWireframe() {
     false,
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const instanceIndex = fromTSL(TSL.instanceIndex, { type: d.u32 });
-  const vertexIndex = fromTSL(TSL.attribute('vertexIndex'), { type: d.u32 });
-  springWireframeMaterial.positionNode = toTSL(() => {
+  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.u32);
+  springWireframeMaterial.positionNode = t3.toTSL(() => {
     'use gpu';
-    const vertexIds = verletSim.springVertexIdBuffer.$[instanceIndex.$];
+    const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
     const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
     return verletSim.vertexPositionBuffer.$[vertexId];
   });
@@ -246,9 +243,10 @@ function setupClothMesh(): THREE.Mesh {
     return std.abs(fuv.x + fuv.y) % 2;
   };
 
-  clothMaterial.colorNode = toTSL(() => {
+  clothMaterial.colorNode = t3.toTSL(() => {
     'use gpu';
-    const pattern = checkerBoard(uv().$.mul(5));
+    const uv = t3.uv().$;
+    const pattern = checkerBoard(uv.mul(5));
     return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
   });
 

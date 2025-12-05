@@ -211,6 +211,10 @@ export default defineConfig({
               label: '@typegpu/noise',
               slug: 'ecosystem/typegpu-noise',
             },
+            {
+              label: '@typegpu/three',
+              slug: 'ecosystem/typegpu-three',
+            },
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',

@@ -55,7 +55,7 @@ describe('shellless', () => {
         return dot(a, a);
       }
 
-      fn item_0() -> f32 {
+      fn foo() -> f32 {
         return (dot2(vec2f(1, 2)) + dot2_1(vec3f(3, 4, 5)));
       }"
     `);
