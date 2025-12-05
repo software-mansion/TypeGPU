@@ -188,27 +188,27 @@ const velocityBuffer = instancedArray(count, 'vec3');
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
-const positionBufferTA = fromTSL(positionBuffer, { type: d.arrayOf(d.vec3f) });
-const velocityBufferTA = fromTSL(velocityBuffer, { type: d.arrayOf(d.vec3f) });
-const attractorsPositionsTA = fromTSL(attractorsPositions, {
-  type: d.arrayOf(d.vec3f),
-});
-const attractorsRotationAxesTA = fromTSL(attractorsRotationAxes, {
-  type: d.arrayOf(d.vec3f),
-});
-const attractorsLengthTA = fromTSL(attractorsLength, { type: d.u32 });
-const attractorMassTA = fromTSL(attractorMass, { type: d.f32 });
-const particleGlobalMassTA = fromTSL(particleGlobalMass, { type: d.f32 });
-const spinningStrengthTA = fromTSL(spinningStrength, { type: d.f32 });
-const maxSpeedTA = fromTSL(maxSpeed, { type: d.f32 });
-const velocityDampingTA = fromTSL(velocityDamping, { type: d.f32 });
-const boundHalfExtentTA = fromTSL(boundHalfExtent, { type: d.f32 });
-const colorATA = fromTSL(colorA, { type: d.vec3f });
-const colorBTA = fromTSL(colorB, { type: d.vec3f });
-const instanceIndexTA = fromTSL(instanceIndex, { type: d.u32 });
-const velocityBufferAttributeTA = fromTSL(velocityBuffer.toAttribute(), {
-  type: d.vec4f,
-});
+const positionBufferTA = fromTSL(positionBuffer, d.arrayOf(d.vec3f));
+const velocityBufferTA = fromTSL(velocityBuffer, d.arrayOf(d.vec3f));
+const attractorsPositionsTA = fromTSL(attractorsPositions, d.arrayOf(d.vec3f));
+const attractorsRotationAxesTA = fromTSL(
+  attractorsRotationAxes,
+  d.arrayOf(d.vec3f),
+);
+const attractorsLengthTA = fromTSL(attractorsLength, d.u32);
+const attractorMassTA = fromTSL(attractorMass, d.f32);
+const particleGlobalMassTA = fromTSL(particleGlobalMass, d.f32);
+const spinningStrengthTA = fromTSL(spinningStrength, d.f32);
+const maxSpeedTA = fromTSL(maxSpeed, d.f32);
+const velocityDampingTA = fromTSL(velocityDamping, d.f32);
+const boundHalfExtentTA = fromTSL(boundHalfExtent, d.f32);
+const colorATA = fromTSL(colorA, d.vec3f);
+const colorBTA = fromTSL(colorB, d.vec3f);
+const instanceIndexTA = fromTSL(instanceIndex, d.u32);
+const velocityBufferAttributeTA = fromTSL(
+  velocityBuffer.toAttribute(),
+  d.vec4f,
+);
 
 // init compute
 

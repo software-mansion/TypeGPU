@@ -66,9 +66,9 @@ export class VerletSimulation {
     this.springs = [];
     this.vertexColumns = [];
 
-    this.stiffnessUniform = t3.fromTSL(TSL.uniform(0.2), { type: d.f32 });
-    this.windUniform = t3.fromTSL(TSL.uniform(1.0), { type: d.f32 });
-    this.dampeningUniform = t3.fromTSL(TSL.uniform(0.99), { type: d.f32 });
+    this.stiffnessUniform = t3.fromTSL(TSL.uniform(0.2), d.f32);
+    this.windUniform = t3.fromTSL(TSL.uniform(1.0), d.f32);
+    this.dampeningUniform = t3.fromTSL(TSL.uniform(0.99), d.f32);
 
     // this function sets up the geometry of the verlet system, a grid of vertices connected by springs
 
@@ -166,24 +166,22 @@ export class VerletSimulation {
 
     this.vertexPositionBuffer = t3.fromTSL(
       TSL.instancedArray(vertexPositionArray, 'vec3'),
-      { type: d.arrayOf(d.vec3f) },
+      d.arrayOf(d.vec3f),
     );
 
     this.vertexForceBuffer = t3.fromTSL(
       TSL.instancedArray(vertexCount, 'vec3'),
-      {
-        type: d.arrayOf(d.vec3f),
-      },
+      d.arrayOf(d.vec3f),
     );
 
     this.vertexParamsBuffer = t3.fromTSL(
       TSL.instancedArray(vertexParamsArray, 'uvec3'),
-      { type: d.arrayOf(d.vec3u) },
+      d.arrayOf(d.vec3u),
     );
 
     this.springListBuffer = t3.fromTSL(
       TSL.instancedArray(new Uint32Array(springListArray), 'uint').setPBO(true),
-      { type: d.arrayOf(d.u32) },
+      d.arrayOf(d.u32),
     );
 
     // setup the buffers holding the spring data for the compute shaders
@@ -204,17 +202,17 @@ export class VerletSimulation {
 
     this.springVertexIdBuffer = t3.fromTSL(
       TSL.instancedArray(springVertexIdArray, 'uvec2').setPBO(true),
-      { type: d.arrayOf(d.vec2u) },
+      d.arrayOf(d.vec2u),
     );
 
     this.springRestLengthBuffer = t3.fromTSL(
       TSL.instancedArray(springRestLengthArray, 'float'),
-      { type: d.arrayOf(d.f32) },
+      d.arrayOf(d.f32),
     );
 
     this.springForceBuffer = t3.fromTSL(
       TSL.instancedArray(springCount * 3, 'vec3').setPBO(true),
-      { type: d.arrayOf(d.vec3f) },
+      d.arrayOf(d.vec3f),
     );
 
     // This sets up the compute shaders for the verlet simulation

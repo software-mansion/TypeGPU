@@ -244,20 +244,18 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
 
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: TSL.ShaderNodeObject<TNode>,
-  options: { type: (length: number) => T },
+  type: (length: number) => T,
 ): TSLAccessor<T, TNode>;
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T },
+  type: T,
 ): TSLAccessor<T, TNode>;
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T } | { type: (length: number) => T },
+  type: T | ((length: number) => T),
 ): TSLAccessor<T, TNode> {
   return new TSLAccessor<T, TNode>(
     node,
-    d.isData(options.type)
-      ? options.type as T
-      : (options.type as (length: number) => T)(0),
+    d.isData(type) ? type as T : (type as (length: number) => T)(0),
   );
 }

@@ -21,9 +21,9 @@ import {
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.fromTSL(
   TSL.uniform(new THREE.Vector3(0, 0, 0)),
-  { type: d.vec3f },
+  d.vec3f,
 );
-const sphereUniform = t3.fromTSL(TSL.uniform(1.0), { type: d.f32 });
+const sphereUniform = t3.fromTSL(TSL.uniform(1.0), d.f32);
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
@@ -139,11 +139,10 @@ function setupWireframe() {
     false,
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const instanceIndex = t3.fromTSL(TSL.instanceIndex, { type: d.u32 });
-  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), { type: d.u32 });
+  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.u32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
     'use gpu';
-    const vertexIds = verletSim.springVertexIdBuffer.$[instanceIndex.$];
+    const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
     const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
     return verletSim.vertexPositionBuffer.$[vertexId];
   });
