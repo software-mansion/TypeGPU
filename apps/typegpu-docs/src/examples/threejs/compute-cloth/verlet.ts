@@ -66,9 +66,9 @@ export class VerletSimulation {
     this.springs = [];
     this.vertexColumns = [];
 
-    this.stiffnessUniform = t3.fromTSL(TSL.uniform(0.2), d.f32);
-    this.windUniform = t3.fromTSL(TSL.uniform(1.0), d.f32);
-    this.dampeningUniform = t3.fromTSL(TSL.uniform(0.99), d.f32);
+    this.stiffnessUniform = t3.uniform(0.2, d.f32);
+    this.windUniform = t3.uniform(1.0, d.f32);
+    this.dampeningUniform = t3.uniform(0.99, d.f32);
 
     // this function sets up the geometry of the verlet system, a grid of vertices connected by springs
 
@@ -164,25 +164,15 @@ export class VerletSimulation {
       }
     }
 
-    this.vertexPositionBuffer = t3.fromTSL(
-      TSL.instancedArray(vertexPositionArray, 'vec3'),
-      d.arrayOf(d.vec3f),
-    );
+    this.vertexPositionBuffer = t3.instancedArray(vertexPositionArray, d.vec3f);
+    this.vertexForceBuffer = t3.instancedArray(vertexCount, d.vec3f);
+    this.vertexParamsBuffer = t3.instancedArray(vertexParamsArray, d.vec3u);
 
-    this.vertexForceBuffer = t3.fromTSL(
-      TSL.instancedArray(vertexCount, 'vec3'),
-      d.arrayOf(d.vec3f),
+    this.springListBuffer = t3.instancedArray(
+      new Uint32Array(springListArray),
+      d.u32,
     );
-
-    this.vertexParamsBuffer = t3.fromTSL(
-      TSL.instancedArray(vertexParamsArray, 'uvec3'),
-      d.arrayOf(d.vec3u),
-    );
-
-    this.springListBuffer = t3.fromTSL(
-      TSL.instancedArray(new Uint32Array(springListArray), 'uint').setPBO(true),
-      d.arrayOf(d.u32),
-    );
+    this.springListBuffer.node.setPBO(true);
 
     // setup the buffers holding the spring data for the compute shaders
 
@@ -200,20 +190,16 @@ export class VerletSimulation {
       );
     }
 
-    this.springVertexIdBuffer = t3.fromTSL(
-      TSL.instancedArray(springVertexIdArray, 'uvec2').setPBO(true),
-      d.arrayOf(d.vec2u),
+    this.springVertexIdBuffer = t3.instancedArray(springVertexIdArray, d.vec2u);
+    this.springVertexIdBuffer.node.setPBO(true);
+
+    this.springRestLengthBuffer = t3.instancedArray(
+      springRestLengthArray,
+      d.f32,
     );
 
-    this.springRestLengthBuffer = t3.fromTSL(
-      TSL.instancedArray(springRestLengthArray, 'float'),
-      d.arrayOf(d.f32),
-    );
-
-    this.springForceBuffer = t3.fromTSL(
-      TSL.instancedArray(springCount * 3, 'vec3').setPBO(true),
-      d.arrayOf(d.vec3f),
-    );
+    this.springForceBuffer = t3.instancedArray(springCount * 3, d.vec3f);
+    this.springForceBuffer.node.setPBO(true);
 
     // This sets up the compute shaders for the verlet simulation
     // There are two shaders that are executed for each simulation step

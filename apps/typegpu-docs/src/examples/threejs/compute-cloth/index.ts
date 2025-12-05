@@ -19,11 +19,8 @@ import {
 } from './verlet.ts';
 
 const sphereRadius = 0.15;
-const spherePositionUniform = t3.fromTSL(
-  TSL.uniform(new THREE.Vector3(0, 0, 0)),
-  d.vec3f,
-);
-const sphereUniform = t3.fromTSL(TSL.uniform(1.0), d.f32);
+const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
+const sphereUniform = t3.uniform(1.0, d.f32);
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
