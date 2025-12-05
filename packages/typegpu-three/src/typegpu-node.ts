@@ -3,6 +3,7 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
+import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
 /**
  * State held by the node, used during shader generation.
@@ -254,10 +255,22 @@ export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: TSL.ShaderNodeObject<TNode>,
   options: { type: T } | { type: (length: number) => T },
 ): TSLAccessor<T, TNode> {
-  return new TSLAccessor<T, TNode>(
-    node,
-    d.isData(options.type)
-      ? options.type as T
-      : (options.type as (length: number) => T)(0),
-  );
+  const tgpuType = d.isData(options.type)
+    ? options.type as T
+    : (options.type as (length: number) => T)(0);
+
+  const builder = new WGSLNodeBuilder();
+
+  const nodeType = (typeof node.getNodeType === 'function')
+    ? node.getNodeType(builder)
+    : (node.nodeType || null);
+
+  if (!nodeType) {
+    console.log('Node type is missing or could not be resolved.');
+  } else {
+    const wgslType = builder.getType(nodeType);
+    console.log(`TSL '${wgslType}' ('${nodeType}') vs TGPU '${tgpuType}'`);
+  }
+
+  return new TSLAccessor<T, TNode>(node, tgpuType);
 }

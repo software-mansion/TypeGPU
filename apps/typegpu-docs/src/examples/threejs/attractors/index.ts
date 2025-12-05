@@ -207,7 +207,7 @@ const colorATA = fromTSL(colorA, { type: d.vec3f });
 const colorBTA = fromTSL(colorB, { type: d.vec3f });
 const instanceIndexTA = fromTSL(instanceIndex, { type: d.u32 });
 const velocityBufferAttributeTA = fromTSL(velocityBuffer.toAttribute(), {
-  type: d.vec4f,
+  type: d.vec3f,
 });
 
 // init compute
@@ -319,7 +319,7 @@ material.positionNode = positionBuffer.toAttribute();
 
 material.colorNode = toTSL(() => {
   'use gpu';
-  const velocity = velocityBufferAttributeTA.$.xyz;
+  const velocity = velocityBufferAttributeTA.$;
   const speed = std.length(velocity);
   const colorMix = std.smoothstep(0, 0.5, speed / maxSpeedTA.$);
   const finalColor = std.mix(colorATA.$, colorBTA.$, colorMix);
