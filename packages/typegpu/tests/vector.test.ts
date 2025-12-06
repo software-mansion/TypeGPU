@@ -971,3 +971,41 @@ describe('v4b', () => {
     });
   });
 });
+
+describe('type predicates', () => {
+  it('prunes branches', () => {
+    const ceil = (input: d.v3f | d.v3i): d.v3i => {
+      'use gpu';
+      if (input.kind === 'vec3f') {
+        return d.vec3i(std.ceil(input));
+      } else {
+        return input;
+      }
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = ceil(d.vec3f(1, 2, 3));
+      const bar = ceil(d.vec3i(1, 2, 3));
+    };
+
+    expect(asWgsl(main)).toMatchInlineSnapshot(`
+      "fn ceil(input: vec3f) -> vec3i {
+        {
+          return vec3i(ceil(input));
+        }
+      }
+
+      fn ceil_1(input: vec3i) -> vec3i {
+        {
+          return input;
+        }
+      }
+
+      fn main() {
+        var foo = ceil(vec3f(1, 2, 3));
+        var bar = ceil_1(vec3i(1, 2, 3));
+      }"
+    `);
+  });
+});

@@ -104,6 +104,13 @@ function cpuAbs<T extends NumVec | number>(value: T): T {
   return VectorOps.abs[value.kind](value) as T;
 }
 
+const unaryIdentitySignature = (arg: AnyData) => {
+  return {
+    argTypes: [arg],
+    returnType: arg,
+  };
+};
+
 export const abs = dualImpl({
   name: 'abs',
   signature: unaryIdentitySignature,

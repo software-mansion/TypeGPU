@@ -7,6 +7,11 @@ const Boid = d.struct({
   vel: d.vec3u,
 });
 
+const Boid = d.struct({
+  pos: d.vec3f,
+  vel: d.vec3u,
+});
+
 describe('tgpu.const', () => {
   it('should inject const declaration when used in shelled WGSL functions', () => {
     const x = tgpu.const(d.u32, 2);
@@ -120,5 +125,50 @@ describe('tgpu.const', () => {
         foo(0i);
       }"
     `);
+  });
+
+  it('cannot be passed directly to shellless functions', () => {
+    const fn1 = (v: d.v3f) => {
+      'use gpu';
+      return v.x * v.y * v.z;
+    };
+
+    const foo = tgpu.const(d.vec3f, d.vec3f(1, 2, 3));
+    const fn2 = () => {
+      'use gpu';
+      return fn1(foo.$);
+    };
+
+    expect(() => asWgsl(fn2)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn2
+      - fn*:fn2(): Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: 'vec3f(...)']
+    `);
+  });
+
+  it('cannot be mutated', () => {
+    const boid = tgpu.const(Boid, {
+      pos: d.vec3f(1, 2, 3),
+      vel: d.vec3u(4, 5, 6),
+    });
+
+    const fn = () => {
+      'use gpu';
+      // @ts-expect-error: Cannot assign to read-only property
+      boid.$.pos = d.vec3f(0, 0, 0);
+    };
+
+    expect(() => asWgsl(fn)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant.]
+    `);
+
+    // Since we freeze the object, we cannot mutate when running the function in JS either
+    expect(() => fn()).toThrowErrorMatchingInlineSnapshot(
+      `[TypeError: Cannot assign to read only property 'pos' of object '#<Object>']`,
+    );
   });
 });

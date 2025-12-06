@@ -50,6 +50,8 @@ const { NodeTypeCatalog: NODE } = tinyest;
 const parenthesizedOps = [
   '==',
   '!=',
+  '===',
+  '!==',
   '<',
   '<=',
   '>',
@@ -68,7 +70,58 @@ const parenthesizedOps = [
   '||',
 ];
 
-const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
+const binaryLogicalOps = [
+  '&&',
+  '||',
+  '==',
+  '!=',
+  '===',
+  '!==',
+  '<',
+  '<=',
+  '>',
+  '>=',
+];
+
+const OP_MAP = {
+  //
+  // binary
+  //
+  '===': '==',
+  '!==': '!=',
+  get '>>>'(): never {
+    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
+  },
+  get in(): never {
+    throw new Error('The `in` operator is unsupported in TypeGPU functions.');
+  },
+  get instanceof(): never {
+    throw new Error(
+      'The `instanceof` operator is unsupported in TypeGPU functions.',
+    );
+  },
+  get '|>'(): never {
+    throw new Error('The `|>` operator is unsupported in TypeGPU functions.');
+  },
+  //
+  // logical
+  //
+  get '??'(): never {
+    throw new Error('The `??` operator is unsupported in TypeGPU functions.');
+  },
+  //
+  // assignment
+  //
+  get '>>>='(): never {
+    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
+  },
+  get '**='(): never {
+    throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
+  },
+  get '??='(): never {
+    throw new Error('The `??=` operator is unsupported in TypeGPU functions.');
+  },
+} as Record<string, string>;
 
 type Operator =
   | tinyest.BinaryOperator
@@ -261,6 +314,16 @@ ${this.ctx.pre}}`;
         );
       }
 
+      if (op === '==') {
+        throw new Error('Please use the === operator instead of ==');
+      }
+
+      if (
+        op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)
+      ) {
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+      }
+
       if (lhsExpr.dataType.type === 'unknown') {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
@@ -328,8 +391,8 @@ ${this.ctx.pre}}`;
 
       return snip(
         parenthesizedOps.includes(op)
-          ? `(${lhsStr} ${op} ${rhsStr})`
-          : `${lhsStr} ${op} ${rhsStr}`,
+          ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`
+          : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
         /* origin */ 'runtime',

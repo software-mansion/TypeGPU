@@ -122,6 +122,9 @@ const randomizeFishPositionsPipeline = root['~unstable']
     buffer0mutable.$[x] = ModelData(data);
     buffer1mutable.$[x] = ModelData(data);
   });
+  buffer0mutable.$[x] = ModelData(data);
+  buffer1mutable.$[x] = ModelData(data);
+});
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
@@ -199,8 +202,9 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const simulatePipeline = root['~unstable']
-  .createGuardedComputePipeline(simulate);
+const simulatePipeline = root['~unstable'].createGuardedComputePipeline(
+  simulate,
+);
 
 // bind groups
 
