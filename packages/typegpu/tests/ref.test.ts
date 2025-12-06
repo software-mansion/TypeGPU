@@ -2,7 +2,6 @@ import tgpu from '../src/index.ts';
 import * as d from '../src/data/index.ts';
 import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('d.ref', () => {
   it('fails when using a ref as an external', () => {
@@ -13,7 +12,7 @@ describe('d.ref', () => {
       sup.$ += 1;
     };
 
-    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
@@ -27,7 +26,7 @@ describe('d.ref', () => {
       const ref = d.ref(0);
     };
 
-    expect(asWgsl(hello)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([hello])).toMatchInlineSnapshot(`
       "fn hello() {
         var ref_1 = 0;
       }"
@@ -49,7 +48,7 @@ describe('d.ref', () => {
       update(foo);
     };
 
-    expect(() => asWgsl(hello)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([hello])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
@@ -64,7 +63,7 @@ describe('d.ref', () => {
       const foo = d.ref(position);
     };
 
-    expect(() => asWgsl(hello)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([hello])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
@@ -93,7 +92,7 @@ describe('d.ref', () => {
     expect(main().pos).toStrictEqual(d.vec3f(0, 0, 0));
 
     // And on the GPU
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "struct Entity {
         pos: vec3f,
       }
@@ -127,7 +126,7 @@ describe('d.ref', () => {
     expect(main()).toBe(1);
 
     // And on the GPU
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn increment(value: ptr<function, i32>) {
         (*value) += 1i;
       }
@@ -151,7 +150,7 @@ describe('d.ref', () => {
       increment(d.ref(0));
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -171,14 +170,14 @@ describe('d.ref', () => {
       return d.ref(0);
     };
 
-    expect(() => asWgsl(foo)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
       - fn*:foo(): Cannot return references, returning 'value']
     `);
 
-    expect(() => asWgsl(bar)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([bar])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:bar
@@ -203,7 +202,7 @@ describe('d.ref', () => {
       foo(d.vec3f());
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
@@ -231,7 +230,7 @@ describe('d.ref', () => {
       d.ref(pos);
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> positions: array<vec3f>;
 
       fn advance(value: ptr<storage, vec3f, read>) {

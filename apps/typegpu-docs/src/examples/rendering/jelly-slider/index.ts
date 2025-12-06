@@ -697,7 +697,7 @@ const renderBackground = (
   );
 };
 
-const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, uv: d.v2f) => {
+const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
   'use gpu';
   let totalSteps = d.u32();
 
@@ -907,7 +907,7 @@ function render(timestamp: number) {
 
   rayMarchPipeline
     .withColorAttachment({
-      view: root.unwrap(textures[currentFrame].sampled),
+      view: textures[currentFrame].sampled,
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -977,7 +977,7 @@ async function autoSetQuaility() {
 
     measurePipeline
       .withColorAttachment({
-        view: root.unwrap(testTexture).createView(),
+        view: testTexture,
         loadOp: 'clear',
         storeOp: 'store',
       })

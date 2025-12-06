@@ -287,7 +287,7 @@ export const isCloseTo = dualImpl({
   codegenImpl: (
     lhs,
     rhs,
-    precision = snip(0.01, f32, /* ref */ 'constant'),
+    precision = snip(0.01, f32, /* origin */ 'constant'),
   ) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;

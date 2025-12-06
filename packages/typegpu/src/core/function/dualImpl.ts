@@ -99,7 +99,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
           options.normalImpl(...converted.map((s) => s.value) as never[]),
           returnType,
           // Functions give up ownership of their return value
-          /* ref */ 'constant',
+          /* origin */ 'constant',
         );
       } catch (e) {
         // cpuImpl may in some cases be present but implemented only partially.
@@ -115,7 +115,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       options.codegenImpl(...converted),
       returnType,
       // Functions give up ownership of their return value
-      /* ref */ 'runtime',
+      /* origin */ 'runtime',
     );
   };
 

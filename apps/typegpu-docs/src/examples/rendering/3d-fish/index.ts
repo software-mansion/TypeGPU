@@ -98,27 +98,29 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsPipeline = root[
-  '~unstable'
-].createGuardedComputePipeline((x) => {
-  'use gpu';
-  randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
-  const data = ModelData({
-    position: d.vec3f(
-      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-    ),
-    direction: d.vec3f(
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-      randf.sample() * 0.1 - 0.05,
-    ),
-    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-    variant: randf.sample(),
-    applySinWave: 1,
-    applySeaFog: 1,
-    applySeaDesaturation: 1,
+const randomizeFishPositionsPipeline = root['~unstable']
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed2(d.vec2f(x, seedUniform.$));
+    const data = ModelData({
+      position: d.vec3f(
+        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+      ),
+      direction: d.vec3f(
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+      ),
+      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+      variant: randf.sample(),
+      applySinWave: 1,
+      applySeaFog: 1,
+      applySeaDesaturation: 1,
+    });
+    buffer0mutable.$[x] = ModelData(data);
+    buffer1mutable.$[x] = ModelData(data);
   });
   buffer0mutable.$[x] = ModelData(data);
   buffer1mutable.$[x] = ModelData(data);

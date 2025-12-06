@@ -76,6 +76,11 @@ const Transpilers: Partial<
     return node.name;
   },
 
+  ThisExpression(ctx) {
+    ctx.externalNames.add('this');
+    return 'this';
+  },
+
   BinaryExpression(ctx, node) {
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;

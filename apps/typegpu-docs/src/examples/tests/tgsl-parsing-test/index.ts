@@ -47,7 +47,7 @@ runTests().then((result) => {
 export const controls = {
   'Log resolved pipeline': {
     async onButtonClick() {
-      console.log(tgpu.resolve({ externals: { pipeline } }));
+      console.log(tgpu.resolve([pipeline]));
     },
   },
 };

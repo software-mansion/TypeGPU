@@ -91,7 +91,7 @@ const createBoid = () => {
 Snippets are the basis for TypeGPU shader code generation. They are immutable objects that hold three values:
 - *value*: A piece of WGSL code, or something "resolvable" to a piece of WGSL code
 - *dataType*: The inferred WGSL type of `value` [(more here)](#data-types)
-- *origin*: An enumerable of where the value came from (if it's a reference to an existing value, or ephemeral)
+- *origin*: An enumerable of where `value` came from (if it's a reference to an existing value, or ephemeral)
 [(more here)](#origins)
 
 ```ts
@@ -143,6 +143,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
     // assign it to a variable or use it.
     const firstBoid = layout.$.boids[0];
     const newBoid = Boid();
+    const copiedBoid = Boid(firstBoid);
 
     const boidPos = newBoid.pos;
   };
@@ -152,6 +153,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
   fn foo() {
     let firstBoid = (&boids[0]); // typed as ptr<storage, Boid, read_write>
     var newBoid = Boid(); // typed as Boid
+    var copiedBoid = firstBoid; // typed as Boid
 
     let boidPos = (&newBoid.pos); // typed as ptr<function, vec3f>
   }
@@ -177,7 +179,7 @@ Origins are enumerable values that describe where a value came from (or didn't c
     // pos.x === 1 in JS
   };
   ```
-  Generates:
+  Would generate:
   ```wgsl
   fn advance(pos: vec3f) {
     pos.x += 1;
@@ -195,5 +197,10 @@ There are essentially three types of origins:
   performing operations that produce new values. Examples include creating a new `Boid` instance or calculating a new position based on an existing one. These
   include `'runtime'` and `'constant'`.
 - **Referential Origins**: These origins represent references to existing values. They are typically used for accessing or modifying existing data. Examples
-  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` and `'constant-ref'`.
+  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'`, `'constant-ref'` and `'this-function'`.
+    - `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` all reflect address spaces that values can belong to, and
+      we use them to determine what kind of pointer type they are.
+    - `'constant-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
+    - `'runtime-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const` but accessed in a way that isn’t constant at shader‑creation time (for example, indexed using a runtime value).
+    - `'this-function'` lets us track whether values originates from the function we're currently generating, or the function that called us.
 - **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.

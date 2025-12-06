@@ -10,6 +10,6 @@ export const discard = createDualImpl(
     );
   },
   // GPU
-  () => snip('discard;', Void, /* ref */ 'runtime'),
+  () => snip('discard;', Void, /* origin */ 'runtime'),
   'discard',
 );

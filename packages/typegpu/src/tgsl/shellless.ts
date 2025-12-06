@@ -67,7 +67,10 @@ export class ShelllessRepository {
 
       let type = concretize(s.dataType as AnyData);
 
-      if (s.origin === 'constant-ref') {
+      if (
+        s.origin === 'constant-tgpu-const-ref' ||
+        s.origin === 'runtime-tgpu-const-ref'
+      ) {
         // biome-ignore lint/style/noNonNullAssertion: it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
@@ -78,7 +81,8 @@ export class ShelllessRepository {
       }
 
       if (isPtr(type) && type.implicit) {
-        // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),// then we dereference the pointer before passing it to the function. The main reason for this,
+        // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),
+        // then we dereference the pointer before passing it to the function. The main reason for this,
         // is that in TypeScript, the type of the function accepts a value, not the value wrapped in
         // d.ref<> (so it's not considered mutable from the perspective of the function)
 

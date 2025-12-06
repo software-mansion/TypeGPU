@@ -63,19 +63,25 @@ function functionToTranspiled(
       i('ast'),
       template.expression`${embedJSON({ params, body, externalNames })}`(),
     ),
-    types.objectMethod(
-      'get',
+    types.objectProperty(
       i('externals'),
-      [],
-      types.blockStatement([
-        types.returnStatement(
-          types.objectExpression(
-            externalNames.map((name) =>
-              types.objectProperty(i(name), i(name), false, true)
+      types.arrowFunctionExpression(
+        [],
+        types.blockStatement([
+          types.returnStatement(
+            types.objectExpression(
+              externalNames.map((name) =>
+                types.objectProperty(
+                  i(name),
+                  i(name),
+                  false,
+                  /* shorthand */ name !== 'this',
+                )
+              ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     ),
   ]);
 

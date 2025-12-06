@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { invariant, WgslTypeError } from '../errors.ts';
+import { WgslTypeError } from '../errors.ts';
 import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -44,7 +44,10 @@ export interface ref<T> {
   $: T;
 }
 
-export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
+// biome has issues with this type being inline
+type RefFn = <T>(value: T) => ref<T>;
+
+export const ref = (() => {
   const gpuImpl = (value: Snippet) => {
     if (value.origin === 'argument') {
       throw new WgslTypeError(
@@ -98,7 +101,7 @@ export const ref: DualFn<<T>(value: T) => ref<T>> = (() => {
     },
   });
 
-  return impl as unknown as DualFn<<T>(value: T) => ref<T>>;
+  return impl as unknown as DualFn<RefFn>;
 })();
 
 export function isRef<T>(value: unknown | ref<T>): value is ref<T> {
@@ -170,7 +173,9 @@ export class RefOperator implements SelfResolvable {
 }
 
 export function derefSnippet(snippet: Snippet): Snippet {
-  invariant(isPtr(snippet.dataType), 'Only pointers can be dereferenced');
+  if (!isPtr(snippet.dataType)) {
+    return snippet;
+  }
 
   const innerType = snippet.dataType.inner;
   const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;

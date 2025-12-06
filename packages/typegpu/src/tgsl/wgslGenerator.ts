@@ -6,8 +6,8 @@ import {
   ConsoleLog,
   InfixDispatch,
   isLooseData,
-  toStorable,
   UnknownData,
+  unptr,
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import {
@@ -26,7 +26,7 @@ import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
+import type { FnArgsConversionHint } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -106,8 +106,6 @@ const OP_MAP = {
   //
   // logical
   //
-  '||': '||',
-  '&&': '&&',
   get '??'(): never {
     throw new Error('The `??` operator is unsupported in TypeGPU functions.');
   },
@@ -224,17 +222,28 @@ ${this.ctx.pre}}`;
     dataType: wgsl.AnyWgslData | UnknownData,
     origin: Origin,
   ): Snippet {
-    let varOrigin: Origin = 'runtime';
-    if (origin === 'constant-ref') {
+    const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
+
+    let varOrigin: Origin;
+    if (
+      origin === 'constant-tgpu-const-ref' ||
+      origin === 'runtime-tgpu-const-ref'
+    ) {
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
-      varOrigin = 'constant-ref';
-    } else if (origin === 'argument' && !wgsl.isNaturallyEphemeral(dataType)) {
-      varOrigin = 'argument';
-    } else if (!wgsl.isNaturallyEphemeral(dataType)) {
-      varOrigin = isEphemeralOrigin(origin) ? 'function' : origin;
+      varOrigin = origin;
+    } else if (origin === 'argument') {
+      if (naturallyEphemeral) {
+        varOrigin = 'runtime';
+      } else {
+        varOrigin = 'argument';
+      }
+    } else if (!naturallyEphemeral) {
+      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
     } else if (origin === 'constant' && varType === 'const') {
       varOrigin = 'constant';
+    } else {
+      varOrigin = 'runtime';
     }
 
     const snippet = snip(
@@ -286,7 +295,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* ref */ 'constant');
+      return snip(expression, bool, /* origin */ 'constant');
     }
 
     if (
@@ -332,7 +341,7 @@ ${this.ctx.pre}}`;
       }
 
       const forcedType = exprType === NODE.assignmentExpr
-        ? [toStorable(lhsExpr.dataType)]
+        ? [lhsExpr.dataType]
         : undefined;
 
       const [convLhs, convRhs] =
@@ -345,7 +354,9 @@ ${this.ctx.pre}}`;
 
       if (exprType === NODE.assignmentExpr) {
         if (
-          convLhs.origin === 'constant' || convLhs.origin === 'constant-ref'
+          convLhs.origin === 'constant' ||
+          convLhs.origin === 'constant-tgpu-const-ref' ||
+          convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
@@ -384,7 +395,7 @@ ${this.ctx.pre}}`;
           : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
         type,
         // Result of an operation, so not a reference to anything
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -395,7 +406,7 @@ ${this.ctx.pre}}`;
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* ref */ 'runtime');
+      return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -413,7 +424,7 @@ ${this.ctx.pre}}`;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* ref */ 'runtime');
+      return snip(`${op}${argStr}`, type, /* origin */ 'runtime');
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -422,7 +433,11 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
 
       if (target.value === console) {
-        return snip(new ConsoleLog(property), UnknownData, /* ref */ 'runtime');
+        return snip(
+          new ConsoleLog(property),
+          UnknownData,
+          /* origin */ 'runtime',
+        );
       }
 
       const accessed = accessProp(target, property);
@@ -492,7 +507,7 @@ ${this.ctx.pre}}`;
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
             // A new struct, so not a reference
-            /* ref */ 'runtime',
+            /* origin */ 'runtime',
           );
         }
 
@@ -507,7 +522,7 @@ ${this.ctx.pre}}`;
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
           // A new struct, so not a reference
-          /* ref */ 'runtime',
+          /* origin */ 'runtime',
         );
       }
 
@@ -545,7 +560,7 @@ ${this.ctx.pre}}`;
             return snip(
               stitch`${snippet.value}(${converted})`,
               snippet.dataType,
-              /* ref */ 'runtime',
+              /* origin */ 'runtime',
             );
           });
         }
@@ -674,7 +689,7 @@ ${this.ctx.pre}}`;
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
         structType,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -730,7 +745,7 @@ ${this.ctx.pre}}`;
           elemType as wgsl.AnyWgslData,
           values.length,
         ) as wgsl.AnyWgslData,
-        /* ref */ 'runtime',
+        /* origin */ 'runtime',
       );
     }
 
@@ -795,7 +810,10 @@ ${this.ctx.pre}}`;
         // };
         if (
           returnSnippet.origin === 'argument' &&
-          !isEphemeralSnippet(returnSnippet)
+          !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+          // Only restricting this use in non-entry functions, as the function
+          // is giving up ownership of all references anyway.
+          this.ctx.topFunctionScope?.functionType === 'normal'
         ) {
           throw new WgslTypeError(
             stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
@@ -805,15 +823,13 @@ ${this.ctx.pre}}`;
         if (
           !expectedReturnType &&
           !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'function'
+          returnSnippet.origin !== 'this-function'
         ) {
           const str = this.ctx.resolve(
             returnSnippet.value,
             returnSnippet.dataType,
           ).value;
-          const typeStr = this.ctx.resolve(
-            toStorable(returnSnippet.dataType as wgsl.StorableData),
-          ).value;
+          const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
           throw new WgslTypeError(
             `'return ${str};' is invalid, cannot return references.
 -----
@@ -824,7 +840,7 @@ Try 'return ${typeStr}(${str});' instead.
 
         returnSnippet = tryConvertSnippet(
           returnSnippet,
-          toStorable(returnSnippet.dataType as wgsl.StorableData),
+          unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
           false,
         );
 
@@ -916,9 +932,7 @@ ${this.ctx.pre}else ${alternate}`;
         // Referential
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
-          const rhsTypeStr =
-            this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
-              .value;
+          const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
           throw new WgslTypeError(
             `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
@@ -929,8 +943,10 @@ ${this.ctx.pre}else ${alternate}`;
           );
         }
 
-        if (eq.origin === 'constant-ref') {
+        if (eq.origin === 'constant-tgpu-const-ref') {
           varType = 'const';
+        } else if (eq.origin === 'runtime-tgpu-const-ref') {
+          varType = 'let';
         } else {
           varType = 'let';
           if (!wgsl.isPtr(dataType)) {
@@ -954,30 +970,29 @@ ${this.ctx.pre}else ${alternate}`;
       } else {
         // Non-referential
 
-        if (eq.origin === 'argument') {
-          if (stmtType === NODE.let) {
-            const rhsStr = this.ctx.resolve(eq.value).value;
-            const rhsTypeStr =
-              this.ctx.resolve(toStorable(eq.dataType as wgsl.StorableData))
-                .value;
-
-            throw new WgslTypeError(
-              `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
------
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
------`,
-            );
-          }
-          varType = 'let';
-        }
-
         if (stmtType === NODE.const) {
           if (eq.origin === 'argument') {
             // Arguments cannot be mutated, so we 'let' them be (kill me)
             varType = 'let';
           } else if (naturallyEphemeral) {
             varType = eq.origin === 'constant' ? 'const' : 'let';
+          }
+        } else {
+          // stmtType === NODE.let
+
+          if (eq.origin === 'argument') {
+            if (!naturallyEphemeral) {
+              const rhsStr = this.ctx.resolve(eq.value).value;
+              const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
+
+              throw new WgslTypeError(
+                `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
+  -----
+  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+  -----`,
+              );
+            }
           }
         }
       }

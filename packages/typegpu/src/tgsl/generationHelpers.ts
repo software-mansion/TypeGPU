@@ -1,3 +1,4 @@
+import { stitch } from '../core/resolve/stitch.ts';
 import {
   type AnyData,
   InfixDispatch,
@@ -17,9 +18,11 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
+import { derefSnippet, isRef } from '../data/ref.ts';
 import {
   isEphemeralSnippet,
   isSnippet,
+  type Origin,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
@@ -53,16 +56,15 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
+import { $internal } from '../shared/symbols.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
 import {
+  type FunctionScopeLayer,
   getOwnSnippet,
   isKnownAtComptime,
   type ResolutionCtx,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
-import { $internal } from '../shared/symbols.ts';
-import { stitch } from '../core/resolve/stitch.ts';
-import { derefSnippet, isRef } from '../data/ref.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -155,10 +157,7 @@ export function accessProp(
   target: Snippet,
   propName: string,
 ): Snippet | undefined {
-  if (
-    infixKinds.includes(target.dataType.type) &&
-    propName in infixOperators
-  ) {
+  if (infixKinds.includes(target.dataType.type) && propName in infixOperators) {
     return snip(
       new InfixDispatch(
         propName,
@@ -173,17 +172,13 @@ export function accessProp(
   if (isWgslArray(target.dataType) && propName === 'length') {
     if (target.dataType.elementCount === 0) {
       // Dynamically-sized array
-      return snip(
-        stitch`arrayLength(&${target})`,
-        u32,
-        /* ref */ 'runtime',
-      );
+      return snip(stitch`arrayLength(&${target})`, u32, /* origin */ 'runtime');
     }
 
     return snip(
       target.dataType.elementCount,
       abstractInt,
-      /* ref */ 'constant',
+      /* origin */ 'constant',
     );
   }
 
@@ -207,10 +202,10 @@ export function accessProp(
       propType,
       /* origin */ target.origin === 'argument'
         ? 'argument'
-        : !isEphemeralSnippet(target) &&
-            !isNaturallyEphemeral(propType)
+        : !isEphemeralSnippet(target) && !isNaturallyEphemeral(propType)
         ? target.origin
-        : target.origin === 'constant' || target.origin === 'constant-ref'
+        : target.origin === 'constant' ||
+            target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -237,11 +232,7 @@ export function accessProp(
   }
 
   const propLength = propName.length;
-  if (
-    isVec(target.dataType) &&
-    propLength >= 1 &&
-    propLength <= 4
-  ) {
+  if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
@@ -261,7 +252,7 @@ export function accessProp(
       /* origin */ target.origin === 'argument' && propLength === 1
         ? 'argument'
         : target.origin === 'constant' ||
-            target.origin === 'constant-ref'
+            target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -288,6 +279,32 @@ export function accessIndex(
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType as AnyData;
+    const isElementNatEph = isNaturallyEphemeral(elementType);
+    const isTargetEphemeral = isEphemeralSnippet(target);
+    const isIndexConstant = index.origin === 'constant';
+
+    let origin: Origin;
+
+    if (target.origin === 'constant-tgpu-const-ref') {
+      // Constant refs stay const unless the element/index forces runtime materialization
+      if (isIndexConstant) {
+        origin = isElementNatEph ? 'constant' : 'constant-tgpu-const-ref';
+      } else {
+        origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
+      }
+    } else if (target.origin === 'runtime-tgpu-const-ref') {
+      // Runtime refs keep their ref semantics unless the element is ephemeral only
+      origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
+    } else if (!isTargetEphemeral && !isElementNatEph) {
+      // Stable containers can forward their origin information
+      origin = target.origin;
+    } else if (isIndexConstant && target.origin === 'constant') {
+      // Plain constants indexed with constants stay constant
+      origin = 'constant';
+    } else {
+      // Everything else must be produced at runtime
+      origin = 'runtime';
+    }
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
@@ -295,12 +312,7 @@ export function accessIndex(
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
-      /* origin */ !isEphemeralSnippet(target) &&
-          !isNaturallyEphemeral(elementType)
-        ? target.origin
-        : target.origin === 'constant' || target.origin === 'constant-ref'
-        ? 'constant'
-        : 'runtime',
+      /* origin */ origin,
     );
   }
 
@@ -313,7 +325,7 @@ export function accessIndex(
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
       /* origin */ target.origin === 'constant' ||
-          target.origin === 'constant-ref'
+          target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -361,7 +373,7 @@ export function accessIndex(
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
-    return snip(value, abstractFloat, /* ref */ 'constant');
+    return snip(value, abstractFloat, /* origin */ 'constant');
   }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
@@ -371,9 +383,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* ref */ 'constant');
+    return snip(value, abstractInt, /* origin */ 'constant');
   }
-  return snip(value, abstractFloat, /* ref */ 'constant');
+  return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
 export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
@@ -409,6 +421,7 @@ export type GenerationCtx = ResolutionCtx & {
    */
   expectedType: AnyData | undefined;
 
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: AnyData | undefined;
 
   indent(): string;
@@ -450,9 +463,12 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (
-    typeof value === 'string' || typeof value === 'function' ||
-    typeof value === 'object' || typeof value === 'symbol' ||
-    typeof value === 'undefined' || value === null
+    typeof value === 'string' ||
+    typeof value === 'function' ||
+    typeof value === 'object' ||
+    typeof value === 'symbol' ||
+    typeof value === 'undefined' ||
+    value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
     return snip(value, UnknownData, /* origin */ 'constant');
