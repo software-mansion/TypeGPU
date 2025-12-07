@@ -43,11 +43,7 @@ export const translate4 = createDualImpl(
     snip(
       stitch`(${gpuTranslation4(vector)} * ${matrix})`,
       matrix.dataType,
-<<<<<<< HEAD
-      /* ref */ 'runtime',
-=======
       /* origin */ 'runtime',
->>>>>>> main
     ),
   'translate4',
 );
@@ -66,11 +62,7 @@ export const scale4 = createDualImpl(
     snip(
       stitch`(${(gpuScaling4(vector))} * ${matrix})`,
       matrix.dataType,
-<<<<<<< HEAD
-      /* ref */ 'runtime',
-=======
       /* origin */ 'runtime',
->>>>>>> main
     ),
   'scale4',
 );
@@ -89,11 +81,7 @@ export const rotateX4 = createDualImpl(
     snip(
       stitch`(${(gpuRotationX4(angle))} * ${matrix})`,
       matrix.dataType,
-<<<<<<< HEAD
-      /* ref */ 'runtime',
-=======
       /* origin */ 'runtime',
->>>>>>> main
     ),
   'rotateX4',
 );
@@ -112,11 +100,7 @@ export const rotateY4 = createDualImpl(
     snip(
       stitch`(${(gpuRotationY4(angle))} * ${matrix})`,
       matrix.dataType,
-<<<<<<< HEAD
-      /* ref */ 'runtime',
-=======
       /* origin */ 'runtime',
->>>>>>> main
     ),
   'rotateY4',
 );
@@ -135,11 +119,7 @@ export const rotateZ4 = createDualImpl(
     snip(
       stitch`(${(gpuRotationZ4(angle))} * ${matrix})`,
       matrix.dataType,
-<<<<<<< HEAD
-      /* ref */ 'runtime',
-=======
       /* origin */ 'runtime',
->>>>>>> main
     ),
   'rotateZ4',
 );

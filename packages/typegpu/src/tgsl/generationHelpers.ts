@@ -18,7 +18,6 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { derefSnippet, isRef } from '../data/ref.ts';
 import {
   isEphemeralSnippet,
   isSnippet,
@@ -56,8 +55,6 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
 import {
   type FunctionScopeLayer,
   getOwnSnippet,
@@ -65,6 +62,10 @@ import {
   type ResolutionCtx,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
+import { add, div, mul, sub } from '../std/operators.ts';
+import { $internal } from '../shared/symbols.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { derefSnippet, isRef } from '../data/ref.ts';
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -463,12 +464,9 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (
-    typeof value === 'string' ||
-    typeof value === 'function' ||
-    typeof value === 'object' ||
-    typeof value === 'symbol' ||
-    typeof value === 'undefined' ||
-    value === null
+    typeof value === 'string' || typeof value === 'function' ||
+    typeof value === 'object' || typeof value === 'symbol' ||
+    typeof value === 'undefined' || value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
     return snip(value, UnknownData, /* origin */ 'constant');

@@ -26,7 +26,7 @@ import { safeStringify } from '../shared/stringify.ts';
 import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import type { FnArgsConversionHint } from '../types.ts';
+import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,

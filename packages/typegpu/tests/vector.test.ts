@@ -4,6 +4,7 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
+import * as std from '../src/std/index.ts';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -979,7 +980,7 @@ describe('type predicates', () => {
       if (input.kind === 'vec3f') {
         return d.vec3i(std.ceil(input));
       } else {
-        return input;
+        return d.vec3i(input);
       }
     };
 
@@ -989,7 +990,7 @@ describe('type predicates', () => {
       const bar = ceil(d.vec3i(1, 2, 3));
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn ceil(input: vec3f) -> vec3i {
         {
           return vec3i(ceil(input));

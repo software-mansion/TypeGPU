@@ -7,11 +7,6 @@ const Boid = d.struct({
   vel: d.vec3u,
 });
 
-const Boid = d.struct({
-  pos: d.vec3f,
-  vel: d.vec3u,
-});
-
 describe('tgpu.const', () => {
   it('should inject const declaration when used in shelled WGSL functions', () => {
     const x = tgpu.const(d.u32, 2);
@@ -139,7 +134,7 @@ describe('tgpu.const', () => {
       return fn1(foo.$);
     };
 
-    expect(() => asWgsl(fn2)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([fn2])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn2
@@ -159,7 +154,7 @@ describe('tgpu.const', () => {
       boid.$.pos = d.vec3f(0, 0, 0);
     };
 
-    expect(() => asWgsl(fn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
