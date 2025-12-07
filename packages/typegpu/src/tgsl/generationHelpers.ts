@@ -1,4 +1,3 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import {
   type AnyData,
   InfixDispatch,
