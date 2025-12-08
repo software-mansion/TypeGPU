@@ -10,133 +10,117 @@ const sectionId = "interactive-code-section";
 
 <div class="flex flex-col" id={sectionId}>
     <div
-        class=""
+        class="flex gap-4 sm:grid sm:grid-cols-3 -mx-6 px-6 pb-2 sm:overflow-visible overflow-x-auto horizontal-scroll"
     >
         <div
-            class="flex gap-4 sm:grid sm:grid-cols-3 -mx-6 px-6 pb-2 sm:overflow-visible overflow-x-auto horizontal-scroll"
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
         >
-            <div
-                class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
-            >
-                <CodeButton
-                    title="As a foundation"
-                    message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
-                    icon={for_libraries}
-                />
-            </div>
-            <div
-                class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
-            >
-                <CodeButton
-                    title="As a puzzle piece"
-                    message="Pick and choose the APIs, then plug them into your code however you want."
-                    icon={as_a_puzzle_piece}
-                />
-            </div>
-            <div
-                class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
-            >
-                <CodeButton
-                    title="For libraries"
-                    message="Simplify library internals, and make your user-facing API type-safe by default."
-                    icon={as_a_foundation}
-                />
-            </div>
+            <CodeButton
+                title="As a foundation"
+                message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+                icon={for_libraries}
+            />
+        </div>
+        <div
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
+        >
+            <CodeButton
+                title="As a puzzle piece"
+                message="Pick and choose the APIs, then plug them into your code however you want."
+                icon={as_a_puzzle_piece}
+            />
+        </div>
+        <div
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
+        >
+            <CodeButton
+                title="For libraries"
+                message="Simplify library internals, and make your user-facing API type-safe by default."
+                icon={as_a_foundation}
+            />
         </div>
     </div>
 
     <div class="codepen-container">
         <CodePen
-            code={`export interface TgpuComputePipeline
-  extends TgpuNamable, SelfResolvable, Timeable {
-  readonly [$internal]: ComputePipelineInternals;
-  readonly resourceType: 'compute-pipeline';
+            code={`const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
 
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline;
+//
+// #1) Can be called in JS
+//
+const range = neighborhood(1.1, 0.5);
+//    ^? d.v2f
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number | undefined,
-    z?: number | undefined,
-  ): void;
-}
+//
+// #2) Used to generate WGSL
+//
+const main = () => {
+  'use gpu';
+  return neighborhood(1.1, 0.5);
+};
 
-export function INTERNAL_createComputePipeline(
-  branch: ExperimentalTgpuRoot,
-  slotBindings: [TgpuSlot<unknown>, unknown][],
-  entryFn: TgpuComputeFn,
-) {
-  return new TgpuComputePipelineImpl(
-    new ComputePipelineCore(branch, slotBindings, entryFn),
-    {},
-  );
+const wgsl = tgpu.resolve([main]);
+//    ^? string
+
+//
+// #3) Executed on the GPU (generates WGSL underneath)
+//
+root['~unstable']
+  .createGuardedComputePipeline(main)
+  .dispatchThreads();`}
+            language="typescript"
+        />
+        <CodePen
+            code={`import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
+
+// We can define schemas, or functions that return schemas...
+const HeightMap = (width: number, height: number) =>
+  d.arrayOf(d.arrayOf(d.f32, height), width);
+
+// ...then infer types from them
+type HeightMap = ReturnType<typeof HeightMap>;
+
+export async function generateHeightMap(
+  root: TgpuRoot,
+  opts: { width: number; height: number },
+): Promise<TgpuBuffer<HeightMap> & StorageFlag> {
+  const buffer = root
+    .createBuffer(HeightMap(opts.width, opts.height))
+    .$usage('storage');
+
+  const rawBuffer = root.unwrap(buffer); // => GPUBuffer
+
+  // Here we can do anything we would usually do with a
+  // WebGPU buffer, like populating it in a compute shader.
+  // 'rawBuffer' is the WebGPU resource that is backing the
+  // typed 'buffer' object, meaning any changes to it will
+  // be visible in both.
+
+  return buffer;
 }`}
             language="typescript"
         />
         <CodePen
-            code={`export function INTERNAL_createComputePipeline(
-    branch: ExperimentalTgpuRoot,
-    slotBindings: [TgpuSlot<unknown>, unknown][],
-    entryFn: TgpuComputeFn,
-  ) {
-    return new TgpuComputePipelineImpl(
-      new ComputePipelineCore(branch, slotBindings, entryFn),
-      {},
-    );
-    export interface TgpuComputePipeline
-    extends TgpuNamable, SelfResolvable, Timeable {
-    readonly [$internal]: ComputePipelineInternals;
-    readonly resourceType: 'compute-pipeline';
+            code={`import tgpu from 'typegpu';
+import gen from '@xyz/gen';
+import plot from '@abc/plot';
 
+// common root for allocating resources
+const root = await tgpu.init();
 
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuComputePipeline;
+const terrainBuffer = await gen.generateHeightMap(root, { ... });
+//    ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number | undefined,
-    z?: number | undefined,
-  ): void;
-}
+// ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
+// not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
+plot.array1d(root, terrainBuffer);
 
-}`}
-            language="typescript"
-        />
-        <CodePen
-            code={`// Create a buffer with a specific data type
-export function INTERNAL_createComputePipeline(
-    branch: ExperimentalTgpuRoot,
-    slotBindings: [TgpuSlot<unknown>, unknown][],
-    entryFn: TgpuComputeFn,
-  ) {
-    return new TgpuComputePipelineImpl(
-      new ComputePipelineCore(branch, slotBindings, entryFn),
-      {},
-    );
-    with(
-        bindGroupLayout: TgpuBindGroupLayout,
-        bindGroup: TgpuBindGroup,
-        ): TgpuComputePipeline;
-        
-        dispatchWorkgroups(
-      x: number,
-      y?: number | undefined,
-      z?: number | undefined,
-    ): void;
-    export interface TgpuComputePipeline
-    extends TgpuNamable, SelfResolvable, Timeable {
-    readonly [$internal]: ComputePipelineInternals;
-    readonly resourceType: 'compute-pipeline';
-
-
-}
-
-      }`}
+// SUCCESS!
+plot.array2d(root, terrainBuffer);}`}
             language="typescript"
         />
     </div>
