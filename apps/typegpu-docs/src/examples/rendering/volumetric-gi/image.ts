@@ -57,15 +57,4 @@ export const gammaSRGB = tgpu.fn([d.vec3f], d.vec3f)((linearSRGB) => {
   return std.mix(a, b, c);
 });
 
-const exposure = 1.0;
-
-const mainImage = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  let luminance = std.textureLoad(iChannel0, uv, 0).xyz;
-  luminance = luminance.mul(std.exp2(exposure));
-  luminance = tonemapACES(luminance);
-  luminance = gammaSRGB(luminance);
-  return d.vec4f(luminance, 1.0);
-});
+export const exposure = 1.0;

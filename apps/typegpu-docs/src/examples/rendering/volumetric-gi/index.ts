@@ -1,15 +1,9 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
-  type TgpuTextureView,
-} from 'typegpu';
+import tgpu, { type TgpuBindGroup, type TgpuTextureView } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { castAndMerge } from './common';
+import { exposure, gammaSRGB, tonemapACES } from './image';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -57,6 +51,10 @@ function recreateResources() {
       iChannel0: workTextures[2],
       iChannel1: workTextures[3],
     }),
+    root.createBindGroup(bindGroupLayout, {
+      iChannel0: workTextures[3],
+      iChannel1: workTextures[0], // irrelevant
+    }),
   ];
 }
 recreateResources();
@@ -72,7 +70,7 @@ function draw(timestamp: number) {
   iTimeBuffer.write(timestamp);
   iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
 
-  const fragmentFn = tgpu['~unstable'].fragmentFn({
+  const fragmentFnABC = tgpu['~unstable'].fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
   })(
@@ -98,7 +96,7 @@ function draw(timestamp: number) {
 
   const pipelineABC = root['~unstable']
     .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFn, { format: 'bgra8unorm' })
+    .withFragment(fragmentFnABC, { format: 'bgra8unorm' })
     .createPipeline();
 
   pipelineABC
@@ -125,6 +123,58 @@ function draw(timestamp: number) {
       loadOp: 'clear',
       storeOp: 'store',
       view: workTextures[1],
+    })
+    .draw(3);
+
+  const fragmentFnD = tgpu['~unstable'].fragmentFn({
+    in: { uv: d.vec2f },
+    out: d.vec4f,
+  })(
+    ({ uv }) => {
+      if (iFrameUniform.$ % 2 === 0) {
+        return std.textureLoad(bindGroupLayout.$.iChannel0, d.vec2i(uv), 0);
+      }
+      return std.textureLoad(bindGroupLayout.$.iChannel1, d.vec2i(uv), 0);
+    },
+  );
+
+  const pipelineD = root['~unstable']
+    .withVertex(fullScreenTriangle)
+    .withFragment(fragmentFnD, { format: 'bgra8unorm' })
+    .createPipeline();
+
+  pipelineD
+    .with(bindGroups[3])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[1],
+    })
+    .draw(3);
+
+  const fragmentFnImage = tgpu['~unstable'].fragmentFn({
+    in: { uv: d.vec2f },
+    out: d.vec4f,
+  })(({ uv }) => {
+    let luminance =
+      std.textureLoad(bindGroupLayout.$.iChannel0, d.vec2i(uv), 0).xyz;
+    luminance = luminance.mul(std.exp2(exposure));
+    luminance = tonemapACES(luminance);
+    luminance = gammaSRGB(luminance);
+    return d.vec4f(luminance, 1.0);
+  });
+
+  const pipelineImage = root['~unstable']
+    .withVertex(fullScreenTriangle)
+    .withFragment(fragmentFnImage, { format: 'bgra8unorm' })
+    .createPipeline();
+
+  pipelineImage
+    .with(bindGroups[4])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: context.getCurrentTexture().createView(),
     })
     .draw(3);
 

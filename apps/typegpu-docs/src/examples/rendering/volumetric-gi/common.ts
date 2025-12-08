@@ -40,10 +40,11 @@ const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
   (color, position, radius, albedo) => {
     'use gpu';
     const sanitizedRadius = std.max(0.5, radius);
+    let result = d.vec4f(color);
     if (std.length(position) - sanitizedRadius < sanitizedRadius) {
-      color = albedo;
+      result = d.vec4f(albedo);
     }
-    return color;
+    return result;
   },
 );
 
