@@ -1,11 +1,11 @@
 import type { DualFn } from '../../data/dualFn.ts';
 import type { MapValueToSnippet } from '../../data/snippet.ts';
 import { WgslTypeError } from '../../errors.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { getResolutionCtx } from '../../execMode.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { isKnownAtComptime } from '../../types.ts';
+import { isKnownAtComptime, NormalState } from '../../types.ts';
 
 export type TgpuComptime<T extends (...args: never[]) => unknown> =
   & DualFn<T>
@@ -52,8 +52,14 @@ export function comptime<T extends (...args: never[]) => unknown>(
   };
 
   const impl = ((...args: Parameters<T>) => {
-    if (inCodegenMode()) {
-      return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
+    const ctx = getResolutionCtx();
+    if (ctx && ctx.mode.type === 'codegen') {
+      ctx.pushMode(new NormalState());
+      try {
+        return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
+      } finally {
+        ctx.popMode('normal');
+      }
     }
     return func(...args);
   }) as TgpuComptime<T>;

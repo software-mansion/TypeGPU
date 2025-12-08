@@ -18,8 +18,8 @@ describe('wgslGenerator', () => {
         var v1 = vec4f(1);
         var v2 = vec3f(3, 4, 5);
         var v3 = vec2f(6);
-        var m1 = (mat2x2f() + mat2x2f());
-        var m2 = ((mat3x3f() + mat3x3f()) + mat3x3f());
+        var m1 = mat2x2f(0, 0, 0, 0);
+        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -38,8 +38,8 @@ describe('wgslGenerator', () => {
         var v1 = vec4f(-1);
         var v2 = vec3f(-1, -2, -3);
         var v3 = vec2f();
-        var m1 = (mat2x2f() - mat2x2f());
-        var m2 = ((mat3x3f() - mat3x3f()) - mat3x3f());
+        var m1 = mat2x2f(0, 0, 0, 0);
+        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -61,12 +61,12 @@ describe('wgslGenerator', () => {
       "fn testFn() {
         var v1 = vec2f(6);
         var v2 = vec3f(4, 6, 8);
-        var v3 = (vec4f() * mat4x4f());
-        var v4 = ((vec3f() * mat3x3f()) * 1);
-        var m1 = (mat2x2f() * 1);
-        var m2 = (mat3x3f() * vec3f());
-        var m3 = (mat4x4f() * mat4x4f());
-        var m4 = ((mat2x2f() * mat2x2f()) * 1);
+        var v3 = vec4f();
+        var v4 = vec3f();
+        var m1 = mat2x2f(0, 0, 0, 0);
+        var m2 = vec3f();
+        var m3 = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        var m4 = mat2x2f(0, 0, 0, 0);
       }"
     `);
   });
