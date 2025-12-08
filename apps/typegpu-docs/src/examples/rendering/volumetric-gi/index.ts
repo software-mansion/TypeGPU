@@ -1,12 +1,17 @@
-import tgpu, { type TgpuBindGroup, type TgpuTextureView } from 'typegpu';
+import tgpu, {
+  type RenderFlag,
+  type SampledFlag,
+  type TgpuBindGroup,
+  type TgpuTexture,
+} from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { castAndMerge } from './common';
-import { exposure, gammaSRGB, tonemapACES } from './image';
+import { castAndMerge } from './common.ts';
+import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const presentationFormat = 'bgra8unorm' as const; //navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
@@ -16,18 +21,40 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-let workTextures: (TgpuTextureView<d.WgslTexture2d>)[];
-const bindGroupLayout = tgpu.bindGroupLayout({
+let workTextures: (
+  & TgpuTexture<{
+    size: [number, number];
+    format: typeof presentationFormat;
+  }>
+  & RenderFlag
+  & SampledFlag
+)[];
+const bindGroupLayoutABC = tgpu.bindGroupLayout({
+  iChannel0: { texture: d.texture2d() },
+});
+let bindGroupsABC: TgpuBindGroup<{
+  iChannel0: { texture: d.WgslTexture2d<d.F32> };
+}>[];
+
+const bindGroupLayoutD = tgpu.bindGroupLayout({
   iChannel0: { texture: d.texture2d() },
   iChannel1: { texture: d.texture2d() },
 });
-let bindGroups: TgpuBindGroup<{
+let bindGroupD: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
   iChannel1: { texture: d.WgslTexture2d<d.F32> };
-}>[];
+}>;
+
+const bindGroupLayoutImage = tgpu.bindGroupLayout({
+  iChannel0: { texture: d.texture2d() },
+});
+let bindGroupImage: TgpuBindGroup<{
+  iChannel0: { texture: d.WgslTexture2d<d.F32> };
+}>;
 
 function recreateResources() {
-  workTextures = [0, 1, 2, 3].map((i) =>
+  // A, B, C, D1, D2 (D writes to D, so we copy it each time)
+  workTextures = [0, 1, 2, 3, 4].map((i) =>
     root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
@@ -36,30 +63,19 @@ function recreateResources() {
       })
       .$usage('sampled', 'render')
       .$name(`work texture ${i}`)
-      .createView()
   );
-  bindGroups = [
-    root.createBindGroup(bindGroupLayout, {
-      iChannel0: workTextures[2],
-      iChannel1: workTextures[2], // irrelevant
-    }),
-    root.createBindGroup(bindGroupLayout, {
-      iChannel0: workTextures[0],
-      iChannel1: workTextures[0], // irrelevant
-    }),
-    root.createBindGroup(bindGroupLayout, {
-      iChannel0: workTextures[1],
-      iChannel1: workTextures[1], // irrelevant
-    }),
-    root.createBindGroup(bindGroupLayout, {
-      iChannel0: workTextures[2],
-      iChannel1: workTextures[3],
-    }),
-    root.createBindGroup(bindGroupLayout, {
-      iChannel0: workTextures[3],
-      iChannel1: workTextures[3], // irrelevant
-    }),
+  bindGroupsABC = [
+    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[2] }),
+    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[0] }),
+    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[1] }),
   ];
+  bindGroupD = root.createBindGroup(bindGroupLayoutD, {
+    iChannel0: workTextures[2],
+    iChannel1: workTextures[3],
+  });
+  bindGroupImage = root.createBindGroup(bindGroupLayoutImage, {
+    iChannel0: workTextures[3],
+  });
 }
 recreateResources();
 
@@ -74,24 +90,26 @@ function draw(timestamp: number) {
   iTimeBuffer.write(timestamp / 1000);
   iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
 
+  const cascadeIndexBuffer = root.createUniform(d.vec2i);
+
   const fragmentFnABC = tgpu['~unstable'].fragmentFn({
-    in: { uv: d.vec2f },
+    in: { pos: d.builtin.position },
     out: d.vec4f,
   })(
-    ({ uv }) => {
+    ({ pos }) => {
       if (iFrameUniform.$ % 2 === 0) {
         return castAndMerge(
-          bindGroupLayout.$.iChannel0,
-          5,
-          uv,
+          bindGroupLayoutABC.$.iChannel0,
+          cascadeIndexBuffer.$.x,
+          pos.xy,
           iResolutionBuffer.$.xy,
           iTimeBuffer.$,
         );
       }
       return castAndMerge(
-        bindGroupLayout.$.iChannel0,
-        2,
-        uv,
+        bindGroupLayoutABC.$.iChannel0,
+        cascadeIndexBuffer.$.y,
+        pos.xy,
         iResolutionBuffer.$.xy,
         iTimeBuffer.$,
       );
@@ -103,8 +121,9 @@ function draw(timestamp: number) {
     .withFragment(fragmentFnABC, { format: presentationFormat })
     .createPipeline();
 
+  cascadeIndexBuffer.write(d.vec2i(5, 2));
   pipelineABC
-    .with(bindGroups[0])
+    .with(bindGroupsABC[0])
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
@@ -112,8 +131,9 @@ function draw(timestamp: number) {
     })
     .draw(3);
 
+  cascadeIndexBuffer.write(d.vec2i(4, 1));
   pipelineABC
-    .with(bindGroups[1])
+    .with(bindGroupsABC[1])
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
@@ -121,8 +141,9 @@ function draw(timestamp: number) {
     })
     .draw(3);
 
+  cascadeIndexBuffer.write(d.vec2i(3, 0));
   pipelineABC
-    .with(bindGroups[2])
+    .with(bindGroupsABC[2])
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
@@ -131,14 +152,18 @@ function draw(timestamp: number) {
     .draw(3);
 
   const fragmentFnD = tgpu['~unstable'].fragmentFn({
-    in: { uv: d.vec2f },
+    in: { pos: d.builtin.position },
     out: d.vec4f,
   })(
-    ({ uv }) => {
+    ({ pos }) => {
       if (iFrameUniform.$ % 2 === 0) {
-        return std.textureLoad(bindGroupLayout.$.iChannel0, d.vec2i(uv), 0);
+        return std.textureLoad(
+          bindGroupLayoutD.$.iChannel1,
+          d.vec2i(pos.xy),
+          0,
+        );
       }
-      return std.textureLoad(bindGroupLayout.$.iChannel1, d.vec2i(uv), 0);
+      return std.textureLoad(bindGroupLayoutD.$.iChannel0, d.vec2i(pos.xy), 0);
     },
   );
 
@@ -148,20 +173,22 @@ function draw(timestamp: number) {
     .createPipeline();
 
   pipelineD
-    .with(bindGroups[3])
+    .with(bindGroupD)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
-      view: workTextures[1],
+      view: workTextures[4],
     })
     .draw(3);
 
+  workTextures[3].copyFrom(workTextures[4]);
+
   const fragmentFnImage = tgpu['~unstable'].fragmentFn({
-    in: { uv: d.vec2f },
+    in: { pos: d.builtin.position },
     out: d.vec4f,
-  })(({ uv }) => {
+  })(({ pos }) => {
     let luminance =
-      std.textureLoad(bindGroupLayout.$.iChannel0, d.vec2i(uv), 0).xyz;
+      std.textureLoad(bindGroupLayoutImage.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
     luminance = luminance.mul(std.exp2(exposure));
     luminance = tonemapACES(luminance);
     luminance = gammaSRGB(luminance);
@@ -174,7 +201,7 @@ function draw(timestamp: number) {
     .createPipeline();
 
   pipelineImage
-    .with(bindGroups[4])
+    .with(bindGroupImage)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
