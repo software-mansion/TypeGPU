@@ -13,11 +13,10 @@ type Props = {
   exampleKey: string;
 };
 
-
 export default function HoverExampleIsland({ exampleKey }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const cleanupRef = useRef<() => void | undefined>(undefined);
+  const cleanupRef = useRef<(() => void) | undefined>(undefined);
   const twoFingerActiveRef = useRef(false);
   const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
   const isHovered = activeExample === exampleKey;
@@ -87,7 +86,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [exampleKey, setActiveExample]);
 
   useEffect(() => { // data hover overlay
     const overlay = containerRef.current?.closest('[data-hover-overlay]');
@@ -166,22 +165,22 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className='w-full h-full overflow-hidden order'
+      className='order h-full w-full overflow-hidden'
     >
       {error
         ? (
-          <p className='font-medium text-white text-sm text-center'>
+          <p className='text-center font-medium text-sm text-white'>
             {error}
           </p>
         )
         : (
-          <div className='flex justify-center items-center w-full h-full'>
+          <div className='flex h-full w-full items-center justify-center'>
             {isLoading && (
-              <span className='font-medium text-white/60 text-xs text-center uppercase tracking-widest animate-pulse'>
+              <span className='animate-pulse text-center font-medium text-white/60 text-xs uppercase tracking-widest'>
                 Loading…
               </span>
             )}
-            <div ref={containerRef} className='w-full h-full' />
+            <div ref={containerRef} className='h-full w-full' />
           </div>
         )}
     </div>
