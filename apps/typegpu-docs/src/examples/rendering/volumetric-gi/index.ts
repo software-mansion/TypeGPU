@@ -1,6 +1,15 @@
-import tgpu from 'typegpu';
+import tgpu, {
+  type RenderFlag,
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuBindGroup,
+  type TgpuTexture,
+  type TgpuTextureView,
+} from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { castAndMerge } from './common';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -13,7 +22,112 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+let workTextures: (TgpuTextureView<d.WgslTexture2d<d.F32>>)[];
+const bindGroupLayout = tgpu.bindGroupLayout({
+  iChannel0: { texture: d.texture2d() },
+  iChannel1: { texture: d.texture2d() },
+});
+let bindGroups: TgpuBindGroup<{
+  iChannel0: { texture: d.WgslTexture2d<d.F32> };
+  iChannel1: { texture: d.WgslTexture2d<d.F32> };
+}>[];
+
+function recreateResources() {
+  workTextures = [0, 1, 2, 3].map(() =>
+    root['~unstable'].createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'rgba8unorm',
+      dimension: '2d',
+    }).$usage('sampled', 'render', 'storage').createView()
+  );
+  bindGroups = [
+    root.createBindGroup(bindGroupLayout, {
+      iChannel0: workTextures[2],
+      iChannel1: workTextures[0], // irrelevant
+    }),
+    root.createBindGroup(bindGroupLayout, {
+      iChannel0: workTextures[0],
+      iChannel1: workTextures[0], // irrelevant
+    }),
+    root.createBindGroup(bindGroupLayout, {
+      iChannel0: workTextures[1],
+      iChannel1: workTextures[0], // irrelevant
+    }),
+    root.createBindGroup(bindGroupLayout, {
+      iChannel0: workTextures[2],
+      iChannel1: workTextures[3],
+    }),
+  ];
+}
+recreateResources();
+
+let iFrame = 0;
+const iFrameUniform = root.createUniform(d.u32);
+const iTimeBuffer = root.createUniform(d.u32);
+const iResolutionBuffer = root.createUniform(d.vec3f);
+
 function draw(timestamp: number) {
+  iFrameUniform.write(iFrame);
+  iFrame += 1;
+  iTimeBuffer.write(timestamp);
+  iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
+
+  const fragmentFn = tgpu['~unstable'].fragmentFn({
+    in: { uv: d.vec2f },
+    out: d.vec4f,
+  })(
+    ({ uv }) => {
+      if (iFrameUniform.$ % 2 === 0) {
+        return castAndMerge(
+          bindGroupLayout.$.iChannel0,
+          5,
+          uv,
+          iResolutionBuffer.$.xy,
+          iTimeBuffer.$,
+        );
+      }
+      return castAndMerge(
+        bindGroupLayout.$.iChannel0,
+        2,
+        uv,
+        iResolutionBuffer.$.xy,
+        iTimeBuffer.$,
+      );
+    },
+  );
+
+  const pipelineABC = root['~unstable']
+    .withVertex(fullScreenTriangle)
+    .withFragment(fragmentFn, { format: 'bgra8unorm' })
+    .createPipeline();
+
+  pipelineABC
+    .with(bindGroups[0])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[2],
+    })
+    .draw(3);
+
+  pipelineABC
+    .with(bindGroups[1])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[0],
+    })
+    .draw(3);
+
+  pipelineABC
+    .with(bindGroups[2])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[1],
+    })
+    .draw(3);
+
   lastFrameId = requestAnimationFrame(draw);
 }
 let lastFrameId = requestAnimationFrame(draw);

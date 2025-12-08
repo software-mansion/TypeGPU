@@ -142,8 +142,14 @@ const getBilinearOffset = tgpu.fn([d.i32], d.vec2i)((offsetIndex) => {
 const NUM_CASCADES = 6;
 
 // sampler2D cascadeTexture
-const castAndMerge = tgpu.fn([d.i32, d.vec2f, d.vec2f, d.f32], d.vec4f)(
-  (cascadeIndex, fragCoord, resolution, time) => {
+export const castAndMerge = tgpu.fn([
+  d.texture2d(d.f32),
+  d.i32,
+  d.vec2f,
+  d.vec2f,
+  d.f32,
+], d.vec4f)(
+  (texture, cascadeIndex, fragCoord, resolution, time) => {
     'use gpu';
     // Probe parameters for cascade N
     const probeSize = d.i32(BASE_PROBE_SIZE << cascadeIndex);
@@ -227,7 +233,7 @@ const castAndMerge = tgpu.fn([d.i32, d.vec2f, d.vec2f, d.f32], d.vec4f)(
           bilinearDirCoord.add(bilinearProbeSize),
         );
         const bilinearInterval = std.textureLoad(
-          cascadeTexture,
+          texture,
           bilinearTexel,
           0,
         );
