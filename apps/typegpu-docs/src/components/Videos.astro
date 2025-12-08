@@ -33,7 +33,9 @@ const videos = [
 		videos.map((video) => (
 			<div class:list={["relative", video.className]}>
 				<a
-					href={video.src.replace("embed/", "watch?v=").replace("?si=", "&si=")}
+					href={video.src
+						.replace("embed/", "watch?v=")
+						.replace("?si=", "&si=")}
 					target="_blank"
 					rel="noopener noreferrer"
 					class:list={[
