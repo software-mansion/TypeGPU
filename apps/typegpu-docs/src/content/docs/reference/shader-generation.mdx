@@ -200,6 +200,7 @@ There are essentially three types of origins:
   include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'`, `'constant-ref'` and `'this-function'`.
     - `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` all reflect address spaces that values can belong to, and
       we use them to determine what kind of pointer type they are.
-    - `'constant-ref'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
+    - `'constant-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
+    - `'runtime-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const` but accessed in a way that isn’t constant at shader‑creation time (for example, indexed using a runtime value).
     - `'this-function'` lets us track whether values originates from the function we're currently generating, or the function that called us.
 - **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.

@@ -1,7 +1,3 @@
-// irrelevant import so the file becomes a module
-import tgpu from 'typegpu';
-const t = tgpu;
-
 // setup
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
