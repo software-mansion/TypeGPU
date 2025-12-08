@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { AnyData } from '../data/dataTypes.ts';
+import type { AnyData } from '../data/dataTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import { type atomicI32, type atomicU32, Void } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';

@@ -332,5 +332,9 @@ function makeVecSchema<TValue, S extends number | boolean>(
       [$repr]: undefined as TValue,
     });
 
+  // it's a workaround for circular dependencies caused by us using schemas in the shader generator
+  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  (VecImpl.prototype as any).schema = schema;
+
   return schema;
 }
