@@ -600,7 +600,7 @@ function render(timestamp: number) {
 
   rayMarchPipeline
     .withColorAttachment({
-      view: root.unwrap(textures[currentFrame].sampled),
+      view: textures[currentFrame].sampled,
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -695,7 +695,7 @@ async function autoSetQuaility() {
 
     measurePipeline
       .withColorAttachment({
-        view: root.unwrap(testTexture).createView(),
+        view: testTexture,
         loadOp: 'clear',
         storeOp: 'store',
       })
