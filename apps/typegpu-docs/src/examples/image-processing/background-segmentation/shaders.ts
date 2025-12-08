@@ -4,7 +4,7 @@ import * as std from 'typegpu/std';
 import {
   blockDim,
   blurLayout,
-  cropBoundsSlot,
+  cropBoundsAccess,
   drawWithMaskLayout,
   filterDim,
   generateMaskLayout,
@@ -20,7 +20,7 @@ export const prepareModelInput = (x: number, y: number) => {
     d.vec2f(MODEL_WIDTH, MODEL_HEIGHT),
   );
 
-  const cropBounds = cropBoundsSlot.$;
+  const cropBounds = cropBoundsAccess.$;
   const uvMin = cropBounds.xy;
   const uvMax = cropBounds.zw;
   const videoUV = std.mix(uvMin, uvMax, modelUV);
@@ -130,7 +130,7 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  const cropBounds = cropBoundsSlot.$;
+  const cropBounds = cropBoundsAccess.$;
   const uvMin = cropBounds.xy;
   const uvMax = cropBounds.zw;
   const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));

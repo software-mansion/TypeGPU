@@ -15,7 +15,7 @@ export const prepareModelInputLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
-export const cropBoundsSlot = tgpu.slot<TgpuUniform<d.Vec4f>>();
+export const cropBoundsAccess = tgpu['~unstable'].accessor(d.vec4f);
 
 export const generateMaskLayout = tgpu.bindGroupLayout({
   outputBuffer: { storage: d.arrayOf(d.f32), access: 'readonly' },

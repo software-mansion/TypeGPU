@@ -11,7 +11,7 @@ import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
-  cropBoundsSlot,
+  cropBoundsAccess,
   drawWithMaskLayout,
   generateMaskLayout,
   prepareModelInputLayout,
@@ -126,7 +126,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
-  .with(cropBoundsSlot, cropBoundsUniform)
+  .with(cropBoundsAccess, cropBoundsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -164,7 +164,7 @@ const blurPipeline = root['~unstable']
   .createPipeline();
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(cropBoundsSlot, cropBoundsUniform)
+  .with(cropBoundsAccess, cropBoundsUniform)
   .with(useGaussianSlot, useGaussianUniform)
   .with(sampleBiasSlot, sampleBiasUniform)
   .withVertex(fullScreenTriangle, {})
