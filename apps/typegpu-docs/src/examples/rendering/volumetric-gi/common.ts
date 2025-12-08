@@ -81,7 +81,7 @@ const getIntervalScale = tgpu.fn([d.i32], d.f32)((cascadeIndex) => {
   if (cascadeIndex <= 0) {
     return 0.0;
   }
-  return d.f32(1 << (2 * cascadeIndex));
+  return d.f32(1 << d.u32(2 * cascadeIndex));
 });
 
 const getIntervalRange = tgpu.fn([d.i32], d.vec2f)((cascadeIndex) => {
@@ -101,13 +101,13 @@ const castInterval = tgpu.fn(
   (intervalStart, intervalEnd, cascadeIndex, resolution, time) => {
     'use gpu';
     const dir = intervalEnd.sub(intervalStart);
-    const steps = 16 << cascadeIndex;
+    const steps = 16 << d.u32(cascadeIndex);
     const stepSize = dir.div(d.f32(steps));
 
     let radiance = d.vec3f(0);
-    let transmittance = 1.0;
+    let transmittance = d.f32(1.0);
 
-    for (let i = 0; i < steps; i++) {
+    for (let i = d.u32(0); i < steps; i++) {
       const coord = intervalStart.add(stepSize.mul(d.f32(i)));
       const scene = getSceneColor(coord, resolution, time);
       radiance = radiance.add(scene.xyz.mul(transmittance).mul(scene.w));
@@ -134,7 +134,7 @@ const getBilinearWeights = tgpu.fn([d.vec2f], d.vec4f)((ratio) => {
   );
 });
 
-const getBilinearOffset = tgpu.fn([d.i32], d.vec2i)((offsetIndex) => {
+const getBilinearOffset = tgpu.fn([d.u32], d.vec2i)((offsetIndex) => {
   'use gpu';
   const offsets = [d.vec2i(0, 0), d.vec2i(1, 0), d.vec2i(0, 1), d.vec2i(1, 1)];
   return offsets[offsetIndex];
@@ -153,9 +153,9 @@ export const castAndMerge = tgpu.fn([
   (texture, cascadeIndex, fragCoord, resolution, time) => {
     'use gpu';
     // Probe parameters for cascade N
-    const probeSize = d.i32(BASE_PROBE_SIZE << cascadeIndex);
-    const probeCenter = std.floor(fragCoord.xy.div(probeSize)).add(0.5);
-    const probePosition = probeCenter.mul(probeSize);
+    const probeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex));
+    const probeCenter = std.floor(fragCoord.xy.div(d.f32(probeSize))).add(0.5);
+    const probePosition = probeCenter.mul(d.f32(probeSize));
 
     // Interval parameters at cascade N
     const dirCoord = std.mod(d.vec2i(fragCoord.xy), probeSize);
@@ -187,8 +187,10 @@ export const castAndMerge = tgpu.fn([
     }
 
     // Merge cascade N+1 -> cascade N
-    const bilinearProbeSize = d.i32(BASE_PROBE_SIZE << (cascadeIndex + 1));
-    const bilinearBaseCoord = (probePosition.div(bilinearProbeSize)).sub(0.5);
+    const bilinearProbeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex + 1));
+    const bilinearBaseCoord = (probePosition.div(d.f32(bilinearProbeSize))).sub(
+      0.5,
+    );
     const ratio = std.fract(bilinearBaseCoord);
     const weights = getBilinearWeights(ratio);
     const baseIndex = d.vec2i(std.floor(bilinearBaseCoord));
@@ -205,7 +207,7 @@ export const castAndMerge = tgpu.fn([
         d.vec2i(resolution).div(bilinearProbeSize).sub(1),
       );
       const bilinearPosition = d.vec2f(bilinearIndex).add(0.5).mul(
-        bilinearProbeSize,
+        d.f32(bilinearProbeSize),
       );
 
       // Cast 4 locally interpolated intervals at cascade N -> cascade N+1 (bilinear fix)

@@ -16,7 +16,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-let workTextures: (TgpuTextureView<d.WgslTexture2d<d.F32>>)[];
+let workTextures: (TgpuTextureView<d.WgslTexture2d>)[];
 const bindGroupLayout = tgpu.bindGroupLayout({
   iChannel0: { texture: d.texture2d() },
   iChannel1: { texture: d.texture2d() },
@@ -27,17 +27,21 @@ let bindGroups: TgpuBindGroup<{
 }>[];
 
 function recreateResources() {
-  workTextures = [0, 1, 2, 3].map(() =>
-    root['~unstable'].createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'rgba8unorm',
-      dimension: '2d',
-    }).$usage('sampled', 'render', 'storage').createView()
+  workTextures = [0, 1, 2, 3].map((i) =>
+    root['~unstable']
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: presentationFormat,
+        dimension: '2d',
+      })
+      .$usage('sampled', 'render')
+      .$name(`work texture ${i}`)
+      .createView()
   );
   bindGroups = [
     root.createBindGroup(bindGroupLayout, {
       iChannel0: workTextures[2],
-      iChannel1: workTextures[0], // irrelevant
+      iChannel1: workTextures[2], // irrelevant
     }),
     root.createBindGroup(bindGroupLayout, {
       iChannel0: workTextures[0],
@@ -45,7 +49,7 @@ function recreateResources() {
     }),
     root.createBindGroup(bindGroupLayout, {
       iChannel0: workTextures[1],
-      iChannel1: workTextures[0], // irrelevant
+      iChannel1: workTextures[1], // irrelevant
     }),
     root.createBindGroup(bindGroupLayout, {
       iChannel0: workTextures[2],
@@ -53,7 +57,7 @@ function recreateResources() {
     }),
     root.createBindGroup(bindGroupLayout, {
       iChannel0: workTextures[3],
-      iChannel1: workTextures[0], // irrelevant
+      iChannel1: workTextures[3], // irrelevant
     }),
   ];
 }
@@ -61,13 +65,13 @@ recreateResources();
 
 let iFrame = 0;
 const iFrameUniform = root.createUniform(d.u32);
-const iTimeBuffer = root.createUniform(d.u32);
+const iTimeBuffer = root.createUniform(d.f32);
 const iResolutionBuffer = root.createUniform(d.vec3f);
 
 function draw(timestamp: number) {
   iFrameUniform.write(iFrame);
   iFrame += 1;
-  iTimeBuffer.write(timestamp);
+  iTimeBuffer.write(timestamp / 1000);
   iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
 
   const fragmentFnABC = tgpu['~unstable'].fragmentFn({
@@ -96,20 +100,11 @@ function draw(timestamp: number) {
 
   const pipelineABC = root['~unstable']
     .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnABC, { format: 'bgra8unorm' })
+    .withFragment(fragmentFnABC, { format: presentationFormat })
     .createPipeline();
 
   pipelineABC
     .with(bindGroups[0])
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: workTextures[2],
-    })
-    .draw(3);
-
-  pipelineABC
-    .with(bindGroups[1])
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
@@ -118,11 +113,20 @@ function draw(timestamp: number) {
     .draw(3);
 
   pipelineABC
-    .with(bindGroups[2])
+    .with(bindGroups[1])
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
       view: workTextures[1],
+    })
+    .draw(3);
+
+  pipelineABC
+    .with(bindGroups[2])
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[2],
     })
     .draw(3);
 
@@ -140,7 +144,7 @@ function draw(timestamp: number) {
 
   const pipelineD = root['~unstable']
     .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnD, { format: 'bgra8unorm' })
+    .withFragment(fragmentFnD, { format: presentationFormat })
     .createPipeline();
 
   pipelineD
@@ -166,7 +170,7 @@ function draw(timestamp: number) {
 
   const pipelineImage = root['~unstable']
     .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnImage, { format: 'bgra8unorm' })
+    .withFragment(fragmentFnImage, { format: presentationFormat })
     .createPipeline();
 
   pipelineImage
