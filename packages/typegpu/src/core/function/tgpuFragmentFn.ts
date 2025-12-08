@@ -9,6 +9,8 @@ import type {
   Interpolate,
   Location,
   Vec4f,
+  Vec4i,
+  Vec4u,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
@@ -41,9 +43,11 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
+type FragmentColorValue = Vec4f | Vec4i | Vec4u;
+
 export type FragmentOutConstrained = IOLayout<
-  | Vec4f
-  | Decorated<Vec4f, (Location | Interpolate)[]>
+  | FragmentColorValue
+  | Decorated<FragmentColorValue, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
 >;
 
@@ -77,7 +81,7 @@ export type TgpuFragmentFnShell<
       input: InferIO<FragmentIn>,
       out: FragmentOut extends IORecord ? WgslStruct<FragmentOut> : FragmentOut,
     ) => InferIO<FragmentOut>,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
   & /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
@@ -85,11 +89,11 @@ export type TgpuFragmentFnShell<
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */ ((
     implementation: string,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
   & {
     /**
      * @deprecated Invoke the shell as a function instead.
@@ -97,7 +101,7 @@ export type TgpuFragmentFnShell<
     does:
       & ((
         implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
-      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>)
+      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
       & /**
        * @param implementation
        *   Raw WGSL function implementation with header and body
@@ -105,7 +109,7 @@ export type TgpuFragmentFnShell<
        *   e.g. `"(x: f32) -> f32 { return x; }"`;
        */ ((
         implementation: string,
-      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>);
+      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>);
   };
 
 export interface TgpuFragmentFn<
