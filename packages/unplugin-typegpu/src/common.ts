@@ -210,6 +210,27 @@ function containsResourceConstructorCall(
   return false;
 }
 
+/**
+ * Tries to find an identifier in a node.
+ *
+ * @example
+ * // syntax is simplified, imagine the arguments are appropriate nodes instead
+ * tryFindIdentifier('myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('buffers.myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
+ * tryFindIdentifier('[a, b]'); // undefined
+ */
+function tryFindIdentifier(
+  node: acorn.AnyNode | babel.Node,
+): string | undefined {
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+  if (node.type === 'MemberExpression') {
+    return tryFindIdentifier(node.property);
+  }
+}
+
 type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
   acorn.AnyNode ? acorn.Expression : babel.Expression;
 
@@ -250,12 +271,21 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
     namingCallback(node.init as ExpressionFor<T>, node.id.name);
   } else if (
     node.type === 'AssignmentExpression' &&
-    node.left.type === 'Identifier' &&
     containsResourceConstructorCall(node.right, ctx)
   ) {
-    namingCallback(node.right as ExpressionFor<T>, node.left.name);
+    const maybeName = tryFindIdentifier(node.left);
+    if (maybeName) {
+      namingCallback(node.right as ExpressionFor<T>, maybeName);
+    }
   } else if (
     (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier' &&
+    containsResourceConstructorCall(node.value, ctx)
+  ) {
+    namingCallback(node.value as ExpressionFor<T>, node.key.name);
+  } else if (
+    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
+    node.value &&
     node.key.type === 'Identifier' &&
     containsResourceConstructorCall(node.value, ctx)
   ) {
