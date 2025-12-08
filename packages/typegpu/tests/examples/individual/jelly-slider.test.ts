@@ -134,7 +134,7 @@ describe('jelly-slider example', () => {
         return opUnion_18(sdPlane_14(position, vec3f(0, 1, 0), 0.06f), (opExtrudeY_17(position, -(rectangleCutoutDist_15(position.xz)), (groundThickness - groundRoundness)) - groundRoundness));
       }
 
-      @group(0) @binding(2) var<uniform> item_20: vec4f;
+      @group(0) @binding(2) var<uniform> endCapUniform_20: vec4f;
 
       @group(0) @binding(3) var digitsTextureView_22: texture_2d_array<f32>;
 
@@ -206,7 +206,7 @@ describe('jelly-slider example', () => {
 
       fn getFakeShadow_34(position: vec3f, lightDir: vec3f) -> vec3f {
         let jellyColor = (&jellyColorUniform_31);
-        let endCapX = item_20.x;
+        let endCapX = endCapUniform_20.x;
         if ((position.y < -0.03f)) {
           const fadeSharpness = 30;
           const inset = 0.02;
@@ -321,7 +321,7 @@ describe('jelly-slider example', () => {
 
       fn renderBackground_19(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32, offset: f32) -> vec4f {
         var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var percentageSample = renderPercentageOnGround_21(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((item_20.x + 0.43f) * 84f)));
+        var percentageSample = renderPercentageOnGround_21(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((endCapUniform_20.x + 0.43f) * 84f)));
         var highlights = 0f;
         const highlightWidth = 1f;
         const highlightHeight = 0.2;
@@ -331,7 +331,7 @@ describe('jelly-slider example', () => {
         const causticScale = 0.2;
         offsetX -= ((*lightDir).x * causticScale);
         offsetZ += ((*lightDir).z * causticScale);
-        let endCapX = item_20.x;
+        let endCapX = endCapUniform_20.x;
         let sliderStretch = ((endCapX + 1f) * 0.5f);
         if (((abs((hitPosition.x + offsetX)) < highlightWidth) && (abs((hitPosition.z + offsetZ)) < highlightHeight))) {
           let uvX_orig = ((((hitPosition.x + offsetX) + (highlightWidth * 2f)) / highlightWidth) * 0.5f);
@@ -388,7 +388,7 @@ describe('jelly-slider example', () => {
       }
 
       fn cap3D_48(position: vec3f) -> f32 {
-        let endCap = (&item_20);
+        let endCap = (&endCapUniform_20);
         var secondLastPoint = vec2f((*endCap).x, (*endCap).y);
         var lastPoint = vec2f((*endCap).z, (*endCap).w);
         let angle = atan2((lastPoint.y - secondLastPoint.y), (lastPoint.x - secondLastPoint.x));
@@ -666,9 +666,9 @@ describe('jelly-slider example', () => {
 
       @group(0) @binding(1) var bezierWriteView_3: texture_storage_2d<rgba16float, write>;
 
-      @group(0) @binding(2) var<storage, read> pointsView_4: array<vec2f, 17>;
+      @group(0) @binding(2) var<storage, read> pointsBuffer_4: array<vec2f, 17>;
 
-      @group(0) @binding(3) var<storage, read> controlPointsView_5: array<vec2f, 16>;
+      @group(0) @binding(3) var<storage, read> controlPointsBuffer_5: array<vec2f, 16>;
 
       fn dot2_7(v: vec2f) -> f32 {
         return dot(v, v);
@@ -722,9 +722,9 @@ describe('jelly-slider example', () => {
         var yPlusDist = 1e+10f;
         var yMinusDist = 1e+10f;
         for (var i = 0; (i < 16i); i++) {
-          let A = (&pointsView_4[i]);
-          let B = (&pointsView_4[(i + 1i)]);
-          let C = (&controlPointsView_5[i]);
+          let A = (&pointsBuffer_4[i]);
+          let B = (&pointsBuffer_4[(i + 1i)]);
+          let C = (&controlPointsBuffer_5[i]);
           let dist = sdBezier_6(sliderPos, (*A), (*C), (*B));
           if ((dist < minDist)) {
             minDist = dist;
