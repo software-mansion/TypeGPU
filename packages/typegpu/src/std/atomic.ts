@@ -8,29 +8,23 @@ type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = dualImpl({
   name: 'workgroupBarrier',
-  normalImpl: () =>
-    console.warn('workgroupBarrier is a no-op outside of CODEGEN mode.'),
+  normalImpl: 'workgroupBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
   codegenImpl: () => 'workgroupBarrier()',
-  noComptime: true,
 });
 
 export const storageBarrier = dualImpl({
   name: 'storageBarrier',
-  normalImpl: () =>
-    console.warn('storageBarrier is a no-op outside of CODEGEN mode.'),
+  normalImpl: 'storageBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
   codegenImpl: () => 'storageBarrier()',
-  noComptime: true,
 });
 
 export const textureBarrier = dualImpl({
   name: 'textureBarrier',
-  normalImpl: () =>
-    console.warn('textureBarrier is a no-op outside of CODEGEN mode.'),
+  normalImpl: () => 'textureBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
   codegenImpl: () => 'textureBarrier()',
-  noComptime: true,
 });
 
 export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({

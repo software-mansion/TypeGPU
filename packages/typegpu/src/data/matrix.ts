@@ -115,6 +115,7 @@ function createMatSchema<
     [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
 
+  // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
   // biome-ignore lint/suspicious/noExplicitAny: explained above
   (options.MatImpl.prototype as any).schema = schema;
