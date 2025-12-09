@@ -5,7 +5,7 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { fromTSL, toTSL } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -31,16 +31,11 @@ scene.backgroundNode = bgColor.mul(
   bgVignette.mul(TSL.color(0xa78ff6).mul(bgIntensity)),
 );
 
-const pointerPosition = TSL.uniform(TSL.vec4(0));
-const elasticity = TSL.uniform(0.4);
-const damping = TSL.uniform(0.94);
-const brushSize = TSL.uniform(0.25);
-const brushStrength = TSL.uniform(0.22);
-const pointerPositionAccessor = fromTSL(pointerPosition, { type: d.vec4f });
-const elasticityAccessor = fromTSL(elasticity, { type: d.f32 });
-const dampingAccessor = fromTSL(damping, { type: d.f32 });
-const brushSizeAccessor = fromTSL(brushSize, { type: d.f32 });
-const brushStrengthAccessor = fromTSL(brushStrength, { type: d.f32 });
+const pointerPosition = t3.uniform(TSL.vec4(0), d.vec4f);
+const elasticity = t3.uniform(0.4, d.f32);
+const damping = t3.uniform(0.94, d.f32);
+const brushSize = t3.uniform(0.25, d.f32);
+const brushStrength = t3.uniform(0.22, d.f32);
 
 const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   const count = geometry.attributes.position.count;
@@ -51,66 +46,61 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   );
   geometry.setAttribute('storagePosition', positionStorageBufferAttribute);
 
-  const instanceIndexAccessor = fromTSL(TSL.instanceIndex, { type: d.u32 });
-  const basePositionAccessor = fromTSL(
+  const basePositionAccessor = t3.fromTSL(
     TSL.storage(
+      // @ts-ignore fixed with r181 types
       geometry.attributes.position as THREE.BufferAttribute,
       'vec3',
       count,
     ),
-    {
-      type: d.arrayOf(d.vec3f),
-    },
+    d.arrayOf(d.vec3f),
   );
-  const positionAccessor = fromTSL(
+  const positionAccessor = t3.fromTSL(
     TSL.storage(
       positionStorageBufferAttribute,
       'vec3',
       count,
     ),
-    {
-      type: d.arrayOf(d.vec3f),
-    },
+    d.arrayOf(d.vec3f),
   );
-  const speedAccessor = fromTSL(
+  const speedAccessor = t3.fromTSL(
     TSL.storage(
       new THREE.StorageBufferAttribute(count, 3),
       'vec3',
       count,
     ),
-    {
-      type: d.arrayOf(d.vec3f),
-    },
+    d.arrayOf(d.vec3f),
   );
 
-  const computeInit = toTSL(() => {
+  const computeInit = t3.toTSL(() => {
     'use gpu';
-    positionAccessor.$[instanceIndexAccessor.$] =
-      basePositionAccessor.$[instanceIndexAccessor.$];
+    positionAccessor.$[t3.instanceIndex.$] =
+      basePositionAccessor.$[t3.instanceIndex.$];
   }).compute(count).setName('Init Mesh');
 
-  const modelMatrixAccessor = fromTSL(TSL.objectWorldMatrix(object), {
-    type: d.mat4x4f,
-  });
+  const modelMatrixAccessor = t3.fromTSL(
+    TSL.objectWorldMatrix(object),
+    d.mat4x4f,
+  );
 
-  const computeUpdate = toTSL(() => {
+  const computeUpdate = t3.toTSL(() => {
     'use gpu';
-    const instanceIdx = instanceIndexAccessor.$;
+    const instanceIdx = t3.instanceIndex.$;
     const basePosition = basePositionAccessor.$[instanceIdx];
     let position = positionAccessor.$[instanceIdx];
 
-    if (pointerPositionAccessor.$.w === 1) {
+    if (pointerPosition.$.w === 1) {
       const worldPosition = modelMatrixAccessor.$.mul(
         d.vec4f(position, 1),
       ).xyz;
-      const dist = std.distance(worldPosition, pointerPositionAccessor.$.xyz);
+      const dist = std.distance(worldPosition, pointerPosition.$.xyz);
       const direction = std.normalize(
-        pointerPositionAccessor.$.xyz.sub(worldPosition),
+        pointerPosition.$.xyz.sub(worldPosition),
       );
-      const power = std.max(brushSizeAccessor.$ - dist, 0) *
-        brushStrengthAccessor.$;
+      const power = std.max(brushSize.$ - dist, 0) *
+        brushStrength.$;
 
-      positionAccessor.$[instanceIndexAccessor.$] = position.add(
+      positionAccessor.$[instanceIdx] = position.add(
         direction.mul(power),
       );
       position = positionAccessor.$[instanceIdx];
@@ -122,10 +112,10 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
     );
     const force = basePosition
       .sub(position)
-      .mul(elasticityAccessor.$ * dist);
+      .mul(elasticity.$ * dist);
     const speed = speedAccessor.$[instanceIdx]
       .add(force)
-      .mul(dampingAccessor.$);
+      .mul(damping.$);
 
     speedAccessor.$[instanceIdx] = d.vec3f(speed);
     positionAccessor.$[instanceIdx] = position.add(speed);
@@ -166,10 +156,10 @@ const onPointerMove = (event: PointerEvent) => {
 
   if (intersects.length > 0) {
     const { point } = intersects[0];
-    pointerPosition.value.copy(new THREE.Vector4(...point, 1));
-    pointerPosition.value.w = 1; // enable
+    pointerPosition.node.value.copy(new THREE.Vector4(...point, 1));
+    pointerPosition.node.value.w = 1; // enable
   } else {
-    pointerPosition.value.w = 0; // disable
+    pointerPosition.node.value.w = 0; // disable
   }
 };
 canvas.addEventListener('pointermove', onPointerMove);
@@ -198,7 +188,7 @@ export const controls = {
     max: 0.5,
     step: 0.01,
     onSliderChange: (value: number) => {
-      elasticity.value = value;
+      elasticity.node.value = value;
     },
   },
   damping: {
@@ -207,7 +197,7 @@ export const controls = {
     max: 0.98,
     step: 0.01,
     onSliderChange: (value: number) => {
-      damping.value = value;
+      damping.node.value = value;
     },
   },
   'brush size': {
@@ -216,7 +206,7 @@ export const controls = {
     max: 0.5,
     step: 0.01,
     onSliderChange: (value: number) => {
-      brushSize.value = value;
+      brushSize.node.value = value;
     },
   },
   'brush strength': {
@@ -225,7 +215,7 @@ export const controls = {
     max: 0.3,
     step: 0.01,
     onSliderChange: (value: number) => {
-      brushStrength.value = value;
+      brushStrength.node.value = value;
     },
   },
 };
