@@ -424,10 +424,35 @@ const onMouseUp = () => {
   lastDrawPos = null;
 };
 
+const onTouchStart = (e: TouchEvent) => {
+  isDrawing = true;
+  lastDrawPos = null;
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  interpolateAndDraw(touch.clientX - rect.left, touch.clientY - rect.top);
+};
+
+const onTouchMove = (e: TouchEvent) => {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  interpolateAndDraw(touch.clientX - rect.left, touch.clientY - rect.top);
+};
+
+const onTouchEnd = () => {
+  isDrawing = false;
+  lastDrawPos = null;
+};
+
 canvas.addEventListener('mousedown', onMouseDown);
 canvas.addEventListener('mousemove', onMouseMove);
 canvas.addEventListener('mouseup', onMouseUp);
 canvas.addEventListener('mouseleave', onMouseUp);
+canvas.addEventListener('touchstart', onTouchStart);
+canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+canvas.addEventListener('touchend', onTouchEnd);
+canvas.addEventListener('touchcancel', onTouchEnd);
 
 export const controls = {
   'Run Algorithm': {
