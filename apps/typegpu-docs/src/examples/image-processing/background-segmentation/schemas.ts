@@ -1,4 +1,4 @@
-import tgpu, { type TgpuUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // constants
@@ -15,8 +15,6 @@ export const prepareModelInputLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
-export const cropBoundsAccess = tgpu['~unstable'].accessor(d.vec4f);
-
 export const generateMaskLayout = tgpu.bindGroupLayout({
   outputBuffer: { storage: d.arrayOf(d.f32), access: 'readonly' },
   maskTexture: {
@@ -25,7 +23,6 @@ export const generateMaskLayout = tgpu.bindGroupLayout({
 });
 
 export const blurLayout = tgpu.bindGroupLayout({
-  flip: { uniform: d.u32 },
   inTexture: { texture: d.texture2d(d.f32) },
   outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
   sampler: { sampler: 'filtering' },
@@ -40,8 +37,14 @@ export const drawWithMaskLayout = tgpu.bindGroupLayout({
 
 // slots
 
-export const useGaussianSlot = tgpu.slot<TgpuUniform<d.U32>>();
-export const sampleBiasSlot = tgpu.slot<TgpuUniform<d.F32>>();
+export const Params = d.struct({
+  cropBounds: d.vec4f,
+  useGaussian: d.u32,
+  sampleBias: d.f32,
+});
+
+export const paramsAccessor = tgpu['~unstable'].accessor(Params);
+export const flipSlot = tgpu['~unstable'].accessor(d.bool);
 
 export interface ModelConfig {
   name: string;

@@ -11,12 +11,12 @@ import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
-  cropBoundsAccess,
   drawWithMaskLayout,
+  flipSlot,
   generateMaskLayout,
+  Params,
+  paramsAccessor,
   prepareModelInputLayout,
-  sampleBiasSlot,
-  useGaussianSlot,
 } from './schemas.ts';
 import {
   computeFn,
@@ -63,7 +63,7 @@ const oldRequestAdapter = navigator.gpu.requestAdapter;
 const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
-const root = await tgpu.initFromDevice({ device });
+const root = tgpu.initFromDevice({ device });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -79,11 +79,11 @@ let blurStrength = 5;
 let useGaussianBlur = false;
 let useSquareCrop = false;
 
-const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
-const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
-const useGaussianUniform = root.createUniform(d.u32, 0);
-const sampleBiasUniform = root.createUniform(d.f32, 0);
-const cropBoundsUniform = root.createUniform(d.vec4f, d.vec4f(0, 0, 1, 1));
+const paramsUniform = root.createUniform(Params, {
+  cropBounds: d.vec4f(0, 0, 1, 1),
+  useGaussian: 0,
+  sampleBias: blurStrength,
+});
 
 const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -126,7 +126,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
-  .with(cropBoundsAccess, cropBoundsUniform)
+  .with(paramsAccessor, paramsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -159,14 +159,15 @@ const generateMaskFromOutputPipeline = root['~unstable']
     generateMaskFromOutput,
   );
 
-const blurPipeline = root['~unstable']
-  .withCompute(computeFn)
-  .createPipeline();
+const blurPipelines = [false, true].map((flip) =>
+  root['~unstable']
+    .with(flipSlot, flip)
+    .withCompute(computeFn)
+    .createPipeline()
+);
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(cropBoundsAccess, cropBoundsUniform)
-  .with(useGaussianSlot, useGaussianUniform)
-  .with(sampleBiasSlot, sampleBiasUniform)
+  .with(paramsAccessor, paramsUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
@@ -223,7 +224,9 @@ function updateCropBounds(aspectRatio: number) {
       uvMaxY = uvMinY + cropHeight;
     }
   }
-  cropBoundsUniform.write(d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY));
+  paramsUniform.writePartial({
+    cropBounds: d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY),
+  });
 }
 
 function onVideoChange(size: { width: number; height: number }) {
@@ -241,13 +244,11 @@ function onVideoChange(size: { width: number; height: number }) {
     root['~unstable'].createTexture({
       size: [size.width, size.height],
       format: 'rgba8unorm',
-      dimension: '2d',
       mipLevelCount: 10,
     }).$usage('sampled', 'render', 'storage')
   );
   blurBindGroups = [
     root.createBindGroup(blurLayout, {
-      flip: zeroBuffer,
       inTexture: blurredTextures[0],
       outTexture: blurredTextures[1].createView(
         d.textureStorage2d('rgba8unorm', 'read-only'),
@@ -256,7 +257,6 @@ function onVideoChange(size: { width: number; height: number }) {
       sampler,
     }),
     root.createBindGroup(blurLayout, {
-      flip: oneBuffer,
       inTexture: blurredTextures[1],
       outTexture: blurredTextures[0].createView(
         d.textureStorage2d('rgba8unorm', 'read-only'),
@@ -295,13 +295,13 @@ async function processVideoFrame(
 
   if (useGaussianBlur) {
     for (const _ of Array(blurStrength * 2)) {
-      blurPipeline
+      blurPipelines[0]
         .with(blurBindGroups[0])
         .dispatchWorkgroups(
           Math.ceil(frameWidth / blockDim),
           Math.ceil(frameHeight / 4),
         );
-      blurPipeline
+      blurPipelines[1]
         .with(blurBindGroups[1])
         .dispatchWorkgroups(
           Math.ceil(frameHeight / blockDim),
@@ -349,7 +349,7 @@ export const controls = {
     options: ['mipmaps', 'gaussian'],
     async onSelectChange(value: string) {
       useGaussianBlur = value === 'gaussian';
-      useGaussianUniform.write(useGaussianBlur ? 1 : 0);
+      paramsUniform.writePartial({ useGaussian: useGaussianBlur ? 1 : 0 });
     },
   },
   'blur strength': {
@@ -359,7 +359,7 @@ export const controls = {
     step: 1,
     onSliderChange(newValue: number) {
       blurStrength = newValue;
-      sampleBiasUniform.write(blurStrength);
+      paramsUniform.writePartial({ sampleBias: blurStrength });
     },
   },
   'square crop': {
