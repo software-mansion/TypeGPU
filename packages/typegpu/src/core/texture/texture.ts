@@ -1,3 +1,5 @@
+import { BufferReader, BufferWriter } from 'typed-binary';
+import { readTexelData, writeTexelData } from '../../data/dataIO.ts';
 import {
   isWgslStorageTexture,
   textureDescriptorToSchema,
@@ -8,7 +10,16 @@ import {
 } from '../../data/texture.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import {
+  type F32,
+  isVecInstance,
+  type v4f,
+  type v4i,
+  type v4u,
+  type Vec4f,
+  type Vec4i,
+  type Vec4u,
+} from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
@@ -53,6 +64,68 @@ type TextureViewInternals = {
 // Public API
 
 export type TexelData = Vec4u | Vec4i | Vec4f;
+
+/**
+ * 2D array of texel data for writing to textures.
+ * Outer array is rows (y), inner array is columns (x).
+ */
+export type TexelData2D<TFormat extends GPUTextureFormat = GPUTextureFormat> =
+  ClearValueForFormat<TFormat>[][];
+
+/**
+ * The clear value type based on the texture format.
+ * Returns v4f for float formats, v4i for signed integer formats, v4u for unsigned integer formats.
+ */
+export type ClearValueForFormat<TFormat extends GPUTextureFormat> =
+  TFormat extends keyof TextureFormats
+    ? Infer<TextureFormats[TFormat]['vectorType']>
+    : v4f | v4i | v4u;
+
+/**
+ * Options for writing to a specific region of a texture.
+ */
+export type WriteOptions<TFormat extends GPUTextureFormat = GPUTextureFormat> =
+  {
+    /**
+     * The x offset in texels. Defaults to 0.
+     */
+    x?: number;
+    /**
+     * The y offset in texels. Defaults to 0.
+     */
+    y?: number;
+    /**
+     * Which mip level to write to. Defaults to 0.
+     */
+    mipLevel?: number;
+    /**
+     * Which array layer to write to. Only applicable for array textures.
+     */
+    arrayLayer?: number;
+  };
+
+/**
+ * Options for clearing a texture.
+ */
+export type ClearOptions<TFormat extends GPUTextureFormat = GPUTextureFormat> =
+  {
+    /**
+     * Which mip level(s) to clear. Defaults to 'all'.
+     */
+    mipLevel?: number | 'all';
+    /**
+     * Which array layer(s) to clear. Only applicable for array textures. Defaults to 'all'.
+     */
+    arrayLayer?: number | 'all';
+    /**
+     * The value to clear the texture with. Defaults to zeros.
+     * The type is determined by the texture format:
+     * - Float formats: v4f (e.g., d.vec4f(0, 0, 0, 0))
+     * - Signed integer formats: v4i (e.g., d.vec4i(0, 0, 0, 0))
+     * - Unsigned integer formats: v4u (e.g., d.vec4u(0, 0, 0, 0))
+     */
+    value?: ClearValueForFormat<TFormat>;
+  };
 
 export type ExternalImageSource =
   | HTMLCanvasElement
@@ -185,12 +258,25 @@ export interface TgpuTexture<TProps extends TextureProps = any>
     viewDescriptor?: TgpuTextureViewDescriptor,
   ): TgpuTextureView<T>;
 
-  clear(mipLevel?: number | 'all'): void;
+  clear(options?: ClearOptions<TProps['format']>): void;
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
   write(source: ExternalImageSource | ExternalImageSource[]): void;
   write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
+  write(
+    source: TexelData2D<TProps['format']>,
+    options?: { mipLevel?: number; arrayLayer?: number },
+  ): void;
+  writePartial(
+    source: TexelData2D<TProps['format']> | ExternalImageSource,
+    options?: WriteOptions<TProps['format']>,
+  ): void;
   // TODO: support copies from GPUBuffers and TgpuBuffers
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
+
+  read(options?: {
+    mipLevel?: number;
+    arrayLayer?: number;
+  }): Promise<TexelData2D<TProps['format']>>;
 
   destroy(): void;
 }
@@ -354,13 +440,47 @@ class TgpuTextureImpl<TProps extends TextureProps>
     );
   }
 
-  #clearMipLevel(mip = 0) {
+  #createClearData(
+    texelCount: number,
+    value?: v4f | v4i | v4u,
+  ): Uint8Array<ArrayBuffer> {
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const buffer = new ArrayBuffer(texelCount * texelSize);
+    const data = new Uint8Array(buffer);
+
+    if (value !== undefined) {
+      const texelBuffer = new ArrayBuffer(texelSize);
+      const writer = new BufferWriter(texelBuffer);
+
+      writeTexelData(writer, this.props.format, value);
+
+      const texelData = new Uint8Array(texelBuffer);
+      for (let i = 0; i < texelCount; i++) {
+        data.set(texelData, i * texelSize);
+      }
+    }
+
+    return data;
+  }
+
+  #clearMipLevel(
+    mip: number,
+    arrayLayer: number | 'all',
+    value?: v4f | v4i | v4u,
+  ) {
     const scale = 2 ** mip;
-    const [width, height, depth] = [
-      Math.max(1, Math.floor((this.props.size[0] ?? 1) / scale)),
-      Math.max(1, Math.floor((this.props.size[1] ?? 1) / scale)),
-      Math.max(1, Math.floor((this.props.size[2] ?? 1) / scale)),
-    ];
+    const width = Math.max(1, Math.floor((this.props.size[0] ?? 1) / scale));
+    const height = Math.max(1, Math.floor((this.props.size[1] ?? 1) / scale));
+    const fullDepth = Math.max(
+      1,
+      Math.floor((this.props.size[2] ?? 1) / scale),
+    );
 
     const texelSize = this.#formatInfo.texelSize;
     if (texelSize === 'non-copyable') {
@@ -369,22 +489,41 @@ class TgpuTextureImpl<TProps extends TextureProps>
       );
     }
 
-    this.#branch.device.queue.writeTexture(
-      { texture: this[$internal].unwrap(), mipLevel: mip },
-      new Uint8Array(width * height * depth * texelSize),
-      { bytesPerRow: texelSize * width, rowsPerImage: height },
-      [width, height, depth],
-    );
+    if (arrayLayer === 'all') {
+      const data = this.#createClearData(width * height * fullDepth, value);
+      this.#branch.device.queue.writeTexture(
+        { texture: this[$internal].unwrap(), mipLevel: mip },
+        data,
+        { bytesPerRow: texelSize * width, rowsPerImage: height },
+        [width, height, fullDepth],
+      );
+    } else {
+      const data = this.#createClearData(width * height, value);
+      this.#branch.device.queue.writeTexture(
+        {
+          texture: this[$internal].unwrap(),
+          mipLevel: mip,
+          origin: { z: arrayLayer },
+        },
+        data,
+        { bytesPerRow: texelSize * width, rowsPerImage: height },
+        [width, height, 1],
+      );
+    }
   }
 
-  clear(mipLevel: number | 'all' = 'all') {
+  clear(options?: ClearOptions<TProps['format']>) {
+    const mipLevel = options?.mipLevel ?? 'all';
+    const arrayLayer = options?.arrayLayer ?? 'all';
+    const value = options?.value;
+
     if (mipLevel === 'all') {
       const mipLevels = this.props.mipLevelCount ?? 1;
       for (let i = 0; i < mipLevels; i++) {
-        this.#clearMipLevel(i);
+        this.#clearMipLevel(i, arrayLayer, value);
       }
     } else {
-      this.#clearMipLevel(mipLevel);
+      this.#clearMipLevel(mipLevel, arrayLayer, value);
     }
   }
 
@@ -426,16 +565,32 @@ class TgpuTextureImpl<TProps extends TextureProps>
   write(source: ExternalImageSource | ExternalImageSource[]): void;
   write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
   write(
+    source: TexelData2D<TProps['format']>,
+    options?: { mipLevel?: number; arrayLayer?: number },
+  ): void;
+  write(
     source:
       | ExternalImageSource
       | ExternalImageSource[]
       | ArrayBuffer
       | TypedArray
-      | DataView,
-    mipLevel = 0,
+      | DataView
+      | TexelData2D<TProps['format']>,
+    optionsOrMipLevel?: number | { mipLevel?: number; arrayLayer?: number },
   ) {
     if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
+      const mipLevel = typeof optionsOrMipLevel === 'number'
+        ? optionsOrMipLevel
+        : 0;
       this.#writeBufferData(source, mipLevel);
+      return;
+    }
+
+    if (this.#isTexelData2D(source)) {
+      const options = typeof optionsOrMipLevel === 'object'
+        ? optionsOrMipLevel
+        : {};
+      this.#writeTexelData2D(source, options.mipLevel ?? 0, options.arrayLayer);
       return;
     }
 
@@ -460,6 +615,115 @@ class TgpuTextureImpl<TProps extends TextureProps>
         this.#writeSingleLayer(bitmap, layer);
       }
     }
+  }
+  #isTexelData2D(source: unknown): source is TexelData2D<TProps['format']> {
+    if (!Array.isArray(source) || source.length === 0) return false;
+    const firstRow = source[0];
+    if (!Array.isArray(firstRow) || firstRow.length === 0) return false;
+    const firstPixel = firstRow[0];
+    return (
+      firstPixel !== null &&
+      typeof firstPixel === 'object' &&
+      'x' in firstPixel &&
+      'y' in firstPixel &&
+      'z' in firstPixel &&
+      'w' in firstPixel
+    );
+  }
+
+  #writeTexelData2D(
+    source: TexelData2D<TProps['format']>,
+    mipLevel: number,
+    arrayLayer?: number,
+  ) {
+    this.writePartial(
+      source,
+      arrayLayer !== undefined ? { mipLevel, arrayLayer } : { mipLevel },
+    );
+  }
+
+  writePartial(
+    source: TexelData2D<TProps['format']> | ExternalImageSource,
+    options?: WriteOptions<TProps['format']>,
+  ) {
+    // Check if source is texel data (2D array of vectors) or an image
+    if (!Array.isArray(source) || !isVecInstance(source[0]?.[0])) {
+      this.#writePartialImage(source as ExternalImageSource, options);
+      return;
+    }
+
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const height = source.length;
+    const width = source[0]?.length ?? 0;
+
+    if (width === 0 || height === 0) {
+      throw new Error('Cannot write empty texel data array');
+    }
+
+    const buffer = new ArrayBuffer(width * height * texelSize);
+    const writer = new BufferWriter(buffer);
+
+    for (let y = 0; y < height; y++) {
+      const row = source[y];
+      if (!row || row.length !== width) {
+        throw new Error(
+          `Row ${y} has inconsistent width. Expected ${width}, got ${
+            row?.length ?? 0
+          }`,
+        );
+      }
+      for (let x = 0; x < width; x++) {
+        const texel = row[x];
+        if (!texel) {
+          throw new Error(`Missing texel at (${x}, ${y})`);
+        }
+        writeTexelData(writer, this.props.format, texel);
+      }
+    }
+
+    const originX = options?.x ?? 0;
+    const originY = options?.y ?? 0;
+    const mipLevel = options?.mipLevel ?? 0;
+    const arrayLayer = options?.arrayLayer;
+
+    const origin: GPUOrigin3D = arrayLayer !== undefined
+      ? { x: originX, y: originY, z: arrayLayer }
+      : { x: originX, y: originY };
+
+    this.#branch.device.queue.writeTexture(
+      { texture: this[$internal].unwrap(), mipLevel, origin },
+      buffer,
+      { bytesPerRow: texelSize * width, rowsPerImage: height },
+      [width, height, 1],
+    );
+  }
+
+  #writePartialImage(
+    source: ExternalImageSource,
+    options?: WriteOptions<TProps['format']>,
+  ) {
+    const originX = options?.x ?? 0;
+    const originY = options?.y ?? 0;
+    const mipLevel = options?.mipLevel ?? 0;
+    const arrayLayer = options?.arrayLayer;
+
+    const { width, height } = getImageSourceDimensions(source);
+
+    const origin: GPUOrigin3D = arrayLayer !== undefined
+      ? { x: originX, y: originY, z: arrayLayer }
+      : { x: originX, y: originY };
+
+    this.#branch.device.queue.copyExternalImageToTexture(
+      { source },
+      { texture: this[$internal].unwrap(), mipLevel, origin },
+      [width, height, 1],
+    );
   }
 
   #writeBufferData(
@@ -555,6 +819,78 @@ class TgpuTextureImpl<TProps extends TextureProps>
       source.props.size,
     );
     this.#branch.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  async read(options?: {
+    mipLevel?: number;
+    arrayLayer?: number;
+  }): Promise<TexelData2D<TProps['format']>> {
+    const mipLevel = options?.mipLevel ?? 0;
+    const arrayLayer = options?.arrayLayer ?? 0;
+
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot read from texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const width = Math.max(1, (this.props.size[0] as number) >> mipLevel);
+    const height = Math.max(1, (this.props.size[1] ?? 1) >> mipLevel);
+
+    // bytesPerRow must be a multiple of 256
+    const bytesPerRow = Math.ceil((width * texelSize) / 256) * 256;
+    const bufferSize = bytesPerRow * height;
+
+    const stagingBuffer = this.#branch.device.createBuffer({
+      size: bufferSize,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+
+    const commandEncoder = this.#branch.device.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer(
+      {
+        texture: this[$internal].unwrap(),
+        mipLevel,
+        origin: { x: 0, y: 0, z: arrayLayer },
+      },
+      {
+        buffer: stagingBuffer,
+        bytesPerRow,
+        rowsPerImage: height,
+      },
+      [width, height, 1],
+    );
+
+    this.#branch.device.queue.submit([commandEncoder.finish()]);
+    await stagingBuffer.mapAsync(GPUMapMode.READ);
+
+    const mappedRange = stagingBuffer.getMappedRange();
+    const result: TexelData2D<TProps['format']> = [];
+
+    for (let y = 0; y < height; y++) {
+      const row: ClearValueForFormat<TProps['format']>[] = [];
+      const rowOffset = y * bytesPerRow;
+      const rowData = new ArrayBuffer(width * texelSize);
+      new Uint8Array(rowData).set(
+        new Uint8Array(mappedRange, rowOffset, width * texelSize),
+      );
+
+      const reader = new BufferReader(rowData);
+      for (let x = 0; x < width; x++) {
+        row.push(
+          readTexelData(reader, this.props.format) as ClearValueForFormat<
+            TProps['format']
+          >,
+        );
+      }
+      result.push(row);
+    }
+
+    stagingBuffer.unmap();
+    stagingBuffer.destroy();
+
+    return result;
   }
 
   get destroyed() {

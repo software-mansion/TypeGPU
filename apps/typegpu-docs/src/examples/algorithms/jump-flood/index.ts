@@ -260,17 +260,6 @@ const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const clearTexture = root['~unstable'].createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, d.vec4f());
-  std.textureStore(
-    initLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    d.vec4f(-1, -1, 0, 0),
-  );
-});
-
 const voronoiPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
   .withFragment(voronoiFrag, { format: presentationFormat })
@@ -339,8 +328,12 @@ function interpolateAndDraw(x: number, y: number) {
 }
 
 function clearCanvas() {
-  for (const bg of resources.initBindGroups) {
-    clearTexture.with(bg).dispatchThreads(canvas.width, canvas.height);
+  for (const tex of resources.textures) {
+    tex.read().then((data) => {
+      console.log(data);
+    });
+    tex.clear({ arrayLayer: 0 });
+    tex.clear({ arrayLayer: 1, value: d.vec4f(-1, -1, 0, 0) });
   }
   sourceIdx = 0;
   render();

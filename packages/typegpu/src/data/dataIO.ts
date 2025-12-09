@@ -764,10 +764,10 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
   'unorm8x4-bgra'(i) {
-    const b = i.readByte() / 255;
-    const g = i.readByte() / 255;
-    const r = i.readByte() / 255;
-    const a = i.readByte() / 255;
+    const b = i.readUint8() / 255;
+    const g = i.readUint8() / 255;
+    const r = i.readUint8() / 255;
+    const a = i.readUint8() / 255;
     return vec4f(r, g, b, a);
   },
 
@@ -818,4 +818,481 @@ export function readData<TData extends wgsl.BaseData>(
   }
 
   return reader(input, schema);
+}
+
+type TexelValue = wgsl.v4f | wgsl.v4i | wgsl.v4u;
+
+type TexelWriter = (output: ISerialOutput, value: TexelValue) => void;
+
+type SupportedTexelFormat = Exclude<
+  GPUTextureFormat,
+  | 'depth24plus'
+  | 'depth24plus-stencil8'
+  | 'depth32float-stencil8'
+  | 'bc1-rgba-unorm'
+  | 'bc1-rgba-unorm-srgb'
+  | 'bc2-rgba-unorm'
+  | 'bc2-rgba-unorm-srgb'
+  | 'bc3-rgba-unorm'
+  | 'bc3-rgba-unorm-srgb'
+  | 'bc4-r-unorm'
+  | 'bc4-r-snorm'
+  | 'bc5-rg-unorm'
+  | 'bc5-rg-snorm'
+  | 'bc6h-rgb-ufloat'
+  | 'bc6h-rgb-float'
+  | 'bc7-rgba-unorm'
+  | 'bc7-rgba-unorm-srgb'
+  | 'etc2-rgb8unorm'
+  | 'etc2-rgb8unorm-srgb'
+  | 'etc2-rgb8a1unorm'
+  | 'etc2-rgb8a1unorm-srgb'
+  | 'etc2-rgba8unorm'
+  | 'etc2-rgba8unorm-srgb'
+  | 'eac-r11unorm'
+  | 'eac-r11snorm'
+  | 'eac-rg11unorm'
+  | 'eac-rg11snorm'
+  | 'astc-4x4-unorm'
+  | 'astc-4x4-unorm-srgb'
+  | 'astc-5x4-unorm'
+  | 'astc-5x4-unorm-srgb'
+  | 'astc-5x5-unorm'
+  | 'astc-5x5-unorm-srgb'
+  | 'astc-6x5-unorm'
+  | 'astc-6x5-unorm-srgb'
+  | 'astc-6x6-unorm'
+  | 'astc-6x6-unorm-srgb'
+  | 'astc-8x5-unorm'
+  | 'astc-8x5-unorm-srgb'
+  | 'astc-8x6-unorm'
+  | 'astc-8x6-unorm-srgb'
+  | 'astc-8x8-unorm'
+  | 'astc-8x8-unorm-srgb'
+  | 'astc-10x5-unorm'
+  | 'astc-10x5-unorm-srgb'
+  | 'astc-10x6-unorm'
+  | 'astc-10x6-unorm-srgb'
+  | 'astc-10x8-unorm'
+  | 'astc-10x8-unorm-srgb'
+  | 'astc-10x10-unorm'
+  | 'astc-10x10-unorm-srgb'
+  | 'astc-12x10-unorm'
+  | 'astc-12x10-unorm-srgb'
+  | 'astc-12x12-unorm'
+  | 'astc-12x12-unorm-srgb'
+>;
+
+const texelWriters = {
+  // 8-bit single channel
+  r8unorm: (o, v) => o.writeUint8(Math.round(v.x * 255)),
+  r8snorm: (o, v) => o.writeInt8(Math.round(v.x * 127)),
+  r8uint: (o, v) => o.writeUint8(v.x),
+  r8sint: (o, v) => o.writeInt8(v.x),
+
+  // 16-bit single channel
+  r16unorm: (o, v) => o.writeUint16(Math.round(v.x * 65535)),
+  r16snorm: (o, v) => o.writeInt16(Math.round(v.x * 32767)),
+  r16uint: (o, v) => o.writeUint16(v.x),
+  r16sint: (o, v) => o.writeInt16(v.x),
+  r16float: (o, v) => o.writeFloat16(v.x),
+
+  // 32-bit single channel
+  r32uint: (o, v) => o.writeUint32(v.x),
+  r32sint: (o, v) => o.writeInt32(v.x),
+  r32float: (o, v) => o.writeFloat32(v.x),
+
+  // 8-bit two channel
+  rg8unorm: (o, v) => {
+    o.writeUint8(Math.round(v.x * 255));
+    o.writeUint8(Math.round(v.y * 255));
+  },
+  rg8snorm: (o, v) => {
+    o.writeInt8(Math.round(v.x * 127));
+    o.writeInt8(Math.round(v.y * 127));
+  },
+  rg8uint: (o, v) => {
+    o.writeUint8(v.x);
+    o.writeUint8(v.y);
+  },
+  rg8sint: (o, v) => {
+    o.writeInt8(v.x);
+    o.writeInt8(v.y);
+  },
+
+  // 16-bit two channel
+  rg16unorm: (o, v) => {
+    o.writeUint16(Math.round(v.x * 65535));
+    o.writeUint16(Math.round(v.y * 65535));
+  },
+  rg16snorm: (o, v) => {
+    o.writeInt16(Math.round(v.x * 32767));
+    o.writeInt16(Math.round(v.y * 32767));
+  },
+  rg16uint: (o, v) => {
+    o.writeUint16(v.x);
+    o.writeUint16(v.y);
+  },
+  rg16sint: (o, v) => {
+    o.writeInt16(v.x);
+    o.writeInt16(v.y);
+  },
+  rg16float: (o, v) => {
+    o.writeFloat16(v.x);
+    o.writeFloat16(v.y);
+  },
+
+  // 32-bit two channel
+  rg32uint: (o, v) => {
+    o.writeUint32(v.x);
+    o.writeUint32(v.y);
+  },
+  rg32sint: (o, v) => {
+    o.writeInt32(v.x);
+    o.writeInt32(v.y);
+  },
+  rg32float: (o, v) => {
+    o.writeFloat32(v.x);
+    o.writeFloat32(v.y);
+  },
+
+  // 8-bit four channel
+  rgba8unorm: (o, v) => {
+    o.writeUint8(Math.round(v.x * 255));
+    o.writeUint8(Math.round(v.y * 255));
+    o.writeUint8(Math.round(v.z * 255));
+    o.writeUint8(Math.round(v.w * 255));
+  },
+  'rgba8unorm-srgb': (o, v) => {
+    o.writeUint8(Math.round(v.x * 255));
+    o.writeUint8(Math.round(v.y * 255));
+    o.writeUint8(Math.round(v.z * 255));
+    o.writeUint8(Math.round(v.w * 255));
+  },
+  rgba8snorm: (o, v) => {
+    o.writeInt8(Math.round(v.x * 127));
+    o.writeInt8(Math.round(v.y * 127));
+    o.writeInt8(Math.round(v.z * 127));
+    o.writeInt8(Math.round(v.w * 127));
+  },
+  rgba8uint: (o, v) => {
+    o.writeUint8(v.x);
+    o.writeUint8(v.y);
+    o.writeUint8(v.z);
+    o.writeUint8(v.w);
+  },
+  rgba8sint: (o, v) => {
+    o.writeInt8(v.x);
+    o.writeInt8(v.y);
+    o.writeInt8(v.z);
+    o.writeInt8(v.w);
+  },
+  bgra8unorm: (o, v) => {
+    o.writeUint8(Math.round(v.z * 255));
+    o.writeUint8(Math.round(v.y * 255));
+    o.writeUint8(Math.round(v.x * 255));
+    o.writeUint8(Math.round(v.w * 255));
+  },
+  'bgra8unorm-srgb': (o, v) => {
+    o.writeUint8(Math.round(v.z * 255));
+    o.writeUint8(Math.round(v.y * 255));
+    o.writeUint8(Math.round(v.x * 255));
+    o.writeUint8(Math.round(v.w * 255));
+  },
+
+  // 16-bit four channel
+  rgba16unorm: (o, v) => {
+    o.writeUint16(Math.round(v.x * 65535));
+    o.writeUint16(Math.round(v.y * 65535));
+    o.writeUint16(Math.round(v.z * 65535));
+    o.writeUint16(Math.round(v.w * 65535));
+  },
+  rgba16snorm: (o, v) => {
+    o.writeInt16(Math.round(v.x * 32767));
+    o.writeInt16(Math.round(v.y * 32767));
+    o.writeInt16(Math.round(v.z * 32767));
+    o.writeInt16(Math.round(v.w * 32767));
+  },
+  rgba16uint: (o, v) => {
+    o.writeUint16(v.x);
+    o.writeUint16(v.y);
+    o.writeUint16(v.z);
+    o.writeUint16(v.w);
+  },
+  rgba16sint: (o, v) => {
+    o.writeInt16(v.x);
+    o.writeInt16(v.y);
+    o.writeInt16(v.z);
+    o.writeInt16(v.w);
+  },
+  rgba16float: (o, v) => {
+    o.writeFloat16(v.x);
+    o.writeFloat16(v.y);
+    o.writeFloat16(v.z);
+    o.writeFloat16(v.w);
+  },
+
+  // 32-bit four channel
+  rgba32uint: (o, v) => {
+    o.writeUint32(v.x);
+    o.writeUint32(v.y);
+    o.writeUint32(v.z);
+    o.writeUint32(v.w);
+  },
+  rgba32sint: (o, v) => {
+    o.writeInt32(v.x);
+    o.writeInt32(v.y);
+    o.writeInt32(v.z);
+    o.writeInt32(v.w);
+  },
+  rgba32float: (o, v) => {
+    o.writeFloat32(v.x);
+    o.writeFloat32(v.y);
+    o.writeFloat32(v.z);
+    o.writeFloat32(v.w);
+  },
+
+  // Packed formats
+  rgb10a2uint: (o, v) => {
+    const packed = ((v.x & 0x3ff) << 0) |
+      ((v.y & 0x3ff) << 10) |
+      ((v.z & 0x3ff) << 20) |
+      ((v.w & 0x3) << 30);
+    o.writeUint32(packed);
+  },
+  rgb10a2unorm: (o, v) => {
+    const packed = ((Math.round(v.x * 1023) & 0x3ff) << 0) |
+      ((Math.round(v.y * 1023) & 0x3ff) << 10) |
+      ((Math.round(v.z * 1023) & 0x3ff) << 20) |
+      ((Math.round(v.w * 3) & 0x3) << 30);
+    o.writeUint32(packed);
+  },
+  rg11b10ufloat: (o, v) => {
+    const toF11 = (x: number) => {
+      if (x <= 0) return 0;
+      const f = new Float32Array([x]);
+      const u = new Uint32Array(f.buffer)[0] as number;
+      const e = Math.max(0, Math.min(31, ((u >> 23) & 0xff) - 127 + 15));
+      const m = (u >> 17) & 0x3f;
+      return (e << 6) | m;
+    };
+    const toF10 = (x: number) => {
+      if (x <= 0) return 0;
+      const f = new Float32Array([x]);
+      const u = new Uint32Array(f.buffer)[0] as number;
+      const e = Math.max(0, Math.min(31, ((u >> 23) & 0xff) - 127 + 15));
+      const m = (u >> 18) & 0x1f;
+      return (e << 5) | m;
+    };
+    const packed = toF11(v.x) | (toF11(v.y) << 11) | (toF10(v.z) << 22);
+    o.writeUint32(packed);
+  },
+  rgb9e5ufloat: (o, v) => {
+    const maxVal = Math.max(v.x, v.y, v.z);
+    const exp = Math.max(0, Math.min(31, Math.floor(Math.log2(maxVal)) + 16));
+    const scale = 2 ** (exp - 24);
+    const r = Math.round(v.x / scale) & 0x1ff;
+    const g = Math.round(v.y / scale) & 0x1ff;
+    const b = Math.round(v.z / scale) & 0x1ff;
+    const packed = r | (g << 9) | (b << 18) | (exp << 27);
+    o.writeUint32(packed);
+  },
+
+  // Depth/stencil formats
+  stencil8: (o, v) => o.writeUint8(v.x),
+  depth16unorm: (o, v) => o.writeUint16(Math.round(v.x * 65535)),
+  depth32float: (o, v) => o.writeFloat32(v.x),
+} satisfies Record<SupportedTexelFormat, TexelWriter>;
+
+export function writeTexelData(
+  output: ISerialOutput,
+  format: GPUTextureFormat,
+  value: TexelValue,
+): void {
+  const writer = texelWriters[format as SupportedTexelFormat] as
+    | TexelWriter
+    | undefined;
+  if (!writer) {
+    throw new Error(
+      `Texture format '${format}' does not support CPU write operations`,
+    );
+  }
+  writer(output, value);
+}
+
+type TexelReader = (input: ISerialInput) => TexelValue;
+
+const texelReaders = {
+  // 8-bit single channel
+  r8unorm: (i) => vec4f(i.readUint8() / 255, 0, 0, 1),
+  r8snorm: (i) => vec4f(i.readInt8() / 127, 0, 0, 1),
+  r8uint: (i) => vec4u(i.readUint8(), 0, 0, 1),
+  r8sint: (i) => vec4i(i.readInt8(), 0, 0, 1),
+
+  // 16-bit single channel
+  r16unorm: (i) => vec4f(i.readUint16() / 65535, 0, 0, 1),
+  r16snorm: (i) => vec4f(i.readInt16() / 32767, 0, 0, 1),
+  r16uint: (i) => vec4u(i.readUint16(), 0, 0, 1),
+  r16sint: (i) => vec4i(i.readInt16(), 0, 0, 1),
+  r16float: (i) => vec4f(i.readFloat16(), 0, 0, 1),
+
+  // 32-bit single channel
+  r32uint: (i) => vec4u(i.readUint32(), 0, 0, 1),
+  r32sint: (i) => vec4i(i.readInt32(), 0, 0, 1),
+  r32float: (i) => vec4f(i.readFloat32(), 0, 0, 1),
+
+  // 8-bit two channel
+  rg8unorm: (i) => vec4f(i.readUint8() / 255, i.readUint8() / 255, 0, 1),
+  rg8snorm: (i) => vec4f(i.readInt8() / 127, i.readInt8() / 127, 0, 1),
+  rg8uint: (i) => vec4u(i.readUint8(), i.readUint8(), 0, 1),
+  rg8sint: (i) => vec4i(i.readInt8(), i.readInt8(), 0, 1),
+
+  // 16-bit two channel
+  rg16unorm: (i) => vec4f(i.readUint16() / 65535, i.readUint16() / 65535, 0, 1),
+  rg16snorm: (i) => vec4f(i.readInt16() / 32767, i.readInt16() / 32767, 0, 1),
+  rg16uint: (i) => vec4u(i.readUint16(), i.readUint16(), 0, 1),
+  rg16sint: (i) => vec4i(i.readInt16(), i.readInt16(), 0, 1),
+  rg16float: (i) => vec4f(i.readFloat16(), i.readFloat16(), 0, 1),
+
+  // 32-bit two channel
+  rg32uint: (i) => vec4u(i.readUint32(), i.readUint32(), 0, 1),
+  rg32sint: (i) => vec4i(i.readInt32(), i.readInt32(), 0, 1),
+  rg32float: (i) => vec4f(i.readFloat32(), i.readFloat32(), 0, 1),
+
+  // 8-bit four channel
+  rgba8unorm: (i) =>
+    vec4f(
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+    ),
+  'rgba8unorm-srgb': (i) =>
+    vec4f(
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+    ),
+  rgba8snorm: (i) =>
+    vec4f(
+      i.readInt8() / 127,
+      i.readInt8() / 127,
+      i.readInt8() / 127,
+      i.readInt8() / 127,
+    ),
+  rgba8uint: (i) =>
+    vec4u(i.readUint8(), i.readUint8(), i.readUint8(), i.readUint8()),
+  rgba8sint: (i) =>
+    vec4i(i.readInt8(), i.readInt8(), i.readInt8(), i.readInt8()),
+  bgra8unorm: (i) => {
+    const b = i.readUint8() / 255;
+    const g = i.readUint8() / 255;
+    const r = i.readUint8() / 255;
+    const a = i.readUint8() / 255;
+    return vec4f(r, g, b, a);
+  },
+  'bgra8unorm-srgb': (i) => {
+    const b = i.readUint8() / 255;
+    const g = i.readUint8() / 255;
+    const r = i.readUint8() / 255;
+    const a = i.readUint8() / 255;
+    return vec4f(r, g, b, a);
+  },
+
+  // 16-bit four channel
+  rgba16unorm: (i) =>
+    vec4f(
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+    ),
+  rgba16snorm: (i) =>
+    vec4f(
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
+      i.readInt16() / 32767,
+    ),
+  rgba16uint: (i) =>
+    vec4u(i.readUint16(), i.readUint16(), i.readUint16(), i.readUint16()),
+  rgba16sint: (i) =>
+    vec4i(i.readInt16(), i.readInt16(), i.readInt16(), i.readInt16()),
+  rgba16float: (i) =>
+    vec4f(i.readFloat16(), i.readFloat16(), i.readFloat16(), i.readFloat16()),
+
+  // 32-bit four channel
+  rgba32uint: (i) =>
+    vec4u(i.readUint32(), i.readUint32(), i.readUint32(), i.readUint32()),
+  rgba32sint: (i) =>
+    vec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
+  rgba32float: (i) =>
+    vec4f(i.readFloat32(), i.readFloat32(), i.readFloat32(), i.readFloat32()),
+
+  // Packed formats
+  rgb10a2uint: (i) => {
+    const packed = i.readUint32();
+    const r = packed & 0x3ff;
+    const g = (packed >> 10) & 0x3ff;
+    const b = (packed >> 20) & 0x3ff;
+    const a = (packed >> 30) & 0x3;
+    return vec4u(r, g, b, a);
+  },
+  rgb10a2unorm: (i) => {
+    const packed = i.readUint32();
+    const r = (packed & 0x3ff) / 1023;
+    const g = ((packed >> 10) & 0x3ff) / 1023;
+    const b = ((packed >> 20) & 0x3ff) / 1023;
+    const a = ((packed >> 30) & 0x3) / 3;
+    return vec4f(r, g, b, a);
+  },
+  rg11b10ufloat: (i) => {
+    const packed = i.readUint32();
+    const fromF11 = (bits: number) => {
+      const e = (bits >> 6) & 0x1f;
+      const m = bits & 0x3f;
+      if (e === 0) return m / 64 * (2 ** -14);
+      return (1 + m / 64) * (2 ** (e - 15));
+    };
+    const fromF10 = (bits: number) => {
+      const e = (bits >> 5) & 0x1f;
+      const m = bits & 0x1f;
+      if (e === 0) return m / 32 * (2 ** -14);
+      return (1 + m / 32) * (2 ** (e - 15));
+    };
+    const r = fromF11(packed & 0x7ff);
+    const g = fromF11((packed >> 11) & 0x7ff);
+    const b = fromF10((packed >> 22) & 0x3ff);
+    return vec4f(r, g, b, 1);
+  },
+  rgb9e5ufloat: (i) => {
+    const packed = i.readUint32();
+    const r = packed & 0x1ff;
+    const g = (packed >> 9) & 0x1ff;
+    const b = (packed >> 18) & 0x1ff;
+    const exp = (packed >> 27) & 0x1f;
+    const scale = 2 ** (exp - 24);
+    return vec4f(r * scale, g * scale, b * scale, 1);
+  },
+
+  // Depth/stencil formats
+  stencil8: (i) => vec4u(i.readUint8(), 0, 0, 1),
+  depth16unorm: (i) => vec4f(i.readUint16() / 65535, 0, 0, 1),
+  depth32float: (i) => vec4f(i.readFloat32(), 0, 0, 1),
+} satisfies Record<SupportedTexelFormat, TexelReader>;
+
+export function readTexelData(
+  input: ISerialInput,
+  format: GPUTextureFormat,
+): TexelValue {
+  const reader = texelReaders[format as SupportedTexelFormat] as
+    | TexelReader
+    | undefined;
+  if (!reader) {
+    throw new Error(
+      `Texture format '${format}' does not support CPU read operations`,
+    );
+  }
+  return reader(input);
 }

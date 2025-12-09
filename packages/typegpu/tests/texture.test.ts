@@ -349,7 +349,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           mipLevelCount: 3,
         });
 
-        texture.clear(1);
+        texture.clear({ mipLevel: 1 });
 
         expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
         expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
@@ -831,6 +831,348 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           storeOp: 'store',
         });
       });
+    });
+  });
+
+  describe('Texel data write', () => {
+    const texels2x2 = [
+      [d.vec4f(1, 0, 0, 1), d.vec4f(0, 1, 0, 1)],
+      [d.vec4f(0, 0, 1, 1), d.vec4f(1, 1, 1, 1)],
+    ];
+
+    const mockImage = (w: number, h: number) =>
+      ({ width: w, height: h }) as HTMLImageElement;
+
+    describe('write with TexelData2D', () => {
+      it('writes to base mip level by default', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [2, 2],
+          format: 'rgba8unorm',
+        });
+        texture.write(texels2x2);
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ mipLevel: 0 }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 8, rowsPerImage: 2 },
+          [2, 2, 1],
+        );
+      });
+
+      it('writes to specific mip level', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+        texture.write(texels2x2, { mipLevel: 1 });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ mipLevel: 1 }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 8, rowsPerImage: 2 },
+          [2, 2, 1],
+        );
+      });
+
+      it('writes to specific array layer', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [2, 2, 4],
+          format: 'rgba8unorm',
+        });
+        texture.write(texels2x2, { arrayLayer: 2 });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: { x: 0, y: 0, z: 2 } }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 8, rowsPerImage: 2 },
+          [2, 2, 1],
+        );
+      });
+    });
+
+    describe('writePartial with TexelData2D', () => {
+      it('writes with x/y offset', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+        });
+        texture.writePartial(texels2x2, { x: 2, y: 3 });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: { x: 2, y: 3 } }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 8, rowsPerImage: 2 },
+          [2, 2, 1],
+        );
+      });
+
+      it('writes with all options', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [16, 16, 4],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+        texture.writePartial(texels2x2, {
+          x: 1,
+          y: 2,
+          mipLevel: 1,
+          arrayLayer: 3,
+        });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mipLevel: 1,
+            origin: { x: 1, y: 2, z: 3 },
+          }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 8, rowsPerImage: 2 },
+          [2, 2, 1],
+        );
+      });
+
+      it('writes single pixel', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+        });
+        texture.writePartial([[d.vec4f(1, 0, 0, 1)]], { x: 3, y: 4 });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: { x: 3, y: 4 } }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 4, rowsPerImage: 1 },
+          [1, 1, 1],
+        );
+      });
+
+      it('writes rectangular region', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+        const texels3x4 = [
+          [d.vec4f(1, 0, 0, 1), d.vec4f(0, 1, 0, 1), d.vec4f(0, 0, 1, 1)],
+          [d.vec4f(1, 1, 0, 1), d.vec4f(1, 0, 1, 1), d.vec4f(0, 1, 1, 1)],
+          [
+            d.vec4f(0.5, 0.5, 0.5, 1),
+            d.vec4f(0.25, 0.25, 0.25, 1),
+            d.vec4f(0.75, 0.75, 0.75, 1),
+          ],
+          [d.vec4f(0, 0, 0, 1), d.vec4f(1, 1, 1, 1), d.vec4f(0.5, 0, 0.5, 1)],
+        ];
+        texture.writePartial(texels3x4, { x: 5, y: 3 });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: { x: 5, y: 3 } }),
+          expect.any(ArrayBuffer),
+          { bytesPerRow: 12, rowsPerImage: 4 },
+          [3, 4, 1],
+        );
+      });
+    });
+
+    describe('writePartial with image source', () => {
+      it('writes image with x/y offset', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        });
+        const img = mockImage(16, 16);
+        texture.writePartial(img, { x: 10, y: 20 });
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: img },
+            expect.objectContaining({ mipLevel: 0, origin: { x: 10, y: 20 } }),
+            [16, 16, 1],
+          );
+      });
+
+      it('writes image with mipLevel', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+          mipLevelCount: 4,
+        });
+        const img = mockImage(8, 8);
+        texture.writePartial(img, { x: 5, y: 3, mipLevel: 2 });
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: img },
+            expect.objectContaining({ mipLevel: 2, origin: { x: 5, y: 3 } }),
+            [8, 8, 1],
+          );
+      });
+
+      it('writes image with arrayLayer', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [32, 32, 6],
+          format: 'rgba8unorm',
+        });
+        const img = mockImage(10, 10);
+        texture.writePartial(img, { x: 5, y: 8, arrayLayer: 3 });
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: img },
+            expect.objectContaining({ origin: { x: 5, y: 8, z: 3 } }),
+            [10, 10, 1],
+          );
+      });
+
+      it('writes image with all options', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64, 4],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+        });
+        const img = mockImage(12, 8);
+        texture.writePartial(img, { x: 4, y: 6, mipLevel: 1, arrayLayer: 2 });
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: img },
+            expect.objectContaining({
+              mipLevel: 1,
+              origin: { x: 4, y: 6, z: 2 },
+            }),
+            [12, 8, 1],
+          );
+      });
+
+      it('uses default origin when no options provided', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        });
+        const img = mockImage(20, 20);
+        texture.writePartial(img);
+
+        expect(device.mock.queue.copyExternalImageToTexture)
+          .toHaveBeenCalledWith(
+            { source: img },
+            expect.objectContaining({ mipLevel: 0, origin: { x: 0, y: 0 } }),
+            [20, 20, 1],
+          );
+      });
+    });
+
+    describe('different texture formats', () => {
+      const formatCases = [
+        {
+          format: 'rgba8uint' as const,
+          texel: d.vec4u(255, 0, 0, 255),
+          bpr: 8,
+        },
+        {
+          format: 'rgba8sint' as const,
+          texel: d.vec4i(127, -128, 0, 1),
+          bpr: 8,
+        },
+        {
+          format: 'rgba32float' as const,
+          texel: d.vec4f(0.1, 0.2, 0.3, 0.4),
+          bpr: 32,
+        },
+        { format: 'rgba32uint' as const, texel: d.vec4u(1, 2, 3, 4), bpr: 32 },
+        {
+          format: 'rgba32sint' as const,
+          texel: d.vec4i(-1, -2, -3, -4),
+          bpr: 32,
+        },
+        { format: 'r32float' as const, texel: d.vec4f(0.5, 0, 0, 0), bpr: 8 },
+        { format: 'rg16uint' as const, texel: d.vec4u(65535, 0, 0, 0), bpr: 8 },
+        {
+          format: 'bgra8unorm' as const,
+          texel: d.vec4f(1, 0.5, 0.25, 1),
+          bpr: 8,
+        },
+      ];
+
+      for (const { format, texel, bpr } of formatCases) {
+        it(`writes to ${format} format`, ({ root, device }) => {
+          const texture = root.createTexture({ size: [2, 2], format });
+          texture.write([[texel, texel], [texel, texel]]);
+
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+            expect.objectContaining({ mipLevel: 0 }),
+            expect.any(ArrayBuffer),
+            expect.objectContaining({ bytesPerRow: bpr, rowsPerImage: 2 }),
+            [2, 2, 1],
+          );
+        });
+      }
+    });
+
+    describe('error handling', () => {
+      it('throws on inconsistent row widths', ({ root }) => {
+        const texture = root.createTexture({
+          size: [4, 4],
+          format: 'rgba8unorm',
+        });
+        const badTexels = [
+          [d.vec4f(1, 0, 0, 1), d.vec4f(0, 1, 0, 1)],
+          [d.vec4f(0, 0, 1, 1)],
+        ];
+        expect(() => texture.writePartial(badTexels)).toThrow(
+          'Row 1 has inconsistent width',
+        );
+      });
+    });
+  });
+
+  describe('Texture read', () => {
+    it('reads texture data as TexelData2D', async ({ root, device }) => {
+      const texture = root.createTexture({
+        size: [2, 2],
+        format: 'rgba8unorm',
+      });
+
+      await texture.read();
+
+      expect(device.mock.createBuffer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        }),
+      );
+      expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+    });
+
+    it('reads from specific mip level', async ({ root, device }) => {
+      const texture = root.createTexture({
+        size: [8, 8],
+        format: 'rgba8unorm',
+        mipLevelCount: 4,
+      });
+
+      await texture.read({ mipLevel: 2 });
+
+      expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+    });
+
+    it('reads from specific array layer', async ({ root, device }) => {
+      const texture = root.createTexture({
+        size: [4, 4, 6],
+        format: 'rgba8unorm',
+      });
+
+      await texture.read({ arrayLayer: 3 });
+
+      expect(device.mock.createCommandEncoder).toHaveBeenCalled();
+    });
+
+    it('reads with both mipLevel and arrayLayer', async ({ root, device }) => {
+      const texture = root.createTexture({
+        size: [16, 16, 4],
+        format: 'rgba8unorm',
+        mipLevelCount: 3,
+      });
+
+      await texture.read({ mipLevel: 1, arrayLayer: 2 });
+
+      expect(device.mock.createCommandEncoder).toHaveBeenCalled();
     });
   });
 });
