@@ -149,8 +149,9 @@ export const castAndMerge = tgpu.fn([
   d.vec2f,
   d.vec2f,
   d.f32,
+  d.i32,
 ], d.vec4f)(
-  (texture, cascadeIndex, fragCoord, resolution, time) => {
+  (texture, cascadeIndex, fragCoord, resolution, time, bilinearFix) => {
     'use gpu';
     // Probe parameters for cascade N
     const probeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex));
@@ -172,7 +173,7 @@ export const castAndMerge = tgpu.fn([
     const intervalRange = getIntervalRange(cascadeIndex);
     const intervalStart = probePosition.add(dir.mul(intervalRange.x));
     const intervalEnd = probePosition.add(dir.mul(intervalRange.y));
-    const destInterval = castInterval(
+    let destInterval = castInterval(
       intervalStart,
       intervalEnd,
       cascadeIndex,
@@ -211,16 +212,18 @@ export const castAndMerge = tgpu.fn([
       );
 
       // Cast 4 locally interpolated intervals at cascade N -> cascade N+1 (bilinear fix)
-      const intervalRange = getIntervalRange(cascadeIndex);
-      const intervalStart = probePosition.add(dir.mul(intervalRange.x));
-      const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));
-      const destInterval = castInterval(
-        intervalStart,
-        intervalEnd,
-        cascadeIndex,
-        resolution,
-        time,
-      );
+      if (bilinearFix) {
+        const intervalRange = getIntervalRange(cascadeIndex);
+        const intervalStart = probePosition.add(dir.mul(intervalRange.x));
+        const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));
+        destInterval = castInterval(
+          intervalStart,
+          intervalEnd,
+          cascadeIndex,
+          resolution,
+          time,
+        );
+      }
 
       // Sample and interpolate 4 probe directions
       let bilinearRadiance = d.vec4f(0.0);

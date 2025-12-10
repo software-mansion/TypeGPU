@@ -7,6 +7,7 @@ import type {
 import * as d from 'typegpu/data';
 import { canvas, context, presentationFormat, root } from './root.ts';
 import {
+  bilinearFix,
   cascadeIndexUniform,
   castAndMergeLayout,
   castAndMergePipeline,
@@ -60,13 +61,9 @@ function draw(timestamp: number) {
   resolutionUniform.write(d.vec3f(canvas.width, canvas.height, 1));
 
   for (let i = 5; i >= 0; i--) {
-    const bindGroup = root.createBindGroup(castAndMergeLayout, {
-      iChannel0: workTextures[0],
-    });
-
     cascadeIndexUniform.write(i);
     castAndMergePipeline
-      .with(bindGroup)
+      .with(castAndMergeBindGroup)
       .withColorAttachment({
         loadOp: 'clear',
         storeOp: 'store',
@@ -97,5 +94,14 @@ export function onCleanup() {
   resizeObserver.unobserve(canvas);
   root.destroy();
 }
+
+export const controls = {
+  'Bilinear fix': {
+    initial: true,
+    onToggleChange: (value: boolean) => {
+      bilinearFix.write(Number(value));
+    },
+  },
+};
 
 // #endregion

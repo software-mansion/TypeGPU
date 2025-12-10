@@ -11,6 +11,7 @@ import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 export const cascadeIndexUniform = root.createUniform(d.i32);
 export const timeUniform = root.createUniform(d.f32);
 export const resolutionUniform = root.createUniform(d.vec3f);
+export const bilinearFix = root.createUniform(d.u32, 1);
 
 // cast and merge
 
@@ -29,6 +30,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
       pos.xy,
       resolutionUniform.$.xy,
       timeUniform.$,
+      bilinearFix.$,
     );
   },
 );
