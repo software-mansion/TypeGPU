@@ -21,8 +21,6 @@ class BuilderData {
   names: WeakMap<object, string>;
   namespace: Namespace;
 
-  #lastPlaceholderId = 0;
-
   constructor() {
     this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
@@ -32,15 +30,6 @@ class BuilderData {
         this.names.set(event.target, event.name);
       }
     });
-  }
-
-  getPlaceholder(accessor: TSLAccessor<d.AnyWgslData, THREE.Node>): string {
-    let placeholder = this.names.get(accessor);
-    if (!placeholder) {
-      placeholder = `$$TYPEGPU_TSL_ACCESSOR_${this.#lastPlaceholderId++}$$`;
-      this.names.set(accessor, placeholder);
-    }
-    return placeholder;
   }
 }
 
@@ -132,15 +121,6 @@ class TgpuFnNode<T> extends THREE.Node {
       // Extracting the function code
       let fnCode = code.slice(lastFnStart).trim();
 
-      // TODO: Placeholders aren't necessary
-      // Replacing placeholders
-      for (const dep of ctx.dependencies) {
-        fnCode = fnCode.replace(
-          builderData.getPlaceholder(dep),
-          dep.node.build(builder) as string,
-        );
-      }
-
       nodeData.custom = {
         functionId: functionId ?? '',
         nodeFunction: builder.parser.parseFunction(
@@ -214,7 +194,6 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.node = node;
     this.#dataType = dataType;
 
-    // TODO: Only create a variable if it's not referentiable in the global scope
     // @ts-expect-error: The properties exist on the node
     if (!node.isStorageBufferNode && !node.isUniformNode) {
       this.var = tgpu.privateVar(dataType);
@@ -242,20 +221,16 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   }
 }
 
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: THREE.TSL.NodeObject<TNode>,
-  type: (length: number) => T,
-): TSLAccessor<T, TNode>;
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: THREE.TSL.NodeObject<TNode>,
-  type: T,
-): TSLAccessor<T, TNode>;
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: THREE.TSL.NodeObject<TNode>,
-  type: T | ((length: number) => T),
-): TSLAccessor<T, TNode> {
-  return new TSLAccessor<T, TNode>(
-    node,
-    d.isData(type) ? type as T : (type as (length: number) => T)(0),
-  );
-}
+export const fromTSL = tgpu['~unstable'].comptime<
+  & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    node: THREE.TSL.NodeObject<TNode>,
+    type: (length: number) => T,
+  ) => TSLAccessor<T, TNode>)
+  & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    node: THREE.TSL.NodeObject<TNode>,
+    type: T,
+  ) => TSLAccessor<T, TNode>)
+>((node, type) => {
+  const dataType = d.isData(type) ? type : (type as (length: number) => any)(0);
+  return new TSLAccessor(node, dataType);
+});
