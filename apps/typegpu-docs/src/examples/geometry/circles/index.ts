@@ -32,7 +32,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// Textures
 let msaaTexture: GPUTexture;
 let msaaTextureView: GPUTextureView;
 
@@ -137,7 +136,7 @@ const pipeline = root['~unstable']
 
 setTimeout(() => {
   pipeline
-    .with(bindGroupLayout, uniformsBindGroup)
+    .with(uniformsBindGroup)
     .withColorAttachment({
       ...(multisample
         ? {
