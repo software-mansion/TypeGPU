@@ -19,6 +19,7 @@ import {
   castAndMergePipeline,
   imageLayout,
   imagePipeline,
+  luminancePostprocessing,
   resolutionUniform,
   timeUniform,
 } from './pipelines.ts';
@@ -106,6 +107,12 @@ export const controls = {
     initial: true,
     onToggleChange: (value: boolean) => {
       bilinearFix.write(Number(value));
+    },
+  },
+  'Luminance postprocessing': {
+    initial: true,
+    onToggleChange: (value: boolean) => {
+      luminancePostprocessing.write(Number(value));
     },
   },
 };

@@ -12,6 +12,7 @@ export const cascadeIndexUniform = root.createUniform(d.i32);
 export const timeUniform = root.createUniform(d.f32);
 export const resolutionUniform = root.createUniform(d.vec3f);
 export const bilinearFix = root.createUniform(d.u32, 1);
+export const luminancePostprocessing = root.createUniform(d.u32, 1);
 
 // cast and merge
 
@@ -52,9 +53,11 @@ const imageFragment = tgpu['~unstable'].fragmentFn({
 })(({ pos }) => {
   let luminance =
     std.textureLoad(imageLayout.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
-  luminance = luminance.mul(std.exp2(exposure));
-  luminance = tonemapACES(luminance);
-  luminance = gammaSRGB(luminance);
+  if (luminancePostprocessing.$ === 1) {
+    luminance = luminance.mul(std.exp2(exposure));
+    luminance = tonemapACES(luminance);
+    luminance = gammaSRGB(luminance);
+  }
   return d.vec4f(luminance, 1.0);
 });
 
