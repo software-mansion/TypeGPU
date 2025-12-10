@@ -6,52 +6,57 @@ import { castAndMerge } from './common.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 
-export const bindGroupLayoutABC = tgpu.bindGroupLayout({
+// buffers
+
+export const cascadeIndexUniform = root.createUniform(d.i32);
+export const timeUniform = root.createUniform(d.f32);
+export const resolutionUniform = root.createUniform(d.vec3f);
+
+// cast and merge
+
+export const castAndMergeLayout = tgpu.bindGroupLayout({
   iChannel0: { texture: d.texture2d() },
 });
 
-export const iFrameUniform = root.createUniform(d.u32);
-export const cascadeIndexBuffer = root.createUniform(d.i32);
-export const iTimeBuffer = root.createUniform(d.f32);
-export const iResolutionBuffer = root.createUniform(d.vec3f);
-
-const fragmentFnABC = tgpu['~unstable'].fragmentFn({
+const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(
   ({ pos }) => {
     return castAndMerge(
-      bindGroupLayoutABC.$.iChannel0,
-      cascadeIndexBuffer.$,
+      castAndMergeLayout.$.iChannel0,
+      cascadeIndexUniform.$,
       pos.xy,
-      iResolutionBuffer.$.xy,
-      iTimeBuffer.$,
+      resolutionUniform.$.xy,
+      timeUniform.$,
     );
   },
 );
 
-export const pipelineABC = root['~unstable']
+export const castAndMergePipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
-  .withFragment(fragmentFnABC, { format: presentationFormat })
+  .withFragment(castAndMergeFragment, { format: presentationFormat })
   .createPipeline();
 
-export const bindGroupLayoutImage = tgpu.bindGroupLayout({
+// image
+
+export const imageLayout = tgpu.bindGroupLayout({
   iChannel0: { texture: d.texture2d() },
 });
 
-const fragmentFnImage = tgpu['~unstable'].fragmentFn({
+const imageFragment = tgpu['~unstable'].fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
   let luminance =
-    std.textureLoad(bindGroupLayoutImage.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
+    std.textureLoad(imageLayout.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
   luminance = luminance.mul(std.exp2(exposure));
   luminance = tonemapACES(luminance);
   luminance = gammaSRGB(luminance);
   return d.vec4f(luminance, 1.0);
 });
 
-export const pipelineImage = root['~unstable']
+export const imagePipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
-  .withFragment(fragmentFnImage, { format: presentationFormat })
+  .withFragment(imageFragment, { format: presentationFormat })
   .createPipeline();

@@ -7,14 +7,13 @@ import type {
 import * as d from 'typegpu/data';
 import { canvas, context, presentationFormat, root } from './root.ts';
 import {
-  bindGroupLayoutABC,
-  bindGroupLayoutImage,
-  cascadeIndexBuffer,
-  iFrameUniform,
-  iResolutionBuffer,
-  iTimeBuffer,
-  pipelineABC,
-  pipelineImage,
+  cascadeIndexUniform,
+  castAndMergeLayout,
+  castAndMergePipeline,
+  imageLayout,
+  imagePipeline,
+  resolutionUniform,
+  timeUniform,
 } from './pipelines.ts';
 
 let workTextures: (
@@ -25,11 +24,11 @@ let workTextures: (
   & RenderFlag
   & SampledFlag
 )[];
-let bindGroupsABC: TgpuBindGroup<{
+let castAndMergeBindGroup: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>;
 
-let bindGroupImage: TgpuBindGroup<{
+let imageBindGroup: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>;
 
@@ -44,10 +43,10 @@ function recreateResources() {
       .$usage('sampled', 'render')
       .$name(`work texture ${i}`)
   );
-  bindGroupsABC = root.createBindGroup(bindGroupLayoutABC, {
+  castAndMergeBindGroup = root.createBindGroup(castAndMergeLayout, {
     iChannel0: workTextures[0],
   });
-  bindGroupImage = root.createBindGroup(bindGroupLayoutImage, {
+  imageBindGroup = root.createBindGroup(imageLayout, {
     iChannel0: workTextures[0],
   });
 }
@@ -56,21 +55,17 @@ recreateResources();
 const resizeObserver = new ResizeObserver(recreateResources);
 resizeObserver.observe(canvas);
 
-let iFrame = 0;
-
 function draw(timestamp: number) {
-  iFrameUniform.write(iFrame);
-  iFrame += 1;
-  iTimeBuffer.write(timestamp / 1000);
-  iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
+  timeUniform.write(timestamp / 1000);
+  resolutionUniform.write(d.vec3f(canvas.width, canvas.height, 1));
 
   for (let i = 5; i >= 0; i--) {
-    const bindGroup = root.createBindGroup(bindGroupLayoutABC, {
+    const bindGroup = root.createBindGroup(castAndMergeLayout, {
       iChannel0: workTextures[0],
     });
 
-    cascadeIndexBuffer.write(i);
-    pipelineABC
+    cascadeIndexUniform.write(i);
+    castAndMergePipeline
       .with(bindGroup)
       .withColorAttachment({
         loadOp: 'clear',
@@ -82,8 +77,8 @@ function draw(timestamp: number) {
     workTextures[0].copyFrom(workTextures[1]);
   }
 
-  pipelineImage
-    .with(bindGroupImage)
+  imagePipeline
+    .with(imageBindGroup)
     .withColorAttachment({
       loadOp: 'clear',
       storeOp: 'store',
