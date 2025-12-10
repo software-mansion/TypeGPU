@@ -24,7 +24,10 @@ export type Origin =
   // note that this doesn't automatically mean the value can be stored in a `const`
   // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in JS shaders)
   | 'constant'
-  | 'constant-ref';
+  // don't even get me started on these. They're references to non-primitive values that originate
+  // from a tgpu.const(...).$ call.
+  | 'constant-tgpu-const-ref' /* turns into a `const` when assigned to a variable */
+  | 'runtime-tgpu-const-ref' /* turns into a `let` when assigned to a variable */;
 
 export function isEphemeralOrigin(space: Origin) {
   return space === 'runtime' || space === 'constant' || space === 'argument';

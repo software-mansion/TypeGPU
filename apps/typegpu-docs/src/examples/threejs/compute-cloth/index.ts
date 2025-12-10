@@ -10,7 +10,7 @@ import * as std from 'typegpu/std';
 import * as TSL from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { UltraHDRLoader } from 'three/addons/loaders/UltraHDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import {
   clothNumSegmentsX,
@@ -43,8 +43,6 @@ const API = {
   color: 0x204080, // sRGB
   sheenColor: 0xffffff, // sRGB
 };
-
-// TODO: Fix example with WebGL backend
 
 if (WebGPU.isAvailable() === false) {
   document.body.appendChild(WebGPU.getErrorMessage());
@@ -94,11 +92,11 @@ controls.maxDistance = 3;
 controls.target.set(0, -0.1, 0);
 controls.update();
 
-const hdrLoader = new HDRLoader().setPath(
+const hdrLoader = new UltraHDRLoader().setPath(
   'https://threejs.org/examples/textures/equirectangular/',
 );
 
-const hdrTexture = await hdrLoader.loadAsync('royal_esplanade_1k.hdr');
+const hdrTexture = await hdrLoader.loadAsync('royal_esplanade_2k.hdr.jpg');
 hdrTexture.mapping = THREE.EquirectangularReflectionMapping;
 scene.background = hdrTexture;
 scene.backgroundBlurriness = 0.5;
@@ -336,4 +334,8 @@ async function render() {
   }
 
   await renderer.renderAsync(scene, camera);
+}
+
+export function onCleanup() {
+  renderer.dispose();
 }

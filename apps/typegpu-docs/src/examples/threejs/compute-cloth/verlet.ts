@@ -1,5 +1,4 @@
 import * as t3 from '@typegpu/three';
-import * as TSL from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -54,8 +53,8 @@ export class VerletSimulation {
   readonly springRestLengthBuffer: TSLStorageAccessor<d.WgslArray<d.F32>>;
   readonly springForceBuffer: TSLStorageAccessor<d.WgslArray<d.Vec3f>>;
 
-  readonly computeSpringForces: TSL.ShaderNodeObject<THREE.ComputeNode>;
-  readonly computeVertexForces: TSL.ShaderNodeObject<THREE.ComputeNode>;
+  readonly computeSpringForces: THREE.TSL.NodeObject<THREE.ComputeNode>;
+  readonly computeVertexForces: THREE.TSL.NodeObject<THREE.ComputeNode>;
 
   constructor({
     sphereRadius,

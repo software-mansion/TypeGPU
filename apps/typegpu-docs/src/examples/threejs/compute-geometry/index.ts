@@ -48,7 +48,6 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
 
   const basePositionAccessor = t3.fromTSL(
     TSL.storage(
-      // @ts-ignore fixed with r181 types
       geometry.attributes.position as THREE.BufferAttribute,
       'vec3',
       count,

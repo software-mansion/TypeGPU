@@ -1,17 +1,12 @@
 import {
-  getDeviceTextureFormatInfo,
-  textureFormats,
+  getEffectiveSampleTypes,
+  getTextureFormatInfo,
 } from './textureFormats.ts';
 import type { ExternalImageSource } from './texture.ts';
 
 export function getImageSourceDimensions(
   source: ExternalImageSource,
 ): { width: number; height: number } {
-  // We used to do it this way but it fails on React Native (ImageBitmap is probably a proxy there)
-  // if ('displayWidth' in source && 'displayHeight' in source) {
-  //   return { width: source.displayWidth, height: source.displayHeight };
-  // }
-
   const { videoWidth, videoHeight } = source as HTMLVideoElement;
   if (videoWidth && videoHeight) {
     return { width: videoWidth, height: videoHeight };
@@ -27,45 +22,225 @@ export function getImageSourceDimensions(
     return { width: codedWidth, height: codedHeight };
   }
 
-  const { width, height } = source as ImageBitmap || HTMLCanvasElement ||
-    OffscreenCanvas || HTMLImageElement || ImageData;
-
-  if (!width || !height) {
-    throw new Error(
-      'Cannot determine dimensions of the provided image source.',
-    );
+  const { width, height } = source as ImageBitmap;
+  if (width && height) {
+    return { width, height };
   }
 
-  return { width, height };
+  throw new Error('Cannot determine dimensions of the provided image source.');
 }
 
-type CachedResources = {
-  vertexShader: GPUShaderModule;
-  fragmentShader: GPUShaderModule;
+const FULLSCREEN_VERTEX_SHADER = `
+struct VertexOutput {
+  @builtin(position) pos: vec4f,
+  @location(0) uv: vec2f,
+}
+
+@vertex
+fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
+  const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+  const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+  return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
+}`;
+
+const SAMPLE_FRAGMENT_SHADER = `
+@group(0) @binding(0) var src: texture_2d<f32>;
+@group(0) @binding(1) var samp: sampler;
+
+@fragment
+fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  return textureSample(src, samp, uv);
+}`;
+
+const GATHER_FRAGMENT_SHADER = `
+@group(0) @binding(0) var src: texture_2d<f32>;
+@group(0) @binding(1) var samp: sampler;
+
+@fragment
+fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  let r = textureGather(0, src, samp, uv);
+  let g = textureGather(1, src, samp, uv);
+  let b = textureGather(2, src, samp, uv);
+  let a = textureGather(3, src, samp, uv);
+  return vec4f(dot(r, vec4f(0.25)), dot(g, vec4f(0.25)), dot(b, vec4f(0.25)), dot(a, vec4f(0.25)));
+}`;
+
+type BlitResources = {
+  vertexModule: GPUShaderModule;
+  fragmentModule: GPUShaderModule;
   bindGroupLayout: GPUBindGroupLayout;
   pipelineLayout: GPUPipelineLayout;
   sampler: GPUSampler;
 };
 
-const deviceResourceCache = new WeakMap<
-  GPUDevice,
-  Map<string, CachedResources>
->();
+type DeviceCache = {
+  vertexModule: GPUShaderModule;
+  filterableResources: Map<
+    boolean,
+    { fragmentModule: GPUShaderModule; sampler: GPUSampler }
+  >;
+  layoutResources: Map<
+    string,
+    { bindGroupLayout: GPUBindGroupLayout; pipelineLayout: GPUPipelineLayout }
+  >;
+};
 
-function getDeviceCache(device: GPUDevice): Map<string, CachedResources> {
-  let cache = deviceResourceCache.get(device);
+const blitCache = new WeakMap<GPUDevice, DeviceCache>();
+
+function getOrCreateDeviceCache(device: GPUDevice): DeviceCache {
+  let cache = blitCache.get(device);
   if (!cache) {
-    cache = new Map<string, CachedResources>();
-    deviceResourceCache.set(device, cache);
+    cache = {
+      vertexModule: device.createShaderModule({
+        code: FULLSCREEN_VERTEX_SHADER,
+      }),
+      filterableResources: new Map(),
+      layoutResources: new Map(),
+    };
+    blitCache.set(device, cache);
   }
   return cache;
 }
 
-export function clearTextureUtilsCache(device: GPUDevice): void {
-  const cache = deviceResourceCache.get(device);
-  if (cache) {
-    cache.clear();
+function getBlitResources(
+  device: GPUDevice,
+  filterable: boolean,
+  sampleType: GPUTextureSampleType,
+): BlitResources {
+  const cache = getOrCreateDeviceCache(device);
+
+  let filterableRes = cache.filterableResources.get(filterable);
+  if (!filterableRes) {
+    filterableRes = {
+      fragmentModule: device.createShaderModule({
+        code: filterable ? SAMPLE_FRAGMENT_SHADER : GATHER_FRAGMENT_SHADER,
+      }),
+      sampler: device.createSampler(
+        filterable ? { magFilter: 'linear', minFilter: 'linear' } : {},
+      ),
+    };
+    cache.filterableResources.set(filterable, filterableRes);
   }
+
+  const layoutKey = `${filterable}:${sampleType}`;
+  let layoutRes = cache.layoutResources.get(layoutKey);
+  if (!layoutRes) {
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: filterable ? 'filtering' : 'non-filtering' },
+        },
+      ],
+    });
+    layoutRes = {
+      bindGroupLayout,
+      pipelineLayout: device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+    };
+    cache.layoutResources.set(layoutKey, layoutRes);
+  }
+
+  return {
+    vertexModule: cache.vertexModule,
+    ...filterableRes,
+    ...layoutRes,
+  };
+}
+
+type BlitOptions = {
+  device: GPUDevice;
+  source: GPUTextureView;
+  destination: GPUTextureView;
+  format: GPUTextureFormat;
+  filterable: boolean;
+  sampleType: GPUTextureSampleType;
+  encoder?: GPUCommandEncoder;
+};
+
+function blit(options: BlitOptions): void {
+  const { device, source, destination, format, filterable, sampleType } =
+    options;
+  const resources = getBlitResources(device, filterable, sampleType);
+
+  const pipeline = device.createRenderPipeline({
+    layout: resources.pipelineLayout,
+    vertex: { module: resources.vertexModule },
+    fragment: { module: resources.fragmentModule, targets: [{ format }] },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  const bindGroup = device.createBindGroup({
+    layout: resources.bindGroupLayout,
+    entries: [
+      { binding: 0, resource: source },
+      { binding: 1, resource: resources.sampler },
+    ],
+  });
+
+  const ownEncoder = !options.encoder;
+  const encoder = options.encoder ?? device.createCommandEncoder();
+
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [{
+      view: destination,
+      loadOp: 'clear',
+      storeOp: 'store',
+    }],
+  });
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bindGroup);
+  pass.draw(3);
+  pass.end();
+
+  if (ownEncoder) {
+    device.queue.submit([encoder.finish()]);
+  }
+}
+
+export function clearTextureUtilsCache(device: GPUDevice): void {
+  blitCache.delete(device);
+}
+
+function validateBlitFormat(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  operation: string,
+): {
+  filterable: boolean;
+  sampleType: GPUTextureSampleType;
+} {
+  const info = getTextureFormatInfo(format);
+  const effectiveSampleTypes = getEffectiveSampleTypes(device, format);
+
+  const isFloat = effectiveSampleTypes.includes('float');
+  const isUnfilterableFloat = effectiveSampleTypes.includes(
+    'unfilterable-float',
+  );
+
+  if (!isFloat && !isUnfilterableFloat) {
+    throw new Error(
+      `Cannot ${operation} for format '${format}': only float formats are supported.`,
+    );
+  }
+
+  if (!info.canRenderAttachment) {
+    throw new Error(
+      `Cannot ${operation} for format '${format}': format does not support render attachments.`,
+    );
+  }
+
+  return {
+    filterable: isFloat,
+    sampleType: isFloat ? 'float' : 'unfilterable-float',
+  };
 }
 
 export function generateTextureMipmaps(
@@ -73,43 +248,36 @@ export function generateTextureMipmaps(
   texture: GPUTexture,
   baseMipLevel = 0,
   mipLevels?: number,
-) {
+): void {
   if (texture.dimension !== '2d') {
-    throw new Error(
-      'Cannot generate mipmaps for non-2D textures: only 2D textures are currently supported.',
-    );
+    throw new Error('Mipmap generation only supports 2D textures.');
   }
 
-  const actualMipLevels = mipLevels ?? (texture.mipLevelCount - baseMipLevel);
-  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
-
-  const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
-    type === 'float' || type === 'unfilterable-float'
+  const { filterable, sampleType } = validateBlitFormat(
+    device,
+    texture.format,
+    'generate mipmaps',
   );
+  const levels = mipLevels ?? texture.mipLevelCount - baseMipLevel;
 
-  if (!hasFloatSampleType) {
-    throw new Error(
-      `Cannot generate mipmaps for format '${texture.format}': only float and unfilterable-float formats are currently supported.`,
-    );
-  }
-
-  if (!formatInfo.canRenderAttachment) {
-    throw new Error(
-      `Cannot generate mipmaps for format '${texture.format}': format does not support render attachments.`,
-    );
-  }
-
-  // Generate mipmaps for all layers
   for (let layer = 0; layer < texture.depthOrArrayLayers; layer++) {
-    for (
-      let mip = baseMipLevel;
-      mip < baseMipLevel + actualMipLevels - 1;
-      mip++
-    ) {
-      const srcMipLevel = mip;
-      const dstMipLevel = mip + 1;
+    for (let mip = baseMipLevel; mip < baseMipLevel + levels - 1; mip++) {
+      const viewOptions = (level: number) => ({
+        dimension: '2d' as const,
+        baseMipLevel: level,
+        mipLevelCount: 1,
+        baseArrayLayer: layer,
+        arrayLayerCount: 1,
+      });
 
-      generateMipmapLevel(device, texture, srcMipLevel, dstMipLevel, layer);
+      blit({
+        device,
+        source: texture.createView(viewOptions(mip)),
+        destination: texture.createView(viewOptions(mip + 1)),
+        format: texture.format,
+        filterable,
+        sampleType,
+      });
     }
   }
 }
@@ -118,198 +286,54 @@ export function resampleImage(
   device: GPUDevice,
   targetTexture: GPUTexture,
   image: ExternalImageSource,
-  layer?: number,
-) {
-  if (targetTexture.dimension === '3d') {
-    throw new Error(
-      'Cannot resample to 3D textures: only 2D textures are currently supported.',
-    );
-  }
-
-  const formatInfo = textureFormats[targetTexture.format];
-
-  const hasFloatSampleType = [...formatInfo.sampleTypes].some((type) =>
-    type === 'float' || type === 'unfilterable-float'
-  );
-
-  if (!hasFloatSampleType) {
-    throw new Error(
-      `Cannot resample to format '${targetTexture.format}': only float and unfilterable-float formats are currently supported.`,
-    );
-  }
-
-  if (!formatInfo.canRenderAttachment) {
-    throw new Error(
-      `Cannot resample to format '${targetTexture.format}': format does not support render attachments.`,
-    );
-  }
-
-  return resampleWithRenderPipeline(device, targetTexture, image, layer);
-}
-
-function resampleWithRenderPipeline(
-  device: GPUDevice,
-  targetTexture: GPUTexture,
-  image: ExternalImageSource,
   layer = 0,
-) {
-  const formatInfo = textureFormats[targetTexture.format];
-  const canFilter = [...formatInfo.sampleTypes].includes('float');
-
-  const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;
-
-  const deviceCache = getDeviceCache(device);
-  let cached = deviceCache.get(cacheKey);
-  if (!cached) {
-    const vertexShader = device.createShaderModule({
-      code: `
-struct VertexOutput {
-  @builtin(position) pos: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@vertex
-fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-  let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-  let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-  var output: VertexOutput;
-  output.pos = vec4f(pos[vertexIndex], 0, 1);
-  output.uv = uv[vertexIndex];
-  return output;
-}
-      `,
-    });
-
-    const sampler = device.createSampler({
-      magFilter: canFilter ? 'linear' : 'nearest',
-      minFilter: canFilter ? 'linear' : 'nearest',
-    });
-
-    const bindGroupLayout = device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: {
-            sampleType: 'float',
-          },
-        },
-        {
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: {
-            type: canFilter ? 'filtering' : 'non-filtering',
-          },
-        },
-      ],
-    });
-
-    const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout],
-    });
-
-    const fragmentShader = device.createShaderModule({
-      code: `
-@group(0) @binding(0) var inputTexture: texture_2d<f32>;
-@group(0) @binding(1) var inputSampler: sampler;
-
-@fragment
-fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  ${
-        canFilter
-          ? 'return textureSample(inputTexture, inputSampler, uv);'
-          : `let texelCoord = vec2u(uv * vec2f(textureDimensions(inputTexture)));
-        return textureLoad(inputTexture, texelCoord, 0);`
-      }
-}
-      `,
-    });
-
-    cached = {
-      vertexShader,
-      fragmentShader,
-      bindGroupLayout,
-      pipelineLayout,
-      sampler,
-    };
-    deviceCache.set(cacheKey, cached);
+): void {
+  if (targetTexture.dimension !== '2d') {
+    throw new Error('Resampling only supports 2D textures.');
   }
+
+  const { filterable } = validateBlitFormat(
+    device,
+    targetTexture.format,
+    'resample',
+  );
+  const { width, height } = getImageSourceDimensions(image);
 
   const inputTexture = device.createTexture({
-    size: [...Object.values(getImageSourceDimensions(image))],
+    size: [width, height],
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT |
-      GPUTextureUsage.COPY_DST,
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  const { width, height } = getImageSourceDimensions(image);
-  device.queue.copyExternalImageToTexture(
-    { source: image },
-    { texture: inputTexture },
-    [width, height, 1],
-  );
+  device.queue.copyExternalImageToTexture({ source: image }, {
+    texture: inputTexture,
+  }, [
+    width,
+    height,
+  ]);
 
   const renderTexture = device.createTexture({
-    size: [targetTexture.width, targetTexture.height, 1],
+    size: [targetTexture.width, targetTexture.height],
     format: targetTexture.format,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
   });
 
-  const pipeline = device.createRenderPipeline({
-    layout: cached.pipelineLayout,
-    vertex: {
-      module: cached.vertexShader,
-    },
-    fragment: {
-      module: cached.fragmentShader,
-      targets: [
-        {
-          format: targetTexture.format,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-    },
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout: cached.bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: inputTexture.createView(),
-      },
-      {
-        binding: 1,
-        resource: cached.sampler,
-      },
-    ],
-  });
-
   const encoder = device.createCommandEncoder();
-  const renderPass = encoder.beginRenderPass({
-    colorAttachments: [
-      {
-        view: renderTexture.createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  });
 
-  renderPass.setPipeline(pipeline);
-  renderPass.setBindGroup(0, bindGroup);
-  renderPass.draw(3);
-  renderPass.end();
+  blit({
+    device,
+    source: inputTexture.createView(),
+    destination: renderTexture.createView(),
+    format: targetTexture.format,
+    filterable,
+    sampleType: 'float', // Input is always rgba8unorm which is filterable
+    encoder,
+  });
 
   encoder.copyTextureToTexture(
     { texture: renderTexture },
-    {
-      texture: targetTexture,
-      origin: { x: 0, y: 0, z: layer },
-    },
+    { texture: targetTexture, origin: { x: 0, y: 0, z: layer } },
     {
       width: targetTexture.width,
       height: targetTexture.height,
@@ -321,160 +345,4 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
   inputTexture.destroy();
   renderTexture.destroy();
-}
-
-function generateMipmapLevel(
-  device: GPUDevice,
-  texture: GPUTexture,
-  srcMipLevel: number,
-  dstMipLevel: number,
-  layer?: number,
-) {
-  const formatInfo = getDeviceTextureFormatInfo(texture.format, device);
-  const canFilter = [...formatInfo.sampleTypes].includes('float');
-
-  const cacheKey = `${canFilter ? 'filterable' : 'unfilterable'}`;
-
-  const deviceCache = getDeviceCache(device);
-  let cached = deviceCache.get(cacheKey);
-  if (!cached) {
-    const vertexShader = device.createShaderModule({
-      code: `
-struct VertexOutput {
-  @builtin(position) pos: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@vertex
-fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-  let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-  let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-  var output: VertexOutput;
-  output.pos = vec4f(pos[vertexIndex], 0, 1);
-  output.uv = uv[vertexIndex];
-  return output;
-}
-      `,
-    });
-
-    const fragmentShader = device.createShaderModule({
-      code: `
-@group(0) @binding(0) var inputTexture: texture_2d<f32>;
-@group(0) @binding(1) var inputSampler: sampler;
-
-@fragment
-fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  return textureSample(inputTexture, inputSampler, uv);
-}
-      `,
-    });
-
-    const sampler = device.createSampler({
-      magFilter: canFilter ? 'linear' : 'nearest',
-      minFilter: canFilter ? 'linear' : 'nearest',
-    });
-
-    const bindGroupLayout = device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: {
-            sampleType: canFilter ? 'float' : 'unfilterable-float',
-          },
-        },
-        {
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: {
-            type: canFilter ? 'filtering' : 'non-filtering',
-          },
-        },
-      ],
-    });
-
-    const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout],
-    });
-
-    cached = {
-      vertexShader,
-      fragmentShader,
-      bindGroupLayout,
-      pipelineLayout,
-      sampler,
-    };
-    deviceCache.set(cacheKey, cached);
-  }
-
-  const pipeline = device.createRenderPipeline({
-    layout: cached.pipelineLayout,
-    vertex: {
-      module: cached.vertexShader,
-    },
-    fragment: {
-      module: cached.fragmentShader,
-      targets: [
-        {
-          format: texture.format,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-    },
-  });
-
-  const srcTextureView = texture.createView({
-    baseMipLevel: srcMipLevel,
-    dimension: '2d',
-    mipLevelCount: 1,
-    ...(layer !== undefined && {
-      baseArrayLayer: layer,
-      arrayLayerCount: 1,
-    }),
-  });
-
-  const dstTextureView = texture.createView({
-    baseMipLevel: dstMipLevel,
-    dimension: '2d',
-    mipLevelCount: 1,
-    ...(layer !== undefined && {
-      baseArrayLayer: layer,
-      arrayLayerCount: 1,
-    }),
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout: cached.bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: srcTextureView,
-      },
-      {
-        binding: 1,
-        resource: cached.sampler,
-      },
-    ],
-  });
-
-  const encoder = device.createCommandEncoder();
-  const renderPass = encoder.beginRenderPass({
-    colorAttachments: [
-      {
-        view: dstTextureView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  });
-
-  renderPass.setPipeline(pipeline);
-  renderPass.setBindGroup(0, bindGroup);
-  renderPass.draw(3);
-  renderPass.end();
-
-  device.queue.submit([encoder.finish()]);
 }

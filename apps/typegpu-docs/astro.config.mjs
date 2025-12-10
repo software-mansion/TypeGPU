@@ -214,6 +214,7 @@ export default defineConfig({
             {
               label: '@typegpu/three',
               slug: 'ecosystem/typegpu-three',
+              badge: { text: 'new' },
             },
             DEV && {
               label: '@typegpu/color',
