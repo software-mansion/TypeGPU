@@ -39,7 +39,7 @@ let resolutionScale = 0.5;
 let [width, height] = [0, 0];
 
 function updateDimensions() {
-  [width, height] = [canvas.clientWidth, canvas.clientHeight]
+  [width, height] = [canvas.width, canvas.height]
     .map((v) => Math.floor(v * resolutionScale));
 }
 updateDimensions();
@@ -471,12 +471,6 @@ canvas.addEventListener('touchend', onTouchEnd);
 canvas.addEventListener('touchcancel', onTouchEnd);
 
 function updateBrushSize() {
-  console.log('Updating brush size to', brushSize);
-  console.log('Canvas size:', width, height);
-  console.log(
-    'Computed radius:',
-    Math.ceil(Math.min(width, height) * brushSize),
-  );
   brushUniform.writePartial({
     radius: Math.ceil(Math.min(width, height) * brushSize),
   });
