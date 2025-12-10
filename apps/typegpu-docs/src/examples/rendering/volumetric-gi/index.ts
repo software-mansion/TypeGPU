@@ -11,11 +11,13 @@ import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import { canvas, context, presentationFormat, root } from './root.ts';
 import {
   bindGroupLayoutABC,
+  bindGroupLayoutD,
   cascadeIndexBuffer,
   iFrameUniform,
   iResolutionBuffer,
   iTimeBuffer,
   pipelineABC,
+  pipelineD,
 } from './pipelines.ts';
 
 let workTextures: (
@@ -30,10 +32,6 @@ let bindGroupsABC: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>[];
 
-const bindGroupLayoutD = tgpu.bindGroupLayout({
-  iChannel0: { texture: d.texture2d() },
-  iChannel1: { texture: d.texture2d() },
-});
 let bindGroupD: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
   iChannel1: { texture: d.WgslTexture2d<d.F32> };
@@ -110,27 +108,6 @@ function draw(timestamp: number) {
       view: workTextures[2],
     })
     .draw(3);
-
-  const fragmentFnD = tgpu['~unstable'].fragmentFn({
-    in: { pos: d.builtin.position },
-    out: d.vec4f,
-  })(
-    ({ pos }) => {
-      if (iFrameUniform.$ % 2 === 0) {
-        return std.textureLoad(
-          bindGroupLayoutD.$.iChannel1,
-          d.vec2i(pos.xy),
-          0,
-        );
-      }
-      return std.textureLoad(bindGroupLayoutD.$.iChannel0, d.vec2i(pos.xy), 0);
-    },
-  );
-
-  const pipelineD = root['~unstable']
-    .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnD, { format: presentationFormat })
-    .createPipeline();
 
   pipelineD
     .with(bindGroupD)
