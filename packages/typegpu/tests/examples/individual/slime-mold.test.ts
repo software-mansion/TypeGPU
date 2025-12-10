@@ -52,8 +52,8 @@ describe('slime mold example', () => {
 
       fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed_3(((f32(x) / 2e+5f) + 0.1f));
-        var pos = ((randInUnitCircle_6() * 140f) + vec2f(150, 75));
-        let angle = atan2((75f - pos.y), (150f - pos.x));
+        var pos = ((randInUnitCircle_6() * 118f) + vec2f(128));
+        let angle = atan2((128f - pos.y), (128f - pos.x));
         agentsData_8[x] = Agent_9(pos, angle);
       }
 
