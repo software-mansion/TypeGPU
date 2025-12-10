@@ -44,8 +44,6 @@ const API = {
   sheenColor: 0xffffff, // sRGB
 };
 
-// TODO: Fix example with WebGL backend
-
 if (WebGPU.isAvailable() === false) {
   document.body.appendChild(WebGPU.getErrorMessage());
 
@@ -336,4 +334,8 @@ async function render() {
   }
 
   await renderer.renderAsync(scene, camera);
+}
+
+export function onCleanup() {
+  renderer.dispose();
 }
