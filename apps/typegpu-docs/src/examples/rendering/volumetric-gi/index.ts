@@ -11,13 +11,11 @@ import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import { canvas, context, presentationFormat, root } from './root.ts';
 import {
   bindGroupLayoutABC,
-  bindGroupLayoutD,
   cascadeIndexBuffer,
   iFrameUniform,
   iResolutionBuffer,
   iTimeBuffer,
   pipelineABC,
-  pipelineD,
 } from './pipelines.ts';
 
 let workTextures: (
@@ -30,11 +28,6 @@ let workTextures: (
 )[];
 let bindGroupsABC: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
-}>[];
-
-let bindGroupD: TgpuBindGroup<{
-  iChannel0: { texture: d.WgslTexture2d<d.F32> };
-  iChannel1: { texture: d.WgslTexture2d<d.F32> };
 }>;
 
 const bindGroupLayoutImage = tgpu.bindGroupLayout({
@@ -45,8 +38,7 @@ let bindGroupImage: TgpuBindGroup<{
 }>;
 
 function recreateResources() {
-  // A, B, C, D1, D2 (D writes to D, so we copy it each time)
-  workTextures = [0, 1, 2, 3, 4].map((i) =>
+  workTextures = [0, 1].map((i) =>
     root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
@@ -56,17 +48,11 @@ function recreateResources() {
       .$usage('sampled', 'render')
       .$name(`work texture ${i}`)
   );
-  bindGroupsABC = [
-    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[2] }),
-    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[0] }),
-    root.createBindGroup(bindGroupLayoutABC, { iChannel0: workTextures[1] }),
-  ];
-  bindGroupD = root.createBindGroup(bindGroupLayoutD, {
-    iChannel0: workTextures[2],
-    iChannel1: workTextures[3],
+  bindGroupsABC = root.createBindGroup(bindGroupLayoutABC, {
+    iChannel0: workTextures[0],
   });
   bindGroupImage = root.createBindGroup(bindGroupLayoutImage, {
-    iChannel0: workTextures[3],
+    iChannel0: workTextures[0],
   });
 }
 recreateResources();
@@ -82,46 +68,23 @@ function draw(timestamp: number) {
   iTimeBuffer.write(timestamp / 1000);
   iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
 
-  cascadeIndexBuffer.write(d.vec2i(5, 2));
-  pipelineABC
-    .with(bindGroupsABC[0])
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: workTextures[0],
-    })
-    .draw(3);
+  for (let i = 5; i >= 0; i--) {
+    const bindGroup = root.createBindGroup(bindGroupLayoutABC, {
+      iChannel0: workTextures[0],
+    });
 
-  cascadeIndexBuffer.write(d.vec2i(4, 1));
-  pipelineABC
-    .with(bindGroupsABC[1])
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: workTextures[1],
-    })
-    .draw(3);
+    cascadeIndexBuffer.write(i);
+    pipelineABC
+      .with(bindGroup)
+      .withColorAttachment({
+        loadOp: 'clear',
+        storeOp: 'store',
+        view: workTextures[1],
+      })
+      .draw(3);
 
-  cascadeIndexBuffer.write(d.vec2i(3, 0));
-  pipelineABC
-    .with(bindGroupsABC[2])
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: workTextures[2],
-    })
-    .draw(3);
-
-  pipelineD
-    .with(bindGroupD)
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: workTextures[4],
-    })
-    .draw(3);
-
-  workTextures[3].copyFrom(workTextures[4]);
+    workTextures[0].copyFrom(workTextures[1]);
+  }
 
   const fragmentFnImage = tgpu['~unstable'].fragmentFn({
     in: { pos: d.builtin.position },
