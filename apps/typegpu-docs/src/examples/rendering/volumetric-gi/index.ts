@@ -7,19 +7,16 @@ import tgpu, {
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { castAndMerge } from './common.ts';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
-
-const root = await tgpu.init();
-const presentationFormat = 'bgra8unorm' as const; //navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+import { canvas, context, presentationFormat, root } from './root.ts';
+import {
+  bindGroupLayoutABC,
+  cascadeIndexBuffer,
+  iFrameUniform,
+  iResolutionBuffer,
+  iTimeBuffer,
+  pipelineABC,
+} from './pipelines.ts';
 
 let workTextures: (
   & TgpuTexture<{
@@ -29,9 +26,6 @@ let workTextures: (
   & RenderFlag
   & SampledFlag
 )[];
-const bindGroupLayoutABC = tgpu.bindGroupLayout({
-  iChannel0: { texture: d.texture2d() },
-});
 let bindGroupsABC: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>[];
@@ -80,46 +74,12 @@ function recreateResources() {
 recreateResources();
 
 let iFrame = 0;
-const iFrameUniform = root.createUniform(d.u32);
-const iTimeBuffer = root.createUniform(d.f32);
-const iResolutionBuffer = root.createUniform(d.vec3f);
 
 function draw(timestamp: number) {
   iFrameUniform.write(iFrame);
   iFrame += 1;
   iTimeBuffer.write(timestamp / 1000);
   iResolutionBuffer.write(d.vec3f(canvas.width, canvas.height, 1));
-
-  const cascadeIndexBuffer = root.createUniform(d.vec2i);
-
-  const fragmentFnABC = tgpu['~unstable'].fragmentFn({
-    in: { pos: d.builtin.position },
-    out: d.vec4f,
-  })(
-    ({ pos }) => {
-      if (iFrameUniform.$ % 2 === 0) {
-        return castAndMerge(
-          bindGroupLayoutABC.$.iChannel0,
-          cascadeIndexBuffer.$.x,
-          pos.xy,
-          iResolutionBuffer.$.xy,
-          iTimeBuffer.$,
-        );
-      }
-      return castAndMerge(
-        bindGroupLayoutABC.$.iChannel0,
-        cascadeIndexBuffer.$.y,
-        pos.xy,
-        iResolutionBuffer.$.xy,
-        iTimeBuffer.$,
-      );
-    },
-  );
-
-  const pipelineABC = root['~unstable']
-    .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnABC, { format: presentationFormat })
-    .createPipeline();
 
   cascadeIndexBuffer.write(d.vec2i(5, 2));
   pipelineABC
