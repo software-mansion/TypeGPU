@@ -39,7 +39,7 @@ const BASE_PROBE_SIZE = 1;
 const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
   (color, position, radius, albedo) => {
     'use gpu';
-    const sanitizedRadius = std.max(0.5, radius);
+    const sanitizedRadius = std.max(0.001, radius);
     let result = d.vec4f(color);
     if (std.length(position) - sanitizedRadius < sanitizedRadius) {
       result = d.vec4f(albedo);
@@ -48,27 +48,26 @@ const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
   },
 );
 
-const getSceneColor = tgpu.fn([d.vec2f, d.vec2f, d.f32], d.vec4f)(
-  (coord, resolution, time) => {
+const getSceneColor = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
+  (worldPos, time) => {
     'use gpu';
-    const center = (resolution.xy.mul(0.5)).sub(coord);
     let color = d.vec4f(0.0);
     color = circle(
       color,
-      d.vec2f(-250, 0).add(center),
-      (std.sin(time) * 0.5 + 0.5) * 50.0,
+      d.vec2f(-0.7, 0).sub(worldPos),
+      (std.sin(time) * 0.5 + 0.5) / 8,
       d.vec4f(1, 0.5, 0, 1),
     );
     color = circle(
       color,
-      d.vec2f(0, std.sin(time) * 250.0).add(center),
-      50.0,
+      d.vec2f(0, std.sin(time) * 0.5).sub(worldPos),
+      1 / 8,
       d.vec4f(0, 0, 0, 0.01),
     );
     color = circle(
       color,
-      d.vec2f(250, 0).add(center),
-      (-std.sin(time) * 0.5 + 0.5) * 50.0,
+      d.vec2f(0.7, 0).sub(worldPos),
+      (-std.sin(time) * 0.5 + 0.5) / 8,
       d.vec4f(1, 1, 1, 1),
     );
     return color;
@@ -94,6 +93,15 @@ const getIntervalRange = tgpu.fn([d.i32], d.vec2f)((cascadeIndex) => {
     .mul(BASE_INTERVAL_LENGTH);
 });
 
+const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
+  (coord, resolution) => {
+    'use gpu';
+    const center = resolution.mul(0.5);
+    const relative = coord.sub(center);
+    return relative.div(resolution.x / 2);
+  },
+);
+
 const castInterval = tgpu.fn(
   [d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32],
   d.vec4f,
@@ -109,7 +117,8 @@ const castInterval = tgpu.fn(
 
     for (let i = d.u32(0); i < steps; i++) {
       const coord = intervalStart.add(stepSize.mul(d.f32(i)));
-      const scene = getSceneColor(coord, resolution, time);
+      const worldPos = coordToWorldPos(coord, resolution);
+      const scene = getSceneColor(worldPos, time);
       radiance = radiance.add(scene.xyz.mul(transmittance).mul(scene.w));
       transmittance *= 1.0 - scene.w;
     }
