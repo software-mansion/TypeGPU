@@ -149,7 +149,7 @@ export const castAndMerge = tgpu.fn([
   d.vec2f,
   d.vec2f,
   d.f32,
-  d.i32,
+  d.u32,
 ], d.vec4f)(
   (texture, cascadeIndex, fragCoord, resolution, time, bilinearFix) => {
     'use gpu';
@@ -212,7 +212,7 @@ export const castAndMerge = tgpu.fn([
       );
 
       // Cast 4 locally interpolated intervals at cascade N -> cascade N+1 (bilinear fix)
-      if (bilinearFix) {
+      if (bilinearFix === 1) {
         const intervalRange = getIntervalRange(cascadeIndex);
         const intervalStart = probePosition.add(dir.mul(intervalRange.x));
         const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));

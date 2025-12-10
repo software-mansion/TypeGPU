@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { intermediateFormat, presentationFormat, root } from './root.ts';
-import { castAndMerge } from './common.ts';
+import { castAndMerge } from './castAndMerge.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 
