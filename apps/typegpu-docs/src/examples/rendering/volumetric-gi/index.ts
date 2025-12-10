@@ -6,13 +6,6 @@ import type {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
-  canvas,
-  context,
-  intermediateFormat,
-  type presentationFormat,
-  root,
-} from './root.ts';
-import {
   bilinearFix,
   cascadeIndexUniform,
   castAndMergeLayout,
@@ -23,6 +16,13 @@ import {
   resolutionUniform,
   timeUniform,
 } from './pipelines.ts';
+import {
+  canvas,
+  context,
+  intermediateFormat,
+  type presentationFormat,
+  root,
+} from './root.ts';
 
 let workTextures: (
   & TgpuTexture<{
