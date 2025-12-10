@@ -1,21 +1,20 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
+import type {
+  RenderFlag,
+  SampledFlag,
+  TgpuBindGroup,
+  TgpuTexture,
 } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import { canvas, context, presentationFormat, root } from './root.ts';
 import {
   bindGroupLayoutABC,
+  bindGroupLayoutImage,
   cascadeIndexBuffer,
   iFrameUniform,
   iResolutionBuffer,
   iTimeBuffer,
   pipelineABC,
+  pipelineImage,
 } from './pipelines.ts';
 
 let workTextures: (
@@ -30,9 +29,6 @@ let bindGroupsABC: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>;
 
-const bindGroupLayoutImage = tgpu.bindGroupLayout({
-  iChannel0: { texture: d.texture2d() },
-});
 let bindGroupImage: TgpuBindGroup<{
   iChannel0: { texture: d.WgslTexture2d<d.F32> };
 }>;
@@ -85,23 +81,6 @@ function draw(timestamp: number) {
 
     workTextures[0].copyFrom(workTextures[1]);
   }
-
-  const fragmentFnImage = tgpu['~unstable'].fragmentFn({
-    in: { pos: d.builtin.position },
-    out: d.vec4f,
-  })(({ pos }) => {
-    let luminance =
-      std.textureLoad(bindGroupLayoutImage.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
-    luminance = luminance.mul(std.exp2(exposure));
-    luminance = tonemapACES(luminance);
-    luminance = gammaSRGB(luminance);
-    return d.vec4f(luminance, 1.0);
-  });
-
-  const pipelineImage = root['~unstable']
-    .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFnImage, { format: presentationFormat })
-    .createPipeline();
 
   pipelineImage
     .with(bindGroupImage)
