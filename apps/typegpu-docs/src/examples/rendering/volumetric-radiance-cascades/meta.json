@@ -1,5 +1,5 @@
 {
-  "title": "Volumetric GI",
+  "title": "Volumetric Radiance Cascades",
   "category": "rendering",
   "tags": ["experimental"]
 }
