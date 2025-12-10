@@ -48,4 +48,20 @@ describe('comptime', () => {
       }"
     `);
   });
+
+  it('should work in "normal" mode', () => {
+    const stagger = tgpu['~unstable'].comptime((v: d.v3f) => {
+      return v.add(d.vec3f(0, 1, 2));
+    });
+
+    const myFn = tgpu.fn([], d.f32)(() => {
+      return stagger(d.vec3f(2)).z;
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> f32 {
+        return 4f;
+      }"
+    `);
+  });
 });
