@@ -111,7 +111,7 @@ const castInterval = tgpu.fn(
       const coord = intervalStart.add(stepSize.mul(d.f32(i)));
       const scene = getSceneColor(coord, resolution, time);
       radiance = radiance.add(scene.xyz.mul(transmittance).mul(scene.w));
-      transmittance = transmittance * (1.0 - scene.w);
+      transmittance *= 1.0 - scene.w;
     }
 
     return d.vec4f(radiance, transmittance);
@@ -154,11 +154,11 @@ export const castAndMerge = tgpu.fn([
     'use gpu';
     // Probe parameters for cascade N
     const probeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex));
-    const probeCenter = std.floor(fragCoord.xy.div(d.f32(probeSize))).add(0.5);
+    const probeCenter = std.floor(fragCoord.div(d.f32(probeSize))).add(0.5);
     const probePosition = probeCenter.mul(d.f32(probeSize));
 
     // Interval parameters at cascade N
-    const dirCoord = std.mod(d.vec2i(fragCoord.xy), probeSize);
+    const dirCoord = std.mod(d.vec2i(fragCoord), probeSize);
     const dirIndex = dirCoord.x + dirCoord.y * probeSize;
     const dirCount = probeSize * probeSize;
 
@@ -188,7 +188,7 @@ export const castAndMerge = tgpu.fn([
 
     // Merge cascade N+1 -> cascade N
     const bilinearProbeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex + 1));
-    const bilinearBaseCoord = (probePosition.div(d.f32(bilinearProbeSize))).sub(
+    const bilinearBaseCoord = probePosition.div(d.f32(bilinearProbeSize)).sub(
       0.5,
     );
     const ratio = std.fract(bilinearBaseCoord);
@@ -225,15 +225,15 @@ export const castAndMerge = tgpu.fn([
       // Sample and interpolate 4 probe directions
       let bilinearRadiance = d.vec4f(0.0);
       for (let dd = 0; dd < 4; dd++) {
-        // Fetch and merge with interval d at probe b from cascade N+1
+        // Fetch and merge with interval dd at probe b from cascade N+1
         const baseDirIndex = dirIndex * 4;
         const bilinearDirIndex = baseDirIndex + dd;
         const bilinearDirCoord = d.vec2i(
           bilinearDirIndex % bilinearProbeSize,
           bilinearDirIndex / bilinearProbeSize,
         );
-        const bilinearTexel = bilinearIndex.mul(
-          bilinearDirCoord.add(bilinearProbeSize),
+        const bilinearTexel = bilinearIndex.mul(bilinearProbeSize).add(
+          bilinearDirCoord,
         );
         const bilinearInterval = std.textureLoad(
           texture,
