@@ -12,8 +12,8 @@ catalogs:
     jiti: ^2.6.0
   types:
     typescript: ^5.9.3
-    '@webgpu/types': ^0.1.66
-    '@types/three': '^0.180.0'
+    "@webgpu/types": ^0.1.66
+    "@types/three": "^0.180.0"
   test:
     vitest: ^3.2.4
   frontend:
