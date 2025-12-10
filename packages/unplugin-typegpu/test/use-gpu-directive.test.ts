@@ -215,7 +215,7 @@ describe('[BABEL] "use gpu" directive', () => {
           v: 1,
           name: void 0,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
-          get externals() {
+          externals: () => {
             return {};
           }
         }) && $.f)({})
@@ -236,7 +236,7 @@ describe('[BABEL] "use gpu" directive', () => {
         v: 1,
         name: "isPrime",
         ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"==",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
-        get externals() {
+        externals: () => {
           return {
             obj
           };
@@ -527,7 +527,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
                     v: 1,
                     name: undefined,
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
-                    get externals() { return {}; },
+                    externals: () => ({}),
                   }) && $.f)({}))
               };
 
@@ -547,7 +547,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
                     v: 1,
                     name: "isPrime",
                     ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"==",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
-                    get externals() { return {obj}; },
+                    externals: () => ({obj}),
                   }) && $.f)({}));
       "
     `);
