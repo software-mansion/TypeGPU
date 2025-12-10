@@ -71,6 +71,9 @@ function recreateResources() {
 }
 recreateResources();
 
+const resizeObserver = new ResizeObserver(recreateResources);
+resizeObserver.observe(canvas);
+
 let iFrame = 0;
 
 function draw(timestamp: number) {
@@ -154,6 +157,7 @@ let lastFrameId = requestAnimationFrame(draw);
 
 export function onCleanup() {
   cancelAnimationFrame(lastFrameId);
+  resizeObserver.unobserve(canvas);
   root.destroy();
 }
 
