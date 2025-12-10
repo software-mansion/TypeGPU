@@ -22,9 +22,9 @@ import {
   Void,
 } from '../data/wgslTypes.ts';
 import {
+  getTextureFormatInfo,
   type StorageTextureFormats,
   type TextureFormats,
-  textureFormats,
 } from '../core/texture/textureFormats.ts';
 import type { $internal, $repr } from '../shared/symbols.ts';
 import type {
@@ -389,7 +389,7 @@ export const textureLoad = dualImpl({
       };
     }
     const format = texture.format;
-    const dataType = textureFormats[format].vectorType;
+    const dataType = getTextureFormatInfo(format).vectorType;
     return {
       argTypes: args,
       returnType: dataType,

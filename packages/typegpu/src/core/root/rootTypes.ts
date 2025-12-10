@@ -112,15 +112,24 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
+type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
+
+type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
-      entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
-      targets: FragmentOutToTargets<FragmentOut>,
-    ]
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
+    ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
+      ? Args extends [infer T]
+        ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : Args extends [] | [infer T] ?
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : never
+    : never
   : [
     entryFn: 'n/a',
     targets: 'n/a',
@@ -273,7 +282,7 @@ export interface WithBinding {
     VertexOut extends VertexOutConstrained,
   >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;

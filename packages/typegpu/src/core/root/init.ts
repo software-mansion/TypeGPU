@@ -267,7 +267,7 @@ class WithBindingImpl implements WithBinding {
 
   withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
@@ -275,7 +275,7 @@ class WithBindingImpl implements WithBinding {
       depthStencilState: undefined,
       slotBindings: this._slotBindings,
       vertexFn,
-      vertexAttribs: attribs as AnyVertexAttribs,
+      vertexAttribs: (attribs ?? {}) as AnyVertexAttribs,
       multisampleState: undefined,
     });
   }
@@ -315,16 +315,19 @@ class WithVertexImpl implements WithVertex {
 
   withFragment(
     fragmentFn: TgpuFragmentFn | 'n/a',
-    targets: AnyFragmentTargets | 'n/a',
+    targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
   ): WithFragment {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
-    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+    invariant(
+      targets === undefined || typeof targets !== 'string',
+      'Just type mismatch validation',
+    );
 
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
-      targets,
+      targets: targets ?? {},
     });
   }
 
