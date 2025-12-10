@@ -197,7 +197,7 @@ class TgpuFnNode<T> extends THREE.Node {
 
 export function toTSL(
   fn: () => unknown,
-): THREE.TSL.ShaderNodeObject<THREE.Node> {
+): THREE.TSL.NodeObject<THREE.Node> {
   return TSL.nodeObject(new TgpuFnNode(fn));
 }
 
@@ -205,10 +205,10 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
   readonly var: TgpuVar<'private', T> | undefined;
-  readonly node: TSL.ShaderNodeObject<TNode>;
+  readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(
-    node: TSL.ShaderNodeObject<TNode>,
+    node: THREE.TSL.NodeObject<TNode>,
     dataType: T,
   ) {
     this.node = node;
@@ -243,21 +243,19 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
 }
 
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: (length: number) => T },
+  node: THREE.TSL.NodeObject<TNode>,
+  type: (length: number) => T,
 ): TSLAccessor<T, TNode>;
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T },
+  node: THREE.TSL.NodeObject<TNode>,
+  type: T,
 ): TSLAccessor<T, TNode>;
 export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T } | { type: (length: number) => T },
+  node: THREE.TSL.NodeObject<TNode>,
+  type: T | ((length: number) => T),
 ): TSLAccessor<T, TNode> {
   return new TSLAccessor<T, TNode>(
     node,
-    d.isData(options.type)
-      ? options.type as T
-      : (options.type as (length: number) => T)(0),
+    d.isData(type) ? type as T : (type as (length: number) => T)(0),
   );
 }
