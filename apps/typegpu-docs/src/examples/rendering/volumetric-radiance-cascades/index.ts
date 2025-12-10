@@ -1,28 +1,91 @@
-import type {
-  RenderFlag,
-  SampledFlag,
-  TgpuBindGroup,
-  TgpuTexture,
+import {
+  type RenderFlag,
+  type SampledFlag,
+  tgpu,
+  type TgpuBindGroup,
+  type TgpuTexture,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import {
-  bilinearFix,
-  cascadeIndexUniform,
-  castAndMergeLayout,
-  castAndMergePipeline,
-  imageLayout,
-  imagePipeline,
-  luminancePostprocessing,
-  resolutionUniform,
-  timeUniform,
-} from './pipelines.ts';
-import {
-  canvas,
-  context,
-  intermediateFormat,
-  type presentationFormat,
-  root,
-} from './root.ts';
+import { castAndMerge } from './castAndMerge.ts';
+import { fullScreenTriangle } from 'typegpu/common';
+import { exposure, gammaSRGB, tonemapACES } from './image.ts';
+import * as std from 'typegpu/std';
+
+// initial setup
+
+export const root = await tgpu.init();
+export const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+export const intermediateFormat = 'rgba16float';
+export const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+export const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
+// buffers
+
+const cascadeIndexUniform = root.createUniform(d.i32);
+const timeUniform = root.createUniform(d.f32);
+const resolutionUniform = root.createUniform(d.vec3f);
+const bilinearFixUniform = root.createUniform(d.u32, 1);
+const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
+
+// castAndMerge pipeline
+
+export const castAndMergeLayout = tgpu.bindGroupLayout({
+  iChannel0: { texture: d.texture2d() },
+});
+
+const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(
+  ({ pos }) => {
+    return castAndMerge(
+      castAndMergeLayout.$.iChannel0,
+      cascadeIndexUniform.$,
+      pos.xy,
+      resolutionUniform.$.xy,
+      timeUniform.$,
+      bilinearFixUniform.$,
+    );
+  },
+);
+
+export const castAndMergePipeline = root['~unstable']
+  .withVertex(fullScreenTriangle)
+  .withFragment(castAndMergeFragment, { format: intermediateFormat })
+  .createPipeline();
+
+// image pipeline
+
+export const imageLayout = tgpu.bindGroupLayout({
+  iChannel0: { texture: d.texture2d() },
+});
+
+const imageFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  let luminance =
+    std.textureLoad(imageLayout.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
+  if (luminancePostprocessingUniform.$ === 1) {
+    luminance = luminance.mul(std.exp2(exposure));
+    luminance = tonemapACES(luminance);
+    luminance = gammaSRGB(luminance);
+  }
+  return d.vec4f(luminance, 1.0);
+});
+
+export const imagePipeline = root['~unstable']
+  .withVertex(fullScreenTriangle)
+  .withFragment(imageFragment, { format: presentationFormat })
+  .createPipeline();
+
+// dynamic resources
 
 let workTextures: (
   & TgpuTexture<{
@@ -58,10 +121,11 @@ function recreateResources() {
     iChannel0: workTextures[0],
   });
 }
-recreateResources();
-
 const resizeObserver = new ResizeObserver(recreateResources);
 resizeObserver.observe(canvas);
+recreateResources();
+
+// draw
 
 function draw(timestamp: number) {
   timeUniform.write(timestamp / 1000);
@@ -98,7 +162,7 @@ let lastFrameId = requestAnimationFrame(draw);
 
 export function onCleanup() {
   cancelAnimationFrame(lastFrameId);
-  resizeObserver.unobserve(canvas);
+  resizeObserver.disconnect();
   root.destroy();
 }
 
@@ -106,13 +170,13 @@ export const controls = {
   'Bilinear fix': {
     initial: true,
     onToggleChange: (value: boolean) => {
-      bilinearFix.write(Number(value));
+      bilinearFixUniform.write(Number(value));
     },
   },
   'Luminance postprocessing': {
     initial: true,
     onToggleChange: (value: boolean) => {
-      luminancePostprocessing.write(Number(value));
+      luminancePostprocessingUniform.write(Number(value));
     },
   },
 };
