@@ -32,6 +32,8 @@ const timeUniform = root.createUniform(d.f32);
 const resolutionUniform = root.createUniform(d.vec3f);
 const bilinearFixUniform = root.createUniform(d.u32, 1);
 const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
+let cascadesNumber = 6;
+const cascadesNumberUniform = root.createUniform(d.u32, cascadesNumber);
 
 // castAndMerge pipeline
 
@@ -51,6 +53,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
       resolutionUniform.$.xy,
       timeUniform.$,
       bilinearFixUniform.$,
+      cascadesNumberUniform.$,
     );
   },
 );
@@ -131,7 +134,7 @@ function draw(timestamp: number) {
   timeUniform.write(timestamp / 1000);
   resolutionUniform.write(d.vec3f(canvas.width, canvas.height, 1));
 
-  for (let i = 5; i >= 0; i--) {
+  for (let i = cascadesNumber - 1; i >= 0; i--) {
     cascadeIndexUniform.write(i);
     castAndMergePipeline
       .with(castAndMergeBindGroup)
@@ -177,6 +180,16 @@ export const controls = {
     initial: true,
     onToggleChange: (value: boolean) => {
       luminancePostprocessingUniform.write(Number(value));
+    },
+  },
+  'Number of cascades': {
+    initial: cascadesNumber,
+    min: 0,
+    max: 9,
+    step: 1,
+    onSliderChange: (value: number) => {
+      cascadesNumber = value;
+      cascadesNumberUniform.write(cascadesNumber);
     },
   },
 };

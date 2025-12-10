@@ -140,8 +140,6 @@ const getBilinearOffset = tgpu.fn([d.u32], d.vec2i)((offsetIndex) => {
   return offsets[offsetIndex];
 });
 
-const NUM_CASCADES = 6;
-
 // sampler2D cascadeTexture
 export const castAndMerge = tgpu.fn([
   d.texture2d(d.f32),
@@ -150,108 +148,115 @@ export const castAndMerge = tgpu.fn([
   d.vec2f,
   d.f32,
   d.u32,
-], d.vec4f)(
-  (texture, cascadeIndex, fragCoord, resolution, time, bilinearFix) => {
-    'use gpu';
-    // Probe parameters for cascade N
-    const probeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex));
-    const probeCenter = std.floor(fragCoord.div(d.f32(probeSize))).add(0.5);
-    const probePosition = probeCenter.mul(d.f32(probeSize));
+  d.u32,
+], d.vec4f)((
+  texture,
+  cascadeIndex,
+  fragCoord,
+  resolution,
+  time,
+  bilinearFix,
+  cascadesNumber,
+) => {
+  'use gpu';
+  // Probe parameters for cascade N
+  const probeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex));
+  const probeCenter = std.floor(fragCoord.div(d.f32(probeSize))).add(0.5);
+  const probePosition = probeCenter.mul(d.f32(probeSize));
 
-    // Interval parameters at cascade N
-    const dirCoord = std.mod(d.vec2i(fragCoord), probeSize);
-    const dirIndex = dirCoord.x + dirCoord.y * probeSize;
-    const dirCount = probeSize * probeSize;
+  // Interval parameters at cascade N
+  const dirCoord = std.mod(d.vec2i(fragCoord), probeSize);
+  const dirIndex = dirCoord.x + dirCoord.y * probeSize;
+  const dirCount = probeSize * probeSize;
 
-    // Interval direction at cascade N
-    const angle = 2.0 * Math.PI * ((d.f32(dirIndex) + 0.5) / d.f32(dirCount));
-    const dir = d.vec2f(std.cos(angle), std.sin(angle));
+  // Interval direction at cascade N
+  const angle = 2.0 * Math.PI * ((d.f32(dirIndex) + 0.5) / d.f32(dirCount));
+  const dir = d.vec2f(std.cos(angle), std.sin(angle));
 
-    let radiance = d.vec4f(0, 0, 0, 1);
+  let radiance = d.vec4f(0, 0, 0, 1);
 
-    // Trace radiance interval at cascade N
-    const intervalRange = getIntervalRange(cascadeIndex);
-    const intervalStart = probePosition.add(dir.mul(intervalRange.x));
-    const intervalEnd = probePosition.add(dir.mul(intervalRange.y));
-    let destInterval = castInterval(
-      intervalStart,
-      intervalEnd,
-      cascadeIndex,
-      resolution,
-      time,
+  // Trace radiance interval at cascade N
+  const intervalRange = getIntervalRange(cascadeIndex);
+  const intervalStart = probePosition.add(dir.mul(intervalRange.x));
+  const intervalEnd = probePosition.add(dir.mul(intervalRange.y));
+  let destInterval = castInterval(
+    intervalStart,
+    intervalEnd,
+    cascadeIndex,
+    resolution,
+    time,
+  );
+
+  // Skip merge and only trace on the last cascade (computed back-to-front)
+  // This can instead merge with sky radiance or an envmap
+  if (cascadeIndex === cascadesNumber - 1) {
+    return destInterval;
+  }
+
+  // Merge cascade N+1 -> cascade N
+  const bilinearProbeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex + 1));
+  const bilinearBaseCoord = probePosition.div(d.f32(bilinearProbeSize)).sub(
+    0.5,
+  );
+  const ratio = std.fract(bilinearBaseCoord);
+  const weights = getBilinearWeights(ratio);
+  const baseIndex = d.vec2i(std.floor(bilinearBaseCoord));
+
+  // Merge with upper 4 probes from cascade N+1
+  // This could be done with hardware interpolation but OES_texture_float_linear support is spotty
+  // Ideally, a smaller float buffer format would be used like RGBA16F or RG11FB10F for cascades
+  for (let b = d.u32(0); b < 4; b++) {
+    // Probe parameters for cascade N+1
+    const baseOffset = getBilinearOffset(b);
+    const bilinearIndex = std.clamp(
+      baseIndex.add(baseOffset),
+      d.vec2i(0),
+      d.vec2i(resolution).div(bilinearProbeSize).sub(1),
+    );
+    const bilinearPosition = d.vec2f(bilinearIndex).add(0.5).mul(
+      d.f32(bilinearProbeSize),
     );
 
-    // Skip merge and only trace on the last cascade (computed back-to-front)
-    // This can instead merge with sky radiance or an envmap
-    if (cascadeIndex === NUM_CASCADES - 1) {
-      return destInterval;
+    // Cast 4 locally interpolated intervals at cascade N -> cascade N+1 (bilinear fix)
+    if (bilinearFix === 1) {
+      const intervalRange = getIntervalRange(cascadeIndex);
+      const intervalStart = probePosition.add(dir.mul(intervalRange.x));
+      const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));
+      destInterval = castInterval(
+        intervalStart,
+        intervalEnd,
+        cascadeIndex,
+        resolution,
+        time,
+      );
     }
 
-    // Merge cascade N+1 -> cascade N
-    const bilinearProbeSize = d.i32(BASE_PROBE_SIZE << d.u32(cascadeIndex + 1));
-    const bilinearBaseCoord = probePosition.div(d.f32(bilinearProbeSize)).sub(
-      0.5,
-    );
-    const ratio = std.fract(bilinearBaseCoord);
-    const weights = getBilinearWeights(ratio);
-    const baseIndex = d.vec2i(std.floor(bilinearBaseCoord));
-
-    // Merge with upper 4 probes from cascade N+1
-    // This could be done with hardware interpolation but OES_texture_float_linear support is spotty
-    // Ideally, a smaller float buffer format would be used like RGBA16F or RG11FB10F for cascades
-    for (let b = d.u32(0); b < 4; b++) {
-      // Probe parameters for cascade N+1
-      const baseOffset = getBilinearOffset(b);
-      const bilinearIndex = std.clamp(
-        baseIndex.add(baseOffset),
-        d.vec2i(0),
-        d.vec2i(resolution).div(bilinearProbeSize).sub(1),
+    // Sample and interpolate 4 probe directions
+    let bilinearRadiance = d.vec4f(0.0);
+    for (let dd = 0; dd < 4; dd++) {
+      // Fetch and merge with interval dd at probe b from cascade N+1
+      const baseDirIndex = dirIndex * 4;
+      const bilinearDirIndex = baseDirIndex + dd;
+      const bilinearDirCoord = d.vec2i(
+        bilinearDirIndex % bilinearProbeSize,
+        bilinearDirIndex / bilinearProbeSize,
       );
-      const bilinearPosition = d.vec2f(bilinearIndex).add(0.5).mul(
-        d.f32(bilinearProbeSize),
+      const bilinearTexel = bilinearIndex.mul(bilinearProbeSize).add(
+        bilinearDirCoord,
       );
-
-      // Cast 4 locally interpolated intervals at cascade N -> cascade N+1 (bilinear fix)
-      if (bilinearFix === 1) {
-        const intervalRange = getIntervalRange(cascadeIndex);
-        const intervalStart = probePosition.add(dir.mul(intervalRange.x));
-        const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));
-        destInterval = castInterval(
-          intervalStart,
-          intervalEnd,
-          cascadeIndex,
-          resolution,
-          time,
-        );
-      }
-
-      // Sample and interpolate 4 probe directions
-      let bilinearRadiance = d.vec4f(0.0);
-      for (let dd = 0; dd < 4; dd++) {
-        // Fetch and merge with interval dd at probe b from cascade N+1
-        const baseDirIndex = dirIndex * 4;
-        const bilinearDirIndex = baseDirIndex + dd;
-        const bilinearDirCoord = d.vec2i(
-          bilinearDirIndex % bilinearProbeSize,
-          bilinearDirIndex / bilinearProbeSize,
-        );
-        const bilinearTexel = bilinearIndex.mul(bilinearProbeSize).add(
-          bilinearDirCoord,
-        );
-        const bilinearInterval = std.textureLoad(
-          texture,
-          bilinearTexel,
-          0,
-        );
-        bilinearRadiance = bilinearRadiance.add(
-          mergeIntervals(destInterval, bilinearInterval).mul(weights[b]),
-        );
-      }
-
-      // Average of 4 bilinear samples
-      radiance = radiance.add(bilinearRadiance.mul(0.25));
+      const bilinearInterval = std.textureLoad(
+        texture,
+        bilinearTexel,
+        0,
+      );
+      bilinearRadiance = bilinearRadiance.add(
+        mergeIntervals(destInterval, bilinearInterval).mul(weights[b]),
+      );
     }
 
-    return radiance;
-  },
-);
+    // Average of 4 bilinear samples
+    radiance = radiance.add(bilinearRadiance.mul(0.25));
+  }
+
+  return radiance;
+});
