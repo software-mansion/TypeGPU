@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { presentationFormat, root } from './root.ts';
+import { intermediateFormat, presentationFormat, root } from './root.ts';
 import { castAndMerge } from './common.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
@@ -37,7 +37,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
 
 export const castAndMergePipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
-  .withFragment(castAndMergeFragment, { format: presentationFormat })
+  .withFragment(castAndMergeFragment, { format: intermediateFormat })
   .createPipeline();
 
 // image

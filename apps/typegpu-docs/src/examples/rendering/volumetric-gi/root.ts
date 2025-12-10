@@ -2,6 +2,7 @@ import tgpu from 'typegpu';
 
 export const root = await tgpu.init();
 export const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+export const intermediateFormat = 'rgba16float';
 export const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 export const context = canvas.getContext('webgpu') as GPUCanvasContext;
 

@@ -5,7 +5,13 @@ import type {
   TgpuTexture,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import { canvas, context, presentationFormat, root } from './root.ts';
+import {
+  canvas,
+  context,
+  intermediateFormat,
+  type presentationFormat,
+  root,
+} from './root.ts';
 import {
   bilinearFix,
   cascadeIndexUniform,
@@ -38,7 +44,7 @@ function recreateResources() {
     root['~unstable']
       .createTexture({
         size: [canvas.width, canvas.height],
-        format: presentationFormat,
+        format: intermediateFormat,
         dimension: '2d',
       })
       .$usage('sampled', 'render')
