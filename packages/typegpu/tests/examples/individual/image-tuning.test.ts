@@ -5,7 +5,10 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import { mockImageLoading } from '../utils/commonMocks.ts';
+import {
+  mockCreateImageBitmap,
+  mockImageLoading,
+} from '../utils/commonMocks.ts';
 
 describe('image tuning example', () => {
   setupCommonMocks();
@@ -14,7 +17,10 @@ describe('image tuning example', () => {
     const shaderCodes = await runExampleTest({
       category: 'image-processing',
       name: 'image-tuning',
-      setupMocks: mockImageLoading,
+      setupMocks: () => {
+        mockImageLoading();
+        mockCreateImageBitmap();
+      },
       expectedCalls: 1,
     }, device);
 

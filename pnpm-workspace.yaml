@@ -11,8 +11,8 @@ catalogs:
     unbuild: ^3.5.0
     jiti: ^2.6.0
   types:
-    typescript: ^5.8.2
-    "@webgpu/types": ^0.1.66
+    typescript: ^5.9.3
+    '@webgpu/types': ^0.1.66
     "@types/three": "^0.180.0"
   test:
     vitest: ^3.2.4
