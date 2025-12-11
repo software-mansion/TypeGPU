@@ -159,3 +159,13 @@ export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((p, c, r) => {
   const m = length(p_w.sub(c.mul(clamp(dot(p_w, c), 0, r))));
   return max(l, m * sign(c.y * p_w.x - c.x * p_w.y));
 });
+
+export const sdArc = tgpu.fn([vec2f, vec2f, f32, f32], f32)(
+  (position, sc, radius, girth) => {
+    const pos = vec2f(abs(position.x), -position.y);
+    if (sc.y * pos.x > sc.x * pos.y) {
+      return length(pos.sub(sc.mul(radius))) - girth;
+    }
+    return abs(length(pos) - radius) - girth;
+  },
+);
