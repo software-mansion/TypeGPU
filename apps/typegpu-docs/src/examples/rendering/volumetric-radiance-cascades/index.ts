@@ -39,7 +39,7 @@ const workResolutionUniform = root.createUniform(d.vec3f); // only for castAndMe
 const bilinearFixUniform = root.createUniform(d.u32, 1);
 const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
 let cascadesNumber = 6;
-const cascadesNumberUniform = root.createUniform(d.u32, cascadesNumber);
+const cascadesNumberUniform = root.createUniform(d.i32, cascadesNumber);
 const selectedSceneUniform = root.createUniform(d.u32, scenes['Shadertoy']);
 
 // prerenderScene pipeline

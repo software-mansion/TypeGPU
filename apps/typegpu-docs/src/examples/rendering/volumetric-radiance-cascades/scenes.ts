@@ -64,7 +64,7 @@ const shadertoyScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
     color = circle(
       color,
       d.vec2f(-0.7, 0).sub(worldPos),
-      (std.sin(time) * 0.5 + 0.5) / 8,
+      (std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
       d.vec4f(1, 0.5, 0, 1),
     );
     color = circle(
@@ -76,7 +76,7 @@ const shadertoyScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
     color = circle(
       color,
       d.vec2f(0.7, 0).sub(worldPos),
-      (-std.sin(time) * 0.5 + 0.5) / 8,
+      (-std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
       d.vec4f(1, 1, 1, 1),
     );
     return color;
@@ -100,8 +100,8 @@ const heartsScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
     let color = d.vec4f(0.0);
     for (let i = d.u32(0); i < 7; i++) {
       const position = d.vec2f(
-        std.sin(time + angle * i),
-        std.cos(time + angle * i) + 0.3,
+        std.sin(time + angle * d.f32(i)),
+        std.cos(time + angle * d.f32(i)) + 0.3,
       ).mul(0.7);
       color = heart(color, position.sub(worldPos), 0.3, colors[i]);
     }

@@ -128,7 +128,7 @@ export const castAndMerge = tgpu.fn([
   d.vec2f,
   d.f32,
   d.u32,
-  d.u32,
+  d.i32,
   d.u32,
 ], d.vec4f)((
   scene,
