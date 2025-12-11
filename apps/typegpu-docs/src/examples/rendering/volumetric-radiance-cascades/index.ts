@@ -6,11 +6,15 @@ import {
   type TgpuTexture,
 } from 'typegpu';
 import * as d from 'typegpu/data';
-import { castAndMerge } from './castAndMerge.ts';
+import { castAndMerge, coordToWorldPos } from './castAndMerge.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import * as std from 'typegpu/std';
-import { scenes } from './scenes.ts';
+import { getSceneColor, scenes } from './scenes.ts';
+
+// AAA shelless
+// AAA dots
+// AAA width
 
 // initial setup
 
@@ -38,9 +42,27 @@ let cascadesNumber = 6;
 const cascadesNumberUniform = root.createUniform(d.u32, cascadesNumber);
 const selectedSceneUniform = root.createUniform(d.u32, scenes['Shadertoy']);
 
+// prerenderScene pipeline
+
+const prerenderSceneFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(
+  ({ pos }) => {
+    const worldPos = coordToWorldPos(pos.xy, workResolutionUniform.$.xy);
+    return getSceneColor(worldPos, timeUniform.$, selectedSceneUniform.$);
+  },
+);
+
+export const prerenderScenePipeline = root['~unstable']
+  .withVertex(fullScreenTriangle)
+  .withFragment(prerenderSceneFragment, { format: intermediateFormat })
+  .createPipeline();
+
 // castAndMerge pipeline
 
 export const castAndMergeLayout = tgpu.bindGroupLayout({
+  scene: { texture: d.texture2d() },
   iChannel0: { texture: d.texture2d() },
 });
 
@@ -50,6 +72,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
 })(
   ({ pos }) => {
     return castAndMerge(
+      castAndMergeLayout.$.scene,
       castAndMergeLayout.$.iChannel0,
       cascadeIndexUniform.$,
       pos.xy,
@@ -115,7 +138,8 @@ let imageBindGroup: TgpuBindGroup<{
 }>;
 
 function recreateResources() {
-  workTextures = [0, 1].map((i) =>
+  // scene, work1, work2
+  workTextures = [0, 1, 2].map((i) =>
     root['~unstable']
       .createTexture({
         size: [canvas.width * quality, canvas.height * quality],
@@ -126,10 +150,11 @@ function recreateResources() {
       .$name(`work texture ${i}`)
   );
   castAndMergeBindGroup = root.createBindGroup(castAndMergeLayout, {
-    iChannel0: workTextures[0],
+    scene: workTextures[0],
+    iChannel0: workTextures[1],
   });
   imageBindGroup = root.createBindGroup(imageLayout, {
-    iChannel0: workTextures[0],
+    iChannel0: workTextures[1],
   });
 }
 const resizeObserver = new ResizeObserver(recreateResources);
@@ -141,8 +166,16 @@ recreateResources();
 function draw(timestamp: number) {
   timeUniform.write(timestamp / 1000);
   workResolutionUniform.write(
-    d.vec3f(...workTextures[0].props.size, 1),
+    d.vec3f(...workTextures[1].props.size, 1),
   );
+
+  prerenderScenePipeline
+    .withColorAttachment({
+      loadOp: 'clear',
+      storeOp: 'store',
+      view: workTextures[0],
+    })
+    .draw(3);
 
   for (let i = cascadesNumber - 1; i >= 0; i--) {
     cascadeIndexUniform.write(i);
@@ -151,11 +184,11 @@ function draw(timestamp: number) {
       .withColorAttachment({
         loadOp: 'clear',
         storeOp: 'store',
-        view: workTextures[1],
+        view: workTextures[2],
       })
       .draw(3);
 
-    workTextures[0].copyFrom(workTextures[1]);
+    workTextures[1].copyFrom(workTextures[2]);
   }
 
   imagePipeline
@@ -213,7 +246,7 @@ export const controls = {
   'Quality': {
     initial: quality,
     min: 0.1,
-    max: 1,
+    max: 4,
     step: 0.1,
     onSliderChange: (value: number) => {
       quality = value;

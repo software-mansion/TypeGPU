@@ -26,11 +26,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { getSceneColor } from './scenes.ts';
 
 // Behold, the one parameter of Radiance Cascades, BASE_INTERVAL_LENGTH.
 // This is the minimum spatial resolution that the cascades can model at C0.
-const BASE_INTERVAL_LENGTH = 0.2;
+const BASE_INTERVAL_LENGTH = 0.3;
 
 // Here is also a BASE_PROBE_SIZE (in px) to try out a sparser probe grid.
 // I do a 2x2 or 4x4 probe grid for screen-space (3D) with later upscaling.
@@ -55,7 +54,7 @@ const getIntervalRange = tgpu.fn([d.i32], d.vec2f)((cascadeIndex) => {
     .mul(BASE_INTERVAL_LENGTH);
 });
 
-const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
+export const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
   (coord, resolution) => {
     'use gpu';
     const center = resolution.mul(0.5);
@@ -65,10 +64,11 @@ const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
 );
 
 const castInterval = tgpu.fn(
-  [d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32, d.u32],
+  [d.texture2d(d.f32), d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32, d.u32],
   d.vec4f,
 )(
   (
+    scene,
     intervalStart,
     intervalEnd,
     cascadeIndex,
@@ -86,10 +86,11 @@ const castInterval = tgpu.fn(
 
     for (let i = d.u32(0); i < steps; i++) {
       const coord = intervalStart.add(stepSize.mul(d.f32(i)));
-      const worldPos = coordToWorldPos(coord, resolution);
-      const scene = getSceneColor(worldPos, time, selectedScene);
-      radiance = radiance.add(scene.xyz.mul(transmittance).mul(scene.w));
-      transmittance *= 1.0 - scene.w;
+      const sceneColor = std.textureLoad(scene, d.vec2i(coord), 0);
+      radiance = radiance.add(
+        sceneColor.xyz.mul(transmittance).mul(sceneColor.w),
+      );
+      transmittance *= 1.0 - sceneColor.w;
     }
 
     return d.vec4f(radiance, transmittance);
@@ -121,6 +122,7 @@ const getBilinearOffset = tgpu.fn([d.u32], d.vec2i)((offsetIndex) => {
 // sampler2D cascadeTexture
 export const castAndMerge = tgpu.fn([
   d.texture2d(d.f32),
+  d.texture2d(d.f32),
   d.i32,
   d.vec2f,
   d.vec2f,
@@ -129,6 +131,7 @@ export const castAndMerge = tgpu.fn([
   d.u32,
   d.u32,
 ], d.vec4f)((
+  scene,
   texture,
   cascadeIndex,
   fragCoord,
@@ -160,6 +163,7 @@ export const castAndMerge = tgpu.fn([
   const intervalStart = probePosition.add(dir.mul(intervalRange.x));
   const intervalEnd = probePosition.add(dir.mul(intervalRange.y));
   let destInterval = castInterval(
+    scene,
     intervalStart,
     intervalEnd,
     cascadeIndex,
@@ -204,6 +208,7 @@ export const castAndMerge = tgpu.fn([
       const intervalStart = probePosition.add(dir.mul(intervalRange.x));
       const intervalEnd = bilinearPosition.add(dir.mul(intervalRange.y));
       destInterval = castInterval(
+        scene,
         intervalStart,
         intervalEnd,
         cascadeIndex,
