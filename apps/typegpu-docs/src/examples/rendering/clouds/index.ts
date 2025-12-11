@@ -77,7 +77,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  randf.seed2(uv);
+  randf.seed2(uv.mul(cloudsLayout.$.params.time));
   const screenRes = resolutionUniform.$;
   const aspect = screenRes.x / screenRes.y;
 
@@ -138,8 +138,8 @@ frameId = requestAnimationFrame(render);
 
 const qualityOptions = {
   'very high': {
-    maxSteps: 200,
-    maxDistance: 15.0,
+    maxSteps: 150,
+    maxDistance: 13.0,
   },
   high: {
     maxSteps: 100,
