@@ -114,7 +114,7 @@ export const imagePipeline = root['~unstable']
 let workTextures: (
   & TgpuTexture<{
     size: [number, number];
-    format: typeof presentationFormat;
+    format: typeof intermediateFormat;
   }>
   & RenderFlag
   & SampledFlag
