@@ -4,7 +4,7 @@
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { fromTSL, toTSL, uv } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
@@ -19,15 +19,11 @@ await renderer.init();
 const particleCount = 200000;
 let isOrbitControlsActive = false;
 
-const gravity = TSL.uniform(-0.00098);
-const bounce = TSL.uniform(0.8);
-const friction = TSL.uniform(0.99);
-const size = TSL.uniform(0.12);
-const clickPosition = TSL.uniform(new THREE.Vector3());
-const gravityAccessor = fromTSL(gravity, { type: d.f32 });
-const bounceAccessor = fromTSL(bounce, { type: d.f32 });
-const frictionAccessor = fromTSL(friction, { type: d.f32 });
-const clickPositionAccessor = fromTSL(clickPosition, { type: d.vec3f });
+const gravity = t3.uniform(-0.00098, d.f32);
+const bounce = t3.uniform(0.8, d.f32);
+const friction = t3.uniform(0.99, d.f32);
+const size = t3.uniform(0.12, d.f32);
+const clickPosition = t3.uniform(new THREE.Vector3(), d.vec3f);
 
 const camera = new THREE.PerspectiveCamera(
   50,
@@ -39,70 +35,65 @@ camera.position.set(0, 10, 20);
 
 const scene = new THREE.Scene();
 
-const positions = TSL.instancedArray(particleCount, 'vec3');
-const velocities = TSL.instancedArray(particleCount, 'vec3');
-const colors = TSL.instancedArray(particleCount, 'vec3');
+const positions = t3.instancedArray(particleCount, d.vec3f);
+const velocities = t3.instancedArray(particleCount, d.vec3f);
+const colors = t3.instancedArray(particleCount, d.vec3f);
 const separation = 0.2;
 const amount = Math.sqrt(particleCount);
 const offset = amount / 2;
 
-const instanceIndexAccessor = fromTSL(TSL.instanceIndex, { type: d.u32 });
-const positionsAccessor = fromTSL(positions, { type: d.arrayOf(d.vec3f) });
-const colorsAccessor = fromTSL(colors, { type: d.arrayOf(d.vec3f) });
-
-const computeInit = toTSL(() => {
+const computeInit = t3.toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndexAccessor.$;
-  const position = positionsAccessor.$[instanceIdx];
-  const color = colorsAccessor.$[instanceIdx];
+  const instanceIdx = t3.instanceIndex.$;
+  const position = positions.$[instanceIdx];
+  const color = colors.$[instanceIdx];
 
   const x = instanceIdx % d.u32(amount);
   const z = instanceIdx / amount;
 
   position.x = (offset - d.f32(x)) * separation;
   position.z = (offset - d.f32(z)) * separation;
-  positionsAccessor.$[instanceIdx] = d.vec3f(position);
+  positions.$[instanceIdx] = d.vec3f(position);
 
   randf.seed(d.f32(instanceIdx / amount));
   color.x = randf.sample();
   randf.seed(d.f32(instanceIdx / amount) + 2);
   color.y = randf.sample();
-  colorsAccessor.$[instanceIdx] = d.vec3f(color);
+  colors.$[instanceIdx] = d.vec3f(color);
 }).compute(particleCount).setName('Init Particles TypeGPU');
 renderer.compute(computeInit);
 
-const velocitiesAccessor = fromTSL(velocities, { type: d.arrayOf(d.vec3f) });
-const computeAccessor = toTSL(() => {
+const computeAccessor = t3.toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndexAccessor.$;
-  let position = positionsAccessor.$[instanceIdx];
-  let velocity = velocitiesAccessor.$[instanceIdx];
+  const instanceIdx = t3.instanceIndex.$;
+  let position = positions.$[instanceIdx];
+  let velocity = velocities.$[instanceIdx];
 
-  velocity = velocity.add(d.vec3f(0, gravityAccessor.$, 0));
+  velocity = velocity.add(d.vec3f(0, gravity.$, 0));
   position = position.add(velocity);
-  velocity = velocity.mul(frictionAccessor.$);
+  velocity = velocity.mul(friction.$);
 
   if (position.y < 0) {
     position.y = 0;
-    velocity.y = -velocity.y * bounceAccessor.$;
+    velocity.y = -velocity.y * bounce.$;
     velocity = velocity.mul(d.vec3f(0.9, 1, 0.9));
   }
 
-  positionsAccessor.$[instanceIdx] = d.vec3f(position);
-  velocitiesAccessor.$[instanceIdx] = d.vec3f(velocity);
+  positions.$[instanceIdx] = d.vec3f(position);
+  velocities.$[instanceIdx] = d.vec3f(velocity);
 }).compute(particleCount).setName('Update Particles TypeGPU');
 
 const material = new THREE.SpriteNodeMaterial();
-material.colorNode = toTSL(() => {
+material.colorNode = t3.toTSL(() => {
   'use gpu';
   return d.vec4f(
-    uv().$.mul(colorsAccessor.$[instanceIndexAccessor.$].xy),
+    t3.uv().$.mul(colors.$[t3.instanceIndex.$].xy),
     0,
     1,
   );
 });
-material.positionNode = positions.toAttribute();
-material.scaleNode = size;
+material.positionNode = positions.node.toAttribute();
+material.scaleNode = size.node;
 material.opacityNode = TSL.shapeCircle();
 material.alphaToCoverage = true;
 material.transparent = true;
@@ -127,14 +118,14 @@ scene.add(plane);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-const computeHit = toTSL(() => {
+const computeHit = t3.toTSL(() => {
   'use gpu';
-  const instanceIdx = instanceIndexAccessor.$;
-  const position = positionsAccessor.$[instanceIdx];
-  let velocity = velocitiesAccessor.$[instanceIdx];
+  const instanceIdx = t3.instanceIndex.$;
+  const position = positions.$[instanceIdx];
+  let velocity = velocities.$[instanceIdx];
 
-  const dist = std.distance(position, clickPositionAccessor.$);
-  const dir = std.normalize(position.sub(clickPositionAccessor.$));
+  const dist = std.distance(position, clickPosition.$);
+  const dir = std.normalize(position.sub(clickPosition.$));
   const distArea = std.max(0, 3 - dist);
 
   const power = distArea * 0.01;
@@ -142,7 +133,7 @@ const computeHit = toTSL(() => {
   const relativePower = power * (1.5 * randf.sample() + 0.5);
 
   velocity = velocity.add(dir.mul(relativePower));
-  velocitiesAccessor.$[instanceIdx] = d.vec3f(velocity);
+  velocities.$[instanceIdx] = d.vec3f(velocity);
 }).compute(particleCount).setName('Hit Particles TypeGPU');
 
 function onMove(event: PointerEvent) {
@@ -161,8 +152,8 @@ function onMove(event: PointerEvent) {
   if (intersects.length > 0) {
     const { point } = intersects[0];
 
-    clickPosition.value.copy(point);
-    clickPosition.value.y = -1;
+    clickPosition.node.value.copy(point);
+    clickPosition.node.value.y = -1;
 
     renderer.compute(computeHit);
   }
@@ -213,7 +204,7 @@ export const controls = {
     max: 0,
     step: 0.0001,
     onSliderChange: (value: number) => {
-      gravity.value = value;
+      gravity.node.value = value;
     },
   },
   'bounce': {
@@ -222,7 +213,7 @@ export const controls = {
     max: 2,
     step: 0.02,
     onSliderChange: (value: number) => {
-      bounce.value = value;
+      bounce.node.value = value;
     },
   },
   'friction': {
@@ -231,7 +222,7 @@ export const controls = {
     max: 0.99,
     step: 0.01,
     onSliderChange: (value: number) => {
-      friction.value = value;
+      friction.node.value = value;
     },
   },
   'size': {
@@ -240,7 +231,7 @@ export const controls = {
     max: 0.5,
     step: 0.01,
     onSliderChange: (value: number) => {
-      size.value = value;
+      size.node.value = value;
     },
   },
 };
