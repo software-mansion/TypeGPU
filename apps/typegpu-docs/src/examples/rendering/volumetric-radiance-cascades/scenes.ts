@@ -121,8 +121,8 @@ const dotsScene = (worldPos: d.v2f, time: number) => {
   'use gpu';
   let color = d.vec4f(0.0);
   for (let i = d.u32(0); i < dots.$.length; i++) {
-    const offsetAngle = i +
-      time * std.sign(d.f32(i % 2) - 0.5) * (i + 100) / 200;
+    const offsetAngle = d.f32(i) +
+      time * std.sign(d.f32(i % 2) - 0.5) * d.f32(i + 100) / 200;
     const offset = d.vec2f(std.sin(offsetAngle), std.cos(offsetAngle)).mul(
       0.1,
     );
@@ -142,13 +142,13 @@ export const getSceneColor = (
   selectedScene: number,
 ) => {
   'use gpu';
-  if (selectedScene === scenes['Shadertoy']) {
+  if (selectedScene === scenes.Shadertoy) {
     return shadertoyScene(worldPos, time);
   }
-  if (selectedScene === scenes['Hearts']) {
+  if (selectedScene === scenes.Hearts) {
     return heartsScene(worldPos, time);
   }
-  if (selectedScene === scenes['Dots']) {
+  if (selectedScene === scenes.Dots) {
     return dotsScene(worldPos, time);
   }
   return d.vec4f(0, 0, 0, 1);
