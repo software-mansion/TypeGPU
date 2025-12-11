@@ -6,6 +6,7 @@ import { loadModel, modelVertexLayout } from './load-model.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { postProcessLayout, ScreenTextures } from './screen-textures.ts';
 import { Pattern } from './pattern.ts';
+import { createFluidSim, renderFluidSimLayout, SIM_N } from './fluid-sim.ts';
 
 interface HeroEffectOptions {
   signal: AbortSignal;
@@ -20,6 +21,7 @@ const Uniforms = d.struct({
 export async function initHeroEffect(options: HeroEffectOptions) {
   const root = await tgpu.init();
   const model = await loadModel(root);
+  const fluidSim = createFluidSim(root, options.canvas);
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
   if (options.signal.aborted) {
@@ -101,11 +103,6 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     })
     .createPipeline();
 
-  const sdDisc = (uv: d.v2f, radius: number) => {
-    'use gpu';
-    return std.length(uv.sub(d.vec2f(0.5))) - radius;
-  };
-
   const CirclePattern = d.struct({
     color: d.vec4f,
     dist: d.f32,
@@ -141,21 +138,47 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   const ss = (
     pat: d.Infer<typeof CirclePattern>,
     sharpness: number,
-    bias: number,
+    bias: d.v4f,
   ) => {
     'use gpu';
     return d.vec4f(
-      std.smoothstep(0, sharpness, (pat.dist) + pat.color.x - bias),
-      std.smoothstep(0, sharpness, (pat.dist) + pat.color.y - bias),
-      std.smoothstep(0, sharpness, (pat.dist) + pat.color.z - bias),
-      std.smoothstep(0, sharpness, (pat.dist) + pat.color.w - bias - 0.5),
+      std.smoothstep(0, sharpness, (pat.dist) + pat.color.x - bias.x),
+      std.smoothstep(0, sharpness, (pat.dist) + pat.color.y - bias.y),
+      std.smoothstep(0, sharpness, (pat.dist) + pat.color.z - bias.z),
+      std.smoothstep(0, sharpness, (pat.dist) + pat.color.w - bias.w - 0.5),
     );
+  };
+
+  const sampleInk = (uv: d.v2f) => {
+    'use gpu';
+    return std.textureSample(
+      renderFluidSimLayout.$.inkTexture,
+      fsampler.$,
+      uv,
+    ).x;
   };
 
   const postProcessFragmentFn = tgpu['~unstable'].fragmentFn({
     in: { pixelCoord: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
   })((input) => {
+    const pixelStep = d.f32(1) / SIM_N;
+
+    const inkUv = d.vec2f(input.uv.x, 1 - input.uv.y);
+    const leftSample = sampleInk(
+      d.vec2f(inkUv.x - pixelStep, inkUv.y),
+    );
+    const rightSample = sampleInk(
+      d.vec2f(inkUv.x + pixelStep, inkUv.y),
+    );
+    const upSample = sampleInk(
+      d.vec2f(inkUv.x, inkUv.y + pixelStep),
+    );
+    const downSample = sampleInk(
+      d.vec2f(inkUv.x, inkUv.y - pixelStep),
+    );
+    const grad = d.vec2f(rightSample - leftSample, upSample - downSample);
+
     const identity = d.mat2x2f(
       d.vec2f(1, 0),
       d.vec2f(0, 1),
@@ -171,13 +194,30 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     const pat1 = circlePattern(
       identity,
       identity,
-      input.uv,
+      input.uv.add(grad.mul(3)),
+      // input.uv,
       d.f32(3),
       d.f32(0),
     );
-    const pat2 = circlePattern(rot, irot, input.uv, d.f32(80), d.f32(0));
+    const pat2 = circlePattern(
+      rot,
+      irot,
+      // input.uv,
+      input.uv.add(grad.mul(0.02)),
+      d.f32(80),
+      d.f32(0),
+    );
     // const c1 = ss(pat1, 0.1, 0.2);
-    const c2 = ss(pat2, 0.1, 0.2 + pat1.dist * 0.4);
+    const c2 = ss(
+      pat2,
+      0.1,
+      d.vec4f(
+        0.2 + pat1.dist * 0.4,
+        0.2 + pat1.dist * 0.4 + downSample,
+        0.2 + pat1.dist * 0.4,
+        0.2 + pat1.dist * 0.4,
+      ),
+    );
 
     return d.vec4f(c2.xyz, c2.w);
     // return d.vec4f(c1.mul(c2).xyz, std.saturate(c1.w + c2.w));
@@ -194,6 +234,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       return;
     }
 
+    fluidSim.update();
     time.write(timestamp * 0.0002 % 1000);
 
     const viewProjection = mat4.perspective(
@@ -211,7 +252,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     mat4.rotateX(modelMatrix, 0.4, modelMatrix);
 
     // Rotating around local y-axis
-    mat4.rotateY(modelMatrix, timestamp * 0.00071212, modelMatrix);
+    mat4.rotateY(modelMatrix, timestamp * 0.00015, modelMatrix);
 
     uniforms.write({
       viewProjection,
@@ -256,6 +297,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     // Post-processing
     postProcessPipeline
       .with(screenTextures.postProcessGroup)
+      .with(fluidSim.renderBindGroup)
       .withColorAttachment({
         view: canvasView,
         loadOp: 'clear',
