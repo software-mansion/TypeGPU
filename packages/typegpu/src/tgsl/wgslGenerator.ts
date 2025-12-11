@@ -33,12 +33,12 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
-  accessIndex,
-  accessProp,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
+import { accessIndex } from './accessIndex.ts';
+import { accessProp } from './accessProp.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';

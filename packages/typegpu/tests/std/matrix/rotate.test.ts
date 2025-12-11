@@ -16,7 +16,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        var resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -32,7 +32,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(cos(angle), 0, -sin(angle), 0, 0, 1, 0, 0, sin(angle), 0, cos(angle), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        var resultExpression = (mat4x4f(cos(f32(angle)), 0, -sin(f32(angle)), 0, 0, 1, 0, 0, sin(f32(angle)), 0, cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -48,7 +48,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(cos(angle), sin(angle), 0, 0, -sin(angle), cos(angle), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        var resultExpression = (mat4x4f(cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });

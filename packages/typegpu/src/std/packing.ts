@@ -1,36 +1,34 @@
 import * as TB from 'typed-binary';
+import { dualImpl } from '../core/function/dualImpl.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2f, vec4f } from '../data/vector.ts';
 import type { v2f, v4f } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
-import { stitch } from '../core/resolve/stitch.ts';
-import { snip } from '../data/snippet.ts';
 
 /**
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#unpack2x16float-builtin
  */
-export const unpack2x16float = createDualImpl(
-  // CPU implementation
-  (e: number): v2f => {
+export const unpack2x16float = dualImpl({
+  name: 'unpack2x16float',
+  normalImpl: (e: number): v2f => {
     const buffer = new ArrayBuffer(4);
     const writer = new TB.BufferWriter(buffer);
     writer.writeUint32(e);
     const reader = new TB.BufferReader(buffer);
     return vec2f(reader.readFloat16(), reader.readFloat16());
   },
-  // GPU implementation
-  (e) => snip(stitch`unpack2x16float(${e})`, vec2f, /* origin */ 'runtime'),
-  'unpack2x16float',
-);
+  signature: { argTypes: [u32], returnType: vec2f },
+  codegenImpl: (e) => stitch`unpack2x16float(${e})`,
+});
 
 /**
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#pack2x16float-builtin
  */
-export const pack2x16float = createDualImpl(
-  // CPU implementation
-  (e: v2f): number => {
+export const pack2x16float = dualImpl({
+  name: 'pack2x16float',
+  normalImpl: (e: v2f): number => {
     const buffer = new ArrayBuffer(4);
     const writer = new TB.BufferWriter(buffer);
     writer.writeFloat16(e.x);
@@ -38,18 +36,17 @@ export const pack2x16float = createDualImpl(
     const reader = new TB.BufferReader(buffer);
     return u32(reader.readUint32());
   },
-  // GPU implementation
-  (e) => snip(stitch`pack2x16float(${e})`, u32, /* origin */ 'runtime'),
-  'pack2x16float',
-);
+  signature: { argTypes: [vec2f], returnType: u32 },
+  codegenImpl: (e) => stitch`pack2x16float(${e})`,
+});
 
 /**
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#unpack4x8unorm-builtin
  */
-export const unpack4x8unorm = createDualImpl(
-  // CPU implementation
-  (e: number): v4f => {
+export const unpack4x8unorm = dualImpl({
+  name: 'unpack4x8unorm',
+  normalImpl: (e: number): v4f => {
     const buffer = new ArrayBuffer(4);
     const writer = new TB.BufferWriter(buffer);
     writer.writeUint32(e);
@@ -61,18 +58,17 @@ export const unpack4x8unorm = createDualImpl(
       reader.readUint8() / 255,
     );
   },
-  // GPU implementation
-  (e) => snip(stitch`unpack4x8unorm(${e})`, vec4f, /* origin */ 'runtime'),
-  'unpack4x8unorm',
-);
+  signature: { argTypes: [u32], returnType: vec4f },
+  codegenImpl: (e) => stitch`unpack4x8unorm(${e})`,
+});
 
 /**
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#pack4x8unorm-builtin
  */
-export const pack4x8unorm = createDualImpl(
-  // CPU implementation
-  (e: v4f): number => {
+export const pack4x8unorm = dualImpl({
+  name: 'pack4x8unorm',
+  normalImpl: (e: v4f): number => {
     const buffer = new ArrayBuffer(4);
     const writer = new TB.BufferWriter(buffer);
     writer.writeUint8(e.x * 255);
@@ -82,7 +78,6 @@ export const pack4x8unorm = createDualImpl(
     const reader = new TB.BufferReader(buffer);
     return u32(reader.readUint32());
   },
-  // GPU implementation
-  (e) => snip(stitch`pack4x8unorm(${e})`, u32, /* origin */ 'runtime'),
-  'pack4x8unorm',
-);
+  signature: { argTypes: [vec4f], returnType: u32 },
+  codegenImpl: (e) => stitch`pack4x8unorm(${e})`,
+});
