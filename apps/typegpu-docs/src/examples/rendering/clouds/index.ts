@@ -1,32 +1,33 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import {
-  raymarchSlot,
-  resolutionAccess,
-  sampledViewSlot,
-  samplerSlot,
-  timeAccess,
+  FOV_FACTOR,
+  SKY_HORIZON,
+  SKY_ZENITH_TINT,
+  SUN_BRIGHTNESS,
+  SUN_DIRECTION,
+  SUN_GLOW,
 } from './consts.ts';
-import { mainVertex } from './shaders/vertex.ts';
-import { mainFragment } from './shaders/fragment.ts';
 import { raymarch } from './utils.ts';
+import { cloudsLayout } from './types.ts';
+import { randf } from '@typegpu/noise';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const root = await tgpu.init();
-const device = root.device;
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-// Uniforms
 const time = root.createUniform(d.f32, 0);
-const resolutionUniform = root.createUniform(
+const resolution = root.createUniform(
   d.vec2f,
   d.vec2f(canvas.width, canvas.height),
 );
@@ -34,48 +35,83 @@ const resolutionUniform = root.createUniform(
 const NOISE_SIZE = 256;
 const noiseData = new Uint8Array(NOISE_SIZE * NOISE_SIZE * 4);
 for (let i = 0; i < noiseData.length; i += 4) {
-  const r = Math.random() * 255;
-  const g = Math.random() * 255;
-  noiseData[i] = r;
-  noiseData[i + 1] = g;
-  noiseData[i + 2] = r;
+  const value = Math.random() * 255;
+  noiseData[i] = value;
+  noiseData[i + 1] = Math.random() * 255;
+  noiseData[i + 2] = value;
   noiseData[i + 3] = 255;
 }
 
-const imageTexture = root['~unstable']
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+  addressModeU: 'repeat',
+  addressModeV: 'repeat',
+});
+
+const noiseTexture = root['~unstable']
   .createTexture({ size: [NOISE_SIZE, NOISE_SIZE], format: 'rgba8unorm' })
   .$usage('sampled', 'render');
 
-device.queue.writeTexture(
-  { texture: root.unwrap(imageTexture) },
+root.device.queue.writeTexture(
+  { texture: root.unwrap(noiseTexture) },
   noiseData,
   { bytesPerRow: NOISE_SIZE * 4 },
   { width: NOISE_SIZE, height: NOISE_SIZE },
 );
 
-const sampledView = imageTexture.createView();
-const sampler = tgpu['~unstable'].sampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
+const bindGroup = root.createBindGroup(cloudsLayout, {
+  time: time.buffer,
+  noiseTexture,
+  sampler,
+});
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  randf.seed2(uv);
+  const screenRes = resolution.$;
+  const aspect = screenRes.x / screenRes.y;
+
+  let screenPos = std.mul(std.sub(uv, 0.5), 2.0);
+  screenPos = d.vec2f(
+    screenPos.x * std.max(aspect, 1.0),
+    screenPos.y * std.max(1.0 / aspect, 1.0),
+  );
+
+  const sunDir = std.normalize(SUN_DIRECTION);
+  const rayOrigin = d.vec3f(0.0, 0.0, -3.0);
+  const rayDir = std.normalize(d.vec3f(screenPos.x, screenPos.y, FOV_FACTOR));
+
+  const sunDot = std.clamp(std.dot(rayDir, sunDir), 0.0, 1.0);
+  const sunGlow = std.pow(
+    sunDot,
+    1.0 / (SUN_BRIGHTNESS * SUN_BRIGHTNESS * SUN_BRIGHTNESS),
+  );
+
+  let skyCol = std.sub(SKY_HORIZON, std.mul(SKY_ZENITH_TINT, rayDir.y * 0.35));
+  skyCol = std.add(skyCol, std.mul(SUN_GLOW, sunGlow));
+
+  const cloudCol = raymarch(rayOrigin, rayDir, sunDir);
+  const finalCol = std.add(std.mul(skyCol, 1.1 - cloudCol.w), cloudCol.xyz);
+
+  return d.vec4f(finalCol, 1.0);
 });
 
 const pipeline = root['~unstable']
-  .with(raymarchSlot, raymarch)
-  .with(sampledViewSlot, sampledView)
-  .with(samplerSlot, sampler)
-  .with(timeAccess, time)
-  .with(resolutionAccess, resolutionUniform)
-  .withVertex(mainVertex, {})
+  .withVertex(fullScreenTriangle)
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-// Animation loop
 let frameId: number;
+
 function render() {
-  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
+  resolution.write(d.vec2f(canvas.width, canvas.height));
   time.write((performance.now() / 1000) % 500);
 
   pipeline
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 1],

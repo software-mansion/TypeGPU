@@ -1,116 +1,135 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { randf } from '@typegpu/noise';
 import {
-  CLOUD_CORE_DENSITY,
-  CLOUD_DENSITY,
-  CLOUD_DETALIZATION,
-  DARK,
-  FAR,
-  FLIGHT_SPEED,
+  CLOUD_AMPLITUDE,
+  CLOUD_BRIGHT,
+  CLOUD_COVERAGE,
+  CLOUD_DARK,
+  CLOUD_FREQUENCY,
+  FBM_LACUNARITY,
+  FBM_OCTAVES,
+  FBM_PERSISTENCE,
   LIGHT_ABSORPTION,
-  MAX_ITERATIONS,
-  sampledViewSlot,
-  samplerSlot,
-  SKY,
-  SUN,
-  SUN_INTENSITY,
-  timeAccess,
-  WHITE,
+  MAX_DEPTH,
+  MAX_STEPS,
+  NOISE_TEXTURE_SIZE,
+  NOISE_Z_OFFSET,
+  SKY_AMBIENT,
+  SUN_BRIGHTNESS,
+  SUN_COLOR,
+  WIND_SPEED,
 } from './consts.ts';
+import { cloudsLayout } from './types.ts';
 
-export const raymarch = tgpu.fn(
-  [d.vec3f, d.vec3f, d.vec3f],
-  d.vec4f,
-)((ro, rd, sunDirection) => {
-  let res = d.vec4f();
-
-  const hash = std.fract(
-    std.sin(std.dot(rd.xy, d.vec2f(12.9898, 78.233))) * 43758.5453,
-  );
-  const MARCH_SIZE = 1 / MAX_ITERATIONS;
-  let depth = hash * MARCH_SIZE;
-
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const p = std.add(ro, std.mul(rd, depth * FAR));
-    const rawDensity = fractalBrownianMotion(p) - 1.5 + CLOUD_DENSITY * 2;
-    const density = std.clamp(rawDensity, 0.0, 1.0);
-
-    if (density > 0.0) {
-      // light occlusion along sun direction
-      let diffuse = std.clamp(
-        rawDensity - fractalBrownianMotion(std.add(p, sunDirection)) - 1.5 +
-          CLOUD_DENSITY * 2,
-        0.0,
-        1.0,
-      );
-      // contrast boost
-      diffuse = std.mix(0.3, 1.0, diffuse);
-
-      const lighting = std.add(
-        std.mul(SKY, 1.1),
-        std.mul(SUN, diffuse * SUN_INTENSITY),
-      );
-
-      const albedo = std.mix(WHITE, DARK, density);
-
-      const lit = albedo.mul(lighting);
-      const premul = d.vec4f(lit, 1).mul(density);
-      res = res.add(premul.mul(LIGHT_ABSORPTION - res.w));
-
-      if (res.w >= LIGHT_ABSORPTION - 1e-3) {
-        break;
-      }
-    }
-    depth += MARCH_SIZE;
-  }
-  return res;
+const sampleDensity = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  return std.saturate(fbm(pos) + CLOUD_COVERAGE - 0.5);
 });
 
-const fractalBrownianMotion = tgpu.fn(
-  [d.vec3f],
-  d.f32,
-)((p) => {
-  // simple wind/movement
-  let q = std.add(
-    p,
-    d.vec3f(
-      std.sin(timeAccess.$),
-      std.cos(timeAccess.$),
-      timeAccess.$ * FLIGHT_SPEED,
-    ),
+const sampleDensityCheap = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  const wind = d.vec3f(
+    std.sin(cloudsLayout.$.time),
+    std.cos(cloudsLayout.$.time),
+    cloudsLayout.$.time * WIND_SPEED,
   );
-  let sum = d.f32();
-  let amplitude = d.f32(CLOUD_CORE_DENSITY);
-  let frequency = d.f32(CLOUD_DETALIZATION);
+  const windPos = std.add(pos, wind);
+  const noise = noise3d(std.mul(windPos, CLOUD_FREQUENCY)) * CLOUD_AMPLITUDE;
+  return std.clamp(noise + CLOUD_COVERAGE - 0.5, 0.0, 1.0);
+});
 
-  for (let i = 0; i < 4; i++) {
-    sum += noise(q) * amplitude;
-    q = std.mul(q, frequency);
-    amplitude *= 0.4;
-    frequency += 0.5;
+export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
+  (rayOrigin, rayDir, sunDir) => {
+    let accum = d.vec4f();
+    const stepSize = 1 / MAX_STEPS;
+    let dist = randf.sample() * stepSize;
+
+    for (let i = 0; i < MAX_STEPS; i++) {
+      const samplePos = std.add(rayOrigin, std.mul(rayDir, dist * MAX_DEPTH));
+      const cloudDensity = sampleDensity(samplePos);
+
+      if (cloudDensity > 0.0) {
+        const shadowPos = std.add(samplePos, sunDir);
+        const shadowDensity = sampleDensityCheap(shadowPos);
+        const shadow = std.clamp(cloudDensity - shadowDensity, 0.0, 1.0);
+        const lightVal = std.mix(0.3, 1.0, shadow);
+
+        const light = std.add(
+          std.mul(SKY_AMBIENT, 1.1),
+          std.mul(SUN_COLOR, lightVal * SUN_BRIGHTNESS),
+        );
+        const color = std.mix(CLOUD_BRIGHT, CLOUD_DARK, cloudDensity);
+        const lit = std.mul(color, light);
+
+        const contrib = std.mul(
+          d.vec4f(lit, 1),
+          cloudDensity * (LIGHT_ABSORPTION - accum.w),
+        );
+        accum = std.add(accum, contrib);
+
+        if (accum.w >= LIGHT_ABSORPTION - 0.001) {
+          break;
+        }
+      }
+      dist += stepSize;
+    }
+    return accum;
+  },
+);
+
+const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  const wind = d.vec3f(
+    std.sin(cloudsLayout.$.time) / 2,
+    std.cos(cloudsLayout.$.time) / 2,
+    cloudsLayout.$.time * WIND_SPEED,
+  );
+  const windPos = std.add(pos, wind);
+  let sum = d.f32();
+  let amp = d.f32(CLOUD_AMPLITUDE);
+  let freq = d.f32(CLOUD_FREQUENCY);
+
+  for (let i = 0; i < FBM_OCTAVES; i++) {
+    sum += noise3d(std.mul(windPos, freq)) * amp;
+    amp *= FBM_PERSISTENCE;
+    freq *= FBM_LACUNARITY;
   }
   return sum;
 });
 
-const noise = tgpu.fn(
-  [d.vec3f],
-  d.f32,
-)((x) => {
-  const p = std.floor(x);
-  let f = std.fract(x);
-  f = std.mul(std.mul(f, f), std.sub(3.0, std.mul(2.0, f)));
+const noise3d = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  const idx = std.floor(pos);
+  const frac = std.fract(pos);
+  const smooth = std.mul(std.mul(frac, frac), std.sub(3.0, std.mul(2.0, frac)));
 
-  const uv = std.add(
-    std.add(p.xy, std.mul(d.vec2f(37.0, 239.0), d.vec2f(p.z, p.z))),
-    f.xy,
+  const texCoord0 = std.fract(
+    std.div(
+      std.add(std.add(idx.xy, frac.xy), std.mul(NOISE_Z_OFFSET, idx.z)),
+      NOISE_TEXTURE_SIZE,
+    ),
   );
-  const tex = std.textureSampleLevel(
-    sampledViewSlot.$,
-    samplerSlot.$,
-    std.fract(std.div(std.add(uv, d.vec2f(0.5, 0.5)), 256.0)),
-    0.0,
-  ).yx;
+  const texCoord1 = std.fract(
+    std.div(
+      std.add(
+        std.add(idx.xy, frac.xy),
+        std.mul(NOISE_Z_OFFSET, std.add(idx.z, 1.0)),
+      ),
+      NOISE_TEXTURE_SIZE,
+    ),
+  );
 
-  return std.mix(tex.x, tex.y, f.z) * 2.0 - 1.0;
+  const val0 = std.textureSampleLevel(
+    cloudsLayout.$.noiseTexture,
+    cloudsLayout.$.sampler,
+    texCoord0,
+    0.0,
+  ).x;
+
+  const val1 = std.textureSampleLevel(
+    cloudsLayout.$.noiseTexture,
+    cloudsLayout.$.sampler,
+    texCoord1,
+    0.0,
+  ).x;
+
+  return std.mix(val0, val1, smooth.z) * 2.0 - 1.0;
 });
