@@ -53,7 +53,7 @@ export function comptime<T extends (...args: never[]) => unknown>(
 
   const impl = ((...args: Parameters<T>) => {
     const ctx = getResolutionCtx();
-    if (ctx && ctx.mode.type === 'codegen') {
+    if (ctx?.mode.type === 'codegen') {
       ctx.pushMode(new NormalState());
       try {
         return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
