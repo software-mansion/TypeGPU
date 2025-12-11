@@ -11,7 +11,7 @@ export const scenes = {
 
 // https://iquilezles.org/articles/distfunctions2d
 const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
-  (color, position, radius, albedo) => {
+  (color: d.v4f, position: d.v2f, radius: number, albedo: d.v4f) => {
     'use gpu';
     const sanitizedRadius = std.max(0.001, radius);
     let result = d.vec4f(color);
@@ -22,10 +22,10 @@ const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
   },
 );
 
-const dot2 = tgpu.fn([d.vec2f], d.f32)((v) => {
+const dot2 = (v: d.v2f) => {
   'use gpu';
   return std.dot(v, v);
-});
+};
 
 const sdHeart = (position: d.v2f) => {
   'use gpu';
@@ -57,57 +57,53 @@ const heart = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
   },
 );
 
-const shadertoyScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
-  (worldPos, time) => {
-    'use gpu';
-    let color = d.vec4f(0.0);
-    color = circle(
-      color,
-      d.vec2f(-0.7, 0).sub(worldPos),
-      (std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
-      d.vec4f(1, 0.5, 0, 1),
-    );
-    color = circle(
-      color,
-      d.vec2f(0, std.sin(time) * 0.5).sub(worldPos),
-      1 / 8,
-      d.vec4f(0, 0, 0, 0.01),
-    );
-    color = circle(
-      color,
-      d.vec2f(0.7, 0).sub(worldPos),
-      (-std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
-      d.vec4f(1, 1, 1, 1),
-    );
-    return color;
-  },
-);
+const shadertoyScene = (worldPos: d.v2f, time: number) => {
+  'use gpu';
+  let color = d.vec4f(0.0);
+  color = circle(
+    color,
+    d.vec2f(-0.7, 0).sub(worldPos),
+    (std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
+    d.vec4f(1, 0.5, 0, 1),
+  );
+  color = circle(
+    color,
+    d.vec2f(0, std.sin(time) * 0.5).sub(worldPos),
+    1 / 8,
+    d.vec4f(0, 0, 0, 0.01),
+  );
+  color = circle(
+    color,
+    d.vec2f(0.7, 0).sub(worldPos),
+    (-std.sin(time) * 0.5 + 0.5) / 8 + 0.01,
+    d.vec4f(1, 1, 1, 1),
+  );
+  return color;
+};
 
-const heartsScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
-  (worldPos, time) => {
-    'use gpu';
-    const angle = Math.PI * 2 / 7;
-    const colors = [
-      d.vec4f(1.0, 0.0, 0.0, 1.0),
-      d.vec4f(1.0, 0.69, 0.0, 1.0),
-      d.vec4f(0.97, 1.0, 0.0, 1.0),
-      d.vec4f(0.0, 1.0, 0.11, 1.0),
-      d.vec4f(0.0, 1.0, 1.0, 1.0),
-      d.vec4f(0.26, 0.0, 1.0, 1.0),
-      d.vec4f(0.99, 0.0, 1.0, 1.0),
-    ];
+const heartsScene = (worldPos: d.v2f, time: number) => {
+  'use gpu';
+  const angle = Math.PI * 2 / 7;
+  const colors = [
+    d.vec4f(1.0, 0.0, 0.0, 1.0),
+    d.vec4f(1.0, 0.69, 0.0, 1.0),
+    d.vec4f(0.97, 1.0, 0.0, 1.0),
+    d.vec4f(0.0, 1.0, 0.11, 1.0),
+    d.vec4f(0.0, 1.0, 1.0, 1.0),
+    d.vec4f(0.26, 0.0, 1.0, 1.0),
+    d.vec4f(0.99, 0.0, 1.0, 1.0),
+  ];
 
-    let color = d.vec4f(0.0);
-    for (let i = d.u32(0); i < 7; i++) {
-      const position = d.vec2f(
-        std.sin(time + angle * d.f32(i)),
-        std.cos(time + angle * d.f32(i)) + 0.3,
-      ).mul(0.7);
-      color = heart(color, position.sub(worldPos), 0.3, colors[i]);
-    }
-    return color;
-  },
-);
+  let color = d.vec4f(0.0);
+  for (let i = d.u32(0); i < 7; i++) {
+    const position = d.vec2f(
+      std.sin(time + angle * d.f32(i)),
+      std.cos(time + angle * d.f32(i)) + 0.3,
+    ).mul(0.7);
+    color = heart(color, position.sub(worldPos), 0.3, colors[i]);
+  }
+  return color;
+};
 
 const Dot = d.struct({ position: d.vec2f, radius: d.f32, albedo: d.vec4f });
 const dots = tgpu.const(
@@ -119,33 +115,34 @@ const dots = tgpu.const(
   })),
 );
 
-const dotsScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
-  (worldPos, time) => {
-    'use gpu';
-    let color = d.vec4f(0.0);
-    for (let i = d.u32(0); i < dots.$.length; i++) {
-      color = circle(
-        color,
-        dots.$[i].position.sub(worldPos),
-        dots.$[i].radius,
-        dots.$[i].albedo,
-      );
-    }
-    return color;
-  },
-);
+const dotsScene = (worldPos: d.v2f, time: number) => {
+  'use gpu';
+  let color = d.vec4f(0.0);
+  for (let i = d.u32(0); i < dots.$.length; i++) {
+    color = circle(
+      color,
+      dots.$[i].position.sub(worldPos),
+      dots.$[i].radius,
+      dots.$[i].albedo,
+    );
+  }
+  return color;
+};
 
-export const getSceneColor = tgpu.fn([d.vec2f, d.f32, d.u32], d.vec4f)(
-  (worldPos, time, selectedScene) => {
-    if (selectedScene === scenes['Shadertoy']) {
-      return shadertoyScene(worldPos, time);
-    }
-    if (selectedScene === scenes['Hearts']) {
-      return heartsScene(worldPos, time);
-    }
-    if (selectedScene === scenes['Dots']) {
-      return dotsScene(worldPos, time);
-    }
-    return d.vec4f(0, 0, 0, 1);
-  },
-);
+export const getSceneColor = (
+  worldPos: d.v2f,
+  time: number,
+  selectedScene: number,
+) => {
+  'use gpu';
+  if (selectedScene === scenes['Shadertoy']) {
+    return shadertoyScene(worldPos, time);
+  }
+  if (selectedScene === scenes['Hearts']) {
+    return heartsScene(worldPos, time);
+  }
+  if (selectedScene === scenes['Dots']) {
+    return dotsScene(worldPos, time);
+  }
+  return d.vec4f(0, 0, 0, 1);
+};

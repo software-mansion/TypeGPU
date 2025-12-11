@@ -23,7 +23,6 @@
 //
 // Now that I have convinced you that RC is awesome and you must implement it into your game, onto the code:
 
-import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -36,15 +35,15 @@ const BASE_INTERVAL_LENGTH = 0.3;
 const BASE_PROBE_SIZE = 1;
 
 // https://m4xc.dev/articles/fundamental-rc
-const getIntervalScale = tgpu.fn([d.i32], d.f32)((cascadeIndex) => {
+const getIntervalScale = (cascadeIndex: number) => {
   'use gpu';
   if (cascadeIndex <= 0) {
     return 0.0;
   }
   return d.f32(1 << d.u32(2 * cascadeIndex));
-});
+};
 
-const getIntervalRange = tgpu.fn([d.i32], d.vec2f)((cascadeIndex) => {
+const getIntervalRange = (cascadeIndex: number) => {
   'use gpu';
   return d
     .vec2f(
@@ -52,58 +51,48 @@ const getIntervalRange = tgpu.fn([d.i32], d.vec2f)((cascadeIndex) => {
       getIntervalScale(cascadeIndex + 1),
     )
     .mul(BASE_INTERVAL_LENGTH);
-});
+};
 
-export const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
-  (coord, resolution) => {
-    'use gpu';
-    const center = resolution.mul(0.5);
-    const relative = coord.sub(center);
-    return relative.div(resolution.x / 2);
-  },
-);
+export const coordToWorldPos = (coord: d.v2f, resolution: d.v2f) => {
+  'use gpu';
+  const center = resolution.mul(0.5);
+  const relative = coord.sub(center);
+  return relative.div(resolution.x / 2);
+};
 
-const castInterval = tgpu.fn(
-  [d.texture2d(d.f32), d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32, d.u32],
-  d.vec4f,
-)(
-  (
-    scene,
-    intervalStart,
-    intervalEnd,
-    cascadeIndex,
-    resolution,
-    time,
-    selectedScene,
-  ) => {
-    'use gpu';
-    const dir = intervalEnd.sub(intervalStart);
-    const steps = 16 << d.u32(cascadeIndex);
-    const stepSize = dir.div(d.f32(steps));
+const castInterval = (
+  scene: d.texture2d<d.F32>,
+  intervalStart: d.v2f,
+  intervalEnd: d.v2f,
+  cascadeIndex: number,
+) => {
+  'use gpu';
+  const dir = intervalEnd.sub(intervalStart);
+  const steps = 16 << d.u32(cascadeIndex);
+  const stepSize = dir.div(d.f32(steps));
 
-    let radiance = d.vec3f(0);
-    let transmittance = d.f32(1.0);
+  let radiance = d.vec3f(0);
+  let transmittance = d.f32(1.0);
 
-    for (let i = d.u32(0); i < steps; i++) {
-      const coord = intervalStart.add(stepSize.mul(d.f32(i)));
-      const sceneColor = std.textureLoad(scene, d.vec2i(coord), 0);
-      radiance = radiance.add(
-        sceneColor.xyz.mul(transmittance).mul(sceneColor.w),
-      );
-      transmittance *= 1.0 - sceneColor.w;
-    }
+  for (let i = d.u32(0); i < steps; i++) {
+    const coord = intervalStart.add(stepSize.mul(d.f32(i)));
+    const sceneColor = std.textureLoad(scene, d.vec2i(coord), 0);
+    radiance = radiance.add(
+      sceneColor.xyz.mul(transmittance).mul(sceneColor.w),
+    );
+    transmittance *= 1.0 - sceneColor.w;
+  }
 
-    return d.vec4f(radiance, transmittance);
-  },
-);
+  return d.vec4f(radiance, transmittance);
+};
 
-const mergeIntervals = tgpu.fn([d.vec4f, d.vec4f], d.vec4f)((near, far) => {
+const mergeIntervals = (near: d.v4f, far: d.v4f) => {
   'use gpu';
   const radiance = near.xyz.add(far.xyz.mul(near.w));
   return d.vec4f(radiance, near.w * far.w);
-});
+};
 
-const getBilinearWeights = tgpu.fn([d.vec2f], d.vec4f)((ratio) => {
+const getBilinearWeights = (ratio: d.v2f) => {
   'use gpu';
   return d.vec4f(
     (1.0 - ratio.x) * (1.0 - ratio.y),
@@ -111,35 +100,23 @@ const getBilinearWeights = tgpu.fn([d.vec2f], d.vec4f)((ratio) => {
     (1.0 - ratio.x) * ratio.y,
     ratio.x * ratio.y,
   );
-});
+};
 
-const getBilinearOffset = tgpu.fn([d.u32], d.vec2i)((offsetIndex) => {
+const getBilinearOffset = (offsetIndex: number) => {
   'use gpu';
   const offsets = [d.vec2i(0, 0), d.vec2i(1, 0), d.vec2i(0, 1), d.vec2i(1, 1)];
   return offsets[offsetIndex];
-});
+};
 
 // sampler2D cascadeTexture
-export const castAndMerge = tgpu.fn([
-  d.texture2d(d.f32),
-  d.texture2d(d.f32),
-  d.i32,
-  d.vec2f,
-  d.vec2f,
-  d.f32,
-  d.u32,
-  d.i32,
-  d.u32,
-], d.vec4f)((
-  scene,
-  texture,
-  cascadeIndex,
-  fragCoord,
-  resolution,
-  time,
-  bilinearFix,
-  cascadesNumber,
-  selectedScene,
+export const castAndMerge = (
+  scene: d.texture2d<d.F32>,
+  texture: d.texture2d<d.F32>,
+  cascadeIndex: number,
+  fragCoord: d.v2f,
+  resolution: d.v2f,
+  bilinearFix: number,
+  cascadesNumber: number,
 ) => {
   'use gpu';
   // Probe parameters for cascade N
@@ -167,9 +144,6 @@ export const castAndMerge = tgpu.fn([
     intervalStart,
     intervalEnd,
     cascadeIndex,
-    resolution,
-    time,
-    selectedScene,
   );
 
   // Skip merge and only trace on the last cascade (computed back-to-front)
@@ -212,9 +186,6 @@ export const castAndMerge = tgpu.fn([
         intervalStart,
         intervalEnd,
         cascadeIndex,
-        resolution,
-        time,
-        selectedScene,
       );
     }
 
@@ -246,4 +217,4 @@ export const castAndMerge = tgpu.fn([
   }
 
   return radiance;
-});
+};

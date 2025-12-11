@@ -12,7 +12,6 @@ import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import * as std from 'typegpu/std';
 import { getSceneColor, scenes } from './scenes.ts';
 
-// AAA shelless
 // AAA dots
 // AAA width
 
@@ -47,12 +46,10 @@ const selectedSceneUniform = root.createUniform(d.u32, scenes['Shadertoy']);
 const prerenderSceneFragment = tgpu['~unstable'].fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
-})(
-  ({ pos }) => {
-    const worldPos = coordToWorldPos(pos.xy, workResolutionUniform.$.xy);
-    return getSceneColor(worldPos, timeUniform.$, selectedSceneUniform.$);
-  },
-);
+})(({ pos }) => {
+  const worldPos = coordToWorldPos(pos.xy, workResolutionUniform.$.xy);
+  return getSceneColor(worldPos, timeUniform.$, selectedSceneUniform.$);
+});
 
 export const prerenderScenePipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
@@ -69,21 +66,17 @@ export const castAndMergeLayout = tgpu.bindGroupLayout({
 const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
-})(
-  ({ pos }) => {
-    return castAndMerge(
-      castAndMergeLayout.$.scene,
-      castAndMergeLayout.$.iChannel0,
-      cascadeIndexUniform.$,
-      pos.xy,
-      workResolutionUniform.$.xy,
-      timeUniform.$,
-      bilinearFixUniform.$,
-      cascadesNumberUniform.$,
-      selectedSceneUniform.$,
-    );
-  },
-);
+})(({ pos }) => {
+  return castAndMerge(
+    castAndMergeLayout.$.scene,
+    castAndMergeLayout.$.iChannel0,
+    cascadeIndexUniform.$,
+    pos.xy,
+    workResolutionUniform.$.xy,
+    bilinearFixUniform.$,
+    cascadesNumberUniform.$,
+  );
+});
 
 export const castAndMergePipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
