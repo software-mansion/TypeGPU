@@ -27,7 +27,7 @@ context.configure({
 });
 
 const time = root.createUniform(d.f32, 0);
-const resolution = root.createUniform(
+const resolutionUniform = root.createUniform(
   d.vec2f,
   d.vec2f(canvas.width, canvas.height),
 );
@@ -71,7 +71,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   randf.seed2(uv);
-  const screenRes = resolution.$;
+  const screenRes = resolutionUniform.$;
   const aspect = screenRes.x / screenRes.y;
 
   let screenPos = std.mul(std.sub(uv, 0.5), 2.0);
@@ -104,10 +104,14 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
+const resizeObserver = new ResizeObserver(() => {
+  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
+});
+resizeObserver.observe(canvas);
+
 let frameId: number;
 
 function render() {
-  resolution.write(d.vec2f(canvas.width, canvas.height));
   time.write((performance.now() / 1000) % 500);
 
   pipeline
@@ -127,5 +131,6 @@ frameId = requestAnimationFrame(render);
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  resizeObserver.disconnect();
   root.destroy();
 }
