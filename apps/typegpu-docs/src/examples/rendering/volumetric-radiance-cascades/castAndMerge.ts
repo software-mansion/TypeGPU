@@ -57,7 +57,7 @@ export const coordToWorldPos = (coord: d.v2f, resolution: d.v2f) => {
   'use gpu';
   const center = resolution.mul(0.5);
   const relative = coord.sub(center);
-  return relative.div(resolution.x / 2);
+  return relative.div(std.min(resolution.x, resolution.y) / 2);
 };
 
 const castInterval = (

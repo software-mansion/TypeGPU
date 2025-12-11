@@ -13,7 +13,7 @@ import * as std from 'typegpu/std';
 import { getSceneColor, scenes } from './scenes.ts';
 
 // AAA dots
-// AAA width
+// AAA tags
 
 // initial setup
 
