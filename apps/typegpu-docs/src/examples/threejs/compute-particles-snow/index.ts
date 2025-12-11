@@ -8,7 +8,9 @@ import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
 
 import * as t3 from '@typegpu/three';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
+
 import * as e from './entities.ts';
 
 const maxParticleCount = 100000;
@@ -159,10 +161,18 @@ scene.add(e.floor);
 scene.add(e.xmasTree);
 scene.add(e.teapot);
 
-scene.backgroundNode = TSL.screenUV.distance(0.5).mul(2).mix(
-  TSL.color(0x0f4140),
-  TSL.color(0x060a0d),
-);
+scene.backgroundNode = t3.toTSL(() => {
+  'use gpu';
+  const ratio = std.saturate(
+    std.distance(t3.fromTSL(TSL.screenUV, d.vec2f).$, d.vec2f(0.5)) / 0.5,
+  );
+  // 0.33 multiplier is empirical
+  return std.mix(
+    d.vec4f(d.vec3f(0.059, 0.255, 0.251).mul(0.33), 1),
+    d.vec4f(d.vec3f(0.024, 0.039, 0.051).mul(0.33), 1),
+    ratio,
+  );
+});
 
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 10, 0);
@@ -175,7 +185,12 @@ controls.update();
 
 const scenePass = TSL.pass(scene, camera);
 const scenePassColor = scenePass.getTextureNode();
-const vignette = TSL.screenUV.distance(0.5).mul(1.35).clamp().oneMinus();
+const vignette = t3.toTSL(() => {
+  'use gpu';
+  return 1 - std.saturate(
+    std.distance(t3.fromTSL(TSL.screenUV, d.vec2f).$, d.vec2f(0.5)) * 1.35,
+  );
+});
 
 const teapotPass = TSL.pass(e.teapot, camera).getTextureNode();
 const teapotPassBlurred = gaussianBlur(teapotPass, TSL.vec2(1), 6);
