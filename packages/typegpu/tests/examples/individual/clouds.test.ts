@@ -5,6 +5,7 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
+import { mockResizeObserver } from '../utils/commonMocks.ts';
 
 describe('clouds example', () => {
   setupCommonMocks();
@@ -14,6 +15,7 @@ describe('clouds example', () => {
       category: 'rendering',
       name: 'clouds',
       expectedCalls: 1,
+      setupMocks: mockResizeObserver,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
@@ -43,7 +45,7 @@ describe('clouds example', () => {
         seed2_5(seed);
       }
 
-      @group(0) @binding(0) var<uniform> resolution_7: vec2f;
+      @group(0) @binding(0) var<uniform> resolutionUniform_7: vec2f;
 
       fn item_10() -> f32 {
         let a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
@@ -131,7 +133,7 @@ describe('clouds example', () => {
 
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_19) -> @location(0) vec4f {
         randSeed2_4(_arg_0.uv);
-        let screenRes = (&resolution_7);
+        let screenRes = (&resolutionUniform_7);
         let aspect = ((*screenRes).x / (*screenRes).y);
         var screenPos = ((_arg_0.uv - 0.5) * 2);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
