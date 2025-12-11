@@ -23,7 +23,7 @@ describe('scale', () => {
 
     expect(tgpu.resolve([scaleFn])).toMatchInlineSnapshot(`
       "fn scaleFn() {
-        var resultExpression = (mat4x4f(vec3f(2, 2, 4).x, 0, 0, 0, 0, vec3f(2, 2, 4).y, 0, 0, 0, 0, vec3f(2, 2, 4).z, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        var resultExpression = mat4x4f(2, 0, 0, 1, 0, 2, 0, 0, 2, 0, 4, 0, 0, 2, 0, 1);
       }"
     `);
   });

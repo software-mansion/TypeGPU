@@ -1,258 +1,136 @@
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import type { AnyData } from '../data/dataTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
-import {
-  type AnyWgslData,
-  type atomicI32,
-  type atomicU32,
-  isWgslData,
-  Void,
-} from '../data/wgslTypes.ts';
+import { type atomicI32, type atomicU32, Void } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
-export const workgroupBarrier = createDualImpl(
-  // CPU implementation
-  () => console.warn('workgroupBarrier is a no-op outside of CODEGEN mode.'),
-  // CODEGEN implementation
-  () => snip('workgroupBarrier()', Void, /* origin */ 'runtime'),
-  'workgroupBarrier',
-);
+export const workgroupBarrier = dualImpl({
+  name: 'workgroupBarrier',
+  normalImpl: 'workgroupBarrier is a no-op outside of CODEGEN mode.',
+  signature: { argTypes: [], returnType: Void },
+  codegenImpl: () => 'workgroupBarrier()',
+});
 
-export const storageBarrier = createDualImpl(
-  // CPU implementation
-  () => console.warn('storageBarrier is a no-op outside of CODEGEN mode.'),
-  // CODEGEN implementation
-  () => snip('storageBarrier()', Void, /* origin */ 'runtime'),
-  'storageBarrier',
-);
+export const storageBarrier = dualImpl({
+  name: 'storageBarrier',
+  normalImpl: 'storageBarrier is a no-op outside of CODEGEN mode.',
+  signature: { argTypes: [], returnType: Void },
+  codegenImpl: () => 'storageBarrier()',
+});
 
-export const textureBarrier = createDualImpl(
-  // CPU implementation
-  () => console.warn('textureBarrier is a no-op outside of CODEGEN mode.'),
-  // CODEGEN implementation
-  () => snip('textureBarrier()', Void, /* origin */ 'runtime'),
-  'textureBarrier',
-);
+export const textureBarrier = dualImpl({
+  name: 'textureBarrier',
+  normalImpl: 'textureBarrier is a no-op outside of CODEGEN mode.',
+  signature: { argTypes: [], returnType: Void },
+  codegenImpl: () => 'textureBarrier()',
+});
 
-export const atomicLoad = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicLoad(&${a})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
+const atomicNormalError =
+  'Atomic operations are not supported outside of CODEGEN mode.';
+
+export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
+  name: 'atomicLoad',
+  normalImpl: atomicNormalError,
+  signature: (a) => {
+    if (a.type !== 'atomic') {
+      throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
     }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
+    return { argTypes: [a], returnType: a.inner };
   },
-  'atomicLoad',
-);
+  codegenImpl: (a) => stitch`atomicLoad(&${a})`,
+});
 
-export const atomicStore = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): void => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (!isWgslData(a.dataType) || a.dataType.type !== 'atomic') {
-      throw new Error(
-        `Invalid atomic type: ${safeStringify(a.dataType)}`,
-      );
-    }
-    return snip(
-      stitch`atomicStore(&${a}, ${value})`,
-      Void,
-      /* origin */ 'runtime',
-    );
-  },
-  'atomicStore',
-);
-
-const atomicTypeFn = (a: Snippet, _value: Snippet): AnyWgslData[] => {
-  if (a.dataType.type === 'atomic' && a.dataType.inner.type === 'i32') {
-    return [a.dataType, i32];
+const atomicActionSignature = (a: AnyData, param: AnyData) => {
+  if (a.type !== 'atomic') {
+    throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
-  return [a.dataType as AnyWgslData, u32];
+  return {
+    argTypes: [a, a.inner.type === 'u32' ? u32 : i32],
+    returnType: Void,
+  };
 };
 
-export const atomicAdd = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicAdd(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicAdd',
-  atomicTypeFn,
-);
+const atomicOpSignature = (a: AnyData, param: AnyData) => {
+  if (a.type !== 'atomic') {
+    throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
+  }
+  const paramType = a.inner.type === 'u32' ? u32 : i32;
+  return {
+    argTypes: [a, paramType],
+    returnType: paramType,
+  };
+};
 
-export const atomicSub = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicSub(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicSub',
-  atomicTypeFn,
-);
+export const atomicStore = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => void
+>({
+  name: 'atomicStore',
+  normalImpl: atomicNormalError,
+  signature: atomicActionSignature,
+  codegenImpl: (a, value) => stitch`atomicStore(&${a}, ${value})`,
+});
 
-export const atomicMax = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicMax(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicMax',
-  atomicTypeFn,
-);
+export const atomicAdd = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicAdd',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicAdd(&${a}, ${value})`,
+});
 
-export const atomicMin = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicMin(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicMin',
-  atomicTypeFn,
-);
+export const atomicSub = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicSub',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicSub(&${a}, ${value})`,
+});
 
-export const atomicAnd = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicAnd(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicAnd',
-  atomicTypeFn,
-);
+export const atomicMax = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicMax',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicMax(&${a}, ${value})`,
+});
 
-export const atomicOr = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicOr(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicOr',
-  atomicTypeFn,
-);
+export const atomicMin = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicMin',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicMin(&${a}, ${value})`,
+});
 
-export const atomicXor = createDualImpl(
-  // CPU implementation
-  <T extends AnyAtomic>(a: T, value: number): number => {
-    throw new Error(
-      'Atomic operations are not supported outside of CODEGEN mode.',
-    );
-  },
-  // CODEGEN implementation
-  (a, value) => {
-    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
-      return snip(
-        stitch`atomicXor(&${a}, ${value})`,
-        a.dataType.inner,
-        /* origin */ 'runtime',
-      );
-    }
-    throw new Error(
-      `Invalid atomic type: ${safeStringify(a.dataType)}`,
-    );
-  },
-  'atomicXor',
-  atomicTypeFn,
-);
+export const atomicAnd = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicAnd',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicAnd(&${a}, ${value})`,
+});
+
+export const atomicOr = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicOr',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicOr(&${a}, ${value})`,
+});
+
+export const atomicXor = dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
+  name: 'atomicXor',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (a, value) => stitch`atomicXor(&${a}, ${value})`,
+});
