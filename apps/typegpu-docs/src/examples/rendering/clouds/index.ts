@@ -4,6 +4,7 @@ import * as std from 'typegpu/std';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
   FOV_FACTOR,
+  NOISE_TEXTURE_SIZE,
   SKY_HORIZON,
   SKY_ZENITH_TINT,
   SUN_BRIGHTNESS,
@@ -32,8 +33,7 @@ const resolutionUniform = root.createUniform(
   d.vec2f(canvas.width, canvas.height),
 );
 
-const NOISE_SIZE = 256;
-const noiseData = new Uint8Array(NOISE_SIZE * NOISE_SIZE * 4);
+const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE * 4);
 for (let i = 0; i < noiseData.length; i += 4) {
   const value = Math.random() * 255;
   noiseData[i] = value;
@@ -50,14 +50,17 @@ const sampler = root['~unstable'].createSampler({
 });
 
 const noiseTexture = root['~unstable']
-  .createTexture({ size: [NOISE_SIZE, NOISE_SIZE], format: 'rgba8unorm' })
+  .createTexture({
+    size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
+    format: 'rgba8unorm',
+  })
   .$usage('sampled', 'render');
 
 root.device.queue.writeTexture(
   { texture: root.unwrap(noiseTexture) },
   noiseData,
-  { bytesPerRow: NOISE_SIZE * 4 },
-  { width: NOISE_SIZE, height: NOISE_SIZE },
+  { bytesPerRow: NOISE_TEXTURE_SIZE * 4 },
+  { width: NOISE_TEXTURE_SIZE, height: NOISE_TEXTURE_SIZE },
 );
 
 const bindGroup = root.createBindGroup(cloudsLayout, {
