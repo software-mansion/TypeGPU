@@ -2,6 +2,10 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 
+import * as t3 from '@typegpu/three';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
 export const dirLight = (() => {
   const dirLight = new THREE.DirectionalLight(0xf9ff9b, 9);
   dirLight.castShadow = true;
@@ -32,7 +36,7 @@ export const hemisphereLight = new THREE.HemisphereLight(
 export const floor = (() => {
   const floorGeometry = new THREE.PlaneGeometry(100, 100);
   floorGeometry.rotateX(-Math.PI / 2);
-  const plane = new THREE.Mesh(
+  const floor = new THREE.Mesh(
     floorGeometry,
     new THREE.MeshStandardMaterial({
       color: 0x800000,
@@ -41,14 +45,17 @@ export const floor = (() => {
       transparent: false,
     }),
   );
-  plane.position.y = 0;
-  plane.material.opacityNode = TSL.positionLocal.xz.mul(0.05).distance(0)
-    .saturate()
-    .oneMinus();
-  plane.layers.disableAll();
-  plane.layers.enable(1);
-  plane.layers.enable(2);
-  return plane;
+  floor.position.y = 0;
+  floor.material.opacityNode = t3.toTSL(() => {
+    'use gpu';
+    return std.saturate(
+      std.length(t3.fromTSL(TSL.positionLocal.xz, d.vec2f).$.mul(0.05)),
+    ) - 1;
+  });
+  floor.layers.disableAll();
+  floor.layers.enable(1);
+  floor.layers.enable(2);
+  return floor;
 })();
 
 export const xmasTree = (() => {

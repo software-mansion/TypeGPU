@@ -129,8 +129,12 @@ function particles(isStatic: boolean = false) {
     metalness: 0,
   });
 
-  material.positionNode = TSL.positionLocal.mul(scaleBuffer.node.toAttribute())
-    .add(posBuffer.node.toAttribute());
+  material.positionNode = t3.toTSL(() => {
+    'use gpu';
+    return t3.fromTSL(TSL.positionLocal, d.vec3f).$
+      .mul(scaleBuffer.$[t3.instanceIndex.$])
+      .add(posBuffer.$[t3.instanceIndex.$]);
+  });
 
   const rainParticles = new THREE.Mesh(sphereGeometry, material);
   rainParticles.count = maxParticleCount;
