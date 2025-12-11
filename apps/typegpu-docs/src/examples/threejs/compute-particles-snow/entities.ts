@@ -25,7 +25,7 @@ export const dirLight = (() => {
   return dirLight;
 })();
 
-export const fog = new THREE.Fog(0x0f3c37, 5, 40);
+export const fog = new THREE.Fog(0x0f3c37, 4, 40);
 
 export const hemisphereLight = new THREE.HemisphereLight(
   0x0f3c37,

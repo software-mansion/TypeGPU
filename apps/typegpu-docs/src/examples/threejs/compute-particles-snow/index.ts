@@ -93,32 +93,33 @@ const computeInit = t3.toTSL(() => {
 
 const surfaceOffset = 0.2;
 const speed = 0.4;
-const computeUpdate = TSL.Fn(() => {
-  const position = positionBuffer.node.element(TSL.instanceIndex);
-  const scale = scaleBuffer.node.element(TSL.instanceIndex);
-  const particleData = dataBuffer.node.element(TSL.instanceIndex);
-
-  const velocity = particleData.y;
-  const random = particleData.w;
-
-  const terrainHeight = TSL.texture(
+const terrainTextureAccess = t3.fromTSL(
+  TSL.texture(
     collisionPosRT.texture,
-    position.xz.add(50).div(100),
-  ).y.add(scale.x.mul(surfaceOffset));
+    positionBuffer.node.element(TSL.instanceIndex).xz.add(50).div(100),
+  ),
+  d.vec4f,
+);
 
-  TSL.If(position.y.greaterThan(terrainHeight), () => {
-    position.x = particleData.x.add(
-      TSL.time.mul(random.mul(random)).mul(speed).sin().mul(3),
-    );
-    position.z = particleData.z.add(
-      TSL.time.mul(random).mul(speed).cos().mul(random.mul(10)),
-    );
+const computeUpdate = t3.toTSL(() => {
+  'use gpu';
+  const instanceIdx = t3.instanceIndex.$;
+  const velocity = dataBuffer.$[instanceIdx].y;
+  const random = dataBuffer.$[instanceIdx].w;
 
-    position.y = position.y.add(velocity);
-  }).Else(() => {
-    staticPositionBuffer.node.element(TSL.instanceIndex).assign(position);
-  });
-})().compute(maxParticleCount).setName('Update Particles');
+  const terrainHeight = terrainTextureAccess.$.y +
+    scaleBuffer.$[instanceIdx].x * surfaceOffset;
+
+  if (positionBuffer.$[instanceIdx].y > terrainHeight) {
+    positionBuffer.$[instanceIdx].x = dataBuffer.$[instanceIdx].x +
+      3 * std.sin(t3.time.$ * (random * random) * speed);
+    positionBuffer.$[instanceIdx].z = dataBuffer.$[instanceIdx].z +
+      10 * random * std.cos(t3.time.$ * speed);
+    positionBuffer.$[instanceIdx].y += velocity;
+  } else {
+    staticPositionBuffer.$[instanceIdx] = positionBuffer.$[instanceIdx];
+  }
+}).compute(maxParticleCount).setName('Update Particles');
 
 const sphereGeometry = new THREE.SphereGeometry(surfaceOffset, 5, 5);
 function particles(isStatic: boolean = false) {
@@ -166,18 +167,18 @@ scene.backgroundNode = t3.toTSL(() => {
   const ratio = std.saturate(
     std.distance(t3.fromTSL(TSL.screenUV, d.vec2f).$, d.vec2f(0.5)) / 0.5,
   );
-  // 0.33 multiplier is empirical
+  // 0.25 multiplier is empirical
   return std.mix(
-    d.vec4f(d.vec3f(0.059, 0.255, 0.251).mul(0.33), 1),
-    d.vec4f(d.vec3f(0.024, 0.039, 0.051).mul(0.33), 1),
+    d.vec4f(d.vec3f(0.059, 0.255, 0.251).mul(0.25), 1),
+    d.vec4f(d.vec3f(0.024, 0.039, 0.051).mul(0.25), 1),
     ratio,
   );
 });
 
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 10, 0);
-controls.minDistance = 15;
-controls.maxDistance = 100;
+controls.minDistance = 20;
+controls.maxDistance = 35;
 controls.maxPolarAngle = Math.PI / 1.7;
 controls.autoRotate = true;
 controls.autoRotateSpeed = -0.7;
