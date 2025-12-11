@@ -12,7 +12,7 @@ import {
   SUN_GLOW,
 } from './consts.ts';
 import { raymarch } from './utils.ts';
-import { cloudsLayout } from './types.ts';
+import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -27,7 +27,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const time = root.createUniform(d.f32, 0);
+const paramsUniform = root.createUniform(CloudsParams, {
+  time: 0,
+  maxSteps: 50,
+  maxDistance: 10.0,
+});
 const resolutionUniform = root.createUniform(
   d.vec2f,
   d.vec2f(canvas.width, canvas.height),
@@ -64,7 +68,7 @@ root.device.queue.writeTexture(
 );
 
 const bindGroup = root.createBindGroup(cloudsLayout, {
-  time: time.buffer,
+  params: paramsUniform.buffer,
   noiseTexture,
   sampler,
 });
@@ -115,7 +119,7 @@ resizeObserver.observe(canvas);
 let frameId: number;
 
 function render() {
-  time.write((performance.now() / 1000) % 500);
+  paramsUniform.writePartial({ time: (performance.now() / 1000) % 500 });
 
   pipeline
     .with(bindGroup)
@@ -131,6 +135,39 @@ function render() {
 }
 
 frameId = requestAnimationFrame(render);
+
+const qualityOptions = {
+  'very high': {
+    maxSteps: 200,
+    maxDistance: 15.0,
+  },
+  high: {
+    maxSteps: 100,
+    maxDistance: 12.0,
+  },
+  medium: {
+    maxSteps: 50,
+    maxDistance: 10.0,
+  },
+  low: {
+    maxSteps: 30,
+    maxDistance: 6.0,
+  },
+  'very low': {
+    maxSteps: 15,
+    maxDistance: 4.0,
+  },
+} as Record<string, Partial<d.Infer<typeof CloudsParams>>>;
+
+export const controls = {
+  Quality: {
+    initial: 'medium',
+    options: ['very high', 'high', 'medium', 'low', 'very low'],
+    onSelectChange(value: string) {
+      paramsUniform.writePartial(qualityOptions[value]);
+    },
+  },
+};
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);

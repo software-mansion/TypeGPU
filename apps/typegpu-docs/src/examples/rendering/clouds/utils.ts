@@ -12,8 +12,6 @@ import {
   FBM_OCTAVES,
   FBM_PERSISTENCE,
   LIGHT_ABSORPTION,
-  MAX_DEPTH,
-  MAX_STEPS,
   NOISE_TEXTURE_SIZE,
   NOISE_Z_OFFSET,
   SKY_AMBIENT,
@@ -28,10 +26,11 @@ const sampleDensity = tgpu.fn([d.vec3f], d.f32)((pos) => {
 });
 
 const sampleDensityCheap = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  const time = cloudsLayout.$.params.time;
   const wind = d.vec3f(
-    std.sin(cloudsLayout.$.time),
-    std.cos(cloudsLayout.$.time),
-    cloudsLayout.$.time * WIND_SPEED,
+    std.sin(time),
+    std.cos(time),
+    time * WIND_SPEED,
   );
   const windPos = std.add(pos, wind);
   const noise = noise3d(std.mul(windPos, CLOUD_FREQUENCY)) * CLOUD_AMPLITUDE;
@@ -41,11 +40,16 @@ const sampleDensityCheap = tgpu.fn([d.vec3f], d.f32)((pos) => {
 export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
   (rayOrigin, rayDir, sunDir) => {
     let accum = d.vec4f();
-    const stepSize = 1 / MAX_STEPS;
+
+    const params = cloudsLayout.$.params;
+    const maxSteps = params.maxSteps;
+    const maxDepth = params.maxDistance;
+
+    const stepSize = 1 / maxSteps;
     let dist = randf.sample() * stepSize;
 
-    for (let i = 0; i < MAX_STEPS; i++) {
-      const samplePos = std.add(rayOrigin, std.mul(rayDir, dist * MAX_DEPTH));
+    for (let i = 0; i < maxSteps; i++) {
+      const samplePos = std.add(rayOrigin, std.mul(rayDir, dist * maxDepth));
       const cloudDensity = sampleDensity(samplePos);
 
       if (cloudDensity > 0.0) {
@@ -78,10 +82,11 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
 );
 
 const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
+  const time = cloudsLayout.$.params.time;
   const wind = d.vec3f(
-    std.sin(cloudsLayout.$.time) / 2,
-    std.cos(cloudsLayout.$.time) / 2,
-    cloudsLayout.$.time * WIND_SPEED,
+    std.sin(time) / 2,
+    std.cos(time) / 2,
+    time * WIND_SPEED,
   );
   const windPos = std.add(pos, wind);
   let sum = d.f32();
