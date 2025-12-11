@@ -24,13 +24,13 @@ describe('tgpu.namespace', () => {
     });
 
     expect(code1).toMatchInlineSnapshot(`
-      "struct Boid_0 {
+      "struct Boid {
         pos: vec3f,
-      }var<private> foo: Boid_0"
+      }var<private> foo: Boid"
     `);
 
     // Should be just the template, as Boid was already defined in the namespace
-    expect(code2).toMatchInlineSnapshot(`"var<private> foo: Boid_0"`);
+    expect(code2).toMatchInlineSnapshot(`"var<private> foo: Boid"`);
   });
 
   it('defines transitive dependencies only once', () => {
@@ -53,17 +53,17 @@ describe('tgpu.namespace', () => {
     const code2 = tgpu.resolve([updateBoid], { names });
 
     expect(code1).toMatchInlineSnapshot(`
-      "struct Boid_1 {
+      "struct Boid {
         pos: vec3f,
       }
 
-      fn createBoid_0() -> Boid_1 {
-        return Boid_1();
+      fn createBoid() -> Boid {
+        return Boid();
       }"
     `);
 
     expect(code2).toMatchInlineSnapshot(`
-      "fn updateBoid_2(boid: ptr<function, Boid_1>) {
+      "fn updateBoid(boid: ptr<function, Boid>) {
         (*boid).pos.x += 1f;
       }"
     `);
@@ -82,10 +82,10 @@ describe('tgpu.namespace', () => {
     const code = tgpu.resolve([Boid], { names });
 
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith({ name: 'Boid_0', target: Boid });
+    expect(listener).toHaveBeenCalledWith({ name: 'Boid', target: Boid });
 
     expect(code).toMatchInlineSnapshot(`
-      "struct Boid_0 {
+      "struct Boid {
         pos: vec3f,
       }"
     `);

@@ -5,11 +5,21 @@ const root = await tgpu.init();
 // Allocating memory for the counter
 const counter = root.createMutable(d.u32);
 
+const f = (v: number) => {
+  'use gpu';
+  return v;
+};
+
 // A 0-dimensional compute pipeline
 const incrementPipeline = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';
+  let x = 1;
+  x ||= 2;
+  console.log(x);
   counter.$ += 1;
 });
+
+console.log(tgpu.resolve([incrementPipeline.pipeline]));
 
 async function increment() {
   // Dispatch and read the result
