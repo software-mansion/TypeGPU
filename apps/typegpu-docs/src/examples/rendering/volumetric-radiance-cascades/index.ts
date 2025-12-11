@@ -10,6 +10,7 @@ import { castAndMerge } from './castAndMerge.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import * as std from 'typegpu/std';
+import { scenes } from './scenes.ts';
 
 // initial setup
 
@@ -35,6 +36,7 @@ const bilinearFixUniform = root.createUniform(d.u32, 1);
 const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
 let cascadesNumber = 6;
 const cascadesNumberUniform = root.createUniform(d.u32, cascadesNumber);
+const selectedSceneUniform = root.createUniform(d.u32, scenes['Shadertoy']);
 
 // castAndMerge pipeline
 
@@ -55,6 +57,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
       timeUniform.$,
       bilinearFixUniform.$,
       cascadesNumberUniform.$,
+      selectedSceneUniform.$,
     );
   },
 );
@@ -177,6 +180,14 @@ export function onCleanup() {
 }
 
 export const controls = {
+  'Scene': {
+    initial: 'Shadertoy',
+    options: Object.keys(scenes),
+    onSelectChange: (value: keyof typeof scenes) => {
+      selectedSceneUniform.write(scenes[value]);
+    },
+  },
+
   'Bilinear fix': {
     initial: true,
     onToggleChange: (value: boolean) => {

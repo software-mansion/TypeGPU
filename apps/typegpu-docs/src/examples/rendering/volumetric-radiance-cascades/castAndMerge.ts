@@ -26,6 +26,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { getSceneColor } from './scenes.ts';
 
 // Behold, the one parameter of Radiance Cascades, BASE_INTERVAL_LENGTH.
 // This is the minimum spatial resolution that the cascades can model at C0.
@@ -34,45 +35,6 @@ const BASE_INTERVAL_LENGTH = 0.2;
 // Here is also a BASE_PROBE_SIZE (in px) to try out a sparser probe grid.
 // I do a 2x2 or 4x4 probe grid for screen-space (3D) with later upscaling.
 const BASE_PROBE_SIZE = 1;
-
-// https://iquilezles.org/articles/distfunctions2d
-const circle = tgpu.fn([d.vec4f, d.vec2f, d.f32, d.vec4f], d.vec4f)(
-  (color, position, radius, albedo) => {
-    'use gpu';
-    const sanitizedRadius = std.max(0.001, radius);
-    let result = d.vec4f(color);
-    if (std.length(position) - sanitizedRadius < sanitizedRadius) {
-      result = d.vec4f(albedo);
-    }
-    return result;
-  },
-);
-
-const getSceneColor = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
-  (worldPos, time) => {
-    'use gpu';
-    let color = d.vec4f(0.0);
-    color = circle(
-      color,
-      d.vec2f(-0.7, 0).sub(worldPos),
-      (std.sin(time) * 0.5 + 0.5) / 8,
-      d.vec4f(1, 0.5, 0, 1),
-    );
-    color = circle(
-      color,
-      d.vec2f(0, std.sin(time) * 0.5).sub(worldPos),
-      1 / 8,
-      d.vec4f(0, 0, 0, 0.01),
-    );
-    color = circle(
-      color,
-      d.vec2f(0.7, 0).sub(worldPos),
-      (-std.sin(time) * 0.5 + 0.5) / 8,
-      d.vec4f(1, 1, 1, 1),
-    );
-    return color;
-  },
-);
 
 // https://m4xc.dev/articles/fundamental-rc
 const getIntervalScale = tgpu.fn([d.i32], d.f32)((cascadeIndex) => {
@@ -103,10 +65,17 @@ const coordToWorldPos = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)(
 );
 
 const castInterval = tgpu.fn(
-  [d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32],
+  [d.vec2f, d.vec2f, d.i32, d.vec2f, d.f32, d.u32],
   d.vec4f,
 )(
-  (intervalStart, intervalEnd, cascadeIndex, resolution, time) => {
+  (
+    intervalStart,
+    intervalEnd,
+    cascadeIndex,
+    resolution,
+    time,
+    selectedScene,
+  ) => {
     'use gpu';
     const dir = intervalEnd.sub(intervalStart);
     const steps = 16 << d.u32(cascadeIndex);
@@ -118,7 +87,7 @@ const castInterval = tgpu.fn(
     for (let i = d.u32(0); i < steps; i++) {
       const coord = intervalStart.add(stepSize.mul(d.f32(i)));
       const worldPos = coordToWorldPos(coord, resolution);
-      const scene = getSceneColor(worldPos, time);
+      const scene = getSceneColor(worldPos, time, selectedScene);
       radiance = radiance.add(scene.xyz.mul(transmittance).mul(scene.w));
       transmittance *= 1.0 - scene.w;
     }
@@ -158,6 +127,7 @@ export const castAndMerge = tgpu.fn([
   d.f32,
   d.u32,
   d.u32,
+  d.u32,
 ], d.vec4f)((
   texture,
   cascadeIndex,
@@ -166,6 +136,7 @@ export const castAndMerge = tgpu.fn([
   time,
   bilinearFix,
   cascadesNumber,
+  selectedScene,
 ) => {
   'use gpu';
   // Probe parameters for cascade N
@@ -194,6 +165,7 @@ export const castAndMerge = tgpu.fn([
     cascadeIndex,
     resolution,
     time,
+    selectedScene,
   );
 
   // Skip merge and only trace on the last cascade (computed back-to-front)
@@ -237,6 +209,7 @@ export const castAndMerge = tgpu.fn([
         cascadeIndex,
         resolution,
         time,
+        selectedScene,
       );
     }
 
