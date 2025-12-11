@@ -191,7 +191,6 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
     return this.#pipeline;
   }
 
-
   get sizeUniform() {
     return this.#sizeUniform;
   }
