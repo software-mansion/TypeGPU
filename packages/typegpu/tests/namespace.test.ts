@@ -98,7 +98,7 @@ describe('tgpu.namespace', () => {
   });
 
   it('handles name collision', () => {
-    let code1, code2;
+    let code1: string, code2: string;
     const names = tgpu['~unstable'].namespace();
     {
       const Boid = d.struct({
