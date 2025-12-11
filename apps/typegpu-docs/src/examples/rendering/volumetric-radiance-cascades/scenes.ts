@@ -6,7 +6,7 @@ import * as sdf from '@typegpu/sdf';
 export const scenes = {
   'Shadertoy': 0,
   'Hearts': 1,
-  'Nothing': 2,
+  'Dots': 2,
 } as const;
 
 // https://iquilezles.org/articles/distfunctions2d
@@ -109,6 +109,32 @@ const heartsScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
   },
 );
 
+const Dot = d.struct({ position: d.vec2f, radius: d.f32, albedo: d.vec4f });
+const dots = tgpu.const(
+  d.arrayOf(Dot, 128),
+  Array.from({ length: 128 }, () => ({
+    position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+    radius: Math.random() * 0.1 + 0.02,
+    albedo: d.vec4f(Math.random(), Math.random(), Math.random(), 1.0),
+  })),
+);
+
+const dotsScene = tgpu.fn([d.vec2f, d.f32], d.vec4f)(
+  (worldPos, time) => {
+    'use gpu';
+    let color = d.vec4f(0.0);
+    for (let i = d.u32(0); i < dots.$.length; i++) {
+      color = circle(
+        color,
+        dots.$[i].position.sub(worldPos),
+        dots.$[i].radius,
+        dots.$[i].albedo,
+      );
+    }
+    return color;
+  },
+);
+
 export const getSceneColor = tgpu.fn([d.vec2f, d.f32, d.u32], d.vec4f)(
   (worldPos, time, selectedScene) => {
     if (selectedScene === scenes['Shadertoy']) {
@@ -116,6 +142,9 @@ export const getSceneColor = tgpu.fn([d.vec2f, d.f32, d.u32], d.vec4f)(
     }
     if (selectedScene === scenes['Hearts']) {
       return heartsScene(worldPos, time);
+    }
+    if (selectedScene === scenes['Dots']) {
+      return dotsScene(worldPos, time);
     }
     return d.vec4f(0, 0, 0, 1);
   },
