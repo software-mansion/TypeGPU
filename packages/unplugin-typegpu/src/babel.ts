@@ -147,6 +147,12 @@ function functionVisitor(ctx: Context): TraverseOptions {
       });
     },
 
+    ClassProperty(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('value').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
     },
