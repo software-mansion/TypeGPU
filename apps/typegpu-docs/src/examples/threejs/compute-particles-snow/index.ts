@@ -3,13 +3,13 @@
  */
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
-import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { fromTSL, toTSL } from '@typegpu/three';
+import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
+
+import * as t3 from '@typegpu/three';
 import * as d from 'typegpu/data';
-import * as o from './sceneObjects.ts';
 import { randf } from '@typegpu/noise';
+import * as e from './entities.ts';
 
 const maxParticleCount = 100000;
 
@@ -18,67 +18,28 @@ const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
 renderer.setClearColor(0x000000);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const camera = new THREE.PerspectiveCamera(
   60,
   canvas.clientWidth / canvas.clientHeight,
-  .1,
+  0.1,
   1000,
 );
-camera.position.set(40, 20, 40);
-camera.lookAt(0, 0, 0);
+camera.position.set(20, 2, 20);
+camera.lookAt(0, 40, 0);
 camera.layers.enable(2);
-
-const scene = new THREE.Scene();
-
-const positionBuffer = TSL.instancedArray(maxParticleCount, 'vec3');
-const scaleBuffer = TSL.instancedArray(maxParticleCount, 'vec3');
-const staticPositionBuffer = TSL.instancedArray(maxParticleCount, 'vec3');
-const dataBuffer = TSL.instancedArray(maxParticleCount, 'vec4');
-
-const positionBufferAccessor = fromTSL(positionBuffer, {
-  type: d.arrayOf(d.vec3f),
-});
-const scaleBufferAccessor = fromTSL(scaleBuffer, { type: d.arrayOf(d.vec3f) });
-const staticPositionAccessor = fromTSL(staticPositionBuffer, {
-  type: d.arrayOf(d.vec3f),
-});
-const dataBufferAccessor = fromTSL(dataBuffer, { type: d.arrayOf(d.vec4f) });
-const instanceIndexAccessor = fromTSL(TSL.instanceIndex, { type: d.u32 });
-
-const computeInit = toTSL(() => {
-  'use gpu';
-  const instanceIdx = instanceIndexAccessor.$;
-
-  randf.seed(instanceIdx / maxParticleCount);
-  const rand = d.vec3f(randf.sample(), randf.sampleExclusive(), randf.sample());
-  const randPos = rand.mul(d.vec3f(100, 500, 100))
-    .add(d.vec3f(-50, 3, -50));
-  positionBufferAccessor.$[instanceIdx] = d.vec3f(randPos);
-
-  scaleBufferAccessor.$[instanceIdx] = d.vec3f(randf.sample() * 0.8 + 0.2);
-
-  staticPositionAccessor.$[instanceIdx] = d.vec3f(1000, 10000, 1000);
-
-  dataBufferAccessor.$[instanceIdx] = d.vec4f(
-    randPos.x,
-    -0.05,
-    randPos.z,
-    rand.x,
-  );
-}).compute(maxParticleCount).setName('Init Partciles');
 
 const collisionCamera = new THREE.OrthographicCamera(
   -50,
   50,
   50,
   -50,
-  .1,
+  0.1,
   1000,
 );
 collisionCamera.position.y = 50;
 collisionCamera.lookAt(0, 0, 0);
-collisionCamera.up.set(0, 0, 1); // probably doesn't matter
 collisionCamera.layers.enable(1);
 
 const collisionPosRT = new THREE.RenderTarget(2048, 2048, {
@@ -92,85 +53,141 @@ const collisionPosRT = new THREE.RenderTarget(2048, 2048, {
 const collisionPosMaterial = new THREE.MeshBasicNodeMaterial();
 collisionPosMaterial.fog = false;
 collisionPosMaterial.toneMapped = false;
-// collisionPosMaterial.colorNode = TSL.C;
+collisionPosMaterial.outputNode = TSL.vec4(
+  TSL.positionWorld.y,
+  TSL.positionWorld.y,
+  TSL.positionWorld.y,
+  1,
+);
 
+const positionBuffer = t3.instancedArray(
+  maxParticleCount,
+  d.vec3f,
+);
+const scaleBuffer = t3.instancedArray(maxParticleCount, d.vec3f);
+const staticPositionBuffer = t3.instancedArray(maxParticleCount, d.vec3f);
+const dataBuffer = t3.instancedArray(maxParticleCount, d.vec4f);
+
+const computeInit = t3.toTSL(() => {
+  'use gpu';
+  const instanceIdx = t3.instanceIndex.$;
+
+  randf.seed(instanceIdx / maxParticleCount);
+  const rand = d.vec3f(randf.sample(), randf.sample(), randf.sample());
+  const randPos = rand.mul(d.vec3f(100, 500, 100))
+    .add(d.vec3f(-50, 3, -50));
+
+  positionBuffer.$[instanceIdx] = d.vec3f(randPos);
+  scaleBuffer.$[instanceIdx] = d.vec3f(randf.sample() * 0.8 + 0.2);
+  staticPositionBuffer.$[instanceIdx] = d.vec3f(1000, 10000, 1000);
+
+  dataBuffer.$[instanceIdx] = d.vec4f(
+    randPos.x,
+    -0.05,
+    randPos.z,
+    rand.x,
+  );
+}).compute(maxParticleCount).setName('Init Partciles');
+
+const surfaceOffset = 0.2;
+const speed = 0.4;
 const computeUpdate = TSL.Fn(() => {
-  const position = positionBuffer.element(TSL.instanceIndex);
+  const position = positionBuffer.node.element(TSL.instanceIndex);
+  const scale = scaleBuffer.node.element(TSL.instanceIndex);
+  const particleData = dataBuffer.node.element(TSL.instanceIndex);
+
+  const velocity = particleData.y;
+  const random = particleData.w;
 
   const terrainHeight = TSL.texture(
     collisionPosRT.texture,
     position.xz.add(50).div(100),
-  ).y;
+  ).y.add(scale.x.mul(surfaceOffset));
 
-  position.y.assign(terrainHeight);
+  TSL.If(position.y.greaterThan(terrainHeight), () => {
+    position.x = particleData.x.add(
+      TSL.time.mul(random.mul(random)).mul(speed).sin().mul(3),
+    );
+    position.z = particleData.z.add(
+      TSL.time.mul(random).mul(speed).cos().mul(random.mul(10)),
+    );
+
+    position.y = position.y.add(velocity);
+  }).Else(() => {
+    staticPositionBuffer.node.element(TSL.instanceIndex).assign(position);
+  });
 })().compute(maxParticleCount).setName('Update Particles');
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 5);
-scene.add(ambientLight);
-
-const floorGeometry = new THREE.PlaneGeometry(100, 100);
-floorGeometry.rotateX(-Math.PI / 2);
-const plane = new THREE.Mesh(
-  floorGeometry,
-  new THREE.MeshStandardMaterial({
-    color: 0xff0000,
-    roughness: .5,
-    metalness: 0,
-    transparent: false,
-  }),
-);
-plane.position.y = -2;
-plane.layers.enable(1);
-plane.layers.enable(2);
-
-scene.add(plane);
-
-const coneMaterial = new THREE.MeshStandardNodeMaterial({
-  color: 0x00ff00,
-  roughness: .6,
-  metalness: 0,
-});
-const cylinderGeometry = new THREE.CylinderGeometry(5, 5, 10, 32);
-const cylinder = new THREE.Mesh(cylinderGeometry, coneMaterial);
-cylinder.position.y = 0;
-cylinder.layers.enable(1);
-cylinder.layers.enable(2);
-
-scene.add(cylinder);
-
-const surfaceOffset = 0.2;
 const sphereGeometry = new THREE.SphereGeometry(surfaceOffset, 5, 5);
-function particle() {
-  const posBuffer = positionBuffer;
+function particles(isStatic: boolean = false) {
+  const posBuffer = isStatic ? staticPositionBuffer : positionBuffer;
+  const layer = isStatic ? 1 : 2;
 
   const material = new THREE.MeshStandardNodeMaterial({
     color: 0xeeeeee,
-    roughness: .9,
+    roughness: 0.9,
     metalness: 0,
   });
 
-  material.positionNode = TSL.positionLocal.add(
-    posBuffer.element(TSL.instanceIndex),
-  );
+  material.positionNode = TSL.positionLocal.mul(scaleBuffer.node.toAttribute())
+    .add(posBuffer.node.toAttribute());
 
-  const rainParticles = new THREE.InstancedMesh(
-    sphereGeometry,
-    material,
-    maxParticleCount,
-  );
-
+  const rainParticles = new THREE.Mesh(sphereGeometry, material);
+  rainParticles.count = maxParticleCount;
+  rainParticles.castShadow = true;
   rainParticles.layers.disableAll();
-  rainParticles.layers.enable(2);
+  rainParticles.layers.enable(layer);
 
   return rainParticles;
 }
 
+const scene = new THREE.Scene();
+scene.fog = e.fog;
+scene.add(e.dirLight);
+scene.add(e.hemisphereLight);
+
+const dynamicParticles = particles();
+const staticParticles = particles(true);
+scene.add(dynamicParticles);
+scene.add(staticParticles);
+
+scene.add(e.floor);
+scene.add(e.xmasTree);
+scene.add(e.teapot);
+
+scene.backgroundNode = TSL.screenUV.distance(0.5).mul(2).mix(
+  TSL.color(0x0f4140),
+  TSL.color(0x060a0d),
+);
+
 const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 10, 0);
-controls.minDistance = 1;
+controls.minDistance = 15;
 controls.maxDistance = 100;
 controls.maxPolarAngle = Math.PI / 1.7;
+controls.autoRotate = true;
+controls.autoRotateSpeed = -0.7;
 controls.update();
+
+const scenePass = TSL.pass(scene, camera);
+const scenePassColor = scenePass.getTextureNode();
+const vignette = TSL.screenUV.distance(0.5).mul(1.35).clamp().oneMinus();
+
+const teapotPass = TSL.pass(e.teapot, camera).getTextureNode();
+const teapotPassBlurred = gaussianBlur(teapotPass, TSL.vec2(1), 6);
+teapotPassBlurred.resolutionScale = 0.2;
+
+const scenePassColorBlurred = gaussianBlur(scenePassColor);
+scenePassColorBlurred.resolutionScale = 0.5;
+scenePassColorBlurred.directionNode = TSL.vec2(1);
+
+const totalPass = scenePass
+  .add(scenePassColorBlurred.mul(0.1))
+  .mul(vignette)
+  .add(teapotPass.mul(10).add(teapotPassBlurred));
+
+const postProcessing = new THREE.PostProcessing(renderer);
+postProcessing.outputNode = totalPass;
 
 const resizeObserver = new ResizeObserver(() => {
   camera.aspect = canvas.clientWidth / canvas.clientHeight;
@@ -182,21 +199,19 @@ resizeObserver.observe(canvas);
 function animate() {
   controls.update();
 
+  scene.overrideMaterial = collisionPosMaterial;
+  renderer.setRenderTarget(collisionPosRT);
+  renderer.render(scene, collisionCamera);
   renderer.compute(computeUpdate);
 
   scene.overrideMaterial = null;
   renderer.setRenderTarget(null);
 
-  renderer.render(scene, camera);
+  postProcessing.render();
 }
 
 await renderer.init();
 renderer.compute(computeInit);
-scene.overrideMaterial = collisionPosMaterial;
-renderer.setRenderTarget(collisionPosRT);
-renderer.render(scene, collisionCamera);
-
-scene.add(particle());
 renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
