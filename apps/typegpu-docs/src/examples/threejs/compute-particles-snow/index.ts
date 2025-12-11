@@ -85,7 +85,7 @@ const computeInit = t3.toTSL(() => {
 
   dataBuffer.$[instanceIdx] = d.vec4f(
     randPos.x,
-    -0.05,
+    -0.01 * rand.y - 0.02,
     randPos.z,
     rand.x,
   );
