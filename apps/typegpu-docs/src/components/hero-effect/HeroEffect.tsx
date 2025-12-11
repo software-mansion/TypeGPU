@@ -17,7 +17,7 @@ export function HeroEffect() {
   });
 
   return (
-    <div className='relative h-64 w-64'>
+    <div className='relative h-[32rem] w-[32rem]'>
       <canvas
         ref={canvasRef}
         className='absolute inset-0 h-full w-full bg-transparent'
