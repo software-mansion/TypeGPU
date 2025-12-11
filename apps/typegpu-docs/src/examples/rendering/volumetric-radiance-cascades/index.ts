@@ -25,11 +25,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// buffers
+// buffers and params
 
 const cascadeIndexUniform = root.createUniform(d.i32);
 const timeUniform = root.createUniform(d.f32);
-const resolutionUniform = root.createUniform(d.vec3f);
+let quality = 0.5; // modifies the resolution of the work textures
+const workResolutionUniform = root.createUniform(d.vec3f); // only for castAndMerge
 const bilinearFixUniform = root.createUniform(d.u32, 1);
 const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
 let cascadesNumber = 6;
@@ -50,7 +51,7 @@ const castAndMergeFragment = tgpu['~unstable'].fragmentFn({
       castAndMergeLayout.$.iChannel0,
       cascadeIndexUniform.$,
       pos.xy,
-      resolutionUniform.$.xy,
+      workResolutionUniform.$.xy,
       timeUniform.$,
       bilinearFixUniform.$,
       cascadesNumberUniform.$,
@@ -69,12 +70,16 @@ export const imageLayout = tgpu.bindGroupLayout({
   iChannel0: { texture: d.texture2d() },
 });
 
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
 const imageFragment = tgpu['~unstable'].fragmentFn({
-  in: { pos: d.builtin.position },
+  in: { uv: d.vec2f },
   out: d.vec4f,
-})(({ pos }) => {
-  let luminance =
-    std.textureLoad(imageLayout.$.iChannel0, d.vec2i(pos.xy), 0).xyz;
+})(({ uv }) => {
+  let luminance = std.textureSample(imageLayout.$.iChannel0, sampler.$, uv).xyz;
   if (luminancePostprocessingUniform.$ === 1) {
     luminance = luminance.mul(std.exp2(exposure));
     luminance = tonemapACES(luminance);
@@ -110,7 +115,7 @@ function recreateResources() {
   workTextures = [0, 1].map((i) =>
     root['~unstable']
       .createTexture({
-        size: [canvas.width, canvas.height],
+        size: [canvas.width * quality, canvas.height * quality],
         format: intermediateFormat,
         dimension: '2d',
       })
@@ -132,7 +137,9 @@ recreateResources();
 
 function draw(timestamp: number) {
   timeUniform.write(timestamp / 1000);
-  resolutionUniform.write(d.vec3f(canvas.width, canvas.height, 1));
+  workResolutionUniform.write(
+    d.vec3f(...workTextures[0].props.size, 1),
+  );
 
   for (let i = cascadesNumber - 1; i >= 0; i--) {
     cascadeIndexUniform.write(i);
@@ -184,12 +191,22 @@ export const controls = {
   },
   'Number of cascades': {
     initial: cascadesNumber,
-    min: 0,
+    min: 1,
     max: 9,
     step: 1,
     onSliderChange: (value: number) => {
       cascadesNumber = value;
       cascadesNumberUniform.write(cascadesNumber);
+    },
+  },
+  'Quality': {
+    initial: quality,
+    min: 0.1,
+    max: 1,
+    step: 0.1,
+    onSliderChange: (value: number) => {
+      quality = value;
+      recreateResources();
     },
   },
 };
