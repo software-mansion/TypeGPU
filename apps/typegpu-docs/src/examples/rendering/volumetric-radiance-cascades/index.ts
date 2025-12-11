@@ -34,7 +34,7 @@ context.configure({
 
 const cascadeIndexUniform = root.createUniform(d.i32);
 const timeUniform = root.createUniform(d.f32);
-let quality = 0.5; // modifies the resolution of the work textures
+let quality = 0.35; // modifies the resolution of the work textures
 const workResolutionUniform = root.createUniform(d.vec3f); // only for castAndMerge
 const bilinearFixUniform = root.createUniform(d.u32, 1);
 const luminancePostprocessingUniform = root.createUniform(d.u32, 1);
@@ -138,7 +138,7 @@ let imageBindGroup: TgpuBindGroup<{
 }>;
 
 function recreateResources() {
-  // scene, work1, work2
+  // pre-rendered scene, work1, work2
   workTextures = [0, 1, 2].map((i) =>
     root['~unstable']
       .createTexture({
@@ -244,12 +244,12 @@ export const controls = {
     },
   },
   'Quality': {
-    initial: quality,
-    min: 0.1,
-    max: 4,
-    step: 0.1,
+    initial: quality * 100,
+    min: 10,
+    max: 100,
+    step: 5,
     onSliderChange: (value: number) => {
-      quality = value;
+      quality = value / 100;
       recreateResources();
     },
   },
