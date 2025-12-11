@@ -1,5 +1,6 @@
 {
   "title": "Volumetric Radiance Cascades",
   "category": "rendering",
-  "tags": ["experimental"]
+  "dev": true,
+  "tags": ["experimental", "global illumination", "volumetric lighting"]
 }

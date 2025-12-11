@@ -107,11 +107,13 @@ const heartsScene = (worldPos: d.v2f, time: number) => {
 
 const Dot = d.struct({ position: d.vec2f, radius: d.f32, albedo: d.vec4f });
 const dots = tgpu.const(
-  d.arrayOf(Dot, 128),
-  Array.from({ length: 128 }, () => ({
-    position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
-    radius: Math.random() * 0.1 + 0.02,
-    albedo: d.vec4f(Math.random(), Math.random(), Math.random(), 1.0),
+  d.arrayOf(Dot, 64),
+  Array.from({ length: 64 }, () => ({
+    position: d.vec2f(Math.random() * 1.6 - 0.8, Math.random() * 1.6 - 0.8),
+    radius: Math.random() * 0.01 + 0.02,
+    albedo: Math.random() < 0.3
+      ? d.vec4f(1, 0.85, 0.2, 1)
+      : d.vec4f(0, 0, 0, 1),
   })),
 );
 
@@ -119,9 +121,14 @@ const dotsScene = (worldPos: d.v2f, time: number) => {
   'use gpu';
   let color = d.vec4f(0.0);
   for (let i = d.u32(0); i < dots.$.length; i++) {
+    const offsetAngle = i +
+      time * std.sign(d.f32(i % 2) - 0.5) * (i + 100) / 200;
+    const offset = d.vec2f(std.sin(offsetAngle), std.cos(offsetAngle)).mul(
+      0.1,
+    );
     color = circle(
       color,
-      dots.$[i].position.sub(worldPos),
+      dots.$[i].position.add(offset).sub(worldPos),
       dots.$[i].radius,
       dots.$[i].albedo,
     );

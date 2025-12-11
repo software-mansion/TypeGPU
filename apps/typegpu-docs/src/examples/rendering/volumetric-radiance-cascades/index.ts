@@ -12,9 +12,6 @@ import { exposure, gammaSRGB, tonemapACES } from './image.ts';
 import * as std from 'typegpu/std';
 import { getSceneColor, scenes } from './scenes.ts';
 
-// AAA dots
-// AAA tags
-
 // initial setup
 
 export const root = await tgpu.init();
