@@ -323,7 +323,7 @@ function manhattanDistance(a: d.v3f, b: d.v3f) {
   const dy = std.abs(a.y - b.y);
   const dz = std.abs(a.z - b.z);
 
-  return std.max(dx, std.max(dy, dz));
+  return std.max(dx, dy, dz);
 }
 ```
 

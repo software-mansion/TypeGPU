@@ -13,6 +13,7 @@ import {
 } from '../../shared/symbols.ts';
 import {
   getOwnSnippet,
+  NormalState,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
@@ -23,7 +24,7 @@ import {
   getGpuValueRecursively,
   valueProxyHandler,
 } from '../valueProxyUtils.ts';
-import { slot } from './slot.ts';
+import { slot as slotConstructor } from './slot.ts';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
@@ -63,7 +64,8 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       | Infer<T>
       | undefined = undefined,
   ) {
-    this.slot = slot(defaultValue);
+    // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
+    this.slot = slotConstructor(defaultValue);
     this[$getNameForward] = this.slot;
   }
 
@@ -93,11 +95,17 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return ownSnippet;
     }
 
-    // Doing a deep copy each time so that we don't have to deal with refs
-    return schemaCallWrapper(
-      this.schema,
-      snip(value, this.schema, /* origin */ 'constant'),
-    );
+    ctx.pushMode(new NormalState());
+    try {
+      // Doing a deep copy each time so that we don't have to deal with refs
+      const cloned = schemaCallWrapper(
+        this.schema,
+        value,
+      );
+      return snip(cloned, this.schema, 'constant');
+    } finally {
+      ctx.popMode('normal');
+    }
   }
 
   $name(label: string) {
