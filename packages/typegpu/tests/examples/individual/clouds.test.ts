@@ -35,32 +35,32 @@ describe('clouds example', () => {
         return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      var<private> seed_6: vec2f;
-
-      fn seed2_5(value: vec2f) {
-        seed_6 = value;
-      }
-
-      fn randSeed2_4(seed: vec2f) {
-        seed2_5(seed);
-      }
-
-      @group(0) @binding(0) var<uniform> resolutionUniform_7: vec2f;
-
-      struct CloudsParams_10 {
+      struct CloudsParams_5 {
         time: f32,
         maxSteps: i32,
         maxDistance: f32,
       }
 
-      @group(1) @binding(0) var<uniform> params_9: CloudsParams_10;
+      @group(1) @binding(0) var<uniform> params_4: CloudsParams_5;
+
+      var<private> seed_8: vec2f;
+
+      fn seed2_7(value: vec2f) {
+        seed_8 = value;
+      }
+
+      fn randSeed2_6(seed: vec2f) {
+        seed2_7(seed);
+      }
+
+      @group(0) @binding(0) var<uniform> resolutionUniform_9: vec2f;
 
       fn item_12() -> f32 {
-        let a = dot(seed_6, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_6, vec2f(54.47856521606445, 345.8415222167969));
-        seed_6.x = fract((cos(a) * 136.8168f));
-        seed_6.y = fract((cos(b) * 534.7645f));
-        return seed_6.y;
+        let a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
+        seed_8.x = fract((cos(a) * 136.8168f));
+        seed_8.y = fract((cos(b) * 534.7645f));
+        return seed_8.y;
       }
 
       fn randFloat01_11() -> f32 {
@@ -83,7 +83,7 @@ describe('clouds example', () => {
       }
 
       fn fbm_14(pos: vec3f) -> f32 {
-        let time = params_9.time;
+        let time = params_4.time;
         var wind = vec3f((sin(time) / 2f), (cos(time) / 2f), (time * 2f));
         var windPos = (pos + wind);
         var sum = 0f;
@@ -102,16 +102,16 @@ describe('clouds example', () => {
       }
 
       fn sampleDensityCheap_19(pos: vec3f) -> f32 {
-        let time = params_9.time;
+        let time = params_4.time;
         var wind = vec3f(sin(time), cos(time), (time * 2f));
         var windPos = (pos + wind);
         let noise = (noise3d_15((windPos * 1.4)) * 1f);
         return clamp(((noise + 0.45f) - 0.5f), 0f, 1f);
       }
 
-      fn raymarch_8(rayOrigin: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec4f {
+      fn raymarch_10(rayOrigin: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec4f {
         var accum = vec4f();
-        let params = (&params_9);
+        let params = (&params_4);
         let maxSteps = (*params).maxSteps;
         let maxDepth = (*params).maxDistance;
         let stepSize = (1f / f32(maxSteps));
@@ -143,8 +143,8 @@ describe('clouds example', () => {
       }
 
       @fragment fn mainFragment_3(_arg_0: mainFragment_Input_20) -> @location(0) vec4f {
-        randSeed2_4(_arg_0.uv);
-        let screenRes = (&resolutionUniform_7);
+        randSeed2_6((_arg_0.uv * params_4.time));
+        let screenRes = (&resolutionUniform_9);
         let aspect = ((*screenRes).x / (*screenRes).y);
         var screenPos = ((_arg_0.uv - 0.5) * 2);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
@@ -155,7 +155,7 @@ describe('clouds example', () => {
         let sunGlow = pow(sunDot, 1.371742112482853f);
         var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * (rayDir.y * 0.35f)));
         skyCol = (skyCol + (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow));
-        var cloudCol = raymarch_8(rayOrigin, rayDir, sunDir);
+        var cloudCol = raymarch_10(rayOrigin, rayDir, sunDir);
         var finalCol = ((skyCol * (1.1f - cloudCol.w)) + cloudCol.xyz);
         return vec4f(finalCol, 1f);
       }"
