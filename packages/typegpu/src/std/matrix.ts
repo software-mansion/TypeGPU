@@ -12,6 +12,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { mul } from './operators.ts';
 import { $internal } from '../shared/symbols.ts';
 import { vec3f } from '../data/vector.ts';
+import { f32 } from '../data/numeric.ts';
 
 const cpuMul = mul[$internal].jsImpl;
 
@@ -60,6 +61,8 @@ export const scale4 = dualImpl({
     stitch`(${(gpuScaling4(vector))} * ${matrix})`,
 });
 
+const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
+
 /**
  * Rotates the given 4-by-4 matrix around the x-axis by the given angle.
  * @param {m4x4f} matrix - The matrix to be modified.
@@ -70,10 +73,7 @@ export const rotateX4 = dualImpl({
   name: 'rotateX4',
   normalImpl: (matrix: m4x4f, angle: number) =>
     cpuMul(cpuRotationX4(angle), matrix),
-  signature: (_matrix, angle) => ({
-    argTypes: [mat4x4f, angle],
-    returnType: mat4x4f,
-  }),
+  signature: rotateSignature,
   codegenImpl: (matrix, angle) =>
     stitch`(${(gpuRotationX4(angle))} * ${matrix})`,
 });
@@ -88,10 +88,7 @@ export const rotateY4 = dualImpl({
   name: 'rotateY4',
   normalImpl: (matrix: m4x4f, angle: number) =>
     cpuMul(cpuRotationY4(angle), matrix),
-  signature: (_matrix, angle) => ({
-    argTypes: [mat4x4f, angle],
-    returnType: mat4x4f,
-  }),
+  signature: rotateSignature,
   codegenImpl: (matrix, angle) =>
     stitch`(${(gpuRotationY4(angle))} * ${matrix})`,
 });
@@ -106,10 +103,7 @@ export const rotateZ4 = dualImpl({
   name: 'rotateZ4',
   normalImpl: (matrix: m4x4f, angle: number) =>
     cpuMul(cpuRotationZ4(angle), matrix),
-  signature: (_matrix, angle) => ({
-    argTypes: [mat4x4f, angle],
-    returnType: mat4x4f,
-  }),
+  signature: rotateSignature,
   codegenImpl: (matrix, angle) =>
     stitch`(${(gpuRotationZ4(angle))} * ${matrix})`,
 });
