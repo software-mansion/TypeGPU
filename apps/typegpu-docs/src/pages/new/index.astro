@@ -21,6 +21,10 @@ import { HeroEffect } from "../../components/hero-effect/HeroEffect";
     class="flex flex-col gap-14 md:gap-30 text-blue-950 dark:text-gray-100 transition-colors duration-300"
   >
     <main>
+      <div class="flex flex-col items-center absolute top-0 right-32 -z-10">
+        <HeroEffect client:only="react" />
+      </div>
+
       <header
         class="flex justify-between items-center self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5 h-24 shrink-0"
       >
@@ -75,10 +79,6 @@ import { HeroEffect } from "../../components/hero-effect/HeroEffect";
         </div>
       </header>
     </main>
-
-    <section class="flex flex-col items-center">
-        <HeroEffect client:only="react" />
-    </section>
 
     <!-- Hero Section -->
     <section

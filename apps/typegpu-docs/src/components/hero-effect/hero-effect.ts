@@ -145,7 +145,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       std.smoothstep(0, sharpness, (pat.dist) + pat.color.x - bias.x),
       std.smoothstep(0, sharpness, (pat.dist) + pat.color.y - bias.y),
       std.smoothstep(0, sharpness, (pat.dist) + pat.color.z - bias.z),
-      std.smoothstep(0, sharpness, (pat.dist) + pat.color.w - bias.w - 0.5),
+      std.smoothstep(0, sharpness, (-pat.dist) + pat.color.w - bias.w),
     );
   };
 
@@ -219,7 +219,12 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       ),
     );
 
-    return d.vec4f(c2.xyz, c2.w);
+    const tint = d.vec3f(0.9, 0.5, 1);
+    const grayscale = d.vec4f(
+      d.vec3f(c2.x + c2.y + c2.z).mul(tint),
+      1,
+    ).mul(0.3 * c2.w);
+    return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
     // return d.vec4f(c1.mul(c2).xyz, std.saturate(c1.w + c2.w));
   });
 

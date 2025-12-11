@@ -25,7 +25,7 @@ export const RADIUS = SIM_N / 16;
 export const INK_AMOUNT = 0.02;
 
 export const params: SimulationParams = {
-  dt: 0.5,
+  dt: 0.3,
   viscosity: 0.000001,
   jacobiIter: 10,
   paused: false,
@@ -171,7 +171,7 @@ export const advectFn = tgpu['~unstable'].computeFn({
   );
 
   // Slowing the ink down synthetically
-  const slowedVelocity = prevVelocity.mul(0.99);
+  const slowedVelocity = prevVelocity.mul(0.999);
   std.textureStore(advectLayout.$.dst, pixelPos, slowedVelocity);
 });
 
@@ -606,9 +606,10 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
   };
   window.addEventListener('touchend', touchEndEventListener);
 
-  canvas.addEventListener('mousemove', (e) => {
-    const x = e.offsetX * devicePixelRatio;
-    const y = e.offsetY * devicePixelRatio;
+  window.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * devicePixelRatio;
+    const y = (e.clientY - rect.top) * devicePixelRatio;
     const [newX, newY] = toGrid(x, y);
     brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
     brushState.pos = [newX, newY];
@@ -632,27 +633,27 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
 
   return {
     update() {
-      if (brushState.isDown) {
-        brushParamBuffer.writePartial({
-          pos: d.vec2i(...brushState.pos),
-          delta: d.vec2f(...brushState.delta),
-        });
+      // if (brushState.isDown) {
+      brushParamBuffer.writePartial({
+        pos: d.vec2i(...brushState.pos),
+        delta: d.vec2f(...brushState.delta),
+      });
 
-        brushPipeline
-          .with(brushBindGroup)
-          .dispatchWorkgroups(dispatchX, dispatchY);
+      brushPipeline
+        .with(brushBindGroup)
+        .dispatchWorkgroups(dispatchX, dispatchY);
 
-        addInkPipeline
-          .with(addInkBindGroups[inkBuffer.currentIndex])
-          .dispatchWorkgroups(dispatchX, dispatchY);
-        inkBuffer.swap();
+      addInkPipeline
+        .with(addInkBindGroups[inkBuffer.currentIndex])
+        .dispatchWorkgroups(dispatchX, dispatchY);
+      inkBuffer.swap();
 
-        addForcePipeline
-          .with(addForceBindGroups[velBuffer.currentIndex])
-          .dispatchWorkgroups(dispatchX, dispatchY);
-      } else {
-        velBuffer.setCurrent(0);
-      }
+      addForcePipeline
+        .with(addForceBindGroups[velBuffer.currentIndex])
+        .dispatchWorkgroups(dispatchX, dispatchY);
+      // } else {
+      // velBuffer.setCurrent(0);
+      // }
 
       advectPipeline
         .with(advectBindGroups[velBuffer.currentIndex])
