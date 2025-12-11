@@ -96,4 +96,48 @@ describe('tgpu.namespace', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(code2).toMatchInlineSnapshot(`""`);
   });
+
+  it('handles name collision', () => {
+    let code1, code2;
+    const names = tgpu['~unstable'].namespace();
+    {
+      const Boid = d.struct({
+        pos: d.vec3f,
+      });
+      const createBoid = tgpu.fn([], Boid)(() => {
+        return Boid();
+      });
+      code1 = tgpu.resolve([createBoid], { names });
+    }
+
+    {
+      const Boid = d.struct({
+        pos: d.vec3i,
+      });
+      const createBoid = tgpu.fn([], Boid)(() => {
+        return Boid();
+      });
+      code2 = tgpu.resolve([createBoid], { names });
+    }
+
+    expect(code1).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+      }
+
+      fn createBoid() -> Boid {
+        return Boid();
+      }"
+    `);
+
+    expect(code2).toMatchInlineSnapshot(`
+      "struct Boid_1 {
+        pos: vec3i,
+      }
+
+      fn createBoid_1() -> Boid_1 {
+        return Boid_1();
+      }"
+    `);
+  });
 });
