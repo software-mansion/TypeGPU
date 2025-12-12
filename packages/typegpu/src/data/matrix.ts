@@ -1,26 +1,29 @@
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { comptime } from '../core/function/comptime.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
 import type { AnyData } from './dataTypes.ts';
+import { f32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
-import type {
-  m2x2f,
-  m3x3f,
-  m4x4f,
-  mat2x2,
-  Mat2x2f,
-  mat3x3,
-  Mat3x3f,
-  mat4x4,
-  Mat4x4f,
-  NumberArrayView,
-  v2f,
-  v3f,
-  v4f,
-  VecKind,
+import {
+  isVec,
+  type m2x2f,
+  type m3x3f,
+  type m4x4f,
+  type mat2x2,
+  type Mat2x2f,
+  type mat3x3,
+  type Mat3x3f,
+  type mat4x4,
+  type Mat4x4f,
+  type NumberArrayView,
+  type v2f,
+  type v3f,
+  type v4f,
+  type VecKind,
 } from './wgslTypes.ts';
 
 // --------------
@@ -61,9 +64,9 @@ function createMatSchema<
 >(
   options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
-  const construct = createDualImpl(
-    // CPU implementation
-    (...args: (number | ColumnType)[]): ValueType => {
+  const construct = dualImpl({
+    name: options.type,
+    normalImpl: (...args: (number | ColumnType)[]): ValueType => {
       const elements: number[] = [];
 
       for (const arg of args) {
@@ -91,15 +94,13 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    // CODEGEN implementation
-    (...args) =>
-      snip(
-        stitch`${options.type}(${args})`,
-        schema as unknown as AnyData,
-        /* origin */ 'runtime',
-      ),
-    options.type,
-  );
+    ignoreImplicitCastWarning: true,
+    signature: (...args) => ({
+      argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
+      returnType: schema as unknown as AnyData,
+    }),
+    codegenImpl: (...args) => stitch`${options.type}(${args})`,
+  });
 
   const schema = Object.assign(construct, {
     type: options.type,
@@ -113,6 +114,11 @@ function createMatSchema<
     type: TType;
     [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
+
+  // TODO: Remove workaround
+  // it's a workaround for circular dependencies caused by us using schemas in the shader generator
+  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  (options.MatImpl.prototype as any).schema = schema;
 
   return schema;
 }
@@ -556,43 +562,23 @@ class mat4x4fImpl extends mat4x4Impl<v4f> {
  * Returns a 2-by-2 identity matrix.
  * @returns {m2x2f} The result matrix.
  */
-export const identity2 = createDualImpl(
-  // CPU implementation
-  () => mat2x2f(1, 0, 0, 1),
-  // CODEGEN implementation
-  () => snip('mat2x2f(1, 0, 0, 1)', mat2x2f, /* origin */ 'runtime'),
-  'identity2',
-);
+export const identity2 = comptime(() => mat2x2f(1, 0, 0, 1)).$name('identity2');
 
 /**
  * Returns a 3-by-3 identity matrix.
  * @returns {m3x3f} The result matrix.
  */
-export const identity3 = createDualImpl(
-  // CPU implementation
+export const identity3 = comptime(
   () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
-  // CODEGEN implementation
-  () =>
-    snip('mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1)', mat3x3f, /* origin */ 'runtime'),
-  'identity3',
-);
+).$name('identity3');
 
 /**
  * Returns a 4-by-4 identity matrix.
  * @returns {m4x4f} The result matrix.
  */
-export const identity4 = createDualImpl(
-  // CPU implementation
+export const identity4 = comptime(
   () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
-  // CODEGEN implementation
-  () =>
-    snip(
-      'mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)',
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'identity4',
-);
+).$name('identity4');
 
 const identityFunctions = {
   2: identity2,
@@ -605,9 +591,9 @@ const identityFunctions = {
  * @param {v3f} vector - The vector by which to translate.
  * @returns {m4x4f} The translation matrix.
  */
-export const translation4 = createDualImpl(
-  // CPU implementation
-  (vector: v3f) =>
+export const translation4 = dualImpl({
+  name: 'translation4',
+  normalImpl: (vector: v3f) =>
     // deno-fmt-ignore
     mat4x4f(
       1, 0, 0, 0,
@@ -615,24 +601,21 @@ export const translation4 = createDualImpl(
       0, 0, 1, 0,
       vector.x, vector.y, vector.z, 1,
     ),
-  // CODEGEN implementation
-  (v) =>
-    snip(
-      stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'translation4',
-);
+  get signature() {
+    return { argTypes: [vec3f], returnType: mat4x4f };
+  },
+  codegenImpl: (v) =>
+    stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
+});
 
 /**
  * Creates a 4-by-4 matrix which scales in each dimension by an amount given by the corresponding entry in the given vector.
  * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
  * @returns {m4x4f} The scaling matrix.
  */
-export const scaling4 = createDualImpl(
-  // CPU implementation
-  (vector: v3f) =>
+export const scaling4 = dualImpl({
+  name: 'scaling4',
+  normalImpl: (vector: v3f) =>
     // deno-fmt-ignore
     mat4x4f(
       vector.x, 0, 0, 0,
@@ -640,24 +623,21 @@ export const scaling4 = createDualImpl(
       0, 0, vector.z, 0,
       0, 0, 0, 1,
     ),
-  // CODEGEN implementation
-  (v) =>
-    snip(
-      stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'scaling4',
-);
+  get signature() {
+    return { argTypes: [vec3f], returnType: mat4x4f };
+  },
+  codegenImpl: (v) =>
+    stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
+});
 
 /**
  * Creates a 4-by-4 matrix which rotates around the x-axis by the given angle.
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotation matrix.
  */
-export const rotationX4 = createDualImpl(
-  // CPU implementation
-  (a: number) =>
+export const rotationX4 = dualImpl({
+  name: 'rotationX4',
+  normalImpl: (a: number) =>
     // deno-fmt-ignore
     mat4x4f(
       1, 0, 0, 0,
@@ -665,24 +645,21 @@ export const rotationX4 = createDualImpl(
       0, -Math.sin(a), Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // CODEGEN implementation
-  (a) =>
-    snip(
-      stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'rotationX4',
-);
+  get signature() {
+    return { argTypes: [f32], returnType: mat4x4f };
+  },
+  codegenImpl: (a) =>
+    stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
+});
 
 /**
  * Creates a 4-by-4 matrix which rotates around the y-axis by the given angle.
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotation matrix.
  */
-export const rotationY4 = createDualImpl(
-  // CPU implementation
-  (a: number) =>
+export const rotationY4 = dualImpl({
+  name: 'rotationY4',
+  normalImpl: (a: number) =>
     // deno-fmt-ignore
     mat4x4f(
       Math.cos(a), 0, -Math.sin(a), 0,
@@ -690,24 +667,21 @@ export const rotationY4 = createDualImpl(
       Math.sin(a), 0, Math.cos(a), 0,
       0, 0, 0, 1,
     ),
-  // CODEGEN implementation
-  (a) =>
-    snip(
-      stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'rotationY4',
-);
+  get signature() {
+    return { argTypes: [f32], returnType: mat4x4f };
+  },
+  codegenImpl: (a) =>
+    stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
+});
 
 /**
  * Creates a 4-by-4 matrix which rotates around the z-axis by the given angle.
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotation matrix.
  */
-export const rotationZ4 = createDualImpl(
-  // CPU implementation
-  (a: number) =>
+export const rotationZ4 = dualImpl({
+  name: 'rotationZ4',
+  normalImpl: (a: number) =>
     // deno-fmt-ignore
     mat4x4f(
       Math.cos(a), Math.sin(a), 0, 0,
@@ -715,15 +689,12 @@ export const rotationZ4 = createDualImpl(
       0, 0, 1, 0,
       0, 0, 0, 1,
     ),
-  // CODEGEN implementation
-  (a) =>
-    snip(
-      stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
-      mat4x4f,
-      /* origin */ 'runtime',
-    ),
-  'rotationZ4',
-);
+  get signature() {
+    return { argTypes: [f32], returnType: mat4x4f };
+  },
+  codegenImpl: (a) =>
+    stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
+});
 
 // ----------
 // Public API
