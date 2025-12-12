@@ -1,6 +1,7 @@
 // Black cubes - bad, see logs for errors
 import * as THREE from 'three/webgpu';
 import {
+  getCubeDiamondWithReference,
   getCubeNestedFunctionReference,
   getCubeTwoDifferentFunctions,
   getCubeTwoSameFunctions,
@@ -28,6 +29,7 @@ camera.position.z = 5;
 scene.add(getCubeTwoDifferentFunctions());
 scene.add(getCubeTwoSameFunctions());
 scene.add(getCubeNestedFunctionReference());
+scene.add(getCubeDiamondWithReference());
 
 let prevTime: number | undefined;
 renderer.setAnimationLoop((time) => {
