@@ -1,3 +1,4 @@
+// Black cubes - bad, see logs for errors
 import * as THREE from 'three/webgpu';
 import {
   getCubeNestedFunctionReference,

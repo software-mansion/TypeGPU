@@ -12,5 +12,6 @@ export const getColorB = () => {
 };
 
 export const getColorComplex = () => {
+  'use gpu';
   return std.mix(getColorA(), getColorB(), 0.8);
 };
