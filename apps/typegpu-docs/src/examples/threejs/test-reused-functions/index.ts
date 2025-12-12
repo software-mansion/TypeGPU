@@ -1,8 +1,5 @@
 import * as THREE from 'three/webgpu';
-import * as t3 from '@typegpu/three';
-import { perlin3d } from '@typegpu/noise';
-import * as d from 'typegpu/data';
-import { tanh } from 'typegpu/std';
+import { getCubeTwoDifferentFunctions } from './cubes.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -23,20 +20,7 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.z = 5;
 
-const material = new THREE.MeshBasicNodeMaterial();
-
-material.colorNode = t3.toTSL(() => {
-  'use gpu';
-  const coords = t3.uv().$.mul(2);
-  const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
-  return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
-});
-
-const mesh = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  material,
-);
-scene.add(mesh);
+scene.add(getCubeTwoDifferentFunctions());
 
 let prevTime: number | undefined;
 renderer.setAnimationLoop((time) => {
@@ -50,8 +34,10 @@ renderer.setAnimationLoop((time) => {
 
   const deltaTime = (time - (prevTime ?? time)) * 0.001;
   prevTime = time;
-  mesh.rotation.x += 0.2 * deltaTime;
-  mesh.rotation.y += 0.2 * deltaTime;
+  scene.children.forEach((mesh) => {
+    mesh.rotation.x += 0.2 * deltaTime;
+    mesh.rotation.y += 0.2 * deltaTime;
+  });
   renderer.render(scene, camera);
 });
 
