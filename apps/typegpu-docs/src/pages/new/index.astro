@@ -14,6 +14,7 @@ import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
 import Videos from "../../components/Videos.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
 import { HeroEffect } from "../../components/hero-effect/HeroEffect";
+import { HeroTitle } from "../../components/hero-effect/HeroTitle";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -21,7 +22,7 @@ import { HeroEffect } from "../../components/hero-effect/HeroEffect";
     class="flex flex-col gap-14 md:gap-30 text-blue-950 dark:text-gray-100 transition-colors duration-300"
   >
     <main>
-      <div class="flex flex-col items-center absolute top-0 right-32 -z-10">
+      <div class="flex flex-col items-center absolute right-32 -z-10">
         <HeroEffect client:only="react" />
       </div>
 
@@ -90,12 +91,7 @@ import { HeroEffect } from "../../components/hero-effect/HeroEffect";
         >
           Type<GradientTitle title="GPU" />
         </div>
-        <div
-          class="md:pr-40 text-blue-950 dark:text-gray-200 text-2xl md:text-3xl text-pretty"
-        >
-          A modular and open-ended toolkit for WebGPU, with advanced type
-          interface and ability to write shaders in TypeScript.
-        </div>
+        <HeroTitle />
         <div class="flex sm:flex-row flex-col gap-4 my-4 md:my-8">
           <GetStartedButton class="h-18" />
           <a

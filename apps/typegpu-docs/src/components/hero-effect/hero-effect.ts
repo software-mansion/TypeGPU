@@ -90,7 +90,11 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     in: { localPos: d.vec3f, normal: d.vec3f },
     out: d.vec4f,
   })((input) => {
-    return d.vec4f(input.normal, 1);
+    const negLight = std.saturate(d.vec3f(0.2, 1, 0.1));
+    const att = std.dot(input.normal, negLight) * 0.5;
+    const ambient = d.vec3f(0.1, 0.1, 0.15);
+    const diffuse = d.vec3f(0.8, 0.6, 0.9);
+    return d.vec4f(std.saturate(diffuse.mul(att).add(ambient)), 1);
   });
 
   const renderPipeline = root['~unstable']
@@ -207,24 +211,28 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       d.f32(80),
       d.f32(0),
     );
-    // const c1 = ss(pat1, 0.1, 0.2);
+
+    const tint = d.vec3f(0.9, 0.5, 1);
     const c2 = ss(
       pat2,
       0.1,
       d.vec4f(
-        0.2 + pat1.dist * 0.4,
-        0.2 + pat1.dist * 0.4 + downSample,
-        0.2 + pat1.dist * 0.4,
-        0.2 + pat1.dist * 0.4,
+        0.5 + pat1.dist * 0.4 + downSample * 0.5,
+        0.5 + pat1.dist * 0.4 + downSample * 0.5,
+        0.5 + pat1.dist * 0.4,
+        0.5 + pat1.dist * 0.4 - downSample * 0.3,
       ),
     );
 
-    const tint = d.vec3f(0.9, 0.5, 1);
     const grayscale = d.vec4f(
-      d.vec3f(c2.x + c2.y + c2.z).mul(tint),
+      d.vec3f(c2.x + c2.y + c2.z + 0.8).mul(tint),
       1,
-    ).mul(0.3 * c2.w);
-    return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
+    ).mul(0.5 * c2.w);
+    return std.mix(
+      grayscale,
+      c2,
+      std.smoothstep(0, 0.2, downSample),
+    );
     // return d.vec4f(c1.mul(c2).xyz, std.saturate(c1.w + c2.w));
   });
 
@@ -253,11 +261,15 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     const modelMatrix = mat4.identity(d.mat4x4f());
     mat4.translate(modelMatrix, [0, -0.7, -10], modelMatrix);
 
-    mat4.rotateZ(modelMatrix, 0.2, modelMatrix);
-    mat4.rotateX(modelMatrix, 0.4, modelMatrix);
+    mat4.rotateZ(modelMatrix, -0.1, modelMatrix);
+    mat4.rotateX(modelMatrix, 0.6, modelMatrix);
 
     // Rotating around local y-axis
-    mat4.rotateY(modelMatrix, timestamp * 0.00015, modelMatrix);
+    mat4.rotateY(
+      modelMatrix,
+      timestamp * 0.00015,
+      modelMatrix,
+    );
 
     uniforms.write({
       viewProjection,
