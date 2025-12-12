@@ -1,15 +1,10 @@
-import { snip } from '../data/snippet.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { Void } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
 
-export const discard = createDualImpl(
-  // CPU
-  (): never => {
-    throw new Error(
-      '`discard` relies on GPU resources and cannot be executed outside of a draw call',
-    );
-  },
-  // GPU
-  () => snip('discard;', Void, /* origin */ 'runtime'),
-  'discard',
-);
+export const discard = dualImpl<() => never>({
+  name: 'discard',
+  normalImpl:
+    '`discard` relies on GPU resources and cannot be executed outside of a draw call',
+  signature: { argTypes: [], returnType: Void },
+  codegenImpl: () => 'discard;',
+});

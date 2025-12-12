@@ -937,7 +937,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:translate4: Cannot read properties of undefined (reading 'dataType')]
+      - fn:translate4: Cannot read properties of undefined (reading 'x')]
     `);
   });
 
@@ -1145,7 +1145,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var matrix = mat4x4f();
+        var matrix = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let column = (&matrix[1i]);
         let element = (*column)[0i];
         let directElement = matrix[1i][0i];

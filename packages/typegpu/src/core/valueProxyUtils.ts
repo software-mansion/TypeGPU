@@ -1,7 +1,7 @@
 import type { Snippet } from '../data/snippet.ts';
 import { getGPUValue } from '../getGPUValue.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import { accessProp } from '../tgsl/generationHelpers.ts';
+import { accessProp } from '../tgsl/accessProp.ts';
 import {
   getOwnSnippet,
   type SelfResolvable,
