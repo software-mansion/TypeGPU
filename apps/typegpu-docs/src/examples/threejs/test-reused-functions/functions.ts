@@ -1,4 +1,5 @@
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 export const getColorA = () => {
   'use gpu';
@@ -8,4 +9,8 @@ export const getColorA = () => {
 export const getColorB = () => {
   'use gpu';
   return d.vec4f(0.114, 0.447, 0.941, 1);
+};
+
+export const getColorComplex = () => {
+  return std.mix(getColorA(), getColorB(), 0.8);
 };

@@ -1,5 +1,9 @@
 import * as THREE from 'three/webgpu';
-import { getCubeTwoDifferentFunctions } from './cubes.ts';
+import {
+  getCubeNestedFunctionReference,
+  getCubeTwoDifferentFunctions,
+  getCubeTwoSameFunctions,
+} from './cubes.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -21,6 +25,8 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.z = 5;
 
 scene.add(getCubeTwoDifferentFunctions());
+scene.add(getCubeTwoSameFunctions());
+scene.add(getCubeNestedFunctionReference());
 
 let prevTime: number | undefined;
 renderer.setAnimationLoop((time) => {
