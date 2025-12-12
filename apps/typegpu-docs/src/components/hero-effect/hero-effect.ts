@@ -228,6 +228,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       d.vec3f(c2.x + c2.y + c2.z + 0.8).mul(tint),
       1,
     ).mul(0.5 * c2.w);
+
     return std.mix(
       grayscale,
       c2,
@@ -267,7 +268,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     // Rotating around local y-axis
     mat4.rotateY(
       modelMatrix,
-      timestamp * 0.00015,
+      -timestamp * 0.00015,
       modelMatrix,
     );
 
