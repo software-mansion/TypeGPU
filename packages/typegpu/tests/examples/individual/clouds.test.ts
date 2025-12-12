@@ -83,14 +83,11 @@ describe('clouds example', () => {
       }
 
       fn fbm_14(pos: vec3f) -> f32 {
-        let time = params_4.time;
-        var wind = vec3f((sin(time) / 2f), (cos(time) / 2f), (time * 2f));
-        var windPos = (pos + wind);
         var sum = 0f;
         var amp = 1f;
         var freq = 1.399999976158142f;
         for (var i = 0; (i < 3i); i++) {
-          sum += (noise3d_15((windPos * freq)) * amp);
+          sum += (noise3d_15((pos * freq)) * amp);
           amp *= 0.5f;
           freq *= 2f;
         }
@@ -98,15 +95,13 @@ describe('clouds example', () => {
       }
 
       fn sampleDensity_13(pos: vec3f) -> f32 {
-        return saturate(((fbm_14(pos) + 0.45f) - 0.5f));
+        let coverage = (0.7f - (abs(pos.y) * 0.25f));
+        return (saturate((fbm_14(pos) + coverage)) - 0.5f);
       }
 
       fn sampleDensityCheap_19(pos: vec3f) -> f32 {
-        let time = params_4.time;
-        var wind = vec3f(sin(time), cos(time), (time * 2f));
-        var windPos = (pos + wind);
-        let noise = (noise3d_15((windPos * 1.4)) * 1f);
-        return clamp(((noise + 0.45f) - 0.5f), 0f, 1f);
+        let noise = (noise3d_15((pos * 1.4)) * 1f);
+        return clamp(((noise + 0.7f) - 0.5f), 0f, 1f);
       }
 
       fn raymarch_10(rayOrigin: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec4f {
@@ -149,7 +144,8 @@ describe('clouds example', () => {
         var screenPos = ((_arg_0.uv - 0.5) * 2);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
         var sunDir = vec3f(1, 0, 0);
-        var rayOrigin = vec3f(0, 0, -3);
+        let time = params_4.time;
+        var rayOrigin = vec3f((sin((time * 0.6f)) * 0.5f), ((cos((time * 0.8f)) * 0.5f) - 1f), (time * 1f));
         var rayDir = normalize(vec3f(screenPos.x, screenPos.y, 1f));
         let sunDot = clamp(dot(rayDir, sunDir), 0f, 1f);
         let sunGlow = pow(sunDot, 1.371742112482853f);
