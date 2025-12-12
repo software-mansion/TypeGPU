@@ -1,4 +1,5 @@
-// Black cubes - bad, see logs for errors
+// Regression test - previously, this example produced black cubes and errors.
+// Now there should be no errors and the cubes should be purple.
 import * as THREE from 'three/webgpu';
 import {
   getCubeDiamondWithReference,
