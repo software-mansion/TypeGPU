@@ -95,7 +95,7 @@ export function getUniqueName(
 }
 
 export function namespace(options?: NamespaceOptions | undefined): Namespace {
-  const { names = 'random' } = options || {};
+  const { names = 'strict' } = options ?? {};
 
   return new NamespaceImpl(
     names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),

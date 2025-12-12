@@ -1,9 +1,7 @@
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { comptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
-import { UnknownData } from './dataTypes.ts';
-import { sizeOf } from './sizeOf.ts';
-import { snip, type Snippet } from './snippet.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
+import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------
@@ -37,39 +35,14 @@ interface WgslArrayConstructor {
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const arrayOf = createDualImpl(
-  // JS implementation
+export const arrayOf = comptime(
   ((elementType, elementCount) => {
     if (elementCount === undefined) {
-      return (count: number) => cpu_arrayOf(elementType, count);
+      return comptime((count: number) => cpu_arrayOf(elementType, count));
     }
     return cpu_arrayOf(elementType, elementCount);
   }) as WgslArrayConstructor,
-  // CODEGEN implementation
-  (elementType, elementCount) => {
-    if (elementCount?.value === undefined) {
-      const partial = (count: Snippet) =>
-        arrayOf[$internal].gpuImpl(elementType, count);
-      // Marking so the WGSL generator lets this function through
-      partial[$internal] = true;
-
-      return snip(partial, UnknownData, /* origin */ 'constant');
-    }
-
-    if (typeof elementCount.value !== 'number') {
-      throw new Error(
-        `Cannot create array schema with count unknown at compile-time: '${elementCount.value}'`,
-      );
-    }
-
-    return snip(
-      cpu_arrayOf(elementType.value as AnyWgslData, elementCount.value),
-      elementType.value as AnyWgslData,
-      /* origin */ 'runtime',
-    );
-  },
-  'arrayOf',
-);
+).$name('arrayOf');
 
 // --------------
 // Implementation
