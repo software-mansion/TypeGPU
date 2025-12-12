@@ -531,7 +531,7 @@ describe('tgpu resolveWithContext', () => {
     });
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `During resolution, the external 'identity' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+      "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
     );
   });
 
