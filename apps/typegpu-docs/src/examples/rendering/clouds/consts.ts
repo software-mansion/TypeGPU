@@ -7,10 +7,10 @@ export const SUN_DIRECTION = d.vec3f(1.0, 0.0, 0.0);
 export const SUN_BRIGHTNESS = 0.9;
 export const LIGHT_ABSORPTION = 0.88;
 
-export const CLOUD_COVERAGE = 0.45;
+export const CLOUD_COVERAGE = 0.7;
 export const CLOUD_AMPLITUDE = 1.0;
 export const CLOUD_FREQUENCY = 1.4;
-export const WIND_SPEED = 2.0;
+export const WIND_SPEED = 1.0;
 
 export const FBM_OCTAVES = 3;
 export const FBM_PERSISTENCE = 0.5;

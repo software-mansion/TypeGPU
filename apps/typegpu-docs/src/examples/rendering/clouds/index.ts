@@ -10,6 +10,7 @@ import {
   SUN_BRIGHTNESS,
   SUN_DIRECTION,
   SUN_GLOW,
+  WIND_SPEED,
 } from './consts.ts';
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
@@ -88,7 +89,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   );
 
   const sunDir = std.normalize(SUN_DIRECTION);
-  const rayOrigin = d.vec3f(0.0, 0.0, -3.0);
+  const time = cloudsLayout.$.params.time;
+  const rayOrigin = d.vec3f(
+    std.sin(time * 0.6) * 0.5,
+    std.cos(time * 0.8) * 0.5 - 1,
+    time * WIND_SPEED,
+  );
   const rayDir = std.normalize(d.vec3f(screenPos.x, screenPos.y, FOV_FACTOR));
 
   const sunDot = std.clamp(std.dot(rayDir, sunDir), 0.0, 1.0);
