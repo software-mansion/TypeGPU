@@ -6,7 +6,7 @@ import {
   getColorC,
   getColorComplex,
   getColorDiamond,
-} from './functions';
+} from './functions.ts';
 import { mix } from 'three/tsl';
 
 export function getCubeTwoDifferentFunctions() {
