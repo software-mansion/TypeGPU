@@ -17,23 +17,16 @@ import {
   SKY_AMBIENT,
   SUN_BRIGHTNESS,
   SUN_COLOR,
-  WIND_SPEED,
 } from './consts.ts';
 import { cloudsLayout } from './types.ts';
 
 const sampleDensity = tgpu.fn([d.vec3f], d.f32)((pos) => {
-  return std.saturate(fbm(pos) + CLOUD_COVERAGE - 0.5);
+  const coverage = CLOUD_COVERAGE - std.abs(pos.y) * 0.25;
+  return std.saturate(fbm(pos) + coverage) - 0.5;
 });
 
 const sampleDensityCheap = tgpu.fn([d.vec3f], d.f32)((pos) => {
-  const time = cloudsLayout.$.params.time;
-  const wind = d.vec3f(
-    std.sin(time),
-    std.cos(time),
-    time * WIND_SPEED,
-  );
-  const windPos = std.add(pos, wind);
-  const noise = noise3d(std.mul(windPos, CLOUD_FREQUENCY)) * CLOUD_AMPLITUDE;
+  const noise = noise3d(std.mul(pos, CLOUD_FREQUENCY)) * CLOUD_AMPLITUDE;
   return std.clamp(noise + CLOUD_COVERAGE - 0.5, 0.0, 1.0);
 });
 
@@ -82,19 +75,12 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
 );
 
 const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
-  const time = cloudsLayout.$.params.time;
-  const wind = d.vec3f(
-    std.sin(time) / 2,
-    std.cos(time) / 2,
-    time * WIND_SPEED,
-  );
-  const windPos = std.add(pos, wind);
   let sum = d.f32();
   let amp = d.f32(CLOUD_AMPLITUDE);
   let freq = d.f32(CLOUD_FREQUENCY);
 
   for (let i = 0; i < FBM_OCTAVES; i++) {
-    sum += noise3d(std.mul(windPos, freq)) * amp;
+    sum += noise3d(std.mul(pos, freq)) * amp;
     amp *= FBM_PERSISTENCE;
     freq *= FBM_LACUNARITY;
   }
