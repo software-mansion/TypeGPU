@@ -23,6 +23,7 @@ export const NodeTypeCatalog = {
   while: 15,
   continue: 16,
   break: 17,
+  forOf: 18,
 
   // rare
   arrayExpr: 100,
@@ -96,6 +97,13 @@ export type Continue = readonly [type: NodeTypeCatalog['continue']];
 
 export type Break = readonly [type: NodeTypeCatalog['break']];
 
+export type ForOf = readonly [
+  type: NodeTypeCatalog['forOf'],
+  left: string,
+  right: Expression,
+  body: Statement,
+];
+
 /**
  * A union type of all statements
  */
@@ -109,7 +117,8 @@ export type Statement =
   | For
   | While
   | Continue
-  | Break;
+  | Break
+  | ForOf;
 
 //
 // Expression

@@ -974,6 +974,34 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
     }
 
+    if (statement[0] === NODE.forOf) {
+      const [_, loopVarName, iterableExpr, body] = statement;
+      const iterable = this.expression(iterableExpr);
+      if (!wgsl.isWgslArray(iterable.dataType)) {
+        throw new WgslTypeError('for-of loops only support array iteration');
+      }
+
+      const arrayLength = iterable.dataType.elementCount;
+      const elementType = iterable.dataType.elementType; // will be used later
+
+      const indexVar = this.ctx.makeNameValid('i');
+      const loopVarNameValid = this.ctx.makeNameValid(loopVarName);
+
+      const iterableStr =
+        this.ctx.resolve(iterable.value, iterable.dataType).value;
+
+      const forStr =
+        `${this.ctx.pre}for (var ${indexVar} = 0; ${indexVar} < ${arrayLength}; ${indexVar}++) {`;
+      this.ctx.indent();
+      const loopVarDecl =
+        `${this.ctx.pre}var ${loopVarNameValid} = ${iterableStr}[${indexVar}];`;
+      const bodyStr = `${this.ctx.pre}${
+        this.block(blockifySingleStatement(body))
+      }`;
+      this.ctx.dedent();
+      return stitch`${forStr}\n${loopVarDecl}\n${bodyStr}\n${this.ctx.pre}}`;
+    }
+
     if (statement[0] === NODE.continue) {
       return `${this.ctx.pre}continue;`;
     }

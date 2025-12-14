@@ -449,6 +449,68 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('for ... of ...', () => {
+    const main = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 3)([1, 2, 3]);
+      for (const foo of arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    const astInfo = getMetaData(main);
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","f32"],[5,"3"]]],[[100,[[5,"1"],[5,"2"],[5,"3"]]]]]],[18,"foo","arr",[0,[[16]]]]]]"`,
+    );
+
+    provideCtx(
+      ctx,
+      () => {
+        ctx[$internal].itemStateStack.pushFunctionScope(
+          'normal',
+          [],
+          {},
+          d.Void,
+          (astInfo.externals as () => Record<string, unknown>)() ?? {},
+        );
+
+        wgslGenerator.initGenerator(ctx);
+        const gen = wgslGenerator.functionDefinition(
+          astInfo.ast?.body as tinyest.Block,
+        );
+        expect(gen).toMatchInlineSnapshot(`
+          "{
+            var arr = array<f32, 3>(1f, 2f, 3f);
+            for (var i = 0; i < 3; i++) {
+              var foo = arr[i];
+              {
+                continue;
+              }
+            }
+          }"
+        `);
+      },
+    );
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = array<f32, 3>(1f, 2f, 3f);
+        for (var i = 0; i < 3; i++) {
+          var foo = arr[i];
+          {
+            continue;
+          }
+        }
+      }"
+    `);
+  });
+
   it('creates correct resources for derived values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => {
       return derivedV4u.value;
