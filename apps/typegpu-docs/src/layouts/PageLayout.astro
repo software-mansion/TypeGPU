@@ -57,6 +57,7 @@ const { title, theme = "light" } = Astro.props;
 
       body {
         margin: 0;
+        @apply transition-colors duration-300 ease-in-out;
       }
 
       [data-theme="dark"] body {
