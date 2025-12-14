@@ -1,20 +1,23 @@
 ---
-import '../fonts/font-face.css';
-import '../tailwind.css';
-import './loadingSpinner.css';
-const { title, theme = 'light' } = Astro.props;
+import "../fonts/font-face.css";
+import "../tailwind.css";
+import "./loadingSpinner.css";
+const { title, theme = "light" } = Astro.props;
 ---
 
-<html data-theme={theme} class={theme === 'dark' ? 'dark' : undefined}>
+<html data-theme={theme} class={theme === "dark" ? "dark" : undefined}>
   <head>
-    <title>{title ?? 'TypeGPU'}</title>
+    <title>{title ?? "TypeGPU"}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap"
+      rel="stylesheet"
+    />
     <script is:inline src="/TypeGPU/coi-serviceworker.js"></script>
     <style is:global>
       .bg-blurred-radial-purple {
@@ -56,47 +59,49 @@ const { title, theme = 'light' } = Astro.props;
         margin: 0;
       }
 
-      [data-theme='dark'] body {
+      [data-theme="dark"] body {
         background-color: #232736;
         color: white;
       }
 
-      [data-theme='light'] body {
+      [data-theme="light"] body {
         background-color: white;
       }
 
-      input[type='color']::-webkit-color-swatch {
+      input[type="color"]::-webkit-color-swatch {
         border: none;
       }
 
-      input[type='color']::-moz-color-swatch {
+      input[type="color"]::-moz-color-swatch {
         border: none;
       }
     </style>
     <script is:inline>
-      (function () {
-        const storageKey = 'typegpu-theme';
-        const doc = document.documentElement;
+      const storageKey = "typegpu-theme";
+      const doc = document.documentElement;
 
-        const applyTheme = (theme) => {
-          doc.dataset.theme = theme;
-          doc.classList.toggle('dark', theme === 'dark');
-        };
+      const applyTheme = (theme) => {
+        doc.dataset.theme = theme;
+        doc.classList.toggle("dark", theme === "dark");
+      };
 
-        let storedTheme = null;
-        try {
-          storedTheme = window.localStorage.getItem(storageKey);
-        } catch (error) {
-          storedTheme = null;
-        }
+      let storedTheme = null;
+      try {
+        storedTheme = window.localStorage.getItem(storageKey);
+      } catch (error) {
+        storedTheme = null;
+      }
 
-        const systemPrefersDark =
-          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const systemPrefersDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-        const themeToApply = storedTheme || doc.dataset.theme || (systemPrefersDark ? 'dark' : 'light');
+      const themeToApply =
+        storedTheme ||
+        doc.dataset.theme ||
+        (systemPrefersDark ? "dark" : "light");
 
-        applyTheme(themeToApply);
-      })();
+      applyTheme(themeToApply);
     </script>
   </head>
   <body>
