@@ -296,7 +296,7 @@ ${this.ctx.pre}}`;
           convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
+            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant. This error may also occur when accidentally assigning to a value defined outside of a TypeGPU function.`,
           );
         }
 
