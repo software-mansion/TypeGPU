@@ -83,7 +83,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot assign to 'boid.pos' because it is a constant. If 'boid.pos' is defined outside the GPU function scope, consider declaring it with 'var' or 'let' inside the function instead.]
+      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either

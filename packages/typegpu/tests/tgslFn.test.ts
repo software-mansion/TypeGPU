@@ -1017,7 +1017,7 @@ describe('tgsl fn when using plugin', () => {
     expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:f: Cannot assign to '0' because it is a constant. If '0' is defined outside the GPU function scope, consider declaring it with 'var' or 'let' inside the function instead.]
+      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
   });
 });
