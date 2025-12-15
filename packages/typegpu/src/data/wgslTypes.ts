@@ -1927,3 +1927,13 @@ export function isNaturallyEphemeral(schema: unknown): boolean {
     ephemeralTypes.includes((schema as BaseData)?.type)
   );
 }
+
+export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
+  vec: T,
+): VecData | MatData {
+  // TODO: Remove workaround
+  // it's a workaround for circular dependencies caused by us using schemas in the shader generator
+  // these schema properties are assigned on the prototype of vector and matrix instances
+  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  return (vec as any).schema;
+}

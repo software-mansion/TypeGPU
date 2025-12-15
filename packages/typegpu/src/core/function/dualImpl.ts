@@ -1,41 +1,11 @@
 import type { DualFn } from '../../data/dualFn.ts';
-import {
-  type MapValueToSnippet,
-  snip,
-  type Snippet,
-} from '../../data/snippet.ts';
-import { inCodegenMode } from '../../execMode.ts';
-import { type FnArgsConversionHint, isKnownAtComptime } from '../../types.ts';
+import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
+import { isKnownAtComptime, NormalState } from '../../types.ts';
 import { setName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-
-export function createDualImpl<T extends (...args: never[]) => unknown>(
-  jsImpl: T,
-  gpuImpl: (...args: MapValueToSnippet<Parameters<T>>) => Snippet,
-  name: string,
-  argConversionHint: FnArgsConversionHint = 'keep',
-): DualFn<T> {
-  const impl = ((...args: Parameters<T>) => {
-    if (inCodegenMode()) {
-      return gpuImpl(...(args as MapValueToSnippet<Parameters<T>>)) as Snippet;
-    }
-    return jsImpl(...args);
-  }) as T;
-
-  setName(impl, name);
-  impl.toString = () => name;
-  Object.defineProperty(impl, $internal, {
-    value: {
-      jsImpl,
-      gpuImpl,
-      argConversionHint,
-    },
-  });
-
-  return impl as DualFn<T>;
-}
 
 type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
@@ -68,6 +38,8 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   options: DualImplOptions<T>,
 ): DualFn<T> {
   const gpuImpl = (...args: MapValueToSnippet<Parameters<T>>) => {
+    // biome-ignore lint/style/noNonNullAssertion: it's there
+    const ctx = getResolutionCtx()!;
     const { argTypes, returnType } = typeof options.signature === 'function'
       ? options.signature(
         ...args.map((s) => {
@@ -94,6 +66,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
       converted.every((s) => isKnownAtComptime(s)) &&
       typeof options.normalImpl === 'function'
     ) {
+      ctx.pushMode(new NormalState());
       try {
         return snip(
           options.normalImpl(...converted.map((s) => s.value) as never[]),
@@ -108,6 +81,8 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
         if (!(e instanceof MissingCpuImplError)) {
           throw e;
         }
+      } finally {
+        ctx.popMode('normal');
       }
     }
 
@@ -135,9 +110,11 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
     value: {
       jsImpl: options.normalImpl,
       gpuImpl,
-      strictSignature: typeof options.signature !== 'function'
-        ? options.signature
-        : undefined,
+      get strictSignature() {
+        return typeof options.signature !== 'function'
+          ? options.signature
+          : undefined;
+      },
       argConversionHint: 'keep',
     },
   });

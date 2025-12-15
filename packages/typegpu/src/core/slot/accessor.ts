@@ -13,6 +13,7 @@ import {
 } from '../../shared/symbols.ts';
 import {
   getOwnSnippet,
+  NormalState,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
@@ -94,11 +95,17 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return ownSnippet;
     }
 
-    // Doing a deep copy each time so that we don't have to deal with refs
-    return schemaCallWrapper(
-      this.schema,
-      snip(value, this.schema, /* origin */ 'constant'),
-    );
+    ctx.pushMode(new NormalState());
+    try {
+      // Doing a deep copy each time so that we don't have to deal with refs
+      const cloned = schemaCallWrapper(
+        this.schema,
+        value,
+      );
+      return snip(cloned, this.schema, 'constant');
+    } finally {
+      ctx.popMode('normal');
+    }
   }
 
   $name(label: string) {
