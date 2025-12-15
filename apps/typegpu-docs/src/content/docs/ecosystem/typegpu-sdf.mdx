@@ -7,7 +7,7 @@ The `@typegpu/sdf` package offers a set of [signed distance function](https://en
 ## Example usage
 
 By definition, signed distance functions return a distance from the given point to the boundary of a shape.
-For example, the `sdf.sdDisk(position, radius)` returns the signed distance from the `position`, to a circle located at point (0, 0) of radius equal to `radius`.
+For example, the `sdf.sdDisk(point, radius)` returns the signed distance from the `point`, to a circle located at point (0, 0) of radius equal to `radius`.
 
 - `sdf.sdDisk(d.vec2f(1, 0), 1)` is equal to 0.5,
 - `sdf.sdDisk(d.vec2f(0.5, 0), 1)` is equal to 0,
@@ -37,9 +37,25 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 ```
 
-## Implemented shapes
+## Implemented functions
 
-See TODO: reference api
+### 2D Primitives
+
+| Function | Signature |
+|----------|-----------|
+| `sdDisk` | `(point: vec2f, radius: f32) -> f32` |
+| `sdBox2d` | `(point: vec2f, halfSize: vec2f) -> f32` |
+| `sdRoundedBox2d` | `(point: vec2f, halfSize: vec2f, cornerRadius: f32) -> f32` |
+| `sdLine` | `(point: vec2f, A: vec2f, B: vec2f) -> f32` |
+| `sdPie` | `(point: vec2f, c: vec2f, radius: f32) -> f32` |
+
+### 2D Curves
+
+| Function | Signature |
+|----------|-----------|
+| `sdBezier` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
+| `sdBezierApprox` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
+
 
 TODO: https://iquilezles.org/articles/distfunctions2d/
 
