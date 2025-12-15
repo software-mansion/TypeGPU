@@ -162,6 +162,9 @@ export async function prepareSession(
 
   return {
     run: () => session.run(feeds, fetches),
-    release: () => session.release(),
+    release: () => {
+      session.release();
+      modelCache.clear();
+    },
   };
 }
