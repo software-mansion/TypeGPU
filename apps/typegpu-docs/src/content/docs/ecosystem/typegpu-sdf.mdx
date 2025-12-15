@@ -1,0 +1,48 @@
+---
+title: "@typegpu/sdf"
+---
+
+The `@typegpu/sdf` package offers a set of [signed distance function](https://en.wikipedia.org/wiki/Signed_distance_function) utilities for use in TypeGPU and WebGPU projects.
+
+## Example usage
+
+By definition, signed distance functions return a distance from the given point to the boundary of a shape.
+For example, the `sdf.sdDisk(position, radius)` returns the signed distance from the `position`, to a circle located at point (0, 0) of radius equal to `radius`.
+
+- `sdf.sdDisk(d.vec2f(1, 0), 1)` is equal to 0.5,
+- `sdf.sdDisk(d.vec2f(0.5, 0), 1)` is equal to 0,
+- `sdf.sdDisk(d.vec2f(0, 0), 1)` is equal to -0.5.
+
+:::note
+Every shape is assumed to be located at position (0, 0).
+
+Position, scale and translation of a shape can be adjusted by applying the inverse transformation to the position argument.
+:::
+
+Here is an example of a fragment shader that draws a disk of radius 0.25 on the center of a (assumedly square) canvas:
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as sdf from '@typegpu/sdf';
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  if (sdf.sdDisk(uv.sub(0.5), 0.25) < 0) {
+    return d.vec4f(0, 0, 0, 1);
+  }
+  return d.vec4f(1, 1, 1, 0);
+});
+```
+
+## Implemented shapes
+
+See TODO: reference api
+
+TODO: https://iquilezles.org/articles/distfunctions2d/
+
+## Implemented utilities
+
+TODO: list utilities
