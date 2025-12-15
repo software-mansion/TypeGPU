@@ -33,7 +33,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   if (sdf.sdDisk(uv.sub(0.5), 0.25) < 0) {
     return d.vec4f(0, 0, 0, 1);
   }
-  return d.vec4f(1, 1, 1, 0);
+  return d.vec4f(1);
 });
 ```
 
