@@ -63,9 +63,19 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 | `sdPlane` | `(point: vec3f, normal: vec3f, height: f32) -> f32` |
 | `sdCapsule` | `(point: vec3f, A: vec3f, B: vec3f, radius: f32) -> f32` |
 
+### Operators
 
+| Function | Signature |
+|----------|-----------|
+| `opUnion` | `(d1: f32, d2: f32) -> f32` |
+| `opSmoothUnion` | `(d1: f32, d2: f32, k: f32) -> f32` |
+| `opSmoothDifference` | `(d1: f32, d2: f32, k: f32) -> f32` |
+| `opExtrudeX` | `(point: vec3f, dd: f32, halfHeight: f32) -> f32` |
+| `opExtrudeY` | `(point: vec3f, dd: f32, halfHeight: f32) -> f32` |
+| `opExtrudeZ` | `(point: vec3f, dd: f32, halfHeight: f32) -> f32` |
 
 TODO: https://iquilezles.org/articles/distfunctions2d/
+https://iquilezles.org/articles/distfunctions/
 
 ## Implemented utilities
 
