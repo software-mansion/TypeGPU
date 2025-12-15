@@ -16,7 +16,7 @@ let stencilTexture = root['~unstable'].createTexture({
   format: 'stencil8',
 }).$usage('render');
 
-const trinagleData = {
+const triangleData = {
   vertices: tgpu.const(d.arrayOf(d.vec2f, 3), [
     d.vec2f(0, 0.5),
     d.vec2f(-0.5, -0.5),
@@ -29,7 +29,7 @@ const trinagleData = {
   ]),
 };
 
-const rotationUiform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
+const rotationUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
 const vertexFn = tgpu['~unstable'].vertexFn({
   in: {
@@ -40,10 +40,10 @@ const vertexFn = tgpu['~unstable'].vertexFn({
     uv: d.vec2f,
   },
 })(({ vid }) => {
-  const pos = trinagleData.vertices.$[vid];
-  const uv = trinagleData.uvs.$[vid];
+  const pos = triangleData.vertices.$[vid];
+  const uv = triangleData.uvs.$[vid];
 
-  const rotatedPos = rotationUiform.$.mul(pos);
+  const rotatedPos = rotationUniform.$.mul(pos);
 
   return {
     position: d.vec4f(rotatedPos, 0, 1),
@@ -94,7 +94,7 @@ function frame(timestamp: number) {
   const rotationAngle = (timestamp / 1000) * Math.PI * 0.5;
   const cosA = Math.cos(rotationAngle);
   const sinA = Math.sin(rotationAngle);
-  rotationUiform.write(d.mat2x2f(cosA, -sinA, sinA, cosA));
+  rotationUniform.write(d.mat2x2f(cosA, -sinA, sinA, cosA));
 
   testStencilPipeline
     .withDepthStencilAttachment({
@@ -119,7 +119,7 @@ const resizeObserver = new ResizeObserver(() => {
     format: 'stencil8',
   }).$usage('render');
 
-  rotationUiform.write(d.mat2x2f.identity());
+  rotationUniform.write(d.mat2x2f.identity());
 
   writeStencilPipeline.withDepthStencilAttachment({
     view: stencilTexture,
