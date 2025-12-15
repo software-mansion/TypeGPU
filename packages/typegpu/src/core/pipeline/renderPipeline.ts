@@ -127,6 +127,10 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     attachment: DepthStencilAttachment,
   ): this;
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this;
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -332,6 +336,7 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
+  readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
       buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer;
@@ -479,6 +484,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as this;
   }
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this {
+    const internals = this[$internal];
+
+    return new TgpuRenderPipelineImpl(internals.core, {
+      ...internals.priors,
+      stencilReference: reference,
+    }) as this;
+  }
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -592,6 +608,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
+
+    if (internals.priors.stencilReference !== undefined) {
+      pass.setStencilReference(internals.priors.stencilReference);
+    }
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
