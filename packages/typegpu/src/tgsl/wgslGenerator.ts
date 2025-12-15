@@ -993,13 +993,13 @@ ${this.ctx.pre}else ${alternate}`;
       const forStr =
         `${this.ctx.pre}for (var ${indexVar} = 0; ${indexVar} < ${arrayLength}; ${indexVar}++) {`;
       this.ctx.indent();
-      const loopVarDecl =
+      const loopVarDeclStr =
         `${this.ctx.pre}var ${loopVarNameValid} = ${iterableStr}[${indexVar}];`;
       const bodyStr = `${this.ctx.pre}${
         this.block(blockifySingleStatement(body))
       }`;
       this.ctx.dedent();
-      return stitch`${forStr}\n${loopVarDecl}\n${bodyStr}\n${this.ctx.pre}}`;
+      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.continue) {
