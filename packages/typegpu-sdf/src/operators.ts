@@ -46,7 +46,6 @@ export const opSmoothDifference = tgpu
  * @param point The 3D point to evaluate the distance at
  * @param dd The 2D signed distance field value (distance in XY plane)
  * @param halfHeight Half-height of the extrusion along the Z-axis
- * @returns The signed distance from the point to the extruded 3D shape
  */
 export const opExtrudeZ = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
   (point, dd, halfHeight) => {
@@ -61,7 +60,6 @@ export const opExtrudeZ = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
  * @param point The 3D point to evaluate the distance at
  * @param dd The 2D signed distance field value (distance in YZ plane)
  * @param halfHeight Half-height of the extrusion along the X-axis
- * @returns The signed distance from the point to the extruded 3D shape
  */
 export const opExtrudeX = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
   (point, dd, halfHeight) => {
@@ -76,7 +74,6 @@ export const opExtrudeX = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
  * @param point The 3D point to evaluate the distance at
  * @param dd The 2D signed distance field value (distance in ZX plane)
  * @param halfHeight Half-height of the extrusion along the Y-axis
- * @returns The signed distance from the point to the extruded 3D shape
  */
 export const opExtrudeY = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
   (point, dd, halfHeight) => {

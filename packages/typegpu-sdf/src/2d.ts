@@ -165,10 +165,6 @@ export const sdBezierApprox = tgpu.fn(
  * @param point - The point to evaluate, in 2D space
  * @param sc - The sine/cosine of the pie's half-angle (`d.vec2f(std.sin(angle/2), std.cos(angle/2))`)
  * @param radius - The radius of the pie
- *
- * @remarks
- * The pie shape is centered at the origin and oriented along the positive x-axis.
- * The `c` parameter controls the angular width of the pie sector through its sine and cosine components.
  */
 export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((point, sc, radius) => {
   const p_w = vec2f(point);

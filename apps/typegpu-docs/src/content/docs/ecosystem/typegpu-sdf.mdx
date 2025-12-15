@@ -9,9 +9,9 @@ The `@typegpu/sdf` package offers a set of [signed distance function](https://en
 By definition, signed distance functions return a distance from the given point to the boundary of a shape.
 For example, the `sdf.sdDisk(point, radius)` returns the signed distance from the `point`, to a circle located at point (0, 0) of radius equal to `radius`.
 
-- `sdf.sdDisk(d.vec2f(1, 0), 1)` is equal to 0.5,
-- `sdf.sdDisk(d.vec2f(0.5, 0), 1)` is equal to 0,
-- `sdf.sdDisk(d.vec2f(0, 0), 1)` is equal to -0.5.
+- `sdf.sdDisk(d.vec2f(2, 0), 1)` is equal to 1,
+- `sdf.sdDisk(d.vec2f(1, 0), 1)` is equal to 0,
+- `sdf.sdDisk(d.vec2f(0, 0), 1)` is equal to -1.
 
 :::note
 Every shape is assumed to be located at position (0, 0).
