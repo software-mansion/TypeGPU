@@ -159,10 +159,21 @@ export const sdBezierApprox = tgpu.fn(
   return length(d);
 });
 
-export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((p, c, r) => {
-  const p_w = vec2f(p);
-  p_w.x = abs(p.x);
-  const l = length(p_w) - r;
-  const m = length(p_w.sub(c.mul(clamp(dot(p_w, c), 0, r))));
-  return max(l, m * sign(c.y * p_w.x - c.x * p_w.y));
+/**
+ * Computes the signed distance field for a pie shape (circular sector).
+ *
+ * @param point - The point to evaluate, in 2D space
+ * @param sc - The sine/cosine of the pie's half-angle (`d.vec2f(std.sin(angle/2), std.cos(angle/2))`)
+ * @param radius - The radius of the pie
+ *
+ * @remarks
+ * The pie shape is centered at the origin and oriented along the positive x-axis.
+ * The `c` parameter controls the angular width of the pie sector through its sine and cosine components.
+ */
+export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((point, sc, radius) => {
+  const p_w = vec2f(point);
+  p_w.x = abs(point.x);
+  const l = length(p_w) - radius;
+  const m = length(p_w.sub(sc.mul(clamp(dot(p_w, sc), 0, radius))));
+  return max(l, m * sign(sc.y * p_w.x - sc.x * p_w.y));
 });
