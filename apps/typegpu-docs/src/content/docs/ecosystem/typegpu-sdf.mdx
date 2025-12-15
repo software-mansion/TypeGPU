@@ -39,7 +39,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 ## Implemented functions
 
-### 2D Primitives
+### 2D shapes
 
 | Function | Signature |
 |----------|-----------|
@@ -48,13 +48,21 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 | `sdRoundedBox2d` | `(point: vec2f, halfSize: vec2f, cornerRadius: f32) -> f32` |
 | `sdLine` | `(point: vec2f, A: vec2f, B: vec2f) -> f32` |
 | `sdPie` | `(point: vec2f, c: vec2f, radius: f32) -> f32` |
+| `sdBezier` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
+| `sdBezierApprox` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
 
-### 2D Curves
+### 3D shapes
 
 | Function | Signature |
 |----------|-----------|
-| `sdBezier` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
-| `sdBezierApprox` | `(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32` |
+| `sdSphere` | `(point: vec3f, radius: f32) -> f32` |
+| `sdBox3d` | `(point: vec3f, halfSize: vec3f) -> f32` |
+| `sdRoundedBox3d` | `(point: vec3f, halfSize: vec3f, cornerRadius: f32) -> f32` |
+| `sdBoxFrame3d` | `(point: vec3f, halfSize: vec3f, thickness: f32) -> f32` |
+| `sdLine3d` | `(point: vec3f, A: vec3f, B: vec3f) -> f32` |
+| `sdPlane` | `(point: vec3f, normal: vec3f, height: f32) -> f32` |
+| `sdCapsule` | `(point: vec3f, A: vec3f, B: vec3f, radius: f32) -> f32` |
+
 
 
 TODO: https://iquilezles.org/articles/distfunctions2d/
