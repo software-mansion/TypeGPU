@@ -61,6 +61,7 @@ const mockRenderPassEncoder = {
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
+  setStencilReference: vi.fn(),
 };
 
 const mockQuerySet = {
