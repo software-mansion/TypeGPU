@@ -129,12 +129,15 @@ export type Statement =
 export type BinaryOperator =
   | '=='
   | '!='
+  | '==='
+  | '!=='
   | '<'
   | '<='
   | '>'
   | '>='
   | '<<'
   | '>>'
+  | '>>>'
   | '+'
   | '-'
   | '*'
@@ -143,6 +146,8 @@ export type BinaryOperator =
   | '|'
   | '^'
   | '&'
+  | 'in'
+  | 'instanceof'
   | '**';
 
 export type BinaryExpression = readonly [
@@ -166,7 +171,9 @@ export type AssignmentOperator =
   | '&='
   | '**='
   | '||='
-  | '&&=';
+  | '&&='
+  | '>>>='
+  | '??=';
 
 export type AssignmentExpression = readonly [
   type: NodeTypeCatalog['assignmentExpr'],
@@ -175,7 +182,7 @@ export type AssignmentExpression = readonly [
   rhs: Expression,
 ];
 
-export type LogicalOperator = '&&' | '||';
+export type LogicalOperator = '&&' | '||' | '??';
 
 export type LogicalExpression = readonly [
   type: NodeTypeCatalog['logicalExpr'],

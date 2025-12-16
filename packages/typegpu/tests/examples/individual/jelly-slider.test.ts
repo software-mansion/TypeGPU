@@ -105,12 +105,12 @@ describe('jelly-slider example', () => {
         return Ray_11(rayOrigin, rayDir);
       }
 
-      fn sdPlane_14(p: vec3f, n: vec3f, h: f32) -> f32 {
-        return (dot(p, n) + h);
+      fn sdPlane_14(point: vec3f, normal: vec3f, height: f32) -> f32 {
+        return (dot(point, normal) + height);
       }
 
-      fn sdRoundedBox2d_16(p: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(p) - size) + vec2f(cornerRadius));
+      fn sdRoundedBox2d_16(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+        var d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
@@ -119,8 +119,8 @@ describe('jelly-slider example', () => {
         return sdRoundedBox2d_16(position, vec2f((1f + groundRoundness), (0.2f + groundRoundness)), (0.2f + groundRoundness));
       }
 
-      fn opExtrudeY_17(p: vec3f, dd: f32, h: f32) -> f32 {
-        var w = vec2f(dd, (abs(p.y) - h));
+      fn opExtrudeY_17(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
+        var w = vec2f(dd, (abs(point.y) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
@@ -272,8 +272,8 @@ describe('jelly-slider example', () => {
         return LineInfo_42(progress, segUnsigned, normal);
       }
 
-      fn opExtrudeZ_43(p: vec3f, dd: f32, h: f32) -> f32 {
-        var w = vec2f(dd, (abs(p.z) - h));
+      fn opExtrudeZ_43(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
+        var w = vec2f(dd, (abs(point.z) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
@@ -379,12 +379,12 @@ describe('jelly-slider example', () => {
         return result;
       }
 
-      fn sdPie_49(p: vec2f, c: vec2f, r: f32) -> f32 {
-        var p_w = p;
-        p_w.x = abs(p.x);
-        let l = (length(p_w) - r);
-        let m = length((p_w - (c * clamp(dot(p_w, c), 0f, r))));
-        return max(l, (m * sign(((c.y * p_w.x) - (c.x * p_w.y)))));
+      fn sdPie_49(point: vec2f, sc: vec2f, radius: f32) -> f32 {
+        var p_w = point;
+        p_w.x = abs(point.x);
+        let l = (length(p_w) - radius);
+        let m = length((p_w - (sc * clamp(dot(p_w, sc), 0f, radius))));
+        return max(l, (m * sign(((sc.y * p_w.x) - (sc.x * p_w.y)))));
       }
 
       fn cap3D_48(position: vec3f) -> f32 {
@@ -674,11 +674,11 @@ describe('jelly-slider example', () => {
         return dot(v, v);
       }
 
-      fn sdBezier_6(pos: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
+      fn sdBezier_6(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
         var a = (B - A);
         var b = ((A - (B * 2)) + C);
         var c = (a * 2f);
-        var d = (A - pos);
+        var d = (A - point);
         let dotB = max(dot(b, b), 1e-4f);
         let kk = (1f / dotB);
         let kx = (kk * dot(a, b));
