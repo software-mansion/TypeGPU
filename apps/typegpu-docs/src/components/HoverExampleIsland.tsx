@@ -128,6 +128,11 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
         }
 
         containerRef.current.innerHTML = example.htmlFile.content;
+        // hide controls pop-up
+        const helpElement = containerRef.current.querySelector('#help');
+        if (helpElement instanceof HTMLElement) {
+          helpElement.style.display = 'none';
+        }
         resizeCanvases(containerRef.current);
 
         const { dispose } = await executeExample(example.tsImport);
