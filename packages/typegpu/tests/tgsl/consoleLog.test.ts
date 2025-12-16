@@ -49,6 +49,27 @@ describe('wgslGenerator with console.log', () => {
         return { pos: d.vec4f() };
       },
     );
+    expect(() => tgpu.resolve([vs])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - vertexFn:vs
+      - fn*:myLog(i32)
+      - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
+    `);
+  });
+
+  it('Throws appropriate error when in a vertex shader during pipeline resolution', ({ root }) => {
+    const myLog = (n: number) => {
+      'use gpu';
+      console.log(n);
+    };
+
+    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
+      () => {
+        myLog(5);
+        return { pos: d.vec4f() };
+      },
+    );
     const fs = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
       return d.vec4f();
     });
@@ -66,6 +87,21 @@ describe('wgslGenerator with console.log', () => {
       - vertexFn:vs
       - fn*:myLog(i32)
       - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
+    `);
+  });
+
+  it('Ignores console.log in a fragment shader', () => {
+    const fs = tgpu['~unstable']
+      .fragmentFn({ out: d.vec4f })(() => {
+        console.log(d.u32(321));
+        return d.vec4f();
+      });
+
+    expect(tgpu.resolve([fs])).toMatchInlineSnapshot(`
+      "@fragment fn fs() -> @location(0) vec4f {
+        /* console.log() */;
+        return vec4f();
+      }"
     `);
   });
 
