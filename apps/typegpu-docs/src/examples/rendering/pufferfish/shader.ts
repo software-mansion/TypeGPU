@@ -7,6 +7,8 @@ import * as std from 'typegpu/std';
  * Holds custom parameters that can be sent to the shader via Smelter
  */
 export const Uniforms = d.struct({
+  invProjMat: d.mat4x4f,
+  invModelMat: d.mat4x4f,
   /**
    * RGB is the fish's color.
    *
@@ -23,12 +25,9 @@ export const Uniforms = d.struct({
   spike_height: d.f32,
   head_yaw: d.f32,
   head_pitch: d.f32,
-
-  // Memory padding.
-  a: d.f32,
+  time: d.f32,
 });
 
-export const timeAccess = tgpu['~unstable'].accessor(d.f32);
 export const uniformsAccess = tgpu['~unstable'].accessor(Uniforms);
 
 const MAX_STEPS = 1000;
@@ -162,7 +161,7 @@ const lastPufferfishDist = tgpu.privateVar(d.f32, MAX_DIST);
 // Get pufferfish SDF with spikes and eyes
 const getPufferfish = (p: d.v3f): Shape => {
   'use gpu';
-  const time = timeAccess.$;
+  const time = uniformsAccess.$.time;
   const bodyRadius = bodyRadiusAccess.$;
   const bodyPosition = bodyPositionAccess.$;
 
@@ -377,8 +376,105 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
   // Pulsating when immune
   const immunity = uniformsAccess.$.color.w;
   result = result.mul(
-    std.mix(1, std.sin(timeAccess.$ * 10) * 0.05 + 0.4, immunity),
+    std.mix(1, std.sin(uniformsAccess.$.time * 10) * 0.05 + 0.4, immunity),
   );
 
   return result;
+});
+
+export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f, coord: d.builtin.position },
+  out: d.vec4f,
+})((input) => {
+  'use gpu';
+  const uv = input.uv.mul(2).sub(1).mul(1.5);
+  const bodyPosition = bodyPositionAccess.$;
+  const faceOval = uniformsAccess.$.face_oval;
+  // Ray setup
+  const initialRo = d.vec3f(uv.x, uv.y, 0);
+  let ro = uniformsAccess.$.invProjMat.mul(d.vec4f(initialRo, 1)).xyz;
+  let rd = uniformsAccess.$.invProjMat.mul(d.vec4f(0, 0, 1, 0)).xyz;
+
+  // Transforming around the pufferfish
+  ro = uniformsAccess.$.invModelMat.mul(
+    d.vec4f(ro.sub(bodyPosition), 1),
+  ).xyz.add(bodyPosition);
+  rd = uniformsAccess.$.invModelMat.mul(d.vec4f(rd, 0)).xyz;
+
+  // Ray march
+  const march = rayMarch(ro, rd);
+  const distance = march.dist;
+  const hitPos = ro.add(rd.mul(distance));
+
+  let textureUV = d.vec2f();
+  let normal = d.vec3f();
+  let blendFactor = d.f32();
+  /**
+   * The (inverse) size of the face in the cutout
+   */
+  const faceSize = 1.8;
+  const faceUv = uv.mul(faceSize).mul(0.5).add(0.5);
+  if (distance < MAX_DIST) {
+    // Hit the pufferfish
+    // const localPos = hitPos.sub(bodyPosition);
+    normal = std.normalize(getNormal(hitPos));
+    const smoothNormal = std.normalize(hitPos.sub(bodyPosition));
+
+    // Face fish mode logic
+    const maskOuterThreshold = 0.3;
+    const maskInnerThreshold = 0.8;
+    blendFactor = std.smoothstep(
+      maskOuterThreshold,
+      maskInnerThreshold,
+      -smoothNormal.z,
+    );
+    textureUV = std.mix(faceOval.xy, faceOval.zw, faceUv);
+  }
+
+  // TODO: Comment to show the face
+  blendFactor = 0;
+
+  // Has to be called in uniform control flow
+  const textureColor = sampleFaceTexture(textureUV);
+  let result = d.vec4f();
+
+  if (distance < MAX_DIST) {
+    // Lighting
+    const lightDir = std.normalize(d.vec3f(0.0, -1, -0.5)); // Light comes from the top
+    const att = std.clamp(std.dot(normal, lightDir) * 5, 0, 1);
+    const diffuseLight = d.vec3f(att * 0.6);
+    const ambientLight = d.vec3f(0.4, 0.45, 0.5);
+    const litFishColor = march.color.mul(diffuseLight.add(ambientLight));
+
+    const finalColor = std.mix(litFishColor, textureColor.xyz, blendFactor);
+
+    result = d.vec4f(finalColor, 1);
+  } else {
+    // Background
+    result = d.vec4f();
+  }
+
+  // Outline
+  const outlineThickness = 0.02;
+  if (
+    minPufferfishDist.$ < outlineThickness &&
+    lastPufferfishDist.$ >= MAX_DIST * 0.1
+  ) {
+    result = d.vec4f(0, 0, 0, 1);
+  }
+
+  // Pulsating when immune
+  const immunity = uniformsAccess.$.color.w;
+  result = result.mul(
+    std.mix(1, std.sin(uniformsAccess.$.time * 10) * 0.05 + 0.4, immunity),
+  );
+
+  const debugPos = d.vec3f(1, 0.6, 0.4);
+  const debugNeg = d.vec3f(0.4, 0.6, 1);
+  return d.vec4f(
+    std.select(debugPos, debugNeg, lastPufferfishDist.$ <= SURF_DIST).mul(
+      std.sin(minPufferfishDist.$ * 50) * 0.25 + 0.75,
+    ),
+    1,
+  );
 });
