@@ -10,7 +10,6 @@ import * as d from 'typegpu/data';
 interface TgpuFnNodeData extends THREE.NodeData {
   custom: {
     nodeFunction: NodeFunction;
-    fnCode: string;
     priorCode: THREE.Node;
     functionId: string;
     dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
@@ -20,10 +19,12 @@ interface TgpuFnNodeData extends THREE.NodeData {
 class BuilderData {
   names: WeakMap<object, string>;
   namespace: Namespace;
+  codeGeneratedThusFar: string;
 
   constructor() {
     this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
+    this.codeGeneratedThusFar = '';
 
     this.namespace.on('name', (event) => {
       if (isVariable(event.target)) {
@@ -112,14 +113,17 @@ class TgpuFnNode<T> extends THREE.Node {
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
       );
-      let lastFnStart = code.lastIndexOf('\nfn');
+      builderData.codeGeneratedThusFar += code;
+      let lastFnStart = builderData.codeGeneratedThusFar.indexOf(
+        `\nfn ${functionId}`,
+      );
       if (lastFnStart === -1) {
         // We're starting with the function declaration
         lastFnStart = 0;
       }
 
       // Extracting the function code
-      let fnCode = code.slice(lastFnStart).trim();
+      const fnCode = builderData.codeGeneratedThusFar.slice(lastFnStart).trim();
 
       nodeData.custom = {
         functionId: functionId ?? '',
@@ -127,10 +131,9 @@ class TgpuFnNode<T> extends THREE.Node {
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
           forceExplicitVoidReturn(fnCode),
         ),
-        fnCode,
         // Including code that was resolved before the function as another node
         // that this node depends on
-        priorCode: TSL.code(code.slice(0, lastFnStart) ?? ''),
+        priorCode: TSL.code(code),
         dependencies: ctx.dependencies,
       };
     }
@@ -163,10 +166,6 @@ class TgpuFnNode<T> extends THREE.Node {
       // @ts-expect-error: It's there
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
-
-    const nodeCode = builder.getCodeFromNode(this, this.getNodeType(builder));
-    // @ts-expect-error
-    nodeCode.code = nodeData.custom.fnCode;
 
     if (output === 'property') {
       return nodeData.custom.functionId;
