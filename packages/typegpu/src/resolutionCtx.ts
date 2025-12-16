@@ -72,7 +72,9 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { hasTinyestMetadata } from './shared/meta.ts';
-import { getItemStage } from './core/function/fnCore.ts';
+import { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
+import { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+import { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -997,4 +999,16 @@ export function resolveFunctionHeader(
       ctx.resolve(returnType).value
     } `
     : `(${argList}) `;
+}
+
+function getItemStage(item: unknown): ShaderStage {
+  if (isTgpuComputeFn(item)) {
+    return 'compute';
+  }
+  if (isTgpuVertexFn(item)) {
+    return 'vertex';
+  }
+  if (isTgpuFragmentFn(item)) {
+    return 'fragment';
+  }
 }

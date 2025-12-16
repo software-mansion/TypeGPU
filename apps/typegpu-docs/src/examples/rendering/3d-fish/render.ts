@@ -17,6 +17,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   // rotate the model so that it aligns with model's direction of movement
   // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
   const currentModelData = layout.$.modelData[input.instanceIndex];
+  console.log('AAA');
 
   // apply sin wave to imitate swimming motion
   let wavedVertex = PosAndNormal({
