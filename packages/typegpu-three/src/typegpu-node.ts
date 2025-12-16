@@ -119,7 +119,7 @@ class TgpuFnNode<T> extends THREE.Node {
       }
 
       // Extracting the function code
-      let fnCode = code.slice(lastFnStart).trim();
+      const fnCode = code.slice(lastFnStart).trim();
 
       nodeData.custom = {
         functionId: functionId ?? '',

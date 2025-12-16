@@ -21,6 +21,12 @@ import {
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
 const sphereUniform = t3.uniform(1.0, d.f32);
+
+const patternUniforms = {
+  color1: t3.uniform(new THREE.Vector4(0.9, 0.3, 0.3, 1), d.vec4f),
+  color2: t3.uniform(new THREE.Vector4(1, 0.5, 0.4, 1), d.vec4f),
+};
+
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
@@ -41,7 +47,7 @@ const params = {
 };
 
 const API = {
-  color: 0x204080, // sRGB
+  color: 0xf542f5, // sRGB
   sheenColor: 0xffffff, // sRGB
 };
 
@@ -227,7 +233,6 @@ function setupClothMesh(): THREE.Mesh {
   geometry.setIndex(indices);
 
   clothMaterial = new THREE.MeshPhysicalNodeMaterial({
-    color: new THREE.Color().setHex(API.color),
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.85,
@@ -246,7 +251,7 @@ function setupClothMesh(): THREE.Mesh {
     'use gpu';
     const uv = t3.uv().$;
     const pattern = checkerBoard(uv.mul(5));
-    return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
+    return std.mix(patternUniforms.color1.$, patternUniforms.color2.$, pattern);
   });
 
   clothMaterial.positionNode = TSL.Fn(({ material }) => {
@@ -337,7 +342,6 @@ async function render() {
   await renderer.renderAsync(scene, camera);
 }
 
-
 export const controls = {
   Stiffness: {
     initial: 0.2,
@@ -348,15 +352,16 @@ export const controls = {
       verletSim.stiffnessUniform.node.value = value;
     },
   },
-  'Cloth Color': {
-    initial: [
-      ((API.color >> 16) & 0xff) / 255,
-      ((API.color >> 8) & 0xff) / 255,
-      (API.color & 0xff) / 255,
-    ],
+  'Pattern Color 1': {
+    initial: [204 / 255, 144 / 255, 250 / 255] as [number, number, number],
     onColorChange: (value: [number, number, number]) => {
-      API.color = ((Math.round(value[0] * 255) << 16) | (Math.round(value[1] * 255) << 8) | Math.round(value[2] * 255));
-      clothMaterial.color = new THREE.Color().setHex(API.color);
+      patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
+    },
+  },
+  'Pattern Color 2': {
+    initial: [100 / 255, 125 / 255, 228 / 255] as [number, number, number],
+    onColorChange: (value: [number, number, number]) => {
+      patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
     },
   },
   Roughness: {
@@ -387,14 +392,20 @@ export const controls = {
     },
   },
   'Sheen Color': {
-    initial: [
-      ((API.sheenColor >> 16) & 0xff) / 255,
-      ((API.sheenColor >> 8) & 0xff) / 255,
-      (API.sheenColor & 0xff) / 255,
-    ],
+    initial: new THREE.Color(API.sheenColor).toArray(),
     onColorChange: (value: [number, number, number]) => {
-      API.sheenColor = ((Math.round(value[0] * 255) << 16) | (Math.round(value[1] * 255) << 8) | Math.round(value[2] * 255));
-      clothMaterial.sheenColor = new THREE.Color().setHex(API.sheenColor);
+      const color = new THREE.Color().fromArray(value);
+      API.sheenColor = color.getHex();
+      clothMaterial.sheenColor = color;
+    },
+  },
+  Wind: {
+    initial: 1,
+    min: 0,
+    max: 5,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      params.wind = value;
     },
   },
 };
