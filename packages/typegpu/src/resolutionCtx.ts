@@ -868,7 +868,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
   }
 
-  resolveWithStage(
+  resolveStage(
     item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
     stage: Stage,
   ): ResolvedSnippet {

@@ -235,7 +235,7 @@ export interface ResolutionCtx {
 
   readonly mode: ExecState;
   /**
-   * Holds info about current shader stage (if any) that is being resolved.
+   * Holds info about the currently resolved shader stage (if there is any).
    * Note that if a function is used both in vertex and fragment stage,
    * then it will only go through the process during the vertex stage.
    */
@@ -288,7 +288,7 @@ export interface ResolutionCtx {
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
-  resolveWithStage(
+  resolveStage(
     item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
     stage: Stage,
   ): ResolvedSnippet;

@@ -781,9 +781,9 @@ class RenderPipelineCore implements SelfResolvable {
       locations,
       () =>
         ctx.withSlots(slotBindings, () => {
-          ctx.resolveWithStage(vertexFn, 'vertex');
+          ctx.resolveStage(vertexFn, 'vertex');
           if (fragmentFn) {
-            ctx.resolveWithStage(fragmentFn, 'fragment');
+            ctx.resolveStage(fragmentFn, 'fragment');
           }
           return snip('', Void, /* origin */ 'runtime');
         }),

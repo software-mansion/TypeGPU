@@ -249,7 +249,7 @@ class ComputePipelineCore implements SelfResolvable {
 
   [$resolve](ctx: ResolutionCtx) {
     return ctx.withSlots(this._slotBindings, () => {
-      ctx.resolveWithStage(this._entryFn, 'compute');
+      ctx.resolveStage(this._entryFn, 'compute');
       return snip('', Void, /* origin */ 'runtime');
     });
   }
