@@ -1054,12 +1054,11 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       const iterableDataType = iterableSnippet.dataType;
-
       let elementCount: number;
-      let elementType: wgsl.BaseData;
+      let elementType: wgsl.AnyWgslData;
       if (wgsl.isWgslArray(iterableDataType)) {
         elementCount = iterableDataType.elementCount;
-        elementType = iterableDataType.elementType;
+        elementType = iterableDataType.elementType as wgsl.AnyWgslData;
       } else if (wgsl.isVec(iterableDataType)) {
         elementType = iterableDataType.primitive;
         elementCount = Number(iterableDataType.type.match(/\d/));
@@ -1068,10 +1067,6 @@ ${this.ctx.pre}else ${alternate}`;
           '`for ... of ...` loops only support array or vector iterables',
         );
       }
-      const loopVarKind = loopVar[0] === tinyest.NodeTypeCatalog.const &&
-          wgsl.isNaturallyEphemeral(elementType)
-        ? 'let'
-        : 'var';
 
       /*
        * if user defines a variable named 'i', it will be scoped to a new block,
@@ -1079,18 +1074,21 @@ ${this.ctx.pre}else ${alternate}`;
        */
       const index = this.ctx.makeNameValid('i');
 
+      const loopVarKind = loopVar[0] === tinyest.NodeTypeCatalog.const &&
+          wgsl.isNaturallyEphemeral(elementType)
+        ? 'let'
+        : 'var';
       const loopVarName = this.ctx.makeNameValid(loopVar[1]);
       const loopVarSnippet = snip(
         loopVarName,
-        elementType as AnyData,
+        elementType,
         'runtime',
       );
       this.ctx.defineVariable(loopVarName, loopVarSnippet);
 
       const iterableStr = this.ctx.resolve(
         iterableSnippet.value,
-        // it's vector or wgslArray
-        iterableSnippet.dataType as AnyData,
+        iterableDataType,
       ).value;
 
       const forStr =

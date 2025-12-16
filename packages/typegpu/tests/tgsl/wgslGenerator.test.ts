@@ -449,7 +449,38 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for for ... of ... statement with array of primitives', () => {
+  it('parses correctly "for ... of ..." statements', () => {
+    const main1 = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const foo of arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    const main2 = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      // biome-ignore lint/style/useConst: it's a part of the test
+      for (let foo of arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    const parsed1 = getMetaData(main1)?.ast?.body;
+    expect(JSON.stringify(parsed1)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[13,"foo"],"arr",[0,[[16]]]]]]"`,
+    );
+
+    const parsed2 = getMetaData(main2)?.ast?.body;
+    expect(JSON.stringify(parsed2)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[12,"foo"],"arr",[0,[[16]]]]]]"`,
+    );
+  });
+
+  it('creates correct code for "for ... of ..." statement using array of primitives', () => {
     const main = () => {
       'use gpu';
       const arr = d.arrayOf(d.f32, 3)([1, 2, 3]);
@@ -459,12 +490,6 @@ describe('wgslGenerator', () => {
         const i = res;
       }
     };
-
-    const parsed = getMetaData(main)?.ast?.body;
-
-    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","f32"],[5,"3"]]],[[100,[[5,"1"],[5,"2"],[5,"3"]]]]]],[12,"res",[6,[7,"d","f32"],[]]],[18,[13,"foo"],"arr",[0,[[2,"res","+=","foo"],[13,"i","res"]]]]]]"`,
-    );
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
@@ -481,7 +506,39 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for for ... of ... statement derived, comptime iterables', () => {
+  it('creates correct code for "for ... of ..." statement using array of non-primitives', () => {
+    const main = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.vec2f, 3)([d.vec2f(1), d.vec2f(2), d.vec2f(3)]);
+      let res = 0;
+      for (const foo of arr) {
+        res += foo.x;
+        const i = res;
+      }
+    };
+
+    const parsed = getMetaData(main)?.ast?.body;
+
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","vec2f"],[5,"3"]]],[[100,[[6,[7,"d","vec2f"],[[5,"1"]]],[6,[7,"d","vec2f"],[[5,"2"]]],[6,[7,"d","vec2f"],[[5,"3"]]]]]]]],[12,"res",[5,"0"]],[18,[13,"foo"],"arr",[0,[[2,"res","+=",[7,"foo","x"]],[13,"i","res"]]]]]]"`,
+    );
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
+        var res = 0;
+        for (var i = 0; i < 3; i++) {
+          var foo = arr[i];
+          {
+            res += i32(foo.x);
+            let i = res;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('creates correct code for "for ... of ..." statements using derived and comptime iterables', () => {
     const comptimeVec = tgpu['~unstable'].comptime(() => d.vec4f(1, 8, 8, 2));
 
     const main = () => {
@@ -519,39 +576,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for for ... of ... statement with array of non-primitives', () => {
-    const main = () => {
-      'use gpu';
-      const arr = d.arrayOf(d.vec2f, 3)([d.vec2f(1), d.vec2f(2), d.vec2f(3)]);
-      let res = 0;
-      for (const foo of arr) {
-        res += foo.x;
-        const i = res;
-      }
-    };
-
-    const parsed = getMetaData(main)?.ast?.body;
-
-    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","vec2f"],[5,"3"]]],[[100,[[6,[7,"d","vec2f"],[[5,"1"]]],[6,[7,"d","vec2f"],[[5,"2"]]],[6,[7,"d","vec2f"],[[5,"3"]]]]]]]],[12,"res",[5,"0"]],[18,[13,"foo"],"arr",[0,[[2,"res","+=",[7,"foo","x"]],[13,"i","res"]]]]]]"`,
-    );
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main() {
-        var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
-        var res = 0;
-        for (var i = 0; i < 3; i++) {
-          var foo = arr[i];
-          {
-            res += i32(foo.x);
-            let i = res;
-          }
-        }
-      }"
-    `);
-  });
-
-  it('creates correct code for for ... of ... statement with vector iterables', () => {
+  it('creates correct code for "for ... of ..." statements using vector iterables', () => {
     const main = () => {
       'use gpu';
       const v1 = d.vec4f(1, 2, 3, 4);
@@ -605,7 +630,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for for ... of ... statement with struct member iterable', () => {
+  it('creates correct code for "for ... of ..." statement using a struct member iterable', () => {
     const TestStruct = d.struct({
       arr: d.arrayOf(d.f32, 4),
     });
@@ -636,7 +661,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws error when for ... of ... iterable is ephemeral', () => {
+  it('throws error when "for ... of ..." statement uses an ephemeral iterable', () => {
     const main = () => {
       'use gpu';
       for (const foo of [1, 2, 3]) {
@@ -653,7 +678,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws error when for ... of ... iterable is not an array or a vector', () => {
+  it('throws error when "for ... of ..." statement uses iterable that is not an array or a vector', () => {
     const TestStruct = d.struct({
       x: d.u32,
       y: d.f32,
