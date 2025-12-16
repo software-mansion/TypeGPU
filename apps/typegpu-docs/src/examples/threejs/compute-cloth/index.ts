@@ -47,7 +47,6 @@ const params = {
 };
 
 const API = {
-  color: 0xf542f5, // sRGB
   sheenColor: 0xffffff, // sRGB
 };
 
