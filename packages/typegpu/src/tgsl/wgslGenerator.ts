@@ -33,7 +33,6 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
-  coerceToSnippet,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -1056,8 +1055,8 @@ ${this.ctx.pre}else ${alternate}`;
 
       const iterableDataType = iterableSnippet.dataType;
 
-      let elementCount;
-      let elementType;
+      let elementCount: number;
+      let elementType: wgsl.BaseData;
       if (wgsl.isWgslArray(iterableDataType)) {
         elementCount = iterableDataType.elementCount;
         elementType = iterableDataType.elementType;

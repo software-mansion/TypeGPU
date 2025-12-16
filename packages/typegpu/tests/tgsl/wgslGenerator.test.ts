@@ -571,7 +571,7 @@ describe('wgslGenerator', () => {
       }
 
       for (const foo of v3) {
-        res3 = foo != res3;
+        res3 = foo !== res3;
       }
     };
 
@@ -662,7 +662,7 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       const testStruct = TestStruct({ x: 1, y: 2 });
-      //@ts-ignore: let's assume it has an iterator
+      //@ts-expect-error: let's assume it has an iterator
       for (const foo of testStruct) {
         // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
