@@ -28,6 +28,7 @@ const verletSim = new VerletSimulation({
 });
 
 let vertexWireframeObject: THREE.Mesh, springWireframeObject: THREE.Line;
+let clothMaterial: THREE.MeshPhysicalNodeMaterial;
 let timeSinceLastStep = 0;
 let timestamp = 0;
 
@@ -86,11 +87,11 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(-1.6, -0.1, -1.6);
 
-const controls = new OrbitControls(camera, canvas);
-controls.minDistance = 1;
-controls.maxDistance = 3;
-controls.target.set(0, -0.1, 0);
-controls.update();
+const cameraControls = new OrbitControls(camera, canvas);
+cameraControls.minDistance = 1;
+cameraControls.maxDistance = 3;
+cameraControls.target.set(0, -0.1, 0);
+cameraControls.update();
 
 const hdrLoader = new UltraHDRLoader().setPath(
   'https://threejs.org/examples/textures/equirectangular/',
@@ -225,7 +226,7 @@ function setupClothMesh(): THREE.Mesh {
   geometry.setAttribute('vertexIds', verletVertexIdBuffer);
   geometry.setIndex(indices);
 
-  const clothMaterial = new THREE.MeshPhysicalNodeMaterial({
+  clothMaterial = new THREE.MeshPhysicalNodeMaterial({
     color: new THREE.Color().setHex(API.color),
     side: THREE.DoubleSide,
     transparent: true,
@@ -335,6 +336,68 @@ async function render() {
 
   await renderer.renderAsync(scene, camera);
 }
+
+
+export const controls = {
+  Stiffness: {
+    initial: 0.2,
+    min: 0.1,
+    max: 0.7,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      verletSim.stiffnessUniform.node.value = value;
+    },
+  },
+  'Cloth Color': {
+    initial: [
+      ((API.color >> 16) & 0xff) / 255,
+      ((API.color >> 8) & 0xff) / 255,
+      (API.color & 0xff) / 255,
+    ],
+    onColorChange: (value: [number, number, number]) => {
+      API.color = ((Math.round(value[0] * 255) << 16) | (Math.round(value[1] * 255) << 8) | Math.round(value[2] * 255));
+      clothMaterial.color = new THREE.Color().setHex(API.color);
+    },
+  },
+  Roughness: {
+    initial: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.roughness = value;
+    },
+  },
+  Sheen: {
+    initial: 1.0,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.sheen = value;
+    },
+  },
+  'Sheen Roughness': {
+    initial: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.sheenRoughness = value;
+    },
+  },
+  'Sheen Color': {
+    initial: [
+      ((API.sheenColor >> 16) & 0xff) / 255,
+      ((API.sheenColor >> 8) & 0xff) / 255,
+      (API.sheenColor & 0xff) / 255,
+    ],
+    onColorChange: (value: [number, number, number]) => {
+      API.sheenColor = ((Math.round(value[0] * 255) << 16) | (Math.round(value[1] * 255) << 8) | Math.round(value[2] * 255));
+      clothMaterial.sheenColor = new THREE.Color().setHex(API.sheenColor);
+    },
+  },
+};
 
 export function onCleanup() {
   renderer.dispose();
