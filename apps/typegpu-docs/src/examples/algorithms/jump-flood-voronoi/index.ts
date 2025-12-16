@@ -7,12 +7,6 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
-import {
-  colorSampleLayout,
-  coordSampleLayout,
-  distanceFrag,
-  voronoiFrag,
-} from './visualization.ts';
 
 const root = await tgpu.init();
 
@@ -29,11 +23,6 @@ let stepDelayMs = 50;
 let seedThreshold = 0.999;
 let startingRangePercent = 1;
 let currentRunId = 0;
-let visualizationMode: 'voronoi' | 'distance' = 'voronoi';
-let brushSize = 10;
-let brushColor = d.vec3f(0x8b / 255, 0x5c / 255, 0xf6 / 255);
-let isDrawing = false;
-let lastDrawPos: { x: number; y: number } | null = null;
 let sourceIdx = 0;
 
 const palette = tgpu.const(d.arrayOf(d.vec3f, 4), [
@@ -46,9 +35,6 @@ const palette = tgpu.const(d.arrayOf(d.vec3f, 4), [
 const seedThresholdUniform = root.createUniform(d.f32, seedThreshold);
 const timeUniform = root.createUniform(d.f32, 0);
 const offsetUniform = root.createUniform(d.i32);
-const brushPosUniform = root.createUniform(d.vec2f);
-const brushSizeUniform = root.createUniform(d.f32, brushSize);
-const brushColorUniform = root.createUniform(d.vec3f, brushColor);
 
 const SampleResult = d.struct({
   color: d.vec4f,
@@ -68,6 +54,11 @@ const pingPongLayout = tgpu.bindGroupLayout({
   readView: {
     storageTexture: d.textureStorage2dArray('rgba16float', 'read-only'),
   },
+});
+
+const colorSampleLayout = tgpu.bindGroupLayout({
+  floodTexture: { texture: d.texture2d() },
+  sampler: { sampler: 'filtering' },
 });
 
 type FloodTexture =
@@ -101,22 +92,15 @@ function createResources() {
     })
   );
 
-  const renderBindGroups = textures.map((tex) => ({
-    color: root.createBindGroup(colorSampleLayout, {
+  const renderBindGroups = textures.map((tex) =>
+    root.createBindGroup(colorSampleLayout, {
       floodTexture: tex.createView(d.texture2d(), {
         baseArrayLayer: 0,
         arrayLayerCount: 1,
       }),
       sampler: filteringSampler,
-    }),
-    coord: root.createBindGroup(coordSampleLayout, {
-      coordTexture: tex.createView(d.texture2d(), {
-        baseArrayLayer: 1,
-        arrayLayerCount: 1,
-      }),
-      sampler: filteringSampler,
-    }),
-  }));
+    })
+  );
 
   return { textures, initBindGroups, pingPongBindGroups, renderBindGroups };
 }
@@ -226,59 +210,20 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  const size = std.textureDimensions(pingPongLayout.$.writeView);
-  const pos = d.vec2f(x, y);
-  const inBrush = std.distance(pos, brushPosUniform.$) <= brushSizeUniform.$;
-
-  const existingColor = std.textureLoad(
-    pingPongLayout.$.readView,
-    d.vec2i(x, y),
-    0,
-  );
-  const existingCoord = std.textureLoad(
-    pingPongLayout.$.readView,
-    d.vec2i(x, y),
-    1,
-  );
-
-  const newColor = d.vec4f(brushColorUniform.$, 1);
-  const newCoord = d.vec4f(pos.div(d.vec2f(size)), 0, 0);
-
-  std.textureStore(
-    pingPongLayout.$.writeView,
-    d.vec2i(x, y),
-    0,
-    std.select(existingColor, newColor, inBrush),
-  );
-  std.textureStore(
-    pingPongLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    std.select(existingCoord, newCoord, inBrush),
-  );
-});
-
-const clearTexture = root['~unstable'].createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, d.vec4f());
-  std.textureStore(
-    initLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    d.vec4f(-1, -1, 0, 0),
-  );
-});
+const voronoiFrag = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) =>
+  std.textureSample(
+    colorSampleLayout.$.floodTexture,
+    colorSampleLayout.$.sampler,
+    uv,
+  )
+);
 
 const voronoiPipeline = root['~unstable']
   .withVertex(fullScreenTriangle, {})
   .withFragment(voronoiFrag, { format: presentationFormat })
-  .createPipeline();
-
-const distancePipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(distanceFrag, { format: presentationFormat })
   .createPipeline();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -294,56 +239,10 @@ function render() {
     storeOp: 'store' as const,
   };
 
-  if (visualizationMode === 'voronoi') {
-    voronoiPipeline
-      .with(resources.renderBindGroups[sourceIdx].color)
-      .withColorAttachment(colorAttachment)
-      .draw(3);
-  } else {
-    distancePipeline
-      .with(resources.renderBindGroups[sourceIdx].coord)
-      .withColorAttachment(colorAttachment)
-      .draw(3);
-  }
-}
-
-function drawAtPosition(canvasX: number, canvasY: number) {
-  const rect = canvas.getBoundingClientRect();
-  brushPosUniform.write(d.vec2f(
-    canvasX * canvas.width / rect.width,
-    canvasY * canvas.height / rect.height,
-  ));
-  brushSizeUniform.write(brushSize);
-  drawSeed.with(resources.pingPongBindGroups[sourceIdx]).dispatchThreads(
-    canvas.width,
-    canvas.height,
-  );
-  swap();
-  render();
-}
-
-function interpolateAndDraw(x: number, y: number) {
-  if (lastDrawPos) {
-    const dx = x - lastDrawPos.x;
-    const dy = y - lastDrawPos.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.ceil(dist / Math.max(1, brushSize / 3));
-    for (let i = 0; i <= steps; i++) {
-      const t = steps > 0 ? i / steps : 0;
-      drawAtPosition(lastDrawPos.x + dx * t, lastDrawPos.y + dy * t);
-    }
-  } else {
-    drawAtPosition(x, y);
-  }
-  lastDrawPos = { x, y };
-}
-
-function clearCanvas() {
-  for (const bg of resources.initBindGroups) {
-    clearTexture.with(bg).dispatchThreads(canvas.width, canvas.height);
-  }
-  sourceIdx = 0;
-  render();
+  voronoiPipeline
+    .with(resources.renderBindGroups[sourceIdx])
+    .withColorAttachment(colorAttachment)
+    .draw(3);
 }
 
 async function runFloodAnimated(runId: number) {
@@ -407,53 +306,6 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-const onMouseDown = (e: MouseEvent) => {
-  if (e.button !== 0) return;
-  isDrawing = true;
-  lastDrawPos = null;
-  const rect = canvas.getBoundingClientRect();
-  interpolateAndDraw(e.clientX - rect.left, e.clientY - rect.top);
-};
-const onMouseMove = (e: MouseEvent) => {
-  if (!isDrawing) return;
-  const rect = canvas.getBoundingClientRect();
-  interpolateAndDraw(e.clientX - rect.left, e.clientY - rect.top);
-};
-const onMouseUp = () => {
-  isDrawing = false;
-  lastDrawPos = null;
-};
-
-const onTouchStart = (e: TouchEvent) => {
-  isDrawing = true;
-  lastDrawPos = null;
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  interpolateAndDraw(touch.clientX - rect.left, touch.clientY - rect.top);
-};
-
-const onTouchMove = (e: TouchEvent) => {
-  if (!isDrawing) return;
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  interpolateAndDraw(touch.clientX - rect.left, touch.clientY - rect.top);
-};
-
-const onTouchEnd = () => {
-  isDrawing = false;
-  lastDrawPos = null;
-};
-
-canvas.addEventListener('mousedown', onMouseDown);
-canvas.addEventListener('mousemove', onMouseMove);
-canvas.addEventListener('mouseup', onMouseUp);
-canvas.addEventListener('mouseleave', onMouseUp);
-canvas.addEventListener('touchstart', onTouchStart);
-canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-canvas.addEventListener('touchend', onTouchEnd);
-canvas.addEventListener('touchcancel', onTouchEnd);
-
 export const controls = {
   'Run Algorithm': {
     onButtonClick: () => {
@@ -463,33 +315,6 @@ export const controls = {
   },
   'Random Seeds': {
     onButtonClick: reset,
-  },
-  Clear: {
-    onButtonClick: clearCanvas,
-  },
-  'Brush size': {
-    initial: brushSize,
-    min: 1,
-    max: 50,
-    step: 1,
-    onSliderChange(value: number) {
-      brushSize = value;
-    },
-  },
-  'Brush color': {
-    initial: brushColor,
-    onColorChange(value: readonly [number, number, number]) {
-      brushColor = d.vec3f(...value);
-      brushColorUniform.write(brushColor);
-    },
-  },
-  Visualization: {
-    initial: 'Voronoi',
-    options: ['Voronoi', 'Distance'],
-    onSelectChange(value: string) {
-      visualizationMode = value.toLowerCase() as 'voronoi' | 'distance';
-      render();
-    },
   },
   'Seed density': {
     initial: 0.5,

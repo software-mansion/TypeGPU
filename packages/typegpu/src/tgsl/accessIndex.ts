@@ -1,7 +1,16 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { AnyData, isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
+import {
+  type AnyData,
+  isDisarray,
+  MatrixColumnsAccess,
+} from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isEphemeralSnippet, Origin, snip, Snippet } from '../data/snippet.ts';
+import {
+  isEphemeralSnippet,
+  type Origin,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import {
   isNaturallyEphemeral,
