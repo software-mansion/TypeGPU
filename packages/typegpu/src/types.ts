@@ -217,6 +217,12 @@ export type ExecState =
   | CodegenState
   | SimulationState;
 
+export type Stage =
+  | 'vertex'
+  | 'fragment'
+  | 'compute'
+  | undefined;
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -228,6 +234,12 @@ export interface ResolutionCtx {
   };
 
   readonly mode: ExecState;
+  /**
+   * Holds info about current shader stage (if any) that is being resolved.
+   * Note that if a function is used both in vertex and fragment stage,
+   * then it will only go through the process during the vertex stage.
+   */
+  readonly currentStage: Stage;
   readonly enableExtensions: WgslExtension[] | undefined;
 
   addDeclaration(declaration: string): void;
@@ -274,6 +286,11 @@ export interface ResolutionCtx {
     item: unknown,
     schema?: AnyData | UnknownData | undefined,
     exact?: boolean | undefined,
+  ): ResolvedSnippet;
+
+  resolveWithStage(
+    item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
+    stage: Stage,
   ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {

@@ -65,12 +65,16 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  Stage,
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { hasTinyestMetadata } from './shared/meta.ts';
+import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
+import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -334,6 +338,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #namespace: NamespaceInternal;
   readonly #shaderGenerator: ShaderGenerator;
 
+  private _currentStage: Stage;
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   readonly #modeStack: ExecState[] = [];
@@ -341,6 +346,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
+
+  get currentStage() {
+    return this._currentStage;
+  }
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -444,6 +453,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
+    if (this._currentStage === 'vertex') {
+      throw new Error(
+        `'console.log' is not supported during vertex shader stage.`,
+      );
+    }
     return this.#logGenerator.generateLog(this, op, args);
   }
 
@@ -852,6 +866,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         schema ? ` to type ${schema.type}` : ''
       }`,
     );
+  }
+
+  resolveWithStage(
+    item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
+    stage: Stage,
+  ): ResolvedSnippet {
+    this._currentStage = stage;
+    const result = this.resolve(item);
+    this._currentStage = undefined;
+    return result;
   }
 
   pushMode(mode: ExecState) {
