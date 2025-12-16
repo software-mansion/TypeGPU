@@ -234,12 +234,6 @@ export interface ResolutionCtx {
   };
 
   readonly mode: ExecState;
-  /**
-   * Holds info about the currently resolved shader stage (if there is any).
-   * Note that if a function is used both in vertex and fragment stage,
-   * then it will only go through the process during the vertex stage.
-   */
-  readonly currentStage: Stage;
   readonly enableExtensions: WgslExtension[] | undefined;
 
   addDeclaration(declaration: string): void;

@@ -338,6 +338,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #namespace: NamespaceInternal;
   readonly #shaderGenerator: ShaderGenerator;
 
+  /**
+   * Holds info about the currently resolved shader stage (if there is any).
+   * Note that if a function is used both in vertex and fragment stage,
+   * then it will only go through the process during the vertex stage.
+   */
   private _currentStage: Stage;
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
@@ -346,10 +351,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
-
-  get currentStage() {
-    return this._currentStage;
-  }
 
   get varyingLocations() {
     return this._varyingLocations;
