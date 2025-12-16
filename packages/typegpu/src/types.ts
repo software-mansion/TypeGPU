@@ -282,15 +282,6 @@ export interface ResolutionCtx {
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
-  /**
-   * @param item The function to resolve
-   * @param stage The stage of this function
-   */
-  resolveStage(
-    item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
-    stage: Stage,
-  ): ResolvedSnippet;
-
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;

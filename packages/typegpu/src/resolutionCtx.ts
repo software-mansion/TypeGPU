@@ -883,16 +883,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
   }
 
-  resolveStage(
-    item: TgpuFragmentFn | TgpuVertexFn | TgpuComputeFn,
-    stage: Stage,
-  ): ResolvedSnippet {
-    this._currentStage = stage;
-    const result = this.resolve(item);
-    this._currentStage = undefined;
-    return result;
-  }
-
   pushMode(mode: ExecState) {
     this.#modeStack.push(mode);
   }
