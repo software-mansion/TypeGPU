@@ -36,10 +36,10 @@ describe('tgsl parsing test example', () => {
 
       fn logicalExpressionTests_1() -> bool {
         var s = true;
-        s = (s && (true == true));
-        s = (s && (true == true));
-        s = (s && (true == true));
-        s = (s && (false == false));
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
+        s = (s && true);
         s = (s && true);
         s = (s && !false);
         s = (s && true);
