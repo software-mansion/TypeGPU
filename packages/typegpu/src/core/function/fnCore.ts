@@ -15,7 +15,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
-import type { ResolutionCtx, Stage } from '../../types.ts';
+import type { ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   applyExternals,
   type ExternalMap,
@@ -299,7 +299,7 @@ function checkAndReturnType(
   return wgslType;
 }
 
-export function getItemStage(item: unknown): Stage {
+export function getItemStage(item: unknown): ShaderStage {
   if (isTgpuComputeFn(item)) {
     return 'compute';
   }

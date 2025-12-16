@@ -65,16 +65,13 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
-  Stage,
+  ShaderStage,
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { hasTinyestMetadata } from './shared/meta.ts';
-import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
-import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 import { getItemStage } from './core/function/fnCore.ts';
 
 /**
@@ -344,7 +341,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * Note that if a function is used both in vertex and fragment stage,
    * then it will only go through the process during the vertex stage.
    */
-  private _currentStage: Stage;
+  private _currentStage: ShaderStage;
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   readonly #modeStack: ExecState[] = [];

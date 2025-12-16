@@ -217,7 +217,7 @@ export type ExecState =
   | CodegenState
   | SimulationState;
 
-export type Stage =
+export type ShaderStage =
   | 'vertex'
   | 'fragment'
   | 'compute'
