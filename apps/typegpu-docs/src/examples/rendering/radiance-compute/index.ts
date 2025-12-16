@@ -106,25 +106,12 @@ const radianceSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-let currentCascadeIndex = 0;
-let lightPos = d.vec2f(0.5);
-let pickerPos = d.vec2f(0.5);
-
 const indexUniform = root.createUniform(d.u32, 0);
 const raysDimUniform = root.createUniform(d.f32, baseRaysDim);
 const mousePosUniform = root.createUniform(d.vec2f);
-const lightPosUniform = root.createUniform(d.vec2f, lightPos);
-const pickerPosUniform = root.createUniform(d.vec2f, pickerPos);
+const lightPosUniform = root.createUniform(d.vec2f, d.vec2f(0.5));
 const mergeRaysDimUniform = root.createUniform(d.u32, baseRaysDim);
-
-const dirToAngle = (dir: d.v2f) => {
-  'use gpu';
-  const angle = std.atan2(-dir.y, dir.x);
-  const pi = d.f32(Math.PI);
-  const tau = d.f32(Math.PI * 2);
-  const t = (angle + pi) / tau;
-  return t;
-};
+const lightColorUniform = root.createUniform(d.vec3f, d.vec3f(1));
 
 const posToDir = (localPos: d.v2u, raysDim: number) => {
   'use gpu';
@@ -135,9 +122,7 @@ const posToDir = (localPos: d.v2u, raysDim: number) => {
   const rayIndex = iy * rd + ix + 0.5;
   const rayCount = rd * rd;
 
-  const pi = d.f32(Math.PI);
-  const tau = d.f32(Math.PI * 2);
-  const angle = (rayIndex / rayCount) * tau - pi;
+  const angle = (rayIndex / rayCount) * Math.PI * 2 - Math.PI;
   return d.vec2f(std.cos(angle), -std.sin(angle));
 };
 
@@ -151,6 +136,21 @@ const globalToLocal = (gid: d.v2u, raysDim: number) => {
   const probeCoord = d.vec2u(gid.x / raysDim, gid.y / raysDim);
   const local = d.vec2u(gid.x % raysDim, gid.y % raysDim);
   return LocalPos({ probeCoord, local });
+};
+
+const sampleProbeQuad = (origin: d.v2u, childBase: number, uDim: number) => {
+  'use gpu';
+  let sum = d.vec4f();
+  for (let i = 0; i < 4; i++) {
+    const childIdx = childBase + i;
+    const childLocal = d.vec2u(childIdx % uDim, childIdx / uDim);
+    const ray = std.textureLoad(
+      mergeBindGroupLayout.$.t2,
+      origin.add(childLocal),
+    );
+    sum = sum.add(ray);
+  }
+  return sum.mul(0.25);
 };
 
 const SceneResult = d.struct({
@@ -167,54 +167,11 @@ const sceneSDF = (p: d.v2f) => {
   const light = sdf.sdDisk(p.sub(lightPosUniform.$), d.f32(0.05));
 
   if (light < minOccluder && minOccluder > 0) {
-    return SceneResult({ dist: light, color: d.vec3f(1) });
+    return SceneResult({ dist: light, color: lightColorUniform.$ });
   } else {
     return SceneResult({ dist: minOccluder, color: d.vec3f(0) });
   }
 };
-
-// const debugFrag = tgpu['~unstable'].fragmentFn({
-//   in: { uv: d.vec2f },
-//   out: d.vec4f,
-// })(({ uv }) => {
-//   const color = std.textureSample(
-//     renderView.$,
-//     nearestSampler.$,
-//     uv,
-//     indexUniform.$,
-//   );
-
-//   if (std.distance(lightPosUniform.$, uv) < 0.06) {
-//     return d.vec4f(1, 0, 0, 1);
-//   }
-//   if (std.distance(pickerPosUniform.$, uv) < 0.006) {
-//     return d.vec4f(0, 0, 1, 1);
-//   }
-
-//   const raysDim = raysDimUniform.$;
-
-//   const dir = std.normalize(mousePosUniform.$.sub(pickerPosUniform.$));
-//   const t = dirToAngle(dir);
-
-//   const raysPerProbe = raysDim * raysDim;
-//   let rayIndex = std.floor(t * raysPerProbe);
-//   rayIndex = std.min(rayIndex, raysPerProbe - 1);
-
-//   const iy = std.floor(rayIndex / raysDim);
-//   const ix = rayIndex - iy * raysDim;
-
-//   const cpPx = std.floor(pickerPosUniform.$.mul(dim));
-//   const probeOrigin = std.floor(cpPx.div(raysDim)).mul(raysDim);
-//   const highlightPx = probeOrigin.add(d.vec2f(ix, iy));
-
-//   const fragPx = std.floor(uv.mul(dim));
-
-//   if (fragPx.x === highlightPx.x && fragPx.y === highlightPx.y) {
-//     return d.vec4f(1, 1, 0, 1);
-//   }
-
-//   return color;
-// });
 
 const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [8, 8],
@@ -331,161 +288,67 @@ const mergeCompute = tgpu['~unstable'].computeFn({
     return;
   }
 
-  const nDim = mergeRaysDimUniform.$; // raysDim for cascade N (u32)
-  const uDim = nDim * d.u32(2); // raysDim for cascade N+1 (u32)
+  const nDim = mergeRaysDimUniform.$;
+  const uDim = nDim << 1;
 
-  // Current ray (cascade N)
   const rayN = std.textureLoad(mergeBindGroupLayout.$.t1, gid.xy);
-
-  // If near interval is blocking (T ~= 0), it fully determines the result.
-  // T is stored in .w: 0 = blocked, 1 = transparent
-  if (rayN.w <= 0.001) {
+  if (rayN.w <= 0.01) {
     std.textureStore(mergeBindGroupLayout.$.dst, gid.xy, rayN);
     return;
   }
 
-  const probeCoordN = d.vec2u(gid.x / nDim, gid.y / nDim);
-  const localN = d.vec2u(gid.x % nDim, gid.y % nDim);
+  const localPosN = globalToLocal(gid.xy, nDim);
 
-  // Upper probe grid sizes
-  const probesN = d.u32(dim) / nDim;
-  const probesU = probesN / d.u32(2);
+  const probesN = d.u32(dim / nDim);
+  const probesU = probesN >> 1;
 
-  // Handle edge case when probesU is very small
-  const maxProbeIdx = std.max(probesU, d.u32(1)) - d.u32(1);
+  const maxProbeIdx = std.max(probesU, 1) - 1;
   const maxProbeIdxF = d.f32(maxProbeIdx);
 
-  // Map fine probe coord -> coarse probe coord in index space.
-  // Because probes are cell-centered, coarse centers are offset by 0.5 fine cell:
-  // u = (x_f * probesU) - 0.5  == (probeCoordN + 0.5)/2 - 0.5 == (probeCoordN - 0.5)/2
-  const uxf = (d.f32(probeCoordN.x) - d.f32(0.5)) * d.f32(0.5);
-  const uyf = (d.f32(probeCoordN.y) - d.f32(0.5)) * d.f32(0.5);
+  const p = d.vec2f(localPosN.probeCoord);
+  const u = p.sub(d.vec2f(0.5)).mul(d.vec2f(0.5));
 
-  const ux0f = std.clamp(std.floor(uxf), d.f32(0.0), maxProbeIdxF);
-  const uy0f = std.clamp(std.floor(uyf), d.f32(0.0), maxProbeIdxF);
+  const u0f = std.clamp(
+    std.floor(u),
+    d.vec2f(),
+    d.vec2f(maxProbeIdxF),
+  );
 
-  const ux0 = d.u32(ux0f);
-  const uy0 = d.u32(uy0f);
+  const u1f = std.min(
+    u0f.add(d.vec2f(1)),
+    d.vec2f(maxProbeIdxF),
+  );
 
-  const ux1 = std.min(ux0 + d.u32(1), maxProbeIdx);
-  const uy1 = std.min(uy0 + d.u32(1), maxProbeIdx);
+  const f = std.clamp(
+    u.sub(u0f),
+    d.vec2f(),
+    d.vec2f(1),
+  );
 
-  const fx = std.clamp(uxf - d.f32(ux0), d.f32(0.0), d.f32(1.0));
-  const fy = std.clamp(uyf - d.f32(uy0), d.f32(0.0), d.f32(1.0));
+  const u0 = d.vec2u(u0f);
+  const u1 = d.vec2u(u1f);
 
-  // 4:1 angular merge using 1D angular indexing
-  // Parent angular index in 1D order
-  const angN = localN.y * nDim + localN.x;
+  const angN = localPosN.local.y * nDim + localPosN.local.x;
   const childBase = angN * d.u32(4);
 
-  const originTL = d.vec2u(ux0 * uDim, uy0 * uDim);
-  const originTR = d.vec2u(ux1 * uDim, uy0 * uDim);
-  const originBL = d.vec2u(ux0 * uDim, uy1 * uDim);
-  const originBR = d.vec2u(ux1 * uDim, uy1 * uDim);
+  const s = d.vec2u(uDim, uDim);
 
-  // Sample 4 consecutive child rays for TL probe
-  const child0 = childBase;
-  const child1 = childBase + d.u32(1);
-  const child2 = childBase + d.u32(2);
-  const child3 = childBase + d.u32(3);
+  const originTL = d.vec2u(u0.x, u0.y).mul(s);
+  const originTR = d.vec2u(u1.x, u0.y).mul(s);
+  const originBL = d.vec2u(u0.x, u1.y).mul(s);
+  const originBR = d.vec2u(u1.x, u1.y).mul(s);
 
-  const childLocal0 = d.vec2u(child0 % uDim, child0 / uDim);
-  const childLocal1 = d.vec2u(child1 % uDim, child1 / uDim);
-  const childLocal2 = d.vec2u(child2 % uDim, child2 / uDim);
-  const childLocal3 = d.vec2u(child3 % uDim, child3 / uDim);
+  const TL = sampleProbeQuad(originTL, childBase, uDim);
+  const TR = sampleProbeQuad(originTR, childBase, uDim);
+  const BL = sampleProbeQuad(originBL, childBase, uDim);
+  const BR = sampleProbeQuad(originBR, childBase, uDim);
 
-  // TL probe
-  const rTL0 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTL.add(childLocal0),
+  const upper = std.mix(
+    std.mix(TL, TR, f.x),
+    std.mix(BL, BR, f.x),
+    f.y,
   );
-  const rTL1 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTL.add(childLocal1),
-  );
-  const rTL2 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTL.add(childLocal2),
-  );
-  const rTL3 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTL.add(childLocal3),
-  );
-  const avgTL = rTL0.add(rTL1).add(rTL2).add(rTL3).mul(0.25);
-  const tTL = (rTL0.w + rTL1.w + rTL2.w + rTL3.w) * d.f32(0.25);
-  const TL = d.vec4f(avgTL.xyz, tTL);
 
-  // TR probe
-  const rTR0 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTR.add(childLocal0),
-  );
-  const rTR1 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTR.add(childLocal1),
-  );
-  const rTR2 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTR.add(childLocal2),
-  );
-  const rTR3 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originTR.add(childLocal3),
-  );
-  const avgTR = rTR0.add(rTR1).add(rTR2).add(rTR3).mul(0.25);
-  const tTR = (rTR0.w + rTR1.w + rTR2.w + rTR3.w) * d.f32(0.25);
-  const TR = d.vec4f(avgTR.xyz, tTR);
-
-  // BL probe
-  const rBL0 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBL.add(childLocal0),
-  );
-  const rBL1 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBL.add(childLocal1),
-  );
-  const rBL2 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBL.add(childLocal2),
-  );
-  const rBL3 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBL.add(childLocal3),
-  );
-  const avgBL = rBL0.add(rBL1).add(rBL2).add(rBL3).mul(0.25);
-  const tBL = (rBL0.w + rBL1.w + rBL2.w + rBL3.w) * d.f32(0.25);
-  const BL = d.vec4f(avgBL.xyz, tBL);
-
-  // BR probe
-  const rBR0 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBR.add(childLocal0),
-  );
-  const rBR1 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBR.add(childLocal1),
-  );
-  const rBR2 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBR.add(childLocal2),
-  );
-  const rBR3 = std.textureLoad(
-    mergeBindGroupLayout.$.t2,
-    originBR.add(childLocal3),
-  );
-  const avgBR = rBR0.add(rBR1).add(rBR2).add(rBR3).mul(0.25);
-  const tBR = (rBR0.w + rBR1.w + rBR2.w + rBR3.w) * d.f32(0.25);
-  const BR = d.vec4f(avgBR.xyz, tBR);
-
-  // Bilinear interpolation in probe space
-  const one = d.f32(1.0);
-  const top = TL.mul(one - fx).add(TR.mul(fx));
-  const bot = BL.mul(one - fx).add(BR.mul(fx));
-  const upper = top.mul(one - fy).add(bot.mul(fy));
-
-  // Merge: near interval transmits (T > 0), so add far interval's radiance
-  // weighted by near's transmittance
   const outRgb = rayN.xyz.add(upper.xyz.mul(rayN.w));
   const outT = rayN.w * upper.w;
   std.textureStore(mergeBindGroupLayout.$.dst, gid.xy, d.vec4f(outRgb, outT));
@@ -551,53 +414,12 @@ function frame() {
 }
 frameId = requestAnimationFrame(frame);
 
-function snapPickerToProbeCenter(uv: { x: number; y: number }, index: number) {
-  const probes = baseProbes >> index;
-  const raysDim = dim / probes;
-
-  const px = Math.max(0, Math.min(dim - 1, Math.floor(uv.x * dim)));
-  const py = Math.max(0, Math.min(dim - 1, Math.floor(uv.y * dim)));
-
-  const bx = Math.floor(px / raysDim);
-  const by = Math.floor(py / raysDim);
-
-  const cx = bx * raysDim + Math.floor(raysDim / 2);
-  const cy = by * raysDim + Math.floor(raysDim / 2);
-
-  return {
-    x: (cx + 0.5) / dim,
-    y: (cy + 0.5) / dim,
-  };
-}
-
-function setCascadeIndex(index: number) {
-  const idx = Math.max(0, Math.min(cascadeAmount - 1, Math.floor(index)));
-  currentCascadeIndex = idx;
-
-  const probes = baseProbes >> idx;
-  const raysDim = dim / probes;
-  indexUniform.write(idx);
-  raysDimUniform.write(raysDim);
-
-  const snapped = snapPickerToProbeCenter(pickerPos, idx);
-  pickerPos = snapped;
-  pickerPosUniform.write(d.vec2f(pickerPos.x, pickerPos.y));
-}
-
 canvas.addEventListener('click', (event) => {
   const rect = canvas.getBoundingClientRect();
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
 
-  if (event.shiftKey) {
-    const snapped = snapPickerToProbeCenter({ x, y }, currentCascadeIndex);
-    pickerPos = snapped;
-    pickerPosUniform.write(d.vec2f(pickerPos.x, pickerPos.y));
-    return;
-  }
-
-  lightPos = { x, y };
-  lightPosUniform.write(d.vec2f(lightPos.x, lightPos.y));
+  lightPosUniform.write(d.vec2f(x, y));
   updateLighting();
 });
 
@@ -608,20 +430,17 @@ canvas.addEventListener('mousemove', (event) => {
   mousePosUniform.write(d.vec2f(x, y));
 
   if (event.buttons === 1) {
-    lightPos = { x, y };
-    lightPosUniform.write(d.vec2f(lightPos.x, lightPos.y));
+    lightPosUniform.write(d.vec2f(x, y));
     updateLighting();
   }
 });
 
 export const controls = {
-  'index': {
-    initial: 0,
-    min: 0,
-    max: cascadeAmount - 1,
-    step: 1,
-    onSliderChange: (value: number) => {
-      setCascadeIndex(value);
+  'Light Color': {
+    initial: [1, 1, 1],
+    onColorChange: (c: [number, number, number]) => {
+      lightColorUniform.write(d.vec3f(...c));
+      updateLighting();
     },
   },
 };
