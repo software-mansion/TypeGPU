@@ -56,7 +56,6 @@ type TgpuFnShellHeader<
   readonly [$internal]: true;
   readonly argTypes: Args;
   readonly returnType: Return;
-  readonly isEntry: false;
 };
 
 /**
@@ -125,7 +124,6 @@ export function fn<
     [$internal]: true,
     argTypes,
     returnType: returnType ?? Void as Return,
-    isEntry: false,
   };
 
   const call = (
