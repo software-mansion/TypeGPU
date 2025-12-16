@@ -90,7 +90,7 @@ describe('wgslGenerator with console.log', () => {
     `);
   });
 
-  it('Ignores console.log in a fragment shader', () => {
+  it('Ignores console.log in a fragment shader resolved without a pipeline', () => {
     const fs = tgpu['~unstable']
       .fragmentFn({ out: d.vec4f })(() => {
         console.log(d.u32(321));
