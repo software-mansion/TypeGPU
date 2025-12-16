@@ -75,6 +75,7 @@ import { hasTinyestMetadata } from './shared/meta.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+import { getItemStage } from './core/function/fnCore.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -747,11 +748,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
+      // if we're resolving an entrypoint function, we want to update this._currentStage
+      const stage = getItemStage(item);
+      const resolutionAction = () => {
+        if (stage) {
+          this._currentStage = stage;
+        }
+        const result = this._getOrInstantiate(item);
+        if (stage) {
+          this._currentStage = undefined;
+        }
+        return result;
+      };
+
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {
           this.pushMode(new CodegenState());
-          const result = provideCtx(this, () => this._getOrInstantiate(item));
+          const result = provideCtx(this, resolutionAction);
           return snip(
             `${[...this._declarations].join('\n\n')}${result.value}`,
             Void,
@@ -762,7 +776,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      return this._getOrInstantiate(item);
+      return resolutionAction();
     }
 
     // This is a value that comes from the outside, maybe we can coerce it

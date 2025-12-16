@@ -52,7 +52,7 @@ type TgpuVertexFnShellHeader<
   readonly in: VertexIn | undefined;
   readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly isEntry: true;
+  readonly entryPoint: 'vertex';
 };
 
 /**
@@ -146,7 +146,7 @@ export function vertexFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
-    isEntry: true,
+    entryPoint: 'vertex',
   };
 
   const call = (
@@ -157,6 +157,16 @@ export function vertexFn<
   return Object.assign(Object.assign(call, shell), {
     does: call,
   }) as TgpuVertexFnShell<VertexIn, VertexOut>;
+}
+
+export function isTgpuVertexFn<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+>(
+  value: unknown | TgpuVertexFn<VertexIn, VertexOut>,
+): value is TgpuVertexFn<VertexIn, VertexOut> {
+  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
+    'vertex';
 }
 
 // --------------

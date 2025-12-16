@@ -27,7 +27,7 @@ type TgpuComputeFnShellHeader<
   readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
   readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
-  readonly isEntry: true;
+  readonly entryPoint: 'compute';
 };
 
 /**
@@ -122,7 +122,7 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
-    isEntry: true,
+    entryPoint: 'compute',
   };
 
   const call = (
@@ -138,6 +138,12 @@ export function computeFn<
   return Object.assign(Object.assign(call, shell), {
     does: call,
   }) as TgpuComputeFnShell<ComputeIn>;
+}
+
+export function isTgpuComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+  value: unknown | TgpuComputeFn<ComputeIn>,
+): value is TgpuComputeFn<ComputeIn> {
+  return (value as TgpuComputeFn<ComputeIn>)?.shell?.entryPoint === 'compute';
 }
 
 // --------------

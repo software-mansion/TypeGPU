@@ -15,7 +15,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
-import type { ResolutionCtx } from '../../types.ts';
+import type { ResolutionCtx, Stage } from '../../types.ts';
 import {
   applyExternals,
   type ExternalMap,
@@ -23,6 +23,9 @@ import {
 } from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
+import { isTgpuComputeFn } from './tgpuComputeFn.ts';
+import { isTgpuVertexFn } from './tgpuVertexFn.ts';
+import { isTgpuFragmentFn } from './tgpuFragmentFn.ts';
 
 export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
@@ -294,4 +297,16 @@ function checkAndReturnType(
   }
 
   return wgslType;
+}
+
+export function getItemStage(item: unknown): Stage {
+  if (isTgpuComputeFn(item)) {
+    return 'compute';
+  }
+  if (isTgpuVertexFn(item)) {
+    return 'vertex';
+  }
+  if (isTgpuFragmentFn(item)) {
+    return 'fragment';
+  }
 }

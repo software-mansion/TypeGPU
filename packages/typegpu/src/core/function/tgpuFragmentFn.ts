@@ -61,7 +61,7 @@ type TgpuFragmentFnShellHeader<
   readonly in: FragmentIn | undefined;
   readonly out: FragmentOut;
   readonly returnType: IOLayoutToSchema<FragmentOut>;
-  readonly isEntry: true;
+  readonly entryPoint: 'fragment';
 };
 
 /**
@@ -162,7 +162,7 @@ export function fragmentFn<
     in: options.in,
     out: options.out,
     returnType: createIoSchema(options.out),
-    isEntry: true,
+    entryPoint: 'fragment',
   };
 
   const call = (
@@ -173,6 +173,17 @@ export function fragmentFn<
   return Object.assign(Object.assign(call, shell), {
     does: call,
   }) as TgpuFragmentFnShell<FragmentIn, FragmentOut>;
+}
+
+export function isTgpuFragmentFn<
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+>(
+  value: unknown | TgpuFragmentFn<FragmentIn, FragmentOut>,
+): value is TgpuFragmentFn<FragmentIn, FragmentOut> {
+  return (value as TgpuFragmentFn<FragmentIn, FragmentOut>)?.shell
+    ?.entryPoint ===
+    'fragment';
 }
 
 // --------------
