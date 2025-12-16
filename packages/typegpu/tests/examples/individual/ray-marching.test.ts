@@ -39,12 +39,12 @@ describe('ray-marching example', () => {
         dist: f32,
       }
 
-      fn sdSphere_9(p: vec3f, radius: f32) -> f32 {
-        return (length(p) - radius);
+      fn sdSphere_9(point: vec3f, radius: f32) -> f32 {
+        return (length(point) - radius);
       }
 
-      fn sdBoxFrame3d_10(p: vec3f, size: vec3f, thickness: f32) -> f32 {
-        var p1 = (abs(p) - size);
+      fn sdBoxFrame3d_10(point: vec3f, size: vec3f, thickness: f32) -> f32 {
+        var p1 = (abs(point) - size);
         var q = (abs((p1 + thickness)) - vec3f(thickness));
         let d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0f));
         let d2 = (length(max(vec3f(q.x, p1.y, q.z), vec3f())) + min(max(q.x, max(p1.y, q.z)), 0f));
@@ -84,8 +84,8 @@ describe('ray-marching example', () => {
         return (abs((fuv.x + fuv.y)) % 2f);
       }
 
-      fn sdPlane_14(p: vec3f, n: vec3f, h: f32) -> f32 {
-        return (dot(p, n) + h);
+      fn sdPlane_14(point: vec3f, normal: vec3f, height: f32) -> f32 {
+        return (dot(point, normal) + height);
       }
 
       fn shapeUnion_15(a: Shape_6, b: Shape_6) -> Shape_6 {
