@@ -182,8 +182,8 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const diskRadius = shadowParams.$.diskRadius;
 
   let visibilityAcc = 0.0;
-  for (let i = 0; i < PCF_SAMPLES; i++) {
-    const o = samplesUniform.$[i].xy.mul(diskRadius);
+  for (const sample of samplesUniform.$) {
+    const o = sample.xy.mul(diskRadius);
 
     const sampleDir = dir
       .add(right.mul(o.x))
