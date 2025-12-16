@@ -1,6 +1,5 @@
 import * as d from 'typegpu/data';
 
-export const MAX_DEPTH = 10;
 export const FOV_FACTOR = 1;
 
 export const SUN_DIRECTION = d.vec3f(1.0, 0.0, 0.0);
