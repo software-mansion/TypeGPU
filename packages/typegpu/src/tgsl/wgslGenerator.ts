@@ -33,6 +33,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  coerceToSnippet,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -975,30 +976,69 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.forOf) {
-      const [_, loopVarName, iterableExpr, body] = statement;
-      const iterable = this.expression(iterableExpr);
-      if (!wgsl.isWgslArray(iterable.dataType)) {
-        throw new WgslTypeError('for-of loops only support array iteration');
+      const [_, loopVar, iterable, body] = statement;
+      const iterableSnippet = this.expression(iterable);
+
+      if (isEphemeralSnippet(iterableSnippet)) {
+        throw new Error(
+          '`for ... of ...` loops only support iterables stored in variables',
+        );
       }
 
-      const arrayLength = iterable.dataType.elementCount;
-      const elementType = iterable.dataType.elementType; // will be used later
+      const iterableDataType = iterableSnippet.dataType;
 
-      const indexVar = this.ctx.makeNameValid('i');
-      const loopVarNameValid = this.ctx.makeNameValid(loopVarName);
+      let elementCount;
+      let elementType;
+      if (wgsl.isWgslArray(iterableDataType)) {
+        elementCount = iterableDataType.elementCount;
+        elementType = iterableDataType.elementType;
+      } else if (wgsl.isVec(iterableDataType)) {
+        elementType = iterableDataType.primitive;
+        elementCount = Number(iterableDataType.type.match(/\d/));
+      } else {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+      const loopVarKind = loopVar[0] === tinyest.NodeTypeCatalog.const &&
+          wgsl.isNaturallyEphemeral(elementType)
+        ? 'let'
+        : 'var';
 
-      const iterableStr =
-        this.ctx.resolve(iterable.value, iterable.dataType).value;
+      /*
+       * if user defines a variable named 'i', it will be scoped to a new block,
+       * shadowing our 'i'
+       */
+      const index = this.ctx.makeNameValid('i');
+
+      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+      const loopVarSnippet = snip(
+        loopVarName,
+        elementType as AnyData,
+        'runtime',
+      );
+      this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+      const iterableStr = this.ctx.resolve(
+        iterableSnippet.value,
+        // it's vector or wgslArray
+        iterableSnippet.dataType as AnyData,
+      ).value;
 
       const forStr =
-        `${this.ctx.pre}for (var ${indexVar} = 0; ${indexVar} < ${arrayLength}; ${indexVar}++) {`;
+        `${this.ctx.pre}for (var ${index} = 0; ${index} < ${elementCount}; ${index}++) {`;
+
       this.ctx.indent();
+
       const loopVarDeclStr =
-        `${this.ctx.pre}var ${loopVarNameValid} = ${iterableStr}[${indexVar}];`;
+        `${this.ctx.pre}${loopVarKind} ${loopVarName} = ${iterableStr}[${index}];`;
+
       const bodyStr = `${this.ctx.pre}${
         this.block(blockifySingleStatement(body))
       }`;
+
       this.ctx.dedent();
+
       return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
     }
 

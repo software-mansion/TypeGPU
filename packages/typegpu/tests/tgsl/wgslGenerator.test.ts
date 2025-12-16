@@ -326,7 +326,7 @@ describe('wgslGenerator', () => {
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
       //                           ^ this part should be a i32
       const res = wgslGenerator.expression(
-        (astInfo.ast?.body[1][0] as tinyest.Const)[2],
+        (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
 
       expect(res.dataType).toStrictEqual(d.i32);
@@ -336,7 +336,7 @@ describe('wgslGenerator', () => {
       ctx[$internal].itemStateStack.pushBlockScope();
       wgslGenerator.blockVariable('var', 'value', d.i32, 'runtime');
       const res2 = wgslGenerator.expression(
-        (astInfo.ast?.body[1][1] as tinyest.Const)[2],
+        (astInfo.ast?.body[1][1] as tinyest.Const)[2] as tinyest.Expression,
       );
       ctx[$internal].itemStateStack.popBlockScope();
 
@@ -449,65 +449,231 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('for ... of ...', () => {
+  it('creates correct code for for ... of ... statement with array of primitives', () => {
     const main = () => {
       'use gpu';
       const arr = d.arrayOf(d.f32, 3)([1, 2, 3]);
+      let res = d.f32();
       for (const foo of arr) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
-        continue;
+        res += foo;
+        const i = res;
       }
     };
 
-    const astInfo = getMetaData(main);
+    const parsed = getMetaData(main)?.ast?.body;
 
-    if (!astInfo) {
-      throw new Error('Expected prebuilt AST to be present');
-    }
-
-    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","f32"],[5,"3"]]],[[100,[[5,"1"],[5,"2"],[5,"3"]]]]]],[18,"foo","arr",[0,[[16]]]]]]"`,
-    );
-
-    provideCtx(
-      ctx,
-      () => {
-        ctx[$internal].itemStateStack.pushFunctionScope(
-          'normal',
-          [],
-          {},
-          d.Void,
-          (astInfo.externals as () => Record<string, unknown>)() ?? {},
-        );
-
-        wgslGenerator.initGenerator(ctx);
-        const gen = wgslGenerator.functionDefinition(
-          astInfo.ast?.body as tinyest.Block,
-        );
-        expect(gen).toMatchInlineSnapshot(`
-          "{
-            var arr = array<f32, 3>(1f, 2f, 3f);
-            for (var i = 0; i < 3; i++) {
-              var foo = arr[i];
-              {
-                continue;
-              }
-            }
-          }"
-        `);
-      },
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","f32"],[5,"3"]]],[[100,[[5,"1"],[5,"2"],[5,"3"]]]]]],[12,"res",[6,[7,"d","f32"],[]]],[18,[13,"foo"],"arr",[0,[[2,"res","+=","foo"],[13,"i","res"]]]]]]"`,
     );
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
+        var res = 0f;
         for (var i = 0; i < 3; i++) {
-          var foo = arr[i];
+          let foo = arr[i];
+          {
+            res += foo;
+            let i = res;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('creates correct code for for ... of ... statement derived, comptime iterables', () => {
+    const comptimeVec = tgpu['~unstable'].comptime(() => d.vec4f(1, 8, 8, 2));
+
+    const main = () => {
+      'use gpu';
+      const arr = derivedV4u.$;
+      for (const foo of arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+
+      const v = comptimeVec();
+      for (const foo of v) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = vec4u(44, 88, 132, 176);
+        for (var i = 0; i < 4; i++) {
+          let foo = arr[i];
+          {
+            continue;
+          }
+        }
+        var v = vec4f(1, 8, 8, 2);
+        for (var i = 0; i < 4; i++) {
+          let foo = v[i];
           {
             continue;
           }
         }
       }"
+    `);
+  });
+
+  it('creates correct code for for ... of ... statement with array of non-primitives', () => {
+    const main = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.vec2f, 3)([d.vec2f(1), d.vec2f(2), d.vec2f(3)]);
+      let res = 0;
+      for (const foo of arr) {
+        res += foo.x;
+        const i = res;
+      }
+    };
+
+    const parsed = getMetaData(main)?.ast?.body;
+
+    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","vec2f"],[5,"3"]]],[[100,[[6,[7,"d","vec2f"],[[5,"1"]]],[6,[7,"d","vec2f"],[[5,"2"]]],[6,[7,"d","vec2f"],[[5,"3"]]]]]]]],[12,"res",[5,"0"]],[18,[13,"foo"],"arr",[0,[[2,"res","+=",[7,"foo","x"]],[13,"i","res"]]]]]]"`,
+    );
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
+        var res = 0;
+        for (var i = 0; i < 3; i++) {
+          var foo = arr[i];
+          {
+            res += i32(foo.x);
+            let i = res;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('creates correct code for for ... of ... statement with vector iterables', () => {
+    const main = () => {
+      'use gpu';
+      const v1 = d.vec4f(1, 2, 3, 4);
+      const v2 = d.vec3u(5, 6, 7);
+      const v3 = d.vec2b(true, false);
+
+      let res1 = d.f32();
+      let res2 = d.u32();
+      let res3 = d.bool();
+
+      for (const foo of v1) {
+        res1 += foo;
+      }
+
+      for (const foo of v2) {
+        res2 *= foo;
+      }
+
+      for (const foo of v3) {
+        res3 = foo != res3;
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var v1 = vec4f(1, 2, 3, 4);
+        var v2 = vec3u(5, 6, 7);
+        var v3 = vec2<bool>(true, false);
+        var res1 = 0f;
+        var res2 = 0u;
+        var res3 = false;
+        for (var i = 0; i < 4; i++) {
+          let foo = v1[i];
+          {
+            res1 += foo;
+          }
+        }
+        for (var i = 0; i < 3; i++) {
+          let foo = v2[i];
+          {
+            res2 *= foo;
+          }
+        }
+        for (var i = 0; i < 2; i++) {
+          let foo = v3[i];
+          {
+            res3 = (foo != res3);
+          }
+        }
+      }"
+    `);
+  });
+
+  it('creates correct code for for ... of ... statement with struct member iterable', () => {
+    const TestStruct = d.struct({
+      arr: d.arrayOf(d.f32, 4),
+    });
+
+    const main = () => {
+      'use gpu';
+      const testStruct = TestStruct({ arr: [1, 8, 8, 2] });
+      for (const foo of testStruct.arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct TestStruct {
+        arr: array<f32, 4>,
+      }
+
+      fn main() {
+        var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
+        for (var i = 0; i < 4; i++) {
+          let foo = testStruct.arr[i];
+          {
+            continue;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('throws error when for ... of ... iterable is ephemeral', () => {
+    const main = () => {
+      'use gpu';
+      for (const foo of [1, 2, 3]) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): \`for ... of ...\` loops only support iterables stored in variables]
+    `);
+  });
+
+  it('throws error when for ... of ... iterable is not an array or a vector', () => {
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.f32,
+    });
+
+    const main = () => {
+      'use gpu';
+      const testStruct = TestStruct({ x: 1, y: 2 });
+      //@ts-ignore: let's assume it has an iterator
+      for (const foo of testStruct) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): \`for ... of ...\` loops only support array or vector iterables]
     `);
   });
 

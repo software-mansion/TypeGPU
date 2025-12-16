@@ -291,12 +291,7 @@ const Transpilers: Partial<
     }
 
     if (node.kind === 'const') {
-      if (init === undefined) {
-        throw new Error(
-          'Did not provide initial value in `const` declaration.',
-        );
-      }
-      return [NODE.const, id, init];
+      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
     }
 
     return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
@@ -370,31 +365,10 @@ const Transpilers: Partial<
   },
 
   ForOfStatement(ctx, node) {
-    if (
-      !(node.left.type === 'VariableDeclaration' &&
-        node.left.declarations.length === 1 &&
-        node.left.declarations[0]?.id.type === 'Identifier')
-    ) {
-      throw new Error(
-        '"for ... of ..." loops only support simple variable declarations',
-      );
-    }
-
-    if (node.right.type !== 'Identifier') {
-      throw new Error(
-        '"for ... of ..." loops only support iterables stored in variables',
-      );
-    }
-
-    // TODO: I can distinguish let and const there, idk how yet
-
-    ctx.ignoreExternalDepth++; // left side variable is not an external
-    const loopVarName = transpile(ctx, node.left.declarations[0].id) as string;
-    ctx.ignoreExternalDepth--;
-    const iterable = transpile(ctx, node.right) as tinyest.Expression; // need that for info during generation
+    const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
+    const iterable = transpile(ctx, node.right) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
-
-    return [NODE.forOf, loopVarName, iterable, body];
+    return [NODE.forOf, loopVar, iterable, body];
   },
 
   ContinueStatement() {

@@ -73,11 +73,13 @@ export type Let =
 /**
  * Represents a const statement
  */
-export type Const = readonly [
-  type: NodeTypeCatalog['const'],
-  identifier: string,
-  value: Expression,
-];
+export type Const =
+  | readonly [type: NodeTypeCatalog['const'], identifier: string]
+  | readonly [
+    type: NodeTypeCatalog['const'],
+    identifier: string,
+    value: Expression,
+  ];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -99,7 +101,7 @@ export type Break = readonly [type: NodeTypeCatalog['break']];
 
 export type ForOf = readonly [
   type: NodeTypeCatalog['forOf'],
-  left: string,
+  left: Const | Let,
   right: Expression,
   body: Statement,
 ];
