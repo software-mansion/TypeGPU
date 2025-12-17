@@ -11,7 +11,6 @@ import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js
 interface TgpuFnNodeData extends THREE.NodeData {
   custom: {
     nodeFunction: NodeFunction;
-    fnCode: string;
     priorCode: THREE.Node;
     functionId: string;
     dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
@@ -21,27 +20,18 @@ interface TgpuFnNodeData extends THREE.NodeData {
 class BuilderData {
   names: WeakMap<object, string>;
   namespace: Namespace;
-
-  #lastPlaceholderId = 0;
+  codeGeneratedThusFar: string;
 
   constructor() {
     this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
+    this.codeGeneratedThusFar = '';
 
     this.namespace.on('name', (event) => {
       if (isVariable(event.target)) {
         this.names.set(event.target, event.name);
       }
     });
-  }
-
-  getPlaceholder(accessor: TSLAccessor<d.AnyWgslData, THREE.Node>): string {
-    let placeholder = this.names.get(accessor);
-    if (!placeholder) {
-      placeholder = `$$TYPEGPU_TSL_ACCESSOR_${this.#lastPlaceholderId++}$$`;
-      this.names.set(accessor, placeholder);
-    }
-    return placeholder;
   }
 }
 
@@ -124,23 +114,17 @@ class TgpuFnNode<T> extends THREE.Node {
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
       );
-      let lastFnStart = code.lastIndexOf('\nfn');
+      builderData.codeGeneratedThusFar += code;
+      let lastFnStart = builderData.codeGeneratedThusFar.indexOf(
+        `\nfn ${functionId}`,
+      );
       if (lastFnStart === -1) {
         // We're starting with the function declaration
         lastFnStart = 0;
       }
 
       // Extracting the function code
-      let fnCode = code.slice(lastFnStart).trim();
-
-      // TODO: Placeholders aren't necessary
-      // Replacing placeholders
-      for (const dep of ctx.dependencies) {
-        fnCode = fnCode.replace(
-          builderData.getPlaceholder(dep),
-          dep.node.build(builder) as string,
-        );
-      }
+      const fnCode = builderData.codeGeneratedThusFar.slice(lastFnStart).trim();
 
       nodeData.custom = {
         functionId: functionId ?? '',
@@ -148,10 +132,9 @@ class TgpuFnNode<T> extends THREE.Node {
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
           forceExplicitVoidReturn(fnCode),
         ),
-        fnCode,
         // Including code that was resolved before the function as another node
         // that this node depends on
-        priorCode: TSL.code(code.slice(0, lastFnStart) ?? ''),
+        priorCode: TSL.code(code),
         dependencies: ctx.dependencies,
       };
     }
@@ -185,10 +168,6 @@ class TgpuFnNode<T> extends THREE.Node {
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
 
-    const nodeCode = builder.getCodeFromNode(this, this.getNodeType(builder));
-    // @ts-expect-error
-    nodeCode.code = nodeData.custom.fnCode;
-
     if (output === 'property') {
       return nodeData.custom.functionId;
     }
@@ -198,7 +177,7 @@ class TgpuFnNode<T> extends THREE.Node {
 
 export function toTSL(
   fn: () => unknown,
-): THREE.TSL.ShaderNodeObject<THREE.Node> {
+): THREE.TSL.NodeObject<THREE.Node> {
   return TSL.nodeObject(new TgpuFnNode(fn));
 }
 
@@ -206,16 +185,15 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
   readonly var: TgpuVar<'private', T> | undefined;
-  readonly node: TSL.ShaderNodeObject<TNode>;
+  readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(
-    node: TSL.ShaderNodeObject<TNode>,
+    node: THREE.TSL.NodeObject<TNode>,
     dataType: T,
   ) {
     this.node = node;
     this.#dataType = dataType;
 
-    // TODO: Only create a variable if it's not referentiable in the global scope
     // @ts-expect-error: The properties exist on the node
     if (!node.isStorageBufferNode && !node.isUniformNode) {
       this.var = tgpu.privateVar(dataType);

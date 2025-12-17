@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { time, toTSL, uv } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import { perlin3d } from '@typegpu/noise';
 import * as d from 'typegpu/data';
 import { tanh } from 'typegpu/std';
@@ -25,10 +25,10 @@ camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
 
-material.colorNode = toTSL(() => {
+material.colorNode = t3.toTSL(() => {
   'use gpu';
-  const coords = uv().$.mul(2);
-  const pattern = perlin3d.sample(d.vec3f(coords, time.$ * 0.2));
+  const coords = t3.uv().$.mul(2);
+  const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
 });
 

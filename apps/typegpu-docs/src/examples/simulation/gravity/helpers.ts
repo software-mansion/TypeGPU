@@ -85,19 +85,15 @@ export async function loadSkyBox(root: TgpuRoot) {
     })
     .$usage('sampled', 'render');
 
-  await Promise.all(
-    getSkyBoxUrls().map(async (url, i) => {
+  const bitmaps = await Promise.all(
+    getSkyBoxUrls().map(async (url) => {
       const response = await fetch(url);
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      root.device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [size, size],
-      );
+      return await createImageBitmap(blob);
     }),
   );
+
+  texture.write(bitmaps);
 
   return texture;
 }
@@ -148,20 +144,15 @@ export async function loadSphereTextures(root: TgpuRoot) {
     })
     .$usage('sampled', 'render');
 
-  await Promise.all(
+  const planets = await Promise.all(
     sphereTextureNames.map(async (name, i) => {
       const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
       const response = await fetch(url);
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      root.device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [2048, 1024],
-      );
+      return await createImageBitmap(blob);
     }),
   );
+  texture.write(planets);
 
   return texture;
 }

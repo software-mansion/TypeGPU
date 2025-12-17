@@ -3,19 +3,13 @@
  */
 
 import { randf } from '@typegpu/noise';
-import { fromTSL, toTSL } from '@typegpu/three';
+import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
   TransformControls,
   type TransformControlsMode,
 } from 'three/addons/controls/TransformControls.js';
-import {
-  color,
-  instancedArray,
-  instanceIndex,
-  uniform,
-  uniformArray,
-} from 'three/tsl';
+import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -77,17 +71,20 @@ window.addEventListener('resize', onWindowResize);
 
 // attractors
 
-const attractorsPositions = uniformArray([
+const attractorsPositions = t3.uniformArray([
   new THREE.Vector3(-1, 0, 0),
   new THREE.Vector3(1, 0, -0.5),
   new THREE.Vector3(0, 0.5, 1),
-]);
-const attractorsRotationAxes = uniformArray([
+], d.vec3f);
+const attractorsRotationAxes = t3.uniformArray([
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(1, 0, -0.5).normalize(),
-]);
-const attractorsLength = uniform(attractorsPositions.array.length, 'uint');
+], d.vec3f);
+const attractorsLength = t3.uniform(
+  attractorsPositions.node.array.length,
+  d.u32,
+);
 const helpersRingGeometry = new THREE.RingGeometry(
   1,
   1.02,
@@ -101,9 +98,9 @@ const helpersMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 
 const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] =
   [];
-for (let i = 0; i < attractorsPositions.array.length; i++) {
-  const position = attractorsPositions.array[i] as THREE.Vector3;
-  const orientation = attractorsRotationAxes.array[i] as THREE.Vector3;
+for (let i = 0; i < attractorsPositions.node.array.length; i++) {
+  const position = attractorsPositions.node.array[i] as THREE.Vector3;
+  const orientation = attractorsRotationAxes.node.array[i] as THREE.Vector3;
   const reference = new THREE.Object3D();
   reference.position.copy(position);
   reference.quaternion.setFromUnitVectors(
@@ -170,45 +167,28 @@ const material = new THREE.SpriteNodeMaterial({
   depthWrite: false,
 });
 
-const attractorMass = uniform(Number(`1e${7}`));
-const particleGlobalMass = uniform(Number(`1e${4}`));
-const spinningStrength = uniform(2.75);
-const maxSpeed = uniform(8);
+const attractorMass = t3.uniform(1e7, d.f32);
+const particleGlobalMass = t3.uniform(1e4, d.f32);
+const spinningStrength = t3.uniform(2.75, d.f32);
+const maxSpeed = t3.uniform(8, d.f32);
 const gravityConstant = 6.67e-11;
-const velocityDamping = uniform(0.1);
+const velocityDamping = t3.uniform(0.1, d.f32);
 const scale = uniform(0.008);
-const boundHalfExtent = uniform(8);
-const colorA = uniform(color('#5900ff'));
-const colorB = uniform(color('#ffa575'));
+const boundHalfExtent = t3.uniform(8, d.f32);
+const colorA = t3.uniform(color('#5900ff'), d.vec3f);
+const colorB = t3.uniform(color('#ffa575'), d.vec3f);
 
-const positionBuffer = instancedArray(count, 'vec3');
-const velocityBuffer = instancedArray(count, 'vec3');
+const positionBuffer = t3.instancedArray(count, d.vec3f);
+const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 // typegpu accessors
 
 const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
-const positionBufferTA = fromTSL(positionBuffer, { type: d.arrayOf(d.vec3f) });
-const velocityBufferTA = fromTSL(velocityBuffer, { type: d.arrayOf(d.vec3f) });
-const attractorsPositionsTA = fromTSL(attractorsPositions, {
-  type: d.arrayOf(d.vec3f),
-});
-const attractorsRotationAxesTA = fromTSL(attractorsRotationAxes, {
-  type: d.arrayOf(d.vec3f),
-});
-const attractorsLengthTA = fromTSL(attractorsLength, { type: d.u32 });
-const attractorMassTA = fromTSL(attractorMass, { type: d.f32 });
-const particleGlobalMassTA = fromTSL(particleGlobalMass, { type: d.f32 });
-const spinningStrengthTA = fromTSL(spinningStrength, { type: d.f32 });
-const maxSpeedTA = fromTSL(maxSpeed, { type: d.f32 });
-const velocityDampingTA = fromTSL(velocityDamping, { type: d.f32 });
-const boundHalfExtentTA = fromTSL(boundHalfExtent, { type: d.f32 });
-const colorATA = fromTSL(colorA, { type: d.vec3f });
-const colorBTA = fromTSL(colorB, { type: d.vec3f });
-const instanceIndexTA = fromTSL(instanceIndex, { type: d.u32 });
-const velocityBufferAttributeTA = fromTSL(velocityBuffer.toAttribute(), {
-  type: d.vec3f,
-});
+const velocityBufferAttributeTA = t3.fromTSL(
+  velocityBuffer.node.toAttribute(),
+  d.vec4f,
+);
 
 // init compute
 
@@ -223,19 +203,20 @@ const sphericalToVec3 = (phi: number, theta: number) => {
   );
 };
 
-const initCompute = toTSL(() => {
+const initCompute = t3.toTSL(() => {
   'use gpu';
-  randf.seed(instanceIndexTA.$ / count + comptimeRandom());
+  const instanceIndex = t3.instanceIndex.$;
+  randf.seed(instanceIndex / count + comptimeRandom());
 
   const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
     .sub(0.5)
     .mul(d.vec3f(5, 0.2, 5));
-  positionBufferTA.$[instanceIndexTA.$] = d.vec3f(basePosition);
+  positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
 
   const phi = randf.sample() * 2 * Math.PI;
   const theta = randf.sample() * 2;
   const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
-  velocityBufferTA.$[instanceIndexTA.$] = d.vec3f(baseVelocity);
+  velocityBuffer.$[instanceIndex] = d.vec3f(baseVelocity);
 });
 
 const reset = () => renderer.compute(initCompute.compute(count));
@@ -245,8 +226,7 @@ reset();
 
 const getParticleMassMultiplier = () => {
   'use gpu';
-  const instanceIndex = instanceIndexTA.$;
-  randf.seed(instanceIndex / count + comptimeRandom());
+  randf.seed(t3.instanceIndex.$ / count + comptimeRandom());
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
   const base = 0.25 + randf.sample() * 3 / 4;
   return base;
@@ -254,28 +234,28 @@ const getParticleMassMultiplier = () => {
 
 const getParticleMass = () => {
   'use gpu';
-  return getParticleMassMultiplier() * particleGlobalMassTA.$;
+  return getParticleMassMultiplier() * particleGlobalMass.$;
 };
 
-const update = toTSL(() => {
+const update = t3.toTSL(() => {
   'use gpu';
   const delta = 1 / 60;
-  let position = d.vec3f(positionBufferTA.$[instanceIndexTA.$]);
-  let velocity = d.vec3f(velocityBufferTA.$[instanceIndexTA.$]);
+  let position = d.vec3f(positionBuffer.$[t3.instanceIndex.$]);
+  let velocity = d.vec3f(velocityBuffer.$[t3.instanceIndex.$]);
 
   // force
   let force = d.vec3f();
 
-  for (let i = d.u32(); i < attractorsLengthTA.$; i++) {
-    const attractorPosition = attractorsPositionsTA.$[i].xyz;
-    const attractorRotationAxis = attractorsRotationAxesTA.$[i].xyz;
+  for (let i = d.u32(); i < attractorsLength.$; i++) {
+    const attractorPosition = attractorsPositions.$[i].xyz;
+    const attractorRotationAxis = attractorsRotationAxes.$[i].xyz;
 
     const toAttractor = attractorPosition.sub(position);
     const distance = std.length(toAttractor);
     const direction = std.normalize(toAttractor);
 
     // gravity
-    const gravityStrength = attractorMassTA.$ *
+    const gravityStrength = attractorMass.$ *
       getParticleMass() *
       gravityConstant /
       (distance ** 2);
@@ -285,7 +265,7 @@ const update = toTSL(() => {
     // spinning
     const spinningForce = attractorRotationAxis
       .mul(gravityStrength)
-      .mul(spinningStrengthTA.$);
+      .mul(spinningStrength.$);
     const spinningVelocity = std.cross(spinningForce, toAttractor);
     force = force.add(spinningVelocity);
   }
@@ -293,41 +273,41 @@ const update = toTSL(() => {
   // velocity
   velocity = velocity.add(force.mul(delta));
   const speed = std.length(velocity);
-  if (speed > maxSpeedTA.$) {
-    velocity = std.normalize(velocity).mul(maxSpeedTA.$);
+  if (speed > maxSpeed.$) {
+    velocity = std.normalize(velocity).mul(maxSpeed.$);
   }
-  velocity = velocity.mul(1 - velocityDampingTA.$);
+  velocity = velocity.mul(1 - velocityDamping.$);
 
   // position
   position = position.add(velocity.mul(delta));
 
   // box loop
-  const halfHalfExtent = boundHalfExtentTA.$ / 2;
+  const halfHalfExtent = boundHalfExtent.$ / 2;
   position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtentTA.$)
+    .mod(position.add(halfHalfExtent), boundHalfExtent.$)
     .sub(halfHalfExtent);
 
-  positionBufferTA.$[instanceIndexTA.$] = d.vec3f(position);
-  velocityBufferTA.$[instanceIndexTA.$] = d.vec3f(velocity);
+  positionBuffer.$[t3.instanceIndex.$] = d.vec3f(position);
+  velocityBuffer.$[t3.instanceIndex.$] = d.vec3f(velocity);
 });
 
 const updateCompute = update.compute(count).setName('Update Particles');
 
 // nodes
 
-material.positionNode = positionBuffer.toAttribute();
+material.positionNode = positionBuffer.node.toAttribute();
 
-material.colorNode = toTSL(() => {
+material.colorNode = t3.toTSL(() => {
   'use gpu';
   const velocity = velocityBufferAttributeTA.$;
   const speed = std.length(velocity);
-  const colorMix = std.smoothstep(0, 0.5, speed / maxSpeedTA.$);
-  const finalColor = std.mix(colorATA.$, colorBTA.$, colorMix);
+  const colorMix = std.smoothstep(0, 0.5, speed / maxSpeed.$);
+  const finalColor = std.mix(colorA.$, colorB.$, colorMix);
 
   return d.vec4f(finalColor, 1);
 });
 
-material.scaleNode = toTSL(getParticleMassMultiplier).mul(scale);
+material.scaleNode = t3.toTSL(getParticleMassMultiplier).mul(scale);
 
 // mesh
 
@@ -397,7 +377,7 @@ export const controls = {
     max: 10,
     step: 1,
     onSliderChange: (newValue: number) => {
-      attractorMass.value = Number(`1e${newValue}`);
+      attractorMass.node.value = Number(`1e${newValue}`);
     },
   },
   'Particle Global Mass Exponent': {
@@ -406,7 +386,7 @@ export const controls = {
     max: 10,
     step: 1,
     onSliderChange: (newValue: number) => {
-      particleGlobalMass.value = Number(`1e${newValue}`);
+      particleGlobalMass.node.value = Number(`1e${newValue}`);
     },
   },
   'Max Speed': {
@@ -415,7 +395,7 @@ export const controls = {
     max: 10,
     step: 0.01,
     onSliderChange: (newValue: number) => {
-      maxSpeed.value = newValue;
+      maxSpeed.node.value = newValue;
     },
   },
   'Velocity Damping': {
@@ -424,7 +404,7 @@ export const controls = {
     max: 0.1,
     step: 0.001,
     onSliderChange: (newValue: number) => {
-      velocityDamping.value = newValue;
+      velocityDamping.node.value = newValue;
     },
   },
   'Spinning Strength': {
@@ -433,7 +413,7 @@ export const controls = {
     max: 10,
     step: 0.01,
     onSliderChange: (newValue: number) => {
-      spinningStrength.value = newValue;
+      spinningStrength.node.value = newValue;
     },
   },
   'Scale': {
@@ -451,19 +431,19 @@ export const controls = {
     max: 20,
     step: 0.01,
     onSliderChange: (newValue: number) => {
-      boundHalfExtent.value = newValue;
+      boundHalfExtent.node.value = newValue;
     },
   },
   'Color A': {
-    initial: [colorA.value.r, colorA.value.g, colorA.value.b],
+    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
     onColorChange: (newValue: [number, number, number]) => {
-      colorA.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.value.r, colorB.value.g, colorB.value.b],
+    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
     onColorChange: (newValue: [number, number, number]) => {
-      colorB.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Reset Particles': {

@@ -124,13 +124,13 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
 
   // Three.js, for examples of @typegpu/three
   'three': {
-    typeDef: { reroute: ['@types/three/build/three.module.d.ts'] },
+    typeDef: { reroute: '@types/three/build/three.module.d.ts' },
   },
   'three/webgpu': {
-    typeDef: { reroute: ['@types/three/build/three.webgpu.d.ts'] },
+    typeDef: { reroute: '@types/three/build/three.webgpu.d.ts' },
   },
   'three/tsl': {
-    typeDef: { reroute: ['@types/three/build/three.tsl.d.ts'] },
+    typeDef: { reroute: '@types/three/build/three.tsl.d.ts' },
   },
 
   // Utility modules
@@ -143,6 +143,6 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     typeDef: { reroute: 'typegpu-color/src/index.ts' },
   },
   '@typegpu/three': {
-    typeDef: { reroute: ['typegpu-three/src/index.ts'] },
+    typeDef: { reroute: 'typegpu-three/src/index.ts' },
   },
 };

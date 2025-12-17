@@ -55,7 +55,7 @@ describe('shellless', () => {
         return dot(a, a);
       }
 
-      fn item_0() -> f32 {
+      fn foo() -> f32 {
         return (dot2(vec2f(1, 2)) + dot2_1(vec3f(3, 4, 5)));
       }"
     `);
@@ -260,6 +260,32 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
+    `);
+  });
+
+  it('should cache shellless implementations in namespace', () => {
+    const foo = () => {
+      'use gpu';
+      return 4.1;
+    };
+
+    const bar = () => {
+      'use gpu';
+      return 4.2 * foo();
+    };
+
+    const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+    expect(tgpu.resolve([foo], { names })).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 4.1;
+      }"
+    `);
+
+    expect(tgpu.resolve([bar], { names })).toMatchInlineSnapshot(`
+      "fn bar() -> f32 {
+        return (4.2f * foo());
+      }"
     `);
   });
 });

@@ -8,27 +8,30 @@
 
 A helper library for using TypeGPU with Three.js.
 
-## API draft
-
-- TSL nodes don't really have types associated with them.
-- We can infer the return type of a node like in shell-less functions
-
 ```ts
+import * as TSL from 'three/tsl';
+import * as t3 from '@typegpu/three';
 import { fract } from 'typegpu/std';
-import tgpu3, { uv } from '@typegpu/three';
 
-const material = new THREE.MeshBasicNodeMaterial();
-// We reexport builtin TSL nodes as `accessors`
-material.colorNode = toTSL(() => {
-  'kernel';
-  return fract(uv.$.mul(4));
+const material1 = new THREE.MeshBasicNodeMaterial();
+const pattern = TSL.texture(detailMap, TSL.uv().mul(10));
+// `fromTSL` can be used to access any TSL node from a TypeGPU function
+const patternAccess = t3.fromTSL(pattern, d.vec4f);
+material1.colorNode = t3.toTSL(() => {
+  'use gpu';
+  return patternAccess.$;
 });
 
-// Users can also wrap custom TSL nodes and use them the same way
-const pattern = TSL.texture(detailMap, TSL.uv().mul(10));
-const patternAccess = fromTSL(pattern, { type: d.vec4f });
-material.colorNode = toTSL(() => {
-  'kernel';
-  return patternAccess.$;
+const material2 = new THREE.MeshBasicNodeMaterial();
+material2.colorNode = t3.toTSL(() => {
+  'use gpu';
+  // Many builtin TSL nodes are already reexported as `accessors`
+  const uv = t3.uv().$;
+
+  if (uv.x < 0.5) {
+    return d.vec4f(fract(uv.mul(4)), 0, 1);
+  }
+
+  return d.vec4f(1, 0, 0, 1);
 });
 ```
