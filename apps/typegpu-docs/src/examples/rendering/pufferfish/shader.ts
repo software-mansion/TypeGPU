@@ -1,7 +1,12 @@
+import { randf } from '@typegpu/noise';
 import * as sdf from '@typegpu/sdf';
-import tgpu from 'typegpu';
+import tgpu, { type TgpuFixedSampler } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+
+export const frequentLayout = tgpu.bindGroupLayout({
+  video: { externalTexture: d.textureExternal() },
+});
 
 /**
  * Holds custom parameters that can be sent to the shader via Smelter
@@ -29,11 +34,11 @@ export const Uniforms = d.struct({
 });
 
 export const uniformsAccess = tgpu['~unstable'].accessor(Uniforms);
+export const samplerSlot = tgpu.slot<TgpuFixedSampler>();
 
 const MAX_STEPS = 1000;
 const MAX_DIST = 30.0;
 const SURF_DIST = 0.001;
-const SPIKES_NUM = 60;
 
 const bodyRadiusAccess = tgpu['~unstable'].accessor(d.f32, 0.6);
 const bodyPositionAccess = tgpu['~unstable'].accessor(
@@ -176,21 +181,24 @@ const getPufferfish = (p: d.v3f): Shape => {
   });
 
   // Spikes
-
-  const spikeFreq = 10;
+  const spikeHeight = uniformsAccess.$.spike_height;
+  const spikeFreq = 16;
   // Changing the coordinate system into something more cylindrical
   const yaw = (std.atan2(bodyLocalP.y, bodyLocalP.x) / (Math.PI * 2)) *
     spikeFreq;
   const pitch = bodyLocalP.z;
   const fyaw = std.fract(yaw) - 0.5;
+  const idx = std.floor(yaw);
   const surfDist = std.length(bodyLocalP) - bodyRadius;
 
-  const spikeAngle = std.radians(60.0);
+  randf.seed(idx * 0.1);
+  const spikeAngle = std.radians(40.0);
   const spikeConeC = d.vec2f(std.sin(spikeAngle), std.cos(spikeAngle));
+  const height = spikeHeight * (0.7 + randf.sample() * 0.3);
   const spikeDist = sdCone(
-    d.vec3f(fyaw, surfDist - 0.1, pitch),
+    d.vec3f(fyaw, surfDist - height / 2, pitch),
     spikeConeC,
-    0.2,
+    height,
   );
   fishBody.dist = sdf.opSmoothUnion(fishBody.dist, spikeDist, 0.03);
 
@@ -276,10 +284,6 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   return result;
 };
 
-const sampleFaceTexture = tgpu.fn([d.vec2f], d.vec4f)`(uv) {
-  return vec4f(0, 1, 1, 1);
-}`;
-
 const getNormal = (p: d.v3f): d.v3f => {
   'use gpu';
   const dist = getPufferfish(p).dist;
@@ -299,17 +303,19 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = input.uv.mul(2).sub(1).mul(1.5);
+  const uv = input.uv.mul(2).sub(1);
   const bodyPosition = bodyPositionAccess.$;
   const faceOval = uniformsAccess.$.face_oval;
   // Ray setup
-  const rotationMatY = rotationMatrixY(uniformsAccess.$.head_yaw);
-  const rotationMatX = rotationMatrixX(uniformsAccess.$.head_pitch);
-  const rotationMatZ = rotationMatrixZ(cameraRollAccess.$);
-  const rotationMat = rotationMatY.mul(rotationMatX).mul(rotationMatZ);
-  const initialRo = d.vec3f(uv.x, uv.y, 0);
-  const ro = rotationMat.mul(initialRo.sub(bodyPosition)).add(bodyPosition);
-  const rd = rotationMat.mul(d.vec3f(0, 0, 1));
+  const suv = uniformsAccess.$.invProjMat.mul(d.vec4f(uv, 0, 1)).xy;
+  let ro = d.vec3f(suv, 0);
+  let rd = uniformsAccess.$.invProjMat.mul(d.vec4f(0, 0, 1, 0)).xyz;
+
+  // Transforming around the pufferfish
+  ro = uniformsAccess.$.invModelMat.mul(
+    d.vec4f(ro.sub(bodyPosition), 1),
+  ).xyz.add(bodyPosition);
+  rd = uniformsAccess.$.invModelMat.mul(d.vec4f(rd, 0)).xyz;
 
   // Ray march
   const march = rayMarch(ro, rd);
@@ -323,7 +329,7 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
    * The (inverse) size of the face in the cutout
    */
   const faceSize = 1.8;
-  const faceUv = uv.mul(faceSize).mul(0.5).add(0.5);
+  const faceUv = suv.mul(faceSize).mul(0.5).add(0.5);
   if (distance < MAX_DIST) {
     // Hit the pufferfish
     // const localPos = hitPos.sub(bodyPosition);
@@ -341,11 +347,11 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
     textureUV = std.mix(faceOval.xy, faceOval.zw, faceUv);
   }
 
-  // TODO: Comment to show the face
-  blendFactor = 0;
-
-  // Has to be called in uniform control flow
-  const textureColor = sampleFaceTexture(textureUV);
+  const textureColor = std.textureSampleBaseClampToEdge(
+    frequentLayout.$.video,
+    samplerSlot.$,
+    textureUV,
+  );
   let result = d.vec4f();
 
   if (distance < MAX_DIST) {
@@ -389,7 +395,6 @@ export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
   'use gpu';
   const uv = input.uv.mul(2).sub(1).mul(1.5);
   const bodyPosition = bodyPositionAccess.$;
-  const faceOval = uniformsAccess.$.face_oval;
   // Ray setup
   const initialRo = d.vec3f(uv.x, uv.y, 0);
   let ro = uniformsAccess.$.invProjMat.mul(d.vec4f(initialRo, 1)).xyz;
@@ -402,72 +407,7 @@ export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
   rd = uniformsAccess.$.invModelMat.mul(d.vec4f(rd, 0)).xyz;
 
   // Ray march
-  const march = rayMarch(ro, rd);
-  const distance = march.dist;
-  const hitPos = ro.add(rd.mul(distance));
-
-  let textureUV = d.vec2f();
-  let normal = d.vec3f();
-  let blendFactor = d.f32();
-  /**
-   * The (inverse) size of the face in the cutout
-   */
-  const faceSize = 1.8;
-  const faceUv = uv.mul(faceSize).mul(0.5).add(0.5);
-  if (distance < MAX_DIST) {
-    // Hit the pufferfish
-    // const localPos = hitPos.sub(bodyPosition);
-    normal = std.normalize(getNormal(hitPos));
-    const smoothNormal = std.normalize(hitPos.sub(bodyPosition));
-
-    // Face fish mode logic
-    const maskOuterThreshold = 0.3;
-    const maskInnerThreshold = 0.8;
-    blendFactor = std.smoothstep(
-      maskOuterThreshold,
-      maskInnerThreshold,
-      -smoothNormal.z,
-    );
-    textureUV = std.mix(faceOval.xy, faceOval.zw, faceUv);
-  }
-
-  // TODO: Comment to show the face
-  blendFactor = 0;
-
-  // Has to be called in uniform control flow
-  const textureColor = sampleFaceTexture(textureUV);
-  let result = d.vec4f();
-
-  if (distance < MAX_DIST) {
-    // Lighting
-    const lightDir = std.normalize(d.vec3f(0.0, -1, -0.5)); // Light comes from the top
-    const att = std.clamp(std.dot(normal, lightDir) * 5, 0, 1);
-    const diffuseLight = d.vec3f(att * 0.6);
-    const ambientLight = d.vec3f(0.4, 0.45, 0.5);
-    const litFishColor = march.color.mul(diffuseLight.add(ambientLight));
-
-    const finalColor = std.mix(litFishColor, textureColor.xyz, blendFactor);
-
-    result = d.vec4f(finalColor, 1);
-  } else {
-    // Background
-    result = d.vec4f();
-  }
-
-  // Outline
-  const outlineThickness = 0.02;
-  if (
-    minPufferfishDist.$ < outlineThickness &&
-    lastPufferfishDist.$ >= MAX_DIST * 0.1
-  ) {
-    result = d.vec4f(0, 0, 0, 1);
-  }
-
-  // Pulsating when immune
-  const immunity = uniformsAccess.$.color.w;
-  result = result.mul(
-    std.mix(1, std.sin(uniformsAccess.$.time * 10) * 0.05 + 0.4, immunity),
-  );
+  rayMarch(ro, rd);
 
   const debugPos = d.vec3f(1, 0.6, 0.4);
   const debugNeg = d.vec3f(0.4, 0.6, 1);
