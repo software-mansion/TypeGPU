@@ -221,21 +221,17 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   }
 }
 
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: (length: number) => T },
-): TSLAccessor<T, TNode>;
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T },
-): TSLAccessor<T, TNode>;
-export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  node: TSL.ShaderNodeObject<TNode>,
-  options: { type: T } | { type: (length: number) => T },
-): TSLAccessor<T, TNode> {
-  const tgpuType = d.isData(options.type)
-    ? options.type as T
-    : (options.type as (length: number) => T)(0);
+export const fromTSL = tgpu['~unstable'].comptime<
+  & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    node: THREE.TSL.NodeObject<TNode>,
+    type: (length: number) => T,
+  ) => TSLAccessor<T, TNode>)
+  & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    node: THREE.TSL.NodeObject<TNode>,
+    type: T,
+  ) => TSLAccessor<T, TNode>)
+>((node, type) => {
+  const tgpuType = d.isData(type) ? type : (type as (length: number) => any)(0);
 
   const builder = new WGSLNodeBuilder();
 
@@ -250,5 +246,5 @@ export function fromTSL<T extends d.AnyWgslData, TNode extends THREE.Node>(
     console.log(`TSL '${wgslType}' ('${nodeType}') vs TGPU '${tgpuType}'`);
   }
 
-  return new TSLAccessor<T, TNode>(node, tgpuType);
-}
+  return new TSLAccessor(node, tgpuType);
+});
