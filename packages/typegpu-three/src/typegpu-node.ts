@@ -241,6 +241,11 @@ function convertTypeToExplicit(type: string) {
     const itemType = typeMap[type.charAt(4) as keyof typeof typeMap];
     return `vec${itemCount}<${itemType}>`;
   }
+  if (type.startsWith('mat') && type.indexOf('<') === -1) {
+    const itemCount = type.charAt(3);
+    const itemType = typeMap[type.charAt(6) as keyof typeof typeMap];
+    return `mat${itemCount}x${itemCount}<${itemType}>`;
+  }
   return type;
 }
 
@@ -272,12 +277,12 @@ export const fromTSL = tgpu['~unstable'].comptime<
   } else {
     const wgslTypeFromTSL = builder.getType(nodeType);
     if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
-      const vec3warn = wgslTypeFromTSL.startsWith('vec4')
-        ? ' Sometimes TSL promotes three element vectors to be four elements.'
+      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
+        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
         : '';
 
       console.warn(
-        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec3warn}`,
+        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
       );
     }
   }
