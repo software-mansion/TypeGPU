@@ -294,7 +294,7 @@ async function autoSetQuaility() {
 
 export const controls = {
   'Quality': {
-    initial: 'Auto',
+    initial: 'Ultra',
     options: [
       'Auto',
       'Very Low',

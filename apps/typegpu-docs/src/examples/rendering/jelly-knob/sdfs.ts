@@ -183,7 +183,6 @@ export const getJellyBounds = () => {
 export const getSceneDist = (position: d.v3f) => {
   'use gpu';
   const jelly = sdJelly(position);
-  const meter = sdMeter(position);
   const mainScene = sdBackground(position);
 
   const hitInfo = HitInfo();
@@ -192,10 +191,6 @@ export const getSceneDist = (position: d.v3f) => {
   if (jelly < hitInfo.distance) {
     hitInfo.distance = jelly;
     hitInfo.objectType = ObjectType.JELLY;
-  }
-  if (meter < hitInfo.distance) {
-    hitInfo.distance = mainScene;
-    hitInfo.objectType = ObjectType.PROGRESS_METER;
   }
   if (mainScene < hitInfo.distance) {
     hitInfo.distance = mainScene;
