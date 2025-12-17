@@ -16,8 +16,18 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import { BOUNDS, limit, waterMaxHeight, WIDTH } from './consts';
 
-// Dimensions of simulation grid.
+// Struct schemas for GPU function return types
+const NeighborIndices = d.struct({
+  northIndex: d.u32,
+  southIndex: d.u32,
+  eastIndex: d.u32,
+  westIndex: d.u32,
+});
 
+const Normals = d.struct({
+  normalX: d.f32,
+  normalY: d.f32,
+});
 
 if (WebGPU.isAvailable() === false) {
   document.body.appendChild(WebGPU.getErrorMessage());
@@ -136,7 +146,7 @@ const getNeighborIndices = (index: number) => {
   const southIndex = d.u32(std.add(std.mul(bottomY, d.i32(width)), x));
   const northIndex = d.u32(std.add(std.mul(topY, d.i32(width)), x));
 
-  return { northIndex, southIndex, eastIndex, westIndex };
+  return NeighborIndices({ northIndex, southIndex, eastIndex, westIndex });
 };
 
 const getCurrentHeight = (index: number) => {
@@ -164,7 +174,7 @@ const getCurrentNormals = (index: number) => {
   const normalX = std.mul(std.sub(west, east), std.div(WIDTH, BOUNDS));
   const normalY = std.mul(std.sub(south, north), std.div(WIDTH, BOUNDS));
 
-  return { normalX, normalY };
+  return Normals({ normalX, normalY });
 };
 
 // Compute shader for height simulation: A -> B
@@ -339,8 +349,9 @@ const computeDucks = t3.toTSL(() => {
   const bounceDamping = -0.4;
 
   const idx = t3.instanceIndex.$;
-  let instancePosition = d.vec3f(duckInstanceDataStorage.$[idx].position);
-  let velocity = d.vec2f(duckInstanceDataStorage.$[idx].velocity);
+  const duckData = duckInstanceDataStorage.$[idx];
+  let instancePosition = d.vec3f(duckData.position);
+  let velocity = d.vec2f(duckData.velocity);
 
   const gridCoordX = std.mul(std.add(std.div(instancePosition.x, BOUNDS), 0.5), WIDTH);
   const gridCoordZ = std.mul(std.add(std.div(instancePosition.z, BOUNDS), 0.5), WIDTH);
@@ -386,8 +397,8 @@ const computeDucks = t3.toTSL(() => {
     velocity.y = std.mul(velocity.y, bounceDamping);
   }
 
-  duckInstanceDataStorage.$[idx].position = instancePosition;
-  duckInstanceDataStorage.$[idx].velocity = velocity;
+  duckData.position = d.vec3f(instancePosition);
+  duckData.velocity = d.vec2f(velocity);
 }).compute(NUM_DUCKS);
 
 // Load environment and duck model
@@ -419,7 +430,8 @@ const duckMaterial = duckModel.material as THREE.MeshStandardNodeMaterial;
 
 duckMaterial.positionNode = t3.toTSL(() => {
   'use gpu';
-  const instancePosition = duckInstanceDataStorage.$[t3.instanceIndex.$].position;
+  const duckData = duckInstanceDataStorage.$[t3.instanceIndex.$];
+  const instancePosition = duckData.position;
   const posLocal = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
   return posLocal.add(instancePosition);
 });
