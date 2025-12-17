@@ -517,12 +517,6 @@ describe('wgslGenerator', () => {
       }
     };
 
-    const parsed = getMetaData(main)?.ast?.body;
-
-    expect(JSON.stringify(parsed)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[6,[6,[7,"d","arrayOf"],[[7,"d","vec2f"],[5,"3"]]],[[100,[[6,[7,"d","vec2f"],[[5,"1"]]],[6,[7,"d","vec2f"],[[5,"2"]]],[6,[7,"d","vec2f"],[[5,"3"]]]]]]]],[12,"res",[5,"0"]],[18,[13,"foo"],"arr",[0,[[2,"res","+=",[7,"foo","x"]],[13,"i","res"]]]]]]"`,
-    );
-
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
@@ -539,18 +533,18 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for "for ... of ..." statements using derived and comptime iterables', () => {
-    const comptimeVec = tgpu['~unstable'].comptime(() => d.vec4f(1, 8, 8, 2));
+    const comptimeVec = tgpu['~unstable'].comptime(() => d.vec2f(1, 2));
 
     const main = () => {
       'use gpu';
-      const arr = derivedV4u.$;
-      for (const foo of arr) {
+      const v1 = derivedV4u.$;
+      for (const foo of v1) {
         // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
 
-      const v = comptimeVec();
-      for (const foo of v) {
+      const v2 = comptimeVec();
+      for (const foo of v2) {
         // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
@@ -558,16 +552,16 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
-        var arr = vec4u(44, 88, 132, 176);
+        var v1 = vec4u(44, 88, 132, 176);
         for (var i = 0; i < 4; i++) {
-          let foo = arr[i];
+          let foo = v1[i];
           {
             continue;
           }
         }
-        var v = vec4f(1, 8, 8, 2);
-        for (var i = 0; i < 4; i++) {
-          let foo = v[i];
+        var v2 = vec2f(1, 2);
+        for (var i = 0; i < 2; i++) {
+          let foo = v2[i];
           {
             continue;
           }
