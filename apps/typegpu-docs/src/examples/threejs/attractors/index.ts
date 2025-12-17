@@ -75,12 +75,12 @@ const attractorsPositions = t3.uniformArray([
   new THREE.Vector3(-1, 0, 0),
   new THREE.Vector3(1, 0, -0.5),
   new THREE.Vector3(0, 0.5, 1),
-], d.vec3f);
+], d.vec4f);
 const attractorsRotationAxes = t3.uniformArray([
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(1, 0, -0.5).normalize(),
-], d.vec3f);
+], d.vec4f);
 const attractorsLength = t3.uniform(
   attractorsPositions.node.array.length,
   d.u32,
@@ -187,7 +187,7 @@ const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
 const velocityBufferAttributeTA = t3.fromTSL(
   velocityBuffer.node.toAttribute(),
-  d.vec4f,
+  d.vec3f,
 );
 
 // init compute

@@ -134,7 +134,7 @@ function setupWireframe() {
     false,
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.u32);
+  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.f32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
     'use gpu';
     const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
@@ -333,7 +333,7 @@ async function render() {
     await verletSim.update(renderer);
   }
 
-  await renderer.renderAsync(scene, camera);
+  await renderer.render(scene, camera);
 }
 
 export function onCleanup() {
