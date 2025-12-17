@@ -123,18 +123,18 @@ const NUM_DUCKS = 100;
 const getNeighborIndices = (index: number) => {
   'use gpu';
   const width = d.u32(WIDTH);
-  const x = d.i32(index % WIDTH);
-  const y = d.i32(index / WIDTH);
+  const x = d.i32(std.mod(index, WIDTH));
+  const y = d.i32(std.div(index, WIDTH));
 
-  const leftX = std.max(0, x - 1);
-  const rightX = std.min(x + 1, d.i32(width) - 1);
-  const bottomY = std.max(0, y - 1);
-  const topY = std.min(y + 1, d.i32(width) - 1);
+  const leftX = std.max(0, std.sub(x, 1));
+  const rightX = std.min(std.add(x, 1), std.sub(d.i32(width), 1));
+  const bottomY = std.max(0, std.sub(y, 1));
+  const topY = std.min(std.add(y, 1), std.sub(d.i32(width), 1));
 
-  const westIndex = d.u32(y * d.i32(width) + leftX);
-  const eastIndex = d.u32(y * d.i32(width) + rightX);
-  const southIndex = d.u32(bottomY * d.i32(width) + x);
-  const northIndex = d.u32(topY * d.i32(width) + x);
+  const westIndex = d.u32(std.add(std.mul(y, d.i32(width)), leftX));
+  const eastIndex = d.u32(std.add(std.mul(y, d.i32(width)), rightX));
+  const southIndex = d.u32(std.add(std.mul(bottomY, d.i32(width)), x));
+  const northIndex = d.u32(std.add(std.mul(topY, d.i32(width)), x));
 
   return { northIndex, southIndex, eastIndex, westIndex };
 };
@@ -150,16 +150,19 @@ const getCurrentHeight = (index: number) => {
 
 const getCurrentNormals = (index: number) => {
   'use gpu';
-  const { northIndex, southIndex, eastIndex, westIndex } =
-    getNeighborIndices(index);
+  const neighbors = getNeighborIndices(index);
+  const northIndex = neighbors.northIndex;
+  const southIndex = neighbors.southIndex;
+  const eastIndex = neighbors.eastIndex;
+  const westIndex = neighbors.westIndex;
 
   const north = getCurrentHeight(northIndex);
   const south = getCurrentHeight(southIndex);
   const east = getCurrentHeight(eastIndex);
   const west = getCurrentHeight(westIndex);
 
-  const normalX = (west - east) * (WIDTH / BOUNDS);
-  const normalY = (south - north) * (WIDTH / BOUNDS);
+  const normalX = std.mul(std.sub(west, east), std.div(WIDTH, BOUNDS));
+  const normalY = std.mul(std.sub(south, north), std.div(WIDTH, BOUNDS));
 
   return { normalX, normalY };
 };
@@ -172,33 +175,36 @@ const computeHeightAtoB = t3.toTSL(() => {
   const height = heightStorageA.$[idx];
   const prevHeight = prevHeightStorage.$[idx];
 
-  const { northIndex, southIndex, eastIndex, westIndex } =
-    getNeighborIndices(idx);
+  const neighbors = getNeighborIndices(idx);
+  const northIndex = neighbors.northIndex;
+  const southIndex = neighbors.southIndex;
+  const eastIndex = neighbors.eastIndex;
+  const westIndex = neighbors.westIndex;
 
   const north = heightStorageA.$[northIndex];
   const south = heightStorageA.$[southIndex];
   const east = heightStorageA.$[eastIndex];
   const west = heightStorageA.$[westIndex];
 
-  let neighborHeight = (north + south + east + west) * 0.5;
-  neighborHeight = neighborHeight - prevHeight;
-  let newHeight = neighborHeight * viscosity.$;
+  let neighborHeight = std.mul(std.add(std.add(std.add(north, south), east), west), 0.5);
+  neighborHeight = std.sub(neighborHeight, prevHeight);
+  let newHeight = std.mul(neighborHeight, viscosity.$);
 
   // Get x and y position of the coordinate in the water plane
-  const x = d.f32(idx % WIDTH) * (1 / WIDTH);
-  const y = d.f32(idx / WIDTH) * (1 / WIDTH);
+  const x = std.mul(d.f32(std.mod(idx, WIDTH)), std.div(1, WIDTH));
+  const y = std.mul(d.f32(std.div(idx, WIDTH)), std.div(1, WIDTH));
 
   // Mouse influence
   const centerVec = d.vec2f(0.5, 0.5);
   const posVec = d.vec2f(x, y);
   const mouseOffset = posVec.sub(centerVec).mul(BOUNDS).sub(mousePos.$.xy);
   const mousePhase = std.clamp(
-    std.length(mouseOffset) * Math.PI / mouseSize.$,
+    std.div(std.mul(std.length(mouseOffset), Math.PI), mouseSize.$),
     0.0,
     Math.PI,
   );
 
-  newHeight = newHeight + (std.cos(mousePhase) + 1.0) * mouseDeep.$ * std.length(mouseSpeed.$.xy);
+  newHeight = std.add(newHeight, std.mul(std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$), std.length(mouseSpeed.$.xy)));
 
   prevHeightStorage.$[idx] = height;
   heightStorageB.$[idx] = newHeight;
@@ -212,33 +218,36 @@ const computeHeightBtoA = t3.toTSL(() => {
   const height = heightStorageB.$[idx];
   const prevHeight = prevHeightStorage.$[idx];
 
-  const { northIndex, southIndex, eastIndex, westIndex } =
-    getNeighborIndices(idx);
+  const neighbors = getNeighborIndices(idx);
+  const northIndex = neighbors.northIndex;
+  const southIndex = neighbors.southIndex;
+  const eastIndex = neighbors.eastIndex;
+  const westIndex = neighbors.westIndex;
 
   const north = heightStorageB.$[northIndex];
   const south = heightStorageB.$[southIndex];
   const east = heightStorageB.$[eastIndex];
   const west = heightStorageB.$[westIndex];
 
-  let neighborHeight = (north + south + east + west) * 0.5;
-  neighborHeight = neighborHeight - prevHeight;
-  let newHeight = neighborHeight * viscosity.$;
+  let neighborHeight = std.mul(std.add(std.add(std.add(north, south), east), west), 0.5);
+  neighborHeight = std.sub(neighborHeight, prevHeight);
+  let newHeight = std.mul(neighborHeight, viscosity.$);
 
   // Get x and y position of the coordinate in the water plane
-  const x = d.f32(idx % WIDTH) * (1 / WIDTH);
-  const y = d.f32(idx / WIDTH) * (1 / WIDTH);
+  const x = std.mul(d.f32(std.mod(idx, WIDTH)), std.div(1, WIDTH));
+  const y = std.mul(d.f32(std.div(idx, WIDTH)), std.div(1, WIDTH));
 
   // Mouse influence
   const centerVec = d.vec2f(0.5, 0.5);
   const posVec = d.vec2f(x, y);
   const mouseOffset = posVec.sub(centerVec).mul(BOUNDS).sub(mousePos.$.xy);
   const mousePhase = std.clamp(
-    std.length(mouseOffset) * Math.PI / mouseSize.$,
+    std.div(std.mul(std.length(mouseOffset), Math.PI), mouseSize.$),
     0.0,
     Math.PI,
   );
 
-  newHeight = newHeight + (std.cos(mousePhase) + 1.0) * mouseDeep.$ * std.length(mouseSpeed.$.xy);
+  newHeight = std.add(newHeight, std.mul(std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$), std.length(mouseSpeed.$.xy)));
 
   prevHeightStorage.$[idx] = height;
   heightStorageA.$[idx] = newHeight;
@@ -260,8 +269,10 @@ const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32);
 
 waterMaterial.normalNode = t3.toTSL(() => {
   'use gpu';
-  const { normalX, normalY } = getCurrentNormals(vertexIndex.$);
-  return d.vec3f(normalX, -normalY, 1.0);
+  const normals = getCurrentNormals(vertexIndex.$);
+  const normalX = normals.normalX;
+  const normalY = normals.normalY;
+  return d.vec3f(normalX, std.neg(normalY), 1.0);
 });
 
 waterMaterial.positionNode = t3.toTSL(() => {
@@ -331,46 +342,48 @@ const computeDucks = t3.toTSL(() => {
   let instancePosition = d.vec3f(duckInstanceDataStorage.$[idx].position);
   let velocity = d.vec2f(duckInstanceDataStorage.$[idx].velocity);
 
-  const gridCoordX = (instancePosition.x / BOUNDS + 0.5) * WIDTH;
-  const gridCoordZ = (instancePosition.z / BOUNDS + 0.5) * WIDTH;
+  const gridCoordX = std.mul(std.add(std.div(instancePosition.x, BOUNDS), 0.5), WIDTH);
+  const gridCoordZ = std.mul(std.add(std.div(instancePosition.z, BOUNDS), 0.5), WIDTH);
 
-  const xCoord = d.u32(std.clamp(std.floor(gridCoordX), 0, WIDTH - 1));
-  const zCoord = d.u32(std.clamp(std.floor(gridCoordZ), 0, WIDTH - 1));
-  const heightInstanceIndex = zCoord * WIDTH + xCoord;
+  const xCoord = d.u32(std.clamp(std.floor(gridCoordX), 0, std.sub(WIDTH, 1)));
+  const zCoord = d.u32(std.clamp(std.floor(gridCoordZ), 0, std.sub(WIDTH, 1)));
+  const heightInstanceIndex = std.add(std.mul(zCoord, WIDTH), xCoord);
 
   const waterHeight = getCurrentHeight(heightInstanceIndex);
-  const { normalX, normalY } = getCurrentNormals(heightInstanceIndex);
+  const normals = getCurrentNormals(heightInstanceIndex);
+  const normalX = normals.normalX;
+  const normalY = normals.normalY;
 
-  const targetY = waterHeight + yOffset;
-  const deltaY = targetY - instancePosition.y;
-  instancePosition.y += deltaY * verticalResponseFactor;
+  const targetY = std.add(waterHeight, yOffset);
+  const deltaY = std.sub(targetY, instancePosition.y);
+  instancePosition.y = std.add(instancePosition.y, std.mul(deltaY, verticalResponseFactor));
 
-  const pushX = normalX * waterPushFactor;
-  const pushZ = normalY * waterPushFactor;
+  const pushX = std.mul(normalX, waterPushFactor);
+  const pushZ = std.mul(normalY, waterPushFactor);
 
-  velocity.x *= linearDamping;
-  velocity.y *= linearDamping;
-  velocity.x += pushX;
-  velocity.y += pushZ;
+  velocity.x = std.mul(velocity.x, linearDamping);
+  velocity.y = std.mul(velocity.y, linearDamping);
+  velocity.x = std.add(velocity.x, pushX);
+  velocity.y = std.add(velocity.y, pushZ);
 
-  instancePosition.x += velocity.x;
-  instancePosition.z += velocity.y;
+  instancePosition.x = std.add(instancePosition.x, velocity.x);
+  instancePosition.z = std.add(instancePosition.z, velocity.y);
 
   // Clamp position to pool bounds
-  if (instancePosition.x < -limit) {
-    instancePosition.x = -limit;
-    velocity.x *= bounceDamping;
+  if (instancePosition.x < std.neg(limit)) {
+    instancePosition.x = std.neg(limit);
+    velocity.x = std.mul(velocity.x, bounceDamping);
   } else if (instancePosition.x > limit) {
     instancePosition.x = limit;
-    velocity.x *= bounceDamping;
+    velocity.x = std.mul(velocity.x, bounceDamping);
   }
 
-  if (instancePosition.z < -limit) {
-    instancePosition.z = -limit;
-    velocity.y *= bounceDamping;
+  if (instancePosition.z < std.neg(limit)) {
+    instancePosition.z = std.neg(limit);
+    velocity.y = std.mul(velocity.y, bounceDamping);
   } else if (instancePosition.z > limit) {
     instancePosition.z = limit;
-    velocity.y *= bounceDamping;
+    velocity.y = std.mul(velocity.y, bounceDamping);
   }
 
   duckInstanceDataStorage.$[idx].position = instancePosition;
