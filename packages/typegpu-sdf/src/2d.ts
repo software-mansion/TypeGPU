@@ -21,44 +21,44 @@ import {
 
 /**
  * Signed distance function for a disk (filled circle)
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param radius Radius of the disk
  */
-export const sdDisk = tgpu.fn([vec2f, f32], f32)((p, radius) => {
-  return length(p) - radius;
+export const sdDisk = tgpu.fn([vec2f, f32], f32)((point, radius) => {
+  return length(point) - radius;
 });
 
 /**
- * Signed distance function for a 2d box
- * @param p Point to evaluate
+ * Signed distance function for a 2d box (rectangle)
+ * @param point Point to evaluate
  * @param size Half-dimensions of the box
  */
-export const sdBox2d = tgpu.fn([vec2f, vec2f], f32)((p, size) => {
-  const d = sub(abs(p), size);
+export const sdBox2d = tgpu.fn([vec2f, vec2f], f32)((point, size) => {
+  const d = sub(abs(point), size);
   return length(max(d, vec2f(0))) + min(max(d.x, d.y), 0);
 });
 
 /**
  * Signed distance function for a rounded 2d box
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param size Half-dimensions of the box
  * @param cornerRadius Box corner radius
  */
 export const sdRoundedBox2d = tgpu
-  .fn([vec2f, vec2f, f32], f32)((p, size, cornerRadius) => {
-    const d = add(sub(abs(p), size), vec2f(cornerRadius));
+  .fn([vec2f, vec2f, f32], f32)((point, size, cornerRadius) => {
+    const d = add(sub(abs(point), size), vec2f(cornerRadius));
     return length(max(d, vec2f(0))) + min(max(d.x, d.y), 0) - cornerRadius;
   });
 
 /**
  * Signed distance function for a line segment
- * @param p Point to evaluate
- * @param a First endpoint of the line
- * @param b Second endpoint of the line
+ * @param point Point to evaluate
+ * @param A First endpoint of the line
+ * @param B Second endpoint of the line
  */
-export const sdLine = tgpu.fn([vec2f, vec2f, vec2f], f32)((p, a, b) => {
-  const pa = sub(p, a);
-  const ba = sub(b, a);
+export const sdLine = tgpu.fn([vec2f, vec2f, vec2f], f32)((point, A, B) => {
+  const pa = sub(point, A);
+  const ba = sub(B, A);
   const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
   return length(sub(pa, ba.mul(h)));
 });
@@ -70,17 +70,17 @@ const dot2 = (v: v2f) => {
 
 /**
  * Signed distance function for a quadratic Bezier curve
- * @param pos Point to evaluate
+ * @param point Point to evaluate
  * @param A First control point of the Bezier curve
  * @param B Second control point of the Bezier curve
  * @param C Third control point of the Bezier curve
  */
 export const sdBezier = tgpu.fn([vec2f, vec2f, vec2f, vec2f], f32)(
-  (pos, A, B, C) => {
+  (point, A, B, C) => {
     const a = B.sub(A);
     const b = A.sub(B.mul(2)).add(C);
     const c = a.mul(f32(2));
-    const d = A.sub(pos);
+    const d = A.sub(point);
 
     const dotB = max(dot(b, b), 0.0001);
     const kk = 1 / dotB;
@@ -121,27 +121,34 @@ export const sdBezier = tgpu.fn([vec2f, vec2f, vec2f, vec2f], f32)(
   },
 );
 
-const cro = (a: v2f, b: v2f) => {
+const cross = (a: v2f, b: v2f) => {
   'use gpu';
   return a.x * b.y - a.y * b.x;
 };
 
+/**
+ * A fast approximation of the signed distance function for a quadratic Bezier curve
+ * @param point Point to evaluate
+ * @param A First control point of the Bezier curve
+ * @param B Second control point of the Bezier curve
+ * @param C Third control point of the Bezier curve
+ */
 export const sdBezierApprox = tgpu.fn(
   [vec2f, vec2f, vec2f, vec2f],
   f32,
-)((pos, A, B, C) => {
+)((point, A, B, C) => {
   const i = A.sub(C);
   const j = C.sub(B);
   const k = B.sub(A);
   const w = j.sub(k);
 
-  const v0 = A.sub(pos);
-  const v1 = B.sub(pos);
-  const v2 = C.sub(pos);
+  const v0 = A.sub(point);
+  const v1 = B.sub(point);
+  const v2 = C.sub(point);
 
-  const x = cro(v0, v2);
-  const y = cro(v1, v0);
-  const z = cro(v2, v1);
+  const x = cross(v0, v2);
+  const y = cross(v1, v0);
+  const z = cross(v2, v1);
 
   const s = j.mul(y).add(k.mul(z)).mul(2).sub(i.mul(x));
 
@@ -152,10 +159,17 @@ export const sdBezierApprox = tgpu.fn(
   return length(d);
 });
 
-export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((p, c, r) => {
-  const p_w = vec2f(p);
-  p_w.x = abs(p.x);
-  const l = length(p_w) - r;
-  const m = length(p_w.sub(c.mul(clamp(dot(p_w, c), 0, r))));
-  return max(l, m * sign(c.y * p_w.x - c.x * p_w.y));
+/**
+ * Computes the signed distance field for a pie shape (circular sector).
+ *
+ * @param point - The point to evaluate, in 2D space
+ * @param sc - The sine/cosine of the pie's half-angle (`d.vec2f(std.sin(angle/2), std.cos(angle/2))`)
+ * @param radius - The radius of the pie
+ */
+export const sdPie = tgpu.fn([vec2f, vec2f, f32], f32)((point, sc, radius) => {
+  const p_w = vec2f(point);
+  p_w.x = abs(point.x);
+  const l = length(p_w) - radius;
+  const m = length(p_w.sub(sc.mul(clamp(dot(p_w, sc), 0, radius))));
+  return max(l, m * sign(sc.y * p_w.x - sc.x * p_w.y));
 });

@@ -83,8 +83,8 @@ describe('liquid-glass example', () => {
 
       @group(0) @binding(1) var<uniform> paramsUniform_5: Params_6;
 
-      fn sdRoundedBox2d_7(p: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(p) - size) + vec2f(cornerRadius));
+      fn sdRoundedBox2d_7(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+        var d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
