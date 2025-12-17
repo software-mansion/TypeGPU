@@ -221,6 +221,29 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   }
 }
 
+const typeMap = {
+  'f': 'f32',
+  'h': 'f16',
+  'i': 'i32',
+  'u': 'u32',
+  'b': 'bool',
+} as const;
+
+/**
+ * Maps short type identifiers to their explicit WGSL type names.
+ *
+ * @example
+ * convertTypeToExplicit('vec3f'); // 'vec3<f32>'
+ */
+function convertTypeToExplicit(type: string) {
+  if (type.startsWith('vec') && type.indexOf('<') === -1) {
+    const itemCount = type.charAt(3);
+    const itemType = typeMap[type.charAt(4) as keyof typeof typeMap];
+    return `vec${itemCount}<${itemType}>`;
+  }
+  return type;
+}
+
 export const fromTSL = tgpu['~unstable'].comptime<
   & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
@@ -233,17 +256,30 @@ export const fromTSL = tgpu['~unstable'].comptime<
 >((node, type) => {
   const tgpuType = d.isData(type) ? type : (type as (length: number) => any)(0);
 
+  // In THREE, the type of array buffers equals to the type of the element.
+  const wgslTypeFromTgpu = convertTypeToExplicit(
+    `${d.isWgslArray(tgpuType) ? tgpuType.elementType : tgpuType}`,
+  );
+
   const builder = new WGSLNodeBuilder();
 
   const nodeType = (typeof node.getNodeType === 'function')
     ? node.getNodeType(builder)
-    : (node.nodeType || null);
+    : (node.nodeType);
 
   if (!nodeType) {
     console.log('Node type is missing or could not be resolved.');
   } else {
-    const wgslType = builder.getType(nodeType);
-    console.log(`TSL '${wgslType}' ('${nodeType}') vs TGPU '${tgpuType}'`);
+    const wgslTypeFromTSL = builder.getType(nodeType);
+    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
+      const vec3warn = wgslTypeFromTSL.startsWith('vec4')
+        ? ' Sometimes TSL promotes three element vectors to be four elements.'
+        : '';
+
+      console.warn(
+        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec3warn}`,
+      );
+    }
   }
 
   return new TSLAccessor(node, tgpuType);
