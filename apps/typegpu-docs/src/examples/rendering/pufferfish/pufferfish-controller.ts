@@ -13,22 +13,17 @@ const MOUTH_PUCKER_CATEGORY = 'mouthPucker';
 
 async function createFaceLandmarker(): Promise<FaceLandmarker> {
   try {
-    const filesetResolver = await FilesetResolver.forVisionTasks(
-      '/TypeGPU/assets/pufferfish',
-    );
+    const filesetResolver = await FilesetResolver.forVisionTasks('/TypeGPU/assets/pufferfish');
 
-    return await FaceLandmarker.createFromOptions(
-      filesetResolver,
-      {
-        baseOptions: {
-          modelAssetPath: MODEL_PATH,
-          delegate: 'GPU',
-        },
-        outputFaceBlendshapes: true,
-        runningMode: 'VIDEO',
-        numFaces: 1,
+    return await FaceLandmarker.createFromOptions(filesetResolver, {
+      baseOptions: {
+        modelAssetPath: MODEL_PATH,
+        delegate: 'GPU',
       },
-    );
+      outputFaceBlendshapes: true,
+      runningMode: 'VIDEO',
+      numFaces: 1,
+    });
   } catch (err) {
     alert(
       "Couldn't initialize the MediaPipe module (AI). Please make sure your device can handle on-device inference.",
@@ -37,9 +32,7 @@ async function createFaceLandmarker(): Promise<FaceLandmarker> {
   }
 }
 
-function extractPuffScore(
-  results: FaceLandmarkerResult,
-): number {
+function extractPuffScore(results: FaceLandmarkerResult): number {
   if (!results.faceBlendshapes || results.faceBlendshapes.length === 0) {
     return 0;
   }
@@ -99,9 +92,7 @@ export function calcBoundingBox(
 }
 
 /** Returns 2d coordinate of the given landmark. */
-export function get2dCoord(
-  normalizedLandmark: NormalizedLandmark,
-): LandmarkCoord {
+export function get2dCoord(normalizedLandmark: NormalizedLandmark): LandmarkCoord {
   const { x, y } = normalizedLandmark;
   return { x, y };
 }
@@ -111,9 +102,7 @@ const LANDMARK_LEFT_EYE = 468;
 const LANDMARK_RIGHT_EYE = 473;
 
 function extractFaceLandmarks(landmarks: NormalizedLandmark[]): FaceLandmarks {
-  const faceOvalPoints = FaceLandmarker.FACE_LANDMARKS_FACE_OVAL.map(
-    ({ start }) => start,
-  );
+  const faceOvalPoints = FaceLandmarker.FACE_LANDMARKS_FACE_OVAL.map(({ start }) => start);
 
   const faceOval = calcBoundingBox(landmarks, faceOvalPoints);
   const nose = get2dCoord(landmarks[LANDMARK_NOSE]);
@@ -128,23 +117,30 @@ function extractFaceLandmarks(landmarks: NormalizedLandmark[]): FaceLandmarks {
   };
 }
 
+function encroach(from: number, to: number, factorPerSecond: number, deltaSeconds: number): number {
+  const diff = to - from;
+  const factor = factorPerSecond ** deltaSeconds;
+  return from + diff * (1 - factor);
+}
+
 export class PufferfishController {
   #faceLandmarker: FaceLandmarker;
   sizeSpring: Spring;
   faceLandmarks: FaceLandmarks | undefined;
+  smoothFaceLandmarks: FaceLandmarks | undefined;
+
+  headYaw: number;
+  headPitch: number;
 
   constructor(faceLandmarker: FaceLandmarker) {
     this.#faceLandmarker = faceLandmarker;
-    this.sizeSpring = new Spring({ damping: 10, mass: 1, stiffness: 1000 });
+    this.sizeSpring = new Spring({ damping: 16, mass: 1, stiffness: 1000 });
+    this.headYaw = 0;
+    this.headPitch = 0;
   }
 
-  updatePuffScore(
-    videoElement: HTMLVideoElement,
-  ): void {
-    const results = this.#faceLandmarker.detectForVideo(
-      videoElement,
-      performance.now(),
-    );
+  updatePuffScore(videoElement: HTMLVideoElement): void {
+    const results = this.#faceLandmarker.detectForVideo(videoElement, performance.now());
 
     const score = extractPuffScore(results);
     this.sizeSpring.target = score > PUCKER_THRESHOLD ? 1 : 0;
@@ -157,12 +153,45 @@ export class PufferfishController {
 
   update(dt: number) {
     this.sizeSpring.update(dt);
+
+    const current = this.faceLandmarks;
+    const prev = this.smoothFaceLandmarks || current;
+    if (!prev || !current) {
+      return;
+    }
+
+    const fromFaceOval = prev.faceOval;
+    const toFaceOval = current.faceOval;
+
+    const conv = 0.002;
+    this.smoothFaceLandmarks = {
+      ...prev,
+      // We only smooth out the face oval for now, as it's the only landmark we use
+      faceOval: {
+        xMin: encroach(fromFaceOval.xMin, toFaceOval.xMin, conv, dt),
+        xMax: encroach(fromFaceOval.xMax, toFaceOval.xMax, conv, dt),
+        yMin: encroach(fromFaceOval.yMin, toFaceOval.yMin, conv, dt),
+        yMax: encroach(fromFaceOval.yMax, toFaceOval.yMax, conv, dt),
+      },
+    };
+
+    const nose = current.nose;
+
+    // Calculate the center of the face oval
+    const ovalX = (toFaceOval.xMin + toFaceOval.xMax) / 2;
+    const ovalY = (toFaceOval.yMin + toFaceOval.yMax) / 2;
+
+    // Determining the head's orientation based on how much the nose is off-center
+    const targetYaw = -(nose.x - ovalX) * 10;
+    const targetPitch = (nose.y - ovalY) * 10;
+
+    // Smoothly approaching the target orientation
+    this.headYaw = encroach(this.headYaw, targetYaw, 0.01, dt);
+    this.headPitch = encroach(this.headPitch, targetPitch, 0.01, dt);
   }
 }
 
-export async function createPufferfishController(): Promise<
-  PufferfishController
-> {
+export async function createPufferfishController(): Promise<PufferfishController> {
   const faceLandmarker = await createFaceLandmarker();
   return new PufferfishController(faceLandmarker);
 }
