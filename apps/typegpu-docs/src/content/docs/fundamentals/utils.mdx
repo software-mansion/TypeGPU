@@ -118,6 +118,86 @@ The default workgroup sizes are:
 The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
 :::
 
+:::tip
+`TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
+Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pipeline directly.
+
+```ts
+const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
+tgpu.resolve([innerPipeline]);
+```
+:::
+
+## *tgpu.comptime*
+
+`tgpu['~unstable'].comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
+This can be used to precompute and inject a value into the final shader code.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const hsvToRgb = tgpu.fn([d.f32, d.f32, d.f32], d.vec3f)``;
+
+// ---cut---
+const injectRand01 = tgpu['~unstable']
+  .comptime(() => Math.random());
+
+const getColor = tgpu.fn([d.vec3f])((diffuse) => {
+  'use gpu';
+  const albedo = hsvToRgb(injectRand01(), 1, 0.5);
+  return albedo.mul(diffuse);
+});
+```
+
+Note how the function passed into `comptime` doesn't have to be marked with
+`'use gpu'` and can use `Math`. That's because the function doesn't execute on the GPU, it gets
+executed before the shader code gets sent to the GPU.
+
+## *tgpu.rawCodeSnippet*
+
+When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
+In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// ---cut---
+// `EXISTING_GLOBAL` is an identifier that we know will be in the
+// final shader bundle, but we cannot
+// refer to it in any other way.
+const existingGlobal = tgpu['~unstable']
+  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
+
+const foo = tgpu.fn([], d.f32)(() => {
+  'use gpu';
+  return existingGlobal.$ * 22;
+});
+
+const wgsl = tgpu.resolve([foo]);
+// fn foo() -> f32 {
+//   return (EXISTING_GLOBAL * 22f);
+// }
+```
+
+:::note
+There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
+:::
+
+### Which origin to choose?
+
+The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
+
+Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
+computation is constant (either a reference to a constant, a numeric literal,
+or an operation on constants), then pass `'constant'` as it might lead to better
+optimizations.
+
+If what the expression is a direct reference to an existing value (e.g. a uniform, a
+storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
+`'private'` or `'handle'` depending on the address space of the referred value.
+
 ## *console.log*
 
 Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
@@ -191,11 +271,12 @@ When using `console.log`, atomic operations are injected into the WGSL code to s
 This synchronization can introduce overhead and significantly impact shader performance.
 :::
 
+Other supported `console` functionalities include `console.debug`, `console.info`, `console.warn`, `console.error` and `console.clear`.
+
 There are some limitations (some of which we intend to alleviate in the future):
 
 - `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
-- `console.log` currently does not support template literals and string substitutions.
-- Other `console` methods like `clear` or `warn` are not yet supported.
+- `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).

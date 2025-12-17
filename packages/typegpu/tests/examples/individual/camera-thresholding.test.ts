@@ -17,56 +17,50 @@ describe('camera thresholding example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var sampling_0: sampler;
+      "struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
 
-      @group(0) @binding(1) var<uniform> threshold_1: f32;
-
-      @group(0) @binding(2) var<uniform> uvTransform_2: mat2x2f;
-
-      @group(1) @binding(0) var inputTexture_3: texture_external;
-
-      struct VertexOutput_4 {
-        @builtin(position) position: vec4f,
+      struct fullScreenTriangle_Output_2 {
+        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex
-      fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput_4 {
-        const pos = array(
-          vec2( 1.0,  1.0),
-          vec2( 1.0, -1.0),
-          vec2(-1.0, -1.0),
-          vec2( 1.0,  1.0),
-          vec2(-1.0, -1.0),
-          vec2(-1.0,  1.0),
-        );
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        const uv = array(
-          vec2(1.0, 0.0),
-          vec2(1.0, 1.0),
-          vec2(0.0, 1.0),
-          vec2(1.0, 0.0),
-          vec2(0.0, 1.0),
-          vec2(0.0, 0.0),
-        );
-
-        var output: VertexOutput_4;
-        output.position = vec4(pos[idx], 0.0, 1.0);
-        output.uv = uv[idx];
-        return output;
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @fragment
-      fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        let uv2 = uvTransform_2 * (uv - vec2f(0.5)) + vec2f(0.5);
-        var color = textureSampleBaseClampToEdge(inputTexture_3, sampling_0, uv2);
-        let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
+      @group(0) @binding(0) var<uniform> uvTransformUniform_4: mat2x2f;
 
-        if (grey < threshold_1) {
-          return vec4f(0, 0, 0, 1);
+      @group(1) @binding(0) var inputTexture_5: texture_external;
+
+      @group(0) @binding(1) var sampler_6: sampler;
+
+      const rgbToYcbcrMatrix_7: mat3x3f = mat3x3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464, -0.16873599588871002, -0.3312639892101288, 0.5, 0.5, -0.41868799924850464, -0.08131200075149536);
+
+      @group(0) @binding(2) var<uniform> colorUniform_8: vec3f;
+
+      @group(0) @binding(3) var<uniform> thresholdBuffer_9: f32;
+
+      struct mainFrag_Input_10 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn mainFrag_3(input: mainFrag_Input_10) -> @location(0) vec4f {
+        var uv2 = ((uvTransformUniform_4 * (input.uv - 0.5)) + 0.5);
+        var col = textureSampleBaseClampToEdge(inputTexture_5, sampler_6, uv2);
+        var ycbcr = (col.xyz * rgbToYcbcrMatrix_7);
+        var colycbcr = (colorUniform_8 * rgbToYcbcrMatrix_7);
+        let crDiff = abs((ycbcr.y - colycbcr.y));
+        let cbDiff = abs((ycbcr.z - colycbcr.z));
+        let distance = length(vec2f(crDiff, cbDiff));
+        if ((distance < pow(thresholdBuffer_9, 2f))) {
+          col = vec4f();
         }
-
-        return vec4f(1);
+        return col;
       }"
     `);
   });

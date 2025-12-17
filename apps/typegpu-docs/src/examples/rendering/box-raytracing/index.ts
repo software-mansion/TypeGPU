@@ -209,7 +209,6 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
   let density = d.f32(0);
   let invColor = d.vec3f(0, 0, 0);
-  let tMin = d.f32(0);
   let intersectionFound = false;
 
   for (let i = 0; i < X; i++) {
@@ -240,7 +239,6 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
               div(d.vec3f(1), boxMatrix.$[i][j][k].albedo),
             ),
           );
-          tMin = intersection.tMin;
           intersectionFound = true;
         }
       }

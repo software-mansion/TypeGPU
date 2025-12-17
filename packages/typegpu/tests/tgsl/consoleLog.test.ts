@@ -6,7 +6,6 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('wgslGenerator with console.log', () => {
   let ctx: ResolutionCtxImpl;
@@ -26,14 +25,14 @@ describe('wgslGenerator with console.log', () => {
       console.log(987);
     });
 
-    expect(asWgsl(fn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         /* console.log() */;
       }"
     `);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is currently only supported in compute pipelines.",
+      "'console.log' is only supported when resolving pipelines.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
@@ -54,7 +53,7 @@ describe('wgslGenerator with console.log', () => {
       .withFragment(fs, { format: 'rg8unorm' })
       .createPipeline();
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {
         @builtin(position) pos: vec4f,
       }
@@ -102,7 +101,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @fragment fn fs() -> @location(0) vec4f {
-        log1(321);
+        log1(321u);
         return vec4f();
       }"
     `);
@@ -118,7 +117,7 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -162,7 +161,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10);
+        log1(10u);
       }"
     `);
   });
@@ -180,7 +179,7 @@ describe('wgslGenerator with console.log', () => {
       compute: fn,
     });
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -239,8 +238,8 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10);
-        log2(20);
+        log1(10u);
+        log2(20u);
       }"
     `);
   });
@@ -262,8 +261,7 @@ describe('wgslGenerator with console.log', () => {
       compute: fn,
     });
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
-
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -315,7 +313,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        log1(10, vec3u(2, 3, 4), 50);
+        log1(10u, vec3u(2, 3, 4), 50u);
       }"
     `);
   });
@@ -343,7 +341,7 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
         id: u32,
         data: array<u32, 4>,
@@ -434,7 +432,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0, array<u32, 4>(9, 8, 7, 6)), SimpleStruct(1, array<u32, 4>(8, 7, 6, 5)), SimpleStruct(2, array<u32, 4>(7, 6, 5, 4))));
+        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
         log1(complexStruct);
       }"
     `);
@@ -463,7 +461,7 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
-    expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
         id: u32,
         data: array<u32, 4>,
@@ -554,7 +552,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
-        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0, array<u32, 4>(9, 8, 7, 6)), SimpleStruct(1, array<u32, 4>(8, 7, 6, 5)), SimpleStruct(2, array<u32, 4>(7, 6, 5, 4))));
+        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
         log1(complexStruct);
       }"
     `);
@@ -588,14 +586,46 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
-    expect(() => asWgsl(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - computePipeline:pipeline
       - computePipelineCore
       - computeFn:fn
-      - consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - fn:consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
+  });
+
+  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
+    using consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    const fn = tgpu['~unstable'].computeFn({
+      workgroupSize: [1],
+      in: { gid: d.builtin.globalInvocationId },
+    })(() => {
+      console.trace();
+    });
+
+    const pipeline = root['~unstable']
+      .withCompute(fn)
+      .createPipeline();
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+        /* console.log() */;
+      }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Unsupported log method 'trace' was used in TGSL.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -605,7 +635,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = ['String literal'];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"String literal"`,
+      `
+      [
+        "String literal",
+      ]
+    `,
     );
   });
 
@@ -614,7 +648,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.u32];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"123"`,
+      `
+      [
+        "123",
+      ]
+    `,
     );
   });
 
@@ -623,7 +661,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+      ]
+    `,
     );
   });
 
@@ -632,7 +674,12 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.vec3u, d.vec3u];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"vec3u(1, 2, 3) vec3u(4, 5, 6)"`,
+      `
+      [
+        "vec3u(1, 2, 3)",
+        "vec3u(4, 5, 6)",
+      ]
+    `,
     );
   });
 
@@ -646,7 +693,14 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"GID: vec3u(1, 2, 3) Result: 456"`,
+      `
+      [
+        "GID:",
+        "vec3u(1, 2, 3)",
+        "Result:",
+        "456",
+      ]
+    `,
     );
   });
 
@@ -655,7 +709,11 @@ describe('deserializeAndStringify', () => {
     const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.u32, 4)];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"[1, 2, 3, 4]"`,
+      `
+      [
+        "[1, 2, 3, 4]",
+      ]
+    `,
     );
   });
 
@@ -666,7 +724,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"[[1, 2], [3, 4]]"`,
+      `
+      [
+        "[[1, 2], [3, 4]]",
+      ]
+    `,
     );
   });
 
@@ -677,7 +739,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"{ vec: vec3u(1, 2, 3), num: 4 }"`,
+      `
+      [
+        "{ vec: vec3u(1, 2, 3), num: 4 }",
+      ]
+    `,
     );
   });
 
@@ -691,7 +757,11 @@ describe('deserializeAndStringify', () => {
     ];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `"{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }"`,
+      `
+      [
+        "{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }",
+      ]
+    `,
     );
   });
 });

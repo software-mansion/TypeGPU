@@ -1,4 +1,9 @@
 import { $internal } from '../shared/symbols.ts';
+import {
+  type Origin,
+  type OriginToPtrParams,
+  originToPtrParams,
+} from './snippet.ts';
 import type { Access, AddressSpace, Ptr, StorableData } from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(
@@ -38,7 +43,7 @@ export function ptrHandle<T extends StorableData>(
   return INTERNAL_createPtr('handle', inner, 'read');
 }
 
-function INTERNAL_createPtr<
+export function INTERNAL_createPtr<
   TAddressSpace extends AddressSpace,
   TInner extends StorableData,
   TAccess extends Access,
@@ -46,6 +51,7 @@ function INTERNAL_createPtr<
   addressSpace: TAddressSpace,
   inner: TInner,
   access: TAccess,
+  implicit: boolean = false,
 ): Ptr<TAddressSpace, TInner, TAccess> {
   return {
     [$internal]: true,
@@ -53,5 +59,42 @@ function INTERNAL_createPtr<
     addressSpace,
     inner,
     access,
+    implicit,
+    toString: () => `ptr<${addressSpace}, ${inner}, ${access}>`,
   } as Ptr<TAddressSpace, TInner, TAccess>;
+}
+
+export function createPtrFromOrigin(
+  origin: Origin,
+  innerDataType: StorableData,
+): Ptr | undefined {
+  const ptrParams = originToPtrParams[origin as keyof OriginToPtrParams];
+
+  if (ptrParams) {
+    return INTERNAL_createPtr(
+      ptrParams.space,
+      innerDataType,
+      ptrParams.access,
+    );
+  }
+
+  return undefined;
+}
+
+export function implicitFrom(ptr: Ptr): Ptr {
+  return INTERNAL_createPtr(
+    ptr.addressSpace,
+    ptr.inner,
+    ptr.access,
+    /* implicit */ true,
+  );
+}
+
+export function explicitFrom(ptr: Ptr): Ptr {
+  return INTERNAL_createPtr(
+    ptr.addressSpace,
+    ptr.inner,
+    ptr.access,
+    /* implicit */ false,
+  );
 }

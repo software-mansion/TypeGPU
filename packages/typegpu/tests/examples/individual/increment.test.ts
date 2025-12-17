@@ -23,7 +23,7 @@ describe('increment example', () => {
       @group(0) @binding(1) var<storage, read_write> counter_3: u32;
 
       fn wrappedCallback_2(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        counter_3 += 1;
+        counter_3 += 1u;
       }
 
       struct mainCompute_Input_4 {

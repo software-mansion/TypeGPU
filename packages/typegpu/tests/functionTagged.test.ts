@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('tagged syntax', () => {
   describe('function', () => {
     it('parses template literal without arguments', () => {
       const getConst = tgpu.fn([], d.i32)`() { return 3; }`;
 
-      expect(asWgsl(getConst)).toMatchInlineSnapshot(
+      expect(tgpu.resolve([getConst])).toMatchInlineSnapshot(
         `"fn getConst() -> i32{ return 3; }"`,
       );
     });
@@ -18,7 +17,7 @@ describe('tagged syntax', () => {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`;
 
-      expect(asWgsl(add)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
         "fn add() -> f32{
                 return f32(10) + f32(20) + f32(30.1);
               }"
@@ -30,7 +29,7 @@ describe('tagged syntax', () => {
         return f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`;
 
-      expect(asWgsl(add)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
         "fn add() -> f32{
                 return f32(10) + f32(20) + f32(30.1);
               }"
@@ -45,7 +44,7 @@ describe('tagged syntax', () => {
         out: { pos: d.builtin.position },
       })`{ return in.pos; }`.$name('vertexFn');
 
-      expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
         "struct vertexFn_Input {
           @builtin(instance_index) idx: u32,
         }
@@ -67,7 +66,7 @@ describe('tagged syntax', () => {
         return in.pos;
       }`.$name('vertexFn');
 
-      expect(asWgsl(vertexFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
         "struct vertexFn_Input {
           @builtin(instance_index) idx: u32,
         }
@@ -91,7 +90,7 @@ describe('tagged syntax', () => {
         out: d.vec4f,
       })`{ return vec4f(); }`;
 
-      expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
         "struct fragmentFn_Input {
           @builtin(position) pos: vec4f,
         }
@@ -109,7 +108,7 @@ describe('tagged syntax', () => {
         return vec4f();
       }`;
 
-      expect(asWgsl(fragmentFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
         "struct fragmentFn_Input {
           @builtin(position) pos: vec4f,
         }
@@ -129,7 +128,7 @@ describe('tagged syntax', () => {
         workgroupSize: [1],
       })`{}`;
 
-      expect(asWgsl(computeFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
         "struct computeFn_Input {
           @builtin(global_invocation_id) gid: vec3u,
         }
@@ -146,7 +145,7 @@ describe('tagged syntax', () => {
         var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
       }`;
 
-      expect(asWgsl(computeFn)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
         "struct computeFn_Input {
           @builtin(global_invocation_id) gid: vec3u,
         }

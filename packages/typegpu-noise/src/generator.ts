@@ -25,7 +25,7 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.value = value;
+      seed.value = d.vec2f(value);
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {

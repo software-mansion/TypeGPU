@@ -9,6 +9,11 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type {
+  WgslTexture,
+  WgslTextureDepth2d,
+  WgslTextureDepthMultisampled2d,
+} from '../../data/texture.ts';
 import {
   type AnyWgslData,
   isWgslData,
@@ -68,7 +73,14 @@ import type {
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import { isTexture, type TgpuTexture } from '../texture/texture.ts';
+import {
+  isTexture,
+  isTextureView,
+  type TextureInternals,
+  type TgpuTexture,
+  type TgpuTextureRenderView,
+  type TgpuTextureView,
+} from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
@@ -234,6 +246,10 @@ export interface TgpuRenderPipeline<Output = unknown>
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this;
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this;
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -261,25 +277,36 @@ export type FragmentOutToTargets<T> = T extends
   : T extends { readonly [$internal]: unknown } ? GPUColorTargetState
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: GPUColorTargetState }
+  : T extends { type: 'void' } ? Record<string, never>
   : GPUColorTargetState;
 
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
 } ? ColorAttachment
   : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
-  : ColorAttachment;
+  : never;
 
 export type AnyFragmentTargets =
   | undefined
   | GPUColorTargetState
   | Record<string, GPUColorTargetState>;
 
+interface ColorTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: GPUTextureFormat };
+}
+
 export interface ColorAttachment {
   /**
    * A {@link GPUTextureView} describing the texture subresource that will be output to for this
    * color attachment.
    */
-  view: (TgpuTexture & RenderFlag) | GPUTextureView;
+  view:
+    | (ColorTextureConstraint & RenderFlag)
+    | GPUTextureView
+    | TgpuTextureView<WgslTexture>
+    | TgpuTextureRenderView;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -313,12 +340,30 @@ export interface ColorAttachment {
   storeOp: GPUStoreOp;
 }
 
+export type DepthStencilFormat =
+  | 'stencil8'
+  | 'depth16unorm'
+  | 'depth24plus'
+  | 'depth24plus-stencil8'
+  | 'depth32float'
+  | 'depth32float-stencil8';
+
+interface DepthStencilTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: DepthStencilFormat };
+}
+
 export interface DepthStencilAttachment {
   /**
    * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
-  view: (TgpuTexture & RenderFlag) | GPUTextureView;
+  view:
+    | (DepthStencilTextureConstraint & RenderFlag)
+    | TgpuTextureView<WgslTextureDepth2d | WgslTextureDepthMultisampled2d>
+    | TgpuTextureRenderView
+    | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
    * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
@@ -396,6 +441,7 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
+  readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
       buffer: (TgpuBuffer<AnyWgslData> & IndexFlag) | GPUBuffer;
@@ -530,6 +576,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as this;
   }
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this {
+    const internals = this[$internal];
+
+    return new TgpuRenderPipelineImpl(internals.core, {
+      ...internals.priors,
+      stencilReference: reference,
+    }) as this;
+  }
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -589,7 +646,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
-  private setupRenderPass(): GPURenderPassEncoder {
+  private setupRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
     const memo = internals.core.unwrap();
     const { root, descriptor } = internals.core.options;
@@ -606,6 +663,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           };
         }
 
+        if (isTextureView(attachment.view)) {
+          return {
+            ...attachment,
+            view: root.unwrap(attachment.view),
+          };
+        }
+
         return attachment;
       }) as GPURenderPassColorAttachment[])
       : [null];
@@ -616,22 +680,27 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       ...setupTimestampWrites(internals.priors, root),
     };
 
-    if (internals.priors.depthStencilAttachment !== undefined) {
-      const attachment = internals.priors.depthStencilAttachment;
-      if (isTexture(attachment.view)) {
-        renderPassDescriptor.depthStencilAttachment = {
-          ...attachment,
-          view: root.unwrap(attachment.view).createView(),
-        };
-      } else {
-        renderPassDescriptor.depthStencilAttachment =
-          attachment as GPURenderPassDepthStencilAttachment;
-      }
+    const depthStencil = internals.priors.depthStencilAttachment;
+    if (depthStencil !== undefined) {
+      const view = isTexture(depthStencil.view)
+        ? root.unwrap(depthStencil.view).createView()
+        : isTextureView(depthStencil.view)
+        ? root.unwrap(depthStencil.view)
+        : depthStencil.view;
+
+      renderPassDescriptor.depthStencilAttachment = {
+        ...depthStencil,
+        view,
+      } as GPURenderPassDepthStencilAttachment;
     }
 
-    const pass = root.commandEncoder.beginRenderPass(renderPassDescriptor);
+    const pass = encoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
+
+    if (internals.priors.stencilReference !== undefined) {
+      pass.setStencilReference(internals.priors.stencilReference);
+    }
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
@@ -678,21 +747,24 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstInstance?: number,
   ): void {
     const internals = this[$internal];
-    const pass = this.setupRenderPass();
     const { logResources } = internals.core.unwrap();
     const { root } = internals.core.options;
 
-    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    const commandEncoder = root.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
+    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     pass.end();
+
+    root.device.queue.submit([commandEncoder.finish()]);
 
     if (logResources) {
       logDataFromGPU(logResources);
     }
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({ root, priors: internals.priors })
-      : root.flush();
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({ root, priors: internals.priors });
+    }
   }
 
   drawIndexed(
@@ -708,12 +780,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       throw new Error('No index buffer set for this render pipeline.');
     }
 
+    const { logResources } = internals.core.unwrap();
+    const { root } = internals.core.options;
     const { buffer, indexFormat, offsetBytes, sizeBytes } =
       internals.priors.indexBuffer;
 
-    const pass = this.setupRenderPass();
-    const { logResources } = internals.core.unwrap();
-    const { root } = internals.core.options;
+    const commandEncoder = root.device.createCommandEncoder();
+    const pass = this.setupRenderPass(commandEncoder);
 
     if (isGPUBuffer(buffer)) {
       pass.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
@@ -736,13 +809,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.end();
 
+    root.device.queue.submit([commandEncoder.finish()]);
+
     if (logResources) {
       logDataFromGPU(logResources);
     }
 
-    internals.priors.performanceCallback
-      ? triggerPerformanceCallback({ root, priors: internals.priors })
-      : root.flush();
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({ root, priors: internals.priors });
+    }
   }
 }
 
@@ -794,7 +869,7 @@ class RenderPipelineCore implements SelfResolvable {
           if (fragment) {
             ctx.resolve(fragment);
           }
-          return snip('', Void);
+          return snip('', Void, /* origin */ 'runtime');
         }),
     );
   }

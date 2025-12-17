@@ -7,47 +7,23 @@ description: A guide on how to use the optional build plugin for TypeGPU
 
 The package includes the following functionalities:
 
-- **TGSL functions**
+- **TypeGPU functions implemented in JS/TS**
 
-  TypeGPU allows running a subset of JavaScript (which we call TGSL) on the GPU. It is achieved by transpiling JS functions into WGSL.
-  This can be done via a Just-In-Time compiler or at build time, using the plugin.
-  Transpiling at build time reduces the performance overhead at runtime,
-  and it is also the only possible approach on React Native, as the function code string is not available during runtime there.
-
-  _unplugin-typegpu_ scans the project files looking for the tgpu function shell implementations.
-  It transpiles the JS code into a compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest).
-
-  When an implementation function is passed directly to the shell creation, the plugin should have no problem identifying and processing it.
+  The plugin allows transpiling a subset of JavaScript to WebGPU Shading Language (WGSL).
+  The parsing of JavaScript happens ahead of time, emitting a highly compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest).
 
   ```ts
   import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
-  const add = tgpu.fn([d.u32, d.u32], d.u32)((a, b) => a + b);
-  ```
-
-  However, if the implementation function, or the shell, is referenced via a variable, the plugin will not recognize it as TGSL,
-  thus to make it work, the function needs to be marked with a `'use gpu'` directive.
-
-  ```ts
-  const addFn = tgpu.fn([d.u32, d.u32], d.u32);
-
-  const add = addFn((a, b) => {
-    'use gpu';
-    return a + b;
-  });
-  ```
-
-  ```ts
-  const addImpl = (a, b) => {
+  // Found by the plugin and decorated with 'tinyest' metadata
+  const add = (a: number, b: number) => {
     'use gpu';
     return a + b;
   };
-
-  const add = tgpu.fn([d.u32, d.u32], d.u32)(addImpl);
   ```
 
-  Besides transpiling JS into AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method anymore.
+  Besides parsing JS into an AST, the plugin also collects external references, so it is not necessary to pass them to the `$uses` method (as is required when implementing functions in WGSL).
 
 - **Automatic naming of tgpu objects**
 
@@ -96,7 +72,7 @@ import { defineConfig } from 'vite';
 import typegpuPlugin from 'unplugin-typegpu/vite';
 
 export default defineConfig({
-  plugins: [typegpuPlugin()],
+  plugins: [typegpuPlugin({})],
 });
 ```
 

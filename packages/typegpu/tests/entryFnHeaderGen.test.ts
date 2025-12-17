@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {
@@ -10,7 +9,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       out: d.vec4f,
     }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
 
-    expect(asWgsl(mainFragment)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
         @location(0) uv: vec2f,
       }
@@ -25,7 +24,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       out: d.location(1, d.vec4f),
     }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
 
-    expect(asWgsl(mainFragment)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
         @location(0) uv: vec2f,
       }
@@ -42,7 +41,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       },
     }) /* wgsl */`{ return Out(vec4f(in.uv[0])); }`;
 
-    expect(asWgsl(mainFragment)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
         @location(0) uv: vec2f,
       }
@@ -61,7 +60,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       workgroupSize: [1],
     }) /* wgsl */`{ let x = in.index; }`;
 
-    expect(asWgsl(mainCompute)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([mainCompute])).toMatchInlineSnapshot(`
       "struct mainCompute_Input {
         @builtin(global_invocation_id) index: vec3u,
       }
@@ -90,7 +89,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
     return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`);
 
-    expect(asWgsl(mainVertex)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([mainVertex])).toMatchInlineSnapshot(`
       "struct mainVertex_Input {
         @builtin(vertex_index) vertexIndex: u32,
       }

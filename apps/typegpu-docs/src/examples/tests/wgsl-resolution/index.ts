@@ -165,13 +165,11 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = instanceInfo;
+  nextTrianglePos.value[index] = TriangleData(instanceInfo);
 }).$name('compute shader');
 
 // WGSL resolution
-const resolved = tgpu.resolve({
-  externals: { mainVert, mainFrag, mainCompute },
-});
+const resolved = tgpu.resolve([mainVert, mainFrag, mainCompute]);
 
 (document.querySelector('.wgsl') as HTMLDivElement).innerText = resolved;
 

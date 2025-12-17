@@ -205,8 +205,7 @@ export type ValidSampledUsage<
  * Validates texture view schema against texture usage
  */
 export type ValidateTextureViewSchema<
-  // biome-ignore lint/suspicious/noExplicitAny: it's okey
-  TTexture extends TgpuTexture<any>,
+  TTexture extends TgpuTexture,
   TSchema extends WgslTexture | WgslStorageTexture,
 > = TSchema extends WgslStorageTexture
   ? SelfOrErrors<TSchema, ValidStorageUsage<TTexture, TSchema>>

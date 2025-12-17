@@ -91,7 +91,7 @@ const rayMarch = tgpu.fn(
 
     if (scene.dist < c.SURF_DIST) {
       result.dist = distOrigin;
-      result.color = scene.color;
+      result.color = d.vec3f(scene.color);
       break;
     }
   }

@@ -20,6 +20,7 @@ export function ExampleCard({ example }: { example: Example }) {
                 src={example.thumbnails.large}
                 alt={example.metadata.title}
                 className='h-full w-full object-cover'
+                loading='lazy'
               />
             </picture>
           )

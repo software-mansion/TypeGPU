@@ -198,7 +198,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...setupTimestampWrites(this._priors, root),
     };
 
-    const pass = root.commandEncoder.beginComputePass(passDescriptor);
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = commandEncoder.beginComputePass(passDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
@@ -224,6 +225,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+    branch.device.queue.submit([commandEncoder.finish()]);
 
     if (memo.logResources) {
       logDataFromGPU(memo.logResources);
@@ -262,7 +264,7 @@ class ComputePipelineCore implements SelfResolvable {
   [$resolve](ctx: ResolutionCtx) {
     return ctx.withSlots(this.#slotBindings, () => {
       ctx.resolve(this.#descriptor.compute);
-      return snip('', Void);
+      return snip('', Void, /* origin */ 'runtime');
     });
   }
 

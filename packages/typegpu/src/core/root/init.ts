@@ -45,6 +45,7 @@ import {
   type VertexFlag,
 } from '../buffer/buffer.ts';
 import {
+  type TgpuBufferShorthand,
   TgpuBufferShorthandImpl,
   type TgpuMutable,
   type TgpuReadonly,
@@ -183,8 +184,14 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
       workgroupCount.y,
       workgroupCount.z,
     );
-    // Yeah, i know we flush here... but it's only a matter of time!
-    this.#root.flush();
+  }
+
+  get pipeline() {
+    return this.#pipeline;
+  }
+
+  get sizeUniform() {
+    return this.#sizeUniform;
   }
 }
 
@@ -196,7 +203,12 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T | TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+    value:
+      | T
+      | TgpuFn<() => T>
+      | TgpuBufferUsage<T>
+      | TgpuBufferShorthand<T>
+      | Infer<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
@@ -272,7 +284,7 @@ class WithBindingImpl implements WithBinding {
 
   withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl(this._getRoot(), this._slotBindings, {
       vertex: vertexFn,
@@ -326,11 +338,14 @@ class WithVertexImpl implements WithVertex {
 
   withFragment(
     fragmentFn: TgpuFragmentFn | 'n/a',
-    targets: AnyFragmentTargets | 'n/a',
+    targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
   ): WithFragment {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
-    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+    invariant(
+      targets === undefined || typeof targets !== 'string',
+      'Just type mismatch validation',
+    );
 
     return new WithFragmentImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
@@ -435,8 +450,6 @@ class TgpuRootImpl extends WithBindingImpl
     key.unwrap(this)
   );
 
-  private _commandEncoder: GPUCommandEncoder | null = null;
-
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -454,14 +467,6 @@ class TgpuRootImpl extends WithBindingImpl
     this[$internal] = {
       logOptions,
     };
-  }
-
-  get commandEncoder() {
-    if (!this._commandEncoder) {
-      this._commandEncoder = this.device.createCommandEncoder();
-    }
-
-    return this._commandEncoder;
   }
 
   get enabledFeatures() {
@@ -673,7 +678,8 @@ class TgpuRootImpl extends WithBindingImpl
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void {
-    const pass = this.commandEncoder.beginRenderPass(descriptor);
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
 
     const bindGroups = new Map<
       TgpuBindGroupLayout,
@@ -820,15 +826,11 @@ class TgpuRootImpl extends WithBindingImpl
     });
 
     pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
   }
 
   flush() {
-    if (!this._commandEncoder) {
-      return;
-    }
-
-    this.device.queue.submit([this._commandEncoder.finish()]);
-    this._commandEncoder = null;
+    console.warn('flush() has been deprecated, and has no effect.');
   }
 }
 

@@ -1,6 +1,7 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
@@ -346,19 +347,6 @@ const blur = tgpu['~unstable'].computeFn({
   );
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0, 1),
-    uv: uv[input.vertexIndex],
-  };
-});
-
 const sampler = root['~unstable'].createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
@@ -377,8 +365,8 @@ const rayBoxIntersection = (
   const t1 = boxMax.sub(rayOrigin).mul(invDir);
   const tmin = std.min(t0, t1);
   const tmax = std.max(t0, t1);
-  const tNear = std.max(std.max(tmin.x, tmin.y), tmin.z);
-  const tFar = std.min(std.min(tmax.x, tmax.y), tmax.z);
+  const tNear = std.max(tmin.x, tmin.y, tmin.z);
+  const tFar = std.min(tmax.x, tmax.y, tmax.z);
   const hit = tFar >= tNear && tFar >= 0;
   return RayBoxResult({ tNear, tFar, hit });
 };
@@ -508,8 +496,6 @@ function frame() {
     })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
-
-  root['~unstable'].flush();
 
   currentTexture = 1 - currentTexture;
 

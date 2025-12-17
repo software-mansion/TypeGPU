@@ -13,6 +13,7 @@ import type {
   AnyWgslData,
   U16,
   U32,
+  Vec3u,
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -101,11 +102,26 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
    * "guarded" by a bounds check.
    */
   dispatchThreads(...args: TArgs): void;
+
+  /**
+   * The underlying pipeline used during `dispatchThreads`.
+   */
+  pipeline: TgpuComputePipeline;
+
+  /**
+   * The buffer used to automatically pass the thread count to the underlying pipeline during `dispatchThreads`.
+   * For pipelines with a dimension count lower than 3, the remaining coordinates are expected to be 1.
+   */
+  sizeUniform: TgpuUniform<Vec3u>;
 }
 
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
+
+type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
+
+type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
 /**
  * TODO: Remove if favor of createRenderPipeline's validation
@@ -115,10 +131,15 @@ export type ValidateFragmentIn<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
-      entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
-      targets: FragmentOutToTargets<FragmentOut>,
-    ]
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
+    ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
+      ? Args extends [infer T]
+        ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : Args extends [] | [infer T] ?
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : never
+    : never
   : [
     entryFn: 'n/a',
     targets: 'n/a',
@@ -324,7 +345,7 @@ export interface WithBinding {
     VertexOut extends VertexOutConstrained,
   >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
@@ -813,11 +834,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -864,8 +880,9 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   ): TgpuFixedComparisonSampler;
 
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }

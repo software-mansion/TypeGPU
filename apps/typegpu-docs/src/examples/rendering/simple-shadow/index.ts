@@ -309,7 +309,7 @@ function render() {
     {
       colorAttachments: [],
       depthStencilAttachment: {
-        view: root.unwrap(shadowTextures.shadowMap).createView(),
+        view: root.unwrap(shadowTextures.shadowMap),
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
         depthClearValue: 1.0,
@@ -330,15 +330,15 @@ function render() {
     {
       colorAttachments: [
         {
-          view: root.unwrap(canvasTextures.msaa).createView(),
-          resolveTarget: context.getCurrentTexture().createView(),
+          view: root.unwrap(canvasTextures.msaa),
+          resolveTarget: context.getCurrentTexture(),
           loadOp: 'clear',
           storeOp: 'store',
           clearValue: [0, 0, 0, 0],
         },
       ],
       depthStencilAttachment: {
-        view: root.unwrap(canvasTextures.depth).createView(),
+        view: root.unwrap(canvasTextures.depth),
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
         depthClearValue: 1,
@@ -357,7 +357,6 @@ function render() {
       }
     },
   );
-  root['~unstable'].flush();
 }
 frameId = requestAnimationFrame(render);
 

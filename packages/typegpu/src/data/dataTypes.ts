@@ -135,6 +135,13 @@ export function undecorate(data: AnyData): AnyData {
   return data;
 }
 
+export function unptr(data: AnyData | UnknownData): AnyData | UnknownData {
+  if (data.type === 'ptr') {
+    return data.inner as AnyData;
+  }
+  return data;
+}
+
 const looseTypeLiterals = [
   'unstruct',
   'disarray',
@@ -259,7 +266,7 @@ export class MatrixColumnsAccess {
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor() {
+  constructor(readonly op: string) {
     setName(this, 'consoleLog');
   }
 }

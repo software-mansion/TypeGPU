@@ -182,6 +182,37 @@ export const controls = {
       test.dispatchThreads();
     },
   },
+  'String interpolation': {
+    onButtonClick: async () =>
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
+        console.log(
+          'The values %d, %f and %s were interpolated in this message.',
+          987,
+          1.26,
+          d.vec4f(1, 2, 3, 4),
+        );
+        console.log(
+          'TypeGPU resources can be used as strings (%s) or objects (%o).',
+          d.vec3f(1, 2, 3),
+          d.vec3f(1, 2, 3),
+          'This sentence is the fourth argument of the log.',
+        );
+      }).dispatchThreads(),
+  },
+  'Different log functionalities': {
+    onButtonClick: async () =>
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
+        console.log('This message should be cleared.');
+        console.clear();
+        console.log('This is a log message.', 'Index:', 1);
+        console.debug('This is a debug message.', 'Index:', 2);
+        console.info('This is an info message.', 'Index:', 3);
+        console.warn('This is a warn message.', 'Index:', 4);
+        console.error('This is an error message.', 'Index:', 5);
+      }).dispatchThreads(),
+  },
   'Render pipeline': {
     onButtonClick: () => {
       const context = canvas.getContext('webgpu') as GPUCanvasContext;

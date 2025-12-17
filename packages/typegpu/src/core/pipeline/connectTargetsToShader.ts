@@ -31,6 +31,9 @@ export function connectTargetsToShader(
     if (isVoid(shaderOutputLayout)) {
       return [];
     }
+    if (shaderOutputLayout.type === 'decorated') {
+      return [];
+    }
 
     if (!isColorTargetState(targets)) {
       throw new Error(

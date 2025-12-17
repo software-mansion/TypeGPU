@@ -101,7 +101,7 @@ const seedUniform = root.createUniform(d.f32);
 const randomizeFishPositionsPipeline = root['~unstable']
   .createGuardedComputePipeline((x) => {
     'use gpu';
-    randf.seed2(d.vec2f(d.f32(x), seedUniform.$));
+    randf.seed2(d.vec2f(x, seedUniform.$));
     const data = ModelData({
       position: d.vec3f(
         randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
@@ -119,8 +119,8 @@ const randomizeFishPositionsPipeline = root['~unstable']
       applySeaFog: 1,
       applySeaDesaturation: 1,
     });
-    buffer0mutable.$[x] = data;
-    buffer1mutable.$[x] = data;
+    buffer0mutable.$[x] = ModelData(data);
+    buffer1mutable.$[x] = ModelData(data);
   });
 
 const randomizeFishPositions = () => {
@@ -308,8 +308,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
-  root['~unstable'].flush();
-
   requestAnimationFrame(frame);
 }
 enqueuePresetChanges();
@@ -391,9 +389,7 @@ async function updateMouseRay(cx: number, cy: number) {
     activated: 1,
     line: Line3({
       origin: camera.position.xyz,
-      dir: std.normalize(
-        std.sub(worldPosNonUniform, camera.position.xyz),
-      ),
+      dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
     }),
   });
 }

@@ -5,7 +5,11 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import { mockImageLoading, mockResizeObserver } from '../utils/commonMocks.ts';
+import {
+  mockCreateImageBitmap,
+  mockImageLoading,
+  mockResizeObserver,
+} from '../utils/commonMocks.ts';
 
 describe('liquid-glass example', () => {
   setupCommonMocks();
@@ -17,6 +21,7 @@ describe('liquid-glass example', () => {
       setupMocks: () => {
         mockResizeObserver();
         mockImageLoading();
+        mockCreateImageBitmap();
       },
       expectedCalls: 3,
     }, device);
@@ -29,40 +34,35 @@ describe('liquid-glass example', () => {
       }
 
       @vertex
-      fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
-        let pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        var output: VertexOutput;
-        output.pos = vec4f(pos[vertexIndex], 0, 1);
-        output.uv = uv[vertexIndex];
-        return output;
+      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
+        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
       }
-            
 
 
-      @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-      @group(0) @binding(1) var inputSampler: sampler;
+      @group(0) @binding(0) var src: texture_2d<f32>;
+      @group(0) @binding(1) var samp: sampler;
 
       @fragment
       fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(inputTexture, inputSampler, uv);
+        return textureSample(src, samp, uv);
       }
-            
 
-      struct fullScreenTriangle_Output_1 {
+      struct fullScreenTriangle_Input_1 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output_2 {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex fn fullScreenTriangle_0(input: fullScreenTriangle_Input_2) -> fullScreenTriangle_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output_1(vec4f(pos[input.vertexIndex], 0, 1), uv[input.vertexIndex]);
+        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> mousePosUniform_4: vec2f;
@@ -83,9 +83,9 @@ describe('liquid-glass example', () => {
 
       @group(0) @binding(1) var<uniform> paramsUniform_5: Params_6;
 
-      fn sdRoundedBox2d_7(p: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(p) - size) + vec2f(cornerRadius));
-        return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0)) - cornerRadius);
+      fn sdRoundedBox2d_7(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+        var d = ((abs(point) - size) + vec2f(cornerRadius));
+        return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
       @group(0) @binding(2) var sampledView_8: texture_2d<f32>;
@@ -97,9 +97,9 @@ describe('liquid-glass example', () => {
       }
 
       fn calculateWeights_9(sdfDist: f32, start: f32, end: f32, featherUV: f32) -> Weights_10 {
-        var inside = (1 - smoothstep((start - featherUV), (start + featherUV), sdfDist));
-        var outside = smoothstep((end - featherUV), (end + featherUV), sdfDist);
-        var ring = max(0, ((1 - inside) - outside));
+        let inside = (1f - smoothstep((start - featherUV), (start + featherUV), sdfDist));
+        let outside = smoothstep((end - featherUV), (end + featherUV), sdfDist);
+        let ring = max(0f, ((1f - inside) - outside));
         return Weights_10(inside, ring, outside);
       }
 
@@ -107,11 +107,11 @@ describe('liquid-glass example', () => {
 
       fn sampleWithChromaticAberration_12(tex: texture_2d<f32>, sampler2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
-        for (var i = 0; (i < 3); i++) {
-          var channelOffset = (dir * ((f32(i) - 1) * offset));
+        for (var i = 0; (i < 3i); i++) {
+          var channelOffset = (dir * ((f32(i) - 1f) * offset));
           samples[i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).xyz;
         }
-        return vec3f(samples[0].x, samples[1].y, samples[2].z);
+        return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
       }
 
       struct TintParams_13 {
@@ -120,7 +120,7 @@ describe('liquid-glass example', () => {
       }
 
       fn applyTint_14(color: vec3f, tint: TintParams_13) -> vec4f {
-        return mix(vec4f(color, 1), vec4f(tint.color, 1), tint.strength);
+        return mix(vec4f(color, 1f), vec4f(tint.color, 1f), tint.strength);
       }
 
       struct fragmentShader_Input_15 {
@@ -129,11 +129,11 @@ describe('liquid-glass example', () => {
 
       @fragment fn fragmentShader_3(_arg_0: fragmentShader_Input_15) -> @location(0) vec4f {
         var posInBoxSpace = (_arg_0.uv - mousePosUniform_4);
-        var sdfDist = sdRoundedBox2d_7(posInBoxSpace, paramsUniform_5.rectDims, paramsUniform_5.radius);
+        let sdfDist = sdRoundedBox2d_7(posInBoxSpace, paramsUniform_5.rectDims, paramsUniform_5.radius);
         var dir = normalize((posInBoxSpace * paramsUniform_5.rectDims.yx));
-        var normalizedDist = ((sdfDist - paramsUniform_5.start) / (paramsUniform_5.end - paramsUniform_5.start));
+        let normalizedDist = ((sdfDist - paramsUniform_5.start) / (paramsUniform_5.end - paramsUniform_5.start));
         var texDim = textureDimensions(sampledView_8, 0);
-        var featherUV = (paramsUniform_5.edgeFeather / f32(max(texDim.x, texDim.y)));
+        let featherUV = (paramsUniform_5.edgeFeather / f32(max(texDim.x, texDim.y)));
         var weights = calculateWeights_9(sdfDist, paramsUniform_5.start, paramsUniform_5.end, featherUV);
         var blurSample = textureSampleBias(sampledView_8, sampler_11, _arg_0.uv, paramsUniform_5.blur);
         var refractedSample = sampleWithChromaticAberration_12(sampledView_8, sampler_11, (_arg_0.uv + (dir * (paramsUniform_5.refractionStrength * normalizedDist))), (paramsUniform_5.chromaticStrength * normalizedDist), dir, (paramsUniform_5.blur * paramsUniform_5.edgeBlurMultiplier));

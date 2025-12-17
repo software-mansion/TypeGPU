@@ -1,22 +1,12 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
-import { computeBindGroupLayout as layout, ModelData } from './schemas.ts';
+import { computeBindGroupLayout as layout } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
 
 export const simulate = (fishIndex: number) => {
   'use gpu';
-  // TODO: replace it with struct copy when Chromium is fixed
-  const fishData = ModelData({
-    position: layout.$.currentFishData[fishIndex].position,
-    direction: layout.$.currentFishData[fishIndex].direction,
-    scale: layout.$.currentFishData[fishIndex].scale,
-    variant: layout.$.currentFishData[fishIndex].variant,
-    applySeaDesaturation:
-      layout.$.currentFishData[fishIndex].applySeaDesaturation,
-    applySeaFog: layout.$.currentFishData[fishIndex].applySeaFog,
-    applySinWave: layout.$.currentFishData[fishIndex].applySinWave,
-  });
+  const fishData = layout.$.currentFishData[fishIndex];
   let separation = d.vec3f();
   let alignment = d.vec3f();
   let alignmentCount = 0;
@@ -30,34 +20,22 @@ export const simulate = (fishIndex: number) => {
       continue;
     }
 
-    // TODO: replace it with struct copy when Chromium is fixed
-    const other = ModelData({
-      position: layout.$.currentFishData[i].position,
-      direction: layout.$.currentFishData[i].direction,
-      scale: layout.$.currentFishData[i].scale,
-      variant: layout.$.currentFishData[i].variant,
-      applySeaDesaturation: layout.$.currentFishData[i].applySeaDesaturation,
-      applySeaFog: layout.$.currentFishData[i].applySeaFog,
-      applySinWave: layout.$.currentFishData[i].applySinWave,
-    });
-    const dist = std.length(std.sub(fishData.position, other.position));
+    const other = layout.$.currentFishData[i];
+    const dist = std.length(fishData.position.sub(other.position));
     if (dist < layout.$.fishBehavior.separationDist) {
-      separation = std.add(
-        separation,
-        std.sub(fishData.position, other.position),
-      );
+      separation = separation.add(fishData.position.sub(other.position));
     }
     if (dist < layout.$.fishBehavior.alignmentDist) {
-      alignment = std.add(alignment, other.direction);
+      alignment = alignment.add(other.direction);
       alignmentCount = alignmentCount + 1;
     }
     if (dist < layout.$.fishBehavior.cohesionDist) {
-      cohesion = std.add(cohesion, other.position);
+      cohesion = cohesion.add(other.position);
       cohesionCount = cohesionCount + 1;
     }
   }
   if (alignmentCount > 0) {
-    alignment = std.mul(1 / d.f32(alignmentCount), alignment);
+    alignment = alignment.mul(1 / d.f32(alignmentCount));
   }
   if (cohesionCount > 0) {
     cohesion = std.sub(
@@ -75,12 +53,12 @@ export const simulate = (fishIndex: number) => {
 
     if (axisPosition > axisAquariumSize - distance) {
       const str = axisPosition - (axisAquariumSize - distance);
-      wallRepulsion = std.sub(wallRepulsion, std.mul(str, repulsion));
+      wallRepulsion = wallRepulsion.sub(repulsion.mul(str));
     }
 
     if (axisPosition < -axisAquariumSize + distance) {
       const str = -axisAquariumSize + distance - axisPosition;
-      wallRepulsion = std.add(wallRepulsion, std.mul(str, repulsion));
+      wallRepulsion = wallRepulsion.add(repulsion.mul(str));
     }
   }
 
@@ -89,42 +67,38 @@ export const simulate = (fishIndex: number) => {
       fishData.position,
       layout.$.mouseRay.line,
     );
-    const diff = std.sub(fishData.position, proj);
+    const diff = fishData.position.sub(proj);
     const limit = p.fishMouseRayRepulsionDistance;
     const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
-    rayRepulsion = std.mul(str, std.normalize(diff));
+    rayRepulsion = std.normalize(diff).mul(str);
   }
 
-  fishData.direction = std.add(
-    fishData.direction,
-    std.mul(layout.$.fishBehavior.separationStr, separation),
+  let direction = d.vec3f(fishData.direction);
+
+  direction = direction.add(
+    separation.mul(layout.$.fishBehavior.separationStr),
   );
-  fishData.direction = std.add(
-    fishData.direction,
-    std.mul(layout.$.fishBehavior.alignmentStr, alignment),
+  direction = direction.add(
+    alignment.mul(layout.$.fishBehavior.alignmentStr),
   );
-  fishData.direction = std.add(
-    fishData.direction,
-    std.mul(layout.$.fishBehavior.cohesionStr, cohesion),
+  direction = direction.add(
+    cohesion.mul(layout.$.fishBehavior.cohesionStr),
   );
-  fishData.direction = std.add(
-    fishData.direction,
-    std.mul(p.fishWallRepulsionStrength, wallRepulsion),
+  direction = direction.add(
+    wallRepulsion.mul(p.fishWallRepulsionStrength),
   );
-  fishData.direction = std.add(
-    fishData.direction,
-    std.mul(p.fishMouseRayRepulsionStrength, rayRepulsion),
+  direction = direction.add(
+    rayRepulsion.mul(p.fishMouseRayRepulsionStrength),
+  );
+  direction = std.normalize(direction).mul(
+    std.clamp(std.length(fishData.direction), 0, 0.01),
   );
 
-  fishData.direction = std.mul(
-    std.clamp(std.length(fishData.direction), 0.0, 0.01),
-    std.normalize(fishData.direction),
-  );
-
-  const translation = std.mul(
+  const translation = direction.mul(
     d.f32(std.min(999, layout.$.timePassed)) / 8,
-    fishData.direction,
   );
-  fishData.position = std.add(fishData.position, translation);
-  layout.$.nextFishData[fishIndex] = fishData;
+
+  const nextFishData = layout.$.nextFishData[fishIndex];
+  nextFishData.position = fishData.position.add(translation);
+  nextFishData.direction = d.vec3f(direction);
 };

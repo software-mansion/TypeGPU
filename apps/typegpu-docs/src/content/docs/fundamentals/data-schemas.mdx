@@ -343,6 +343,116 @@ const array = ArrayPartialSchema(2)([1.2, 19.29]);
 //    ^?
 ```
 
+## Textures
+
+Texture schemas serve two main purposes:
+ - defining texture views (both fixed and in layouts)
+ - providing argument types for user defined functions
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
+
+const root = await tgpu.init();
+const texture = root['~unstable'].createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'storage');
+
+// ---cut---
+const storeOnes = (tex: d.textureStorage2d<'rgba8unorm'>, coords: d.v2u) => {
+  'use gpu';
+  std.textureStore(tex, coords, d.vec4f(1));
+};
+
+const storeOnesShelled = tgpu.fn([d.textureStorage2d('rgba8unorm'), d.vec2u])(
+  (tex, coords) => {
+    std.textureStore(tex, coords, d.vec4f(1));
+  },
+);
+
+const sampledView = texture.createView(d.texture2d(d.f32));
+//     ^?
+
+const storageView = texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
+//     ^?
+
+const layout = tgpu.bindGroupLayout({
+  //     ^?
+  sampled: { texture: d.texture2d() },
+  storage: { storageTexture: d.textureStorage2d('rgba8unorm', 'read-only') },
+});
+```
+
+### Sampled Textures
+
+Sampled texture schemas are created using one of the following constructors:
+
+- **`d.texture1d(sampleType?)`** - A 1D texture
+- **`d.texture2d(sampleType?)`** - A 2D texture
+- **`d.texture2dArray(sampleType?)`** - A 2D array texture
+- **`d.texture3d(sampleType?)`** - A 3D texture
+- **`d.textureCube(sampleType?)`** - A cube texture
+- **`d.textureCubeArray(sampleType?)`** - A cube array texture
+- **`d.textureMultisampled2d(sampleType?)`** - A 2D multisampled texture
+
+The `sampleType` parameter can be `d.f32`, `d.i32`, or `d.u32`, determining how the texture data will be interpreted. If omitted, it defaults to `d.f32`.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const tex1 = d.texture2d(d.f32); // float texture (default)
+//    ^?
+
+const tex2 = d.texture2d(d.u32); // unsigned integer texture
+//    ^?
+
+const tex3 = d.texture2dArray(); // defaults to f32
+//    ^?
+```
+
+#### Depth Textures
+
+For depth comparison operations, TypeGPU provides specialized depth texture schemas:
+
+- **`d.textureDepth2d()`** - A 2D depth texture
+- **`d.textureDepthMultisampled2d()`** - A 2D multisampled depth texture
+- **`d.textureDepth2dArray()`** - A 2D array depth texture
+- **`d.textureDepthCube()`** - A cube depth texture
+- **`d.textureDepthCubeArray()`** - A cube array depth texture
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const depthTex = d.textureDepth2d();
+//    ^?
+```
+
+### Storage Textures
+
+Storage texture schemas are created using dimension-specific constructors, with required `format` and optional `access` parameters:
+
+- **`d.textureStorage1d(format, access?)`** - A 1D storage texture
+- **`d.textureStorage2d(format, access?)`** - A 2D storage texture
+- **`d.textureStorage2dArray(format, access?)`** - A 2D array storage texture
+- **`d.textureStorage3d(format, access?)`** - A 3D storage texture
+
+The `format` parameter specifies the texture format (e.g., `'rgba8unorm'`, `'rgba16float'`, `'r32float'`), and the `access` parameter can be `'write-only'`, `'read-only'`, or `'read-write'`. If `access` is omitted, it defaults to `'write-only'`.
+
+```ts twoslash
+import * as d from 'typegpu/data';
+// ---cut---
+const storageTex1 = d.textureStorage2d('rgba8unorm');
+//    ^?
+
+const storageTex2 = d.textureStorage2d('rgba8unorm', 'read-only');
+//    ^?
+
+const storageTex3 = d.textureStorage3d('r32float', 'read-write');
+//    ^?
+```
+
 ## Atomics
 
 To create a schema corresponding to an atomic data type, wrap `d.i32` or `d.u32` with `d.atomic`.

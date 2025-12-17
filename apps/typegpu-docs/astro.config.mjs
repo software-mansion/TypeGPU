@@ -46,7 +46,10 @@ export default defineConfig({
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
     optimizeDeps: {
-      exclude: ['@rolldown/browser'],
+      exclude: [
+        '@rolldown/browser',
+        'onnxruntime-web',
+      ],
     },
     // Allowing query params, for invalidation
     plugins: [
@@ -65,6 +68,7 @@ export default defineConfig({
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
         '@rolldown/browser',
+        'onnxruntime-web',
       ],
     },
   },
@@ -132,11 +136,6 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
-              label: 'TGSL',
-              slug: 'fundamentals/tgsl',
-              badge: { text: 'new' },
-            },
-            {
               label: 'Pipelines',
               slug: 'fundamentals/pipelines',
               badge: { text: 'new' },
@@ -144,6 +143,11 @@ export default defineConfig({
             {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
+            },
+            {
+              label: 'Textures',
+              slug: 'fundamentals/textures',
+              badge: { text: 'new' },
             },
             {
               label: 'Variables',
@@ -206,6 +210,10 @@ export default defineConfig({
             {
               label: '@typegpu/noise',
               slug: 'ecosystem/typegpu-noise',
+            },
+            {
+              label: '@typegpu/sdf',
+              slug: 'ecosystem/typegpu-sdf',
             },
             DEV && {
               label: '@typegpu/color',
@@ -273,6 +281,10 @@ export default defineConfig({
             DEV && {
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
+            },
+            DEV && {
+              label: 'Shader Generation',
+              slug: 'reference/shader-generation',
             },
             typeDocSidebarGroup,
           ]),

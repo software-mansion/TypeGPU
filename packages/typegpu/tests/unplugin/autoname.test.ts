@@ -4,7 +4,6 @@ import { struct } from '../../src/data/index.ts';
 import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
@@ -193,7 +192,7 @@ describe('autonaming', () => {
       myFun();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn myFun() -> i32 {
         return 0;
       }
@@ -202,5 +201,37 @@ describe('autonaming', () => {
         myFun();
       }"
     `);
+  });
+
+  it('autonames class properties', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames object member assignment', ({ root }) => {
+    const items: { myBuffer: unknown } = { myBuffer: undefined };
+
+    items.myBuffer = root.createUniform(d.u32);
+
+    expect(getName(items.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames this prop assignment', ({ root }) => {
+    class MyController {
+      myBuffer;
+
+      constructor() {
+        this.myBuffer = root.createUniform(d.u32);
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
 });

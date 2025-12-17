@@ -26,6 +26,9 @@ export function connectAttachmentToShader(
   }
 
   if (isData(shaderOutputLayout)) {
+    if (isBuiltin(shaderOutputLayout)) {
+      return [];
+    }
     if (!isColorAttachment(attachment)) {
       throw new Error('Expected a single color attachment, not a record.');
     }

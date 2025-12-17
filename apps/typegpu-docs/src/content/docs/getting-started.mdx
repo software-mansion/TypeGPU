@@ -27,23 +27,45 @@ Install TypeGPU using the package manager of your choice.
   </TabItem>
 </Tabs>
 
-You can then import it in JavaScript/TypeScript code.
+TypeScript doesn't yet ship WebGPU types by default, so we install them separately:
 
-```ts
-// main.ts
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install --save-dev @webgpu/types
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add -D @webgpu/types
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add -D @webgpu/types
+    ```
+  </TabItem>
+</Tabs>
 
-import tgpu from 'typegpu';
+Then add the following to your `tsconfig.json`:
 
-// ...
+```json
+{
+  "compilerOptions": {
+    "types": ["@webgpu/types"],
+    // ...
+  },
+  // ...
+}
 ```
+
+:::note
+TypeGPU features related to writing shaders in JavaScript/TypeScript rely on an [additional build tool that hooks into existing bundlers called unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu). Make sure to set it up as well if you plan on using these features.
+:::
 
 ## Live Examples
 
-Our [live examples](/TypeGPU/examples) showcase many use-cases of TypeGPU. Feel free to check them out! You can also open each of them on StackBlitz in order to edit the code and see the preview update live.
-
-## StackBlitz
-
-You can play with TypeGPU right in the browser using our [StackBlitz example](https://stackblitz.com/edit/typegpu-example?file=src%2Fmain.ts).
+Our [live examples](/TypeGPU/examples) showcase many use-cases of TypeGPU. Feel free to check them out! You can also open each of them on StackBlitz in order to edit the code and see the preview update live, or to bootstrap your own project.
 
 ## Troubleshooting
 
