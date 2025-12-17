@@ -36,11 +36,13 @@ import {
   LIGHT_GROUND_ALBEDO,
   MAX_DIST,
   MAX_STEPS,
+  METER_TICKS,
   SPECULAR_INTENSITY,
   SPECULAR_POWER,
   SURF_DIST,
 } from './constants.ts';
 import { beerLambert, fresnelSchlick, intersectBox, rotateY } from './utils.ts';
+import { sdCapsule } from '@typegpu/sdf';
 
 const getRay = (ndc: d.v2f) => {
   'use gpu';
@@ -195,7 +197,7 @@ const rayMarchScene = (
 
   for (let i = 0; i < maxSteps; i++) {
     point = rayOrigin.add(rayDirection.mul(distanceFromOrigin));
-    const hit = std.min(sdBackground(point), sdMeter(point));
+    const hit = sdBackground(point);
     distanceFromOrigin += hit;
     if (distanceFromOrigin > MAX_DIST || hit < SURF_DIST) {
       break;
@@ -204,17 +206,23 @@ const rayMarchScene = (
 
   let color = d.vec3f();
   if (distanceFromOrigin < MAX_DIST) {
-    if (sdMeter(point) < SURF_DIST) {
-      color = renderMeter(rayOrigin, rayDirection, distanceFromOrigin, uv).xyz;
-    } else {
-      color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
-    }
+    color = renderBackground(rayOrigin, rayDirection, distanceFromOrigin).xyz;
   }
 
   return RayMarchResult({
     color,
     point,
   });
+};
+
+const getTickDist = (p: d.v3f, tick: number) => {
+  'use gpu';
+  const angle = tick / (METER_TICKS - 1) * Math.PI;
+  const origin = d.vec3f(-std.cos(angle), 0, -std.sin(angle))
+    .mul(GroundParams.meterCutoutRadius * 1)
+    .add(d.vec3f(0, -0.1, 0));
+
+  return std.length(p.sub(origin));
 };
 
 const renderBackground = (
@@ -237,9 +245,8 @@ const renderBackground = (
   const newNormal = getApproxNormal(hitPosition, 1e-4);
 
   // Calculate fake bounce lighting
-  const switchX = 0;
   const jellyColor = jellyColorUniformSlot.$;
-  const sqDist = sqLength(hitPosition.sub(d.vec3f(switchX, 0, 0)));
+  const sqDist = sqLength(hitPosition);
   const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
   const sideBounceLight = jellyColor.xyz
     .mul(1 / (sqDist * 40 + 1) * 0.3)
@@ -253,13 +260,22 @@ const renderBackground = (
     darkModeUniformSlot.$ === 1,
   );
 
+  let meterLight = d.vec3f(0);
+  for (let i = 0; i < std.floor(METER_TICKS * state.topProgress); i++) {
+    const tickDist = getTickDist(hitPosition, i);
+    meterLight = meterLight.add(
+      d.vec3f(1).mul(1 / (tickDist * 30 + 0.5) * 0.1),
+    );
+  }
+
   const backgroundColor = applyAO(
     albedo.mul(litColor),
     hitPosition,
     newNormal,
   )
     .add(d.vec4f(bounceLight.mul(emission), 0))
-    .add(d.vec4f(sideBounceLight.mul(emission), 0));
+    .add(d.vec4f(sideBounceLight.mul(emission), 0))
+    .add(d.vec4f(meterLight, 0));
 
   return d.vec4f(backgroundColor.xyz, 1);
 };

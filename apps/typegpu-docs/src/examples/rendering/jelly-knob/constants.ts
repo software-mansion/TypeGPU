@@ -10,13 +10,14 @@ export const SURF_DIST = 0.001;
 // Ground material constants
 export const LIGHT_GROUND_ALBEDO = d.vec3f(1);
 export const DARK_GROUND_ALBEDO = d.vec3f(0.2);
+export const METER_TICKS = 16;
 
 export const GroundParams = {
-  groundThickness: 0.03,
-  groundRoundness: 0.02,
+  groundThickness: 0.01,
+  groundRoundness: 0.01,
   jellyCutoutRadius: 0.38,
-  meterCutoutRadius: 0.7,
-  meterCutoutGirth: 0.08,
+  meterCutoutRadius: 0.6,
+  meterCutoutGirth: 0.04,
 };
 
 // Lighting constants
@@ -42,9 +43,9 @@ export const JELLY_HALFSIZE = d.vec3f(0.3, 0.3, 0.3);
 
 // Spring dynamics constants
 export const twistProperties: SpringProperties = {
-  mass: 1,
+  mass: 4,
   stiffness: 700,
-  damping: 10,
+  damping: 50,
 };
 
 export const wiggleXProperties: SpringProperties = {
