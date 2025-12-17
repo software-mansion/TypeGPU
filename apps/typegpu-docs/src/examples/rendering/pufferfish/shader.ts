@@ -54,28 +54,6 @@ const Shape = d.struct({
 });
 type Shape = d.Infer<typeof Shape>;
 
-const rotationMatrixY = (angle: number): d.m3x3f => {
-  'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-
-  return d.mat3x3f(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c);
-};
-
-const rotationMatrixX = (angle: number): d.m3x3f => {
-  'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-  return d.mat3x3f(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c);
-};
-
-const rotationMatrixZ = (angle: number): d.m3x3f => {
-  'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-  return d.mat3x3f(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0);
-};
-
 const sdEllipsoid = (p: d.v3f, r: d.v3f): number => {
   'use gpu';
   const k0 = std.length(p.div(r));
@@ -330,6 +308,9 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
    */
   const faceSize = 1.8;
   const faceUv = suv.mul(faceSize).mul(0.5).add(0.5);
+  // Flip the x axis
+  faceUv.x = 1.0 - faceUv.x;
+
   if (distance < MAX_DIST) {
     // Hit the pufferfish
     // const localPos = hitPos.sub(bodyPosition);
@@ -393,11 +374,11 @@ export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = input.uv.mul(2).sub(1).mul(1.5);
+  const uv = input.uv.mul(2).sub(1);
   const bodyPosition = bodyPositionAccess.$;
   // Ray setup
-  const initialRo = d.vec3f(uv.x, uv.y, 0);
-  let ro = uniformsAccess.$.invProjMat.mul(d.vec4f(initialRo, 1)).xyz;
+  const suv = uniformsAccess.$.invProjMat.mul(d.vec4f(uv, 0, 1)).xy;
+  let ro = d.vec3f(suv, 0);
   let rd = uniformsAccess.$.invProjMat.mul(d.vec4f(0, 0, 1, 0)).xyz;
 
   // Transforming around the pufferfish

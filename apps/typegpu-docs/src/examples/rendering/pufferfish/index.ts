@@ -95,15 +95,13 @@ function draw(timestamp: number) {
   const invProjMat = mat4.identity(d.mat4x4f());
   const scale = Math.max(1, canvas.height / canvas.width);
   const aspect = canvas.width / canvas.height;
-  const puffScale = 1.2 - pufferfishController.sizeSpring.value * 0.2;
+  const puffScale = 1.5 - pufferfishController.sizeSpring.value * 0.2;
   mat4.scale(invProjMat, [aspect * scale, scale, 1], invProjMat);
   mat4.scale(invProjMat, d.vec3f(puffScale, puffScale, 1), invProjMat);
 
   const invModelMat = mat4.identity(d.mat4x4f());
-  const headPitch = Math.sin(timestamp * 0.001) * 0.2;
-  const headYaw = Math.sin(timestamp * 0.0023) * 0.2;
-  mat4.rotateY(invModelMat, headYaw, invModelMat);
-  mat4.rotateX(invModelMat, headPitch, invModelMat);
+  mat4.rotateY(invModelMat, pufferfishController.headYaw, invModelMat);
+  mat4.rotateX(invModelMat, -pufferfishController.headPitch, invModelMat);
 
   const videoTexture = device.importExternalTexture({ source: video });
   const frequentGroup = root.createBindGroup(frequentLayout, {

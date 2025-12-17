@@ -128,14 +128,31 @@ function extractFaceLandmarks(landmarks: NormalizedLandmark[]): FaceLandmarks {
   };
 }
 
+function encroach(
+  from: number,
+  to: number,
+  factorPerSecond: number,
+  deltaSeconds: number,
+): number {
+  const diff = to - from;
+  const factor = factorPerSecond ** deltaSeconds;
+  return from + diff * (1 - factor);
+}
+
 export class PufferfishController {
   #faceLandmarker: FaceLandmarker;
   sizeSpring: Spring;
   faceLandmarks: FaceLandmarks | undefined;
+  smoothFaceLandmarks: FaceLandmarks | undefined;
+
+  headYaw: number;
+  headPitch: number;
 
   constructor(faceLandmarker: FaceLandmarker) {
     this.#faceLandmarker = faceLandmarker;
-    this.sizeSpring = new Spring({ damping: 10, mass: 1, stiffness: 1000 });
+    this.sizeSpring = new Spring({ damping: 16, mass: 1, stiffness: 1000 });
+    this.headYaw = 0;
+    this.headPitch = 0;
   }
 
   updatePuffScore(
@@ -157,6 +174,41 @@ export class PufferfishController {
 
   update(dt: number) {
     this.sizeSpring.update(dt);
+
+    const current = this.faceLandmarks;
+    const prev = this.smoothFaceLandmarks || current;
+    if (!prev || !current) {
+      return;
+    }
+
+    const fromFaceOval = prev.faceOval;
+    const toFaceOval = current.faceOval;
+
+    const conv = 0.002;
+    this.smoothFaceLandmarks = {
+      ...prev,
+      // We only smooth out the face oval for now, as it's the only landmark we use
+      faceOval: {
+        xMin: encroach(fromFaceOval.xMin, toFaceOval.xMin, conv, dt),
+        xMax: encroach(fromFaceOval.xMax, toFaceOval.xMax, conv, dt),
+        yMin: encroach(fromFaceOval.yMin, toFaceOval.yMin, conv, dt),
+        yMax: encroach(fromFaceOval.yMax, toFaceOval.yMax, conv, dt),
+      },
+    };
+
+    const nose = current.nose;
+
+    // Calculate the center of the face oval
+    const ovalX = (toFaceOval.xMin + toFaceOval.xMax) / 2;
+    const ovalY = (toFaceOval.yMin + toFaceOval.yMax) / 2;
+
+    // Determining the head's orientation based on how much the nose is off-center
+    const targetYaw = -(nose.x - ovalX) * 10;
+    const targetPitch = (nose.y - ovalY) * 10;
+
+    // Smoothly approaching the target orientation
+    this.headYaw = encroach(this.headYaw, targetYaw, 0.01, dt);
+    this.headPitch = encroach(this.headPitch, targetPitch, 0.01, dt);
   }
 }
 
