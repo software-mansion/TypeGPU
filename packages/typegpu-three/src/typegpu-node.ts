@@ -249,6 +249,7 @@ function convertTypeToExplicit(type: string) {
   return type;
 }
 
+let sharedBuilder: WGSLNodeBuilder | undefined;
 export const fromTSL = tgpu['~unstable'].comptime<
   & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
@@ -266,16 +267,13 @@ export const fromTSL = tgpu['~unstable'].comptime<
     `${d.isWgslArray(tgpuType) ? tgpuType.elementType : tgpuType}`,
   );
 
-  const builder = new WGSLNodeBuilder();
+  if (!sharedBuilder) {
+    sharedBuilder = new WGSLNodeBuilder();
+  }
+  const nodeType = node.getNodeType(sharedBuilder);
 
-  const nodeType = (typeof node.getNodeType === 'function')
-    ? node.getNodeType(builder)
-    : (node.nodeType);
-
-  if (!nodeType) {
-    console.log('Node type is missing or could not be resolved.');
-  } else {
-    const wgslTypeFromTSL = builder.getType(nodeType);
+  if (nodeType) {
+    const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
     if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
       const vec4warn = wgslTypeFromTSL.startsWith('vec4')
         ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
