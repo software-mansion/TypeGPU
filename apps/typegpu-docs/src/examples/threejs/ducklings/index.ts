@@ -319,25 +319,20 @@ meshRay.updateMatrix();
 scene.add(meshRay);
 
 // Duck instance data storage
-const DuckStruct = d.struct({
-  position: d.vec3f,
-  velocity: d.vec2f,
-  _padding: d.vec3f, // padding to make stride 8 floats
-});
-
-const duckStride = 8;
-const duckInstanceDataArray = new Float32Array(NUM_DUCKS * duckStride);
+const duckPositions = new Float32Array(NUM_DUCKS * 3);
+const duckVelocities = new Float32Array(NUM_DUCKS * 2);
+const duckStride = 3;
 
 for (let i = 0; i < NUM_DUCKS; i++) {
-  duckInstanceDataArray[i * duckStride + 0] = (Math.random() - 0.5) * BOUNDS * 0.7;
-  duckInstanceDataArray[i * duckStride + 1] = 0;
-  duckInstanceDataArray[i * duckStride + 2] = (Math.random() - 0.5) * BOUNDS * 0.7;
+  duckPositions[i * duckStride + 0] = (Math.random() - 0.5) * BOUNDS * 0.7;
+  duckPositions[i * duckStride + 1] = 0;
+  duckPositions[i * duckStride + 2] = (Math.random() - 0.5) * BOUNDS * 0.7;
+  duckVelocities[i * 2 + 0] = 0;
+  duckVelocities[i * 2 + 1] = 0;
 }
 
-const duckInstanceDataStorage = t3.instancedArray(
-  duckInstanceDataArray,
-  DuckStruct,
-);
+const duckPositionStorage = t3.instancedArray(duckPositions, d.vec3f);
+const duckVelocityStorage = t3.instancedArray(duckVelocities, d.vec2f);
 
 // Duck compute shader
 const computeDucks = t3.toTSL(() => {
@@ -349,9 +344,8 @@ const computeDucks = t3.toTSL(() => {
   const bounceDamping = -0.4;
 
   const idx = t3.instanceIndex.$;
-  const duckData = duckInstanceDataStorage.$[idx];
-  let instancePosition = d.vec3f(duckData.position);
-  let velocity = d.vec2f(duckData.velocity);
+  let instancePosition = d.vec3f(duckPositionStorage.$[idx]);
+  let velocity = d.vec2f(duckVelocityStorage.$[idx]);
 
   const gridCoordX = std.mul(std.add(std.div(instancePosition.x, BOUNDS), 0.5), WIDTH);
   const gridCoordZ = std.mul(std.add(std.div(instancePosition.z, BOUNDS), 0.5), WIDTH);
@@ -397,8 +391,8 @@ const computeDucks = t3.toTSL(() => {
     velocity.y = std.mul(velocity.y, bounceDamping);
   }
 
-  duckData.position = d.vec3f(instancePosition);
-  duckData.velocity = d.vec2f(velocity);
+  duckPositionStorage.$[idx] = d.vec3f(instancePosition);
+  duckVelocityStorage.$[idx] = d.vec2f(velocity);
 }).compute(NUM_DUCKS);
 
 // Load environment and duck model
@@ -430,10 +424,14 @@ const duckMaterial = duckModel.material as THREE.MeshStandardNodeMaterial;
 
 duckMaterial.positionNode = t3.toTSL(() => {
   'use gpu';
-  const duckData = duckInstanceDataStorage.$[t3.instanceIndex.$];
-  const instancePosition = duckData.position;
+  const idx = t3.instanceIndex.$;
+  const instancePosition = duckPositionStorage.$[idx];
   const posLocal = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
-  return posLocal.add(instancePosition);
+  return d.vec3f(
+    std.add(posLocal.x, instancePosition.x),
+    std.add(posLocal.y, instancePosition.y),
+    std.add(posLocal.z, instancePosition.z)
+  );
 });
 
 const duckMesh = new THREE.InstancedMesh(
