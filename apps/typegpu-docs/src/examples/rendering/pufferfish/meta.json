@@ -1,5 +1,6 @@
 {
   "title": "Pufferfish",
   "category": "rendering",
-  "tags": ["experimental"]
+  "tags": ["ai", "camera", "inference", "machine learning", "onnx", "mediapipe"],
+  "coolFactor": 6
 }

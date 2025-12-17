@@ -1,8 +1,7 @@
-import { randf } from '@typegpu/noise';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { type TgpuFixedSampler } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { TgpuFixedSampler } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
+import { randf } from '@typegpu/noise';
 
 export const frequentLayout = tgpu.bindGroupLayout({
   video: { externalTexture: d.textureExternal() },
@@ -33,19 +32,15 @@ export const Uniforms = d.struct({
   time: d.f32,
 });
 
-export const uniformsAccess = tgpu['~unstable'].accessor(Uniforms);
+export const uniformsAccess = tgpu.accessor(Uniforms);
 export const samplerSlot = tgpu.slot<TgpuFixedSampler>();
 
 const MAX_STEPS = 1000;
 const MAX_DIST = 30.0;
 const SURF_DIST = 0.001;
 
-const bodyRadiusAccess = tgpu['~unstable'].accessor(d.f32, 0.6);
-const bodyPositionAccess = tgpu['~unstable'].accessor(
-  d.vec3f,
-  d.vec3f(0, 0, 2.5),
-);
-const cameraRollAccess = tgpu['~unstable'].accessor(d.f32, 0);
+const bodyRadiusAccess = tgpu.accessor(d.f32, 0.6);
+const bodyPositionAccess = tgpu.accessor(d.vec3f, d.vec3f(0, 0, 2.5));
 
 // Structure to hold both distance and color
 const Shape = d.struct({
@@ -54,62 +49,41 @@ const Shape = d.struct({
 });
 type Shape = d.Infer<typeof Shape>;
 
-const rotationMatrixY = (angle: number): d.m3x3f => {
+function sdEllipsoid(p: d.v3f, r: d.v3f): number {
   'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-
-  return d.mat3x3f(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c);
-};
-
-const rotationMatrixX = (angle: number): d.m3x3f => {
-  'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-  return d.mat3x3f(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c);
-};
-
-const rotationMatrixZ = (angle: number): d.m3x3f => {
-  'use gpu';
-  const c = std.cos(angle);
-  const s = std.sin(angle);
-  return d.mat3x3f(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0);
-};
-
-const sdEllipsoid = (p: d.v3f, r: d.v3f): number => {
-  'use gpu';
-  const k0 = std.length(p.div(r));
-  const k1 = std.length(p.div(r.mul(r)));
+  const k0 = std.length(p / r);
+  const k1 = std.length(p / (r * r));
   return (k0 * (k0 - 1.0)) / k1;
-};
+}
 
-const sdCone = (p: d.v3f, c: d.v2f, h: number): number => {
+function sdCone(p: d.v3f, c: d.v2f, h: number): number {
   'use gpu';
-  const q = d.vec2f(c.x / c.y, -1).mul(h);
+  const q = d.vec2f(c.x / c.y, -1) * h;
   const w = d.vec2f(std.length(p.xz), p.y);
-  const a = w.sub(q.mul(std.clamp(std.dot(w, q) / std.dot(q, q), 0, 1)));
-  const b = w.sub(q.mul(d.vec2f(std.clamp(w.x / q.x, 0, 1), 1)));
+  const a = w - q * std.clamp(std.dot(w, q) / std.dot(q, q), 0, 1);
+  const b = w - q * d.vec2f(std.clamp(w.x / q.x, 0, 1), 1);
   const k = std.sign(q.y);
   const dd = std.min(std.dot(a, a), std.dot(b, b));
   const s = std.max(k * (w.x * q.y - w.y * q.x), k * (w.y - q.y));
   return std.sqrt(dd) * std.sign(s);
-};
+}
 
-const dot2 = (a: d.v3f): number => {
+function dot2(a: d.v3f): number {
   'use gpu';
   return std.dot(a, a);
-};
+}
 
-const udTriangle = (p: d.v3f, a: d.v3f, b: d.v3f, c: d.v3f): number => {
+function udTriangle(p: d.v3f, a: d.v3f, b: d.v3f, c: d.v3f): number {
   'use gpu';
-  const ba = b.sub(a);
-  const pa = p.sub(a);
-  const cb = c.sub(b);
-  const pb = p.sub(b);
-  const ac = a.sub(c);
-  const pc = p.sub(c);
+  const ba = b - a;
+  const pa = p - a;
+  const cb = c - b;
+  const pb = p - b;
+  const ac = a - c;
+  const pc = p - c;
   const nor = std.cross(ba, ac);
-  const condition = std.sign(std.dot(std.cross(ba, nor), pa)) +
+  const condition =
+    std.sign(std.dot(std.cross(ba, nor), pa)) +
       std.sign(std.dot(std.cross(cb, nor), pb)) +
       std.sign(std.dot(std.cross(ac, nor), pc)) <
     2;
@@ -117,18 +91,18 @@ const udTriangle = (p: d.v3f, a: d.v3f, b: d.v3f, c: d.v3f): number => {
     return std.sqrt(
       std.min(
         std.min(
-          dot2(ba.mul(std.clamp(std.dot(ba, pa) / dot2(ba), 0, 1)).sub(pa)),
-          dot2(cb.mul(std.clamp(std.dot(cb, pb) / dot2(cb), 0, 1)).sub(pb)),
+          dot2(ba * std.saturate(std.dot(ba, pa) / dot2(ba)) - pa),
+          dot2(cb * std.saturate(std.dot(cb, pb) / dot2(cb)) - pb),
         ),
-        dot2(ac.mul(std.clamp(std.dot(ac, pc) / dot2(ac), 0, 1)).sub(pc)),
+        dot2(ac * std.saturate(std.dot(ac, pc) / dot2(ac)) - pc),
       ),
     );
   } else {
     return std.sqrt((std.dot(nor, pa) * std.dot(nor, pa)) / dot2(nor));
   }
-};
+}
 
-const shapeUnion = (a: Shape, b: Shape): Shape => {
+function shapeUnion(a: Shape, b: Shape): Shape {
   'use gpu';
   const result = Shape();
   if (a.dist < b.dist) {
@@ -139,9 +113,9 @@ const shapeUnion = (a: Shape, b: Shape): Shape => {
     result.color = d.vec3f(b.color);
   }
   return result;
-};
+}
 
-const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
+function smoothShapeUnion(a: Shape, b: Shape, k: number): Shape {
   'use gpu';
   const h = std.max(k - std.abs(a.dist - b.dist), 0.0) / k;
   const m = h * h;
@@ -150,7 +124,7 @@ const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
 
   let weight = d.f32();
   if (a.dist > b.dist) {
-    weight = 1.0 - m;
+    weight = 1 - m;
   } else {
     weight = m;
   }
@@ -158,13 +132,13 @@ const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
   const color = std.mix(a.color, b.color, weight);
 
   return Shape({ color, dist });
-};
+}
 
 const minPufferfishDist = tgpu.privateVar(d.f32, MAX_DIST);
 const lastPufferfishDist = tgpu.privateVar(d.f32, MAX_DIST);
 
 // Get pufferfish SDF with spikes and eyes
-const getPufferfish = (p: d.v3f): Shape => {
+function getPufferfish(p: d.v3f): Shape {
   'use gpu';
   const time = uniformsAccess.$.time;
   const bodyRadius = bodyRadiusAccess.$;
@@ -173,7 +147,7 @@ const getPufferfish = (p: d.v3f): Shape => {
   // Body ellipsoid
   const bodyColor = uniformsAccess.$.color.xyz;
   const bodyRadii = d.vec3f(bodyRadius);
-  const bodyLocalP = p.sub(bodyPosition);
+  const bodyLocalP = p - bodyPosition;
   const mainBody = sdEllipsoid(bodyLocalP, bodyRadii);
   let fishBody = Shape({
     color: bodyColor,
@@ -184,8 +158,7 @@ const getPufferfish = (p: d.v3f): Shape => {
   const spikeHeight = uniformsAccess.$.spike_height;
   const spikeFreq = 16;
   // Changing the coordinate system into something more cylindrical
-  const yaw = (std.atan2(bodyLocalP.y, bodyLocalP.x) / (Math.PI * 2)) *
-    spikeFreq;
+  const yaw = (std.atan2(bodyLocalP.y, bodyLocalP.x) / (Math.PI * 2)) * spikeFreq;
   const pitch = bodyLocalP.z;
   const fyaw = std.fract(yaw) - 0.5;
   const idx = std.floor(yaw);
@@ -195,11 +168,7 @@ const getPufferfish = (p: d.v3f): Shape => {
   const spikeAngle = std.radians(40.0);
   const spikeConeC = d.vec2f(std.sin(spikeAngle), std.cos(spikeAngle));
   const height = spikeHeight * (0.7 + randf.sample() * 0.3);
-  const spikeDist = sdCone(
-    d.vec3f(fyaw, surfDist - height / 2, pitch),
-    spikeConeC,
-    height,
-  );
+  const spikeDist = sdCone(d.vec3f(fyaw, surfDist - height / 2, pitch), spikeConeC, height);
   fishBody.dist = sdf.opSmoothUnion(fishBody.dist, spikeDist, 0.03);
 
   // Fins
@@ -261,16 +230,16 @@ const getPufferfish = (p: d.v3f): Shape => {
   lastPufferfishDist.$ = fishBody.dist;
 
   return fishBody;
-};
+}
 
 // Ray marching function
-const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
+function rayMarch(ro: d.v3f, rd: d.v3f): Shape {
   'use gpu';
   let dO = d.f32();
   const result = Shape({ color: d.vec3f(), dist: MAX_DIST });
 
   for (let i = d.i32(0); i < MAX_STEPS; i++) {
-    const p = ro.add(rd.mul(dO));
+    const p = ro + rd * dO;
     const scene = getPufferfish(p);
     dO += scene.dist;
 
@@ -282,39 +251,37 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   }
 
   return result;
-};
+}
 
-const getNormal = (p: d.v3f): d.v3f => {
+function getNormal(p: d.v3f): d.v3f {
   'use gpu';
   const dist = getPufferfish(p).dist;
   const e = 0.01;
 
   const n = d.vec3f(
-    getPufferfish(p.add(d.vec3f(e, 0, 0))).dist - dist,
-    getPufferfish(p.add(d.vec3f(0, e, 0))).dist - dist,
-    getPufferfish(p.add(d.vec3f(0, 0, e))).dist - dist,
+    getPufferfish(p + d.vec3f(e, 0, 0)).dist - dist,
+    getPufferfish(p + d.vec3f(0, e, 0)).dist - dist,
+    getPufferfish(p + d.vec3f(0, 0, e)).dist - dist,
   );
 
   return std.normalize(n);
-};
+}
 
-export const fullColorFragment = tgpu['~unstable'].fragmentFn({
+export const fullColorFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f, coord: d.builtin.position },
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = input.uv.mul(2).sub(1);
+  const uv = input.uv * 2 - 1;
   const bodyPosition = bodyPositionAccess.$;
   const faceOval = uniformsAccess.$.face_oval;
   // Ray setup
-  const suv = uniformsAccess.$.invProjMat.mul(d.vec4f(uv, 0, 1)).xy;
+  const suv = (uniformsAccess.$.invProjMat * d.vec4f(uv, 0, 1)).xy;
   let ro = d.vec3f(suv, 0);
-  let rd = uniformsAccess.$.invProjMat.mul(d.vec4f(0, 0, 1, 0)).xyz;
+  let rd = (uniformsAccess.$.invProjMat * d.vec4f(0, 0, 1, 0)).xyz;
 
   // Transforming around the pufferfish
-  ro = uniformsAccess.$.invModelMat.mul(
-    d.vec4f(ro.sub(bodyPosition), 1),
-  ).xyz.add(bodyPosition);
+  ro = uniformsAccess.$.invModelMat.mul(d.vec4f(ro.sub(bodyPosition), 1)).xyz + bodyPosition;
   rd = uniformsAccess.$.invModelMat.mul(d.vec4f(rd, 0)).xyz;
 
   // Ray march
@@ -330,6 +297,9 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
    */
   const faceSize = 1.8;
   const faceUv = suv.mul(faceSize).mul(0.5).add(0.5);
+  // Flip the x axis
+  faceUv.x = 1.0 - faceUv.x;
+
   if (distance < MAX_DIST) {
     // Hit the pufferfish
     // const localPos = hitPos.sub(bodyPosition);
@@ -339,11 +309,7 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
     // Face fish mode logic
     const maskOuterThreshold = 0.3;
     const maskInnerThreshold = 0.8;
-    blendFactor = std.smoothstep(
-      maskOuterThreshold,
-      maskInnerThreshold,
-      -smoothNormal.z,
-    );
+    blendFactor = std.smoothstep(maskOuterThreshold, maskInnerThreshold, -smoothNormal.z);
     textureUV = std.mix(faceOval.xy, faceOval.zw, faceUv);
   }
 
@@ -372,38 +338,31 @@ export const fullColorFragment = tgpu['~unstable'].fragmentFn({
 
   // Outline
   const outlineThickness = 0.02;
-  if (
-    minPufferfishDist.$ < outlineThickness &&
-    lastPufferfishDist.$ >= MAX_DIST * 0.1
-  ) {
+  if (minPufferfishDist.$ < outlineThickness && lastPufferfishDist.$ >= MAX_DIST * 0.1) {
     result = d.vec4f(0, 0, 0, 1);
   }
 
   // Pulsating when immune
   const immunity = uniformsAccess.$.color.w;
-  result = result.mul(
-    std.mix(1, std.sin(uniformsAccess.$.time * 10) * 0.05 + 0.4, immunity),
-  );
+  result = result.mul(std.mix(1, std.sin(uniformsAccess.$.time * 10) * 0.05 + 0.4, immunity));
 
   return result;
 });
 
-export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
+export const sdfDebugFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f, coord: d.builtin.position },
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = input.uv.mul(2).sub(1).mul(1.5);
+  const uv = input.uv.mul(2).sub(1);
   const bodyPosition = bodyPositionAccess.$;
   // Ray setup
-  const initialRo = d.vec3f(uv.x, uv.y, 0);
-  let ro = uniformsAccess.$.invProjMat.mul(d.vec4f(initialRo, 1)).xyz;
+  const suv = uniformsAccess.$.invProjMat.mul(d.vec4f(uv, 0, 1)).xy;
+  let ro = d.vec3f(suv, 0);
   let rd = uniformsAccess.$.invProjMat.mul(d.vec4f(0, 0, 1, 0)).xyz;
 
   // Transforming around the pufferfish
-  ro = uniformsAccess.$.invModelMat.mul(
-    d.vec4f(ro.sub(bodyPosition), 1),
-  ).xyz.add(bodyPosition);
+  ro = uniformsAccess.$.invModelMat.mul(d.vec4f(ro.sub(bodyPosition), 1)).xyz.add(bodyPosition);
   rd = uniformsAccess.$.invModelMat.mul(d.vec4f(rd, 0)).xyz;
 
   // Ray march
@@ -412,9 +371,9 @@ export const sdfDebugFragment = tgpu['~unstable'].fragmentFn({
   const debugPos = d.vec3f(1, 0.6, 0.4);
   const debugNeg = d.vec3f(0.4, 0.6, 1);
   return d.vec4f(
-    std.select(debugPos, debugNeg, lastPufferfishDist.$ <= SURF_DIST).mul(
-      std.sin(minPufferfishDist.$ * 50) * 0.25 + 0.75,
-    ),
+    std
+      .select(debugPos, debugNeg, lastPufferfishDist.$ <= SURF_DIST)
+      .mul(std.sin(minPufferfishDist.$ * 50) * 0.25 + 0.75),
     1,
   );
 });

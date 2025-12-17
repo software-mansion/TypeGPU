@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { d, common } from 'typegpu';
 import {
   frequentLayout,
   fullColorFragment,
@@ -10,6 +8,7 @@ import {
   uniformsAccess,
 } from './shader.ts';
 import { mat4 } from 'wgpu-matrix';
+
 import { createPufferfishController } from './pufferfish-controller.ts';
 
 const root = await tgpu.init();
@@ -40,12 +39,9 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const visualModes = [
-  'Full-color',
-  'Distance',
-] as const;
+const visualModes = ['Full-color', 'Distance'] as const;
 
-type VisualMode = typeof visualModes[number];
+type VisualMode = (typeof visualModes)[number];
 
 const uniforms = root.createUniform(Uniforms, {
   invProjMat: d.mat4x4f(),
@@ -58,20 +54,20 @@ const uniforms = root.createUniform(Uniforms, {
   time: 0,
 });
 
-const sampler = root['~unstable'].createSampler({});
+const sampler = root.createSampler({});
 
-const fullColorRenderPipeline = root['~unstable']
+const fullColorRenderPipeline = root
   .with(uniformsAccess, uniforms)
   .with(samplerSlot, sampler)
-  .withVertex(fullScreenTriangle)
-  .withFragment(fullColorFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fullColorFragment,
+  });
 
-const sdfDebugRenderPipeline = root['~unstable']
-  .with(uniformsAccess, uniforms)
-  .withVertex(fullScreenTriangle)
-  .withFragment(sdfDebugFragment, { format: presentationFormat })
-  .createPipeline();
+const sdfDebugRenderPipeline = root.with(uniformsAccess, uniforms).createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: sdfDebugFragment,
+});
 
 let isRunning = true;
 let visualMode: VisualMode = visualModes[0];
@@ -95,15 +91,13 @@ function draw(timestamp: number) {
   const invProjMat = mat4.identity(d.mat4x4f());
   const scale = Math.max(1, canvas.height / canvas.width);
   const aspect = canvas.width / canvas.height;
-  const puffScale = 1.2 - pufferfishController.sizeSpring.value * 0.2;
+  const puffScale = 1.5 - pufferfishController.sizeSpring.value * 0.2;
   mat4.scale(invProjMat, [aspect * scale, scale, 1], invProjMat);
   mat4.scale(invProjMat, d.vec3f(puffScale, puffScale, 1), invProjMat);
 
   const invModelMat = mat4.identity(d.mat4x4f());
-  const headPitch = Math.sin(timestamp * 0.001) * 0.2;
-  const headYaw = Math.sin(timestamp * 0.0023) * 0.2;
-  mat4.rotateY(invModelMat, headYaw, invModelMat);
-  mat4.rotateX(invModelMat, headPitch, invModelMat);
+  mat4.rotateY(invModelMat, pufferfishController.headYaw, invModelMat);
+  mat4.rotateX(invModelMat, -pufferfishController.headPitch, invModelMat);
 
   const videoTexture = device.importExternalTexture({ source: video });
   const frequentGroup = root.createBindGroup(frequentLayout, {
@@ -111,10 +105,10 @@ function draw(timestamp: number) {
   });
 
   const faceOval = pufferfishController.faceLandmarks?.faceOval;
-  uniforms.writePartial({
+  uniforms.patch({
     invProjMat,
     invModelMat,
-    time: timestamp * 0.001 % 1000,
+    time: (timestamp * 0.001) % 1000,
     face_oval: d.vec4f(
       faceOval?.xMin ?? 0,
       faceOval?.yMin ?? 0,
@@ -154,10 +148,7 @@ requestAnimationFrame(draw);
 
 let videoFrameCallbackId: number | undefined;
 
-function processVideoFrame(
-  _: number,
-  metadata: VideoFrameCallbackMetadata,
-) {
+function processVideoFrame(_: number, _metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
