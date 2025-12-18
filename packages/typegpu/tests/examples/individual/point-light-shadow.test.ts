@@ -132,13 +132,10 @@ describe('point light shadow example', () => {
         let PCF_SAMPLES = shadowParams_7.pcfSamples;
         let diskRadius = shadowParams_7.diskRadius;
         var visibilityAcc = 0;
-        for (var i = 0; i < 64; i++) {
-          let sample = (&samplesUniform_9[i]);
-          {
-            var o = ((*sample).xy * diskRadius);
-            var sampleDir = ((dir + (right * o.x)) + (realUp * o.y));
-            visibilityAcc += i32(textureSampleCompare(shadowDepthCube_10, shadowSampler_11, sampleDir, depthRef));
-          }
+        for (var i = 0; (i < i32(PCF_SAMPLES)); i++) {
+          var o = (samplesUniform_9[i].xy * diskRadius);
+          var sampleDir = ((dir + (right * o.x)) + (realUp * o.y));
+          visibilityAcc += i32(textureSampleCompare(shadowDepthCube_10, shadowSampler_11, sampleDir, depthRef));
         }
         let rawNdotl = dot(_arg_0.normal, lightDir);
         let visibility = select((f32(visibilityAcc) / f32(PCF_SAMPLES)), 0f, (rawNdotl < 0f));
