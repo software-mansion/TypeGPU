@@ -9,16 +9,27 @@ import type { ModelData } from './types.ts';
 import { VertexData } from './types.ts';
 import { setupOrbitCamera } from './setup-orbit-camera.ts';
 
-const MODELS = {
-  LongBoi: '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
-  DancingBot: '/TypeGPU/assets/mesh-skinning/DancingBot.glb',
+const MODELS: Record<
+  string,
+  { path: string; scale: number; offset: [number, number, number] }
+> = {
+  LongBoi: {
+    path: '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
+    scale: 1,
+    offset: [0, 0, 0],
+  },
+  DancingBot: {
+    path: '/TypeGPU/assets/mesh-skinning/DancingBot.glb',
+    scale: 8,
+    offset: [0, -8, 0],
+  },
 };
 type ModelName = keyof typeof MODELS;
 
 const MAX_JOINTS = 64;
 
 let currentModelName: ModelName = 'LongBoi';
-let modelData: ModelData = await loadGLBModel(MODELS[currentModelName]);
+let modelData: ModelData = await loadGLBModel(MODELS[currentModelName].path);
 let twistEnabled = false;
 let bendEnabled = false;
 let animationPlaying = true;
@@ -127,10 +138,14 @@ const getJointMatrices = (): d.m4x4f[] => {
   const useLongBoi = currentModelName === 'LongBoi' &&
     (twistEnabled || bendEnabled);
   const animTransforms =
-    currentModelName === 'DancingBot' && modelData.animations.length > 0 &&
-      animationPlaying
+    currentModelName === 'DancingBot' && modelData.animations.length > 0
       ? sampleAnimation(modelData.animations[0], animationTime)
       : undefined;
+
+  const { scale, offset } = MODELS[currentModelName];
+  const modelTransform = mat4.identity();
+  mat4.translate(modelTransform, offset, modelTransform);
+  mat4.scale(modelTransform, [scale, scale, scale], modelTransform);
 
   const matrices = modelData.jointNodes.map((jointNode: number, i: number) => {
     const world = getWorldTransform(
@@ -140,7 +155,8 @@ const getJointMatrices = (): d.m4x4f[] => {
       useLongBoi,
     );
     const invBind = modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16);
-    return mat4.mul(world, invBind, d.mat4x4f());
+    const jointMatrix = mat4.mul(world, invBind, d.mat4x4f());
+    return mat4.mul(modelTransform, jointMatrix, d.mat4x4f());
   });
 
   while (matrices.length < MAX_JOINTS) {
@@ -241,14 +257,14 @@ async function switchModel(name: ModelName) {
     return;
   }
   currentModelName = name;
-  modelData = await loadGLBModel(MODELS[name]);
+  modelData = await loadGLBModel(MODELS[name].path);
   vertexBuffer = root.createBuffer(
     d.arrayOf(VertexData, modelData.vertexCount),
     createVertexData(),
   ).$usage('vertex');
   indexBuffer = root.createBuffer(
     d.arrayOf(d.u16, modelData.indices.length),
-    Array.from(modelData.indices) as number[],
+    Array.from(modelData.indices),
   ).$usage('index');
   currentIndexCount = modelData.indices.length;
   animationTime = 0;
@@ -317,6 +333,13 @@ export const controls = {
     initial: true,
     onToggleChange: (v: boolean) => {
       animationPlaying = v;
+    },
+  },
+  'Reset Animation': {
+    onButtonClick: () => {
+      animationTime = 0;
+      bendTime = 0;
+      twistTime = 0;
     },
   },
 };
