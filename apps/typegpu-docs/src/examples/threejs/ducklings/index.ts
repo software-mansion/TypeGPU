@@ -14,7 +14,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import { BOUNDS, limit, WIDTH } from './consts.ts';
-import { noise } from './utils.ts';
+import { initializeHeightArrays } from './utils.ts';
 import { createGpuHelpers } from './gpuHelpers.ts';
 
 // Struct schemas for GPU function return types
@@ -59,20 +59,7 @@ sun.position.set(-1, 2.6, 1.4);
 scene.add(sun);
 
 // height storage buffers
-const heightArray = new Float32Array(WIDTH * WIDTH);
-const prevHeightArray = new Float32Array(WIDTH * WIDTH);
-
-let p = 0;
-for (let j = 0; j < WIDTH; j++) {
-  for (let i = 0; i < WIDTH; i++) {
-    const x = (i * 128) / WIDTH;
-    const y = (j * 128) / WIDTH;
-    const height = noise(x, y);
-    heightArray[p] = height;
-    prevHeightArray[p] = height;
-    p++;
-  }
-}
+const { heightArray, prevHeightArray } = initializeHeightArrays();
 
 // Ping-pong height storage buffers
 const heightStorageA = t3.instancedArray(new Float32Array(heightArray), d.f32);
@@ -441,6 +428,8 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
+
+// #region Example controls and cleanup
 // Event handlers
 function setMouseCoords(x: number, y: number) {
   mouseCoords.set(
