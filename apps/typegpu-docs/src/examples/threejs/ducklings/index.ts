@@ -13,8 +13,9 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { BOUNDS, limit, NeighborIndices, Normals, WIDTH } from './consts';
-import { noise } from './utils';
+import { BOUNDS, limit, WIDTH } from './consts.ts';
+import { noise } from './utils.ts';
+import { createGpuHelpers } from './gpuHelpers.ts';
 
 // Struct schemas for GPU function return types
 
@@ -27,7 +28,11 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const canvasResizeContainer = canvas.parentElement
   ?.parentElement as HTMLDivElement;
 
-const getTargetSize = () => [canvasResizeContainer.clientWidth, canvasResizeContainer.clientHeight] as [number, number]
+const getTargetSize = () =>
+  [canvasResizeContainer.clientWidth, canvasResizeContainer.clientHeight] as [
+    number,
+    number,
+  ];
 const initialSize = getTargetSize();
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 await renderer.init();
@@ -95,53 +100,13 @@ const speed = 5;
 
 const NUM_DUCKS = 100;
 
-// GPU helper functions
-const getNeighborIndices = (index: number) => {
-  'use gpu';
-  const width = d.u32(WIDTH);
-  const x = d.i32(std.mod(index, WIDTH));
-  const y = d.i32(std.div(index, WIDTH));
-
-  const leftX = std.max(0, std.sub(x, 1));
-  const rightX = std.min(std.add(x, 1), std.sub(d.i32(width), 1));
-  const bottomY = std.max(0, std.sub(y, 1));
-  const topY = std.min(std.add(y, 1), std.sub(d.i32(width), 1));
-
-  const westIndex = d.u32(std.add(std.mul(y, d.i32(width)), leftX));
-  const eastIndex = d.u32(std.add(std.mul(y, d.i32(width)), rightX));
-  const southIndex = d.u32(std.add(std.mul(bottomY, d.i32(width)), x));
-  const northIndex = d.u32(std.add(std.mul(topY, d.i32(width)), x));
-
-  return NeighborIndices({ northIndex, southIndex, eastIndex, westIndex });
-};
-
-const getCurrentHeight = (index: number) => {
-  'use gpu';
-  return std.select(
-    heightStorageB.$[index],
-    heightStorageA.$[index],
-    readFromA.$ === 1,
+// Create GPU helper functions with closure over storage buffers
+const { getNeighborIndices, getCurrentHeight, getCurrentNormals } =
+  createGpuHelpers(
+    heightStorageA,
+    heightStorageB,
+    readFromA,
   );
-};
-
-const getCurrentNormals = (index: number) => {
-  'use gpu';
-  const neighbors = getNeighborIndices(index);
-  const northIndex = neighbors.northIndex;
-  const southIndex = neighbors.southIndex;
-  const eastIndex = neighbors.eastIndex;
-  const westIndex = neighbors.westIndex;
-
-  const north = getCurrentHeight(northIndex);
-  const south = getCurrentHeight(southIndex);
-  const east = getCurrentHeight(eastIndex);
-  const west = getCurrentHeight(westIndex);
-
-  const normalX = std.mul(std.sub(west, east), std.div(WIDTH, BOUNDS));
-  const normalY = std.mul(std.sub(south, north), std.div(WIDTH, BOUNDS));
-
-  return Normals({ normalX, normalY });
-};
 
 // Compute shader for height simulation: A -> B
 const computeHeightAtoB = t3.toTSL(() => {
@@ -162,7 +127,10 @@ const computeHeightAtoB = t3.toTSL(() => {
   const east = heightStorageA.$[eastIndex];
   const west = heightStorageA.$[westIndex];
 
-  let neighborHeight = std.mul(std.add(std.add(std.add(north, south), east), west), 0.5);
+  let neighborHeight = std.mul(
+    std.add(std.add(std.add(north, south), east), west),
+    0.5,
+  );
   neighborHeight = std.sub(neighborHeight, prevHeight);
   let newHeight = std.mul(neighborHeight, viscosity.$);
 
@@ -180,7 +148,13 @@ const computeHeightAtoB = t3.toTSL(() => {
     Math.PI,
   );
 
-  newHeight = std.add(newHeight, std.mul(std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$), std.length(mouseSpeed.$.xy)));
+  newHeight = std.add(
+    newHeight,
+    std.mul(
+      std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$),
+      std.length(mouseSpeed.$.xy),
+    ),
+  );
 
   prevHeightStorage.$[idx] = height;
   heightStorageB.$[idx] = newHeight;
@@ -205,7 +179,10 @@ const computeHeightBtoA = t3.toTSL(() => {
   const east = heightStorageB.$[eastIndex];
   const west = heightStorageB.$[westIndex];
 
-  let neighborHeight = std.mul(std.add(std.add(std.add(north, south), east), west), 0.5);
+  let neighborHeight = std.mul(
+    std.add(std.add(std.add(north, south), east), west),
+    0.5,
+  );
   neighborHeight = std.sub(neighborHeight, prevHeight);
   let newHeight = std.mul(neighborHeight, viscosity.$);
 
@@ -223,14 +200,25 @@ const computeHeightBtoA = t3.toTSL(() => {
     Math.PI,
   );
 
-  newHeight = std.add(newHeight, std.mul(std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$), std.length(mouseSpeed.$.xy)));
+  newHeight = std.add(
+    newHeight,
+    std.mul(
+      std.mul(std.add(std.cos(mousePhase), 1.0), mouseDeep.$),
+      std.length(mouseSpeed.$.xy),
+    ),
+  );
 
   prevHeightStorage.$[idx] = height;
   heightStorageA.$[idx] = newHeight;
 }).compute(WIDTH * WIDTH);
 
 // Water Geometry and Material
-const waterGeometry = new THREE.PlaneGeometry(BOUNDS, BOUNDS, WIDTH - 1, WIDTH - 1);
+const waterGeometry = new THREE.PlaneGeometry(
+  BOUNDS,
+  BOUNDS,
+  WIDTH - 1,
+  WIDTH - 1,
+);
 
 const waterMaterial = new THREE.MeshStandardNodeMaterial({
   color: 0x9bd2ec,
@@ -310,11 +298,17 @@ const computeDucks = t3.toTSL(() => {
   const bounceDamping = -0.4;
 
   const idx = t3.instanceIndex.$;
-  let instancePosition = d.vec3f(duckPositionStorage.$[idx]);
-  let velocity = d.vec2f(duckVelocityStorage.$[idx]);
+  const instancePosition = d.vec3f(duckPositionStorage.$[idx]);
+  const velocity = d.vec2f(duckVelocityStorage.$[idx]);
 
-  const gridCoordX = std.mul(std.add(std.div(instancePosition.x, BOUNDS), 0.5), WIDTH);
-  const gridCoordZ = std.mul(std.add(std.div(instancePosition.z, BOUNDS), 0.5), WIDTH);
+  const gridCoordX = std.mul(
+    std.add(std.div(instancePosition.x, BOUNDS), 0.5),
+    WIDTH,
+  );
+  const gridCoordZ = std.mul(
+    std.add(std.div(instancePosition.z, BOUNDS), 0.5),
+    WIDTH,
+  );
 
   const xCoord = d.u32(std.clamp(std.floor(gridCoordX), 0, std.sub(WIDTH, 1)));
   const zCoord = d.u32(std.clamp(std.floor(gridCoordZ), 0, std.sub(WIDTH, 1)));
@@ -327,7 +321,10 @@ const computeDucks = t3.toTSL(() => {
 
   const targetY = std.add(waterHeight, yOffset);
   const deltaY = std.sub(targetY, instancePosition.y);
-  instancePosition.y = std.add(instancePosition.y, std.mul(deltaY, verticalResponseFactor));
+  instancePosition.y = std.add(
+    instancePosition.y,
+    std.mul(deltaY, verticalResponseFactor),
+  );
 
   const pushX = std.mul(normalX, waterPushFactor);
   const pushZ = std.mul(normalY, waterPushFactor);
@@ -396,7 +393,7 @@ duckMaterial.positionNode = t3.toTSL(() => {
   return d.vec3f(
     std.add(posLocal.x, instancePosition.x),
     std.add(posLocal.y, instancePosition.y),
-    std.add(posLocal.z, instancePosition.z)
+    std.add(posLocal.z, instancePosition.z),
   );
 });
 
@@ -406,6 +403,43 @@ const duckMesh = new THREE.InstancedMesh(
   NUM_DUCKS,
 );
 scene.add(duckMesh);
+
+// Render loop
+renderer.setAnimationLoop(() => {
+  const targetSize = getTargetSize();
+  const rendererSize = renderer.getSize(new THREE.Vector2());
+  if (
+    targetSize[0] !== rendererSize.width ||
+    targetSize[1] !== rendererSize.height
+  ) {
+    onWindowResize();
+  }
+
+  raycast();
+
+  frame++;
+
+  if (frame >= 7 - speed) {
+    // Ping-pong: alternate which buffer we read from and write to
+    if (pingPong === 0) {
+      renderer.compute(computeHeightAtoB);
+      readFromA.node.value = 0; // Material now reads from B (just written)
+    } else {
+      renderer.compute(computeHeightBtoA);
+      readFromA.node.value = 1; // Material now reads from A (just written)
+    }
+
+    pingPong = 1 - pingPong;
+
+    if (ducksEnabled) {
+      renderer.compute(computeDucks);
+    }
+
+    frame = 0;
+  }
+
+  renderer.render(scene, camera);
+});
 
 // Event handlers
 function setMouseCoords(x: number, y: number) {
@@ -479,43 +513,6 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(...targetSize);
 }
-
-// Render loop
-renderer.setAnimationLoop(() => {
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
-  }
-
-  raycast();
-
-  frame++;
-
-  if (frame >= 7 - speed) {
-    // Ping-pong: alternate which buffer we read from and write to
-    if (pingPong === 0) {
-      renderer.compute(computeHeightAtoB);
-      readFromA.node.value = 0; // Material now reads from B (just written)
-    } else {
-      renderer.compute(computeHeightBtoA);
-      readFromA.node.value = 1; // Material now reads from A (just written)
-    }
-
-    pingPong = 1 - pingPong;
-
-    if (ducksEnabled) {
-      renderer.compute(computeDucks);
-    }
-
-    frame = 0;
-  }
-
-  renderer.render(scene, camera);
-});
 
 // Export controls for the example panel
 export const controlsConfig = {

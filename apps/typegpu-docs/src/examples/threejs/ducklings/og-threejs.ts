@@ -1,599 +1,599 @@
-	import * as THREE from 'three/webgpu';
-			import { instanceIndex, struct, If, uint, int, floor, float, length, clamp, vec2, cos, vec3, vertexIndex, Fn, uniform, instancedArray, min, max, positionLocal, transformNormalToView, select, globalId } from 'three/tsl';
+import * as THREE from 'three/webgpu';
+import { instanceIndex, struct, If, uint, int, floor, float, length, clamp, vec2, cos, vec3, vertexIndex, Fn, uniform, instancedArray, min, max, positionLocal, transformNormalToView, select, globalId } from 'three/tsl';
 
-			import { Inspector } from 'three/addons/inspector/Inspector.js';
+import { Inspector } from 'three/addons/inspector/Inspector.js';
 
-			import { SimplexNoise } from 'three/addons/math/SimplexNoise.js';
-			import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-			import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
- 			import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { SimplexNoise } from 'three/addons/math/SimplexNoise.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-			import WebGPU from 'three/addons/capabilities/WebGPU.js';
+import WebGPU from 'three/addons/capabilities/WebGPU.js';
 
-			// Dimensions of simulation grid.
-			const WIDTH = 128;
+// Dimensions of simulation grid.
+const WIDTH = 128;
 
-			// Water size in system units.
-			const BOUNDS = 6;
-			const BOUNDS_HALF = BOUNDS * 0.5;
-			const limit = BOUNDS_HALF - 0.2;
+// Water size in system units.
+const BOUNDS = 6;
+const BOUNDS_HALF = BOUNDS * 0.5;
+const limit = BOUNDS_HALF - 0.2;
 
-			const waterMaxHeight = 0.1;
+const waterMaxHeight = 0.1;
 
-			let container;
-			let camera, scene, renderer, controls;
+let container;
+let camera, scene, renderer, controls;
 
-			let mouseDown = false;
-			let firstClick = true;
-			let updateOriginMouseDown = false;
+let mouseDown = false;
+let firstClick = true;
+let updateOriginMouseDown = false;
 
-			const mouseCoords = new THREE.Vector2();
-			const raycaster = new THREE.Raycaster();
-			let frame = 0;
+const mouseCoords = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+let frame = 0;
 
-			const effectController = {
-				mousePos: uniform( new THREE.Vector2() ).setName( 'mousePos' ),
-				mouseSpeed: uniform( new THREE.Vector2() ).setName( 'mouseSpeed' ),
-				mouseDeep: uniform( .5 ).setName( 'mouseDeep' ),
-				mouseSize: uniform( 0.12 ).setName( 'mouseSize' ),
-				viscosity: uniform( 0.96 ).setName( 'viscosity' ),
-				ducksEnabled: true,
-				wireframe: false,
-				speed: 5,
-			};
+const effectController = {
+	mousePos: uniform(new THREE.Vector2()).setName('mousePos'),
+	mouseSpeed: uniform(new THREE.Vector2()).setName('mouseSpeed'),
+	mouseDeep: uniform(.5).setName('mouseDeep'),
+	mouseSize: uniform(0.12).setName('mouseSize'),
+	viscosity: uniform(0.96).setName('viscosity'),
+	ducksEnabled: true,
+	wireframe: false,
+	speed: 5,
+};
 
-			let sun;
-			let waterMesh;
-			let poolBorder;
-			let meshRay;
-			let computeHeightAtoB, computeHeightBtoA, computeDucks;
-			let pingPong = 0;
-			const readFromA = uniform( 1 );
-			let duckModel = null;
+let sun;
+let waterMesh;
+let poolBorder;
+let meshRay;
+let computeHeightAtoB, computeHeightBtoA, computeDucks;
+let pingPong = 0;
+const readFromA = uniform(1);
+let duckModel = null;
 
-			const NUM_DUCKS = 100;
+const NUM_DUCKS = 100;
 
-			const simplex = new SimplexNoise();
+const simplex = new SimplexNoise();
 
-			// TODO: Fix example with WebGL backend
-			
-			if ( WebGPU.isAvailable() === false ) {
+// TODO: Fix example with WebGL backend
 
-				document.body.appendChild( WebGPU.getErrorMessage() );
+if (WebGPU.isAvailable() === false) {
 
-				throw new Error( 'No WebGPU support' );
+	document.body.appendChild(WebGPU.getErrorMessage());
 
-			}
+	throw new Error('No WebGPU support');
 
-			init();
+}
 
-			function noise( x, y ) {
+init();
 
-				let multR = waterMaxHeight;
-				let mult = 0.025;
-				let r = 0;
-				for ( let i = 0; i < 15; i ++ ) {
+function noise(x, y) {
 
-					r += multR * simplex.noise( x * mult, y * mult );
-					multR *= 0.53 + 0.025 * i;
-					mult *= 1.25;
+	let multR = waterMaxHeight;
+	let mult = 0.025;
+	let r = 0;
+	for (let i = 0; i < 15; i++) {
 
-				}
+		r += multR * simplex.noise(x * mult, y * mult);
+		multR *= 0.53 + 0.025 * i;
+		mult *= 1.25;
 
-				return r;
+	}
 
-			}
+	return r;
 
-			async function init() {
+}
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+async function init() {
 
-				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
-				camera.position.set( 0, 2.00, 4 );
-				camera.lookAt( 0, 0, 0 );
+	container = document.createElement('div');
+	document.body.appendChild(container);
 
-				scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 3000);
+	camera.position.set(0, 2.00, 4);
+	camera.lookAt(0, 0, 0);
 
-				sun = new THREE.DirectionalLight( 0xFFFFFF, 4.0 );
- 				sun.position.set( - 1, 2.6, 1.4 );
-				scene.add( sun );
+	scene = new THREE.Scene();
 
-				//
+	sun = new THREE.DirectionalLight(0xFFFFFF, 4.0);
+	sun.position.set(- 1, 2.6, 1.4);
+	scene.add(sun);
 
-				// Initialize height storage buffers
-				const heightArray = new Float32Array( WIDTH * WIDTH );
-				const prevHeightArray = new Float32Array( WIDTH * WIDTH );
+	//
 
-				let p = 0;
-				for ( let j = 0; j < WIDTH; j ++ ) {
+	// Initialize height storage buffers
+	const heightArray = new Float32Array(WIDTH * WIDTH);
+	const prevHeightArray = new Float32Array(WIDTH * WIDTH);
 
-					for ( let i = 0; i < WIDTH; i ++ ) {
+	let p = 0;
+	for (let j = 0; j < WIDTH; j++) {
 
-						const x = i * 128 / WIDTH;
-						const y = j * 128 / WIDTH;
+		for (let i = 0; i < WIDTH; i++) {
 
-						const height = noise( x, y );
+			const x = i * 128 / WIDTH;
+			const y = j * 128 / WIDTH;
 
-						heightArray[ p ] = height;
-						prevHeightArray[ p ] = height;
+			const height = noise(x, y);
 
-						p ++;
+			heightArray[p] = height;
+			prevHeightArray[p] = height;
 
-					}
+			p++;
 
-				}
+		}
 
-				// Ping-pong height storage buffers
-				const heightStorageA = instancedArray( heightArray ).setName( 'HeightA' );
-				const heightStorageB = instancedArray( new Float32Array( heightArray ) ).setName( 'HeightB' );
-				const prevHeightStorage = instancedArray( prevHeightArray ).setName( 'PrevHeight' );
+	}
 
-				// Get Indices of Neighbor Values of an Index in the Simulation Grid
-				const getNeighborIndicesTSL = ( index ) => {
+	// Ping-pong height storage buffers
+	const heightStorageA = instancedArray(heightArray).setName('HeightA');
+	const heightStorageB = instancedArray(new Float32Array(heightArray)).setName('HeightB');
+	const prevHeightStorage = instancedArray(prevHeightArray).setName('PrevHeight');
 
-					const width = uint( WIDTH );
+	// Get Indices of Neighbor Values of an Index in the Simulation Grid
+	const getNeighborIndicesTSL = (index) => {
 
-					// Get 2-D compute coordinate from one-dimensional instanceIndex. The calculation will
-					// still work even if you dispatch your compute shader 2-dimensionally, since within a compute
-					// context, instanceIndex is a 1-dimensional value derived from the workgroup dimensions.
+		const width = uint(WIDTH);
 
-					// Cast to int to prevent unintended index overflow upon subtraction.
-					const x = int( index.mod( WIDTH ) );
-					const y = int( index.div( WIDTH ) );
+		// Get 2-D compute coordinate from one-dimensional instanceIndex. The calculation will
+		// still work even if you dispatch your compute shader 2-dimensionally, since within a compute
+		// context, instanceIndex is a 1-dimensional value derived from the workgroup dimensions.
 
-					// The original shader accesses height via texture uvs. However, unlike with textures, we can't
-					// access areas that are out of bounds. Accordingly, we emulate the Clamp to Edge Wrapping
-					// behavior of accessing a DataTexture with out of bounds uvs.
+		// Cast to int to prevent unintended index overflow upon subtraction.
+		const x = int(index.mod(WIDTH));
+		const y = int(index.div(WIDTH));
 
-					const leftX = max( 0, x.sub( 1 ) );
-					const rightX = min( x.add( 1 ), width.sub( 1 ) );
+		// The original shader accesses height via texture uvs. However, unlike with textures, we can't
+		// access areas that are out of bounds. Accordingly, we emulate the Clamp to Edge Wrapping
+		// behavior of accessing a DataTexture with out of bounds uvs.
 
-					const bottomY = max( 0, y.sub( 1 ) );
-					const topY = min( y.add( 1 ), width.sub( 1 ) );
+		const leftX = max(0, x.sub(1));
+		const rightX = min(x.add(1), width.sub(1));
 
-					const westIndex = y.mul( width ).add( leftX );
-					const eastIndex = y.mul( width ).add( rightX );
+		const bottomY = max(0, y.sub(1));
+		const topY = min(y.add(1), width.sub(1));
 
-					const southIndex = bottomY.mul( width ).add( x );
-					const northIndex = topY.mul( width ).add( x );
+		const westIndex = y.mul(width).add(leftX);
+		const eastIndex = y.mul(width).add(rightX);
 
-					return { northIndex, southIndex, eastIndex, westIndex };
+		const southIndex = bottomY.mul(width).add(x);
+		const northIndex = topY.mul(width).add(x);
 
-				};
+		return { northIndex, southIndex, eastIndex, westIndex };
 
-				// Get simulation index neighbor values
-				const getNeighborValuesTSL = ( index, store ) => {
+	};
 
-					const { northIndex, southIndex, eastIndex, westIndex } = getNeighborIndicesTSL( index );
+	// Get simulation index neighbor values
+	const getNeighborValuesTSL = (index, store) => {
 
-					const north = store.element( northIndex );
-					const south = store.element( southIndex );
-					const east = store.element( eastIndex );
-					const west = store.element( westIndex );
+		const { northIndex, southIndex, eastIndex, westIndex } = getNeighborIndicesTSL(index);
 
-					return { north, south, east, west };
+		const north = store.element(northIndex);
+		const south = store.element(southIndex);
+		const east = store.element(eastIndex);
+		const west = store.element(westIndex);
 
-				};
+		return { north, south, east, west };
 
-				// Create compute shader for height simulation with explicit read/write buffers
-				const createComputeHeight = ( readBuffer, writeBuffer ) => Fn( () => {
+	};
 
-					const { viscosity, mousePos, mouseSize, mouseDeep, mouseSpeed } = effectController;
+	// Create compute shader for height simulation with explicit read/write buffers
+	const createComputeHeight = (readBuffer, writeBuffer) => Fn(() => {
 
-					const height = readBuffer.element( instanceIndex ).toVar();
-					const prevHeight = prevHeightStorage.element( instanceIndex ).toVar();
+		const { viscosity, mousePos, mouseSize, mouseDeep, mouseSpeed } = effectController;
 
-					const { north, south, east, west } = getNeighborValuesTSL( instanceIndex, readBuffer );
+		const height = readBuffer.element(instanceIndex).toVar();
+		const prevHeight = prevHeightStorage.element(instanceIndex).toVar();
 
-					const neighborHeight = north.add( south ).add( east ).add( west );
-					neighborHeight.mulAssign( 0.5 );
-					neighborHeight.subAssign( prevHeight );
+		const { north, south, east, west } = getNeighborValuesTSL(instanceIndex, readBuffer);
 
-					const newHeight = neighborHeight.mul( viscosity );
+		const neighborHeight = north.add(south).add(east).add(west);
+		neighborHeight.mulAssign(0.5);
+		neighborHeight.subAssign(prevHeight);
 
-					// Get x and y position of the coordinate in the water plane
+		const newHeight = neighborHeight.mul(viscosity);
 
-					const x = float( globalId.x ).mul( 1 / WIDTH );
-					const y = float( globalId.y ).mul( 1 / WIDTH );
+		// Get x and y position of the coordinate in the water plane
 
-					// Mouse influence
-					const centerVec = vec2( 0.5 );
+		const x = float(globalId.x).mul(1 / WIDTH);
+		const y = float(globalId.y).mul(1 / WIDTH);
 
-					// Get length of position in range [ -BOUNDS / 2, BOUNDS / 2 ], offset by mousePos, then scale.
-					const mousePhase = clamp( length( ( vec2( x, y ).sub( centerVec ) ).mul( BOUNDS ).sub( mousePos ) ).mul( Math.PI ).div( mouseSize ), 0.0, Math.PI );
+		// Mouse influence
+		const centerVec = vec2(0.5);
 
-					// "Indent" water down by scaled distance from center of mouse impact
-					newHeight.addAssign( cos( mousePhase ).add( 1.0 ).mul( mouseDeep ).mul( mouseSpeed.length() ) );
+		// Get length of position in range [ -BOUNDS / 2, BOUNDS / 2 ], offset by mousePos, then scale.
+		const mousePhase = clamp(length((vec2(x, y).sub(centerVec)).mul(BOUNDS).sub(mousePos)).mul(Math.PI).div(mouseSize), 0.0, Math.PI);
 
-					prevHeightStorage.element( instanceIndex ).assign( height );
-					writeBuffer.element( instanceIndex ).assign( newHeight );
+		// "Indent" water down by scaled distance from center of mouse impact
+		newHeight.addAssign(cos(mousePhase).add(1.0).mul(mouseDeep).mul(mouseSpeed.length()));
 
-				} )().compute( WIDTH * WIDTH, [ 16, 16 ] );
+		prevHeightStorage.element(instanceIndex).assign(height);
+		writeBuffer.element(instanceIndex).assign(newHeight);
 
-				// Create both ping-pong compute shaders
-				computeHeightAtoB = createComputeHeight( heightStorageA, heightStorageB ).setName( 'Update Height A→B' );
-				computeHeightBtoA = createComputeHeight( heightStorageB, heightStorageA ).setName( 'Update Height B→A' );
+	})().compute(WIDTH * WIDTH, [16, 16]);
 
-				// Water Geometry corresponds with buffered compute grid.
-				const waterGeometry = new THREE.PlaneGeometry( BOUNDS, BOUNDS, WIDTH - 1, WIDTH - 1 );
+	// Create both ping-pong compute shaders
+	computeHeightAtoB = createComputeHeight(heightStorageA, heightStorageB).setName('Update Height A→B');
+	computeHeightBtoA = createComputeHeight(heightStorageB, heightStorageA).setName('Update Height B→A');
 
-				const waterMaterial = new THREE.MeshStandardNodeMaterial( {
-					color: 0x9bd2ec,
- 					metalness: 0.9,
- 					roughness: 0,
- 					transparent: true,
- 					opacity: 0.8,
- 					side: THREE.DoubleSide
-				} );
+	// Water Geometry corresponds with buffered compute grid.
+	const waterGeometry = new THREE.PlaneGeometry(BOUNDS, BOUNDS, WIDTH - 1, WIDTH - 1);
 
-				// Helper to get height from the current read buffer
-				const getCurrentHeight = ( index ) => {
+	const waterMaterial = new THREE.MeshStandardNodeMaterial({
+		color: 0x9bd2ec,
+		metalness: 0.9,
+		roughness: 0,
+		transparent: true,
+		opacity: 0.8,
+		side: THREE.DoubleSide
+	});
 
-					return select( readFromA, heightStorageA.element( index ), heightStorageB.element( index ) );
+	// Helper to get height from the current read buffer
+	const getCurrentHeight = (index) => {
 
-				};
+		return select(readFromA, heightStorageA.element(index), heightStorageB.element(index));
 
-				// Helper to get normals from the current read buffer
-				const getCurrentNormals = ( index ) => {
+	};
 
-					const { northIndex, southIndex, eastIndex, westIndex } = getNeighborIndicesTSL( index );
+	// Helper to get normals from the current read buffer
+	const getCurrentNormals = (index) => {
 
-					const north = getCurrentHeight( northIndex );
-					const south = getCurrentHeight( southIndex );
-					const east = getCurrentHeight( eastIndex );
-					const west = getCurrentHeight( westIndex );
+		const { northIndex, southIndex, eastIndex, westIndex } = getNeighborIndicesTSL(index);
 
-					const normalX = ( west.sub( east ) ).mul( WIDTH / BOUNDS );
-					const normalY = ( south.sub( north ) ).mul( WIDTH / BOUNDS );
+		const north = getCurrentHeight(northIndex);
+		const south = getCurrentHeight(southIndex);
+		const east = getCurrentHeight(eastIndex);
+		const west = getCurrentHeight(westIndex);
 
-					return { normalX, normalY };
+		const normalX = (west.sub(east)).mul(WIDTH / BOUNDS);
+		const normalY = (south.sub(north)).mul(WIDTH / BOUNDS);
 
-				};
+		return { normalX, normalY };
 
-				waterMaterial.normalNode = Fn( () => {
+	};
 
-					// To correct the lighting as our mesh undulates, we have to reassign the normals in the normal shader.
-					const { normalX, normalY } = getCurrentNormals( vertexIndex );
+	waterMaterial.normalNode = Fn(() => {
 
-					return transformNormalToView( vec3( normalX, normalY.negate(), 1.0 ) ).toVertexStage();
+		// To correct the lighting as our mesh undulates, we have to reassign the normals in the normal shader.
+		const { normalX, normalY } = getCurrentNormals(vertexIndex);
 
-				} )();
+		return transformNormalToView(vec3(normalX, normalY.negate(), 1.0)).toVertexStage();
 
-				waterMaterial.positionNode = Fn( () => {
+	})();
 
-					return vec3( positionLocal.x, positionLocal.y, getCurrentHeight( vertexIndex ) );
+	waterMaterial.positionNode = Fn(() => {
 
-				} )();
+		return vec3(positionLocal.x, positionLocal.y, getCurrentHeight(vertexIndex));
 
-				waterMesh = new THREE.Mesh( waterGeometry, waterMaterial );
-				waterMesh.rotation.x = - Math.PI * 0.5;
-				waterMesh.matrixAutoUpdate = false;
-				waterMesh.updateMatrix();
+	})();
 
-				scene.add( waterMesh );
+	waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+	waterMesh.rotation.x = - Math.PI * 0.5;
+	waterMesh.matrixAutoUpdate = false;
+	waterMesh.updateMatrix();
 
-				// Pool border
-				const borderGeom = new THREE.TorusGeometry( 4.2, 0.1, 12, 4 );
- 				borderGeom.rotateX( Math.PI * 0.5 );
- 				borderGeom.rotateY( Math.PI * 0.25 );
- 				poolBorder = new THREE.Mesh( borderGeom, new THREE.MeshStandardMaterial( { color: 0x908877, roughness: 0.2 } ) );
- 				scene.add( poolBorder );
+	scene.add(waterMesh);
 
-				// THREE.Mesh just for mouse raycasting
-				const geometryRay = new THREE.PlaneGeometry( BOUNDS, BOUNDS, 1, 1 );
-				meshRay = new THREE.Mesh( geometryRay, new THREE.MeshBasicMaterial( { color: 0xFFFFFF, visible: false } ) );
-				meshRay.rotation.x = - Math.PI / 2;
-				meshRay.matrixAutoUpdate = false;
-				meshRay.updateMatrix();
-				scene.add( meshRay );
+	// Pool border
+	const borderGeom = new THREE.TorusGeometry(4.2, 0.1, 12, 4);
+	borderGeom.rotateX(Math.PI * 0.5);
+	borderGeom.rotateY(Math.PI * 0.25);
+	poolBorder = new THREE.Mesh(borderGeom, new THREE.MeshStandardMaterial({ color: 0x908877, roughness: 0.2 }));
+	scene.add(poolBorder);
 
-				// Initialize sphere mesh instance position and velocity.
-				// position<vec3> + velocity<vec2> + unused<vec3> = 8 floats per sphere.
-				// for structs arrays must be enclosed in multiple of 4
+	// THREE.Mesh just for mouse raycasting
+	const geometryRay = new THREE.PlaneGeometry(BOUNDS, BOUNDS, 1, 1);
+	meshRay = new THREE.Mesh(geometryRay, new THREE.MeshBasicMaterial({ color: 0xFFFFFF, visible: false }));
+	meshRay.rotation.x = - Math.PI / 2;
+	meshRay.matrixAutoUpdate = false;
+	meshRay.updateMatrix();
+	scene.add(meshRay);
 
-				const duckStride = 8;
-				const duckInstanceDataArray = new Float32Array( NUM_DUCKS * duckStride );
+	// Initialize sphere mesh instance position and velocity.
+	// position<vec3> + velocity<vec2> + unused<vec3> = 8 floats per sphere.
+	// for structs arrays must be enclosed in multiple of 4
 
-				// Only hold velocity in x and z directions.
-				// The sphere is wedded to the surface of the water, and will only move vertically with the water.
+	const duckStride = 8;
+	const duckInstanceDataArray = new Float32Array(NUM_DUCKS * duckStride);
 
-				for ( let i = 0; i < NUM_DUCKS; i ++ ) {
+	// Only hold velocity in x and z directions.
+	// The sphere is wedded to the surface of the water, and will only move vertically with the water.
 
-					duckInstanceDataArray[ i * duckStride + 0 ] = ( Math.random() - 0.5 ) * BOUNDS * 0.7;
-					duckInstanceDataArray[ i * duckStride + 1 ] = 0;
-					duckInstanceDataArray[ i * duckStride + 2 ] = ( Math.random() - 0.5 ) * BOUNDS * 0.7;
+	for (let i = 0; i < NUM_DUCKS; i++) {
 
-				}
+		duckInstanceDataArray[i * duckStride + 0] = (Math.random() - 0.5) * BOUNDS * 0.7;
+		duckInstanceDataArray[i * duckStride + 1] = 0;
+		duckInstanceDataArray[i * duckStride + 2] = (Math.random() - 0.5) * BOUNDS * 0.7;
 
-				const DuckStruct = struct( {
-					position: 'vec3',
-					velocity: 'vec2'
-				} );
+	}
 
-				// Duck instance data storage
+	const DuckStruct = struct({
+		position: 'vec3',
+		velocity: 'vec2'
+	});
 
-				const duckInstanceDataStorage = instancedArray( duckInstanceDataArray, DuckStruct ).setName( 'DuckInstanceData' );
+	// Duck instance data storage
 
-				computeDucks = Fn( () => {
+	const duckInstanceDataStorage = instancedArray(duckInstanceDataArray, DuckStruct).setName('DuckInstanceData');
 
-					const yOffset = float( - 0.04 );
-					const verticalResponseFactor = float( 0.98 );
-					const waterPushFactor = float( 0.015 );
-					const linearDamping = float( 0.92 );
-					const bounceDamping = float( - 0.4 );
+	computeDucks = Fn(() => {
 
-					// Get 2-D compute coordinate from one-dimensional instanceIndex.
-					const instancePosition = duckInstanceDataStorage.element( instanceIndex ).get( 'position' ).toVar();
-					const velocity = duckInstanceDataStorage.element( instanceIndex ).get( 'velocity' ).toVar();
+		const yOffset = float(- 0.04);
+		const verticalResponseFactor = float(0.98);
+		const waterPushFactor = float(0.015);
+		const linearDamping = float(0.92);
+		const bounceDamping = float(- 0.4);
 
-					const gridCoordX = instancePosition.x.div( BOUNDS ).add( 0.5 ).mul( WIDTH );
-					const gridCoordZ = instancePosition.z.div( BOUNDS ).add( 0.5 ).mul( WIDTH );
+		// Get 2-D compute coordinate from one-dimensional instanceIndex.
+		const instancePosition = duckInstanceDataStorage.element(instanceIndex).get('position').toVar();
+		const velocity = duckInstanceDataStorage.element(instanceIndex).get('velocity').toVar();
 
-					// Cast to int to prevent unintended index overflow upon subtraction.
-					const xCoord = uint( clamp( floor( gridCoordX ), 0, WIDTH - 1 ) );
-					const zCoord = uint( clamp( floor( gridCoordZ ), 0, WIDTH - 1 ) );
-					const heightInstanceIndex = zCoord.mul( WIDTH ).add( xCoord );
+		const gridCoordX = instancePosition.x.div(BOUNDS).add(0.5).mul(WIDTH);
+		const gridCoordZ = instancePosition.z.div(BOUNDS).add(0.5).mul(WIDTH);
 
-					// Get height of water at the duck's position (use current read buffer)
-					const waterHeight = getCurrentHeight( heightInstanceIndex );
-					const { normalX, normalY } = getCurrentNormals( heightInstanceIndex );
+		// Cast to int to prevent unintended index overflow upon subtraction.
+		const xCoord = uint(clamp(floor(gridCoordX), 0, WIDTH - 1));
+		const zCoord = uint(clamp(floor(gridCoordZ), 0, WIDTH - 1));
+		const heightInstanceIndex = zCoord.mul(WIDTH).add(xCoord);
 
-					// Calculate the target Y position based on the water height and the duck's vertical offset
-					const targetY = waterHeight.add( yOffset );
+		// Get height of water at the duck's position (use current read buffer)
+		const waterHeight = getCurrentHeight(heightInstanceIndex);
+		const { normalX, normalY } = getCurrentNormals(heightInstanceIndex);
 
-					const deltaY = targetY.sub( instancePosition.y );
-					instancePosition.y.addAssign( deltaY.mul( verticalResponseFactor ) ); // Gradually update position
+		// Calculate the target Y position based on the water height and the duck's vertical offset
+		const targetY = waterHeight.add(yOffset);
 
-					// Get the normal of the water surface at the duck's position
-					const pushX = normalX.mul( waterPushFactor );
-					const pushZ = normalY.mul( waterPushFactor );
+		const deltaY = targetY.sub(instancePosition.y);
+		instancePosition.y.addAssign(deltaY.mul(verticalResponseFactor)); // Gradually update position
 
-					// Apply the water push to the duck's velocity
-					velocity.x.mulAssign( linearDamping );
-					velocity.y.mulAssign( linearDamping );
+		// Get the normal of the water surface at the duck's position
+		const pushX = normalX.mul(waterPushFactor);
+		const pushZ = normalY.mul(waterPushFactor);
 
-					velocity.x.addAssign( pushX );
-					velocity.y.addAssign( pushZ );
+		// Apply the water push to the duck's velocity
+		velocity.x.mulAssign(linearDamping);
+		velocity.y.mulAssign(linearDamping);
 
-					// update position based on velocity
-					instancePosition.x.addAssign( velocity.x );
-					instancePosition.z.addAssign( velocity.y );
+		velocity.x.addAssign(pushX);
+		velocity.y.addAssign(pushZ);
 
-					// Clamp position to the pool bounds
+		// update position based on velocity
+		instancePosition.x.addAssign(velocity.x);
+		instancePosition.z.addAssign(velocity.y);
 
-					If( instancePosition.x.lessThan( - limit ), () => {
+		// Clamp position to the pool bounds
 
-						instancePosition.x = - limit;
-						velocity.x.mulAssign( bounceDamping );
+		If(instancePosition.x.lessThan(- limit), () => {
 
-					} ).ElseIf( instancePosition.x.greaterThan( limit ), () => {
+			instancePosition.x = - limit;
+			velocity.x.mulAssign(bounceDamping);
 
-						instancePosition.x = limit;
-						velocity.x.mulAssign( bounceDamping );
+		}).ElseIf(instancePosition.x.greaterThan(limit), () => {
 
-					} );
+			instancePosition.x = limit;
+			velocity.x.mulAssign(bounceDamping);
 
-					If( instancePosition.z.lessThan( - limit ), () => {
+		});
 
-						instancePosition.z = - limit;
-						velocity.y.mulAssign( bounceDamping ); // Invert and damp vz (velocity.y)
+		If(instancePosition.z.lessThan(- limit), () => {
 
-					} ).ElseIf( instancePosition.z.greaterThan( limit ), () => {
+			instancePosition.z = - limit;
+			velocity.y.mulAssign(bounceDamping); // Invert and damp vz (velocity.y)
 
-						instancePosition.z = limit;
-						velocity.y.mulAssign( bounceDamping );
+		}).ElseIf(instancePosition.z.greaterThan(limit), () => {
 
-					} );
+			instancePosition.z = limit;
+			velocity.y.mulAssign(bounceDamping);
 
-					// assignment of new values to the instance data storage
+		});
 
-					duckInstanceDataStorage.element( instanceIndex ).get( 'position' ).assign( instancePosition );
-					duckInstanceDataStorage.element( instanceIndex ).get( 'velocity' ).assign( velocity );
+		// assignment of new values to the instance data storage
 
-				} )().compute( NUM_DUCKS ).setName( 'Update Ducks' );
+		duckInstanceDataStorage.element(instanceIndex).get('position').assign(instancePosition);
+		duckInstanceDataStorage.element(instanceIndex).get('velocity').assign(velocity);
 
-				// Models / Textures
+	})().compute(NUM_DUCKS).setName('Update Ducks');
 
-				const hdrLoader = new HDRLoader().setPath( './textures/equirectangular/' );
- 				const glbloader = new GLTFLoader().setPath( 'models/gltf/' );
- 				glbloader.setDRACOLoader( new DRACOLoader().setDecoderPath( 'jsm/libs/draco/gltf/' ) );
+	// Models / Textures
 
- 				const [ env, model ] = await Promise.all( [ hdrLoader.loadAsync( 'blouberg_sunrise_2_1k.hdr' ), glbloader.loadAsync( 'duck.glb' ) ] );
- 				env.mapping = THREE.EquirectangularReflectionMapping;
- 				scene.environment = env;
- 				scene.background = env;
- 				scene.backgroundBlurriness = 0.3;
- 				scene.environmentIntensity = 1.25;
+	const hdrLoader = new HDRLoader().setPath('./textures/equirectangular/');
+	const glbloader = new GLTFLoader().setPath('models/gltf/');
+	glbloader.setDRACOLoader(new DRACOLoader().setDecoderPath('jsm/libs/draco/gltf/'));
 
-				duckModel = model.scene.children[ 0 ];
-				duckModel.material.positionNode = Fn( () => {
+	const [env, model] = await Promise.all([hdrLoader.loadAsync('blouberg_sunrise_2_1k.hdr'), glbloader.loadAsync('duck.glb')]);
+	env.mapping = THREE.EquirectangularReflectionMapping;
+	scene.environment = env;
+	scene.background = env;
+	scene.backgroundBlurriness = 0.3;
+	scene.environmentIntensity = 1.25;
 
-					const instancePosition = duckInstanceDataStorage.element( instanceIndex ).get( 'position' );
+	duckModel = model.scene.children[0];
+	duckModel.material.positionNode = Fn(() => {
 
-					const newPosition = positionLocal.add( instancePosition );
+		const instancePosition = duckInstanceDataStorage.element(instanceIndex).get('position');
 
-					return newPosition;
+		const newPosition = positionLocal.add(instancePosition);
 
-				} )();
+		return newPosition;
 
-				const duckMesh = new THREE.InstancedMesh( duckModel.geometry, duckModel.material, NUM_DUCKS );
-				scene.add( duckMesh );
+	})();
 
-				renderer = new THREE.WebGPURenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.toneMapping = THREE.ACESFilmicToneMapping;
-				renderer.toneMappingExposure = 0.5;
-				renderer.setAnimationLoop( render );
-				container.appendChild( renderer.domElement );
+	const duckMesh = new THREE.InstancedMesh(duckModel.geometry, duckModel.material, NUM_DUCKS);
+	scene.add(duckMesh);
 
-				renderer.inspector = new Inspector();
-				document.body.appendChild( renderer.inspector.domElement );
+	renderer = new THREE.WebGPURenderer({ antialias: true });
+	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	renderer.toneMappingExposure = 0.5;
+	renderer.setAnimationLoop(render);
+	container.appendChild(renderer.domElement);
 
-				controls = new OrbitControls( camera, container );
+	renderer.inspector = new Inspector();
+	document.body.appendChild(renderer.inspector.domElement);
 
-				//
+	controls = new OrbitControls(camera, container);
 
-				container.style.touchAction = 'none';
-				container.addEventListener( 'pointermove', onPointerMove );
-				container.addEventListener( 'pointerdown', onPointerDown );
-				container.addEventListener( 'pointerup', onPointerUp );
+	//
 
-				window.addEventListener( 'resize', onWindowResize );
+	container.style.touchAction = 'none';
+	container.addEventListener('pointermove', onPointerMove);
+	container.addEventListener('pointerdown', onPointerDown);
+	container.addEventListener('pointerup', onPointerUp);
 
-				// GUI
+	window.addEventListener('resize', onWindowResize);
 
-				const gui = renderer.inspector.createParameters( 'Settings' );
-				gui.add( effectController.mouseSize, 'value', 0.1, .3 ).name( 'Mouse Size' );
-				gui.add( effectController.mouseDeep, 'value', 0.1, 1 ).name( 'Mouse Deep' );
-				gui.add( effectController.viscosity, 'value', 0.9, 0.96, 0.001 ).name( 'viscosity' );
-				gui.add( effectController, 'speed', 1, 6, 1 );
-				gui.add( effectController, 'ducksEnabled' ).onChange( () => {
+	// GUI
 
-					duckMesh.visible = effectController.ducksEnabled;
+	const gui = renderer.inspector.createParameters('Settings');
+	gui.add(effectController.mouseSize, 'value', 0.1, .3).name('Mouse Size');
+	gui.add(effectController.mouseDeep, 'value', 0.1, 1).name('Mouse Deep');
+	gui.add(effectController.viscosity, 'value', 0.9, 0.96, 0.001).name('viscosity');
+	gui.add(effectController, 'speed', 1, 6, 1);
+	gui.add(effectController, 'ducksEnabled').onChange(() => {
 
-				} );
-				gui.add( effectController, 'wireframe' ).onChange( () => {
+		duckMesh.visible = effectController.ducksEnabled;
 
-					waterMesh.material.wireframe = ! waterMesh.material.wireframe;
-					poolBorder.material.wireframe = ! poolBorder.material.wireframe;
-					duckModel.material.wireframe = ! duckModel.material.wireframe;
-					waterMesh.material.needsUpdate = true;
-					poolBorder.material.needsUpdate = true;
+	});
+	gui.add(effectController, 'wireframe').onChange(() => {
 
-				} );
+		waterMesh.material.wireframe = !waterMesh.material.wireframe;
+		poolBorder.material.wireframe = !poolBorder.material.wireframe;
+		duckModel.material.wireframe = !duckModel.material.wireframe;
+		waterMesh.material.needsUpdate = true;
+		poolBorder.material.needsUpdate = true;
 
-			}
+	});
 
-			function onWindowResize() {
+}
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+function onWindowResize() {
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
 
-			}
+	renderer.setSize(window.innerWidth, window.innerHeight);
 
-			function setMouseCoords( x, y ) {
+}
 
-				mouseCoords.set( ( x / renderer.domElement.clientWidth ) * 2 - 1, - ( y / renderer.domElement.clientHeight ) * 2 + 1 );
+function setMouseCoords(x, y) {
 
-			}
+	mouseCoords.set((x / renderer.domElement.clientWidth) * 2 - 1, - (y / renderer.domElement.clientHeight) * 2 + 1);
 
-			function onPointerDown() {
+}
 
-				mouseDown = true;
-				firstClick = true;
-				updateOriginMouseDown = true;
+function onPointerDown() {
 
-			}
+	mouseDown = true;
+	firstClick = true;
+	updateOriginMouseDown = true;
 
-			function onPointerUp() {
+}
 
-				mouseDown = false;
-				firstClick = false;
+function onPointerUp() {
+
+	mouseDown = false;
+	firstClick = false;
+	updateOriginMouseDown = false;
+
+	controls.enabled = true;
+
+}
+
+function onPointerMove(event) {
+
+	if (event.isPrimary === false) return;
+
+	setMouseCoords(event.clientX, event.clientY);
+
+}
+
+function raycast() {
+
+	if (mouseDown && (firstClick || !controls.enabled)) {
+
+		raycaster.setFromCamera(mouseCoords, camera);
+
+		const intersects = raycaster.intersectObject(meshRay);
+
+		if (intersects.length > 0) {
+
+			const point = intersects[0].point;
+
+			if (updateOriginMouseDown) {
+
+				effectController.mousePos.value.set(point.x, point.z);
+
 				updateOriginMouseDown = false;
 
-				controls.enabled = true;
+			}
+
+			effectController.mouseSpeed.value.set(
+				(point.x - effectController.mousePos.value.x),
+				(point.z - effectController.mousePos.value.y)
+			);
+
+			effectController.mousePos.value.set(point.x, point.z);
+
+			if (firstClick) {
+
+				controls.enabled = false;
 
 			}
 
-			function onPointerMove( event ) {
+		} else {
 
-				if ( event.isPrimary === false ) return;
+			updateOriginMouseDown = true;
 
-				setMouseCoords( event.clientX, event.clientY );
+			effectController.mouseSpeed.value.set(0, 0);
 
-			}
+		}
 
-			function raycast() {
+		firstClick = false;
 
-				if ( mouseDown && ( firstClick || ! controls.enabled ) ) {
+	} else {
 
-					raycaster.setFromCamera( mouseCoords, camera );
+		updateOriginMouseDown = true;
 
-					const intersects = raycaster.intersectObject( meshRay );
+		effectController.mouseSpeed.value.set(0, 0);
 
-					if ( intersects.length > 0 ) {
+	}
 
-						const point = intersects[ 0 ].point;
+}
 
-						if ( updateOriginMouseDown ) {
+function render() {
 
-							effectController.mousePos.value.set( point.x, point.z );
+	raycast();
 
-							updateOriginMouseDown = false;
+	frame++;
 
-						}
+	if (frame >= 7 - effectController.speed) {
 
-						effectController.mouseSpeed.value.set(
-							( point.x - effectController.mousePos.value.x ),
-							( point.z - effectController.mousePos.value.y )
-						);
+		// Ping-pong: alternate which buffer we read from and write to
+		if (pingPong === 0) {
 
-						effectController.mousePos.value.set( point.x, point.z );
+			renderer.compute(computeHeightAtoB, [8, 8, 1]);
+			readFromA.value = 0; // Material now reads from B (just written)
 
-						if ( firstClick ) {
+		} else {
 
-							controls.enabled = false;
+			renderer.compute(computeHeightBtoA, [8, 8, 1]);
+			readFromA.value = 1; // Material now reads from A (just written)
 
-						}
+		}
 
-					} else {
+		pingPong = 1 - pingPong;
 
-						updateOriginMouseDown = true;
+		if (effectController.ducksEnabled) {
 
-						effectController.mouseSpeed.value.set( 0, 0 );
+			renderer.compute(computeDucks);
 
-					}
+		}
 
-					firstClick = false;
+		frame = 0;
 
-				} else {
+	}
 
-					updateOriginMouseDown = true;
+	renderer.render(scene, camera);
 
-					effectController.mouseSpeed.value.set( 0, 0 );
-
-				}
-
-			}
-
-			function render() {
-
-				raycast();
-
-				frame ++;
-
-				if ( frame >= 7 - effectController.speed ) {
-
-					// Ping-pong: alternate which buffer we read from and write to
-					if ( pingPong === 0 ) {
-
-						renderer.compute( computeHeightAtoB, [ 8, 8, 1 ] );
-						readFromA.value = 0; // Material now reads from B (just written)
-
-					} else {
-
-						renderer.compute( computeHeightBtoA, [ 8, 8, 1 ] );
-						readFromA.value = 1; // Material now reads from A (just written)
-
-					}
-
-					pingPong = 1 - pingPong;
-
-					if ( effectController.ducksEnabled ) {
-
-						renderer.compute( computeDucks );
-
-					}
-
-					frame = 0;
-
-				}
-
-				renderer.render( scene, camera );
-
-			}
+}
