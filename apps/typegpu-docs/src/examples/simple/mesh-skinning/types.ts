@@ -3,8 +3,8 @@ import * as d from 'typegpu/data';
 export const VertexData = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
-  joint: d.vec2u,
-  weight: d.vec2f,
+  joint: d.vec4u,
+  weight: d.vec4f,
 });
 
 export interface GLTFNode {
@@ -17,6 +17,25 @@ export interface GLTFNode {
   skin?: number;
 }
 
+export interface AnimationSampler {
+  input: Float32Array;
+  output: Float32Array;
+  interpolation: 'LINEAR' | 'STEP' | 'CUBICSPLINE';
+}
+
+export interface AnimationChannel {
+  samplerIndex: number;
+  targetNode: number;
+  targetPath: 'translation' | 'rotation' | 'scale';
+}
+
+export interface Animation {
+  name: string;
+  duration: number;
+  samplers: AnimationSampler[];
+  channels: AnimationChannel[];
+}
+
 export interface ModelData {
   positions: Float32Array;
   normals: Float32Array;
@@ -27,4 +46,6 @@ export interface ModelData {
   nodes: GLTFNode[];
   jointNodes: number[];
   vertexCount: number;
+  animations: Animation[];
+  jointCount: number;
 }

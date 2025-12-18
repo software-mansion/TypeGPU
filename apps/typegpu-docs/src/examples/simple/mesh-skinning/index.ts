@@ -3,12 +3,29 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { loadGLBModel } from './loader.ts';
+import { type NodeTransform, sampleAnimation } from './animation.ts';
+import { type Quat, quatFromAxisAngle, quatMul } from './math.ts';
+import type { ModelData } from './types.ts';
 import { VertexData } from './types.ts';
 import { setupOrbitCamera } from './setup-orbit-camera.ts';
 
-const modelData = await loadGLBModel(
-  '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
-);
+const MODELS = {
+  LongBoi: '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
+  DancingBot: '/TypeGPU/assets/mesh-skinning/DancingBot.glb',
+};
+type ModelName = keyof typeof MODELS;
+
+const MAX_JOINTS = 64;
+
+let currentModelName: ModelName = 'LongBoi';
+let modelData: ModelData = await loadGLBModel(MODELS[currentModelName]);
+let twistEnabled = false;
+let bendEnabled = false;
+let animationPlaying = true;
+let bendTime = 0;
+let twistTime = 0;
+let animationTime = 0;
+let lastFrameTime = 0;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -27,7 +44,6 @@ let depthTexture = root['~unstable'].createTexture({
 }).$usage('render');
 
 const cameraUniform = root.createUniform(d.mat4x4f);
-
 let viewMatrix = d.mat4x4f();
 let projectionMatrix = d.mat4x4f();
 
@@ -41,218 +57,168 @@ const { cleanupCamera } = setupOrbitCamera(
     if (camera.projection) {
       projectionMatrix = camera.projection;
     }
-
-    const viewProjectionMatrix = mat4.mul(
-      projectionMatrix,
-      viewMatrix,
-      d.mat4x4f(),
-    );
-    cameraUniform.write(viewProjectionMatrix);
+    cameraUniform.write(mat4.mul(projectionMatrix, viewMatrix, d.mat4x4f()));
   },
 );
 
-function createQuaternionFromAxisAngle(
-  axis: [number, number, number],
-  angle: number,
-): [number, number, number, number] {
-  const halfAngle = angle / 2;
-  const s = Math.sin(halfAngle);
-  return [axis[0] * s, axis[1] * s, axis[2] * s, Math.cos(halfAngle)];
-}
-
-function multiplyQuaternions(
-  q1: [number, number, number, number],
-  q2: [number, number, number, number],
-): [number, number, number, number] {
-  const [x1, y1, z1, w1] = q1;
-  const [x2, y2, z2, w2] = q2;
-  return [
-    w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-    w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-    w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-    w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-  ];
-}
-
-let twistEnabled = true;
-let bendEnabled = true;
-let bendTime = 0;
-let twistTime = 0;
-let lastFrameTime = 0;
-
-function animateBone(
-  nodeIndex: number,
-): [number, number, number, number] | null {
-  if (nodeIndex === 0) {
-    const bendAngle = Math.sin(bendTime * 0.001) * Math.PI * 0.5;
-    const bendQuat = createQuaternionFromAxisAngle([0, 0, 1], bendAngle);
-
-    const twistAngle = Math.sin(twistTime * 0.0015) * Math.PI * 0.3;
-    const twistQuat = createQuaternionFromAxisAngle([0, 1, 0], twistAngle);
-
-    return multiplyQuaternions(twistQuat, bendQuat);
+const longBoiAnimation = (nodeIndex: number): Quat | null => {
+  if (nodeIndex !== 0) {
+    return null;
   }
-  return null;
-}
+  const bendQuat = quatFromAxisAngle(
+    [0, 0, 1],
+    Math.sin(bendTime * 0.001) * Math.PI * 0.5,
+  );
+  const twistQuat = quatFromAxisAngle(
+    [0, 1, 0],
+    Math.sin(twistTime * 0.0015) * Math.PI * 0.3,
+  );
+  return quatMul(twistQuat, bendQuat);
+};
 
-function getWorldTransform(
+const getWorldTransform = (
   nodeIndex: number,
   parentTransform?: Float32Array,
-  time?: number,
-): Float32Array {
+  animatedTransforms?: Map<number, NodeTransform>,
+  useLongBoi?: boolean,
+): Float32Array => {
   const node = modelData.nodes[nodeIndex];
+  const anim = animatedTransforms?.get(nodeIndex);
   const localMatrix = mat4.identity();
 
-  if (node.translation) {
-    mat4.translate(localMatrix, node.translation, localMatrix);
-  }
-  if (node.rotation) {
-    let rotation = node.rotation;
+  const translation = anim?.translation ?? node.translation;
+  const scale = anim?.scale ?? node.scale;
+  let rotation = anim?.rotation ?? node.rotation;
 
-    if (time !== undefined) {
-      const animatedRotation = animateBone(nodeIndex);
-      if (animatedRotation) {
-        rotation = animatedRotation;
-      }
+  if (useLongBoi) {
+    const animRot = longBoiAnimation(nodeIndex);
+    if (animRot) {
+      rotation = animRot;
     }
-
-    const rotMat = mat4.fromQuat(rotation);
-    mat4.mul(localMatrix, rotMat, localMatrix);
   }
-  if (node.scale) {
-    mat4.scale(localMatrix, node.scale, localMatrix);
+
+  if (translation) {
+    mat4.translate(localMatrix, translation, localMatrix);
+  }
+  if (rotation) {
+    mat4.mul(localMatrix, mat4.fromQuat(rotation), localMatrix);
+  }
+  if (scale) {
+    mat4.scale(localMatrix, scale, localMatrix);
   }
 
   if (parentTransform) {
     return mat4.mul(parentTransform, localMatrix);
   }
 
-  // Find parent
   for (let i = 0; i < modelData.nodes.length; i++) {
     if (modelData.nodes[i].children?.includes(nodeIndex)) {
-      const parent = getWorldTransform(i, undefined, time);
-      return mat4.mul(parent, localMatrix);
+      return mat4.mul(
+        getWorldTransform(i, undefined, animatedTransforms, useLongBoi),
+        localMatrix,
+      );
     }
   }
 
   return localMatrix;
-}
+};
 
-function updateJointMatrices(time: number): d.m4x4f[] {
-  const matrices: d.m4x4f[] = [];
+const getJointMatrices = (): d.m4x4f[] => {
+  const useLongBoi = currentModelName === 'LongBoi' &&
+    (twistEnabled || bendEnabled);
+  const animTransforms =
+    currentModelName === 'DancingBot' && modelData.animations.length > 0 &&
+      animationPlaying
+      ? sampleAnimation(modelData.animations[0], animationTime)
+      : undefined;
 
-  for (let i = 0; i < modelData.jointNodes.length; i++) {
-    const worldTransform = getWorldTransform(
-      modelData.jointNodes[i],
+  const matrices = modelData.jointNodes.map((jointNode: number, i: number) => {
+    const world = getWorldTransform(
+      jointNode,
       undefined,
-      time,
+      animTransforms,
+      useLongBoi,
     );
-    const invBindMatrix = new Float32Array(16);
+    const invBind = modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16);
+    return mat4.mul(world, invBind, d.mat4x4f());
+  });
 
-    for (let j = 0; j < 16; j++) {
-      invBindMatrix[j] = modelData.inverseBindMatrices[i * 16 + j];
-    }
-
-    const jointMatrix = mat4.mul(worldTransform, invBindMatrix, d.mat4x4f());
-    matrices.push(jointMatrix);
+  while (matrices.length < MAX_JOINTS) {
+    matrices.push(d.mat4x4f.identity());
   }
-
   return matrices;
-}
+};
 
-// Create vertex data
-function createVertexData(): d.Infer<typeof VertexData>[] {
-  const data: d.Infer<typeof VertexData>[] = [];
+const createVertexData = (): d.Infer<typeof VertexData>[] =>
+  Array.from({ length: modelData.vertexCount }, (_, i) => ({
+    position: d.vec3f(
+      modelData.positions[i * 3],
+      modelData.positions[i * 3 + 1],
+      modelData.positions[i * 3 + 2],
+    ),
+    normal: d.vec3f(
+      modelData.normals[i * 3],
+      modelData.normals[i * 3 + 1],
+      modelData.normals[i * 3 + 2],
+    ),
+    joint: d.vec4u(
+      modelData.joints[i * 4],
+      modelData.joints[i * 4 + 1],
+      modelData.joints[i * 4 + 2],
+      modelData.joints[i * 4 + 3],
+    ),
+    weight: d.vec4f(
+      modelData.weights[i * 4],
+      modelData.weights[i * 4 + 1],
+      modelData.weights[i * 4 + 2],
+      modelData.weights[i * 4 + 3],
+    ),
+  }));
 
-  for (let i = 0; i < modelData.vertexCount; i++) {
-    data.push({
-      position: d.vec3f(
-        modelData.positions[i * 3],
-        modelData.positions[i * 3 + 1],
-        modelData.positions[i * 3 + 2],
-      ),
-      normal: d.vec3f(
-        modelData.normals[i * 3],
-        modelData.normals[i * 3 + 1],
-        modelData.normals[i * 3 + 2],
-      ),
-      joint: d.vec2u(
-        modelData.joints[i * 2],
-        modelData.joints[i * 2 + 1],
-      ),
-      weight: d.vec2f(
-        modelData.weights[i * 2],
-        modelData.weights[i * 2 + 1],
-      ),
-    });
-  }
+let vertexBuffer = root.createBuffer(
+  d.arrayOf(VertexData, modelData.vertexCount),
+  createVertexData(),
+).$usage('vertex');
+let indexBuffer = root.createBuffer(
+  d.arrayOf(d.u16, modelData.indices.length),
+  Array.from(modelData.indices) as number[],
+).$usage('index');
+let currentIndexCount = modelData.indices.length;
 
-  return data;
-}
-
-const vertexBuffer = root
-  .createBuffer(
-    d.arrayOf(VertexData, modelData.vertexCount),
-    createVertexData(),
-  )
-  .$usage('vertex');
-
-const indexBuffer = root
-  .createBuffer(
-    d.arrayOf(d.u16, modelData.indices.length),
-    Array.from(modelData.indices),
-  )
-  .$usage('index');
-
-const jointMatricesUniform = root
-  .createUniform(d.arrayOf(d.mat4x4f, 2), updateJointMatrices(0));
-
+const jointMatricesUniform = root.createUniform(
+  d.arrayOf(d.mat4x4f, MAX_JOINTS),
+  getJointMatrices(),
+);
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
 
 const vertex = tgpu['~unstable'].vertexFn({
-  in: {
-    position: d.vec3f,
-    normal: d.vec3f,
-    joint: d.vec2u,
-    weight: d.vec2f,
-  },
-  out: {
-    pos: d.builtin.position,
-    normal: d.vec3f,
-  },
+  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
+  out: { pos: d.builtin.position, normal: d.vec3f },
 })(({ position, normal, joint, weight }) => {
-  const jointMatrices = jointMatricesUniform.$;
-  const viewProj = cameraUniform.$;
-
-  const skinMatrix = jointMatrices[joint.x].mul(weight.x).add(
-    jointMatrices[joint.y].mul(weight.y),
-  );
-
-  const skinnedPos = skinMatrix.mul(d.vec4f(position, 1));
-  const skinnedNormal = skinMatrix.mul(d.vec4f(normal, 0)).xyz;
+  const jm = jointMatricesUniform.$;
+  const skinMatrix = jm[joint.x].mul(weight.x)
+    .add(jm[joint.y].mul(weight.y))
+    .add(jm[joint.z].mul(weight.z))
+    .add(jm[joint.w].mul(weight.w));
 
   return {
-    pos: viewProj.mul(skinnedPos),
-    normal: std.normalize(skinnedNormal),
+    pos: cameraUniform.$.mul(skinMatrix.mul(d.vec4f(position, 1))),
+    normal: std.normalize(skinMatrix.mul(d.vec4f(normal, 0)).xyz),
   };
 });
 
 const fragment = tgpu['~unstable'].fragmentFn({
-  in: {
-    normal: d.vec3f,
-  },
+  in: { normal: d.vec3f },
   out: d.vec4f,
 })(({ normal }) => {
-  const lightDir = std.normalize(d.vec3f(1, 0, 1));
-  const diffuse = std.saturate(std.dot(normal, lightDir));
-  const color = d.vec3f(0.8, 0.8, 0.8).mul(diffuse * 0.7 + 0.3);
-  return d.vec4f(color, 1.0);
+  const diffuse = std.saturate(
+    std.dot(normal, std.normalize(d.vec3f(1, 0, 1))),
+  );
+  return d.vec4f(d.vec3f(0.8, 0.8, 0.8).mul(diffuse * 0.7 + 0.3), 1.0);
 });
 
 const pipeline = root['~unstable']
-  .withVertex(vertex, {
-    ...vertexLayout.attrib,
-  })
+  .withVertex(vertex, vertexLayout.attrib)
   .withFragment(fragment, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
@@ -270,21 +236,44 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+async function switchModel(name: ModelName) {
+  if (name === currentModelName) {
+    return;
+  }
+  currentModelName = name;
+  modelData = await loadGLBModel(MODELS[name]);
+  vertexBuffer = root.createBuffer(
+    d.arrayOf(VertexData, modelData.vertexCount),
+    createVertexData(),
+  ).$usage('vertex');
+  indexBuffer = root.createBuffer(
+    d.arrayOf(d.u16, modelData.indices.length),
+    Array.from(modelData.indices) as number[],
+  ).$usage('index');
+  currentIndexCount = modelData.indices.length;
+  animationTime = 0;
+}
+
 function render(time: number) {
-  const deltaTime = lastFrameTime === 0 ? 0 : time - lastFrameTime;
+  const deltaTime = Math.max(0, time - lastFrameTime);
   lastFrameTime = time;
 
-  if (bendEnabled) {
-    bendTime += deltaTime;
-  }
-  if (twistEnabled) {
-    twistTime += deltaTime;
+  if (currentModelName === 'LongBoi') {
+    if (bendEnabled) {
+      bendTime += deltaTime;
+    }
+    if (twistEnabled) {
+      twistTime += deltaTime;
+    }
+  } else if (animationPlaying) {
+    animationTime += deltaTime * 0.001;
   }
 
-  jointMatricesUniform.write(updateJointMatrices(time));
+  jointMatricesUniform.write(getJointMatrices());
 
   pipeline
     .with(vertexLayout, vertexBuffer)
+    .withIndexBuffer(indexBuffer)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
@@ -296,26 +285,38 @@ function render(time: number) {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .drawIndexed(modelData.indices.length);
+    .drawIndexed(currentIndexCount);
 
   animationId = requestAnimationFrame(render);
 }
 
 let animationId: number | undefined;
-
 animationId = requestAnimationFrame(render);
 
 export const controls = {
+  Model: {
+    initial: 'LongBoi',
+    options: Object.keys(MODELS),
+    onSelectChange: async (v: string) => {
+      await switchModel(v as ModelName);
+    },
+  },
   Twist: {
     initial: false,
     onToggleChange: (v: boolean) => {
       twistEnabled = v;
     },
   },
-  Move: {
+  Bend: {
     initial: false,
     onToggleChange: (v: boolean) => {
       bendEnabled = v;
+    },
+  },
+  'Play Animation': {
+    initial: true,
+    onToggleChange: (v: boolean) => {
+      animationPlaying = v;
     },
   },
 };
