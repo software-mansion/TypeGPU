@@ -1053,14 +1053,26 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      // if user defines a variable named 'i', it will be scoped to a new block,
+      // shadowing our 'i'
+      const index = this.ctx.makeNameValid('i');
+
+      const elementSnippet = accessIndex(
+        iterableSnippet,
+        snip(index, u32, 'runtime'),
+      );
+      if (!elementSnippet) {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+
       const iterableDataType = iterableSnippet.dataType;
       let elementCount: number;
-      let elementType: wgsl.AnyWgslData;
+      let elementType = elementSnippet?.dataType;
       if (wgsl.isWgslArray(iterableDataType)) {
         elementCount = iterableDataType.elementCount;
-        elementType = iterableDataType.elementType as wgsl.AnyWgslData;
       } else if (wgsl.isVec(iterableDataType)) {
-        elementType = iterableDataType.primitive;
         elementCount = Number(iterableDataType.type.match(/\d/));
       } else {
         throw new WgslTypeError(
@@ -1068,21 +1080,44 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      /*
-       * if user defines a variable named 'i', it will be scoped to a new block,
-       * shadowing our 'i'
-       */
-      const index = this.ctx.makeNameValid('i');
+      if (loopVar[0] !== NODE.const) {
+        throw new WgslTypeError(
+          'Only `for (const ... of ... )` loops are supported',
+        );
+      }
 
-      const loopVarKind = loopVar[0] === tinyest.NodeTypeCatalog.const &&
-          wgsl.isNaturallyEphemeral(elementType)
-        ? 'let'
-        : 'var';
+      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+      // an implicit pointer to it
+      let loopVarKind = 'let';
       const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+      if (!isEphemeralSnippet(elementSnippet)) {
+        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
+          loopVarKind = 'const';
+        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
+          loopVarKind = 'let';
+        } else {
+          loopVarKind = 'let';
+          if (!wgsl.isPtr(elementType)) {
+            const ptrType = createPtrFromOrigin(
+              elementSnippet.origin,
+              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
+            );
+            invariant(
+              ptrType !== undefined,
+              `Creating pointer type from origin ${elementSnippet.origin}`,
+            );
+            elementType = ptrType;
+          }
+
+          elementType = implicitFrom(elementType);
+        }
+      }
+
       const loopVarSnippet = snip(
         loopVarName,
         elementType,
-        'runtime',
+        elementSnippet.origin,
       );
       this.ctx.defineVariable(loopVarName, loopVarSnippet);
 
@@ -1097,7 +1132,9 @@ ${this.ctx.pre}else ${alternate}`;
       this.ctx.indent();
 
       const loopVarDeclStr =
-        `${this.ctx.pre}${loopVarKind} ${loopVarName} = ${iterableStr}[${index}];`;
+        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+          tryConvertSnippet(elementSnippet, elementType as AnyData, false)
+        };`;
 
       const bodyStr = `${this.ctx.pre}${
         this.block(blockifySingleStatement(body))

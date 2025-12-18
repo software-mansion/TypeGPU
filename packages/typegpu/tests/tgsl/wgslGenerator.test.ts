@@ -522,9 +522,9 @@ describe('wgslGenerator', () => {
         var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
         var res = 0;
         for (var i = 0; i < 3; i++) {
-          var foo = arr[i];
+          let foo = (&arr[i]);
           {
-            res += i32(foo.x);
+            res += i32((*foo).x);
             let i = res;
           }
         }

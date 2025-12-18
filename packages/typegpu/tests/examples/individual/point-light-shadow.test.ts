@@ -133,9 +133,9 @@ describe('point light shadow example', () => {
         let diskRadius = shadowParams_7.diskRadius;
         var visibilityAcc = 0;
         for (var i = 0; i < 64; i++) {
-          var sample = samplesUniform_9[i];
+          let sample = (&samplesUniform_9[i]);
           {
-            var o = (sample.xy * diskRadius);
+            var o = ((*sample).xy * diskRadius);
             var sampleDir = ((dir + (right * o.x)) + (realUp * o.y));
             visibilityAcc += i32(textureSampleCompare(shadowDepthCube_10, shadowSampler_11, sampleDir, depthRef));
           }
