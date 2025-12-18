@@ -198,7 +198,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...setupTimestampWrites(this._priors, root),
     };
 
-    const commandEncoder = branch.device.createCommandEncoder();
+    const commandEncoder = root.device.createCommandEncoder();
     const pass = commandEncoder.beginComputePass(passDescriptor);
 
     pass.setPipeline(memo.pipeline);
@@ -225,7 +225,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
-    branch.device.queue.submit([commandEncoder.finish()]);
+    root.device.queue.submit([commandEncoder.finish()]);
 
     if (memo.logResources) {
       logDataFromGPU(memo.logResources);
