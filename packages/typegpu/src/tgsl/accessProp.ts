@@ -177,6 +177,13 @@ export function accessProp(
     return accessProp(derefed, propName);
   }
 
+  if (isVec(target.dataType)) {
+    // Example: d.vec3f().kind === 'vec3f'
+    if (propName === 'kind') {
+      return snip(target.dataType.type, UnknownData, 'constant');
+    }
+  }
+
   const propLength = propName.length;
   if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
     const swizzleTypeChar = target.dataType.type.includes('bool')

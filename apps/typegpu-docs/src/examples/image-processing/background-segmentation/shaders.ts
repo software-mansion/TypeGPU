@@ -6,19 +6,28 @@ import {
   blurLayout,
   drawWithMaskLayout,
   filterDim,
+  flipSlot,
   generateMaskLayout,
+  paramsAccessor,
   prepareModelInputLayout,
-  sampleBiasSlot,
-  useGaussianSlot,
 } from './schemas.ts';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
+  const modelUV = d.vec2f(d.f32(x), d.f32(y)).div(
+    d.vec2f(MODEL_WIDTH, MODEL_HEIGHT),
+  );
+
+  const cropBounds = paramsAccessor.$.cropBounds;
+  const uvMin = cropBounds.xy;
+  const uvMax = cropBounds.zw;
+  const videoUV = std.mix(uvMin, uvMax, modelUV);
+
   const col = std.textureSampleBaseClampToEdge(
     prepareModelInputLayout.$.inputTexture,
     prepareModelInputLayout.$.sampler,
-    d.vec2f(d.f32(x), d.f32(y)).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT)),
+    videoUV,
   );
 
   prepareModelInputLayout.$
@@ -54,7 +63,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       let loadIndex = baseIndex.add(d.vec2i(c, r));
-      if (blurLayout.$.flip !== 0) {
+      if (flipSlot.$) {
         loadIndex = loadIndex.yx;
       }
 
@@ -73,7 +82,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       let writeIndex = baseIndex.add(d.vec2i(c, r));
-      if (blurLayout.$.flip !== 0) {
+      if (flipSlot.$) {
         writeIndex = writeIndex.yx;
       }
 
@@ -105,7 +114,7 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   );
 
   let blurredColor = d.vec4f();
-  if (useGaussianSlot.$ === 1) {
+  if (paramsAccessor.$.useGaussian === 1) {
     blurredColor = std.textureSampleBaseClampToEdge(
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
@@ -116,15 +125,26 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
       input.uv,
-      sampleBiasSlot.$,
+      paramsAccessor.$.sampleBias,
     );
   }
 
-  const mask = std.textureSampleBaseClampToEdge(
+  const cropBounds = paramsAccessor.$.cropBounds;
+  const uvMin = cropBounds.xy;
+  const uvMax = cropBounds.zw;
+  const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));
+  const sampledMask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    maskUV,
   ).x;
+
+  const inCropRegion = input.uv.x >= uvMin.x &&
+    input.uv.x <= uvMax.x &&
+    input.uv.y >= uvMin.y &&
+    input.uv.y <= uvMax.y;
+  // use mask only inside the crop region
+  const mask = std.select(0, sampledMask, inCropRegion);
 
   return std.mix(blurredColor, originalColor, mask);
 });
