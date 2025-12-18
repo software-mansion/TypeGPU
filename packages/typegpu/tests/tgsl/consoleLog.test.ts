@@ -35,6 +35,32 @@ describe('wgslGenerator with console.log', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('Does not reset the state after visiting one function', () => {
+    const fn1 = (n: number) => {
+      'use gpu';
+    };
+
+    const fn2 = (n: number) => {
+      'use gpu';
+      console.log(n);
+    };
+
+    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
+      () => {
+        fn1(1);
+        fn2(2);
+        return { pos: d.vec4f() };
+      },
+    );
+    expect(() => tgpu.resolve([vs])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - vertexFn:vs
+      - fn*:fn2(i32)
+      - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
+    `);
+  });
+
   it('Throws appropriate error when in a vertex shader', () => {
     const myLog = (n: number) => {
       'use gpu';
