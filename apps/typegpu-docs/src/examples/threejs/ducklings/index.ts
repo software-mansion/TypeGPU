@@ -8,26 +8,15 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as TSL from 'three/tsl';
 
-import { SimplexNoise } from 'three/addons/math/SimplexNoise.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { BOUNDS, limit, waterMaxHeight, WIDTH } from './consts';
+import { BOUNDS, limit, NeighborIndices, Normals, WIDTH } from './consts';
+import { noise } from './utils';
 
 // Struct schemas for GPU function return types
-const NeighborIndices = d.struct({
-  northIndex: d.u32,
-  southIndex: d.u32,
-  eastIndex: d.u32,
-  westIndex: d.u32,
-});
-
-const Normals = d.struct({
-  normalX: d.f32,
-  normalY: d.f32,
-});
 
 if (WebGPU.isAvailable() === false) {
   document.body.appendChild(WebGPU.getErrorMessage());
@@ -38,18 +27,10 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const canvasResizeContainer = canvas.parentElement
   ?.parentElement as HTMLDivElement;
 
-const getTargetSize = () => {
-  return [
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  ] as [number, number];
-};
-
+const getTargetSize = () => [canvasResizeContainer.clientWidth, canvasResizeContainer.clientHeight] as [number, number]
 const initialSize = getTargetSize();
-
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 await renderer.init();
-
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(...initialSize);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -67,27 +48,12 @@ camera.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera, canvas);
 
-// Sun light
+// Sun
 const sun = new THREE.DirectionalLight(0xffffff, 4.0);
 sun.position.set(-1, 2.6, 1.4);
 scene.add(sun);
 
-// Generate initial height values using simplex noise
-const simplex = new SimplexNoise();
-
-function noise(x: number, y: number): number {
-  let multR = waterMaxHeight;
-  let mult = 0.025;
-  let r = 0;
-  for (let i = 0; i < 15; i++) {
-    r += multR * simplex.noise(x * mult, y * mult);
-    multR *= 0.53 + 0.025 * i;
-    mult *= 1.25;
-  }
-  return r;
-}
-
-// Initialize height storage buffers
+// height storage buffers
 const heightArray = new Float32Array(WIDTH * WIDTH);
 const prevHeightArray = new Float32Array(WIDTH * WIDTH);
 
@@ -103,7 +69,7 @@ for (let j = 0; j < WIDTH; j++) {
   }
 }
 
-// Ping-pong height storage buffers using t3.instancedArray
+// Ping-pong height storage buffers
 const heightStorageA = t3.instancedArray(new Float32Array(heightArray), d.f32);
 const heightStorageB = t3.instancedArray(new Float32Array(heightArray), d.f32);
 const prevHeightStorage = t3.instancedArray(prevHeightArray, d.f32);
