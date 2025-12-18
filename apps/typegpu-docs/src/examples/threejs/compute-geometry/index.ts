@@ -137,6 +137,7 @@ new GLTFLoader().load(
     mesh.scale.setScalar(0.1);
     mesh.material = material;
     scene.add(mesh);
+    document.querySelector('.loading')?.classList.add('loaded');
   },
 );
 
@@ -173,6 +174,9 @@ resizeObserver.observe(canvas);
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.minDistance = 0.7;
 orbitControls.maxDistance = 2;
+if ('ontouchstart' in window) {
+  orbitControls.enableRotate = false; // disable rotation on mobile
+}
 
 function animate() {
   renderer.render(scene, camera);

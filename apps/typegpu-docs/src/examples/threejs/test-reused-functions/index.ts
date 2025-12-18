@@ -1,14 +1,19 @@
+// Regression test - previously, this example produced black cubes and errors.
+// Now there should be no errors and the cubes should be purple.
 import * as THREE from 'three/webgpu';
-import * as t3 from '@typegpu/three';
-import { perlin3d } from '@typegpu/noise';
-import * as d from 'typegpu/data';
-import { tanh } from 'typegpu/std';
+import {
+  getCubeDiamondWithReference,
+  getCubeNestedFunctionReference,
+  getCubeTwoDifferentFunctions,
+  getCubeTwoSameFunctions,
+} from './cubes.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
 const renderer = new THREE.WebGPURenderer({ canvas });
-renderer.setPixelRatio(window.devicePixelRatio);
 await renderer.init();
+
+renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -19,20 +24,10 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.z = 5;
 
-const material = new THREE.MeshBasicNodeMaterial();
-
-material.colorNode = t3.toTSL(() => {
-  'use gpu';
-  const coords = t3.uv().$.mul(2);
-  const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
-  return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
-});
-
-const mesh = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  material,
-);
-scene.add(mesh);
+scene.add(getCubeTwoDifferentFunctions());
+scene.add(getCubeTwoSameFunctions());
+scene.add(getCubeNestedFunctionReference());
+scene.add(getCubeDiamondWithReference());
 
 const onResize: ResizeObserverCallback = (entries) => {
   const size = entries[0]?.devicePixelContentBoxSize[0];
@@ -52,8 +47,10 @@ let prevTime: number | undefined;
 renderer.setAnimationLoop((time) => {
   const deltaTime = (time - (prevTime ?? time)) * 0.001;
   prevTime = time;
-  mesh.rotation.x += 0.2 * deltaTime;
-  mesh.rotation.y += 0.2 * deltaTime;
+  scene.children.forEach((mesh) => {
+    mesh.rotation.x += 0.2 * deltaTime;
+    mesh.rotation.y += 0.2 * deltaTime;
+  });
   renderer.render(scene, camera);
 });
 

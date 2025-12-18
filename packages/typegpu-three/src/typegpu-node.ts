@@ -3,6 +3,7 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
+import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
 /**
  * State held by the node, used during shader generation.
@@ -10,7 +11,6 @@ import * as d from 'typegpu/data';
 interface TgpuFnNodeData extends THREE.NodeData {
   custom: {
     nodeFunction: NodeFunction;
-    fnCode: string;
     priorCode: THREE.Node;
     functionId: string;
     dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
@@ -20,10 +20,12 @@ interface TgpuFnNodeData extends THREE.NodeData {
 class BuilderData {
   names: WeakMap<object, string>;
   namespace: Namespace;
+  codeGeneratedThusFar: string;
 
   constructor() {
     this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
+    this.codeGeneratedThusFar = '';
 
     this.namespace.on('name', (event) => {
       if (isVariable(event.target)) {
@@ -112,14 +114,17 @@ class TgpuFnNode<T> extends THREE.Node {
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
       );
-      let lastFnStart = code.lastIndexOf('\nfn');
+      builderData.codeGeneratedThusFar += code;
+      let lastFnStart = builderData.codeGeneratedThusFar.indexOf(
+        `\nfn ${functionId}`,
+      );
       if (lastFnStart === -1) {
         // We're starting with the function declaration
         lastFnStart = 0;
       }
 
       // Extracting the function code
-      let fnCode = code.slice(lastFnStart).trim();
+      const fnCode = builderData.codeGeneratedThusFar.slice(lastFnStart).trim();
 
       nodeData.custom = {
         functionId: functionId ?? '',
@@ -127,10 +132,9 @@ class TgpuFnNode<T> extends THREE.Node {
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
           forceExplicitVoidReturn(fnCode),
         ),
-        fnCode,
         // Including code that was resolved before the function as another node
         // that this node depends on
-        priorCode: TSL.code(code.slice(0, lastFnStart) ?? ''),
+        priorCode: TSL.code(code),
         dependencies: ctx.dependencies,
       };
     }
@@ -163,10 +167,6 @@ class TgpuFnNode<T> extends THREE.Node {
       // @ts-expect-error: It's there
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
-
-    const nodeCode = builder.getCodeFromNode(this, this.getNodeType(builder));
-    // @ts-expect-error
-    nodeCode.code = nodeData.custom.fnCode;
 
     if (output === 'property') {
       return nodeData.custom.functionId;
@@ -224,6 +224,35 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   }
 }
 
+const typeMap = {
+  'f': 'f32',
+  'h': 'f16',
+  'i': 'i32',
+  'u': 'u32',
+  'b': 'bool',
+} as const;
+
+/**
+ * Maps short type identifiers to their explicit WGSL type names.
+ *
+ * @example
+ * convertTypeToExplicit('vec3f'); // 'vec3<f32>'
+ */
+function convertTypeToExplicit(type: string) {
+  if (type.startsWith('vec') && type.indexOf('<') === -1) {
+    const itemCount = type.charAt(3);
+    const itemType = typeMap[type.charAt(4) as keyof typeof typeMap];
+    return `vec${itemCount}<${itemType}>`;
+  }
+  if (type.startsWith('mat') && type.indexOf('<') === -1) {
+    const itemCount = type.charAt(3);
+    const itemType = typeMap[type.charAt(6) as keyof typeof typeMap];
+    return `mat${itemCount}x${itemCount}<${itemType}>`;
+  }
+  return type;
+}
+
+let sharedBuilder: WGSLNodeBuilder | undefined;
 export const fromTSL = tgpu['~unstable'].comptime<
   & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
@@ -234,6 +263,30 @@ export const fromTSL = tgpu['~unstable'].comptime<
     type: T,
   ) => TSLAccessor<T, TNode>)
 >((node, type) => {
-  const dataType = d.isData(type) ? type : (type as (length: number) => any)(0);
-  return new TSLAccessor(node, dataType);
+  const tgpuType = d.isData(type) ? type : (type as (length: number) => any)(0);
+
+  // In THREE, the type of array buffers equals to the type of the element.
+  const wgslTypeFromTgpu = convertTypeToExplicit(
+    `${d.isWgslArray(tgpuType) ? tgpuType.elementType : tgpuType}`,
+  );
+
+  if (!sharedBuilder) {
+    sharedBuilder = new WGSLNodeBuilder();
+  }
+  const nodeType = node.getNodeType(sharedBuilder);
+
+  if (nodeType) {
+    const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
+    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
+      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
+        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
+        : '';
+
+      console.warn(
+        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
+      );
+    }
+  }
+
+  return new TSLAccessor(node, tgpuType);
 });
