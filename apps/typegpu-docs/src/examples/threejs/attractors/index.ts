@@ -17,24 +17,13 @@ import * as std from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const getTargetSize = () => {
-  const canvasResizeContainer = canvas.parentElement
-    ?.parentElement as HTMLDivElement;
-
-  return [
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  ] as [number, number];
-};
-
 const scene = new THREE.Scene();
 
 // camera
 
-const targetSize = getTargetSize();
 const camera = new THREE.PerspectiveCamera(
   25,
-  targetSize[0] / targetSize[1],
+  1,
   0.1,
   100,
 );
@@ -67,20 +56,18 @@ orbitControls.enableDamping = true;
 orbitControls.minDistance = 0.1;
 orbitControls.maxDistance = 50;
 
-window.addEventListener('resize', onWindowResize);
-
 // attractors
 
 const attractorsPositions = t3.uniformArray([
   new THREE.Vector3(-1, 0, 0),
   new THREE.Vector3(1, 0, -0.5),
   new THREE.Vector3(0, 0.5, 1),
-], d.vec3f);
+], d.vec4f);
 const attractorsRotationAxes = t3.uniformArray([
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(1, 0, -0.5).normalize(),
-], d.vec3f);
+], d.vec4f);
 const attractorsLength = t3.uniform(
   attractorsPositions.node.array.length,
   d.u32,
@@ -187,7 +174,7 @@ const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
 
 const velocityBufferAttributeTA = t3.fromTSL(
   velocityBuffer.node.toAttribute(),
-  d.vec4f,
+  d.vec3f,
 );
 
 // init compute
@@ -299,7 +286,7 @@ material.positionNode = positionBuffer.node.toAttribute();
 
 material.colorNode = t3.toTSL(() => {
   'use gpu';
-  const velocity = velocityBufferAttributeTA.$.xyz;
+  const velocity = velocityBufferAttributeTA.$;
   const speed = std.length(velocity);
   const colorMix = std.smoothstep(0, 0.5, speed / maxSpeed.$);
   const finalColor = std.mix(colorA.$, colorB.$, colorMix);
@@ -315,27 +302,22 @@ const geometry = new THREE.PlaneGeometry(1, 1);
 const mesh = new THREE.InstancedMesh(geometry, material, count);
 scene.add(mesh);
 
-function onWindowResize() {
-  const targetSize = getTargetSize();
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
+  }
+};
 
-  camera.aspect = targetSize[0] / targetSize[1];
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(...targetSize);
-}
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
 
 async function animate() {
   orbitControls.update();
-
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
-  }
-
   renderer.compute(updateCompute);
   renderer.render(scene, camera);
 }
@@ -452,7 +434,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  window.removeEventListener('resize', onWindowResize);
+  observer.disconnect();
   renderer.dispose();
 }
 
