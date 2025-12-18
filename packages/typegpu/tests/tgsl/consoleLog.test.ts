@@ -10,13 +10,11 @@ import { it } from '../utils/extendedIt.ts';
 describe('wgslGenerator with console.log', () => {
   let ctx: ResolutionCtxImpl;
   beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-    });
+    ctx = new ResolutionCtxImpl({ namespace: namespace() });
     ctx.pushMode(new CodegenState());
   });
 
-  it('Parses console.log in a stray function to a comment and warns', ({ root }) => {
+  it('Parses console.log in a stray function to a comment and warns', () => {
     using consoleWarnSpy = vi
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
@@ -37,7 +35,7 @@ describe('wgslGenerator with console.log', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('Throws appropriate error when in a vertex shader', ({ root }) => {
+  it('Throws appropriate error when in a vertex shader', () => {
     const myLog = (n: number) => {
       'use gpu';
       console.log(n);
@@ -75,7 +73,7 @@ describe('wgslGenerator with console.log', () => {
     });
 
     const pipeline = root['~unstable']
-      .withVertex(vs, {})
+      .withVertex(vs)
       .withFragment(fs, { format: 'rg8unorm' })
       .createPipeline();
 
@@ -117,7 +115,7 @@ describe('wgslGenerator with console.log', () => {
       });
 
     const pipeline = root['~unstable']
-      .withVertex(vs, {})
+      .withVertex(vs)
       .withFragment(fs, { format: 'rg8unorm' })
       .createPipeline();
 
