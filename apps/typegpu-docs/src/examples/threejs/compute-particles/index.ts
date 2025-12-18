@@ -57,7 +57,6 @@ const computeInit = t3.toTSL(() => {
 
   randf.seed(d.f32(instanceIdx / amount));
   color.x = randf.sample();
-  randf.seed(d.f32(instanceIdx / amount) + 2);
   color.y = randf.sample();
   colors.$[instanceIdx] = d.vec3f(color);
 }).compute(particleCount).setName('Init Particles TypeGPU');
@@ -69,7 +68,7 @@ const computeAccessor = t3.toTSL(() => {
   let position = positions.$[instanceIdx];
   let velocity = velocities.$[instanceIdx];
 
-  velocity = velocity.add(d.vec3f(0, gravity.$, 0));
+  velocity.y += gravity.$;
   position = position.add(velocity);
   velocity = velocity.mul(friction.$);
 
