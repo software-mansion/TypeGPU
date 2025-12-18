@@ -57,23 +57,12 @@ if (WebGPU.isAvailable() === false) {
 }
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const canvasResizeContainer = canvas.parentElement
-  ?.parentElement as HTMLDivElement;
 
-const getTargetSize = () => {
-  return [
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  ] as [number, number];
-};
-
-const initialSize = getTargetSize();
 const renderer = new THREE.WebGPURenderer({
   antialias: true,
   canvas,
 });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(...initialSize);
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1;
 
@@ -86,7 +75,7 @@ scene.add(sphere);
 
 const camera = new THREE.PerspectiveCamera(
   40,
-  initialSize[0] / initialSize[1],
+  1,
   0.01,
   10,
 );
@@ -140,7 +129,7 @@ function setupWireframe() {
     false,
   );
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.u32);
+  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.f32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
     'use gpu';
     const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
@@ -284,20 +273,6 @@ function setupClothMesh(): THREE.Mesh {
   return clothMesh;
 }
 
-function onWindowResize() {
-  camera.aspect = canvasResizeContainer.clientWidth /
-    canvasResizeContainer.clientHeight;
-  canvas.width = canvasResizeContainer.clientWidth;
-  canvas.height = canvasResizeContainer.clientHeight;
-
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  );
-}
-
 function updateSphere() {
   sphere.position.set(
     Math.sin(timestamp * 2.1) * 0.1,
@@ -307,16 +282,21 @@ function updateSphere() {
   spherePositionUniform.node.value.copy(sphere.position);
 }
 
-async function render() {
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
   }
+};
 
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
+
+async function render() {
   sphere.visible = params.sphere;
   sphereUniform.node.value = params.sphere ? 1 : 0;
   verletSim.windUniform.node.value = params.wind;
@@ -338,9 +318,10 @@ async function render() {
     await verletSim.update(renderer);
   }
 
-  await renderer.renderAsync(scene, camera);
+  renderer.render(scene, camera);
 }
 
+// #region Example controls and cleanup
 export const controls = {
   Stiffness: {
     initial: 0.2,
@@ -410,5 +391,8 @@ export const controls = {
 };
 
 export function onCleanup() {
+  observer.disconnect();
   renderer.dispose();
 }
+
+// #endregion
