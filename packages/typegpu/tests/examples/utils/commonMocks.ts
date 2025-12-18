@@ -15,6 +15,28 @@ export function setupCommonMocks() {
       },
     );
 
+    Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
+      get: () => 256,
+      set: () => {},
+      configurable: true,
+    });
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'height', {
+      get: () => 256,
+      set: () => {},
+      configurable: true,
+    });
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'clientWidth', {
+      get: () => 256,
+      configurable: true,
+    });
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'clientHeight', {
+      get: () => 256,
+      configurable: true,
+    });
+
     // jsdom will sometimes throw css related errors which we don't care about
     vi.spyOn(console, 'error').mockImplementation(() => {});
 

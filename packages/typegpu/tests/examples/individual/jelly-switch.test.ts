@@ -79,12 +79,12 @@ describe('jelly switch example', () => {
         return Ray_11(rayOrigin, rayDir);
       }
 
-      fn sdPlane_14(p: vec3f, n: vec3f, h: f32) -> f32 {
-        return (dot(p, n) + h);
+      fn sdPlane_14(point: vec3f, normal: vec3f, height: f32) -> f32 {
+        return (dot(point, normal) + height);
       }
 
-      fn sdRoundedBox2d_16(p: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(p) - size) + vec2f(cornerRadius));
+      fn sdRoundedBox2d_16(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+        var d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
@@ -94,8 +94,8 @@ describe('jelly switch example', () => {
         return sdRoundedBox2d_16(position, vec2f((0.4f + groundRoundness), (groundRadius + groundRoundness)), (groundRadius + groundRoundness));
       }
 
-      fn opExtrudeY_17(p: vec3f, dd: f32, h: f32) -> f32 {
-        var w = vec2f(dd, (abs(p.y) - h));
+      fn opExtrudeY_17(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
+        var w = vec2f(dd, (abs(point.y) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
@@ -136,8 +136,8 @@ describe('jelly switch example', () => {
         return vec3f((m * p.xy), p.z);
       }
 
-      fn sdRoundedBox3d_30(p: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
-        var d = ((abs(p) - size) + vec3f(cornerRadius));
+      fn sdRoundedBox3d_30(point: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
+        var d = ((abs(point) - size) + vec3f(cornerRadius));
         return ((length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f)) - cornerRadius);
       }
 

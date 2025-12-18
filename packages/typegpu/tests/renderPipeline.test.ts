@@ -32,32 +32,32 @@ describe('TgpuRenderPipeline', () => {
 
     // Using none
     const pipeline = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vert)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are erased from the vertex output)
     const pipeline2 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are ignored in the fragment input)
     const pipeline3 = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vert)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using none (builtins are ignored in both input and output,
     // so their conflict of the `pos` key is fine)
     const pipeline4 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using all
     const pipeline5 = root
-      .withVertex(vert, {})
+      .withVertex(vert)
       .withFragment(fullFragment, { format: 'rgba8unorm' })
       .createPipeline();
 
@@ -793,6 +793,53 @@ describe('TgpuRenderPipeline', () => {
         },
       }),
     );
+  });
+
+  it('should handle stencil reference value correctly', ({ root, commandEncoder }) => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        out: { pos: d.builtin.position },
+      })('')
+      .$name('vertex');
+
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        out: { color: d.vec4f },
+      })('')
+      .$name('fragment');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .withDepthStencil({
+        format: 'stencil8',
+        stencilFront: { passOp: 'replace' },
+      })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      })
+      .withDepthStencilAttachment({
+        view: {} as unknown as GPUTextureView,
+        stencilLoadOp: 'clear',
+        stencilStoreOp: 'store',
+        stencilClearValue: 5,
+      })
+      .withStencilReference(3);
+
+    pipeline.draw(3);
+
+    const renderPassEncoder = commandEncoder.mock.beginRenderPass();
+    expect(renderPassEncoder.setStencilReference)
+      .toHaveBeenCalledExactlyOnceWith(3);
+
+    pipeline.withStencilReference(7).draw(3);
+
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 7);
   });
 
   it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
