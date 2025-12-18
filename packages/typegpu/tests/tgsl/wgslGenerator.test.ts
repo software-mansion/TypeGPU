@@ -713,6 +713,51 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('handles "for ... of ..." internal index variable when "i" is used by user', () => {
+    const f1 = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const foo of arr) {
+        const i = foo;
+      }
+    };
+
+    expect(tgpu.resolve([f1])).toMatchInlineSnapshot(`
+      "fn f1() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0; i < 3; i++) {
+          let foo = arr[i];
+          {
+            let i = foo;
+          }
+        }
+      }"
+    `);
+
+    const f2 = () => {
+      'use gpu';
+      const i = 7;
+      const arr = [1, 2, 3];
+      for (const foo of arr) {
+        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([f2])).toMatchInlineSnapshot(`
+      "fn f2() {
+        const i = 7;
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var ii = 0; ii < 3; ii++) {
+          let foo = arr[ii];
+          {
+            continue;
+          }
+        }
+      }"
+    `);
+  });
+
   it('creates correct resources for derived values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => {
       return derivedV4u.value;

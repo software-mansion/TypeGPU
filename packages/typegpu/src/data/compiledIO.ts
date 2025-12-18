@@ -196,6 +196,10 @@ export function buildWriter(
   }
 
   if (wgsl.isVec(node)) {
+    if (wgsl.isVecBool(node)) {
+      throw new Error('Compiled writers do not support boolean vectors');
+    }
+
     const primitive = typeToPrimitive[node.type];
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];

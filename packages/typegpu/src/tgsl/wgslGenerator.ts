@@ -1053,9 +1053,15 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      // if user defines a variable named 'i', it will be scoped to a new block,
-      // shadowing our 'i'
-      const index = this.ctx.makeNameValid('i');
+      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
+      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
+      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
+      // so we can safely use `i`.
+      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
+      while (this.ctx.getById(index) !== null) {
+        console.log(this.ctx.getById(index));
+        index += 'i';
+      }
 
       const elementSnippet = accessIndex(
         iterableSnippet,
@@ -1069,7 +1075,7 @@ ${this.ctx.pre}else ${alternate}`;
 
       const iterableDataType = iterableSnippet.dataType;
       let elementCount: number;
-      let elementType = elementSnippet?.dataType;
+      let elementType = elementSnippet.dataType;
       if (wgsl.isWgslArray(iterableDataType)) {
         elementCount = iterableDataType.elementCount;
       } else if (wgsl.isVec(iterableDataType)) {
@@ -1120,11 +1126,6 @@ ${this.ctx.pre}else ${alternate}`;
         elementSnippet.origin,
       );
       this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
-      const iterableStr = this.ctx.resolve(
-        iterableSnippet.value,
-        iterableDataType,
-      ).value;
 
       const forStr =
         `${this.ctx.pre}for (var ${index} = 0; ${index} < ${elementCount}; ${index}++) {`;
