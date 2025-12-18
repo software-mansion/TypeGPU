@@ -333,7 +333,7 @@ async function render() {
     await verletSim.update(renderer);
   }
 
-  await renderer.render(scene, camera);
+  renderer.render(scene, camera);
 }
 
 export function onCleanup() {
