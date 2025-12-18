@@ -696,6 +696,23 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('throws error when "for ... of ..." statement uses let declarator', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      // biome-ignore lint/style/useConst: it's a part of the test
+      for (let foo of arr) {
+      }
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Only \`for (const ... of ... )\` loops are supported]
+    `);
+  });
+
   it('creates correct resources for derived values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => {
       return derivedV4u.value;
