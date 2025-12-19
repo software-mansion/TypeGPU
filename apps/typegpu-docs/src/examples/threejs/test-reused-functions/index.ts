@@ -14,14 +14,11 @@ const renderer = new THREE.WebGPURenderer({ canvas });
 await renderer.init();
 
 renderer.setPixelRatio(window.devicePixelRatio);
-let lastWidth = canvas.clientWidth;
-let lastHeight = canvas.clientHeight;
-renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
   75,
-  lastWidth / lastHeight,
+  1,
   0.1,
   1000,
 );
@@ -32,16 +29,22 @@ scene.add(getCubeTwoSameFunctions());
 scene.add(getCubeNestedFunctionReference());
 scene.add(getCubeDiamondWithReference());
 
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
+  }
+};
+
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
+
 let prevTime: number | undefined;
 renderer.setAnimationLoop((time) => {
-  if (canvas.clientWidth !== lastWidth || canvas.clientHeight !== lastHeight) {
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-    lastWidth = canvas.clientWidth;
-    lastHeight = canvas.clientHeight;
-  }
-
   const deltaTime = (time - (prevTime ?? time)) * 0.001;
   prevTime = time;
   scene.children.forEach((mesh) => {
@@ -52,5 +55,6 @@ renderer.setAnimationLoop((time) => {
 });
 
 export function onCleanup() {
+  observer.disconnect();
   renderer.dispose();
 }

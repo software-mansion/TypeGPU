@@ -17,24 +17,13 @@ import * as std from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const getTargetSize = () => {
-  const canvasResizeContainer = canvas.parentElement
-    ?.parentElement as HTMLDivElement;
-
-  return [
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  ] as [number, number];
-};
-
 const scene = new THREE.Scene();
 
 // camera
 
-const targetSize = getTargetSize();
 const camera = new THREE.PerspectiveCamera(
   25,
-  targetSize[0] / targetSize[1],
+  1,
   0.1,
   100,
 );
@@ -66,8 +55,6 @@ const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.minDistance = 0.1;
 orbitControls.maxDistance = 50;
-
-window.addEventListener('resize', onWindowResize);
 
 // attractors
 
@@ -315,27 +302,22 @@ const geometry = new THREE.PlaneGeometry(1, 1);
 const mesh = new THREE.InstancedMesh(geometry, material, count);
 scene.add(mesh);
 
-function onWindowResize() {
-  const targetSize = getTargetSize();
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
+  }
+};
 
-  camera.aspect = targetSize[0] / targetSize[1];
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(...targetSize);
-}
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
 
 async function animate() {
   orbitControls.update();
-
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
-  }
-
   renderer.compute(updateCompute);
   renderer.render(scene, camera);
 }
@@ -452,7 +434,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  window.removeEventListener('resize', onWindowResize);
+  observer.disconnect();
   renderer.dispose();
 }
 

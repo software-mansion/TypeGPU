@@ -21,6 +21,12 @@ import {
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
 const sphereUniform = t3.uniform(1.0, d.f32);
+
+const patternUniforms = {
+  color1: t3.uniform(new THREE.Vector4(0.9, 0.3, 0.3, 1), d.vec4f),
+  color2: t3.uniform(new THREE.Vector4(1, 0.5, 0.4, 1), d.vec4f),
+};
+
 const verletSim = new VerletSimulation({
   sphereRadius,
   sphereUniform,
@@ -28,6 +34,7 @@ const verletSim = new VerletSimulation({
 });
 
 let vertexWireframeObject: THREE.Mesh, springWireframeObject: THREE.Line;
+let clothMaterial: THREE.MeshPhysicalNodeMaterial;
 let timeSinceLastStep = 0;
 let timestamp = 0;
 
@@ -40,7 +47,6 @@ const params = {
 };
 
 const API = {
-  color: 0x204080, // sRGB
   sheenColor: 0xffffff, // sRGB
 };
 
@@ -51,23 +57,12 @@ if (WebGPU.isAvailable() === false) {
 }
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const canvasResizeContainer = canvas.parentElement
-  ?.parentElement as HTMLDivElement;
 
-const getTargetSize = () => {
-  return [
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  ] as [number, number];
-};
-
-const initialSize = getTargetSize();
 const renderer = new THREE.WebGPURenderer({
   antialias: true,
   canvas,
 });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(...initialSize);
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1;
 
@@ -80,17 +75,17 @@ scene.add(sphere);
 
 const camera = new THREE.PerspectiveCamera(
   40,
-  initialSize[0] / initialSize[1],
+  1,
   0.01,
   10,
 );
 camera.position.set(-1.6, -0.1, -1.6);
 
-const controls = new OrbitControls(camera, canvas);
-controls.minDistance = 1;
-controls.maxDistance = 3;
-controls.target.set(0, -0.1, 0);
-controls.update();
+const cameraControls = new OrbitControls(camera, canvas);
+cameraControls.minDistance = 1;
+cameraControls.maxDistance = 3;
+cameraControls.target.set(0, -0.1, 0);
+cameraControls.update();
 
 const hdrLoader = new UltraHDRLoader().setPath(
   'https://threejs.org/examples/textures/equirectangular/',
@@ -225,8 +220,7 @@ function setupClothMesh(): THREE.Mesh {
   geometry.setAttribute('vertexIds', verletVertexIdBuffer);
   geometry.setIndex(indices);
 
-  const clothMaterial = new THREE.MeshPhysicalNodeMaterial({
-    color: new THREE.Color().setHex(API.color),
+  clothMaterial = new THREE.MeshPhysicalNodeMaterial({
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.85,
@@ -245,7 +239,7 @@ function setupClothMesh(): THREE.Mesh {
     'use gpu';
     const uv = t3.uv().$;
     const pattern = checkerBoard(uv.mul(5));
-    return std.mix(d.vec4f(0.4, 0.3, 0.3, 1), d.vec4f(1, 0.5, 0.4, 1), pattern);
+    return std.mix(patternUniforms.color1.$, patternUniforms.color2.$, pattern);
   });
 
   clothMaterial.positionNode = TSL.Fn(({ material }) => {
@@ -279,20 +273,6 @@ function setupClothMesh(): THREE.Mesh {
   return clothMesh;
 }
 
-function onWindowResize() {
-  camera.aspect = canvasResizeContainer.clientWidth /
-    canvasResizeContainer.clientHeight;
-  canvas.width = canvasResizeContainer.clientWidth;
-  canvas.height = canvasResizeContainer.clientHeight;
-
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(
-    canvasResizeContainer.clientWidth,
-    canvasResizeContainer.clientHeight,
-  );
-}
-
 function updateSphere() {
   sphere.position.set(
     Math.sin(timestamp * 2.1) * 0.1,
@@ -302,16 +282,21 @@ function updateSphere() {
   spherePositionUniform.node.value.copy(sphere.position);
 }
 
-async function render() {
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
   }
+};
 
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
+
+async function render() {
   sphere.visible = params.sphere;
   sphereUniform.node.value = params.sphere ? 1 : 0;
   verletSim.windUniform.node.value = params.wind;
@@ -336,6 +321,78 @@ async function render() {
   renderer.render(scene, camera);
 }
 
+// #region Example controls and cleanup
+export const controls = {
+  Stiffness: {
+    initial: 0.2,
+    min: 0.1,
+    max: 0.7,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      verletSim.stiffnessUniform.node.value = value;
+    },
+  },
+  'Pattern Color 1': {
+    initial: [204 / 255, 144 / 255, 250 / 255] as [number, number, number],
+    onColorChange: (value: [number, number, number]) => {
+      patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
+    },
+  },
+  'Pattern Color 2': {
+    initial: [100 / 255, 125 / 255, 228 / 255] as [number, number, number],
+    onColorChange: (value: [number, number, number]) => {
+      patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
+    },
+  },
+  Roughness: {
+    initial: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.roughness = value;
+    },
+  },
+  Sheen: {
+    initial: 1.0,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.sheen = value;
+    },
+  },
+  'Sheen Roughness': {
+    initial: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      clothMaterial.sheenRoughness = value;
+    },
+  },
+  'Sheen Color': {
+    initial: new THREE.Color(API.sheenColor).toArray(),
+    onColorChange: (value: [number, number, number]) => {
+      const color = new THREE.Color().fromArray(value);
+      API.sheenColor = color.getHex();
+      clothMaterial.sheenColor = color;
+    },
+  },
+  Wind: {
+    initial: 1,
+    min: 0,
+    max: 5,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      params.wind = value;
+    },
+  },
+};
+
 export function onCleanup() {
+  observer.disconnect();
   renderer.dispose();
 }
+
+// #endregion
