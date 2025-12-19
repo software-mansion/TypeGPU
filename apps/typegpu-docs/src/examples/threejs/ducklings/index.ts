@@ -13,7 +13,7 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { BOUNDS, limit, WIDTH } from './consts.ts';
+import { BOUNDS, limit, NUM_DUCKS, SPEED, SUN_POSITION, WIDTH } from './consts.ts';
 import { initializeHeightArrays } from './utils.ts';
 import { createGpuHelpers } from './gpuHelpers.ts';
 
@@ -46,7 +46,7 @@ const controls = new OrbitControls(camera, canvas);
 
 // Sun
 const sun = new THREE.DirectionalLight(0xffffff, 4.0);
-sun.position.set(-1, 2.6, 1.4);
+sun.position.set(SUN_POSITION[0], SUN_POSITION[1], SUN_POSITION[2]);
 scene.add(sun);
 
 // height storage buffers
@@ -74,9 +74,6 @@ const raycaster = new THREE.Raycaster();
 let frame = 0;
 let pingPong = 0;
 let ducksEnabled = true;
-const speed = 5;
-
-const NUM_DUCKS = 100;
 
 // Create GPU helper functions with closure over storage buffers
 const { getNeighborIndices, getCurrentHeight, getCurrentNormals } =
@@ -90,20 +87,14 @@ const { getNeighborIndices, getCurrentHeight, getCurrentNormals } =
 const computeHeightAtoB = t3.toTSL(() => {
   'use gpu';
   const idx = t3.instanceIndex.$;
-
   const height = heightStorageA.$[idx];
   const prevHeight = prevHeightStorage.$[idx];
 
   const neighbors = getNeighborIndices(idx);
-  const northIndex = neighbors.northIndex;
-  const southIndex = neighbors.southIndex;
-  const eastIndex = neighbors.eastIndex;
-  const westIndex = neighbors.westIndex;
-
-  const north = heightStorageA.$[northIndex];
-  const south = heightStorageA.$[southIndex];
-  const east = heightStorageA.$[eastIndex];
-  const west = heightStorageA.$[westIndex];
+  const north = heightStorageA.$[neighbors.northIndex];
+  const south = heightStorageA.$[neighbors.southIndex];
+  const east = heightStorageA.$[neighbors.eastIndex];
+  const west = heightStorageA.$[neighbors.westIndex];
 
   let neighborHeight = std.mul(
     std.add(std.add(std.add(north, south), east), west),
@@ -147,15 +138,10 @@ const computeHeightBtoA = t3.toTSL(() => {
   const prevHeight = prevHeightStorage.$[idx];
 
   const neighbors = getNeighborIndices(idx);
-  const northIndex = neighbors.northIndex;
-  const southIndex = neighbors.southIndex;
-  const eastIndex = neighbors.eastIndex;
-  const westIndex = neighbors.westIndex;
-
-  const north = heightStorageB.$[northIndex];
-  const south = heightStorageB.$[southIndex];
-  const east = heightStorageB.$[eastIndex];
-  const west = heightStorageB.$[westIndex];
+  const north = heightStorageB.$[neighbors.northIndex];
+  const south = heightStorageB.$[neighbors.southIndex];
+  const east = heightStorageB.$[neighbors.eastIndex];
+  const west = heightStorageB.$[neighbors.westIndex];
 
   let neighborHeight = std.mul(
     std.add(std.add(std.add(north, south), east), west),
@@ -212,9 +198,7 @@ const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32);
 waterMaterial.normalNode = t3.toTSL(() => {
   'use gpu';
   const normals = getCurrentNormals(vertexIndex.$);
-  const normalX = normals.normalX;
-  const normalY = normals.normalY;
-  return d.vec3f(normalX, std.neg(normalY), 1.0);
+  return d.vec3f(normals.normalX, std.neg(normals.normalY), 1.0);
 });
 
 waterMaterial.positionNode = t3.toTSL(() => {
@@ -266,7 +250,7 @@ for (let i = 0; i < NUM_DUCKS; i++) {
 const duckPositionStorage = t3.instancedArray(duckPositions, d.vec3f);
 const duckVelocityStorage = t3.instancedArray(duckVelocities, d.vec2f);
 
-// compute shader
+// ducks compute shader
 const computeDucks = t3.toTSL(() => {
   'use gpu';
   const yOffset = -0.04;
@@ -368,11 +352,7 @@ duckMaterial.positionNode = t3.toTSL(() => {
   const idx = t3.instanceIndex.$;
   const instancePosition = duckPositionStorage.$[idx];
   const posLocal = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
-  return d.vec3f(
-    std.add(posLocal.x, instancePosition.x),
-    std.add(posLocal.y, instancePosition.y),
-    std.add(posLocal.z, instancePosition.z),
-  );
+  return posLocal.add(instancePosition);
 });
 
 const duckMesh = new THREE.InstancedMesh(
@@ -388,7 +368,7 @@ renderer.setAnimationLoop(() => {
 
   frame++;
 
-  if (frame >= 7 - speed) {
+  if (frame >= 7 - SPEED) {
     // Ping-pong: alternate which buffer we read from and write to
     if (pingPong === 0) {
       renderer.compute(computeHeightAtoB);
