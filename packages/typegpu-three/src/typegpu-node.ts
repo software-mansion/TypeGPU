@@ -194,8 +194,11 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.node = node;
     this.#dataType = dataType;
 
-    // @ts-expect-error: The properties exist on the node
-    if (!node.isStorageBufferNode && !node.isUniformNode) {
+    // node.isTextureNode - temporary workaround for textures
+    if (
+      // @ts-expect-error: The properties exist on the node
+      (!node.isStorageBufferNode && !node.isUniformNode) || node.isTextureNode
+    ) {
       this.var = tgpu.privateVar(dataType);
     }
   }
