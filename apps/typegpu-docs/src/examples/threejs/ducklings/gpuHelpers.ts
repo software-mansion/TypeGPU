@@ -44,15 +44,26 @@ export function createGpuHelpers(
   const getCurrentNormals = (index: number) => {
     'use gpu';
     const neighbors = getNeighborIndices(index);
-    const northIndex = neighbors.northIndex;
-    const southIndex = neighbors.southIndex;
-    const eastIndex = neighbors.eastIndex;
-    const westIndex = neighbors.westIndex;
-
-    const north = getCurrentHeight(northIndex);
-    const south = getCurrentHeight(southIndex);
-    const east = getCurrentHeight(eastIndex);
-    const west = getCurrentHeight(westIndex);
+    const north = std.select(
+      heightStorageB.$[neighbors.northIndex],
+      heightStorageA.$[neighbors.northIndex],
+      readFromA.$ === 1,
+    );
+    const south = std.select(
+      heightStorageB.$[neighbors.southIndex],
+      heightStorageA.$[neighbors.southIndex],
+      readFromA.$ === 1,
+    );
+    const east = std.select(
+      heightStorageB.$[neighbors.eastIndex],
+      heightStorageA.$[neighbors.eastIndex],
+      readFromA.$ === 1,
+    );
+    const west = std.select(
+      heightStorageB.$[neighbors.westIndex],
+      heightStorageA.$[neighbors.westIndex],
+      readFromA.$ === 1,
+    );
 
     const normalX = std.mul(std.sub(west, east), std.div(WIDTH, BOUNDS));
     const normalY = std.mul(std.sub(south, north), std.div(WIDTH, BOUNDS));

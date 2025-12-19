@@ -192,14 +192,15 @@ const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32);
 
 waterMaterial.normalNode = t3.toTSL(() => {
   'use gpu';
-  const normals = getCurrentNormals(vertexIndex.$);
+  const vertexIndexx = vertexIndex.$;
+  const normals = getCurrentNormals(d.u32(vertexIndexx));
   return d.vec3f(normals.normalX, std.neg(normals.normalY), 1.0);
 });
 
 waterMaterial.positionNode = t3.toTSL(() => {
   'use gpu';
   const posLocal = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
-  return d.vec3f(posLocal.x, posLocal.y, getCurrentHeight(vertexIndex.$));
+  return d.vec3f(posLocal.x, posLocal.y, getCurrentHeight(d.u32(vertexIndex.$)));
 });
 
 const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
@@ -271,8 +272,8 @@ const computeDucks = t3.toTSL(() => {
   const zCoord = d.u32(std.clamp(std.floor(gridCoordZ), 0, std.sub(WIDTH, 1)));
   const heightInstanceIndex = std.add(std.mul(zCoord, WIDTH), xCoord);
 
-  const waterHeight = getCurrentHeight(heightInstanceIndex);
-  const normals = getCurrentNormals(heightInstanceIndex);
+  const waterHeight = getCurrentHeight(d.u32(heightInstanceIndex));
+  const normals = getCurrentNormals(d.u32(heightInstanceIndex));
 
   const targetY = std.add(waterHeight, yOffset);
   const deltaY = std.sub(targetY, instancePosition.y);
@@ -312,6 +313,8 @@ const computeDucks = t3.toTSL(() => {
   duckPositionStorage.$[idx] = d.vec3f(instancePosition);
   duckVelocityStorage.$[idx] = d.vec2f(velocity);
 }).compute(NUM_DUCKS);
+
+
 
 // Load environment and duck model
 const hdrLoader = new HDRLoader().setPath(

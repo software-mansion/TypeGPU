@@ -110,10 +110,12 @@ class TgpuFnNode<T> extends THREE.Node {
       } finally {
         currentlyGeneratingFnNodeCtx = undefined;
       }
-
+      
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
-      );
+    );
+    console.log(code);
+    console.log(ctx.dependencies);
       builderData.codeGeneratedThusFar += code;
       let lastFnStart = builderData.codeGeneratedThusFar.indexOf(
         `\nfn ${functionId}`,
@@ -153,6 +155,7 @@ class TgpuFnNode<T> extends THREE.Node {
 
     // Building dependencies
     for (const dep of nodeData.custom.dependencies) {
+      console.log('Building dependency', dep);
       dep.node.build(builder);
     }
     nodeData.custom.priorCode.build(builder);
