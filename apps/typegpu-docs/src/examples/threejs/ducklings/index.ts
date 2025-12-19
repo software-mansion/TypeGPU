@@ -25,26 +25,17 @@ if (WebGPU.isAvailable() === false) {
 }
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const canvasResizeContainer = canvas.parentElement
-  ?.parentElement as HTMLDivElement;
 
-const getTargetSize = () =>
-  [canvasResizeContainer.clientWidth, canvasResizeContainer.clientHeight] as [
-    number,
-    number,
-  ];
-const initialSize = getTargetSize();
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 await renderer.init();
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(...initialSize);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
   75,
-  initialSize[0] / initialSize[1],
+  1,
   1,
   3000,
 );
@@ -275,7 +266,7 @@ for (let i = 0; i < NUM_DUCKS; i++) {
 const duckPositionStorage = t3.instancedArray(duckPositions, d.vec3f);
 const duckVelocityStorage = t3.instancedArray(duckVelocities, d.vec2f);
 
-// Duck compute shader
+// compute shader
 const computeDucks = t3.toTSL(() => {
   'use gpu';
   const yOffset = -0.04;
@@ -393,15 +384,6 @@ scene.add(duckMesh);
 
 // Render loop
 renderer.setAnimationLoop(() => {
-  const targetSize = getTargetSize();
-  const rendererSize = renderer.getSize(new THREE.Vector2());
-  if (
-    targetSize[0] !== rendererSize.width ||
-    targetSize[1] !== rendererSize.height
-  ) {
-    onWindowResize();
-  }
-
   raycast();
 
   frame++;
@@ -496,12 +478,19 @@ function raycast() {
   }
 }
 
-function onWindowResize() {
-  const targetSize = getTargetSize();
-  camera.aspect = targetSize[0] / targetSize[1];
-  camera.updateProjectionMatrix();
-  renderer.setSize(...targetSize);
-}
+const onResize: ResizeObserverCallback = (entries) => {
+  const size = entries[0]?.devicePixelContentBoxSize[0];
+  if (size) {
+    canvas.width = size.inlineSize;
+    canvas.height = size.blockSize;
+    renderer.setSize(size.inlineSize, size.blockSize, false);
+    camera.aspect = size.inlineSize / size.blockSize;
+    camera.updateProjectionMatrix();
+  }
+};
+
+const observer = new ResizeObserver(onResize);
+observer.observe(canvas);
 
 // Export controls for the example panel
 export const controlsConfig = {
@@ -545,5 +534,8 @@ export function onCleanup() {
   canvas.removeEventListener('pointermove', onPointerMove);
   canvas.removeEventListener('pointerdown', onPointerDown);
   canvas.removeEventListener('pointerup', onPointerUp);
+  observer.disconnect();
   renderer.dispose();
 }
+
+// #endregion
