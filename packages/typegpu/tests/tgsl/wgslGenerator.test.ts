@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect } from 'vitest';
+import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -1197,5 +1197,65 @@ describe('wgslGenerator', () => {
       - <root>
       - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
     `);
+  });
+
+  it('console.warns the suggestion when snippet value is array', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const getArr = tgpu['~unstable'].comptime(() =>
+      d.arrayOf(d.f32, 2)([1, 2])
+    );
+    const f = () => {
+      'use gpu';
+      const arr = getArr();
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Tried to define variable 'arr' of unknown type]
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `You are likely trying to define variable \`arr\` with a value \`[1,2]\` of an unknown type.
+-----
+- Try to wrap \`[1,2]\` with a schema \`d.arrayOf(...)([1,2])\`.
+-----`,
+    );
+  });
+
+  it('console.warns the suggestion when snippet value is object', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const MyStruct = d.struct({
+      x: d.vec2f,
+    });
+
+    const getMyStruct = tgpu['~unstable'].comptime(() =>
+      MyStruct({ x: d.vec2f(1, 2) })
+    );
+    const f = () => {
+      'use gpu';
+      const s = getMyStruct();
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Tried to define variable 's' of unknown type]
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `You are likely trying to define variable \`s\` with a value of an unknown type.
+-----
+- Try to wrap right-hand side with a schema \`StructSchema(...)\`.
+-----`,
+    );
   });
 });
