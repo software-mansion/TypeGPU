@@ -138,13 +138,8 @@ const computeHeightBtoA = t3.toTSL(() => {
   const prevHeight = prevHeightStorage.$[idx];
 
   const neighbors = getNeighborIndices(idx);
-  const north = heightStorageB.$[neighbors.northIndex];
-  const south = heightStorageB.$[neighbors.southIndex];
-  const east = heightStorageB.$[neighbors.eastIndex];
-  const west = heightStorageB.$[neighbors.westIndex];
-
   let neighborHeight = std.mul(
-    std.add(std.add(std.add(north, south), east), west),
+    std.add(std.add(std.add(heightStorageB.$[neighbors.northIndex], heightStorageB.$[neighbors.southIndex]), heightStorageB.$[neighbors.eastIndex]), heightStorageB.$[neighbors.westIndex]),
     0.5,
   );
   neighborHeight = std.sub(neighborHeight, prevHeight);
@@ -278,8 +273,6 @@ const computeDucks = t3.toTSL(() => {
 
   const waterHeight = getCurrentHeight(heightInstanceIndex);
   const normals = getCurrentNormals(heightInstanceIndex);
-  const normalX = normals.normalX;
-  const normalY = normals.normalY;
 
   const targetY = std.add(waterHeight, yOffset);
   const deltaY = std.sub(targetY, instancePosition.y);
@@ -288,8 +281,8 @@ const computeDucks = t3.toTSL(() => {
     std.mul(deltaY, verticalResponseFactor),
   );
 
-  const pushX = std.mul(normalX, waterPushFactor);
-  const pushZ = std.mul(normalY, waterPushFactor);
+  const pushX = std.mul(normals.normalX, waterPushFactor);
+  const pushZ = std.mul(normals.normalY, waterPushFactor);
 
   velocity.x = std.mul(velocity.x, linearDamping);
   velocity.y = std.mul(velocity.y, linearDamping);
@@ -394,13 +387,16 @@ renderer.setAnimationLoop(() => {
 // #region Example controls and cleanup
 // Event handlers
 function setMouseCoords(x: number, y: number) {
+  const rect = canvas.getBoundingClientRect();
   mouseCoords.set(
-    (x / canvas.clientWidth) * 2 - 1,
-    -(y / canvas.clientHeight) * 2 + 1,
+    ((x - rect.left) / rect.width) * 2 - 1,
+    -((y - rect.top) / rect.height) * 2 + 1,
   );
 }
 
-function onPointerDown() {
+function onPointerDown(event: PointerEvent) {
+  if (event.isPrimary === false) return;
+  setMouseCoords(event.clientX, event.clientY);
   mouseDown = true;
   firstClick = true;
   updateOriginMouseDown = true;
