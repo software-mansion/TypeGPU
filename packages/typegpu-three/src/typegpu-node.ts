@@ -19,19 +19,13 @@ interface TgpuFnNodeData extends THREE.NodeData {
 
 class BuilderData {
   names: WeakMap<object, string>;
-  namespace: Namespace;
+  namespaces: WeakMap<() => unknown, Namespace>;
   codeGeneratedThusFar: string;
 
   constructor() {
     this.names = new WeakMap();
-    this.namespace = tgpu['~unstable'].namespace();
     this.codeGeneratedThusFar = '';
-
-    this.namespace.on('name', (event) => {
-      if (isVariable(event.target)) {
-        this.names.set(event.target, event.name);
-      }
-    });
+    this.namespaces = new WeakMap();
   }
 }
 
@@ -94,6 +88,18 @@ class TgpuFnNode<T> extends THREE.Node {
         console.warn('[@typegpu/three] Nested function generation detected');
       }
 
+      let ownNamespace = builderData.namespaces.get(this.#impl);
+      if (!ownNamespace) {
+        ownNamespace = tgpu['~unstable'].namespace();
+        builderData.namespaces.set(this.#impl, ownNamespace);
+
+        ownNamespace.on('name', (event) => {
+          if (isVariable(event.target)) {
+            builderData.names.set(event.target, event.name);
+          }
+        });
+      }
+
       const ctx: TgpuFnNodeContext = {
         builder,
         builderData,
@@ -103,7 +109,7 @@ class TgpuFnNode<T> extends THREE.Node {
       let resolved: string;
       try {
         resolved = tgpu.resolve({
-          names: builderData.namespace,
+          names: ownNamespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
         });
