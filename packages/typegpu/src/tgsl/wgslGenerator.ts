@@ -1059,7 +1059,6 @@ ${this.ctx.pre}else ${alternate}`;
       // so we can safely use `i`.
       let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
       while (this.ctx.getById(index) !== null) {
-        console.log(this.ctx.getById(index));
         index += 'i';
       }
 
