@@ -537,6 +537,37 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('creates correct code for "for ... of ..." nested statements that use the same variable name', () => {
+    const main = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 3)([1, 2, 3]);
+      let res = d.f32();
+      for (const foo of arr) {
+        for (const foo of arr) {
+          res += foo * foo;
+        }
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = array<f32, 3>(1f, 2f, 3f);
+        var res = 0f;
+        for (var i = 0; i < 3; i++) {
+          let foo = arr[i];
+          {
+            for (var i = 0; i < 3; i++) {
+              let foo2 = arr[i];
+              {
+                res += (foo2 * foo2);
+              }
+            }
+          }
+        }
+      }"
+    `);
+  });
+
   it('creates correct code for "for ... of ..." statement using array of non-primitives', () => {
     const main = () => {
       'use gpu';
