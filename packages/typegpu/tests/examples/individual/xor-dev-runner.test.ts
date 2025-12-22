@@ -17,66 +17,66 @@ describe('xor dev runner example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct vertexMain_Output_1 {
+      "struct vertexMain_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input_2 {
+      struct vertexMain_Input {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
+      @vertex fn vertexMain(input: vertexMain_Input) -> vertexMain_Output {
         var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
+        return vertexMain_Output(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> color_4: vec3f;
+      @group(0) @binding(0) var<uniform> color: vec3f;
 
-      @group(0) @binding(1) var<uniform> aspectRatio_5: f32;
+      @group(0) @binding(1) var<uniform> aspectRatio: f32;
 
-      @group(0) @binding(2) var<uniform> scale_6: f32;
+      @group(0) @binding(2) var<uniform> scale: f32;
 
-      @group(0) @binding(3) var<uniform> time_7: f32;
+      @group(0) @binding(3) var<uniform> time: f32;
 
-      fn mod_8(v: vec3f, a: f32) -> vec3f{
+      fn mod_1(v: vec3f, a: f32) -> vec3f{
         return fract(v / a) * a;
       }
 
-      fn rotateXZ_9(angle: f32) -> mat3x3f {
+      fn rotateXZ(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(cos(angle), 0f, sin(angle)), vec3f(0, 1, 0), vec3f(-(sin(angle)), 0f, cos(angle)));
       }
 
-      @group(0) @binding(4) var<uniform> shift_10: f32;
+      @group(0) @binding(4) var<uniform> shift: f32;
 
-      fn safeTanh_11(v: f32) -> f32 {
+      fn safeTanh(v: f32) -> f32 {
         return select(tanh(v), sign(v), (abs(v) > 10f));
       }
 
-      struct fragmentMain_Input_12 {
+      struct fragmentMain_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentMain_3(_arg_0: fragmentMain_Input_12) -> @location(0) vec4f {
-        var icolor = (color_4 * 4);
-        var ratio = vec2f(aspectRatio_5, 1f);
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        var icolor = (color * 4);
+        var ratio = vec2f(aspectRatio, 1f);
         var dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
         var acc = vec3f();
         var z = 0f;
         for (var l = 0; (l < 30i); l++) {
-          var p = ((z * dir) - scale_6);
-          p.x -= (time_7 + 3f);
-          p.z -= (time_7 + 3f);
+          var p = ((z * dir) - scale);
+          p.x -= (time + 3f);
+          p.z -= (time + 3f);
           var q = p;
           var prox = p.y;
           for (var i = 40.1; (i > 0.01f); i *= 0.2f) {
-            q = ((i * 0.9f) - abs((mod_8(q, (i + i)) - i)));
+            q = ((i * 0.9f) - abs((mod_1(q, (i + i)) - i)));
             let minQ = min(min(q.x, q.y), q.z);
             prox = max(prox, minQ);
-            q = (q * rotateXZ_9(shift_10));
+            q = (q * rotateXZ(shift));
           }
           z += prox;
-          acc = (acc + ((icolor - safeTanh_11((p.y + 4f))) * ((0.1f * prox) / (1f + z))));
+          acc = (acc + ((icolor - safeTanh((p.y + 4f))) * ((0.1f * prox) / (1f + z))));
         }
         acc = tanh((acc * acc));
         return vec4f(acc, 1f);
