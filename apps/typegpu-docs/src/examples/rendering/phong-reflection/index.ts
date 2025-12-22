@@ -46,7 +46,7 @@ const exampleControlsUniform = root.createUniform(
   p.initialControls,
 );
 
-export const vertexShader = tgpu['~unstable'].vertexFn({
+const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
 })((input) => {
@@ -63,7 +63,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
 });
 
 // see https://gist.github.com/chicio/d983fff6ff304bd55bebd6ff05a2f9dd
-export const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
