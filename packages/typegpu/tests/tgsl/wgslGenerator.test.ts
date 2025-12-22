@@ -487,7 +487,7 @@ describe('wgslGenerator', () => {
       let res = d.f32();
       for (const foo of arr) {
         res += foo;
-        const i = res;
+        const i = res; // this is intentional, scoping `i` to a block separate from `arr` index
       }
     };
 
@@ -575,7 +575,6 @@ describe('wgslGenerator', () => {
       let res = 0;
       for (const foo of arr) {
         res += foo.x;
-        const i = res;
       }
     };
 
@@ -587,7 +586,6 @@ describe('wgslGenerator', () => {
           let foo = (&arr[i]);
           {
             res += i32((*foo).x);
-            let i = res;
           }
         }
       }"
