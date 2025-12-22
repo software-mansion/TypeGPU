@@ -10,7 +10,7 @@ import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example } from '../utils/examples/types.ts';
+import type { Example, ExampleCommonFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
@@ -20,6 +20,7 @@ import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 type Props = {
   example: Example;
+  common: ExampleCommonFile[];
   isPlayground?: boolean;
 };
 
@@ -66,7 +67,7 @@ function useExample(
   }, [setSnackbarText, setExampleControlParams]);
 }
 
-export function ExampleView({ example }: Props) {
+export function ExampleView({ example, common }: Props) {
   const { tsFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
@@ -171,7 +172,7 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button onClick={() => openInStackBlitz(example)}>
+                  <Button onClick={() => openInStackBlitz(example, common)}>
                     <span className='font-bold'>Edit on</span>
                     <img
                       src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
