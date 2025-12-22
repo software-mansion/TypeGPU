@@ -44,6 +44,7 @@ import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { arrayLength } from 'src/std/array.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1088,12 +1089,22 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       const iterableDataType = iterableSnippet.dataType;
-      let elementCount: number;
+      let elementCountSnippet: Snippet;
       let elementType = elementSnippet.dataType;
       if (wgsl.isWgslArray(iterableDataType)) {
-        elementCount = iterableDataType.elementCount;
+        elementCountSnippet = iterableDataType.elementCount > 0
+          ? snip(
+            `${iterableDataType.elementCount}`,
+            u32,
+            'constant',
+          )
+          : arrayLength[$internal].gpuImpl(iterableSnippet);
       } else if (wgsl.isVec(iterableDataType)) {
-        elementCount = Number(iterableDataType.type.match(/\d/));
+        elementCountSnippet = snip(
+          `${Number(iterableDataType.type.match(/\d/))}`,
+          u32,
+          'constant',
+        );
       } else {
         throw new WgslTypeError(
           '`for ... of ...` loops only support array or vector iterables',
@@ -1141,8 +1152,9 @@ ${this.ctx.pre}else ${alternate}`;
       );
       this.ctx.defineVariable(loopVarName, loopVarSnippet);
 
-      const forStr =
-        `${this.ctx.pre}for (var ${index} = 0; ${index} < ${elementCount}; ${index}++) {`;
+      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0; ${index} < ${
+        tryConvertSnippet(elementCountSnippet, u32, false)
+      }; ${index}++) {`;
 
       this.ctx.indent();
 

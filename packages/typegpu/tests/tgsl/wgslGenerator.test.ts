@@ -592,6 +592,34 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('creates correct code for "for ... of ..." statement using runtime size array', ({ root }) => {
+    const layout = tgpu.bindGroupLayout({
+      arr: { storage: d.arrayOf(d.f32) },
+    });
+
+    const main = () => {
+      'use gpu';
+      let res = d.f32(0);
+      for (const foo of layout.$.arr) {
+        res += foo;
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> arr: array<f32>;
+
+      fn main() {
+        var res = 0f;
+        for (var i = 0; i < arrayLength((&arr)); i++) {
+          let foo = arr[i];
+          {
+            res += foo;
+          }
+        }
+      }"
+    `);
+  });
+
   it('creates correct code for "for ... of ..." statements using derived and comptime iterables', () => {
     const comptimeVec = tgpu['~unstable'].comptime(() => d.vec2f(1, 2));
 
