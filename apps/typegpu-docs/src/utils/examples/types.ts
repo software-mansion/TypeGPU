@@ -25,6 +25,7 @@ export type ExampleSrcFile = {
 };
 
 export type ExampleCommonFile = {
+  common: true;
   path: string;
   content: string;
 };

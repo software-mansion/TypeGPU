@@ -10,7 +10,11 @@ import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example, ExampleCommonFile } from '../utils/examples/types.ts';
+import type {
+  Example,
+  ExampleCommonFile,
+  ExampleSrcFile,
+} from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
@@ -68,7 +72,7 @@ function useExample(
 }
 
 export function ExampleView({ example, common }: Props) {
-  const { tsFiles, tsImport, htmlFile } = example;
+  const { tsFiles: tsExampleFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
@@ -77,6 +81,10 @@ export function ExampleView({ example, common }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
+    ...tsExampleFiles,
+    ...common,
+  ];
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',

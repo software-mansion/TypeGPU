@@ -153,6 +153,7 @@ export const common = R.pipe(
     const filePath = pathRelToCommon.split('/')[1];
 
     return {
+      common: true,
       path: filePath,
       content,
     };
