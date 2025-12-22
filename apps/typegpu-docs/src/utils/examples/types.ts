@@ -25,6 +25,11 @@ export type ExampleSrcFile = {
   content: string;
 };
 
+export type ExampleCommonFile = {
+  path: string;
+  content: string;
+};
+
 export interface ThumbnailPair {
   small: string;
   large: string;
