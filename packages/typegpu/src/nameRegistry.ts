@@ -235,26 +235,54 @@ export function isValidIdentifier(ident: string): boolean {
 }
 
 export class RandomNameRegistry implements NameRegistry {
-  private lastUniqueId = 0;
-  private readonly _usedNames = new Set<string>(bannedTokens);
+  #lastUniqueId = 0;
+  readonly #usedNames: Set<string>;
+  readonly #usedFunctionScopeNamesStack: Set<string>[];
+
+  constructor() {
+    this.#usedNames = new Set<string>(bannedTokens);
+    this.#usedFunctionScopeNamesStack = [];
+  }
+
+  get usedFunctionScopeNames(): Set<string> | undefined {
+    return this
+      .#usedFunctionScopeNamesStack[
+        this.#usedFunctionScopeNamesStack.length - 1
+      ];
+  }
 
   makeUnique(primer?: string | undefined): string {
     const sanitizedPrimer = sanitizePrimer(primer);
+    const fnScopeNames = this.usedFunctionScopeNames;
 
-    let name = `${sanitizedPrimer}_${this.lastUniqueId++}`;
-    while (this._usedNames.has(name)) {
-      name = `${sanitizedPrimer}_${this.lastUniqueId++}`;
+    let name = `${sanitizedPrimer}_${this.#lastUniqueId++}`;
+    while (this.#usedNames.has(name) || fnScopeNames?.has(name)) {
+      name = `${sanitizedPrimer}_${this.#lastUniqueId++}`;
     }
-    this._usedNames.add(name);
+
+    if (global) {
+      this.#usedNames.add(name);
+    } else {
+      fnScopeNames?.add(name);
+    }
+
     return name;
   }
 
   makeValid(primer: string): string {
-    if (isValidIdentifier(primer) && !this._usedNames.has(primer)) {
-      this._usedNames.add(primer);
+    if (isValidIdentifier(primer) && !this.#usedNames.has(primer)) {
+      this.usedFunctionScopeNames?.add(primer);
       return primer;
     }
     return this.makeUnique(primer);
+  }
+
+  pushFunctionScope(): void {
+    this.#usedFunctionScopeNamesStack.push(new Set<string>());
+  }
+
+  popFunctionScope(): void {
+    this.#usedFunctionScopeNamesStack.pop();
   }
 }
 
