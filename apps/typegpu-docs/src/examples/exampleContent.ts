@@ -148,16 +148,11 @@ export const common = R.pipe(
     eager: true,
     import: 'default',
   }) as Record<string, string>,
-  R.mapValues((content: string, key: string): ExampleCommonFile => {
-    const pathRelToCommon = pathe.relative('./', key);
-    const filePath = pathRelToCommon.split('/')[1];
-
-    return {
-      common: true,
-      path: filePath,
-      content,
-    };
-  }),
+  R.mapValues((content: string, key: string): ExampleCommonFile => ({
+    common: true,
+    path: pathe.basename(key),
+    content,
+  })),
   R.values(),
 );
 
