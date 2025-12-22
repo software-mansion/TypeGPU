@@ -34,7 +34,7 @@ import {
   isWgslArray,
   isWgslStruct,
   Void,
-  WgslStruct,
+  type WgslStruct,
 } from './data/wgslTypes.ts';
 import {
   invariant,

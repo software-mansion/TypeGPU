@@ -234,8 +234,9 @@ export function isValidIdentifier(ident: string): boolean {
   return !bannedTokens.has(prefix);
 }
 
-export class RandomNameRegistry implements NameRegistry {
-  #lastUniqueId = 0;
+abstract class NameRegistryImpl implements NameRegistry {
+  abstract getUniqueVariant(base: string): string;
+
   readonly #usedNames: Set<string>;
   readonly #usedFunctionScopeNamesStack: Set<string>[];
 
@@ -251,19 +252,14 @@ export class RandomNameRegistry implements NameRegistry {
       ];
   }
 
-  makeUnique(primer?: string | undefined): string {
+  makeUnique(primer: string | undefined, global: boolean): string {
     const sanitizedPrimer = sanitizePrimer(primer);
-    const fnScopeNames = this.usedFunctionScopeNames;
-
-    let name = `${sanitizedPrimer}_${this.#lastUniqueId++}`;
-    while (this.#usedNames.has(name) || fnScopeNames?.has(name)) {
-      name = `${sanitizedPrimer}_${this.#lastUniqueId++}`;
-    }
+    const name = this.getUniqueVariant(sanitizedPrimer);
 
     if (global) {
       this.#usedNames.add(name);
     } else {
-      fnScopeNames?.add(name);
+      this.usedFunctionScopeNames?.add(name);
     }
 
     return name;
@@ -274,7 +270,12 @@ export class RandomNameRegistry implements NameRegistry {
       this.usedFunctionScopeNames?.add(primer);
       return primer;
     }
-    return this.makeUnique(primer);
+    return this.makeUnique(primer, false);
+  }
+
+  isUsed(name: string): boolean {
+    return this.#usedNames.has(name) ||
+      !!this.usedFunctionScopeNames?.has(name);
   }
 
   pushFunctionScope(): void {
@@ -286,60 +287,26 @@ export class RandomNameRegistry implements NameRegistry {
   }
 }
 
-export class StrictNameRegistry implements NameRegistry {
-  /**
-   * Allows to provide a good fallback for instances of the
-   * same function that are bound to different slot values.
-   */
-  readonly #usedNames: Set<string>;
-  readonly #usedFunctionScopeNamesStack: Set<string>[];
+export class RandomNameRegistry extends NameRegistryImpl {
+  #lastUniqueId = 0;
 
-  constructor() {
-    this.#usedNames = new Set<string>(bannedTokens);
-    this.#usedFunctionScopeNamesStack = [];
+  getUniqueVariant(base: string): string {
+    let name = `${base}_${this.#lastUniqueId++}`;
+    while (this.isUsed(name)) {
+      name = `${base}_${this.#lastUniqueId++}`;
+    }
+    return name;
   }
+}
 
-  get usedFunctionScopeNames(): Set<string> | undefined {
-    return this
-      .#usedFunctionScopeNamesStack[
-        this.#usedFunctionScopeNamesStack.length - 1
-      ];
-  }
-
-  // TODO: optimize this with a map
-  makeUnique(primer: string | undefined, global: boolean): string {
-    const sanitizedPrimer = sanitizePrimer(primer);
-    const fnScopeNames = this.usedFunctionScopeNames;
-
+export class StrictNameRegistry extends NameRegistryImpl {
+  getUniqueVariant(base: string): string {
     let index = 0;
-    let label = sanitizedPrimer;
-    while (this.#usedNames.has(label) || fnScopeNames?.has(label)) {
+    let name = base;
+    while (this.isUsed(name)) {
       index++;
-      label = `${sanitizedPrimer}_${index}`;
+      name = `${base}_${index}`;
     }
-
-    if (global) {
-      this.#usedNames.add(label);
-    } else {
-      fnScopeNames?.add(label);
-    }
-
-    return label;
-  }
-
-  makeValid(primer: string): string {
-    if (isValidIdentifier(primer) && !this.#usedNames.has(primer)) {
-      this.usedFunctionScopeNames?.add(primer);
-      return primer;
-    }
-    return this.makeUnique(primer, false);
-  }
-
-  pushFunctionScope(): void {
-    this.#usedFunctionScopeNamesStack.push(new Set<string>());
-  }
-
-  popFunctionScope(): void {
-    this.#usedFunctionScopeNamesStack.pop();
+    return name;
   }
 }

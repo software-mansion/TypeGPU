@@ -118,3 +118,46 @@ test('should give declarations new names if they clash with a name in a function
     }"
   `);
 });
+
+test('duplicate names across function scopes', ({ root }) => {
+  const timeUniform = root.createUniform(d.f32).$name('time');
+
+  const foo = (a: number) => {
+    'use gpu';
+    // Should declare time_1
+    const time = timeUniform.$;
+    return time * a;
+  };
+
+  const bar = (a: number) => {
+    'use gpu';
+    // Should declare time_1
+    const time = timeUniform.$;
+    return foo(time * a);
+  };
+
+  const main = () => {
+    'use gpu';
+    const some = timeUniform.$;
+    return bar(some);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "@group(0) @binding(0) var<uniform> time: f32;
+
+    fn foo(a: f32) -> f32 {
+      let time_1 = time;
+      return (time_1 * a);
+    }
+
+    fn bar(a: f32) -> f32 {
+      let time_1 = time;
+      return foo((time_1 * a));
+    }
+
+    fn main() -> f32 {
+      let some = time;
+      return bar(some);
+    }"
+  `);
+});
