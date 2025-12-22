@@ -81,10 +81,7 @@ export function ExampleView({ example, common }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
-    ...tsExampleFiles,
-    ...common,
-  ];
+  const tsFiles = filterRelevantTsFiles(tsExampleFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
@@ -298,4 +295,28 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
     };
   }, [exampleHtmlRef]);
+}
+
+/**
+ * NOTE: this function only filters common files used in src files.
+ * Common files used in other common files will not be included.
+ */
+function filterRelevantTsFiles(
+  srcFiles: ExampleSrcFile[],
+  commonFiles: ExampleCommonFile[],
+) {
+  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
+    ...srcFiles,
+  ];
+
+  for (const common of commonFiles) {
+    for (const src of tsFiles) {
+      if (src.content.includes(`common/${common.path}`)) {
+        tsFiles.push(common);
+        break;
+      }
+    }
+  }
+
+  return tsFiles;
 }
