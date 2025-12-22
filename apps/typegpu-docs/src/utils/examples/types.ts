@@ -21,12 +21,18 @@ export const exampleCategories = [
 
 export type ExampleSrcFile = {
   exampleKey: string;
+  /**
+   * The relative path, for example 'index.ts'
+   */
   path: string;
   content: string;
 };
 
 export type ExampleCommonFile = {
   common: true;
+  /**
+   * The relative path, for example 'helper.ts'
+   */
   path: string;
   content: string;
 };

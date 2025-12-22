@@ -1,7 +1,6 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from 'yaml';
 import { type } from 'arktype';
-import * as R from 'remeda';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with {
   type: 'json',
 };
@@ -56,23 +55,25 @@ export const openInStackBlitz = (
   example: Example,
   common: ExampleCommonFile[],
 ) => {
-  const rawTsFiles: Record<string, string> = {};
-  example.tsFiles.forEach((file) => {
-    rawTsFiles[`src/${file.path}`] = file.content;
-  });
-  common.forEach((file) => {
-    rawTsFiles[`src/common/${file.path}`] = file.content;
-  });
+  const tsFiles: Record<string, string> = {};
 
-  const tsFiles = R.mapValues(rawTsFiles, (content) => {
-    return content.replaceAll(
+  for (const file of example.tsFiles) {
+    tsFiles[`src/${file.path}`] = file.content;
+  }
+  for (const file of common) {
+    tsFiles[`src/common/${file.path}`] = file.content;
+  }
+
+  for (const key of Object.keys(tsFiles)) {
+    const content = tsFiles[key];
+    tsFiles[key] = content.replaceAll(
       '/TypeGPU',
       'https://docs.swmansion.com/TypeGPU',
     ).replaceAll(
       '../../common',
       './common',
     );
-  });
+  }
 
   StackBlitzSDK.openProject(
     {
