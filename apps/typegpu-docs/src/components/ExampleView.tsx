@@ -310,7 +310,7 @@ function filterRelevantTsFiles(
   ];
 
   for (const common of commonFiles) {
-    for (const src of tsFiles) {
+    for (const src of srcFiles) {
       if (src.content.includes(`common/${common.path}`)) {
         tsFiles.push(common);
         break;
