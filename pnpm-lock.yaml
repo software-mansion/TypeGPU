@@ -370,7 +370,7 @@ importers:
         specifier: ^2.21.2
         version: 2.21.2
       typegpu:
-        specifier: workspace:^0.8.0
+        specifier: workspace:^0.9.0
         version: link:../typegpu
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -431,7 +431,7 @@ importers:
   packages/tinyest-for-wgsl:
     dependencies:
       tinyest:
-        specifier: workspace:~0.1.2
+        specifier: workspace:~0.2.0
         version: link:../tinyest
     devDependencies:
       '@babel/parser':
@@ -457,7 +457,7 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.1.2
+        specifier: workspace:~0.2.0
         version: link:../tinyest
       typed-binary:
         specifier: ^4.3.1
@@ -633,13 +633,13 @@ importers:
         specifier: ^4.0.3
         version: 4.0.3
       tinyest:
-        specifier: workspace:~0.1.2
+        specifier: workspace:~0.2.0
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.3
+        specifier: workspace:~0.2.0
         version: link:../tinyest-for-wgsl
       typegpu:
-        specifier: workspace:^0.8.0
+        specifier: workspace:^0.9.0
         version: link:../typegpu
       unplugin:
         specifier: ^2.3.5
