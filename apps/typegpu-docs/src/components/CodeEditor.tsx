@@ -71,7 +71,7 @@ const createCodeEditorComponent = (
 (props: Props) => {
   const { file, shown } = props;
 
-  // Monaco needs relative paths to work correctly
+  // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
   const path = 'common' in file
     ? `common/${file.path}`
     : `${file.exampleKey.replace('--', '/')}/${file.path}`;

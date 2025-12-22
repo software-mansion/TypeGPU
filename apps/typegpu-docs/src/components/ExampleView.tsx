@@ -72,7 +72,7 @@ function useExample(
 }
 
 export function ExampleView({ example, common }: Props) {
-  const { tsFiles: tsExampleFiles, tsImport, htmlFile } = example;
+  const { tsFiles: srcFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
@@ -81,7 +81,7 @@ export function ExampleView({ example, common }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const tsFiles = filterRelevantTsFiles(tsExampleFiles, common);
+  const tsFiles = filterRelevantTsFiles(srcFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
