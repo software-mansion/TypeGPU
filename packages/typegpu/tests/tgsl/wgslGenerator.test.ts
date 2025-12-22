@@ -1222,7 +1222,7 @@ describe('wgslGenerator', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       `You are likely trying to define variable \`arr\` with a value \`[1,2]\` of an unknown type.
 -----
-- Try to wrap \`[1,2]\` with a schema \`d.arrayOf(...)([1,2])\`.
+- Try to wrap right-hand side with a schema \`d.arrayOf(...)(...)\`.
 -----`,
     );
   });
@@ -1254,7 +1254,7 @@ describe('wgslGenerator', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       `You are likely trying to define variable \`s\` with a value of an unknown type.
 -----
-- Try to wrap right-hand side with a schema \`StructSchema(...)\`.
+- Try to wrap right-hand side with a schema \`YourStructSchema(...)\`.
 -----`,
     );
   });

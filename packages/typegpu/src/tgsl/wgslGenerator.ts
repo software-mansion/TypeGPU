@@ -1024,14 +1024,14 @@ ${this.ctx.pre}else ${alternate}`;
           console.warn(
             `You are likely trying to define variable \`${rawId}\` with a value \`[${eq.value}]\` of an unknown type.
 -----
-- Try to wrap \`[${eq.value}]\` with a schema \`d.arrayOf(...)([${eq.value}])\`.
+- Try to wrap right-hand side with a schema \`d.arrayOf(...)(...)\`.
 -----`,
           );
         } else {
           console.warn(
             `You are likely trying to define variable \`${rawId}\` with a value of an unknown type.
 -----
-- Try to wrap right-hand side with a schema \`StructSchema(...)\`.
+- Try to wrap right-hand side with a schema \`YourStructSchema(...)\`.
 -----`,
           );
         }
