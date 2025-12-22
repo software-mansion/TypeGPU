@@ -6,9 +6,7 @@ import { randf } from '@typegpu/noise';
 import * as m from 'wgpu-matrix';
 
 const root = await tgpu.init({
-  device: {
-    optionalFeatures: ['float32-filterable'],
-  },
+  device: { optionalFeatures: ['float32-filterable'] },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
 const device = root.device;
@@ -32,8 +30,8 @@ const CAMERA_FOV_DEGREES = 60;
 const CAMERA_DISTANCE_MULTIPLIER = 1.5;
 const CAMERA_INITIAL_ANGLE = Math.PI / 4;
 
-const RAYMARCH_STEPS = 128;
-const DENSITY_MULTIPLIER = 0.05;
+const RAYMARCH_STEPS = 48;
+const DENSITY_MULTIPLIER = 0.1;
 
 const RANDOM_DIRECTION_WEIGHT = 0.3;
 const CENTER_BIAS_WEIGHT = 0.7;
@@ -105,15 +103,19 @@ const Params = d.struct({
   evaporationRate: d.f32,
 });
 
-const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
+const agentsDataBuffers = [0, 1].map(() =>
+  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage')
+);
 
+const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
 root['~unstable'].createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
   const center = resolution.div(2);
   const dir = std.normalize(center.sub(pos));
-  agentsData.$[x] = Agent({ position: pos, direction: dir });
+  mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
+  mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
 }).dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
@@ -136,8 +138,16 @@ const textures = [0, 1].map(() =>
 );
 
 const computeLayout = tgpu.bindGroupLayout({
+  oldAgents: { storage: d.arrayOf(Agent), access: 'readonly' },
   oldState: { storageTexture: d.textureStorage3d('r32float', 'read-only') },
+  newAgents: { storage: d.arrayOf(Agent), access: 'mutable' },
   newState: { storageTexture: d.textureStorage3d('r32float', 'write-only') },
+});
+
+const blurLayout = tgpu.bindGroupLayout({
+  oldState: { texture: d.texture3d() },
+  newState: { storageTexture: d.textureStorage3d('r32float', 'write-only') },
+  sampler: { sampler: 'filtering' },
 });
 
 const renderLayout = tgpu.bindGroupLayout({
@@ -223,24 +233,18 @@ const updateAgents = tgpu['~unstable'].computeFn({
   const dims = std.textureDimensions(computeLayout.$.oldState);
   const dimsf = d.vec3f(dims);
 
-  const agent = agentsData.$[gid.x];
-  const random = randf.sample();
+  const agent = computeLayout.$.oldAgents[gid.x];
 
   let direction = std.normalize(agent.direction);
   const senseResult = sense3D(agent.position, direction);
-
-  if (senseResult.totalWeight > 0.01) {
-    const targetDir = std.normalize(senseResult.weightedDir);
-    direction = std.normalize(
-      direction.add(targetDir.mul(params.$.turnSpeed * params.$.deltaTime)),
-    );
-  } else {
-    const perp = getPerpendicular(direction);
-    const randomOffset = perp.mul(
-      (random * 2 - 1) * params.$.turnSpeed * params.$.deltaTime,
-    );
-    direction = std.normalize(direction.add(randomOffset));
-  }
+  const targetDirection = std.select(
+    randf.onHemisphere(direction),
+    std.normalize(senseResult.weightedDir),
+    senseResult.totalWeight > 0.01,
+  );
+  direction = std.normalize(direction.add(
+    targetDirection.mul(params.$.turnSpeed * params.$.deltaTime),
+  ));
 
   const newPos = agent.position.add(
     direction.mul(params.$.moveSpeed * params.$.deltaTime),
@@ -292,7 +296,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
     );
   }
 
-  agentsData.$[gid.x] = Agent({
+  computeLayout.$.newAgents[gid.x] = Agent({
     position: newPos,
     direction,
   });
@@ -306,50 +310,45 @@ const updateAgents = tgpu['~unstable'].computeFn({
   );
 });
 
+const sampler = root['~unstable'].createSampler({
+  magFilter: canFilter ? 'linear' : 'nearest',
+  minFilter: canFilter ? 'linear' : 'nearest',
+});
+
+const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
+  std.textureSampleLevel(
+    blurLayout.$.oldState,
+    blurLayout.$.sampler,
+    uv.add(offset),
+    0,
+  ).x
+);
+
 const blur = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
-  const dims = std.textureDimensions(computeLayout.$.oldState);
+  const dims = d.vec3u(std.textureDimensions(blurLayout.$.oldState));
   if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) return;
 
+  const uv = d.vec3f(gid).add(0.5).div(d.vec3f(dims));
+
   let sum = d.f32();
-  let count = d.f32();
 
-  for (let offsetZ = -1; offsetZ <= 1; offsetZ++) {
-    for (let offsetY = -1; offsetY <= 1; offsetY++) {
-      for (let offsetX = -1; offsetX <= 1; offsetX++) {
-        const samplePos = d.vec3i(gid.xyz).add(
-          d.vec3i(offsetX, offsetY, offsetZ),
-        );
-        const dimsi = d.vec3i(dims);
+  sum += getSummand(uv, d.vec3f(-1, 0, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(1, 0, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, -1, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 1, 0).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 0, -1).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(0, 0, 1).div(d.vec3f(dims)));
 
-        if (
-          samplePos.x >= 0 && samplePos.x < dimsi.x &&
-          samplePos.y >= 0 && samplePos.y < dimsi.y &&
-          samplePos.z >= 0 && samplePos.z < dimsi.z
-        ) {
-          const value =
-            std.textureLoad(computeLayout.$.oldState, d.vec3u(samplePos)).x;
-          sum = sum + value;
-          count = count + 1;
-        }
-      }
-    }
-  }
-
-  const blurred = sum / count;
+  const blurred = sum / 6.0;
   const newValue = std.saturate(blurred - params.$.evaporationRate);
   std.textureStore(
-    computeLayout.$.newState,
+    blurLayout.$.newState,
     gid.xyz,
     d.vec4f(newValue, 0, 0, 1),
   );
-});
-
-const sampler = root['~unstable'].createSampler({
-  magFilter: canFilter ? 'linear' : 'nearest',
-  minFilter: canFilter ? 'linear' : 'nearest',
 });
 
 // Ray-box intersection
@@ -375,6 +374,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
+  randf.seed2(uv);
   const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
   const ndcNear = d.vec4f(ndc, -1, 1);
   const ndcFar = d.vec4f(ndc, 1, 1);
@@ -393,11 +393,23 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     return d.vec4f();
   }
 
-  // March params
-  const tStart = std.max(isect.tNear, 0);
+  const jitter = randf.sample() * 20;
+  const tStart = std.max(isect.tNear + jitter, jitter);
   const tEnd = isect.tFar;
-  const numSteps = RAYMARCH_STEPS;
-  const stepSize = (tEnd - tStart) / numSteps;
+
+  const intersectionLength = tEnd - tStart;
+  const baseStepsPerUnit = d.f32(0.3);
+  const minSteps = d.i32(8);
+  const maxSteps = d.i32(RAYMARCH_STEPS);
+
+  const adaptiveSteps = std.clamp(
+    d.i32(intersectionLength * baseStepsPerUnit),
+    minSteps,
+    maxSteps,
+  );
+
+  const numSteps = adaptiveSteps;
+  const stepSize = intersectionLength / d.f32(numSteps);
 
   const thresholdLo = d.f32(0.06);
   const thresholdHi = d.f32(0.25);
@@ -411,11 +423,8 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   const TMin = d.f32(1e-3);
 
-  for (let i = 0; i < numSteps; i++) {
-    if (transmittance <= TMin) {
-      break;
-    }
-
+  let i = d.i32(0);
+  while (i < numSteps && transmittance > TMin) {
     const t = tStart + (d.f32(i) + 0.5) * stepSize;
     const pos = rayOrigin.add(rayDir.mul(t));
     const texCoord = pos.div(resolution);
@@ -433,6 +442,8 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 
     accum = accum.add(contrib.mul(transmittance));
     transmittance = transmittance * (1 - alphaSrc);
+
+    i += 1;
   }
 
   const alpha = 1 - transmittance;
@@ -454,8 +465,18 @@ const blurPipeline = root['~unstable']
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
+    oldAgents: agentsDataBuffers[i],
+    oldState: textures[i],
+    newAgents: agentsDataBuffers[1 - i],
+    newState: textures[1 - i],
+  })
+);
+
+const blurBindGroups = [0, 1].map((i) =>
+  root.createBindGroup(blurLayout, {
     oldState: textures[i],
     newState: textures[1 - i],
+    sampler: sampler,
   })
 );
 
@@ -476,7 +497,7 @@ function frame() {
   params.writePartial({ deltaTime });
 
   blurPipeline
-    .with(bindGroups[currentTexture])
+    .with(blurBindGroups[currentTexture])
     .dispatchWorkgroups(
       Math.ceil(resolution.x / BLUR_WORKGROUP_SIZE[0]),
       Math.ceil(resolution.y / BLUR_WORKGROUP_SIZE[1]),
