@@ -216,6 +216,11 @@ export default defineConfig({
               slug: 'ecosystem/typegpu-three',
               badge: { text: 'new' },
             },
+            {
+              label: '@typegpu/sdf',
+              slug: 'ecosystem/typegpu-sdf',
+              badge: { text: 'new' },
+            },
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',

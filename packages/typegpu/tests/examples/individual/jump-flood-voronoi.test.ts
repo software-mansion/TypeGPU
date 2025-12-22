@@ -7,13 +7,13 @@ import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import { mockResizeObserver } from '../utils/commonMocks.ts';
 
-describe('jump flood example', () => {
+describe('jump flood (voronoi) example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
       category: 'algorithms',
-      name: 'jump-flood',
+      name: 'jump-flood-voronoi',
       expectedCalls: 3,
       setupMocks: mockResizeObserver,
     }, device);

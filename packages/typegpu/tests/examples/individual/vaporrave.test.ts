@@ -105,8 +105,8 @@ describe('vaporrave example', () => {
 
       @group(0) @binding(1) var<uniform> floorAngleUniform_10: f32;
 
-      fn sdPlane_11(p: vec3f, n: vec3f, h: f32) -> f32 {
-        return (dot(p, n) + h);
+      fn sdPlane_11(point: vec3f, normal: vec3f, height: f32) -> f32 {
+        return (dot(point, normal) + height);
       }
 
       fn rotateAroundZ_13(angle: f32) -> mat3x3f {
@@ -117,8 +117,8 @@ describe('vaporrave example', () => {
         return mat3x3f(vec3f(1, 0, 0), vec3f(0f, cos(angle), sin(angle)), vec3f(0f, -(sin(angle)), cos(angle)));
       }
 
-      fn sdSphere_15(p: vec3f, radius: f32) -> f32 {
-        return (length(p) - radius);
+      fn sdSphere_15(point: vec3f, radius: f32) -> f32 {
+        return (length(point) - radius);
       }
 
       @group(0) @binding(2) var<storage, read> memoryBuffer_19: array<vec3f, 343>;

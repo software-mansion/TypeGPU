@@ -2,10 +2,7 @@
  * @module typegpu/data
  */
 
-import {
-  type InfixOperator,
-  infixOperators,
-} from '../tgsl/generationHelpers.ts';
+import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';

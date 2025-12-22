@@ -1,19 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  createDualImpl,
   dualImpl,
   MissingCpuImplError,
 } from '../../src/core/function/dualImpl.ts';
-import { getName } from '../../src/shared/meta.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.ts';
-
-describe('createDualImpl', () => {
-  it('names functions created by createDualImpl', () => {
-    const dual = createDualImpl((a) => a, (snippet) => snippet, 'myDualImpl');
-    expect(getName(dual)).toBe('myDualImpl');
-  });
-});
+import { getName } from '../../src/shared/meta.ts';
 
 describe('dualImpl', () => {
   it('names functions created by dualImpl', () => {
