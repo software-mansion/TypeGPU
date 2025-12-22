@@ -2,6 +2,7 @@ import pathe from 'pathe';
 import * as R from 'remeda';
 import type {
   Example,
+  ExampleCommonFile,
   ExampleMetadata,
   ExampleSrcFile,
   ThumbnailPair,
@@ -75,8 +76,9 @@ const metaFiles = R.pipe(
   R.mapKeys(pathToExampleKey),
 );
 
-const readonlyTsFiles = R.pipe(
-  import.meta.glob('./**/*.ts', {
+const exampleTsFiles = R.pipe(
+  // './<category>/<example>/<file>.ts'
+  import.meta.glob('./*/*/*.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -127,7 +129,7 @@ export const examples = R.pipe(
     ({
       key,
       metadata: value,
-      tsFiles: readonlyTsFiles[key] ?? [],
+      tsFiles: exampleTsFiles[key] ?? [],
       tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
       htmlFile: htmlFiles[key]?.[0] ?? '',
       thumbnails: thumbnailFiles[key],
@@ -138,6 +140,24 @@ export const examples = R.pipe(
 export const examplesByCategory = R.groupBy(
   Object.values(examples),
   (example) => example.metadata.category,
+);
+
+export const common = R.pipe(
+  import.meta.glob('./common/*.ts', {
+    query: 'raw',
+    eager: true,
+    import: 'default',
+  }) as Record<string, string>,
+  R.mapValues((content: string, key: string): ExampleCommonFile => {
+    const pathRelToCommon = pathe.relative('./', key);
+    const filePath = pathRelToCommon.split('/')[1];
+
+    return {
+      path: filePath,
+      content,
+    };
+  }),
+  R.values(),
 );
 
 export const PLAYGROUND_KEY = 'playground__';
