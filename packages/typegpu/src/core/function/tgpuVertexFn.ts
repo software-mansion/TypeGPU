@@ -52,7 +52,7 @@ type TgpuVertexFnShellHeader<
   readonly in: VertexIn | undefined;
   readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly isEntry: true;
+  readonly entryPoint: 'vertex';
 };
 
 /**
@@ -77,19 +77,7 @@ export type TgpuVertexFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-      & ((
-        implementation: string,
-      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
-  };
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
 
 export interface TgpuVertexFn<
   VertexIn extends VertexInConstrained = VertexInConstrained,
@@ -146,7 +134,7 @@ export function vertexFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
-    isEntry: true,
+    entryPoint: 'vertex',
   };
 
   const call = (
@@ -154,9 +142,17 @@ export function vertexFn<
     ...values: unknown[]
   ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuVertexFnShell<VertexIn, VertexOut>;
+  return Object.assign(call, shell) as TgpuVertexFnShell<VertexIn, VertexOut>;
+}
+
+export function isTgpuVertexFn<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+>(
+  value: unknown | TgpuVertexFn<VertexIn, VertexOut>,
+): value is TgpuVertexFn<VertexIn, VertexOut> {
+  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
+    'vertex';
 }
 
 // --------------

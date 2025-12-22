@@ -65,12 +65,16 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  ShaderStage,
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { hasTinyestMetadata } from './shared/meta.ts';
+import { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
+import { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+import { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -334,6 +338,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #namespace: NamespaceInternal;
   readonly #shaderGenerator: ShaderGenerator;
 
+  /**
+   * Holds info about the currently resolved shader stage (if there is any).
+   * Note that if a function is used both in vertex and fragment stage,
+   * then it will only go through the process during the vertex stage.
+   */
+  private _currentStage: ShaderStage;
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   readonly #modeStack: ExecState[] = [];
@@ -444,6 +454,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
+    if (this._currentStage === 'vertex') {
+      throw new Error(
+        `'console.log' is not supported during vertex shader stage.`,
+      );
+    }
     return this.#logGenerator.generateLog(this, op, args);
   }
 
@@ -732,11 +747,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
+      // if we're resolving an entrypoint function, we want to update this._currentStage
+      const stage = getItemStage(item);
+      const resolutionAction = () => {
+        if (stage) {
+          this._currentStage = stage;
+        }
+        const result = this._getOrInstantiate(item);
+        if (stage) {
+          this._currentStage = undefined;
+        }
+        return result;
+      };
+
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
         try {
           this.pushMode(new CodegenState());
-          const result = provideCtx(this, () => this._getOrInstantiate(item));
+          const result = provideCtx(this, resolutionAction);
           return snip(
             `${[...this._declarations].join('\n\n')}${result.value}`,
             Void,
@@ -747,7 +775,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      return this._getOrInstantiate(item);
+      return resolutionAction();
     }
 
     // This is a value that comes from the outside, maybe we can coerce it
@@ -971,4 +999,16 @@ export function resolveFunctionHeader(
       ctx.resolve(returnType).value
     } `
     : `(${argList}) `;
+}
+
+function getItemStage(item: unknown): ShaderStage {
+  if (isTgpuComputeFn(item)) {
+    return 'compute';
+  }
+  if (isTgpuVertexFn(item)) {
+    return 'vertex';
+  }
+  if (isTgpuFragmentFn(item)) {
+    return 'fragment';
+  }
 }

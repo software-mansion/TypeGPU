@@ -27,7 +27,7 @@ type TgpuComputeFnShellHeader<
   readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
   readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
-  readonly isEntry: true;
+  readonly entryPoint: 'compute';
 };
 
 /**
@@ -54,22 +54,7 @@ export type TgpuComputeFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuComputeFn<ComputeIn>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (input: InferIO<ComputeIn>) => undefined,
-      ) => TgpuComputeFn<ComputeIn>)
-      & /**
-       * @param implementation
-       *   Raw WGSL function implementation with header and body
-       *   without `fn` keyword and function name
-       *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */ ((implementation: string) => TgpuComputeFn<ComputeIn>);
-  };
+  ) => TgpuComputeFn<ComputeIn>);
 
 export interface TgpuComputeFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
@@ -122,7 +107,7 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
-    isEntry: true,
+    entryPoint: 'compute',
   };
 
   const call = (
@@ -135,9 +120,13 @@ export function computeFn<
       stripTemplate(arg, ...values),
     );
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuComputeFnShell<ComputeIn>;
+  return Object.assign(call, shell);
+}
+
+export function isTgpuComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+  value: unknown | TgpuComputeFn<ComputeIn>,
+): value is TgpuComputeFn<ComputeIn> {
+  return (value as TgpuComputeFn<ComputeIn>)?.shell?.entryPoint === 'compute';
 }
 
 // --------------

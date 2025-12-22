@@ -61,7 +61,7 @@ type TgpuFragmentFnShellHeader<
   readonly in: FragmentIn | undefined;
   readonly out: FragmentOut;
   readonly returnType: IOLayoutToSchema<FragmentOut>;
-  readonly isEntry: true;
+  readonly entryPoint: 'fragment';
 };
 
 /**
@@ -93,24 +93,7 @@ export type TgpuFragmentFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
-      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
-      & /**
-       * @param implementation
-       *   Raw WGSL function implementation with header and body
-       *   without `fn` keyword and function name
-       *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */ ((
-        implementation: string,
-      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>);
-  };
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>);
 
 export interface TgpuFragmentFn<
   Varying extends FragmentInConstrained = FragmentInConstrained,
@@ -162,7 +145,7 @@ export function fragmentFn<
     in: options.in,
     out: options.out,
     returnType: createIoSchema(options.out),
-    isEntry: true,
+    entryPoint: 'fragment',
   };
 
   const call = (
@@ -170,9 +153,21 @@ export function fragmentFn<
     ...values: unknown[]
   ) => createFragmentFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuFragmentFnShell<FragmentIn, FragmentOut>;
+  return Object.assign(call, shell) as TgpuFragmentFnShell<
+    FragmentIn,
+    FragmentOut
+  >;
+}
+
+export function isTgpuFragmentFn<
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+>(
+  value: unknown | TgpuFragmentFn<FragmentIn, FragmentOut>,
+): value is TgpuFragmentFn<FragmentIn, FragmentOut> {
+  return (value as TgpuFragmentFn<FragmentIn, FragmentOut>)?.shell
+    ?.entryPoint ===
+    'fragment';
 }
 
 // --------------
