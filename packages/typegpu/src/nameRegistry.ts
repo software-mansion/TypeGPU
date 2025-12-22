@@ -173,6 +173,8 @@ const bannedTokens = new Set([
   'with',
   'writeonly',
   'yield',
+  // Keywords that should be reserved
+  'sampler',
 ]);
 
 export interface NameRegistry {
@@ -181,8 +183,9 @@ export interface NameRegistry {
    * in the lifetime of a single resolution process.
    * Should append "_" to primer, followed by some id.
    * @param primer Used in the generation process, makes the identifier more recognizable.
+   * @param global Whether the name should be registered in the global scope (true), or in the current function scope (false)
    */
-  makeUnique(primer?: string): string;
+  makeUnique(primer: string | undefined, global: boolean): string;
 
   /**
    * Creates a valid WGSL identifier.
@@ -196,6 +199,9 @@ export interface NameRegistry {
    * makeValid("_"); // ERROR (too difficult to make valid to care)
    */
   makeValid(primer: string): string;
+
+  pushFunctionScope(): void;
+  popFunctionScope(): void;
 }
 
 function sanitizePrimer(primer: string | undefined) {
@@ -228,46 +234,84 @@ export function isValidIdentifier(ident: string): boolean {
   return !bannedTokens.has(prefix);
 }
 
-abstract class NameRegistryImpl implements NameRegistry {
-  abstract makeUnique(primer?: string): string;
+export class RandomNameRegistry implements NameRegistry {
+  private lastUniqueId = 0;
+  private readonly _usedNames = new Set<string>(bannedTokens);
+
+  makeUnique(primer?: string | undefined): string {
+    const sanitizedPrimer = sanitizePrimer(primer);
+
+    let name = `${sanitizedPrimer}_${this.lastUniqueId++}`;
+    while (this._usedNames.has(name)) {
+      name = `${sanitizedPrimer}_${this.lastUniqueId++}`;
+    }
+    this._usedNames.add(name);
+    return name;
+  }
 
   makeValid(primer: string): string {
-    if (isValidIdentifier(primer)) {
+    if (isValidIdentifier(primer) && !this._usedNames.has(primer)) {
+      this._usedNames.add(primer);
       return primer;
     }
     return this.makeUnique(primer);
   }
 }
 
-export class RandomNameRegistry extends NameRegistryImpl {
-  private lastUniqueId = 0;
-
-  makeUnique(primer?: string | undefined): string {
-    const sanitizedPrimer = sanitizePrimer(primer);
-
-    return `${sanitizedPrimer}_${this.lastUniqueId++}`;
-  }
-}
-
-export class StrictNameRegistry extends NameRegistryImpl {
+export class StrictNameRegistry implements NameRegistry {
   /**
    * Allows to provide a good fallback for instances of the
    * same function that are bound to different slot values.
    */
-  private readonly _usedNames = new Set<string>(bannedTokens);
+  readonly #usedNames: Set<string>;
+  readonly #usedFunctionScopeNamesStack: Set<string>[];
+
+  constructor() {
+    this.#usedNames = new Set<string>(bannedTokens);
+    this.#usedFunctionScopeNamesStack = [];
+  }
+
+  get usedFunctionScopeNames(): Set<string> | undefined {
+    return this
+      .#usedFunctionScopeNamesStack[
+        this.#usedFunctionScopeNamesStack.length - 1
+      ];
+  }
 
   // TODO: optimize this with a map
-  makeUnique(primer?: string | undefined): string {
+  makeUnique(primer: string | undefined, global: boolean): string {
     const sanitizedPrimer = sanitizePrimer(primer);
+    const fnScopeNames = this.usedFunctionScopeNames;
 
     let index = 0;
     let label = sanitizedPrimer;
-    while (this._usedNames.has(label)) {
+    while (this.#usedNames.has(label) || fnScopeNames?.has(label)) {
       index++;
       label = `${sanitizedPrimer}_${index}`;
     }
 
-    this._usedNames.add(label);
+    if (global) {
+      this.#usedNames.add(label);
+    } else {
+      fnScopeNames?.add(label);
+    }
+
     return label;
+  }
+
+  makeValid(primer: string): string {
+    if (isValidIdentifier(primer) && !this.#usedNames.has(primer)) {
+      this.usedFunctionScopeNames?.add(primer);
+      return primer;
+    }
+    return this.makeUnique(primer, false);
+  }
+
+  pushFunctionScope(): void {
+    this.#usedFunctionScopeNamesStack.push(new Set<string>());
+  }
+
+  popFunctionScope(): void {
+    this.#usedFunctionScopeNamesStack.pop();
   }
 }

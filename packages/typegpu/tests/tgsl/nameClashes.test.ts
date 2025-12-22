@@ -1,0 +1,120 @@
+import { expect } from 'vitest';
+import * as d from '../../src/data/index.ts';
+import tgpu from '../../src/index.ts';
+import { test } from '../utils/extendedIt.ts';
+
+test('should differentiate parameter names from existing declarations', () => {
+  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
+    'use gpu';
+    return a * 2;
+  }).$name('foo');
+
+  const bar = (foo: number) => {
+    'use gpu';
+    return foo;
+  };
+
+  const main = () => {
+    'use gpu';
+    // Resolving `fooFn` first so that it's first to get the name `foo`
+    return bar(fooFn(1.1));
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn foo(a: f32) -> f32 {
+      return (a * 2f);
+    }
+
+    fn bar(foo_1: f32) -> f32 {
+      return foo_1;
+    }
+
+    fn main() -> f32 {
+      return bar(foo(1.1f));
+    }"
+  `);
+});
+
+test('should give new global declarations a unique name if it would clash with a parameter name', () => {
+  const utils = {
+    foo: tgpu.fn([d.f32], d.f32)((a: number) => {
+      'use gpu';
+      return a * 2;
+    }).$name('foo'),
+  };
+
+  const bar = (foo: number) => {
+    'use gpu';
+    return utils.foo(foo);
+  };
+
+  const main = () => {
+    'use gpu';
+    return bar(1.1);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn foo_1(a: f32) -> f32 {
+      return (a * 2f);
+    }
+
+    fn bar(foo: f32) -> f32 {
+      return foo_1(foo);
+    }
+
+    fn main() -> f32 {
+      return bar(1.1f);
+    }"
+  `);
+});
+
+test('should give variables new names if they clash with a global declaration already used in the scope', () => {
+  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
+    'use gpu';
+    return a * 2;
+  }).$name('foo');
+
+  const main = () => {
+    'use gpu';
+    const b = fooFn(1.2);
+    const foo = 1.1; // foo is going to get a new name, because it would shadow `fooFn`
+    const c = fooFn(1.3);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn foo(a: f32) -> f32 {
+      return (a * 2f);
+    }
+
+    fn main() {
+      let b = foo(1.2f);
+      const foo_1 = 1.1;
+      let c = foo(1.3f);
+    }"
+  `);
+});
+
+test('should give declarations new names if they clash with a name in a function scope the declaration is meant to be referenced in', () => {
+  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
+    'use gpu';
+    return a * 2;
+  }).$name('foo');
+
+  const main = () => {
+    'use gpu';
+    const foo = 1.1;
+    // fooFn is going to get a new name, because it'd get shadowed by `foo`
+    return fooFn(foo);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn foo_1(a: f32) -> f32 {
+      return (a * 2f);
+    }
+
+    fn main() -> f32 {
+      const foo = 1.1;
+      return foo_1(foo);
+    }"
+  `);
+});
