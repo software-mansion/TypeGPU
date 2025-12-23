@@ -848,7 +848,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   const {
     adapter: adapterOpt,
     device: deviceOpt,
-    unstable_names: names = 'random',
+    unstable_names: names = 'strict',
     unstable_logOptions,
   } = options ?? {};
 
@@ -907,7 +907,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
 export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
-    unstable_names: names = 'random',
+    unstable_names: names = 'strict',
     unstable_logOptions,
   } = options ?? {};
 

@@ -720,9 +720,24 @@ ${this.ctx.pre}}`;
         }
       } else {
         // The array is not typed, so we try to guess the types.
-        const valuesSnippets = valueNodes.map((value) =>
-          this.expression(value as tinyest.Expression)
-        );
+        const valuesSnippets = valueNodes.map((value) => {
+          const snippet = this.expression(value as tinyest.Expression);
+          // We check if there are no references among the elements
+          if (
+            (snippet.origin === 'argument' &&
+              !wgsl.isNaturallyEphemeral(snippet.dataType)) ||
+            !isEphemeralSnippet(snippet)
+          ) {
+            const snippetStr =
+              this.ctx.resolve(snippet.value, snippet.dataType).value;
+            const snippetType =
+              this.ctx.resolve(concretize(snippet.dataType as AnyData)).value;
+            throw new WgslTypeError(
+              `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+            );
+          }
+          return snippet;
+        });
 
         if (valuesSnippets.length === 0) {
           throw new WgslTypeError(
