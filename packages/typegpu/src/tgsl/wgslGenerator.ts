@@ -1018,6 +1018,25 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
+      if (eq.dataType.type === 'unknown') {
+        if (Array.isArray(eq.value)) {
+          // for arrays we can give more specific suggestion
+          console.warn(
+            `You are likely trying to define variable \`${rawId}\` with a value \`[${eq.value}]\` of an unknown type.
+-----
+- Try to wrap right-hand side with a schema \`d.arrayOf(...)(...)\`.
+-----`,
+          );
+        } else {
+          console.warn(
+            `You are likely trying to define variable \`${rawId}\` with a value of an unknown type.
+-----
+- Try to wrap right-hand side with a schema \`YourStructSchema(...)\`.
+-----`,
+          );
+        }
+      }
+
       const snippet = this.blockVariable(
         varType,
         rawId,
