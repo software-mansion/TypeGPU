@@ -17,60 +17,60 @@ describe('xor dev centrifuge example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct vertexMain_Output_1 {
+      "struct vertexMain_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input_2 {
+      struct vertexMain_Input {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn vertexMain_0(input: vertexMain_Input_2) -> vertexMain_Output_1 {
+      @vertex fn vertexMain(input: vertexMain_Input) -> vertexMain_Output {
         var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output_1(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
+        return vertexMain_Output(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> aspectRatio_4: f32;
+      @group(0) @binding(0) var<uniform> aspectRatio: f32;
 
-      @group(0) @binding(1) var<uniform> tunnelDepth_5: i32;
+      @group(0) @binding(1) var<uniform> tunnelDepth: i32;
 
-      @group(0) @binding(2) var<uniform> cameraPos_6: vec2f;
+      @group(0) @binding(2) var<uniform> cameraPos: vec2f;
 
-      @group(0) @binding(3) var<uniform> bigStrips_7: f32;
+      @group(0) @binding(3) var<uniform> bigStrips: f32;
 
-      @group(0) @binding(4) var<uniform> time_8: f32;
+      @group(0) @binding(4) var<uniform> time: f32;
 
-      @group(0) @binding(5) var<uniform> dollyZoom_9: f32;
+      @group(0) @binding(5) var<uniform> dollyZoom: f32;
 
-      @group(0) @binding(6) var<uniform> smallStrips_10: f32;
+      @group(0) @binding(6) var<uniform> smallStrips: f32;
 
-      @group(0) @binding(7) var<uniform> color_11: vec3f;
+      @group(0) @binding(7) var<uniform> color: vec3f;
 
-      fn safeTanh_12(v: vec3f) -> vec3f {
+      fn safeTanh(v: vec3f) -> vec3f {
         return select(tanh(v), sign(v), (abs(v) > vec3f(10)));
       }
 
-      struct fragmentMain_Input_13 {
+      struct fragmentMain_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentMain_3(_arg_0: fragmentMain_Input_13) -> @location(0) vec4f {
-        var ratio = vec2f(aspectRatio_4, 1f);
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        var ratio = vec2f(aspectRatio, 1f);
         var dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
         var z = 0f;
         var acc = vec3f();
-        for (var i = 0; (i < tunnelDepth_5); i++) {
+        for (var i = 0; (i < tunnelDepth); i++) {
           var p = (dir * z);
-          p.x += cameraPos_6.x;
-          p.y += cameraPos_6.y;
-          var coords = vec3f(((atan2(p.y, p.x) * bigStrips_7) + time_8), ((p.z * dollyZoom_9) - (5f * time_8)), (length(p.xy) - 11f));
-          var coords2 = (cos((coords + cos((coords * smallStrips_10)))) - 1);
+          p.x += cameraPos.x;
+          p.y += cameraPos.y;
+          var coords = vec3f(((atan2(p.y, p.x) * bigStrips) + time), ((p.z * dollyZoom) - (5f * time)), (length(p.xy) - 11f));
+          var coords2 = (cos((coords + cos((coords * smallStrips)))) - 1);
           let dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
-          acc = (acc + ((1.2 - cos((color_11 * p.z))) / dd));
+          acc = (acc + ((1.2 - cos((color * p.z))) / dd));
           z += dd;
         }
-        acc = safeTanh_12((acc * 5e-3));
+        acc = safeTanh((acc * 5e-3));
         return vec4f(acc, 1f);
       }"
     `);

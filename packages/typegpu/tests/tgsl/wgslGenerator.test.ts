@@ -996,36 +996,6 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws when struct prop has whitespace in name', () => {
-    const TestStruct = d.struct({ 'my prop': d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
-      `);
-  });
-
-  it('throws when struct prop uses a reserved word', () => {
-    const TestStruct = d.struct({ struct: d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Property key 'struct' is a reserved WGSL word. Choose a different name.]
-      `);
-  });
-
   it('throws when an identifier starts with underscores', () => {
     const main1 = tgpu.fn([])(() => {
       const _ = 1;

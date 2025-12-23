@@ -301,7 +301,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
         let index = input.gid.x;
         const iterationF = 0f;
-        const sign = 0;
+        const sign_1 = 0;
         var change = vec4f();
       }"
     `);
@@ -328,7 +328,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
         let index = _arg_0.gid.x;
         const iterationF = 0f;
-        const sign = 0;
+        const sign_1 = 0;
         var change = vec4f();
       }"
     `);

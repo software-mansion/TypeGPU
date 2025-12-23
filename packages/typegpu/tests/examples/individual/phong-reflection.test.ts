@@ -27,35 +27,35 @@ describe('phong reflection example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct Camera_2 {
+      "struct Camera {
         position: vec4f,
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> cameraUniform_1: Camera_2;
+      @group(0) @binding(0) var<uniform> cameraUniform: Camera;
 
-      struct vertexShader_Output_3 {
+      struct vertexShader_Output {
         @location(0) worldPosition: vec3f,
         @location(1) worldNormal: vec3f,
         @builtin(position) canvasPosition: vec4f,
       }
 
-      struct vertexShader_Input_4 {
+      struct vertexShader_Input {
         @location(0) modelPosition: vec3f,
         @location(1) modelNormal: vec3f,
         @builtin(instance_index) instanceIndex: u32,
       }
 
-      @vertex fn vertexShader_0(input: vertexShader_Input_4) -> vertexShader_Output_3 {
+      @vertex fn vertexShader(input: vertexShader_Input) -> vertexShader_Output {
         var worldPosition = vec4f(input.modelPosition, 1f);
-        let camera = (&cameraUniform_1);
+        let camera = (&cameraUniform);
         var canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
-        return vertexShader_Output_3(input.modelPosition, input.modelNormal, canvasPosition);
+        return vertexShader_Output(input.modelPosition, input.modelNormal, canvasPosition);
       }
 
-      struct ExampleControls_7 {
+      struct ExampleControls {
         lightColor: vec3f,
         lightDirection: vec3f,
         ambientColor: vec3f,
@@ -63,25 +63,25 @@ describe('phong reflection example', () => {
         specularExponent: f32,
       }
 
-      @group(0) @binding(1) var<uniform> exampleControlsUniform_6: ExampleControls_7;
+      @group(0) @binding(1) var<uniform> exampleControlsUniform: ExampleControls;
 
-      struct fragmentShader_Input_8 {
+      struct fragmentShader_Input {
         @location(0) worldPosition: vec3f,
         @location(1) worldNormal: vec3f,
         @builtin(position) canvasPosition: vec4f,
       }
 
-      @fragment fn fragmentShader_5(input: fragmentShader_Input_8) -> @location(0) vec4f {
-        var lightColor = normalize(exampleControlsUniform_6.lightColor);
-        var lightDirection = normalize(exampleControlsUniform_6.lightDirection);
-        let ambientColor = (&exampleControlsUniform_6.ambientColor);
-        let ambientStrength = exampleControlsUniform_6.ambientStrength;
-        let specularStrength = exampleControlsUniform_6.specularExponent;
+      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
+        var lightColor = normalize(exampleControlsUniform.lightColor);
+        var lightDirection = normalize(exampleControlsUniform.lightDirection);
+        let ambientColor = (&exampleControlsUniform.ambientColor);
+        let ambientStrength = exampleControlsUniform.ambientStrength;
+        let specularStrength = exampleControlsUniform.specularExponent;
         var ambient = ((*ambientColor) * ambientStrength);
         let cosTheta = dot(input.worldNormal, lightDirection);
         var diffuse = (lightColor * max(0f, cosTheta));
         var reflectionDirection = reflect((lightDirection * -1), input.worldNormal);
-        var viewDirection = normalize((cameraUniform_1.position.xyz - input.worldPosition));
+        var viewDirection = normalize((cameraUniform.position.xyz - input.worldPosition));
         var specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularStrength));
         var color = ((ambient + diffuse) + specular);
         return vec4f(color, 1f);

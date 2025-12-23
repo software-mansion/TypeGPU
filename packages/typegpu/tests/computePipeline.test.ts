@@ -495,11 +495,11 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f32, 3>();
       }"
     `);
@@ -540,11 +540,11 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f16, 3>();
         {
           a[0i] = f16(_arg_0.gid.x);

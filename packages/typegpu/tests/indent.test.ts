@@ -387,7 +387,7 @@ describe('indents', () => {
 
       @group(0) @binding(3) var sampled: texture_2d_array<f32>;
 
-      @group(0) @binding(4) var sampler: sampler;
+      @group(0) @binding(4) var sampler_1: sampler;
 
       @group(0) @binding(2) var smoothRender: texture_multisampled_2d<f32>;
 
@@ -405,9 +405,9 @@ describe('indents', () => {
       @vertex fn someVertex(input: someVertex_Input) -> someVertex_Output {
         let uniBoid = (&boids);
         for (var i = 0u; (i < -1u); i++) {
-          var sampled = textureSample(sampled, sampler, vec2f(0.5), i);
+          var sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender, vec2i(), 0);
-          if (((someVal.x + sampled.x) > 0.5f)) {
+          if (((someVal.x + sampled_1.x) > 0.5f)) {
             var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
