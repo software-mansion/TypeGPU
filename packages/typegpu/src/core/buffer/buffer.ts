@@ -26,13 +26,13 @@ import type {
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
-  asMutable,
-  asReadonly,
-  asUniform,
+  mutable,
+  readonly,
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   type TgpuFixedBufferUsage,
+  uniform,
 } from './bufferUsage.ts';
 
 // ----------
@@ -79,11 +79,7 @@ type UsageTypeToBufferUsage<TData extends BaseData> = {
   readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 };
 
-const usageToUsageConstructor = {
-  uniform: asUniform,
-  mutable: asMutable,
-  readonly: asReadonly,
-};
+const usageToUsageConstructor = { uniform, mutable, readonly };
 
 /**
  * Done as an object to later Prettify it

@@ -73,6 +73,21 @@ describe('TgpuBufferUniform', () => {
       }"
     `);
   });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('storage')
+        // @ts-expect-error
+        .as('uniform')
+    ).toThrow();
+  });
 });
 
 describe('TgpuBufferMutable', () => {
@@ -162,6 +177,21 @@ describe('TgpuBufferMutable', () => {
       });
       expect(result.value).toBe(3);
     });
+  });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('mutable')
+    ).toThrow();
   });
 });
 
@@ -272,5 +302,20 @@ describe('TgpuBufferReadonly', () => {
       const result = tgpu['~unstable'].simulate(foo);
       expect(result.value).toBe(123);
     });
+  });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('readonly')
+    ).toThrow();
   });
 });
