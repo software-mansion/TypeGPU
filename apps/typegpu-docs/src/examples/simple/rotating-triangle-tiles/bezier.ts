@@ -39,7 +39,7 @@ export function createBezier(x1: number, y1: number, x2: number, y2: number) {
     return t2;
   }
 
-  return function(x: number) {
+  return (x: number) => {
     if (x <= 0) return 0; // Clamp start
     if (x >= 1) return 1; // Clamp end
     const t = solveCurveX(x);
