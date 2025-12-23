@@ -19,7 +19,7 @@ import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json' with {
   type: 'json',
 };
-import type { Example } from '../../utils/examples/types.ts';
+import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
 // biome-ignore lint/correctness/useImportExtensions: dude it's there
 import index from './stackBlitzIndex.ts?raw';
 
@@ -51,17 +51,29 @@ if (pnpmWorkspaceYaml instanceof type.errors) {
   throw new Error(pnpmWorkspaceYaml.summary);
 }
 
-export const openInStackBlitz = (example: Example) => {
-  const tsFiles = example.tsFiles.reduce(
-    (acc, file) => {
-      acc[`src/${file.path}`] = file.content.replaceAll(
-        '/TypeGPU',
-        'https://docs.swmansion.com/TypeGPU',
-      );
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
+export const openInStackBlitz = (
+  example: Example,
+  common: ExampleCommonFile[],
+) => {
+  const tsFiles: Record<string, string> = {};
+
+  for (const file of example.tsFiles) {
+    tsFiles[`src/${file.path}`] = file.content;
+  }
+  for (const file of common) {
+    tsFiles[`src/common/${file.path}`] = file.content;
+  }
+
+  for (const key of Object.keys(tsFiles)) {
+    const content = tsFiles[key];
+    tsFiles[key] = content.replaceAll(
+      '/TypeGPU',
+      'https://docs.swmansion.com/TypeGPU',
+    ).replaceAll(
+      '../../common',
+      './common',
+    );
+  }
 
   StackBlitzSDK.openProject(
     {
