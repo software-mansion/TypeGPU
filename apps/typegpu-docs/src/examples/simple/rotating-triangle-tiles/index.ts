@@ -2,86 +2,33 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { createBezier } from './bezier.ts';
+import { interpolateBezier, rotate } from './transformations.ts';
+import { colors, triangleVertices } from './geometry.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
-const green = d.vec4f(
-  0.11764705882352941,
-  0.8392156862745098,
-  0.5137254901960784,
-  1,
-);
-const yellow = d.vec4f(
-  0.8392156862745098,
-  0.6470588235294118,
-  0.11764705882352941,
-  1,
-);
-const indigo = d.vec4f(
-  0.3803921568627451,
-  0.3333333333333333,
-  0.9607843137254902,
-  1,
-);
-
-const colors = [green, yellow, indigo];
 
 const root = await tgpu.init();
 
 const STEP_ROTATION_ANGLE = 60;
+const ANIMATION_DURATION = 1500;
+const SCALE = 0.5;
 
-function rotate(coordinate: d.v2f, angleInDegrees: number) {
-  'use gpu';
-  const angle = (angleInDegrees * Math.PI) / 180;
-  const x = coordinate.x;
-  const y = coordinate.y;
-  return d.vec2f(
-    x * std.cos(angle) - y * std.sin(angle),
-    x * std.sin(angle) + y * std.cos(angle),
-  );
-}
+const animationProgress = root.createUniform(d.f32);
 
-function interpolateToScaleFactor(angle: number) {
-  'use gpu';
-  return angle / STEP_ROTATION_ANGLE;
-}
+const shiftedColors = root.createReadonly(d.arrayOf(d.vec4f, 3), [...colors]);
 
-const PositionArray = d.arrayOf(d.vec2f);
-
-const TrianglePositions = d.struct({
-  positions: PositionArray(6),
+const TriangleVertices = d.struct({
+  positions: d.arrayOf(d.vec2f, 9),
 });
 
-const originalPositions = PositionArray(3)([
-  d.vec2f(-std.sqrt(3), -1),
-  d.vec2f(0, 2),
-  d.vec2f(std.sqrt(3), -1),
-]);
-
-const pos = originalPositions.map((pos) => std.mul(pos, 0.5));
-
-// const pos2 = pos.map(pos => rotate(std.mul(pos, 0.5), 180));
-
-const trianglePositionBuffer = root.createReadonly(TrianglePositions, {
-  positions: PositionArray(6)([...pos, ...pos]),
+const triangleVerticesBuffer = root.createReadonly(TriangleVertices, {
+  positions: triangleVertices,
 });
-
-const time = root.createUniform(d.f32);
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { color: d.vec4f },
   out: d.vec4f,
 })((input) => {
-  // const angle = std.mod(time.$, STEP_ROTATION_ANGLE);
-  //   const scaleFactor = interpolateToScaleFactor(angle)
-  // console.log("ScaleFactor:",scaleFactor)
-  // console.log("Angle:", angle);
-  // randf.seed(time.$);
-  // const random = randf.sample();
-  // console.log(random);
-  // if (random < 0.5) {
-  //   return green;
-  // }
-  // return yellow;
   return input.color;
 });
 
@@ -92,43 +39,51 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, color: d.vec4f },
 })(({ vertexIndex }) => {
-  const originalPositions = PositionArray(6)([
-    d.vec2f(-0.5, -0.5),
-    d.vec2f(-0.5, 0.5),
-    d.vec2f(0.5, -0.5),
-    d.vec2f(1, 1),
-    d.vec2f(1, -1),
-    d.vec2f(-1, 1),
-  ]);
-  const vertexPosition = trianglePositionBuffer.$.positions[vertexIndex];
-  // const vertexPosition = originalPositions[vertexIndex];
+  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
   let calculatedPosition = d.vec2f(vertexPosition);
 
-  let color = yellow;
-  if (vertexIndex > 2) {
-    color = green;
-    const angle = std.mod(time.$, STEP_ROTATION_ANGLE);
-    const scaleFactor = interpolateToScaleFactor(angle);
+  // biggest triangle
+  let color = d.vec4f(shiftedColors.$[0]);
+
+  // middle triangle
+  if (vertexIndex > 2 && vertexIndex < 6) {
+    color = d.vec4f(shiftedColors.$[1]);
+
+    const angle = interpolateBezier(
+      animationProgress.$,
+      STEP_ROTATION_ANGLE,
+      STEP_ROTATION_ANGLE * 1.5,
+    );
+    const scaleFactor = interpolateBezier(animationProgress.$, 0.5, d.f32(2));
+
     calculatedPosition = rotate(vertexPosition, angle);
     calculatedPosition = std.mul(calculatedPosition, scaleFactor);
   }
 
-  return { outPos: d.vec4f(calculatedPosition, 0, 1), color };
+  // smallest triangle
+  if (vertexIndex > 5) {
+    color = d.vec4f(shiftedColors.$[2]);
+
+    const angle = interpolateBezier(
+      animationProgress.$,
+      0,
+      STEP_ROTATION_ANGLE,
+    );
+    const scaleFactor = animationProgress.$;
+    calculatedPosition = rotate(vertexPosition, angle);
+    calculatedPosition = std.mul(calculatedPosition, scaleFactor);
+  }
+
+  return { outPos: d.vec4f(std.mul(calculatedPosition, SCALE), 0, 1), color };
 });
 
 const maskVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { position: d.builtin.position },
 })(({ vertexIndex }) => {
-  const originalPositions = PositionArray(3)([
-    d.vec2f(-0.5, -0.5),
-    d.vec2f(-0.5, 0.5),
-    d.vec2f(0.5, -0.5),
-  ]);
-  const vertexPosition = originalPositions[vertexIndex];
-  // const vertexPosition = trianglePositionBuffer.$.positions[vertexIndex];
+  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
 
-  return { position: d.vec4f(vertexPosition, 0, 1) };
+  return { position: d.vec4f(std.mul(vertexPosition, SCALE), 0, 1) };
 });
 
 const wgsl = tgpu.resolve([mainVertex]);
@@ -174,25 +129,26 @@ const pipeline = root['~unstable']
     },
   })
   .createPipeline()
-  .withStencilReference(2);
+  .withStencilReference(1);
 
 let isRunning = true;
 
 console.log(tgpu.resolve([maskPipeline]));
 
+// main drawing loop
+
+function getShiftedColors(timestamp: number) {
+  const shiftBy = Math.floor(timestamp / ANIMATION_DURATION) % colors.length;
+  return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
+}
+
 function draw(timestamp: number) {
   if (!isRunning) return;
 
-  time.write((timestamp * 0.04) % 1000);
-
-  maskPipeline
-    .withDepthStencilAttachment({
-      view: stencilTexture.createView(),
-      stencilClearValue: 0,
-      stencilLoadOp: 'clear',
-      stencilStoreOp: 'store',
-    })
-    .draw(3);
+  shiftedColors.write(getShiftedColors(timestamp));
+  animationProgress.write(
+    ease((timestamp % ANIMATION_DURATION) / ANIMATION_DURATION),
+  );
 
   pipeline
     .withColorAttachment({
@@ -206,11 +162,13 @@ function draw(timestamp: number) {
       stencilLoadOp: 'load',
       stencilStoreOp: 'store',
     })
-    .draw(6);
+    .draw(9);
 
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
+
+// cleanup
 
 const resizeObserver = new ResizeObserver(() => {
   stencilTexture.destroy();
