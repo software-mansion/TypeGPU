@@ -178,7 +178,7 @@ const bannedTokens = new Set([
 ]);
 
 const builtins = new Set([
-  // Builtin constructors
+  // constructors
   'array',
   'bool',
   'f16',
@@ -197,15 +197,15 @@ const builtins = new Set([
   'vec2',
   'vec3',
   'vec4',
-  // Builtin bitcast
+  // bitcast
   'bitcast',
-  // Builtin logical
+  // logical
   'all',
   'any',
   'select',
-  // Builtin array
+  // array
   'arrayLength',
-  // Builtin numeric
+  // numeric
   'abs',
   'acos',
   'acosh',
@@ -267,7 +267,7 @@ const builtins = new Set([
   'tanh',
   'transpose',
   'trunc',
-  // Builtin derivative
+  // derivative
   'dpdx',
   'dpdxCoarse',
   'dpdxFine',
@@ -277,7 +277,7 @@ const builtins = new Set([
   'fwidth',
   'fwidthCoarse',
   'fwidthFine',
-  // Builtin texture
+  // texture
   'textureDimensions',
   'textureGather',
   'textureGatherCompare',
@@ -293,7 +293,7 @@ const builtins = new Set([
   'textureSampleLevel',
   'textureSampleBaseClampToEdge',
   'textureStore',
-  // Builtin atomic
+  // atomic
   'atomicLoad',
   'atomicStore',
   'atomicAdd',
@@ -305,7 +305,7 @@ const builtins = new Set([
   'atomicXor',
   'atomicExchange',
   'atomicCompareExchangeWeak',
-  // Builtin data packing
+  // data packing
   'pack4x8snorm',
   'pack4x8unorm',
   'pack4xI8',
@@ -315,7 +315,7 @@ const builtins = new Set([
   'pack2x16snorm',
   'pack2x16unorm',
   'pack2x16float',
-  // Builtin data unpacking
+  // data unpacking
   'unpack4x8snorm',
   'unpack4x8unorm',
   'unpack4xI8',
@@ -323,12 +323,12 @@ const builtins = new Set([
   'unpack2x16snorm',
   'unpack2x16unorm',
   'unpack2x16float',
-  // Builtin synchronization
+  // synchronization
   'storageBarrier',
   'textureBarrier',
   'workgroupBarrier',
   'workgroupUniformLoad',
-  // Builtin subgroup
+  // subgroup
   'subgroupAdd',
   'subgroupExclusiveAdd',
   'subgroupInclusiveAdd',
@@ -350,7 +350,7 @@ const builtins = new Set([
   'subgroupShuffleUp',
   'subgroupShuffleXor',
   'subgroupXor',
-  // Builtin quad operations
+  // quad operations
   'quadBroadcast',
   'quadSwapDiagonal',
   'quadSwapX',
@@ -405,7 +405,7 @@ function sanitizePrimer(primer: string | undefined) {
  * isValidIdentifier("_"); // ERROR
  * isValidIdentifier("my variable"); // ERROR
  */
-export function isValidIdentifier(ident: string): boolean {
+function isValidIdentifier(ident: string): boolean {
   if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
     throw new Error(
       `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
@@ -415,6 +415,9 @@ export function isValidIdentifier(ident: string): boolean {
   return !bannedTokens.has(prefix) && !builtins.has(prefix);
 }
 
+/**
+ * Same as `isValidIdentifier`, except does not check for builtin clashes.
+ */
 export function isValidProp(ident: string): boolean {
   if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
     throw new Error(
