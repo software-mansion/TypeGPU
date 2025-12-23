@@ -1,5 +1,6 @@
 import { expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
+import * as std from '../../src/std/index.ts';
 import tgpu from '../../src/index.ts';
 import { test } from '../utils/extendedIt.ts';
 
@@ -158,6 +159,32 @@ test('duplicate names across function scopes', ({ root }) => {
     fn main() -> f32 {
       let some = time;
       return bar(some);
+    }"
+  `);
+});
+
+test('should give new names to functions that collide with builtins', () => {
+  const min = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+    return std.max(0, std.min(a, b));
+  }).$name('min');
+
+  const main = tgpu.fn([])(() => {
+    const a = -1;
+    const b = -2;
+    const x = min(a, b);
+    const y = std.min(a, b);
+  });
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn min(a: f32, b: f32) -> f32 {
+      return max(0f, min(a, b));
+    }
+
+    fn main() {
+      const a = -1;
+      const b = -2;
+      let x = min(f32(a), f32(b));
+      let y = min(a, b);
     }"
   `);
 });
