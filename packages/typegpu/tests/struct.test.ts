@@ -389,6 +389,21 @@ describe('struct', () => {
         `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
       );
   });
+
+  it('allows builtin names as struct props', () => {
+    const myStruct = struct({
+      min: u32,
+      fract: f32,
+      subgroupAdd: i32,
+    });
+    expect(tgpu.resolve([myStruct])).toMatchInlineSnapshot(`
+      "struct myStruct {
+        min: u32,
+        fract: f32,
+        subgroupAdd: i32,
+      }"
+    `);
+  });
 });
 
 describe('abstruct', () => {

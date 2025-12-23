@@ -1,4 +1,4 @@
-import { isValidIdentifier } from '../nameRegistry.ts';
+import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -41,7 +41,7 @@ function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
   Object.keys(props).forEach((key) => {
-    if (!isValidIdentifier(key)) {
+    if (!isValidProp(key)) {
       throw new Error(
         `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
       );
