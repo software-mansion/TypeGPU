@@ -19,19 +19,19 @@ describe('point light shadow example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct CameraData_2 {
+      "struct CameraData {
         viewProjectionMatrix: mat4x4f,
         inverseViewProjectionMatrix: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_1: CameraData_2;
+      @group(0) @binding(0) var<uniform> camera: CameraData;
 
-      struct vertexDepth_Output_3 {
+      struct vertexDepth_Output {
         @builtin(position) pos: vec4f,
         @location(0) worldPos: vec3f,
       }
 
-      struct vertexDepth_Input_4 {
+      struct vertexDepth_Input {
         @location(0) position: vec3f,
         @location(1) normal: vec3f,
         @location(2) uv: vec2f,
@@ -41,39 +41,39 @@ describe('point light shadow example', () => {
         @location(6) column4: vec4f,
       }
 
-      @vertex fn vertexDepth_0(_arg_0: vertexDepth_Input_4) -> vertexDepth_Output_3 {
+      @vertex fn vertexDepth(_arg_0: vertexDepth_Input) -> vertexDepth_Output {
         var modelMatrix = mat4x4f(_arg_0.column1, _arg_0.column2, _arg_0.column3, _arg_0.column4);
         var worldPos = (modelMatrix * vec4f(_arg_0.position, 1f)).xyz;
-        var pos = (camera_1.viewProjectionMatrix * vec4f(worldPos, 1f));
-        return vertexDepth_Output_3(pos, worldPos);
+        var pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        return vertexDepth_Output(pos, worldPos);
       }
 
-      @group(0) @binding(1) var<uniform> lightPosition_6: vec3f;
+      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
-      struct fragmentDepth_Input_7 {
+      struct fragmentDepth_Input {
         @location(0) worldPos: vec3f,
       }
 
-      @fragment fn fragmentDepth_5(_arg_0: fragmentDepth_Input_7) -> @builtin(frag_depth) f32 {
-        let dist = length((_arg_0.worldPos - lightPosition_6));
+      @fragment fn fragmentDepth(_arg_0: fragmentDepth_Input) -> @builtin(frag_depth) f32 {
+        let dist = length((_arg_0.worldPos - lightPosition));
         return (dist / 100f);
       }
 
-      struct CameraData_2 {
+      struct CameraData {
         viewProjectionMatrix: mat4x4f,
         inverseViewProjectionMatrix: mat4x4f,
       }
 
-      @group(1) @binding(0) var<uniform> camera_1: CameraData_2;
+      @group(1) @binding(0) var<uniform> camera: CameraData;
 
-      struct vertexMain_Output_3 {
+      struct vertexMain_Output {
         @builtin(position) pos: vec4f,
         @location(0) worldPos: vec3f,
         @location(1) uv: vec2f,
         @location(2) normal: vec3f,
       }
 
-      struct vertexMain_Input_4 {
+      struct vertexMain_Input {
         @location(0) position: vec3f,
         @location(1) normal: vec3f,
         @location(2) uv: vec2f,
@@ -83,44 +83,44 @@ describe('point light shadow example', () => {
         @location(6) column4: vec4f,
       }
 
-      @vertex fn vertexMain_0(_arg_0: vertexMain_Input_4) -> vertexMain_Output_3 {
+      @vertex fn vertexMain(_arg_0: vertexMain_Input) -> vertexMain_Output {
         var modelMatrix = mat4x4f(_arg_0.column1, _arg_0.column2, _arg_0.column3, _arg_0.column4);
         var worldPos = (modelMatrix * vec4f(_arg_0.position, 1f)).xyz;
-        var pos = (camera_1.viewProjectionMatrix * vec4f(worldPos, 1f));
+        var pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
         var worldNormal = normalize((modelMatrix * vec4f(_arg_0.normal, 0f)).xyz);
-        return vertexMain_Output_3(pos, worldPos, _arg_0.uv, worldNormal);
+        return vertexMain_Output(pos, worldPos, _arg_0.uv, worldNormal);
       }
 
-      @group(1) @binding(3) var<uniform> lightPosition_6: vec3f;
+      @group(1) @binding(3) var<uniform> lightPosition: vec3f;
 
-      struct item_8 {
+      struct item {
         pcfSamples: u32,
         diskRadius: f32,
         normalBiasBase: f32,
         normalBiasSlope: f32,
       }
 
-      @group(0) @binding(0) var<uniform> shadowParams_7: item_8;
+      @group(0) @binding(0) var<uniform> shadowParams: item;
 
-      @group(0) @binding(1) var<uniform> samplesUniform_9: array<vec4f, 64>;
+      @group(0) @binding(1) var<uniform> samplesUniform: array<vec4f, 64>;
 
-      @group(1) @binding(1) var shadowDepthCube_10: texture_depth_cube;
+      @group(1) @binding(1) var shadowDepthCube: texture_depth_cube;
 
-      @group(1) @binding(2) var shadowSampler_11: sampler_comparison;
+      @group(1) @binding(2) var shadowSampler: sampler_comparison;
 
-      struct fragmentMain_Input_12 {
+      struct fragmentMain_Input {
         @location(0) worldPos: vec3f,
         @location(1) uv: vec2f,
         @location(2) normal: vec3f,
       }
 
-      @fragment fn fragmentMain_5(_arg_0: fragmentMain_Input_12) -> @location(0) vec4f {
-        let lightPos = (&lightPosition_6);
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        let lightPos = (&lightPosition);
         var toLight = ((*lightPos) - _arg_0.worldPos);
         let dist = length(toLight);
         var lightDir = (toLight / dist);
         let ndotl = max(dot(_arg_0.normal, lightDir), 0f);
-        let normalBiasWorld = (shadowParams_7.normalBiasBase + (shadowParams_7.normalBiasSlope * (1f - ndotl)));
+        let normalBiasWorld = (shadowParams.normalBiasBase + (shadowParams.normalBiasSlope * (1f - ndotl)));
         var biasedPos = (_arg_0.worldPos + (_arg_0.normal * normalBiasWorld));
         var toLightBiased = (biasedPos - (*lightPos));
         let distBiased = length(toLightBiased);
@@ -129,13 +129,13 @@ describe('point light shadow example', () => {
         var up = select(vec3f(1, 0, 0), vec3f(0, 1, 0), (abs(dir.y) < 0.9998999834060669f));
         var right = normalize(cross(up, dir));
         var realUp = cross(dir, right);
-        let PCF_SAMPLES = shadowParams_7.pcfSamples;
-        let diskRadius = shadowParams_7.diskRadius;
+        let PCF_SAMPLES = shadowParams.pcfSamples;
+        let diskRadius = shadowParams.diskRadius;
         var visibilityAcc = 0;
         for (var i = 0; (i < i32(PCF_SAMPLES)); i++) {
-          var o = (samplesUniform_9[i].xy * diskRadius);
+          var o = (samplesUniform[i].xy * diskRadius);
           var sampleDir = ((dir + (right * o.x)) + (realUp * o.y));
-          visibilityAcc += i32(textureSampleCompare(shadowDepthCube_10, shadowSampler_11, sampleDir, depthRef));
+          visibilityAcc += i32(textureSampleCompare(shadowDepthCube, shadowSampler, sampleDir, depthRef));
         }
         let rawNdotl = dot(_arg_0.normal, lightDir);
         let visibility = select((f32(visibilityAcc) / f32(PCF_SAMPLES)), 0f, (rawNdotl < 0f));
@@ -144,30 +144,30 @@ describe('point light shadow example', () => {
         return vec4f(color, 1f);
       }
 
-      @group(0) @binding(1) var<uniform> lightPosition_1: vec3f;
+      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
-      struct CameraData_3 {
+      struct CameraData {
         viewProjectionMatrix: mat4x4f,
         inverseViewProjectionMatrix: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_2: CameraData_3;
+      @group(0) @binding(0) var<uniform> camera: CameraData;
 
-      struct vertexLightIndicator_Output_4 {
+      struct vertexLightIndicator_Output {
         @builtin(position) pos: vec4f,
       }
 
-      struct vertexLightIndicator_Input_5 {
+      struct vertexLightIndicator_Input {
         @location(0) position: vec3f,
       }
 
-      @vertex fn vertexLightIndicator_0(_arg_0: vertexLightIndicator_Input_5) -> vertexLightIndicator_Output_4 {
-        var worldPos = ((_arg_0.position * 0.15) + lightPosition_1);
-        var pos = (camera_2.viewProjectionMatrix * vec4f(worldPos, 1f));
-        return vertexLightIndicator_Output_4(pos);
+      @vertex fn vertexLightIndicator(_arg_0: vertexLightIndicator_Input) -> vertexLightIndicator_Output {
+        var worldPos = ((_arg_0.position * 0.15) + lightPosition);
+        var pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        return vertexLightIndicator_Output(pos);
       }
 
-      @fragment fn fragmentLightIndicator_6() -> @location(0) vec4f {
+      @fragment fn fragmentLightIndicator() -> @location(0) vec4f {
         return vec4f(1, 1, 0.5, 1);
       }"
     `);
