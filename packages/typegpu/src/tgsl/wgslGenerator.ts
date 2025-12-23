@@ -21,9 +21,8 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
-import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
@@ -44,7 +43,7 @@ import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { arrayLength } from 'src/std/array.ts';
+import { arrayLength } from '../std/array.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
