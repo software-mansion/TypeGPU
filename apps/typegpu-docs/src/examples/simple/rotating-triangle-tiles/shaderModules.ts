@@ -2,20 +2,13 @@ import tgpu from 'typegpu';
 import * as std from 'typegpu/std';
 import * as d from 'typegpu/data';
 import { interpolateBezier, rotate } from './transformations.ts';
-import { triangleVertices } from './geometry.ts';
-import { root } from './root.ts';
-import { animationProgress, shiftedColors } from './buffers.ts';
-
-const STEP_ROTATION_ANGLE = 60;
-const SCALE = 0.5;
-
-const TriangleVertices = d.struct({
-  positions: d.arrayOf(d.vec2f, 9),
-});
-
-const triangleVerticesBuffer = root.createReadonly(TriangleVertices, {
-  positions: triangleVertices,
-});
+import {
+  animationProgressUniform,
+  instanceInfoBuffer,
+  shiftedColorsBuffer,
+  triangleVerticesBuffer,
+} from './buffers.ts';
+import { SCALE, STEP_ROTATION_ANGLE } from './consts.ts';
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { color: d.vec4f },
@@ -34,19 +27,25 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
   let calculatedPosition = d.vec2f(vertexPosition);
 
+  const instanceInfo = instanceInfoBuffer.$[instanceIndex];
+
   // biggest triangle
-  let color = d.vec4f(shiftedColors.$[0]);
+  let color = d.vec4f(shiftedColorsBuffer.$[0]);
 
   // middle triangle
   if (vertexIndex > 2 && vertexIndex < 6) {
-    color = d.vec4f(shiftedColors.$[1]);
+    color = d.vec4f(shiftedColorsBuffer.$[1]);
 
     const angle = interpolateBezier(
-      animationProgress.$,
+      animationProgressUniform.$,
       STEP_ROTATION_ANGLE,
       STEP_ROTATION_ANGLE * 1.5,
     );
-    const scaleFactor = interpolateBezier(animationProgress.$, 0.5, d.f32(2));
+    const scaleFactor = interpolateBezier(
+      animationProgressUniform.$,
+      0.5,
+      d.f32(2),
+    );
 
     calculatedPosition = rotate(vertexPosition, angle);
     calculatedPosition = std.mul(calculatedPosition, scaleFactor);
@@ -54,28 +53,45 @@ const mainVertex = tgpu['~unstable'].vertexFn({
 
   // smallest triangle
   if (vertexIndex > 5) {
-    color = d.vec4f(shiftedColors.$[2]);
+    color = d.vec4f(shiftedColorsBuffer.$[2]);
 
     const angle = interpolateBezier(
-      animationProgress.$,
+      animationProgressUniform.$,
       0,
       STEP_ROTATION_ANGLE,
     );
-    const scaleFactor = animationProgress.$;
+    const scaleFactor = animationProgressUniform.$;
     calculatedPosition = rotate(vertexPosition, angle);
     calculatedPosition = std.mul(calculatedPosition, scaleFactor);
   }
 
-  return { outPos: d.vec4f(std.mul(calculatedPosition, SCALE), 0, 1), color };
+  // instance transform
+
+  const finalPosition = std.add(
+    rotate(std.mul(calculatedPosition, SCALE), instanceInfo.rotationAngle),
+    instanceInfo.offset,
+  );
+
+  return { outPos: d.vec4f(finalPosition, 0, 1), color };
 });
 
 const maskVertex = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
+  in: {
+    vertexIndex: d.builtin.vertexIndex,
+    instanceIndex: d.builtin.instanceIndex,
+  },
   out: { position: d.builtin.position },
-})(({ vertexIndex }) => {
+})(({ vertexIndex, instanceIndex }) => {
+  const instanceInfo = instanceInfoBuffer.$[instanceIndex];
   const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
 
-  return { position: d.vec4f(std.mul(vertexPosition, SCALE), 0, 1) };
+  // instance transform
+  const finalPosition = std.add(
+    rotate(std.mul(vertexPosition, SCALE), instanceInfo.rotationAngle),
+    instanceInfo.offset,
+  );
+
+  return { position: d.vec4f(finalPosition, 0, 1) };
 });
 
 console.log('mainVertex:\n', tgpu.resolve([mainVertex]));

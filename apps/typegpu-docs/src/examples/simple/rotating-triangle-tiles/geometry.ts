@@ -22,24 +22,18 @@ const indigo = d.vec4f(
 
 const colors = [green, yellow, indigo];
 
-const originalPositions = [
+const originalVertices = [
   d.vec2f(std.sqrt(3), -1),
   d.vec2f(0, 2),
   d.vec2f(-std.sqrt(3), -1),
 ];
 
-const originalTriangleVertices = originalPositions.map((pos) =>
-  std.mul(pos, 0.5),
-);
-
-const halvedTriangleVertexes = originalTriangleVertices.map((pos) =>
-  std.mul(pos, 0.5),
-);
+const halvedVertices = originalVertices.map((pos) => std.mul(pos, 0.5));
 
 const triangleVertices = [
-  ...originalTriangleVertices, // the biggest outer static triangle
-  ...originalTriangleVertices, // the middle triangle growing from half the size to full size
-  ...halvedTriangleVertexes, // the smallest triangle growing from zero to half the size
+  ...originalVertices, // the biggest outer static triangle
+  ...originalVertices, // the middle triangle growing from half the size to full size
+  ...halvedVertices, // the smallest triangle growing from zero to half the size
 ];
 
 export { colors, triangleVertices };
