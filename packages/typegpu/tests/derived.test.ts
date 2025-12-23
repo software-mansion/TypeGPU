@@ -232,11 +232,11 @@ describe('TgpuDerived', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn foo() {
-        var array = array<f32, 4>();
+        var array_1 = array<f32, 4>();
       }
 
       fn foo_1() {
-        var array = array<f16, 4>();
+        var array_1 = array<f16, 4>();
       }
 
       fn main() {
