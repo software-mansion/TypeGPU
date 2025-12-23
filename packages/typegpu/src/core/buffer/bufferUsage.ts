@@ -361,7 +361,7 @@ export function uniform<TData extends AnyWgslData>(
 ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
-      `Cannot call as('uniform'), as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
+      `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
     );
   }
 
