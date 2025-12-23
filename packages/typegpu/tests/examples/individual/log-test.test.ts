@@ -254,7 +254,7 @@ describe('console log example', () => {
         serializeF32(_arg_0);
       }
 
-      fn log2(_arg_0: f32) {
+      fn log2_1(_arg_0: f32) {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -797,7 +797,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1();
-        log2(3.140000104904175f);
+        log2_1(3.140000104904175f);
         log3(-2000000000i);
         log4(3000000000u);
         log5(true);
@@ -931,7 +931,7 @@ describe('console log example', () => {
         ComplexStructSerializer(_arg_0);
       }
 
-      fn log2(_arg_0: ComplexStruct) {
+      fn log2_1(_arg_0: ComplexStruct) {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -992,7 +992,7 @@ describe('console log example', () => {
         var simpleStruct = SimpleStruct(vec3u(1, 2, 3), 4u);
         log1(simpleStruct);
         var complexStruct = ComplexStruct(simpleStruct, true);
-        log2(complexStruct);
+        log2_1(complexStruct);
         var simpleArray = array<u32, 2>(1u, 2u);
         log3(simpleArray);
         var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3u, 4u), array<u32, 2>(5u, 6u), array<u32, 2>(7u, 8u));
@@ -1044,7 +1044,7 @@ describe('console log example', () => {
 
       }
 
-      fn log2() {
+      fn log2_1() {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -1057,7 +1057,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1();
-        log2();
+        log2_1();
       }
 
       struct mainCompute_Input {
@@ -1307,7 +1307,7 @@ describe('console log example', () => {
         serializeVec3f(_arg_1);
       }
 
-      fn log2(_arg_0: vec3f, _arg_1: vec3f) {
+      fn log2_1(_arg_0: vec3f, _arg_1: vec3f) {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -1320,7 +1320,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1(987i, 1.26f, vec4f(1, 2, 3, 4));
-        log2(vec3f(1, 2, 3), vec3f(1, 2, 3));
+        log2_1(vec3f(1, 2, 3), vec3f(1, 2, 3));
       }
 
       struct mainCompute_Input {
@@ -1368,7 +1368,7 @@ describe('console log example', () => {
 
       }
 
-      fn log2() {
+      fn log2_1() {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -1466,7 +1466,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1();
-        log2();
+        log2_1();
         log3(1i);
         log4(2i);
         log5(3i);
@@ -1651,7 +1651,7 @@ describe('console log example', () => {
         serializeU32(_arg_0);
       }
 
-      fn log2(_arg_0: u32) {
+      fn log2_1(_arg_0: u32) {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 40) {
           return;
@@ -1679,7 +1679,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         log1(x);
-        log2(x);
+        log2_1(x);
         log3(x);
       }
 

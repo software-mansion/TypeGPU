@@ -170,13 +170,13 @@ describe('3d fish example', () => {
           repulsion[i] = 1f;
           let axisAquariumSize = (vec3f(10, 4, 10)[i] / 2f);
           let axisPosition = (*fishData).position[i];
-          const distance = 0.1;
-          if ((axisPosition > (axisAquariumSize - distance))) {
-            let str = (axisPosition - (axisAquariumSize - distance));
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str = (axisPosition - (axisAquariumSize - distance_1));
             wallRepulsion = (wallRepulsion - (repulsion * str));
           }
-          if ((axisPosition < (-(axisAquariumSize) + distance))) {
-            let str = ((-(axisAquariumSize) + distance) - axisPosition);
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
             wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }

@@ -176,14 +176,14 @@ test('should give new names to functions that collide with builtins', () => {
   });
 
   expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-    "fn min(a: f32, b: f32) -> f32 {
+    "fn min_1(a: f32, b: f32) -> f32 {
       return max(0f, min(a, b));
     }
 
     fn main() {
       const a = -1;
       const b = -2;
-      let x = min(f32(a), f32(b));
+      let x = min_1(f32(a), f32(b));
       let y = min(a, b);
     }"
   `);

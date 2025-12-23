@@ -185,9 +185,9 @@ describe('vaporrave example', () => {
       }
 
       fn getSceneRay(p: vec3f) -> Ray {
-        var floor = Ray(circles(p.xz, floorAngleUniform), sdPlane(p, vec3f(0, 1, 0), 1f));
+        var floor_1 = Ray(circles(p.xz, floorAngleUniform), sdPlane(p, vec3f(0, 1, 0), 1f));
         var sphere = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
-        return rayUnion(floor, sphere);
+        return rayUnion(floor_1, sphere);
       }
 
       struct LightRay {
