@@ -1,14 +1,11 @@
-import tgpu from 'typegpu';
-import { createBezier } from './bezier.ts';
 import { colors } from './geometry.ts';
+import { animationProgressUniform, shiftedColorsBuffer } from './buffers.ts';
+import { createBezier } from './bezier.ts';
 import { root } from './root.ts';
 import { mainFragment, mainVertex, maskVertex } from './shaderModules.ts';
-import { animationProgress, shiftedColors } from './buffers.ts';
+import { ANIMATION_DURATION, TRIANGLE_COUNT } from './consts.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
-
-const ANIMATION_DURATION = 1500;
-const TRIANGLE_COUNT = 2;
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -63,8 +60,8 @@ function getShiftedColors(timestamp: number) {
 function draw(timestamp: number) {
   if (!isRunning) return;
 
-  shiftedColors.write(getShiftedColors(timestamp));
-  animationProgress.write(
+  shiftedColorsBuffer.write(getShiftedColors(timestamp));
+  animationProgressUniform.write(
     ease((timestamp % ANIMATION_DURATION) / ANIMATION_DURATION),
   );
 
@@ -104,7 +101,7 @@ const resizeObserver = new ResizeObserver(() => {
       stencilLoadOp: 'clear',
       stencilStoreOp: 'store',
     })
-    .draw(3);
+    .draw(3, TRIANGLE_COUNT);
 });
 resizeObserver.observe(canvas);
 
