@@ -1,93 +1,14 @@
 import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { createBezier } from './bezier.ts';
-import { interpolateBezier, rotate } from './transformations.ts';
-import { colors, triangleVertices } from './geometry.ts';
+import { colors } from './geometry.ts';
+import { root } from './root.ts';
+import { mainFragment, mainVertex, maskVertex } from './shaderModules.ts';
+import { animationProgress, shiftedColors } from './buffers.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
 
-const root = await tgpu.init();
-
-const STEP_ROTATION_ANGLE = 60;
 const ANIMATION_DURATION = 1500;
-const SCALE = 0.5;
-
-const animationProgress = root.createUniform(d.f32);
-
-const shiftedColors = root.createReadonly(d.arrayOf(d.vec4f, 3), [...colors]);
-
-const TriangleVertices = d.struct({
-  positions: d.arrayOf(d.vec2f, 9),
-});
-
-const triangleVerticesBuffer = root.createReadonly(TriangleVertices, {
-  positions: triangleVertices,
-});
-
-const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: { color: d.vec4f },
-  out: d.vec4f,
-})((input) => {
-  return input.color;
-});
-
-const wgsl2 = tgpu.resolve([mainFragment]);
-console.log(wgsl2);
-
-const mainVertex = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position, color: d.vec4f },
-})(({ vertexIndex }) => {
-  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
-  let calculatedPosition = d.vec2f(vertexPosition);
-
-  // biggest triangle
-  let color = d.vec4f(shiftedColors.$[0]);
-
-  // middle triangle
-  if (vertexIndex > 2 && vertexIndex < 6) {
-    color = d.vec4f(shiftedColors.$[1]);
-
-    const angle = interpolateBezier(
-      animationProgress.$,
-      STEP_ROTATION_ANGLE,
-      STEP_ROTATION_ANGLE * 1.5,
-    );
-    const scaleFactor = interpolateBezier(animationProgress.$, 0.5, d.f32(2));
-
-    calculatedPosition = rotate(vertexPosition, angle);
-    calculatedPosition = std.mul(calculatedPosition, scaleFactor);
-  }
-
-  // smallest triangle
-  if (vertexIndex > 5) {
-    color = d.vec4f(shiftedColors.$[2]);
-
-    const angle = interpolateBezier(
-      animationProgress.$,
-      0,
-      STEP_ROTATION_ANGLE,
-    );
-    const scaleFactor = animationProgress.$;
-    calculatedPosition = rotate(vertexPosition, angle);
-    calculatedPosition = std.mul(calculatedPosition, scaleFactor);
-  }
-
-  return { outPos: d.vec4f(std.mul(calculatedPosition, SCALE), 0, 1), color };
-});
-
-const maskVertex = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { position: d.builtin.position },
-})(({ vertexIndex }) => {
-  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
-
-  return { position: d.vec4f(std.mul(vertexPosition, SCALE), 0, 1) };
-});
-
-const wgsl = tgpu.resolve([mainVertex]);
-console.log(wgsl);
+const TRIANGLE_COUNT = 2;
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -131,11 +52,8 @@ const pipeline = root['~unstable']
   .createPipeline()
   .withStencilReference(1);
 
-let isRunning = true;
-
-console.log(tgpu.resolve([maskPipeline]));
-
 // main drawing loop
+let isRunning = true;
 
 function getShiftedColors(timestamp: number) {
   const shiftBy = Math.floor(timestamp / ANIMATION_DURATION) % colors.length;
@@ -162,7 +80,7 @@ function draw(timestamp: number) {
       stencilLoadOp: 'load',
       stencilStoreOp: 'store',
     })
-    .draw(9);
+    .draw(9, TRIANGLE_COUNT);
 
   requestAnimationFrame(draw);
 }
