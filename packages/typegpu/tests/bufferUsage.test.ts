@@ -75,17 +75,17 @@ describe('TgpuBufferUniform', () => {
   });
 
   it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
-    root.createBuffer(d.u32, 2).$usage('storage').as('readonly');
-    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
-    root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
     expect(() =>
       root
         .createBuffer(d.u32, 2)
-        .$usage('uniform')
+        .$usage('storage')
         // @ts-expect-error
-        .as('readonly')
+        .as('uniform')
     ).toThrow();
   });
 });
@@ -180,17 +180,17 @@ describe('TgpuBufferMutable', () => {
   });
 
   it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
-    root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
-    root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
-    root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('storage').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
     expect(() =>
       root
         .createBuffer(d.u32, 2)
-        .$usage('storage')
+        .$usage('uniform')
         // @ts-expect-error
-        .as('uniform')
+        .as('mutable')
     ).toThrow();
   });
 });
@@ -305,17 +305,17 @@ describe('TgpuBufferReadonly', () => {
   });
 
   it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
-    root.createBuffer(d.u32, 2).$usage('storage').as('mutable');
-    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
-    root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('storage').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
     expect(() =>
       root
         .createBuffer(d.u32, 2)
         .$usage('uniform')
         // @ts-expect-error
-        .as('mutable')
+        .as('readonly')
     ).toThrow();
   });
 });
