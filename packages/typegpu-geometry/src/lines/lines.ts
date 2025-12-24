@@ -1,59 +1,31 @@
 import tgpu from 'typegpu';
-import { struct, u32, vec2f } from 'typegpu/data';
-import type { v2f } from 'typegpu/data';
-import { dot, mul, normalize, sub } from 'typegpu/std';
-import { addMul, midPoint, rot90ccw, rot90cw } from '../utils.ts';
-import { externalNormals, limitTowardsMiddle, miterPoint } from './utils.ts';
-import { JoinPath, LineSegmentVertex } from './types.ts';
-import { joinSituationIndex } from './joins/common.ts';
-import { roundJoin } from './joins/round.ts';
-import { roundCap } from './caps/round.ts';
-import { JOIN_LIMIT } from './constants.ts';
+import { u32, vec2f } from 'typegpu/data';
+import { dot, neg, select, sub } from 'typegpu/std';
+import { addMul, intersectLines } from '../utils.ts';
+import { ExternalNormals, externalNormals } from './externalNormals.ts';
+import { round } from './joins/round.ts';
+import { solveJoin } from './solveJoin.ts';
+import { JoinInput, LineControlPoint, LineSegmentOutput } from './types.ts';
 
-export const joinSlot = tgpu.slot(roundJoin);
-export const startCapSlot = tgpu.slot(roundCap);
-export const endCapSlot = tgpu.slot(roundCap);
+export const joinSlot = tgpu.slot(round);
+export const startCapSlot = tgpu.slot(round);
+export const endCapSlot = tgpu.slot(round);
 
-const getJoinParent = tgpu.fn([u32], u32)((i) => (i - 4) >> 1);
-
-const getJoinVertexPath = tgpu.fn([u32], JoinPath)((vertexIndex) => {
-  // deno-fmt-ignore
-  const lookup = [u32(0), u32(0), /* dont care */u32(0), u32(1), u32(1), u32(2), u32(2), /* dont care */u32(2), u32(3), u32(3)];
-  if (vertexIndex < 10) {
-    return JoinPath({
-      joinIndex: lookup[vertexIndex] as number,
-      path: 0,
-      depth: -1,
-    });
-  }
-  let joinIndex = vertexIndex - 10;
-  let depth = 0;
-  let path = u32(0);
-  while (joinIndex >= 4) {
-    path = (path << 1) | (joinIndex & 1);
-    joinIndex = getJoinParent(joinIndex);
-    depth += 1;
-  }
-  return JoinPath({ joinIndex, path, depth });
-});
-
-const LineSegmentOutput = struct({
-  vertexPosition: vec2f,
-  situationIndex: u32,
-});
-
-export const lineSegmentVariableWidth = tgpu.fn([
-  u32,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
-], LineSegmentOutput)((vertexIndex, A, B, C, D) => {
-  const joinPath = getJoinVertexPath(vertexIndex);
-
+export const lineSegmentVariableWidth = tgpu.fn(
+  [
+    u32,
+    LineControlPoint,
+    LineControlPoint,
+    LineControlPoint,
+    LineControlPoint,
+    u32,
+  ],
+  LineSegmentOutput,
+)((vertexIndex, A, B, C, D, maxJoinCount) => {
   const AB = sub(B.position, A.position);
   const BC = sub(C.position, B.position);
-  const CD = sub(D.position, C.position);
+  const DC = sub(C.position, D.position);
+  const CB = neg(BC);
 
   const radiusABDelta = A.radius - B.radius;
   const radiusBCDelta = B.radius - C.radius;
@@ -62,145 +34,89 @@ export const lineSegmentVariableWidth = tgpu.fn([
   // segments where one end completely contains the other are skipped
   // TODO: we should probably render a circle in some cases
   if (dot(BC, BC) <= radiusBCDelta * radiusBCDelta) {
-    return {
-      vertexPosition: vec2f(0, 0),
-      uv: vec2f(0, 0),
-      situationIndex: 0,
-    };
+    return { vertexPosition: vec2f(0, 0), w: 1 };
   }
 
-  const isCapB = dot(AB, AB) <= radiusABDelta * radiusABDelta + 1e-12;
-  const isCapC = dot(CD, CD) <= radiusCDDelta * radiusCDDelta + 1e-12;
+  const isCapB = dot(AB, AB) <= radiusABDelta * radiusABDelta;
+  const isCapC = dot(DC, DC) <= radiusCDDelta * radiusCDDelta;
 
   const eAB = externalNormals(AB, A.radius, B.radius);
   const eBC = externalNormals(BC, B.radius, C.radius);
-  const eCD = externalNormals(CD, C.radius, D.radius);
+  const eCB = ExternalNormals({ nL: eBC.nR, nR: eBC.nL });
+  const eDC = externalNormals(DC, D.radius, C.radius);
 
-  const nBC = normalize(BC);
-  const nCB = mul(nBC, -1);
+  const joinLimit = dot(eBC.nL, BC);
+  const joinB = solveJoin(AB, BC, eAB, eBC, joinLimit, isCapB);
+  const joinC = solveJoin(DC, CB, eDC, eCB, -joinLimit, isCapC);
+  const d2 = joinB.dL;
+  const d3 = joinB.dR;
+  const d4 = joinC.dL;
+  const d5 = joinC.dR;
 
-  let d0 = eBC.n1;
-  let d4 = eBC.n2;
-  let d5 = eBC.n2;
-  let d9 = eBC.n1;
+  const v2orig = addMul(B.position, d2, B.radius);
+  const v3orig = addMul(B.position, d3, B.radius);
+  const v4orig = addMul(C.position, d4, C.radius);
+  const v5orig = addMul(C.position, d5, C.radius);
 
-  const situationIndexB = joinSituationIndex(eAB.n1, eBC.n1, eAB.n2, eBC.n2);
-  const situationIndexC = joinSituationIndex(eCD.n2, eBC.n2, eCD.n1, eBC.n1);
-  let joinBu = true;
-  let joinBd = true;
-  let joinCu = true;
-  let joinCd = true;
-  if (!isCapB) {
-    if (
-      situationIndexB === 1 || situationIndexB === 5 ||
-      dot(eBC.n2, eAB.n2) > JOIN_LIMIT.$
-    ) {
-      d4 = miterPoint(eBC.n2, eAB.n2);
-      joinBd = false;
-    }
-    if (
-      situationIndexB === 4 || situationIndexB === 5 ||
-      dot(eAB.n1, eBC.n1) > JOIN_LIMIT.$
-    ) {
-      d0 = miterPoint(eAB.n1, eBC.n1);
-      joinBu = false;
-    }
+  const limL = intersectLines(B.position, v2orig, C.position, v5orig);
+  const limR = intersectLines(B.position, v3orig, C.position, v4orig);
+
+  const v2 = select(v2orig, limL.point, limL.valid);
+  const v5 = select(v5orig, limL.point, limL.valid);
+  const v3 = select(v3orig, limR.point, limR.valid);
+  const v4 = select(v4orig, limR.point, limR.valid);
+
+  if (vertexIndex === 0) {
+    return { vertexPosition: B.position, w: 1 / B.radius };
   }
-  if (!isCapC) {
-    if (
-      situationIndexC === 4 || situationIndexC === 5 ||
-      dot(eCD.n2, eBC.n2) > JOIN_LIMIT.$
-    ) {
-      d5 = miterPoint(eCD.n2, eBC.n2);
-      joinCd = false;
-    }
-    if (
-      situationIndexC === 1 || situationIndexC === 5 ||
-      dot(eBC.n1, eCD.n1) > JOIN_LIMIT.$
-    ) {
-      d9 = miterPoint(eBC.n1, eCD.n1);
-      joinCu = false;
-    }
+  if (vertexIndex === 1) {
+    return { vertexPosition: C.position, w: 1 / C.radius };
   }
 
-  let v0 = addMul(B.position, d0, B.radius);
-  let v4 = addMul(B.position, d4, B.radius);
-  let v5 = addMul(C.position, d5, C.radius);
-  let v9 = addMul(C.position, d9, C.radius);
-
-  const midBC = midPoint(B.position, C.position);
-  const tBC1 = rot90cw(eBC.n1);
-  const tBC2 = rot90ccw(eBC.n2);
-
-  const limU = limitTowardsMiddle(midBC, tBC1, v0, v9);
-  const limD = limitTowardsMiddle(midBC, tBC2, v4, v5);
-  v0 = limU.a;
-  v9 = limU.b;
-  v4 = limD.a;
-  v5 = limD.b;
-
-  // after this point we need to process only one of the joins!
-  const isCSide = joinPath.joinIndex >= 2;
-
-  let situationIndex = situationIndexB;
-  let V = B;
-  let isCap = isCapB;
-  let j1 = eAB.n1;
-  let j2 = eBC.n1;
-  let j3 = eAB.n2;
-  let j4 = eBC.n2;
-  let vu = v0;
-  let vd = v4;
-  let joinU = joinBu;
-  let joinD = joinBd;
-  if (isCSide) {
-    situationIndex = situationIndexC;
-    V = C;
-    isCap = isCapC;
-    j4 = eBC.n1;
-    j3 = eCD.n1;
-    j2 = eBC.n2;
-    j1 = eCD.n2;
-    vu = v5;
-    vd = v9;
-    joinU = joinCd;
-    joinD = joinCu;
-  }
-
-  const joinIndex = joinPath.joinIndex;
-  if (vertexIndex >= 10) {
-    const shouldJoin = [u32(joinBu), u32(joinBd), u32(joinCd), u32(joinCu)];
-    if (shouldJoin[joinIndex] === 0) {
-      const noJoinPoints = [v0, v4, v5, v9];
-      const vertexPosition = noJoinPoints[joinIndex] as v2f;
-      return {
-        situationIndex,
-        vertexPosition,
-      };
-    }
-  }
-
-  let vertexPosition = vec2f();
+  const joinIndex = (vertexIndex - 2) & 0b11;
+  const joinCount = (vertexIndex - 2) >> 2;
+  let join = JoinInput();
 
   // deno-fmt-ignore
-  if (isCap) {
-    if (isCSide) {
-      vertexPosition =   endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
-    } else {
-      vertexPosition = startCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nCB, j4);
-    }
+  if (joinIndex === 0) {
+    join = JoinInput({
+      C: B, v: v2, d: d2, shouldJoin: joinB.shouldJoinL, isCap: isCapB, fw: CB,
+      start: d2,
+      end: select(eAB.nL, d3, joinB.isHairpin || isCapB),
+    });
+  } else if (joinIndex === 1) {
+    join = JoinInput({
+      C: B, v: v3, d: d3, shouldJoin: joinB.shouldJoinR, isCap: isCapB, fw: CB,
+      start: select(eAB.nR, d2, joinB.isHairpin || isCapB),
+      end: d3,
+    });
+  } else if (joinIndex === 2) {
+    join = JoinInput({
+      C: C, v: v4, d: d4, shouldJoin: joinC.shouldJoinL, isCap: isCapC, fw: BC,
+      start: d4,
+      end: select(eDC.nL, d5, joinC.isHairpin || isCapC),
+    });
   } else {
-    vertexPosition = joinSlot.$(
-      situationIndex, vertexIndex,
-      joinPath,
-      V, vu, vd,
-      j1, j2, j3, j4,
-      joinU, joinD
-    );
+    join = JoinInput({
+      C: C, v: v5, d: d5, shouldJoin: joinC.shouldJoinR, isCap: isCapC, fw: BC,
+      start: select(eDC.nR, d4, joinC.isHairpin || isCapC),
+      end: d5,
+    });
   }
 
-  return {
-    situationIndex,
-    vertexPosition,
-  };
+  let vertexPosition = vec2f(join.v);
+  if (join.isCap) {
+    if (joinIndex < 2) {
+      vertexPosition = startCapSlot.$(join, joinCount, maxJoinCount);
+    } else {
+      vertexPosition = endCapSlot.$(join, joinCount, maxJoinCount);
+    }
+  } else if (join.shouldJoin) {
+    vertexPosition = joinSlot.$(join, joinCount, maxJoinCount);
+  }
+
+  // TODO: adjust for reverse miter
+  const w = select(1 / B.radius, 1 / C.radius, joinIndex >= 2);
+
+  return { vertexPosition, w };
 });
