@@ -127,6 +127,9 @@ ${example.htmlFile.content}
       "@loaders.gl/obj": "${
           typegpuDocsPackageJson.dependencies['@loaders.gl/obj']
         }",
+      "@loaders.gl/gltf": "${
+          typegpuDocsPackageJson.dependencies['@loaders.gl/gltf']
+        }",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",
       "@typegpu/sdf": "${typegpuSdfPackageJson.version}"
