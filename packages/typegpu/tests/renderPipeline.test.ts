@@ -11,7 +11,7 @@ import tgpu, {
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 
-describe('TgpuRenderPipeline', () => {
+describe('root.withVertex(...).withFragment(...)', () => {
   const vert = tgpu['~unstable'].vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
   })`{ return Out(); }`;
@@ -1057,6 +1057,105 @@ describe('TgpuRenderPipeline', () => {
         querySet: querySet.querySet,
       },
     });
+  });
+});
+
+describe('root.createRenderPipeline', () => {
+  const vertex = tgpu['~unstable'].vertexFn({
+    out: { a: d.vec3f, b: d.vec2f },
+  })`{ return Out(); }`;
+  const vertexWithBuiltin = tgpu['~unstable'].vertexFn({
+    out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
+  })`{ return Out(); }`;
+
+  it.skip('allows fragment functions to use a subset of the vertex output', ({ root }) => {
+    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
+    const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
+      in: { pos: d.builtin.frontFacing },
+      out: {},
+    })`{}`;
+    const fullFragment = tgpu['~unstable'].fragmentFn({
+      in: { a: d.vec3f, b: d.vec2f },
+      out: d.vec4f,
+    })`{ return vec4f(); }`;
+
+    const pipelines = [
+      // Using none
+      root.createRenderPipeline({
+        vertex,
+        fragment: emptyFragment,
+      }),
+      // (shell-less)
+      root.createRenderPipeline({
+        vertex,
+        fragment: () => {
+          'use gpu';
+        },
+      }),
+
+      // Using none (builtins are erased from the vertex output)
+      root.createRenderPipeline({
+        vertex: vertexWithBuiltin,
+        fragment: emptyFragment,
+      }),
+      // (shell-less)
+      root.createRenderPipeline({
+        vertex: vertexWithBuiltin,
+        fragment: () => {
+          'use gpu';
+        },
+      }),
+
+      // Using none (builtins are ignored in the fragment input)
+      root.createRenderPipeline({
+        vertex,
+        fragment: emptyFragmentWithBuiltin,
+      }),
+      // (shell-less)
+      root.createRenderPipeline({
+        vertex,
+        fragment: ({ $frontFacing }) => {
+          'use gpu';
+        },
+      }),
+
+      // Using none (builtins are ignored in both input and output,
+      // so their conflict of the `pos` key is fine)
+      root.createRenderPipeline({
+        vertex: vertexWithBuiltin,
+        fragment: emptyFragmentWithBuiltin,
+      }),
+      // (shell-less)
+      root.createRenderPipeline({
+        vertex: vertexWithBuiltin,
+        fragment: ({ $frontFacing }) => {
+          'use gpu';
+        },
+      }),
+
+      // Using all
+      root.createRenderPipeline({
+        vertex,
+        fragment: fullFragment,
+        targets: { format: 'rgba8unorm' },
+      }),
+      // (shell-less)
+      root.createRenderPipeline({
+        vertex,
+        fragment: ({ $frontFacing, a }) => {
+          'use gpu';
+          if ($frontFacing) {
+            return d.vec4f(a, 1);
+          }
+          return d.vec4f(a.zyx, 1);
+        },
+        targets: { format: 'rgba8unorm' },
+      }),
+    ];
+
+    for (const pipeline of pipelines) {
+      expect(pipeline).toBeDefined();
+    }
   });
 });
 

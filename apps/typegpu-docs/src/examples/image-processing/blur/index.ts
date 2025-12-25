@@ -158,14 +158,15 @@ const ioBindGroups = [
   }),
 ];
 
-const computePipeline = root['~unstable']
-  .withCompute(computeFn)
-  .createPipeline();
+const computePipeline = root['~unstable'].createComputePipeline({
+  compute: computeFn,
+});
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(renderFragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: renderFragment,
+  targets: { format: presentationFormat },
+});
 
 function render() {
   settingsUniform.write({

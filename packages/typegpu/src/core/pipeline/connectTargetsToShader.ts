@@ -11,9 +11,22 @@ function isColorTargetState(
 }
 
 export function connectTargetsToShader(
-  shaderOutputLayout: FragmentOutConstrained,
+  shaderOutputLayout: FragmentOutConstrained | undefined,
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
+  // For shell-less entry functions, we determine the layout based on solely the targets
+  if (!shaderOutputLayout) {
+    if (!targets) {
+      return [];
+    }
+
+    if (typeof targets?.format === 'string') {
+      return [targets as GPUColorTargetState];
+    }
+
+    return Object.values(targets) as GPUColorTargetState[];
+  }
+
   if (isData(shaderOutputLayout)) {
     if (isVoid(shaderOutputLayout)) {
       return [];
