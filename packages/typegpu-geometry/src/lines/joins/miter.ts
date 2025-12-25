@@ -19,7 +19,7 @@ export const miterLimit = tgpu.fn([vec2f, f32], vec2f)((miter, limitRatio) => {
       (limitRatio - 1) * (limitRatio * limitRatio - 1) / (m2 - 1) + 1,
     );
   }
-  return miter;
+  return vec2f(miter);
 });
 
 export const miterJoin = joinShell(
@@ -53,35 +53,35 @@ export const miterJoin = joinShell(
       0.5,
     );
 
-    let uR = ur;
-    let u = miterU;
+    let uR = vec2f(ur);
+    let u = vec2f(miterU);
     let c = select(averageCenter, crossCenter, shouldCross);
-    let d = miterD;
-    let dR = dr;
+    let d = vec2f(miterD);
+    let dR = vec2f(dr);
 
     if (situationIndex === 2) {
       const mid = bisectCcw(ur, dr);
-      uR = ur;
-      u = mid;
-      c = mid;
-      d = mid;
-      dR = dr;
+      uR = vec2f(ur);
+      u = vec2f(mid);
+      c = vec2f(mid);
+      d = vec2f(mid);
+      dR = vec2f(dr);
     }
 
     if (situationIndex === 3) {
       const mid = bisectCcw(dl, ul);
-      uR = ur;
-      u = mid;
-      c = mid;
-      d = mid;
-      dR = dr;
+      uR = vec2f(ur);
+      u = vec2f(mid);
+      c = vec2f(mid);
+      d = vec2f(mid);
+      dR = vec2f(dr);
     }
 
     const joinIndex = joinPath.joinIndex;
     if (joinPath.depth >= 0) {
       const parents = [uR, u, d, dR];
-      const d0 = parents[(joinIndex * 2) & 3] as v2f;
-      const d1 = parents[(joinIndex * 2 + 1) & 3] as v2f;
+      const d0 = vec2f(parents[(joinIndex * 2) & 3] as v2f);
+      const d1 = vec2f(parents[(joinIndex * 2 + 1) & 3] as v2f);
       const dm = miterPoint(d0, d1);
       return addMul(V.position, dm, V.radius);
     }
@@ -90,6 +90,6 @@ export const miterJoin = joinShell(
     const v2 = select(vu, addMul(V.position, c, V.radius), joinU || joinD);
     const v3 = select(vd, addMul(V.position, d, V.radius), joinD);
     const points = [vu, v1, v2, v3, vd];
-    return points[vertexIndex % 5] as v2f;
+    return vec2f(points[vertexIndex % 5] as v2f);
   },
 );

@@ -44,7 +44,7 @@ const getSubdivLevel = tgpu.fn([u32], SubdivLevelResult)(
 );
 
 const consecutiveTriangleVertexIndex = tgpu.fn([u32], u32)((i) => {
-  return (2 * (i + 1)) / 3;
+  return u32((2 * (i + 1)) / 3);
 });
 
 /**
@@ -69,7 +69,7 @@ export const circle = tgpu.fn([u32], vec2f)(
 
 export function circleVertexCount(subdivLevel: number) {
   let totalVertexCount = 3;
-  for (let level = 0; level < subdivLevel; level += 1) {
+  for (let level = u32(0); level < subdivLevel; level += 1) {
     totalVertexCount += 9 * (1 << level);
   }
   return totalVertexCount;
