@@ -429,6 +429,46 @@ describe('[BABEL] auto naming', () => {
         }"
       `);
   });
+
+  it('works with assigning to "this" property', () => {
+    const code = `\
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        #myBuffer;
+
+        constructor() {
+          this.#myBuffer = root.createUniform(d.u32);
+        }
+
+        get myBuffer() {
+          return this.#myBuffer;
+        }
+      }
+
+      console.log(MyController);
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+        const root = await tgpu.init();
+        class MyController {
+          #myBuffer;
+          constructor() {
+            this.#myBuffer = root.createUniform(d.u32);
+          }
+          get myBuffer() {
+            return this.#myBuffer;
+          }
+        }
+        console.log(MyController);"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
@@ -868,6 +908,52 @@ describe('[ROLLUP] auto naming', () => {
 
                 constructor() {
                   this.myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
+                }
+              }
+
+              console.log(MyController);
+        "
+      `);
+  });
+
+  it('works with assigning to "this" property', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        #myBuffer;
+
+        constructor() {
+          this.#myBuffer = root.createUniform(d.u32);
+        }
+
+        get myBuffer() {
+          return this.#myBuffer;
+        }
+      }
+
+      console.log(MyController);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+
+        const root = await tgpu.init();
+
+              class MyController {
+                #myBuffer;
+
+                constructor() {
+                  this.#myBuffer = root.createUniform(d.u32);
+                }
+
+                get myBuffer() {
+                  return this.#myBuffer;
                 }
               }
 
