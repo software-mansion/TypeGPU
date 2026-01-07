@@ -150,16 +150,11 @@ describe('TgpuBufferMutable', () => {
 
     const main = () => {
       'use gpu';
+      // @ts-expect-error
       foo.$ += 1;
     };
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> foo: f32;
-
-      fn main() {
-        foo += 1f;
-      }"
-    `);
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('cannot be mutated (non-primitive)', ({ root }) => {
@@ -170,13 +165,7 @@ describe('TgpuBufferMutable', () => {
       foo.$.x += 1;
     };
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> foo: vec3f;
-
-      fn main() {
-        foo.x += 1f;
-      }"
-    `);
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 
   describe('simulate mode', () => {
@@ -299,16 +288,11 @@ describe('TgpuBufferReadonly', () => {
 
     const main = () => {
       'use gpu';
+      // @ts-expect-error
       foo.$ += 1;
     };
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> foo: f32;
-
-      fn main() {
-        foo += 1f;
-      }"
-    `);
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('cannot be mutated (non-primitive)', ({ root }) => {
@@ -319,13 +303,7 @@ describe('TgpuBufferReadonly', () => {
       foo.$.x += 1;
     };
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> foo: vec3f;
-
-      fn main() {
-        foo.x += 1f;
-      }"
-    `);
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 
   describe('simulate mode', () => {
