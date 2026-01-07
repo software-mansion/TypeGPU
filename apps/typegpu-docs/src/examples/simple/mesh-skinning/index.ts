@@ -52,6 +52,12 @@ context.configure({
 let depthTexture = root['~unstable'].createTexture({
   size: [canvas.width, canvas.height],
   format: 'depth24plus',
+  sampleCount: 4,
+}).$usage('render');
+let msaaTexture = root['~unstable'].createTexture({
+  size: [canvas.width, canvas.height],
+  format: presentationFormat,
+  sampleCount: 4,
 }).$usage('render');
 
 const cameraUniform = root.createUniform(d.mat4x4f);
@@ -230,7 +236,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
   const diffuse = std.saturate(
     std.dot(normal, std.normalize(d.vec3f(1, 0, 1))),
   );
-  return d.vec4f(d.vec3f(0.8, 0.8, 0.8).mul(diffuse * 0.7 + 0.3), 1.0);
+  return d.vec4f(d.vec3f(0.8).mul(diffuse * 0.7 + 0.3), 1.0);
 });
 
 const pipeline = root['~unstable']
@@ -241,6 +247,7 @@ const pipeline = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
+  .withMultisample({ count: 4 })
   .createPipeline()
   .withIndexBuffer(indexBuffer);
 
@@ -248,6 +255,12 @@ const resizeObserver = new ResizeObserver(() => {
   depthTexture = root['~unstable'].createTexture({
     size: [canvas.width, canvas.height],
     format: 'depth24plus',
+    sampleCount: 4,
+  }).$usage('render');
+  msaaTexture = root['~unstable'].createTexture({
+    size: [canvas.width, canvas.height],
+    format: presentationFormat,
+    sampleCount: 4,
   }).$usage('render');
 });
 resizeObserver.observe(canvas);
@@ -291,7 +304,8 @@ function render(time: number) {
     .with(vertexLayout, vertexBuffer)
     .withIndexBuffer(indexBuffer)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      resolveTarget: context.getCurrentTexture().createView(),
+      view: root.unwrap(msaaTexture).createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -318,13 +332,13 @@ export const controls = {
     },
   },
   Twist: {
-    initial: false,
+    initial: true,
     onToggleChange: (v: boolean) => {
       twistEnabled = v;
     },
   },
   Bend: {
-    initial: false,
+    initial: true,
     onToggleChange: (v: boolean) => {
       bendEnabled = v;
     },
