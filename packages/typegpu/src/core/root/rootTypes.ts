@@ -73,11 +73,10 @@ import type {
   TgpuMutableAccessor,
   TgpuSlot,
 } from '../slot/slotTypes.ts';
-import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
+import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 
 // ----------
 // Public API
@@ -213,7 +212,7 @@ export interface Configurable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: AccessorIn<T>,
+    value: AccessorIn<NoInfer<T>>,
   ): Configurable;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
