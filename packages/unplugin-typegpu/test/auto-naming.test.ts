@@ -430,7 +430,7 @@ describe('[BABEL] auto naming', () => {
       `);
   });
 
-  it('works with assigning to "this" property', () => {
+  it('works with assigning to "this" private property', () => {
     const code = `\
       import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
@@ -460,7 +460,7 @@ describe('[BABEL] auto naming', () => {
         class MyController {
           #myBuffer;
           constructor() {
-            this.#myBuffer = root.createUniform(d.u32);
+            this.#myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");
           }
           get myBuffer() {
             return this.#myBuffer;
@@ -916,7 +916,7 @@ describe('[ROLLUP] auto naming', () => {
       `);
   });
 
-  it('works with assigning to "this" property', async () => {
+  it('works with assigning to "this" private property', async () => {
     const code = `\
       import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
@@ -949,7 +949,7 @@ describe('[ROLLUP] auto naming', () => {
                 #myBuffer;
 
                 constructor() {
-                  this.#myBuffer = root.createUniform(d.u32);
+                  this.#myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
                 }
 
                 get myBuffer() {

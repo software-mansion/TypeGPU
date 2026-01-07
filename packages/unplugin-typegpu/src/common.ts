@@ -226,6 +226,12 @@ function tryFindIdentifier(
   if (node.type === 'Identifier') {
     return node.name;
   }
+  if (node.type === 'PrivateName') {
+    return tryFindIdentifier(node.id);
+  }
+  if (node.type === 'PrivateIdentifier') {
+    return node.name;
+  }
   if (node.type === 'MemberExpression') {
     return tryFindIdentifier(node.property);
   }
