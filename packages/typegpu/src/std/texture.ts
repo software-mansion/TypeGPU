@@ -37,6 +37,7 @@ import type {
   textureDepth2d,
   textureDepth2dArray,
   textureDepthCube,
+  textureDepthCubeArray,
   textureExternal,
   textureMultisampled2d,
   textureStorage1d,
@@ -537,7 +538,7 @@ function textureSampleCompareCpu<T extends textureDepthCube>(
   coords: v3f,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends textureCubeArray>(
+function textureSampleCompareCpu<T extends textureDepthCubeArray>(
   texture: T,
   sampler: comparisonSampler,
   coords: v3f,
@@ -561,6 +562,70 @@ export const textureSampleCompare = dualImpl({
   name: 'textureSampleCompare',
   normalImpl: textureSampleCompareCpu,
   codegenImpl: (...args) => stitch`textureSampleCompare(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: f32,
+  }),
+});
+
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCube>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCubeArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu(
+  _texture: WgslTexture,
+  _sampler: comparisonSampler,
+  _coords: v2f | v3f,
+  _depthRefOrArrayIndex: number,
+  _depthRefOrOffset?: number | v2i,
+  _maybeOffset?: v2i,
+): number {
+  throw new Error(
+    'Texture comparison sampling with level relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureSampleCompareLevel = dualImpl({
+  name: 'textureSampleCompareLevel',
+  normalImpl: textureSampleCompareLevelCpu,
+  codegenImpl: (...args) => stitch`textureSampleCompareLevel(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: f32,
