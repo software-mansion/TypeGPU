@@ -2,7 +2,7 @@ import { colors } from './geometry.ts';
 import { animationProgressUniform, shiftedColorsBuffer } from './buffers.ts';
 import { createBezier } from './bezier.ts';
 import { root } from './root.ts';
-import { mainFragment, mainVertex, maskVertex } from './shaderModules.ts';
+import { mainFragment, mainVertex } from './shaderModules.ts';
 import { ANIMATION_DURATION, TRIANGLE_COUNT } from './consts.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
@@ -17,37 +17,10 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-let stencilTexture = root.device.createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'stencil8',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
-const maskPipeline = root['~unstable']
-  .withVertex(maskVertex)
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: {
-      compare: 'always',
-      passOp: 'replace',
-    },
-  })
-  .createPipeline()
-  .withStencilReference(1);
-
 const pipeline = root['~unstable']
   .withVertex(mainVertex)
   .withFragment(mainFragment, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: {
-      compare: 'equal',
-      passOp: 'keep',
-      failOp: 'keep',
-    },
-  })
-  .createPipeline()
-  .withStencilReference(1);
+  .createPipeline();
 
 // main drawing loop
 let isRunning = true;
@@ -72,37 +45,17 @@ function draw(timestamp: number) {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .withDepthStencilAttachment({
-      view: stencilTexture.createView(),
-      stencilLoadOp: 'load',
-      stencilStoreOp: 'store',
-    })
     .draw(9, TRIANGLE_COUNT);
 
   requestAnimationFrame(draw);
 }
+
 requestAnimationFrame(draw);
 
 // cleanup
 
-const resizeObserver = new ResizeObserver(() => {
-  stencilTexture.destroy();
+const resizeObserver = new ResizeObserver(() => {});
 
-  stencilTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'stencil8',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-
-  maskPipeline
-    .withDepthStencilAttachment({
-      view: stencilTexture.createView(),
-      stencilClearValue: 0,
-      stencilLoadOp: 'clear',
-      stencilStoreOp: 'store',
-    })
-    .draw(3, TRIANGLE_COUNT);
-});
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
