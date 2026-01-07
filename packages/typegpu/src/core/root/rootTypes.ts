@@ -41,7 +41,6 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type {
-  TgpuBufferShorthand,
   TgpuMutable,
   TgpuReadonly,
   TgpuUniform,
@@ -50,9 +49,7 @@ import type {
   TgpuFixedComparisonSampler,
   TgpuFixedSampler,
 } from '../sampler/sampler.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
@@ -71,7 +68,9 @@ import type {
 import type {
   AccessorIn,
   Eventual,
+  MutableAccessorIn,
   TgpuAccessor,
+  TgpuMutableAccessor,
   TgpuSlot,
 } from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
@@ -212,17 +211,13 @@ export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
-  with<T extends WgslTexture | WgslStorageTexture>(
+  with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuTextureView<T> | Infer<T>,
+    value: AccessorIn<T>,
   ): Configurable;
-  with<T extends AnyWgslData>(
-    accessor: TgpuAccessor<T>,
-    value:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
   ): Configurable;
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
@@ -291,13 +286,13 @@ export interface WithBinding {
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends WgslTexture | WgslStorageTexture>(
-    accessor: TgpuAccessor<T>,
-    value: TgpuTextureView<T> | Infer<T>,
-  ): WithBinding;
-  with<T extends AnyWgslData>(
+  with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
     value: AccessorIn<NoInfer<T>>,
+  ): WithBinding;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
   ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;

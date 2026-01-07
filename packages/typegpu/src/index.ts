@@ -88,7 +88,12 @@ export {
   ResolutionError,
 } from './errors.ts';
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
-export { isDerived, isSlot } from './core/slot/slotTypes.ts';
+export {
+  isAccessor,
+  isDerived,
+  isMutableAccessor,
+  isSlot,
+} from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export {
@@ -139,9 +144,12 @@ export type {
   TgpuUniform,
 } from './core/buffer/bufferShorthand.ts';
 export type {
+  AccessorIn,
   Eventual,
+  MutableAccessorIn,
   TgpuAccessor,
   TgpuDerived,
+  TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
 export type {

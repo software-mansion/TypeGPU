@@ -26,9 +26,12 @@ import {
   type AccessorIn,
   type Eventual,
   isAccessor,
+  isMutableAccessor,
+  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuMutableAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { dualImpl } from './dualImpl.ts';
@@ -93,6 +96,10 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
     value: AccessorIn<NoInfer<T>>,
+  ): TgpuFn<ImplSchema>;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
 }
 
@@ -184,11 +191,11 @@ function createFn<ImplSchema extends AnyFn>(
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
 
@@ -288,12 +295,12 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
         ...pairs,
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
   };

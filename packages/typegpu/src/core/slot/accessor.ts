@@ -30,6 +30,7 @@ import type {
   AccessorIn,
   MutableAccessorIn,
   TgpuAccessor,
+  TgpuMutableAccessor,
   TgpuSlot,
 } from './slotTypes.ts';
 
@@ -52,30 +53,32 @@ export function mutableAccessor<
 >(
   schemaOrConstructor: T,
   defaultValue?: MutableAccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
-): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
-  return new TgpuAccessorImpl(
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
+  return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
     defaultValue,
-  ) as unknown as TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+  ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-export class TgpuAccessorImpl<T extends AnyData>
-  implements TgpuAccessor<T>, SelfResolvable {
+abstract class AccessorBase<
+  T extends AnyData,
+  TValue extends AccessorIn<T> | MutableAccessorIn<T>,
+> implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
-  readonly resourceType = 'accessor';
-  readonly slot: TgpuSlot<AccessorIn<T>>;
-
+  readonly slot: TgpuSlot<TValue>;
   readonly schema: T;
-  readonly defaultValue: AccessorIn<T> | undefined;
+  readonly defaultValue: TValue | undefined;
+
+  abstract readonly resourceType: string;
 
   constructor(
     schemaOrConstructor: T | ((count: number) => T),
-    defaultValue: AccessorIn<T> | undefined = undefined,
+    defaultValue: TValue | undefined = undefined,
   ) {
     this.schema = isData(schemaOrConstructor)
       ? schemaOrConstructor
@@ -92,7 +95,7 @@ export class TgpuAccessorImpl<T extends AnyData>
       [$internal]: true,
       [$ownSnippet]: this.#createSnippet(),
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `accessor:${getName(this) ?? '<unnamed>'}.$`,
+      toString: () => `${this.resourceType}:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<T>;
   }
 
@@ -149,21 +152,13 @@ export class TgpuAccessorImpl<T extends AnyData>
   }
 
   toString(): string {
-    return `accessor:${getName(this) ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
+
+  abstract readonly $: InferGPU<T>;
 
   get value(): InferGPU<T> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
-    );
-  }
-
-  get $(): InferGPU<T> {
-    return this.value;
+    return this.$;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -172,6 +167,52 @@ export class TgpuAccessorImpl<T extends AnyData>
       ctx.resolve(snippet.value, snippet.dataType).value,
       snippet.dataType as T,
       snippet.origin,
+    );
+  }
+}
+
+export class TgpuAccessorImpl<T extends AnyData>
+  extends AccessorBase<T, AccessorIn<T>>
+  implements TgpuAccessor<T> {
+  readonly resourceType = 'accessor';
+
+  constructor(
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: AccessorIn<T> | undefined = undefined,
+  ) {
+    super(schemaOrConstructor, defaultValue);
+  }
+
+  get $(): InferGPU<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
+  }
+}
+
+export class TgpuMutableAccessorImpl<T extends AnyData>
+  extends AccessorBase<T, MutableAccessorIn<T>>
+  implements TgpuMutableAccessor<T> {
+  readonly resourceType = 'mutable-accessor';
+
+  constructor(
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: MutableAccessorIn<T> | undefined = undefined,
+  ) {
+    super(schemaOrConstructor, defaultValue);
+  }
+
+  get $(): InferGPU<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
     );
   }
 }

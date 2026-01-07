@@ -12,10 +12,10 @@ import {
   blockDim,
   blurLayout,
   drawWithMaskLayout,
-  flipSlot,
+  flipAccess,
   generateMaskLayout,
   Params,
-  paramsAccessor,
+  paramsAccess,
   prepareModelInputLayout,
 } from './schemas.ts';
 import {
@@ -126,7 +126,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
+  .with(paramsAccess, paramsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -161,13 +161,13 @@ const generateMaskFromOutputPipeline = root['~unstable']
 
 const blurPipelines = [false, true].map((flip) =>
   root['~unstable']
-    .with(flipSlot, flip)
+    .with(flipAccess, flip)
     .withCompute(computeFn)
     .createPipeline()
 );
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
+  .with(paramsAccess, paramsUniform)
   .withVertex(fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
