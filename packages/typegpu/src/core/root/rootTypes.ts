@@ -68,7 +68,12 @@ import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
-import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
+import type {
+  AccessorIn,
+  Eventual,
+  TgpuAccessor,
+  TgpuSlot,
+} from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
@@ -292,11 +297,7 @@ export interface WithBinding {
   ): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
-    value:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
+    value: AccessorIn<NoInfer<T>>,
   ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;

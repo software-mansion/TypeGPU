@@ -1,9 +1,9 @@
+import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
-import { getName } from '../../shared/meta.ts';
-import type { Infer, InferGPU } from '../../shared/repr.ts';
+import { getName, hasTinyestMetadata } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
@@ -11,59 +11,77 @@ import {
   $ownSnippet,
   $resolve,
 } from '../../shared/symbols.ts';
+import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
+import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import {
   getOwnSnippet,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
-import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
-import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
+import { isComptimeFn } from '../function/comptime.ts';
+import { isTgpuFn } from '../function/tgpuFn.ts';
 import {
   getGpuValueRecursively,
   valueProxyHandler,
 } from '../valueProxyUtils.ts';
 import { slot as slotConstructor } from './slot.ts';
-import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
+import type {
+  AccessorIn,
+  MutableAccessorIn,
+  TgpuAccessor,
+  TgpuSlot,
+} from './slotTypes.ts';
 
 // ----------
 // Public API
 // ----------
 
-export function accessor<T extends AnyWgslData>(
-  schema: T,
-  defaultValue?:
-    | TgpuFn<() => T>
-    | TgpuBufferUsage<T>
-    | TgpuBufferShorthand<T>
-    | Infer<T>,
-): TgpuAccessor<T> {
-  return new TgpuAccessorImpl(schema, defaultValue);
+export function accessor<T extends AnyData | ((count: number) => AnyData)>(
+  schemaOrConstructor: T,
+  defaultValue?: AccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
+  return new TgpuAccessorImpl(
+    schemaOrConstructor,
+    defaultValue,
+  ) as unknown as TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+}
+
+export function mutableAccessor<
+  T extends AnyData | ((count: number) => AnyData),
+>(
+  schemaOrConstructor: T,
+  defaultValue?: MutableAccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
+  return new TgpuAccessorImpl(
+    schemaOrConstructor,
+    defaultValue,
+  ) as unknown as TgpuAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-export class TgpuAccessorImpl<T extends AnyWgslData>
+export class TgpuAccessorImpl<T extends AnyData>
   implements TgpuAccessor<T>, SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
   readonly resourceType = 'accessor';
-  readonly slot: TgpuSlot<
-    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
-  >;
+  readonly slot: TgpuSlot<AccessorIn<T>>;
+
+  readonly schema: T;
+  readonly defaultValue: AccessorIn<T> | undefined;
 
   constructor(
-    public readonly schema: T,
-    public readonly defaultValue:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>
-      | undefined = undefined,
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: AccessorIn<T> | undefined = undefined,
   ) {
+    this.schema = isData(schemaOrConstructor)
+      ? schemaOrConstructor
+      : schemaOrConstructor(0);
+    this.defaultValue = defaultValue;
+
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
     this.slot = slotConstructor(defaultValue);
     this[$getNameForward] = this.slot;
@@ -84,10 +102,16 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   #createSnippet() {
     // biome-ignore lint/style/noNonNullAssertion: it's there
     const ctx = getResolutionCtx()!;
-    const value = getGpuValueRecursively(ctx.unwrap(this.slot));
+    let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
-    if (isTgpuFn(value)) {
-      return value[$internal].gpuImpl();
+    if (isTgpuFn(value) || hasTinyestMetadata(value)) {
+      return ctx.withResetIndentLevel(() =>
+        snip(
+          `${ctx.resolve(value).value}()`,
+          this.schema,
+          /* origin */ 'runtime',
+        )
+      );
     }
 
     const ownSnippet = getOwnSnippet(value);
@@ -95,8 +119,19 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return ownSnippet;
     }
 
+    if (typeof value === 'function' && !isComptimeFn(value)) {
+      // Not a comptime or GPU function, so has to be a resource accessor
+      // Running the function in codegen mode
+      return coerceToSnippet(value());
+    }
+
     ctx.pushMode(new NormalState());
     try {
+      if (typeof value === 'function') {
+        // Has to be comptime
+        value = value();
+      }
+
       // Doing a deep copy each time so that we don't have to deal with refs
       const cloned = schemaCallWrapper(
         this.schema,

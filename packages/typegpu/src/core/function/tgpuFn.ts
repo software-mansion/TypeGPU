@@ -17,13 +17,13 @@ import {
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
+  type AccessorIn,
   type Eventual,
   isAccessor,
   type Providing,
@@ -92,7 +92,7 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+    value: AccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
 }
 

@@ -3,7 +3,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
+import { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
@@ -43,20 +43,25 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
+export type AccessorIn<TSchema extends AnyData> =
+  | (() => Infer<TSchema>)
+  | TgpuBufferUsage<TSchema>
+  | TgpuBufferShorthand<TSchema>
+  | TgpuVar<VariableScope, TSchema>
+  | Infer<TSchema>;
+
+export type MutableAccessorIn<TSchema extends AnyData> =
+  | (() => Infer<TSchema>)
+  | TgpuBufferUsage<TSchema>
+  | TgpuBufferShorthand<TSchema>;
+
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
   readonly schema: T;
-  readonly defaultValue:
-    | TgpuFn<() => T>
-    | TgpuBufferUsage<T>
-    | TgpuBufferShorthand<T>
-    | Infer<T>
-    | undefined;
-  readonly slot: TgpuSlot<
-    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
-  >;
+  readonly defaultValue: AccessorIn<T> | undefined;
+  readonly slot: TgpuSlot<AccessorIn<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
   readonly value: InferGPU<T>;
