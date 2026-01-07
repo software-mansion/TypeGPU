@@ -86,7 +86,7 @@ describe('jelly-slider example', () => {
         projInv: mat4x4f,
       }
 
-      @group(0) @binding(1) var<uniform> cameraUniform: Camera;
+      @group(0) @binding(1) var<uniform> uniform: Camera;
 
       struct Ray {
         origin: vec3f,
@@ -95,8 +95,8 @@ describe('jelly-slider example', () => {
 
       fn getRay(ndc: vec2f) -> Ray {
         var clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
-        let invView = (&cameraUniform.viewInv);
-        let invProj = (&cameraUniform.projInv);
+        let invView = (&uniform.viewInv);
+        let invProj = (&uniform.projInv);
         var viewPos = ((*invProj) * clipPos);
         var viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
         var worldPos = ((*invView) * viewPosNormalized);
