@@ -374,7 +374,7 @@ describe('tgpu.accessor', () => {
     `);
   });
 
-  it('can provide a mutable reference', ({ root }) => {
+  it('can provide a mutable reference (non-primitive)', ({ root }) => {
     const boids = root.createMutable(BoidArray(100));
 
     const boidAccess = tgpu['~unstable'].mutableAccessor(
@@ -396,6 +396,35 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         boids[0].pos.x += 1f;
+      }"
+    `);
+  });
+
+  it('can provide a mutable reference (primitive)', ({ root }) => {
+    const Ctx = d.struct({
+      counter: d.f32,
+    });
+    const ctx = root.createMutable(Ctx);
+
+    const counterAccess = tgpu['~unstable'].mutableAccessor(
+      d.f32,
+      () => ctx.$.counter,
+    );
+
+    const main = () => {
+      'use gpu';
+      counterAccess.$ += 1;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Ctx {
+        counter: f32,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> ctx: Ctx;
+
+      fn main() {
+        ctx.counter += 1f;
       }"
     `);
   });
