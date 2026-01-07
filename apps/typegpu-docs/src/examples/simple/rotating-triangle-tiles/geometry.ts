@@ -1,24 +1,9 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const green = d.vec4f(
-  0.11764705882352941,
-  0.8392156862745098,
-  0.5137254901960784,
-  1,
-);
-const yellow = d.vec4f(
-  0.8392156862745098,
-  0.6470588235294118,
-  0.11764705882352941,
-  1,
-);
-const indigo = d.vec4f(
-  0.3803921568627451,
-  0.3333333333333333,
-  0.9607843137254902,
-  1,
-);
+const green = d.vec4f(0.117, 0.839, 0.513, 1);
+const yellow = d.vec4f(0.839, 0.647, 0.117, 1);
+const indigo = d.vec4f(0.38, 0.333, 0.96, 1);
 
 const colors = [green, yellow, indigo];
 
