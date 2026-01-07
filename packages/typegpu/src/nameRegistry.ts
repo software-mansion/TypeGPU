@@ -175,8 +175,8 @@ const bannedTokens = new Set([
   'yield',
   // Keywords that should be reserved
   'sampler',
-  // 'uniform',
-  // 'storage',
+  'uniform',
+  'storage',
 ]);
 
 const builtins = new Set([
