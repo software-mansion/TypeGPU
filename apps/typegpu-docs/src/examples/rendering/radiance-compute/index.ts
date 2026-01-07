@@ -12,13 +12,12 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 context.configure({
   device: root.device,
   format: presentationFormat,
-  alphaMode: 'opaque',
 });
 
 const dim = 2048;
-const cascadeAmount = Math.log2(dim / 8);
 const baseProbes = dim / 4;
 const baseRaysDim = dim / baseProbes;
+const cascadeAmount = Math.log2(baseProbes);
 
 const cascadesTexture = root['~unstable']
   .createTexture({
@@ -34,9 +33,17 @@ const mergedTexture = root['~unstable']
   })
   .$usage('storage', 'sampled');
 
+const mergeSampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge',
+});
+
 const mergeBindGroupLayout = tgpu.bindGroupLayout({
   t1: { storageTexture: d.textureStorage2d('rgba16float', 'read-only') },
-  t2: { storageTexture: d.textureStorage2d('rgba16float', 'read-only') },
+  t2: { texture: d.texture2d(d.f32) },
+  t2Sampler: { sampler: 'filtering' },
   dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
@@ -52,9 +59,10 @@ const mergeBindGroups = Array.from(
       ),
       t2: (layer === cascadeAmount - 2 ? cascadesTexture : mergedTexture)
         .createView(
-          d.textureStorage2d('rgba16float', 'read-only'),
+          d.texture2d(d.f32),
           { baseArrayLayer: layer + 1, arrayLayerCount: 1 },
         ),
+      t2Sampler: mergeSampler,
       dst: mergedTexture.createView(
         d.textureStorage2d('rgba16float', 'write-only'),
         { baseArrayLayer: layer, arrayLayerCount: 1 },
@@ -66,12 +74,6 @@ const mergeBindGroups = Array.from(
 const writeView = cascadesTexture.createView(
   d.textureStorage2dArray('rgba16float', 'write-only'),
 );
-const renderView = cascadesTexture.createView(d.texture2dArray());
-
-const nearestSampler = root['~unstable'].createSampler({
-  magFilter: 'nearest',
-  minFilter: 'nearest',
-});
 
 const radianceFieldTex = root['~unstable']
   .createTexture({
@@ -106,25 +108,51 @@ const radianceSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const indexUniform = root.createUniform(d.u32, 0);
-const raysDimUniform = root.createUniform(d.f32, baseRaysDim);
 const mousePosUniform = root.createUniform(d.vec2f);
 const lightPosUniform = root.createUniform(d.vec2f, d.vec2f(0.5));
 const mergeRaysDimUniform = root.createUniform(d.u32, baseRaysDim);
-const lightColorUniform = root.createUniform(d.vec3f, d.vec3f(1));
+const lightColorUniform = root.createUniform(d.vec4f, d.vec4f(1));
 
-const posToDir = (localPos: d.v2u, raysDim: number) => {
-  'use gpu';
-  const ix = d.f32(localPos.x);
-  const iy = d.f32(localPos.y);
-  const rd = d.f32(raysDim);
+// Z-order curve (Morton code) encoding/decoding for better cache efficiency
+const spreadBits = tgpu.fn([d.u32], d.u32)((v) => {
+  let x = v;
+  x = (x | (x << 8)) & 0x00ff00ff;
+  x = (x | (x << 4)) & 0x0f0f0f0f;
+  x = (x | (x << 2)) & 0x33333333;
+  x = (x | (x << 1)) & 0x55555555;
+  return x;
+});
 
-  const rayIndex = iy * rd + ix + 0.5;
-  const rayCount = rd * rd;
+const compactBits = tgpu.fn([d.u32], d.u32)((v) => {
+  let x = v & 0x55555555;
+  x = (x | (x >> 1)) & 0x33333333;
+  x = (x | (x >> 2)) & 0x0f0f0f0f;
+  x = (x | (x >> 4)) & 0x00ff00ff;
+  x = (x | (x >> 8)) & 0x0000ffff;
+  return x;
+});
 
-  const angle = (rayIndex / rayCount) * Math.PI * 2 - Math.PI;
+const mortonEncode2D = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => {
+  return spreadBits(x) | (spreadBits(y) << 1);
+});
+
+const mortonDecode2D = tgpu.fn([d.u32], d.vec2u)((code) => {
+  return d.vec2u(compactBits(code), compactBits(code >> 1));
+});
+
+const linearToZOrder = tgpu.fn([d.u32], d.vec2u)((idx) => {
+  return mortonDecode2D(idx);
+});
+
+const zOrderToLinear = tgpu.fn([d.vec2u], d.u32)((pos) => {
+  return mortonEncode2D(pos.x, pos.y);
+});
+
+const indexToDir = tgpu.fn([d.u32, d.u32], d.vec2f)((mortonIdx, rayCount) => {
+  const rayIndex = d.f32(mortonIdx) + 0.5;
+  const angle = (rayIndex / d.f32(rayCount)) * Math.PI * 2 - Math.PI;
   return d.vec2f(std.cos(angle), -std.sin(angle));
-};
+});
 
 const LocalPos = d.struct({
   probeCoord: d.vec2u,
@@ -138,19 +166,31 @@ const globalToLocal = (gid: d.v2u, raysDim: number) => {
   return LocalPos({ probeCoord, local });
 };
 
-const sampleProbeQuad = (origin: d.v2u, childBase: number, uDim: number) => {
+const getAtlasPos = (probeCoord: d.v2u, localRay: d.v2u, raysDim: number) => {
   'use gpu';
-  let sum = d.vec4f();
-  for (let i = 0; i < 4; i++) {
-    const childIdx = childBase + i;
-    const childLocal = d.vec2u(childIdx % uDim, childIdx / uDim);
-    const ray = std.textureLoad(
-      mergeBindGroupLayout.$.t2,
-      origin.add(childLocal),
-    );
-    sum = sum.add(ray);
-  }
-  return sum.mul(0.25);
+  return probeCoord.mul(d.u32(raysDim)).add(localRay);
+};
+
+const sampleProbeQuadFiltered = (
+  probeCoord: d.v2u,
+  childBase: number,
+  uDim: number,
+) => {
+  'use gpu';
+  const baseLocal = linearToZOrder(d.u32(childBase));
+  // Compute center UV for the 2x2 quad
+  // The quad spans from baseLocal to baseLocal+(1,1), so center is baseLocal+(0.5,0.5)
+  const atlasBase = d.vec2f(probeCoord.mul(d.u32(uDim))).add(
+    d.vec2f(baseLocal),
+  );
+  const centerUv = atlasBase.add(d.vec2f(1)).div(d.f32(dim));
+
+  return std.textureSampleLevel(
+    mergeBindGroupLayout.$.t2,
+    mergeBindGroupLayout.$.t2Sampler,
+    centerUv,
+    0,
+  );
 };
 
 const SceneResult = d.struct({
@@ -167,10 +207,9 @@ const sceneSDF = (p: d.v2f) => {
   const light = sdf.sdDisk(p.sub(lightPosUniform.$), d.f32(0.05));
 
   if (light < minOccluder && minOccluder > 0) {
-    return SceneResult({ dist: light, color: lightColorUniform.$ });
-  } else {
-    return SceneResult({ dist: minOccluder, color: d.vec3f(0) });
+    return SceneResult({ dist: light, color: lightColorUniform.$.xyz });
   }
+  return SceneResult({ dist: minOccluder, color: d.vec3f(0) });
 };
 
 const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
@@ -183,25 +222,30 @@ const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
 
   const raysDim = d.u32(baseRaysDim);
   const probe = gid.xy;
+  const rayCount = raysDim * raysDim;
 
   let sum = d.vec3f();
-
-  let y = d.u32(0);
-  while (y < raysDim) {
-    let x = d.u32(0);
-    while (x < raysDim) {
-      const atlasPx = probe.mul(raysDim).add(d.vec2u(x, y));
-      const ray = std.textureLoad(buildRadianceFieldBGL.$.src, atlasPx);
-      sum = sum.add(ray.xyz);
-      x += 1;
-    }
-    y += 1;
+  let idx = d.u32(0);
+  while (idx < rayCount) {
+    const localRay = linearToZOrder(idx);
+    const atlasPx = getAtlasPos(probe, localRay, baseRaysDim);
+    const ray = std.textureLoad(buildRadianceFieldBGL.$.src, atlasPx);
+    sum = sum.add(ray.xyz);
+    idx += 1;
   }
 
-  const rayCount = d.f32(raysDim * raysDim);
-  const avg = sum.div(rayCount);
-
+  const avg = sum.div(d.f32(rayCount));
   std.textureStore(buildRadianceFieldBGL.$.dst, probe, d.vec4f(avg, 1.0));
+});
+
+const ACESFilm = tgpu.fn([d.vec3f], d.vec3f)((x) => {
+  const a = 2.51;
+  const b = 0.03;
+  const c = 2.43;
+  const dVal = 0.59;
+  const e = 0.01;
+  const res = x.mul(x.mul(a).add(b)).div(x.mul(x.mul(c).add(dVal)).add(e));
+  return std.saturate(res);
 });
 
 const finalRadianceFieldFrag = tgpu['~unstable'].fragmentFn({
@@ -211,7 +255,7 @@ const finalRadianceFieldFrag = tgpu['~unstable'].fragmentFn({
   const field = std.textureSample(radianceFieldView.$, radianceSampler.$, uv)
     .xyz;
   const outRgb = std.saturate(field);
-  return d.vec4f(outRgb, 1.0);
+  return d.vec4f(ACESFilm(outRgb), 1.0);
 });
 
 const rayMarchCompute = tgpu['~unstable'].computeFn({
@@ -227,17 +271,18 @@ const rayMarchCompute = tgpu['~unstable'].computeFn({
   let textureIndex = d.u32(0);
 
   while (probes > 1) {
-    const raysDim = d.u32(dim / probes);
+    const raysDim = d.u32(dim) / probes;
+    const raysDimU = d.u32(raysDim);
+    const lp = globalToLocal(gid.xy, raysDimU);
 
-    const lp = globalToLocal(gid.xy, raysDim);
-    const dir = posToDir(lp.local, raysDim);
+    const mortonIdx = zOrderToLinear(lp.local);
+    const rayCount = raysDimU * raysDimU;
+    const dir = indexToDir(mortonIdx, rayCount);
 
     const probePos = d.vec2f(lp.probeCoord).add(0.5).div(d.f32(probes));
 
-    // Radiance interval shell for this cascade: [t_i, t_{i+1}]
-    // t_i = L0 * (4^i - 1) / 3, length_i = L0 * 4^i
-    const c = d.f32(textureIndex);
-    const pow4 = std.pow(4, c);
+    // 4^i = 2^(2i) = 1 << (2*i)
+    const pow4 = d.f32(d.u32(1) << (textureIndex * d.u32(2)));
 
     const startPx = interval0Px * (pow4 - 1) / 3;
     const lengthPx = interval0Px * pow4;
@@ -246,15 +291,12 @@ const rayMarchCompute = tgpu['~unstable'].computeFn({
 
     let rgb = d.vec3f();
     let T = d.f32(1);
-
     let t = startUv;
 
     const eps = 0.5 / dim;
     const minStep = 0.25 / dim;
-    let step = d.u32(0);
-    const maxSteps = d.u32(32);
 
-    while (step < maxSteps) {
+    for (let step = 0; step < 32; step++) {
       if (t > endUv) {
         break;
       }
@@ -269,13 +311,11 @@ const rayMarchCompute = tgpu['~unstable'].computeFn({
       }
 
       t += std.max(occluderDist.dist, minStep);
-      step += 1;
     }
 
-    const cascadeIndex = textureIndex;
-    std.textureStore(writeView.$, gid.xy, cascadeIndex, d.vec4f(rgb, T));
+    std.textureStore(writeView.$, gid.xy, textureIndex, d.vec4f(rgb, T));
 
-    probes /= 2;
+    probes = probes >> 1;
     textureIndex += 1;
   }
 });
@@ -299,8 +339,8 @@ const mergeCompute = tgpu['~unstable'].computeFn({
 
   const localPosN = globalToLocal(gid.xy, nDim);
 
-  const probesN = d.u32(dim / nDim);
-  const probesU = probesN >> 1;
+  const probesN = d.u32(dim) / nDim;
+  const probesU = d.u32(probesN) >> 1;
 
   const maxProbeIdx = std.max(probesU, 1) - 1;
   const maxProbeIdxF = d.f32(maxProbeIdx);
@@ -308,40 +348,25 @@ const mergeCompute = tgpu['~unstable'].computeFn({
   const p = d.vec2f(localPosN.probeCoord);
   const u = p.sub(d.vec2f(0.5)).mul(d.vec2f(0.5));
 
-  const u0f = std.clamp(
-    std.floor(u),
-    d.vec2f(),
-    d.vec2f(maxProbeIdxF),
-  );
-
-  const u1f = std.min(
-    u0f.add(d.vec2f(1)),
-    d.vec2f(maxProbeIdxF),
-  );
-
-  const f = std.clamp(
-    u.sub(u0f),
-    d.vec2f(),
-    d.vec2f(1),
-  );
+  const u0f = std.clamp(std.floor(u), d.vec2f(), d.vec2f(maxProbeIdxF));
+  const u1f = std.min(u0f.add(d.vec2f(1)), d.vec2f(maxProbeIdxF));
+  const f = std.clamp(u.sub(u0f), d.vec2f(), d.vec2f(1));
 
   const u0 = d.vec2u(u0f);
   const u1 = d.vec2u(u1f);
 
-  const angN = localPosN.local.y * nDim + localPosN.local.x;
+  const angN = zOrderToLinear(localPosN.local);
   const childBase = angN * d.u32(4);
 
-  const s = d.vec2u(uDim, uDim);
+  const probeTL = d.vec2u(u0.x, u0.y);
+  const probeTR = d.vec2u(u1.x, u0.y);
+  const probeBL = d.vec2u(u0.x, u1.y);
+  const probeBR = d.vec2u(u1.x, u1.y);
 
-  const originTL = d.vec2u(u0.x, u0.y).mul(s);
-  const originTR = d.vec2u(u1.x, u0.y).mul(s);
-  const originBL = d.vec2u(u0.x, u1.y).mul(s);
-  const originBR = d.vec2u(u1.x, u1.y).mul(s);
-
-  const TL = sampleProbeQuad(originTL, childBase, uDim);
-  const TR = sampleProbeQuad(originTR, childBase, uDim);
-  const BL = sampleProbeQuad(originBL, childBase, uDim);
-  const BR = sampleProbeQuad(originBR, childBase, uDim);
+  const TL = sampleProbeQuadFiltered(probeTL, childBase, uDim);
+  const TR = sampleProbeQuadFiltered(probeTR, childBase, uDim);
+  const BL = sampleProbeQuadFiltered(probeBL, childBase, uDim);
+  const BR = sampleProbeQuadFiltered(probeBR, childBase, uDim);
 
   const upper = std.mix(
     std.mix(TL, TR, f.x),
@@ -439,7 +464,7 @@ export const controls = {
   'Light Color': {
     initial: [1, 1, 1],
     onColorChange: (c: [number, number, number]) => {
-      lightColorUniform.write(d.vec3f(...c));
+      lightColorUniform.write(d.vec4f(...c, 1));
       updateLighting();
     },
   },
