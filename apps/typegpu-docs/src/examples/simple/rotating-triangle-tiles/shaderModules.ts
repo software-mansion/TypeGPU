@@ -1,20 +1,46 @@
 import tgpu from 'typegpu';
 import * as std from 'typegpu/std';
 import * as d from 'typegpu/data';
-import { interpolateBezier, rotate } from './transformations.ts';
+import {
+  instanceTransform,
+  interpolateBezier,
+  rotate,
+} from './transformations.ts';
 import {
   animationProgressUniform,
   instanceInfoBuffer,
   shiftedColorsBuffer,
   triangleVerticesBuffer,
 } from './buffers.ts';
-import { SCALE, STEP_ROTATION_ANGLE } from './consts.ts';
+import { STEP_ROTATION_ANGLE } from './consts.ts';
+
+const MainVertexOutput = {
+  outPos: d.builtin.position,
+  color: d.vec4f,
+  maskP0: d.interpolate('flat', d.vec2f),
+  maskP1: d.interpolate('flat', d.vec2f),
+  maskP2: d.interpolate('flat', d.vec2f),
+  worldPos: d.vec2f,
+};
+
+function edgeFunction(a: d.v2f, b: d.v2f, p: d.v2f) {
+  'use gpu';
+  return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+}
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: { color: d.vec4f },
+  in: MainVertexOutput,
   out: d.vec4f,
-})((input) => {
-  return input.color;
+})(({ color, maskP0, maskP1, maskP2, worldPos }) => {
+  const e0 = edgeFunction(maskP0, maskP1, worldPos);
+  const e1 = edgeFunction(maskP1, maskP2, worldPos);
+  const e2 = edgeFunction(maskP2, maskP0, worldPos);
+
+  if (e0 > 0 || e1 > 0 || e2 > 0) {
+    std.discard();
+  }
+
+  return color;
 });
 
 const mainVertex = tgpu['~unstable'].vertexFn({
@@ -22,7 +48,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     vertexIndex: d.builtin.vertexIndex,
     instanceIndex: d.builtin.instanceIndex,
   },
-  out: { outPos: d.builtin.position, color: d.vec4f },
+  out: MainVertexOutput,
 })(({ vertexIndex, instanceIndex }) => {
   const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
   let calculatedPosition = d.vec2f(vertexPosition);
@@ -65,37 +91,33 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     calculatedPosition = std.mul(calculatedPosition, scaleFactor);
   }
 
-  // instance transform
+  const finalPosition = instanceTransform(calculatedPosition, instanceInfo);
 
-  const finalPosition = std.add(
-    rotate(std.mul(calculatedPosition, SCALE), instanceInfo.rotationAngle),
-    instanceInfo.offset,
+  // mask transform
+  const maskP0 = instanceTransform(
+    triangleVerticesBuffer.$.positions[0],
+    instanceInfo,
+  );
+  const maskP1 = instanceTransform(
+    triangleVerticesBuffer.$.positions[1],
+    instanceInfo,
+  );
+  const maskP2 = instanceTransform(
+    triangleVerticesBuffer.$.positions[2],
+    instanceInfo,
   );
 
-  return { outPos: d.vec4f(finalPosition, 0, 1), color };
-});
-
-const maskVertex = tgpu['~unstable'].vertexFn({
-  in: {
-    vertexIndex: d.builtin.vertexIndex,
-    instanceIndex: d.builtin.instanceIndex,
-  },
-  out: { position: d.builtin.position },
-})(({ vertexIndex, instanceIndex }) => {
-  const instanceInfo = instanceInfoBuffer.$[instanceIndex];
-  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
-
-  // instance transform
-  const finalPosition = std.add(
-    rotate(std.mul(vertexPosition, SCALE), instanceInfo.rotationAngle),
-    instanceInfo.offset,
-  );
-
-  return { position: d.vec4f(finalPosition, 0, 1) };
+  return {
+    outPos: d.vec4f(finalPosition, 0, 1),
+    color,
+    maskP0,
+    maskP1,
+    maskP2,
+    worldPos: finalPosition,
+  };
 });
 
 console.log('mainVertex:\n', tgpu.resolve([mainVertex]));
 console.log('mainFragment:\n', tgpu.resolve([mainFragment]));
-console.log('maskVertex:\n', tgpu.resolve([maskVertex]));
 
-export { mainFragment, mainVertex, maskVertex };
+export { mainFragment, mainVertex };
