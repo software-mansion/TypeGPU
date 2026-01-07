@@ -235,4 +235,22 @@ describe('autonaming', () => {
 
     expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
+
+  it('autonames this private prop assignment', ({ root }) => {
+    class MyController {
+      #myBuffer;
+
+      constructor() {
+        this.#myBuffer = root.createUniform(d.u32);
+      }
+
+      get myBuffer() {
+        return this.#myBuffer;
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
 });
