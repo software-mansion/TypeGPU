@@ -10,7 +10,6 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 
 describe('TgpuRenderPipeline', () => {
   const vert = tgpu['~unstable'].vertexFn({
@@ -33,32 +32,32 @@ describe('TgpuRenderPipeline', () => {
 
     // Using none
     const pipeline = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vert)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are erased from the vertex output)
     const pipeline2 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are ignored in the fragment input)
     const pipeline3 = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vert)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using none (builtins are ignored in both input and output,
     // so their conflict of the `pos` key is fine)
     const pipeline4 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using all
     const pipeline5 = root
-      .withVertex(vert, {})
+      .withVertex(vert)
       .withFragment(fullFragment, { format: 'rgba8unorm' })
       .createPipeline();
 
@@ -114,7 +113,7 @@ describe('TgpuRenderPipeline', () => {
     );
 
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
     );
   });
 
@@ -140,6 +139,82 @@ describe('TgpuRenderPipeline', () => {
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
+  it('properly handles custom depth output in fragment functions', ({ root }) => {
+    const vertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
+      d.vec2f(-1, -1),
+      d.vec2f(3, -1),
+      d.vec2f(-1, 3),
+    ]);
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      in: { vid: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position },
+      // biome-ignore lint/style/noNonNullAssertion: it's fine
+    })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
+
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f, depth: d.builtin.fragDepth },
+    })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
+
+    const pipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { color: { format: 'rgba8unorm' } })
+      .createPipeline();
+
+    pipeline.withColorAttachment({
+      color: {
+        view: {} as unknown as GPUTextureView,
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    });
+
+    expect(() => {
+      pipeline.withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+        // @ts-expect-error
+        depth: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+    });
+  });
+
+  it('type checks passed bind groups', ({ root }) => {
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      out: { bar: d.location(0, d.vec3f) },
+    })(() => ({
+      bar: d.vec3f(),
+    }));
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      in: { bar: d.location(0, d.vec3f) },
+      out: d.vec4f,
+    })(() => d.vec4f());
+    const renderPipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { format: 'r8unorm' })
+      .createPipeline();
+
+    const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
+    const bindGroup1 = root.createBindGroup(layout1, {
+      buf: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const layout2 = tgpu.bindGroupLayout({ buf: { uniform: d.f32 } });
+    const bindGroup2 = root.createBindGroup(layout2, {
+      buf: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    renderPipeline.with(layout1, bindGroup1);
+    renderPipeline.with(layout2, bindGroup2);
+    //@ts-expect-error
+    (() => renderPipeline.with(layout1, bindGroup2));
+  });
+
   describe('resolve', () => {
     it('allows resolving the entire shader code', ({ root }) => {
       const pipeline = root['~unstable']
@@ -153,7 +228,7 @@ describe('TgpuRenderPipeline', () => {
         )
         .createPipeline();
 
-      expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertex_Output {
           @location(0) a: vec3f,
           @location(1) b: vec2f,
@@ -206,7 +281,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertexMain_Output {
           @location(2) foo: vec3f,
           @location(1) bar: vec3f,
@@ -217,7 +292,7 @@ describe('TgpuRenderPipeline', () => {
         }
 
         @vertex fn vertexMain() -> vertexMain_Output {
-          return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0, 0, vec4f());
+          return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0f, 0u, vec4f());
         }
 
         struct fragmentMain_Input {
@@ -261,7 +336,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      expect(asWgsl(pipeline)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertexMain_Output {
           @location(2) foo: vec3f,
           @location(1) bar: vec3f,
@@ -312,7 +387,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      tgpu.resolve({ externals: { pipeline } });
+      tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
       );
@@ -345,7 +420,7 @@ describe('TgpuRenderPipeline', () => {
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
 
-      tgpu.resolve({ externals: { pipeline } });
+      tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).not.toHaveBeenCalledWith(
         'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
       );
@@ -451,7 +526,7 @@ describe('TgpuRenderPipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const vertexFn = tgpu['~unstable'].vertexFn({
@@ -474,8 +549,36 @@ describe('TgpuRenderPipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
+    });
+
+    it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
+      const vertexFn = tgpu['~unstable'].vertexFn({
+        out: { pos: d.builtin.position },
+      })('');
+
+      const fragmentFn = tgpu['~unstable'].fragmentFn({
+        in: {},
+        out: {
+          fragColor: d.vec4f,
+          fragDepth: d.builtin.fragDepth,
+        },
+      })(() => {
+        return {
+          fragColor: d.vec4f(),
+          fragDepth: 0.0,
+        };
+      });
+
+      expect(() => {
+        root
+          .withVertex(vertexFn, {})
+          .withFragment(fragmentFn, { fragColor: { format: 'rgba8unorm' } })
+          .createPipeline();
+      }).not.toThrow(
+        "A color target by the name of 'fragDepth' was not provided to the shader.",
+      );
     });
   });
 
@@ -692,6 +795,53 @@ describe('TgpuRenderPipeline', () => {
     );
   });
 
+  it('should handle stencil reference value correctly', ({ root, commandEncoder }) => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        out: { pos: d.builtin.position },
+      })('')
+      .$name('vertex');
+
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        out: { color: d.vec4f },
+      })('')
+      .$name('fragment');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .withDepthStencil({
+        format: 'stencil8',
+        stencilFront: { passOp: 'replace' },
+      })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      })
+      .withDepthStencilAttachment({
+        view: {} as unknown as GPUTextureView,
+        stencilLoadOp: 'clear',
+        stencilStoreOp: 'store',
+        stencilClearValue: 5,
+      })
+      .withStencilReference(3);
+
+    pipeline.draw(3);
+
+    const renderPassEncoder = commandEncoder.mock.beginRenderPass();
+    expect(renderPassEncoder.setStencilReference)
+      .toHaveBeenCalledExactlyOnceWith(3);
+
+    pipeline.withStencilReference(7).draw(3);
+
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 7);
+  });
+
   it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
@@ -737,7 +887,7 @@ describe('TgpuRenderPipeline', () => {
     expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
   });
 
-  it('works when combining timestamp writes and index buffer', ({ root, device }) => {
+  it('works when combining timestamp writes and index buffer', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -753,7 +903,7 @@ describe('TgpuRenderPipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
 
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -809,7 +959,7 @@ describe('TgpuRenderPipeline', () => {
     });
   });
 
-  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device }) => {
+  it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device, commandEncoder }) => {
     const vertexFn = tgpu['~unstable']
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -824,8 +974,8 @@ describe('TgpuRenderPipeline', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(root.commandEncoder, 'beginRenderPass');
-    const resolveQuerySetSpy = vi.spyOn(root.commandEncoder, 'resolveQuerySet');
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const resolveQuerySetSpy = vi.spyOn(commandEncoder, 'resolveQuerySet');
 
     const callback = vi.fn();
 
@@ -868,7 +1018,7 @@ describe('TgpuRenderPipeline', () => {
       count: 2,
     });
 
-    expect(root.commandEncoder.beginRenderPass).toHaveBeenCalledWith({
+    expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith({
       colorAttachments: [
         {
           loadOp: 'clear',

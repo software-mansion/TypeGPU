@@ -133,7 +133,7 @@ export class IcosphereGenerator {
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
-      const triangleCount = d.u32(std.arrayLength(prevVertices.value) / 3);
+      const triangleCount = d.u32(prevVertices.$.length / 3);
       const triangleIndex = input.gid.x + input.gid.y * MAX_DISPATCH;
       if (triangleIndex >= triangleCount) {
         return;
@@ -142,13 +142,13 @@ export class IcosphereGenerator {
       const baseIndexPrev = triangleIndex * 3;
 
       const v1 = unpackVec2u(
-        prevVertices.value[baseIndexPrev].position,
+        prevVertices.$[baseIndexPrev].position,
       );
       const v2 = unpackVec2u(
-        prevVertices.value[baseIndexPrev + 1].position,
+        prevVertices.$[baseIndexPrev + 1].position,
       );
       const v3 = unpackVec2u(
-        prevVertices.value[baseIndexPrev + 2].position,
+        prevVertices.$[baseIndexPrev + 2].position,
       );
 
       const v12 = d.vec4f(
@@ -164,7 +164,7 @@ export class IcosphereGenerator {
         1,
       );
 
-      const newVertices = [
+      const newVertices = d.arrayOf(d.vec4f, 12)([
         // Triangle A: [v1, v12, v31]
         v1,
         v12,
@@ -181,15 +181,15 @@ export class IcosphereGenerator {
         v12,
         v23,
         v31,
-      ];
+      ]);
 
       const baseIndexNext = triangleIndex * 12;
       for (let i = d.u32(0); i < 12; i++) {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);
-        let normal = reprojectedVertex;
-        if (smoothFlag.value === 0) {
+        let normal = d.vec4f(reprojectedVertex);
+        if (smoothFlag.$ === 0) {
           normal = getAverageNormal(
             newVertices[triBase],
             newVertices[triBase + 1],
@@ -198,12 +198,9 @@ export class IcosphereGenerator {
         }
 
         const outIndex = baseIndexNext + i;
-        const nextVertex = nextVertices.value[outIndex];
-
+        const nextVertex = nextVertices.$[outIndex];
         nextVertex.position = packVec2u(reprojectedVertex);
         nextVertex.normal = packVec2u(normal);
-
-        nextVertices.value[outIndex] = nextVertex;
       }
     });
 
@@ -307,10 +304,8 @@ export class IcosphereGenerator {
     );
 
     this.pipeline
-      .with(generatorLayout, bindGroup)
+      .with(bindGroup)
       .dispatchWorkgroups(xGroups, yGroups, 1);
-
-    this.root['~unstable'].flush();
 
     return nextBuffer;
   }

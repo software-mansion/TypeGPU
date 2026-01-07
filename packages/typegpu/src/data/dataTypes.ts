@@ -28,6 +28,7 @@ import type {
 import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
+import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -134,6 +135,13 @@ export function undecorate(data: AnyData): AnyData {
   return data;
 }
 
+export function unptr(data: AnyData | UnknownData): AnyData | UnknownData {
+  if (data.type === 'ptr') {
+    return data.inner as AnyData;
+  }
+  return data;
+}
+
 const looseTypeLiterals = [
   'unstruct',
   'disarray',
@@ -227,6 +235,8 @@ export type AnyConcreteData = Exclude<
   | WgslTexture
   | WgslStorageTexture
   | WgslExternalTexture
+  | WgslSampler
+  | WgslComparisonSampler
 >;
 
 export interface UnknownData {
@@ -256,7 +266,7 @@ export class MatrixColumnsAccess {
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor() {
+  constructor(readonly op: string) {
     setName(this, 'consoleLog');
   }
 }

@@ -6,9 +6,14 @@ import type {
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
+import type {
   AnyWgslData,
   U16,
   U32,
+  Vec3u,
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -41,6 +46,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+} from '../sampler/sampler.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -70,19 +79,57 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 // Public API
 // ----------
 
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
+  /**
+   * Returns a pipeline wrapper with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Dispatches the pipeline.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`, this method takes in the
+   * number of threads to run in each dimension.
+   *
+   * Under the hood, the number of expected threads is sent as a uniform, and
+   * "guarded" by a bounds check.
+   */
+  dispatchThreads(...args: TArgs): void;
+
+  /**
+   * The underlying pipeline used during `dispatchThreads`.
+   */
+  pipeline: TgpuComputePipeline;
+
+  /**
+   * The buffer used to automatically pass the thread count to the underlying pipeline during `dispatchThreads`.
+   * For pipelines with a dimension count lower than 3, the remaining coordinates are expected to be 1.
+   */
+  sizeUniform: TgpuUniform<Vec3u>;
+}
+
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
+
+type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
+
+type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
-      entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
-      targets: FragmentOutToTargets<FragmentOut>,
-    ]
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
+    ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
+      ? Args extends [infer T]
+        ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : Args extends [] | [infer T] ?
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : never
+    : never
   : [
     entryFn: 'n/a',
     targets: 'n/a',
@@ -181,12 +228,61 @@ export interface WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
+  /**
+   * Creates a compute pipeline that executes the given callback in an exact number of threads.
+   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * thread id, where as regular pipelines do not and work in units of workgroups.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU.
+   *                 It can accept up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   *                 of the executing thread.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline(() => {
+   *     'use gpu';
+   *     console.log('Hello, GPU!');
+   *   });
+   *
+   * fooPipeline.dispatchThreads();
+   * // [GPU] Hello, GPU!
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline((x) => {
+   *     'use gpu';
+   *     if (x % 16 === 0) {
+   *       // Logging every 16th thread
+   *       console.log('I am the', x, 'thread');
+   *     }
+   *   });
+   *
+   * // executing 512 threads
+   * fooPipeline.dispatchThreads(512);
+   * // [GPU] I am the 256 thread
+   * // [GPU] I am the 272 thread
+   * // ... (30 hidden logs)
+   * // [GPU] I am the 16 thread
+   * // [GPU] I am the 240 thread
+   * ```
+   */
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): TgpuGuardedComputePipeline<TArgs>;
+
   withVertex<
     VertexIn extends VertexInConstrained,
     VertexOut extends VertexOutConstrained,
   >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
@@ -675,11 +771,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -719,9 +810,16 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     callback: (pass: RenderPass) => void,
   ): void;
 
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler;
+
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }

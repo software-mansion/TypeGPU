@@ -27,11 +27,30 @@ const DEV = import.meta.env.DEV;
 export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
+  server: {
+    // Required for '@rolldown/browser' to work in dev mode.
+    // Since the service worker is hosted on the /TypeGPU path,
+    // fetches from /@fs/ fail due to CORS. This fixes that.
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathJax],
   },
   vite: {
+    define: {
+      // Required for '@rolldown/browser' to work.
+      'process.env.NODE_DEBUG_NATIVE': '""',
+    },
+    optimizeDeps: {
+      exclude: [
+        '@rolldown/browser',
+        'onnxruntime-web',
+      ],
+    },
     // Allowing query params, for invalidation
     plugins: [
       wasm(),
@@ -48,6 +67,8 @@ export default defineConfig({
     ssr: {
       noExternal: [
         'wgsl-wasm-transpiler-bundler',
+        '@rolldown/browser',
+        'onnxruntime-web',
       ],
     },
   },
@@ -115,11 +136,6 @@ export default defineConfig({
               slug: 'fundamentals/functions',
             },
             {
-              label: 'TGSL',
-              slug: 'fundamentals/tgsl',
-              badge: { text: 'new' },
-            },
-            {
               label: 'Pipelines',
               slug: 'fundamentals/pipelines',
               badge: { text: 'new' },
@@ -127,6 +143,11 @@ export default defineConfig({
             {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
+            },
+            {
+              label: 'Textures',
+              slug: 'fundamentals/textures',
+              badge: { text: 'new' },
             },
             {
               label: 'Variables',
@@ -189,6 +210,16 @@ export default defineConfig({
             {
               label: '@typegpu/noise',
               slug: 'ecosystem/typegpu-noise',
+            },
+            {
+              label: '@typegpu/three',
+              slug: 'ecosystem/typegpu-three',
+              badge: { text: 'new' },
+            },
+            {
+              label: '@typegpu/sdf',
+              slug: 'ecosystem/typegpu-sdf',
+              badge: { text: 'new' },
             },
             DEV && {
               label: '@typegpu/color',
@@ -256,6 +287,10 @@ export default defineConfig({
             DEV && {
               label: 'Naming Convention',
               slug: 'reference/naming-convention',
+            },
+            DEV && {
+              label: 'Shader Generation',
+              slug: 'reference/shader-generation',
             },
             typeDocSidebarGroup,
           ]),

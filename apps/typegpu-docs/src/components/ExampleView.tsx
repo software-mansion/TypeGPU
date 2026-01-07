@@ -171,9 +171,7 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button
-                    onClick={() => openInStackBlitz(example)}
-                  >
+                  <Button onClick={() => openInStackBlitz(example)}>
                     <span className='font-bold'>Edit on</span>
                     <img
                       src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
@@ -245,26 +243,43 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
 
       for (const prop of canvas.style) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas.style[prop] = canvas.style[prop];
       }
       for (const attribute of canvas.attributes) {
-        // @ts-ignore
+        // @ts-expect-error
         newCanvas[attribute.name] = attribute.value;
       }
       newCanvas.className = 'absolute w-full h-full';
 
       canvas.parentElement?.replaceChild(container, canvas);
 
-      const onResize = () => {
-        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
-        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      const onResize: ResizeObserverCallback = ([entry]) => {
+        if (!entry) {
+          return;
+        }
+
+        // Despite what the types say this property does not exist in Safari (hence the optional chaining).
+        const dpcb = entry.devicePixelContentBoxSize?.[0] as
+          | ResizeObserverSize
+          | undefined;
+
+        const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
+        const box = dpcb ??
+          (Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize);
+
+        if (!box) {
+          return;
+        }
+
+        newCanvas.width = Math.round(box.inlineSize * dpr);
+        newCanvas.height = Math.round(box.blockSize * dpr);
       };
 
-      onResize();
-
       const observer = new ResizeObserver(onResize);
-      observer.observe(container);
+      observer.observe(newCanvas);
       observers.push(observer);
     }
 

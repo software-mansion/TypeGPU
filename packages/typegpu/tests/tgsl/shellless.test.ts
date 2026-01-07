@@ -3,17 +3,16 @@ import tgpu from '../../src/index.ts';
 import * as d from '../../src/data/index.ts';
 import * as std from '../../src/std/index.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('shellless', () => {
   it('is callable from shelled function', () => {
     const dot2 = (a: d.v2f) => {
-      'kernel';
+      'use gpu';
       return std.dot(a, a);
     };
 
     const foo = () => {
-      'kernel';
+      'use gpu';
       return dot2(d.vec2f(1, 2)) + dot2(d.vec2f(3, 4));
     };
 
@@ -21,7 +20,7 @@ describe('shellless', () => {
       return foo();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn dot2(a: vec2f) -> f32 {
         return dot(a, a);
       }
@@ -38,16 +37,16 @@ describe('shellless', () => {
 
   it('is generic based on arguments', () => {
     const dot2 = (a: d.v2f | d.v3f) => {
-      'kernel';
+      'use gpu';
       return std.dot(a, a);
     };
 
     const foo = () => {
-      'kernel';
+      'use gpu';
       return dot2(d.vec2f(1, 2)) + dot2(d.vec3f(3, 4, 5));
     };
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn dot2(a: vec2f) -> f32 {
         return dot(a, a);
       }
@@ -64,7 +63,7 @@ describe('shellless', () => {
 
   it('handles fully abstract cases', () => {
     const someFn = (a: number, b: number) => {
-      'kernel';
+      'use gpu';
       if (a > b) {
         return 12.2;
       }
@@ -82,7 +81,7 @@ describe('shellless', () => {
       return x;
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn someFn(a: i32, b: i32) -> f32 {
         if ((a > b)) {
           return 12.2;
@@ -94,7 +93,7 @@ describe('shellless', () => {
       }
 
       fn main() -> f32 {
-        var x = someFn(1, 2);
+        let x = someFn(1i, 2i);
         return x;
       }"
     `);
@@ -102,7 +101,7 @@ describe('shellless', () => {
 
   it('throws when no single return type can be achieved', () => {
     const someFn = (a: number, b: number) => {
-      'kernel';
+      'use gpu';
       if (a > b) {
         return d.u32(12);
       }
@@ -120,22 +119,22 @@ describe('shellless', () => {
       return x;
     });
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main
-      - fn*:someFn: Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
+      - fn*:someFn(f32, i32): Expected function to have a single return type, got [u32, i32, f32]. Cast explicitly to the desired type.]
     `);
   });
 
   it('handles nested shellless', () => {
     const fn1 = () => {
-      'kernel';
+      'use gpu';
       return 4.1;
     };
 
     const fn2 = () => {
-      'kernel';
+      'use gpu';
       return fn1();
     };
 
@@ -143,7 +142,7 @@ describe('shellless', () => {
       return fn2();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn fn1() -> f32 {
         return 4.1;
       }
@@ -158,13 +157,93 @@ describe('shellless', () => {
     `);
   });
 
+  it('handles refs and generates pointer arguments for them', () => {
+    const advance = (pos: d.ref<d.v3f>, vel: d.v3f) => {
+      'use gpu';
+      pos.$.x += vel.x;
+      pos.$.y += vel.y;
+      pos.$.z += vel.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      const pos = d.ref(d.vec3f(0, 0, 0));
+      advance(pos, d.vec3f(1, 2, 3));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn advance(pos: ptr<function, vec3f>, vel: vec3f) {
+        (*pos).x += vel.x;
+        (*pos).y += vel.y;
+        (*pos).z += vel.z;
+      }
+
+      fn main() {
+        var pos = vec3f();
+        advance((&pos), vec3f(1, 2, 3));
+      }"
+    `);
+  });
+
+  it('generates private pointer params when passing a private variable ref to a function', ({ root }) => {
+    const foo = tgpu.privateVar(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(d.ref(foo.$));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn sumComponents(vec: ptr<private, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
+      }
+
+      var<private> foo: vec3f;
+
+      fn main() {
+        sumComponents((&foo));
+      }"
+    `);
+  });
+
+  it('generates uniform pointer params when passing a fixed uniform ref to a function', ({ root }) => {
+    const posUniform = root.createUniform(d.vec3f);
+
+    const sumComponents = (vec: d.ref<d.v3f>) => {
+      'use gpu';
+      return vec.$.x + vec.$.y + vec.$.z;
+    };
+
+    const main = () => {
+      'use gpu';
+      sumComponents(d.ref(posUniform.$));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn sumComponents(vec: ptr<uniform, vec3f>) -> f32 {
+        return (((*vec).x + (*vec).y) + (*vec).z);
+      }
+
+      @group(0) @binding(0) var<uniform> posUniform: vec3f;
+
+      fn main() {
+        sumComponents((&posUniform));
+      }"
+    `);
+  });
+
   it('resolves when accepting no arguments', () => {
     const main = () => {
-      'kernel';
+      'use gpu';
       return 4.1;
     };
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> f32 {
         return 4.1;
       }"
@@ -173,14 +252,40 @@ describe('shellless', () => {
 
   it('throws error when resolving function that expects arguments', () => {
     const main = (a: number) => {
-      'kernel';
+      'use gpu';
       return a + 1;
     };
 
-    expect(() => asWgsl(main)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
+    `);
+  });
+
+  it('should cache shellless implementations in namespace', () => {
+    const foo = () => {
+      'use gpu';
+      return 4.1;
+    };
+
+    const bar = () => {
+      'use gpu';
+      return 4.2 * foo();
+    };
+
+    const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+    expect(tgpu.resolve([foo], { names })).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 4.1;
+      }"
+    `);
+
+    expect(tgpu.resolve([bar], { names })).toMatchInlineSnapshot(`
+      "fn bar() -> f32 {
+        return (4.2f * foo());
+      }"
     `);
   });
 });

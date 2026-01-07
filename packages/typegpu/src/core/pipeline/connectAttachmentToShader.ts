@@ -1,3 +1,4 @@
+import { isBuiltin } from '../../data/attributes.ts';
 import { isData } from '../../data/dataTypes.ts';
 import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
 import type {
@@ -16,6 +17,9 @@ export function connectAttachmentToShader(
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
   if (isData(shaderOutputLayout)) {
+    if (isBuiltin(shaderOutputLayout)) {
+      return [];
+    }
     if (!isColorAttachment(attachment)) {
       throw new Error('Expected a single color attachment, not a record.');
     }
@@ -25,6 +29,12 @@ export function connectAttachmentToShader(
 
   const result: ColorAttachment[] = [];
   for (const key of Object.keys(shaderOutputLayout)) {
+    const outputValue = (shaderOutputLayout as Record<string, unknown>)[key];
+
+    if (isBuiltin(outputValue)) {
+      continue;
+    }
+
     const matching = (attachment as Record<string, ColorAttachment>)[key];
 
     if (!matching) {

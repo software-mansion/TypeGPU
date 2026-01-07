@@ -1,10 +1,9 @@
 import { describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { struct } from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
@@ -63,11 +62,11 @@ describe('autonaming', () => {
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = tgpu['~unstable'].sampler({
+    const mySampler = root['~unstable'].createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = tgpu['~unstable'].comparisonSampler({
+    const myComparisonSampler = root['~unstable'].createComparisonSampler({
       compare: 'equal',
     });
 
@@ -126,7 +125,8 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    let layout = undefined;
+    // biome-ignore lint/style/useConst: it's a test
+    let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
         foo: { uniform: d.vec3f },
@@ -145,7 +145,7 @@ describe('autonaming', () => {
 
   it('names arrow functions', () => {
     const myFun = () => {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -159,7 +159,7 @@ describe('autonaming', () => {
   it('names function expression', () => {
     // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
-      'kernel';
+      'use gpu';
       return 0;
     };
 
@@ -172,7 +172,7 @@ describe('autonaming', () => {
 
   it('names function definition', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 
@@ -185,7 +185,7 @@ describe('autonaming', () => {
 
   it('shellless name carries over to WGSL', () => {
     function myFun() {
-      'kernel';
+      'use gpu';
       return 0;
     }
 
@@ -193,7 +193,7 @@ describe('autonaming', () => {
       myFun();
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn myFun() -> i32 {
         return 0;
       }
@@ -202,5 +202,37 @@ describe('autonaming', () => {
         myFun();
       }"
     `);
+  });
+
+  it('autonames class properties', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames object member assignment', ({ root }) => {
+    const items: { myBuffer: unknown } = { myBuffer: undefined };
+
+    items.myBuffer = root.createUniform(d.u32);
+
+    expect(getName(items.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames this prop assignment', ({ root }) => {
+    class MyController {
+      myBuffer;
+
+      constructor() {
+        this.myBuffer = root.createUniform(d.u32);
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
 });

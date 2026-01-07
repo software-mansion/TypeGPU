@@ -1,4 +1,4 @@
-import tgpu, { prepareDispatch } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -12,42 +12,75 @@ const root = await tgpu.init({
   },
 });
 
+// setup for render tests
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+
+const mainVertex = tgpu['~unstable'].vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position },
+})((input) => {
+  const positions = [
+    d.vec2f(0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
+});
+
+const mainFragment = tgpu['~unstable'].fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  console.log('X:', pos.x, 'Y:', pos.y);
+  return d.vec4f(0.769, 0.392, 1.0, 1);
+});
+
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
 // #region Example controls and cleanup
 
 export const controls = {
   'One argument': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log(d.u32(321));
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log(1, d.vec3u(2, 3, 4), 5, 6);
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'String literals': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log(2, 'plus', 3, 'equals', 5);
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Two logs': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log('First log.');
         console.log('Second log.');
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Different types': {
     onButtonClick: () =>
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log('--- scalars ---');
         console.log(d.f32(3.14));
         console.log(d.i32(-2_000_000_000));
@@ -86,7 +119,7 @@ export const controls = {
         } else {
           console.log("The 'shader-f16' flag is not enabled.");
         }
-      }).dispatch(),
+      }).dispatchThreads(),
   },
   'Compound types': {
     onButtonClick: () => {
@@ -95,8 +128,8 @@ export const controls = {
       const SimpleArray = d.arrayOf(d.u32, 2);
       const ComplexArray = d.arrayOf(SimpleArray, 3);
 
-      prepareDispatch(root, () => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
 
@@ -111,70 +144,77 @@ export const controls = {
 
         const complexArray = ComplexArray([[3, 4], [5, 6], [7, 8]]);
         console.log(complexArray);
-      }).dispatch();
+      }).dispatchThreads();
     },
   },
   'Two threads': {
     onButtonClick: () =>
-      prepareDispatch(root, (x) => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline((x) => {
+        'use gpu';
         console.log('Log from thread', x);
-      }).dispatch(2),
+      }).dispatchThreads(2),
   },
   '100 dispatches': {
     onButtonClick: async () => {
       const indexUniform = root.createUniform(d.u32);
-      const test = prepareDispatch(root, () => {
-        'kernel';
+      const test = root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         console.log('Log from dispatch', indexUniform.$);
       });
       for (let i = 0; i < 100; i++) {
         indexUniform.write(i);
-        test.dispatch();
-        console.log(`dispatched ${i}`);
+        test.dispatchThreads();
       }
     },
   },
   'Varying size logs': {
     onButtonClick: async () => {
       const logCountUniform = root.createUniform(d.u32);
-      const test = prepareDispatch(root, () => {
-        'kernel';
+      const test = root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
           console.log('Log index', i + 1, 'out of', logCountUniform.$);
         }
       });
       logCountUniform.write(3);
-      test.dispatch();
+      test.dispatchThreads();
       logCountUniform.write(1);
-      test.dispatch();
+      test.dispatchThreads();
     },
+  },
+  'String interpolation': {
+    onButtonClick: async () =>
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
+        console.log(
+          'The values %d, %f and %s were interpolated in this message.',
+          987,
+          1.26,
+          d.vec4f(1, 2, 3, 4),
+        );
+        console.log(
+          'TypeGPU resources can be used as strings (%s) or objects (%o).',
+          d.vec3f(1, 2, 3),
+          d.vec3f(1, 2, 3),
+          'This sentence is the fourth argument of the log.',
+        );
+      }).dispatchThreads(),
+  },
+  'Different log functionalities': {
+    onButtonClick: async () =>
+      root['~unstable'].createGuardedComputePipeline(() => {
+        'use gpu';
+        console.log('This message should be cleared.');
+        console.clear();
+        console.log('This is a log message.', 'Index:', 1);
+        console.debug('This is a debug message.', 'Index:', 2);
+        console.info('This is an info message.', 'Index:', 3);
+        console.warn('This is a warn message.', 'Index:', 4);
+        console.error('This is an error message.', 'Index:', 5);
+      }).dispatchThreads(),
   },
   'Render pipeline': {
     onButtonClick: () => {
-      const mainVertex = tgpu['~unstable'].vertexFn({
-        in: { vertexIndex: d.builtin.vertexIndex },
-        out: { pos: d.builtin.position },
-      })((input) => {
-        const positions = [
-          d.vec2f(0, 0.5),
-          d.vec2f(-0.5, -0.5),
-          d.vec2f(0.5, -0.5),
-        ];
-
-        return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
-      });
-
-      const mainFragment = tgpu['~unstable'].fragmentFn({
-        in: { pos: d.builtin.position },
-        out: d.vec4f,
-      })(({ pos }) => {
-        console.log('X:', pos.x, 'Y:', pos.y);
-        return d.vec4f(0.769, 0.392, 1.0, 1);
-      });
-
-      const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-      const canvas = document.querySelector('canvas') as HTMLCanvasElement;
       const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
       context.configure({
@@ -198,26 +238,35 @@ export const controls = {
         .draw(3);
     },
   },
+  'Draw indexed': {
+    onButtonClick: () => {
+      const pipeline = root['~unstable']
+        .withVertex(mainVertex, {})
+        .withFragment(mainFragment, { format: presentationFormat })
+        .createPipeline();
+
+      const indexBuffer = root
+        .createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2])
+        .$usage('index');
+
+      pipeline
+        .withIndexBuffer(indexBuffer)
+        .withColorAttachment({
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        }).drawIndexed(3);
+    },
+  },
   'Too many logs': {
     onButtonClick: () =>
-      prepareDispatch(root, (x) => {
-        'kernel';
+      root['~unstable'].createGuardedComputePipeline((x) => {
+        'use gpu';
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);
         console.log('Log 3 from thread', x);
-      }).dispatch(16),
-  },
-  'Too much data': {
-    onButtonClick: () => {
-      try {
-        prepareDispatch(root, () => {
-          'kernel';
-          console.log(d.mat4x4f(), d.mat4x4f(), 1);
-        }).dispatch();
-      } catch (err) {
-        console.log(err);
-      }
-    },
+      }).dispatchThreads(16),
   },
 };
 

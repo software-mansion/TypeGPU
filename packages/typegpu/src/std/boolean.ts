@@ -19,6 +19,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { $internal } from '../shared/symbols.ts';
+import { unify } from '../tgsl/conversion.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: AnyData) {
@@ -283,7 +284,11 @@ export const isCloseTo = dualImpl({
     return false;
   },
   // GPU implementation
-  codegenImpl: (lhs, rhs, precision = snip(0.01, f32)) => {
+  codegenImpl: (
+    lhs,
+    rhs,
+    precision = snip(0.01, f32, /* origin */ 'constant'),
+  ) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
@@ -333,7 +338,10 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
  */
 export const select = dualImpl({
   name: 'select',
-  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  signature: (f, t, cond) => {
+    const [uf, ut] = unify([f, t]) ?? [f, t] as const;
+    return ({ argTypes: [uf, ut, cond], returnType: uf });
+  },
   normalImpl: cpuSelect,
   codegenImpl: (f, t, cond) => stitch`select(${f}, ${t}, ${cond})`,
 });

@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, isKernel, setName } from '../../shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -104,7 +104,7 @@ export function replaceExternalsInWgsl(
     }
 
     if (
-      isWgsl(external) || isLooseData(external) || isKernel(external)
+      isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)
     ) {
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
@@ -139,7 +139,7 @@ export function replaceExternalsInWgsl(
     }
 
     console.warn(
-      `During resolution, the external '${externalName}' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+      `During resolution, the external '${externalName}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
     );
 
     return acc;

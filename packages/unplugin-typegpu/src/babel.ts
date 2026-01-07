@@ -12,9 +12,9 @@ import {
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
-  kernelDirective,
   type Options,
   performExpressionNaming,
+  useGpuDirective,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
 
@@ -26,7 +26,7 @@ const template = (
 const types = (Babel as unknown as { packages: { types: typeof babel } })
   .packages.types;
 
-function containsKernelDirective(
+function containsUseGpuDirective(
   node:
     | babel.FunctionDeclaration
     | babel.FunctionExpression
@@ -36,7 +36,7 @@ function containsKernelDirective(
     'directives' in node.body ? (node.body?.directives ?? []) : []
   )
     .map((directive) => directive.value.value))
-    .includes(kernelDirective);
+    .includes(useGpuDirective);
 }
 
 function i(identifier: string): babel.Identifier {
@@ -63,19 +63,25 @@ function functionToTranspiled(
       i('ast'),
       template.expression`${embedJSON({ params, body, externalNames })}`(),
     ),
-    types.objectMethod(
-      'get',
+    types.objectProperty(
       i('externals'),
-      [],
-      types.blockStatement([
-        types.returnStatement(
-          types.objectExpression(
-            externalNames.map((name) =>
-              types.objectProperty(i(name), i(name), false, true)
+      types.arrowFunctionExpression(
+        [],
+        types.blockStatement([
+          types.returnStatement(
+            types.objectExpression(
+              externalNames.map((name) =>
+                types.objectProperty(
+                  i(name),
+                  i(name),
+                  false,
+                  /* shorthand */ name !== 'this',
+                )
+              ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     ),
   ]);
 
@@ -141,6 +147,12 @@ function functionVisitor(ctx: Context): TraverseOptions {
       });
     },
 
+    ClassProperty(path) {
+      performExpressionNaming(ctx, path.node, (node, name) => {
+        path.get('value').replaceWith(wrapInAutoName(node, name));
+      });
+    },
+
     ImportDeclaration(path) {
       gatherTgpuAliases(path.node, ctx);
     },
@@ -148,7 +160,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     ArrowFunctionExpression(path) {
       const node = path.node;
       const parent = path.parentPath.node;
-      if (containsKernelDirective(node)) {
+      if (containsUseGpuDirective(node)) {
         path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
@@ -157,7 +169,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionExpression(path) {
       const node = path.node;
       const parent = path.parentPath.node;
-      if (containsKernelDirective(node)) {
+      if (containsUseGpuDirective(node)) {
         path.replaceWith(functionToTranspiled(node, parent));
         path.skip();
       }
@@ -172,7 +184,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         node.body,
       );
 
-      if (containsKernelDirective(path.node) && node.id) {
+      if (containsUseGpuDirective(path.node) && node.id) {
         path.replaceWith(
           types.variableDeclaration('const', [
             types.variableDeclarator(
@@ -218,8 +230,6 @@ export default function () {
   return {
     visitor: {
       Program(path, state) {
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
-        const code: string | undefined = (state as any).file?.code;
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
         const options = defu((state as any).opts as Options, defaultOptions);
         // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
