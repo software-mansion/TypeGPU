@@ -3,7 +3,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
+import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
@@ -66,6 +66,20 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$gpuValueOf]: InferGPU<T>;
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
+}
+
+export interface TgpuMutableAccessor<T extends AnyData = AnyData>
+  extends TgpuNamable {
+  readonly [$internal]: true;
+  readonly resourceType: 'mutable-accessor';
+
+  readonly schema: T;
+  readonly defaultValue: MutableAccessorIn<T> | undefined;
+  readonly slot: TgpuSlot<MutableAccessorIn<T>>;
+
+  readonly [$gpuValueOf]: InferGPU<T>;
+  value: InferGPU<T>;
+  $: InferGPU<T>;
 }
 
 /**
