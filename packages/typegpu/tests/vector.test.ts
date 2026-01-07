@@ -991,21 +991,21 @@ describe('type predicates', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn ceil(input: vec3f) -> vec3i {
+      "fn ceil_1(input: vec3f) -> vec3i {
         {
           return vec3i(ceil(input));
         }
       }
 
-      fn ceil_1(input: vec3i) -> vec3i {
+      fn ceil_2(input: vec3i) -> vec3i {
         {
           return input;
         }
       }
 
       fn main() {
-        var foo = ceil(vec3f(1, 2, 3));
-        var bar = ceil_1(vec3i(1, 2, 3));
+        var foo = ceil_1(vec3f(1, 2, 3));
+        var bar = ceil_2(vec3i(1, 2, 3));
       }"
     `);
   });

@@ -178,3 +178,5 @@ export const it = base.extend<{
     root.destroy();
   },
 });
+
+export const test = it;
