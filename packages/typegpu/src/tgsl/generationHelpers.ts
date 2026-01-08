@@ -156,7 +156,7 @@ export class ArrayExpression implements SelfResolvable {
     return snip(
       stitch`${arrayType}(${this.elements})`,
       this.type,
-      'runtime',
+      /* origin */ 'runtime',
     );
   }
 }
