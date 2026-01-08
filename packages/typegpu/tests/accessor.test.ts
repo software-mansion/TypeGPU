@@ -295,6 +295,35 @@ describe('tgpu.accessor', () => {
     `);
   });
 
+  it('can provide a constant', () => {
+    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
+
+    const getColor = tgpu.fn([], d.vec3f)(() => {
+      'use gpu';
+      return colorAccess.$;
+    });
+
+    const constantColor = tgpu.const(d.vec3f, d.vec3f(0.1, 0.5, 0.3));
+    const getColor2 = getColor.with(colorAccess, constantColor);
+
+    const main = () => {
+      'use gpu';
+      const foo = getColor2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const constantColor: vec3f = vec3f(0.10000000149011612, 0.5, 0.30000001192092896);
+
+      fn getColor() -> vec3f {
+        return constantColor;
+      }
+
+      fn main() {
+        var foo = getColor();
+      }"
+    `);
+  });
+
   it('can provide a runtime-sized array', () => {
     const ImageStruct = (count: number) =>
       d.struct({

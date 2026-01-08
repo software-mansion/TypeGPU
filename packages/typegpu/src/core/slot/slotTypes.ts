@@ -4,6 +4,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
+import { TgpuConst } from '../constant/tgpuConstant.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
 import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
@@ -56,6 +57,7 @@ export type AccessorIn<TSchema extends AnyData> = TSchema extends
     | TgpuBufferUsage<TSchema>
     | TgpuBufferShorthand<TSchema>
     | TgpuVar<VariableScope, TSchema>
+    | TgpuConst<TSchema>
     | Infer<TSchema>
   );
 
