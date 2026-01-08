@@ -33,6 +33,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  ArrayExpression,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -756,16 +757,18 @@ ${this.ctx.pre}}`;
         elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
-      const arrayType = `array<${
-        this.ctx.resolve(elemType).value
-      }, ${values.length}>`;
+      const arrayType = arrayOf[$internal].jsImpl(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      );
 
       return snip(
-        stitch`${arrayType}(${values})`,
-        arrayOf[$internal].jsImpl(
+        new ArrayExpression(
           elemType as wgsl.AnyWgslData,
-          values.length,
-        ) as wgsl.AnyWgslData,
+          arrayType,
+          values,
+        ),
+        arrayType,
         /* origin */ 'runtime',
       );
     }
