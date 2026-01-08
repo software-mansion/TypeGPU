@@ -14,13 +14,13 @@ const ResultRecord = type({
 
 const BenchmarkResults = arrayOf(ResultRecord);
 
-function getSharedBundlers(
+function getAllBundlers(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
 ) {
   const prBundlers = new Set(prResults.map((r) => r.bundler));
   const targetBundlers = new Set(targetResults.map((r) => r.bundler));
-  return [...prBundlers].filter((bundler) => targetBundlers.has(bundler));
+  return new Set([...prBundlers, ...targetBundlers]);
 }
 
 function groupResultsByExample(results: typeof BenchmarkResults.infer) {
@@ -54,9 +54,14 @@ async function generateSingleTableReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
 ) {
-  const sharedBundlers = getSharedBundlers(prResults, targetResults);
   const prGrouped = groupResultsByExample(prResults);
   const targetGrouped = groupResultsByExample(targetResults);
+
+  // Get all unique bundlers from both branches
+  const allBundlers = new Set([
+    ...new Set(prResults.map((r) => r.bundler)),
+    ...new Set(targetResults.map((r) => r.bundler)),
+  ]);
 
   // Get all unique examples from both branches
   const allExamples = new Set([
@@ -73,7 +78,7 @@ async function generateSingleTableReport(
     totalUnknown = 0;
 
   for (const example of allExamples) {
-    for (const bundler of sharedBundlers) {
+    for (const bundler of allBundlers) {
       const prSize = prGrouped[example]?.[bundler];
       const targetSize = targetGrouped[example]?.[bundler];
       assert(prSize);
@@ -96,14 +101,14 @@ async function generateSingleTableReport(
 
   // Table header
   output += "| Example";
-  for (const bundler of sharedBundlers) {
+  for (const bundler of allBundlers) {
     output += ` | ${bundler}`;
   }
   output += " |\n";
 
   // Table separator
   output += "|---------";
-  for (const bundler of sharedBundlers) {
+  for (const bundler of allBundlers) {
     output += "|---------";
   }
   output += " |\n";
@@ -112,7 +117,7 @@ async function generateSingleTableReport(
   for (const example of [...allExamples].sort()) {
     output += `| ${example}`;
 
-    for (const bundler of sharedBundlers) {
+    for (const bundler of allBundlers) {
       const prSize = prGrouped[example]?.[bundler];
       const targetSize = targetGrouped[example]?.[bundler];
 
