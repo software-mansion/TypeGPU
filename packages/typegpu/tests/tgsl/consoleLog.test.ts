@@ -224,7 +224,7 @@ describe('wgslGenerator with console.log', () => {
         serializeU32(_arg_0);
       }
 
-      fn log2(_arg_0: u32) {
+      fn log2_1(_arg_0: u32) {
         dataBlockIndex = atomicAdd(&indexBuffer, 1);
         if (dataBlockIndex >= 64) {
           return;
@@ -241,7 +241,7 @@ describe('wgslGenerator with console.log', () => {
 
       @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         log1(10u);
-        log2(20u);
+        log2_1(20u);
       }"
     `);
   });

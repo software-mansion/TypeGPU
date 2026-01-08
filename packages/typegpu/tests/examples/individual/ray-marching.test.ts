@@ -94,8 +94,8 @@ describe('ray-marching example', () => {
 
       fn getSceneDist(p: vec3f) -> Shape {
         var shape = getMorphingShape(p, time);
-        var floor = Shape(mix(vec3f(1), vec3f(0.20000000298023224), checkerBoard((p.xz * 2))), sdPlane(p, vec3f(0, 1, 0), 0f));
-        return shapeUnion(shape, floor);
+        var floor_1 = Shape(mix(vec3f(1), vec3f(0.20000000298023224), checkerBoard((p.xz * 2))), sdPlane(p, vec3f(0, 1, 0), 0f));
+        return shapeUnion(shape, floor_1);
       }
 
       fn rayMarch(ro: vec3f, rd: vec3f) -> Shape {
