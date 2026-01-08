@@ -4,7 +4,6 @@ import * as std from 'typegpu/std';
 import type { StorageBufferNode, UniformNode } from 'three/webgpu';
 import { BOUNDS, NeighborIndices, Normals, WIDTH } from './consts.ts';
 
-
 export function createGpuHelpers(
   heightStorageA: t3.TSLAccessor<d.WgslArray<typeof d.f32>, StorageBufferNode>,
   heightStorageB: t3.TSLAccessor<d.WgslArray<typeof d.f32>, StorageBufferNode>,

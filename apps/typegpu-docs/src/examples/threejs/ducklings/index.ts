@@ -13,7 +13,14 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import { BOUNDS, limit, NUM_DUCKS, SPEED, SUN_POSITION, WIDTH } from './consts.ts';
+import {
+  BOUNDS,
+  limit,
+  NUM_DUCKS,
+  SPEED,
+  SUN_POSITION,
+  WIDTH,
+} from './consts.ts';
 import { initializeHeightArrays } from './utils.ts';
 import { createGpuHelpers } from './gpuHelpers.ts';
 
@@ -139,7 +146,16 @@ const computeHeightBtoA = t3.toTSL(() => {
 
   const neighbors = getNeighborIndices(idx);
   let neighborHeight = std.mul(
-    std.add(std.add(std.add(heightStorageB.$[neighbors.northIndex], heightStorageB.$[neighbors.southIndex]), heightStorageB.$[neighbors.eastIndex]), heightStorageB.$[neighbors.westIndex]),
+    std.add(
+      std.add(
+        std.add(
+          heightStorageB.$[neighbors.northIndex],
+          heightStorageB.$[neighbors.southIndex],
+        ),
+        heightStorageB.$[neighbors.eastIndex],
+      ),
+      heightStorageB.$[neighbors.westIndex],
+    ),
     0.5,
   );
   neighborHeight = std.sub(neighborHeight, prevHeight);
@@ -313,8 +329,6 @@ const computeDucks = t3.toTSL(() => {
   duckVelocityStorage.$[idx] = d.vec2f(velocity);
 }).compute(NUM_DUCKS);
 
-
-
 // Load environment and duck model
 const hdrLoader = new HDRLoader().setPath(
   'https://threejs.org/examples/textures/equirectangular/',
@@ -367,10 +381,10 @@ renderer.setAnimationLoop(() => {
   if (frame >= 7 - SPEED) {
     if (pingPong === 0) {
       renderer.compute(computeHeightAtoB);
-      readFromA.node.value = 0; 
+      readFromA.node.value = 0;
     } else {
       renderer.compute(computeHeightBtoA);
-      readFromA.node.value = 1; 
+      readFromA.node.value = 1;
     }
 
     pingPong = 1 - pingPong;
@@ -384,7 +398,6 @@ renderer.setAnimationLoop(() => {
 
   renderer.render(scene, camera);
 });
-
 
 // #region Example controls and cleanup
 // Event handlers
