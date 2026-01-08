@@ -1,36 +1,44 @@
 import * as d from 'typegpu/data';
-import {
-  SCALE,
-  TRIANGLE_COUNT,
-  TRIANGLES_PER_ROW,
-  USER_SCALE,
-} from './consts.ts';
+import { gridParams } from './config.ts';
+import { baseTriangleCentroidToMidpointLength, baseTriangleHalfHeight, baseTriangleSide } from './geometry.ts';
 
 const InstanceInfo = d.struct({ offset: d.vec2f, rotationAngle: d.f32 });
-const InstanceInfoArray = d.arrayOf(InstanceInfo, TRIANGLE_COUNT);
+const InstanceInfoArray = d.arrayOf(InstanceInfo);
 
-const instanceInfoArray = Array.from({ length: TRIANGLE_COUNT }, (_, index) => {
-  const row = Math.floor(index / TRIANGLES_PER_ROW);
-  const column = index % TRIANGLES_PER_ROW;
+function createInstanceInfoArray() {
+  const instanceInfoArray = Array.from(
+    { length: gridParams.triangleCount },
+    (_, index) => {
+      const row = Math.floor(index / gridParams.trianglesPerRow);
+      const column = index % gridParams.trianglesPerRow;
 
-  const info = InstanceInfo(
-    column % 2 === 1
-      ? {
+      let info: d.Infer<typeof InstanceInfo>;
+      
+      if (column % 2 === 1) {
+        info = {
           offset: d.vec2f(
-            (column - 1) * Math.sqrt(3) * SCALE * USER_SCALE,
-            1 * SCALE * USER_SCALE,
+            (column - 1) * baseTriangleHalfHeight * gridParams.userScale,
+            baseTriangleCentroidToMidpointLength * gridParams.userScale,
           ),
           rotationAngle: 60,
         }
-      : {
-          offset: d.vec2f((column - 1) * Math.sqrt(3) * SCALE * USER_SCALE, 0),
+      } else {
+        info = {
+          offset: d.vec2f(
+            (column - 1)  * baseTriangleHalfHeight * gridParams.userScale,
+            0,
+          ),
           rotationAngle: 0,
-        },
+        };
+      }
+
+      info.offset.y += -row * baseTriangleSide * gridParams.userScale;
+
+      return info;
+    },
   );
 
-  info.offset.y += -row * 3 * SCALE * USER_SCALE;
+  return instanceInfoArray;
+}
 
-  return info;
-});
-
-export { instanceInfoArray, InstanceInfoArray, InstanceInfo };
+export { createInstanceInfoArray, InstanceInfoArray, InstanceInfo };

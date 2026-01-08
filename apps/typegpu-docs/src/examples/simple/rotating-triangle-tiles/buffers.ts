@@ -1,8 +1,10 @@
 import * as d from 'typegpu/data';
+import tgpu from 'typegpu';
 import { colors } from './geometry.ts';
 import { root } from './root.ts';
 import { triangleVertices } from './geometry.ts';
-import { instanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
+import { createInstanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
+import { GridParams, gridParams } from './config.ts';
 
 const animationProgressUniform = root.createUniform(d.f32);
 
@@ -18,14 +20,45 @@ const triangleVerticesBuffer = root.createReadonly(TriangleVertices, {
   positions: triangleVertices,
 });
 
-const instanceInfoBuffer = root.createReadonly(
-  InstanceInfoArray,
-  instanceInfoArray,
-);
+const instanceInfoLayout = tgpu.bindGroupLayout({
+  instanceInfo: { storage: InstanceInfoArray },
+});
+
+let { instanceInfoBuffer, instanceInfoBindGroup } =
+  createInstanceInfoBufferAndBindGroup();
+
+function getInstanceInfoBindGroup() {
+  return instanceInfoBindGroup;
+}
+
+function createInstanceInfoBufferAndBindGroup() {
+
+  const instanceInfoBuffer = root.createReadonly(
+    InstanceInfoArray(gridParams.triangleCount),
+    createInstanceInfoArray(),
+  );
+
+  const instanceInfoBindGroup = root.createBindGroup(instanceInfoLayout, {
+    instanceInfo: instanceInfoBuffer.buffer,
+  });
+
+  return { instanceInfoBuffer, instanceInfoBindGroup };
+}
+
+
+function updateInstanceInfoBufferAndBindGroup() {
+  ({ instanceInfoBuffer, instanceInfoBindGroup } =
+    createInstanceInfoBufferAndBindGroup())
+}
+
+const gridParamsBuffer = root.createUniform(GridParams, gridParams);
 
 export {
   animationProgressUniform,
+  getInstanceInfoBindGroup,
+  gridParamsBuffer,
+  instanceInfoLayout,
   shiftedColorsBuffer,
-  instanceInfoBuffer,
   triangleVerticesBuffer,
+  updateInstanceInfoBufferAndBindGroup
 };

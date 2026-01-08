@@ -2,8 +2,8 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
-import { SCALE, USER_SCALE } from './consts.ts';
-import { zeroXOffset, zeroYOffset } from './calculated.ts';
+import { gridParamsBuffer } from './buffers.ts';
+import { baseTriangleHalfHeight } from './geometry.ts';
 
 const interpolate = tgpu.fn(
   [d.f32, d.f32, d.f32, d.f32, d.f32],
@@ -64,13 +64,22 @@ function instanceTransform(
   return std.add(
     std.add(
       rotate(
-        std.mul(std.mul(position, SCALE), USER_SCALE),
+        std.mul(position, gridParamsBuffer.$.userScale),
         instanceInfo.rotationAngle,
       ),
       instanceInfo.offset,
     ),
-    d.vec2f(zeroXOffset, zeroYOffset),
+    getZeroOffset(),
   );
+}
+
+function getZeroOffset() {
+  'use gpu';
+  const zeroXOffset = baseTriangleHalfHeight * gridParamsBuffer.$.userScale - 1;
+  // make the top of the very first triangle touch the border
+  const zeroYOffset = 1 - gridParamsBuffer.$.userScale;
+
+  return d.vec2f(zeroXOffset, zeroYOffset);
 }
 
 export { interpolateBezier, rotate, instanceTransform };
