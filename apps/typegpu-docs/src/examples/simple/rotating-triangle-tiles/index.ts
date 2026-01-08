@@ -2,7 +2,6 @@ import { colors } from './geometry.ts';
 import {
   animationProgressUniform,
   getInstanceInfoBindGroup,
-  gridParamsBuffer,
   shiftedColorsBuffer,
   updateInstanceInfoBufferAndBindGroup,
 } from './buffers.ts';
@@ -11,10 +10,11 @@ import { root } from './root.ts';
 import { mainFragment, mainVertex } from './shaderModules.ts';
 import {
   animationDuration,
-  createGridParams,
   gridParams,
   initTileDensity,
   updateAnimationDuration,
+  updateAspectRatio,
+  updateGridParams,
 } from './config.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
@@ -22,6 +22,8 @@ const ease = createBezier(0.18, 0.7, 0.68, 1.03);
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+updateAspectRatio(canvas.width, canvas.height);
 
 context.configure({
   device: root.device,
@@ -67,7 +69,11 @@ requestAnimationFrame(draw);
 
 // cleanup
 
-const resizeObserver = new ResizeObserver(() => {});
+const resizeObserver = new ResizeObserver(() => {
+  updateAspectRatio(canvas.width, canvas.height);
+  updateGridParams();
+  updateInstanceInfoBufferAndBindGroup()
+});
 
 resizeObserver.observe(canvas);
 
@@ -86,11 +92,7 @@ export const controls = {
     min: 0.01,
     max: 1,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
-      Object.assign(gridParams, createGridParams(newValue));
-      gridParamsBuffer.write(gridParams);
-      updateInstanceInfoBufferAndBindGroup();
-    },
+    onSliderChange: updateGridParams,
   },
   'animation duration': {
     initial: animationDuration,

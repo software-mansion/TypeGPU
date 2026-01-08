@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
-import { gridParamsBuffer } from './buffers.ts';
+import { aspectRatioBuffer, gridParamsBuffer } from './buffers.ts';
 import { baseTriangleHalfHeight } from './geometry.ts';
 
 const interpolate = tgpu.fn(
@@ -61,21 +61,27 @@ function instanceTransform(
   instanceInfo: d.Infer<typeof InstanceInfo>,
 ) {
   'use gpu';
-  return std.add(
-    std.add(
-      rotate(
-        std.mul(position, gridParamsBuffer.$.userScale),
-        instanceInfo.rotationAngle,
-      ),
-      instanceInfo.offset,
+  const transformedPoint = std.add(
+    // rotate accordingly
+    rotate(
+      std.mul(position, gridParamsBuffer.$.userScale),
+      instanceInfo.rotationAngle,
     ),
-    getZeroOffset(),
+    // add instance offsets with top left corner offset
+    std.add(
+      instanceInfo.offset,
+      getZeroOffset(),
+    ),
   );
+
+  return d.mat2x2f(1 / aspectRatioBuffer.$, 0, 0, 1).mul(transformedPoint);
 }
 
+// common offset so that the first triangle's
+// top vertex lies on top of canvas's top left corner
 function getZeroOffset() {
   'use gpu';
-  const zeroXOffset = baseTriangleHalfHeight * gridParamsBuffer.$.userScale - 1;
+  const zeroXOffset = baseTriangleHalfHeight * gridParamsBuffer.$.userScale - 1 * aspectRatioBuffer.$;
   // make the top of the very first triangle touch the border
   const zeroYOffset = 1 - gridParamsBuffer.$.userScale;
 

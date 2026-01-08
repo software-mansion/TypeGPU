@@ -52,9 +52,11 @@ function updateInstanceInfoBufferAndBindGroup() {
 }
 
 const gridParamsBuffer = root.createUniform(GridParams, gridParams);
+const aspectRatioBuffer = root.createUniform(d.f32, 1)
 
 export {
   animationProgressUniform,
+  aspectRatioBuffer,
   getInstanceInfoBindGroup,
   gridParamsBuffer,
   instanceInfoLayout,

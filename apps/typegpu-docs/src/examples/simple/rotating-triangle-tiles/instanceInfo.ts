@@ -13,26 +13,27 @@ function createInstanceInfoArray() {
       const column = index % gridParams.trianglesPerRow;
 
       let info: d.Infer<typeof InstanceInfo>;
-      
+
+      const offsetX = (column - 1) * baseTriangleHalfHeight * gridParams.userScale;
+
       if (column % 2 === 1) {
         info = {
           offset: d.vec2f(
-            (column - 1) * baseTriangleHalfHeight * gridParams.userScale,
+            offsetX,
             baseTriangleCentroidToMidpointLength * gridParams.userScale,
           ),
           rotationAngle: 60,
         }
       } else {
         info = {
-          offset: d.vec2f(
-            (column - 1)  * baseTriangleHalfHeight * gridParams.userScale,
-            0,
-          ),
+          offset: d.vec2f(offsetX, 0),
           rotationAngle: 0,
         };
       }
 
       info.offset.y += -row * baseTriangleSide * gridParams.userScale;
+      // hide empty pixel lines
+      info.offset.y *= 0.9999;
 
       return info;
     },
