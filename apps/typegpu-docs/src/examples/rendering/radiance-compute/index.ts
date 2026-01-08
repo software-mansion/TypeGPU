@@ -2,7 +2,14 @@ import tgpu from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as sdf from '@typegpu/sdf';
+import {
+  SceneData,
+  sceneData,
+  sceneDataAccess,
+  sceneSDF,
+  updateElementPosition,
+} from './scene.ts';
+import { DragController } from './drag-controller.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -14,29 +21,42 @@ context.configure({
   format: presentationFormat,
 });
 
-// Primary setting: texture dimension for cascade storage
 const dim = 1024;
 const baseRaysDimStored = 2; // Pre-averaged: 2x2 stored texels = 4x4 effective rays per probe
-const baseProbes = dim / baseRaysDimStored; // Derived: 512 probes at finest cascade
-const cascadeAmount = Math.round(Math.log2(baseProbes));
+
+let baseProbesX: number;
+let baseProbesY: number;
+
+const canvasAspect = canvas.width / canvas.height;
+if (canvasAspect >= 1.0) {
+  baseProbesY = dim / baseRaysDimStored;
+  baseProbesX = Math.round(baseProbesY * canvasAspect);
+} else {
+  baseProbesX = dim / baseRaysDimStored;
+  baseProbesY = Math.round(baseProbesX / canvasAspect);
+}
+
+const dimX = baseProbesX * baseRaysDimStored;
+const dimY = baseProbesY * baseRaysDimStored;
+const cascadeAmount = Math.round(Math.log2(Math.min(baseProbesX, baseProbesY)));
 
 const cascadesTextureA = root['~unstable']
   .createTexture({
-    size: [dim, dim, cascadeAmount],
+    size: [dimX, dimY, cascadeAmount],
     format: 'rgba16float',
   })
   .$usage('storage', 'sampled');
 
 const cascadesTextureB = root['~unstable']
   .createTexture({
-    size: [dim, dim, cascadeAmount],
+    size: [dimX, dimY, cascadeAmount],
     format: 'rgba16float',
   })
   .$usage('storage', 'sampled');
 
 const radianceFieldTex = root['~unstable']
   .createTexture({
-    size: [baseProbes, baseProbes],
+    size: [baseProbesX, baseProbesY],
     format: 'rgba16float',
   })
   .$usage('storage', 'sampled');
@@ -57,82 +77,34 @@ const radianceSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const lightPosUniform = root.createUniform(d.vec2f, d.vec2f(0.5));
-const lightColorUniform = root.createUniform(d.vec4f, d.vec4f(1));
+const sceneDataUniform = root.createUniform(SceneData, sceneData);
 
-// Uniforms for the fused cascade pass
 const cascadeIndexUniform = root.createUniform(d.u32);
-const probesUniform = root.createUniform(d.u32);
+const probesUniform = root.createUniform(d.vec2u);
+const dimUniform = root.createUniform(d.vec2u, d.vec2u(dimX, dimY));
+const baseProbesUniform = root.createUniform(
+  d.vec2u,
+  d.vec2u(baseProbesX, baseProbesY),
+);
 
-// Z-order curve (Morton code) encoding/decoding for better cache efficiency
-const spreadBits = tgpu.fn([d.u32], d.u32)((v) => {
-  let x = v;
-  x = (x | (x << 8)) & 0x00ff00ff;
-  x = (x | (x << 4)) & 0x0f0f0f0f;
-  x = (x | (x << 2)) & 0x33333333;
-  x = (x | (x << 1)) & 0x55555555;
-  return x;
-});
-
-const compactBits = tgpu.fn([d.u32], d.u32)((v) => {
-  let x = v & 0x55555555;
-  x = (x | (x >> 1)) & 0x33333333;
-  x = (x | (x >> 2)) & 0x0f0f0f0f;
-  x = (x | (x >> 4)) & 0x00ff00ff;
-  x = (x | (x >> 8)) & 0x0000ffff;
-  return x;
-});
-
-const mortonEncode2D = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => {
-  return spreadBits(x) | (spreadBits(y) << 1);
-});
-
-const mortonDecode2D = tgpu.fn([d.u32], d.vec2u)((code) => {
-  return d.vec2u(compactBits(code), compactBits(code >> 1));
-});
-
-const linearToZOrder = tgpu.fn([d.u32], d.vec2u)((idx) => {
-  return mortonDecode2D(idx);
-});
-
-// Direction-first layout helpers (key optimization for hardware filtering)
 const AtlasLocal = d.struct({
   dir: d.vec2u,
   probe: d.vec2u,
 });
 
-const atlasToDirFirst = tgpu.fn([d.vec2u, d.u32], AtlasLocal)((gid, probes) => {
-  const dir = d.vec2u(gid.x / probes, gid.y / probes);
-  const probe = d.vec2u(gid.x % probes, gid.y % probes);
-  return AtlasLocal({ dir, probe });
-});
-
-const dirFirstAtlasPos = tgpu.fn([d.vec2u, d.vec2u, d.u32], d.vec2u)(
-  (dir, probe, probes) => {
-    return dir.mul(probes).add(probe);
-  },
-);
-
-const SceneResult = d.struct({
-  dist: d.f32,
-  color: d.vec3f,
-});
-
-const sceneSDF = (p: d.v2f) => {
+const atlasToDirFirst = (gid: d.v2u, probes: d.v2u) => {
   'use gpu';
-  const occluder1 = sdf.sdBox2d(p.sub(d.vec2f(0.3, 0.3)), d.vec2f(0.08, 0.15));
-  const occluder2 = sdf.sdBox2d(p.sub(d.vec2f(0.7, 0.6)), d.vec2f(0.12, 0.08));
-  const occluder3 = sdf.sdDisk(p.sub(d.vec2f(0.5, 0.75)), d.f32(0.1));
-  const minOccluder = std.min(occluder1, occluder2, occluder3);
-  const light = sdf.sdDisk(p.sub(lightPosUniform.$), d.f32(0.05));
-
-  if (light < minOccluder && minOccluder > 0) {
-    return SceneResult({ dist: light, color: lightColorUniform.$.xyz });
-  }
-  return SceneResult({ dist: minOccluder, color: d.vec3f(0) });
+  return AtlasLocal({
+    dir: gid.div(probes),
+    probe: std.mod(gid, probes),
+  });
 };
 
-// Fused cascade pass: raymarch + merge in one top-down pass per layer
+const dirFirstAtlasPos = (dir: d.v2u, probe: d.v2u, probes: d.v2u) => {
+  'use gpu';
+  return dir.mul(probes).add(probe);
+};
+
 const cascadePassBGL = tgpu.bindGroupLayout({
   upper: { texture: d.texture2d(d.f32) },
   upperSampler: { sampler: 'filtering' },
@@ -150,49 +122,55 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
-  if (gid.x >= dim || gid.y >= dim) return;
+  const dim2 = dimUniform.$;
+  if (gid.x >= dim2.x || gid.y >= dim2.y) {
+    return;
+  }
 
   const layer = cascadeIndexUniform.$;
   const probes = probesUniform.$;
   const topLayer = d.u32(cascadeAmount - 1);
 
-  // Direction-first layout: decode gid to (dir, probe)
+  // Decode atlas position to (direction, probe)
   const lp = atlasToDirFirst(gid.xy, probes);
   const dirStored = lp.dir;
   const probe = lp.probe;
 
-  // Stored raysDim at this layer
-  const raysDimStored = d.u32(d.u32(dim) / probes);
-  // Actual direction grid is 2x (because we pre-average 4 rays per stored texel)
-  const raysDimActual = raysDimStored << d.u32(1);
+  // Stored vs Actual ray dimensions:
+  // Each stored texel represents a 2x2 block of actual rays (pre-averaged)
+  const raysDimStoredX = d.u32(dim2.x / probes.x);
+  const raysDimStoredY = d.u32(dim2.y / probes.y);
+  const raysDimStored = std.min(raysDimStoredX, raysDimStoredY);
+  const raysDimActual = raysDimStored << d.u32(1); // 2x for cascade hierarchy
   const rayCountActual = raysDimActual * raysDimActual;
 
-  const probePos = d.vec2f(probe).add(0.5).div(d.f32(probes));
+  const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
 
-  // Interval calculation (decoupled from dim for consistent lighting)
-  const interval0Uv = 1.0 / d.f32(baseProbes);
+  // Interval calculation
+  const baseProbes2 = baseProbesUniform.$;
+  const baseProbesMin = d.f32(std.min(baseProbes2.x, baseProbes2.y));
+  const interval0Uv = 1.0 / baseProbesMin;
   const pow4 = d.f32(d.u32(1) << (layer * d.u32(2)));
   const startUv = interval0Uv * (pow4 - 1.0) / 3.0;
   const endUv = startUv + interval0Uv * pow4;
 
-  // March tuning
-  const eps = 0.5 / d.f32(baseProbes);
-  const minStep = 0.25 / d.f32(baseProbes);
+  const eps = 0.5 / baseProbesMin;
+  const minStep = 0.25 / baseProbesMin;
 
   let accum = d.vec4f();
 
-  // Cast 4 rays per stored texel (2x2 block in actual direction grid)
+  // Cast 4 rays per stored texel (2x2 block) and average them
   for (let i = 0; i < 4; i++) {
     const ox = d.u32(d.u32(i) & d.u32(1));
     const oy = d.u32(d.u32(i) >> d.u32(1));
 
-    // Map stored direction to actual direction (2x finer)
+    // Map stored direction to actual direction (2x2 block)
     const dirActual2D = dirStored.mul(d.u32(2)).add(d.vec2u(ox, oy));
-    const mortonIdx = mortonEncode2D(dirActual2D.x, dirActual2D.y);
 
-    const rayIndex = d.f32(mortonIdx) + 0.5;
+    // Compute ray direction from actual ray index
+    const rayIndex = d.f32(dirActual2D.y * raysDimActual + dirActual2D.x) + 0.5;
     const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
-    const dir = d.vec2f(std.cos(angle), -std.sin(angle));
+    const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
 
     // Raymarch
     let rgb = d.vec3f();
@@ -201,8 +179,7 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
 
     for (let step = 0; step < 32; step++) {
       if (t > endUv) break;
-
-      const p = probePos.add(dir.mul(t));
+      const p = probePos.add(rayDir.mul(t));
       const hit = sceneSDF(p);
 
       if (hit.dist <= eps) {
@@ -210,33 +187,35 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
         T = d.f32(0);
         break;
       }
-
       t += std.max(hit.dist, minStep);
     }
 
-    // Merge with upper cascade (hardware bilinear interpolation!)
+    // Merge with upper cascade
     if (layer < topLayer && T > 0.01) {
-      const probesU = std.max(probes >> d.u32(1), d.u32(1));
+      const probesU = d.vec2u(
+        std.max(probes.x >> d.u32(1), d.u32(1)),
+        std.max(probes.y >> d.u32(1), d.u32(1)),
+      );
 
-      // Fractional probe position in upper grid
-      // Upper grid has half the probes, so we map probe/2 + 0.25 for center alignment
-      let probeUf = d.vec2f(probe).mul(0.5).add(d.vec2f(0.25));
+      // Upper cascade's stored resolution matches our actual resolution
+      const tileOriginU = d.vec2f(
+        d.f32(dirActual2D.x * probesU.x),
+        d.f32(dirActual2D.y * probesU.y),
+      );
 
-      // Clamp away from block edges to prevent filtering into neighboring direction blocks
-      if (probesU > d.u32(2)) {
-        const lo = d.vec2f(1.5);
-        const hi = d.vec2f(d.f32(probesU) - 1.5);
-        probeUf = std.clamp(probeUf, lo, hi);
-      }
+      // Map probe position to pixel coordinates within the tile
+      const probePixelU = probePos.mul(d.vec2f(probesU));
 
-      // Upper cascade uses direction-first too, and its stored raysDim == our actual raysDim
-      // So we can sample upper using dirActual2D directly
-      const atlasBaseU = d.vec2f(dirActual2D.mul(probesU));
-      const atlasPxU = atlasBaseU.add(probeUf);
+      // Clamp to prevent bilinear bleeding into neighboring direction tiles
+      const clampedPixelU = std.clamp(
+        probePixelU,
+        d.vec2f(0.5),
+        d.vec2f(probesU).sub(0.5),
+      );
 
-      const uvU = atlasPxU.div(d.f32(dim));
+      // Convert to UV space
+      const uvU = tileOriginU.add(clampedPixelU).div(d.vec2f(dim2));
 
-      // Single bilinear sample across 4 probes (key optimization!)
       const upper = std.textureSampleLevel(
         cascadePassBGL.$.upper,
         cascadePassBGL.$.upperSampler,
@@ -260,20 +239,24 @@ const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
-  if (gid.x >= baseProbes || gid.y >= baseProbes) {
+  const baseProbes2 = baseProbesUniform.$;
+  if (gid.x >= baseProbes2.x || gid.y >= baseProbes2.y) {
     return;
   }
 
-  const probes = d.u32(baseProbes);
-  const raysDimStored = d.u32(d.u32(dim) / probes); // Should be 2 for cascade0
+  const dim2 = dimUniform.$;
+  const probes = baseProbes2;
+  const raysDimStoredX = d.u32(dim2.x / probes.x);
+  const raysDimStoredY = d.u32(dim2.y / probes.y);
+  const raysDimStored = std.min(raysDimStoredX, raysDimStoredY); // Should be 2 for cascade0
   const probe = gid.xy;
   const rayCountStored = raysDimStored * raysDimStored;
 
   let sum = d.vec3f();
   let idx = d.u32(0);
   while (idx < rayCountStored) {
-    // Direction-first layout: iterate over directions
-    const dir = linearToZOrder(idx);
+    // Direction-first layout: iterate over directions (row-major)
+    const dir = d.vec2u(idx % raysDimStored, idx / raysDimStored);
     const atlasPx = dirFirstAtlasPos(dir, probe, probes);
     const ray = std.textureLoad(buildRadianceFieldBGL.$.src, atlasPx);
     sum = sum.add(ray.xyz);
@@ -305,6 +288,7 @@ const finalRadianceFieldFrag = tgpu['~unstable'].fragmentFn({
 });
 
 const cascadePassPipeline = root['~unstable']
+  .with(sceneDataAccess, sceneDataUniform)
   .withCompute(cascadePassCompute)
   .createPipeline();
 
@@ -359,7 +343,10 @@ function buildRadianceField() {
 
   buildRadianceFieldPipeline
     .with(buildRadianceFieldBG)
-    .dispatchWorkgroups(Math.ceil(baseProbes / 8), Math.ceil(baseProbes / 8));
+    .dispatchWorkgroups(
+      Math.ceil(baseProbesX / 8),
+      Math.ceil(baseProbesY / 8),
+    );
 }
 
 // Top-down cascade dispatch (replaces separate raymarch + merge)
@@ -367,14 +354,15 @@ function runCascadesTopDown() {
   // Process from highest cascade down to 0
   // Each layer reads from layer+1 (already computed) and writes to itself
   for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
-    const probes = baseProbes >> layer;
+    const probesX = baseProbesX >> layer;
+    const probesY = baseProbesY >> layer;
 
     cascadeIndexUniform.write(layer);
-    probesUniform.write(probes);
+    probesUniform.write(d.vec2u(probesX, probesY));
 
     cascadePassPipeline
       .with(cascadePassBindGroups[layer])
-      .dispatchWorkgroups(Math.ceil(dim / 8), Math.ceil(dim / 8));
+      .dispatchWorkgroups(Math.ceil(dimX / 8), Math.ceil(dimY / 8));
   }
 }
 
@@ -389,8 +377,12 @@ const renderPipeline = root['~unstable']
   .withFragment(finalRadianceFieldFrag, { format: presentationFormat })
   .createPipeline();
 
+let isRunning = true;
 let frameId: number;
+
 function frame() {
+  if (!isRunning) return; // Prevent using destroyed device
+
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -402,36 +394,28 @@ function frame() {
 }
 frameId = requestAnimationFrame(frame);
 
-canvas.addEventListener('click', (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = (event.clientX - rect.left) / rect.width;
-  const y = (event.clientY - rect.top) / rect.height;
+function updateUniforms() {
+  sceneDataUniform.write(sceneData);
+}
 
-  lightPosUniform.write(d.vec2f(x, y));
-  updateLighting();
-});
-
-canvas.addEventListener('mousemove', (event) => {
-  if (event.buttons === 1) {
-    const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-    lightPosUniform.write(d.vec2f(x, y));
+// Set up drag controller for interactive scene manipulation
+const dragController = new DragController(
+  canvas,
+  (id, position) => {
+    updateElementPosition(id, position);
+    updateUniforms();
     updateLighting();
-  }
-});
-
-export const controls = {
-  'Light Color': {
-    initial: [1, 1, 1],
-    onColorChange: (c: [number, number, number]) => {
-      lightColorUniform.write(d.vec4f(...c, 1));
-      updateLighting();
-    },
   },
-};
+  (id, position) => {
+    updateElementPosition(id, position);
+    updateUniforms();
+    updateLighting();
+  },
+);
 
 export function onCleanup() {
+  isRunning = false; // Stop the loop logic immediately
+  dragController.destroy();
   if (frameId !== null) {
     cancelAnimationFrame(frameId);
   }
