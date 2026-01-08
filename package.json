@@ -19,7 +19,8 @@
     "test:browser:watch": "vitest --browser.enabled --project browser",
     "test:coverage": "vitest --coverage run",
     "nightly-build": "pnpm --filter typegpu --filter @typegpu/noise --filter unplugin-typegpu prepublishOnly --skip-all-checks",
-    "changes": "tgpu-dev-cli changes"
+    "changes": "tgpu-dev-cli changes",
+    "spec-report": "bun scripts/spec-report.ts"
   },
   "engines": {
     "node": ">=12.20.0"
