@@ -1,9 +1,21 @@
 import { colors } from './geometry.ts';
-import { animationProgressUniform, shiftedColorsBuffer } from './buffers.ts';
+import {
+  animationProgressUniform,
+  getInstanceInfoBindGroup,
+  gridParamsBuffer,
+  shiftedColorsBuffer,
+  updateInstanceInfoBufferAndBindGroup,
+} from './buffers.ts';
 import { createBezier } from './bezier.ts';
 import { root } from './root.ts';
 import { mainFragment, mainVertex } from './shaderModules.ts';
-import { ANIMATION_DURATION, TRIANGLE_COUNT } from './consts.ts';
+import {
+  animationDuration,
+  createGridParams,
+  gridParams,
+  initTileDensity,
+  updateAnimationDuration,
+} from './config.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
 
@@ -26,7 +38,7 @@ const pipeline = root['~unstable']
 let isRunning = true;
 
 function getShiftedColors(timestamp: number) {
-  const shiftBy = Math.floor(timestamp / ANIMATION_DURATION) % colors.length;
+  const shiftBy = Math.floor(timestamp / animationDuration) % colors.length;
   return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
 }
 
@@ -35,7 +47,7 @@ function draw(timestamp: number) {
 
   shiftedColorsBuffer.write(getShiftedColors(timestamp));
   animationProgressUniform.write(
-    ease((timestamp % ANIMATION_DURATION) / ANIMATION_DURATION),
+    ease((timestamp % animationDuration) / animationDuration),
   );
 
   pipeline
@@ -45,7 +57,8 @@ function draw(timestamp: number) {
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .draw(9, TRIANGLE_COUNT);
+    .with(getInstanceInfoBindGroup())
+    .draw(9, gridParams.triangleCount);
 
   requestAnimationFrame(draw);
 }
@@ -64,3 +77,28 @@ export function onCleanup() {
   resizeObserver.disconnect();
   root.destroy();
 }
+
+// Example controls and cleanup
+
+export const controls = {
+  'tile density': {
+    initial: initTileDensity,
+    min: 0.01,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (newValue: number) => {
+      Object.assign(gridParams, createGridParams(newValue));
+      gridParamsBuffer.write(gridParams);
+      updateInstanceInfoBufferAndBindGroup();
+    },
+  },
+  'animation duration': {
+    initial: animationDuration,
+    min: 250,
+    max: 2500,
+    step: 25,
+    onSliderChange: (newValue: number) => {
+      updateAnimationDuration(newValue);
+    },
+  },
+};
