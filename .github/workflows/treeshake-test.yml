@@ -51,7 +51,7 @@ jobs:
 
       - name: Compare results
         run: |
-          node pr-branch/apps/treeshake-test/compare-results.mjs \
+          node pr-branch/apps/treeshake-test/compare-results.ts \
             pr-branch/apps/treeshake-test/results.json \
             target-branch/apps/treeshake-test/results.json \
             > comparison.md
