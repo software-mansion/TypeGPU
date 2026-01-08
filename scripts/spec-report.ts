@@ -1,34 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import * as std from 'typegpu/std';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const typegpuStdPath = join(__dirname, '../packages/typegpu/src/std');
-
-const TYPEGPU_FUNCTIONS = new Set<string>();
-
-function collectExportedFunctions(dirPath: string): void {
-  const files = readdirSync(dirPath, { withFileTypes: true });
-  for (const file of files) {
-    const fullPath = join(dirPath, file.name);
-    if (file.isDirectory()) {
-      collectExportedFunctions(fullPath);
-    } else if (file.name.endsWith('.ts') && !file.name.endsWith('.d.ts')) {
-      const content = readFileSync(fullPath, 'utf-8');
-      const exportMatches = content.matchAll(
-        /export\s+(?:const|function)\s+(\w+)/g,
-      );
-      for (const match of exportMatches) {
-        const name = match[1];
-        if (name) {
-          TYPEGPU_FUNCTIONS.add(name);
-        }
-      }
-    }
-  }
-}
-
-collectExportedFunctions(typegpuStdPath);
+const TYPEGPU_FUNCTIONS = new Set<string>(Object.keys(std));
 
 const response = await fetch(
   'https://raw.githubusercontent.com/iwoplaza/wgsl-spec/refs/heads/main/spec/functions.json',
@@ -39,20 +11,19 @@ const ALL_SPEC_FUNCTIONS = new Set(Object.keys(jsonData));
 // EXCLUDED_FUNCTIONS contains WGSL builtin function names that are excluded from the "missing functions" comparison.
 // These functions are either not applicable, deprecated, or have special handling in TypeGPU.
 const EXCLUDED_FUNCTIONS = new Set([
-  'array',
-  'textureGather',
-  'textureGatherCompare',
-  'textureNumLayers',
-  'textureNumSamples',
-  'textureSampleCompareLevel',
-  'textureSampleGrad',
-  'atomicExchange',
-  'atomicCompareExchangeWeak',
-  'subgroupInverseBallot',
-  'subgroupBallotBitExtract',
-  'subgroupBallotBitCount',
-  'subgroupBallotFindLSB',
-  'subgroupBallotFindMSB',
+  'bitcast', // exists as bitcastU32toF32, bitcastU32toI32, ...
+  'array', // exists as d.arrayOf
+  'vec2', // exists as d.vec2f, d.vec2i, ...
+  'vec3', // exists as d.vec3f, d.vec3i, ...
+  'vec4', // exists as d.vec4f, d.vec4i, ...
+  'bool', // exists as d.bool
+  'f32', // exists as d.f32
+  'f16', // exists as d.f16
+  'i32', // exists as d.i32
+  'u32', // exists as d.u32
+  'mat2x2', // exists as d.mat2x2f
+  'mat3x3', // exists as d.mat3x3f
+  'mat4x4', // exists as d.mat4x4f
 ]);
 
 function normalizeToSnakeCase(name: string): string {
