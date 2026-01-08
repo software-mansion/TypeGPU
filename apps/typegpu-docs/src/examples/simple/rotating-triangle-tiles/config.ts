@@ -1,8 +1,16 @@
 import * as d from 'typegpu/data';
+import { aspectRatioBuffer, gridParamsBuffer, updateInstanceInfoBufferAndBindGroup } from './buffers';
 
-const initAnimationDuration = 1500;
+const initAnimationDuration = 1000;
 const initTileDensity = 0.1;
 const STEP_ROTATION_ANGLE = 60;
+
+let aspectRatio = 1;
+
+function updateAspectRatio(width: number, height: number) {
+  aspectRatio = width / height;
+  aspectRatioBuffer.write(aspectRatio)
+}
 
 let animationDuration = initAnimationDuration;
 
@@ -15,16 +23,25 @@ const GridParams = d.struct({
 
 let gridParams = createGridParams(initTileDensity);
 
+function updateGridParams(newValue?: number) {
+  const value = newValue ?? gridParams.tileDensity;
+  gridParams = createGridParams(value);
+  gridParamsBuffer.write(gridParams);
+  updateInstanceInfoBufferAndBindGroup();
+}
+
+// snugly put all of the triangles inside the canvas
 function createGridParams(tileDensity: number) {
-  const MAGIC_NUMBER = 0.443;
-  const userScale = tileDensity * 1.0001;
-  const trianglesPerRow = 6 * Math.ceil(MAGIC_NUMBER / userScale);
+  const MAGIC_NUMBER = 1.331;
+  const userScale = tileDensity
+  const trianglesPerColumn = Math.ceil(MAGIC_NUMBER / userScale);
+  const trianglesPerRow = Math.ceil(trianglesPerColumn * aspectRatio * 2);
 
   return {
-    tileDensity,
+    tileDensity: tileDensity,
     userScale,
     trianglesPerRow,
-    triangleCount: trianglesPerRow ** 2 / 2,
+    triangleCount: trianglesPerColumn * trianglesPerRow,
   };
 }
 
@@ -39,5 +56,7 @@ export {
   gridParams,
   STEP_ROTATION_ANGLE,
   initTileDensity,
-  updateAnimationDuration
+  updateAnimationDuration,
+  updateAspectRatio,
+  updateGridParams
 };
