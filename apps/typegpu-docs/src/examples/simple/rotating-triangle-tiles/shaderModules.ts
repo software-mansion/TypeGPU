@@ -8,11 +8,11 @@ import {
 } from './transformations.ts';
 import {
   animationProgressUniform,
-  instanceInfoBuffer,
+  instanceInfoLayout,
   shiftedColorsBuffer,
   triangleVerticesBuffer,
 } from './buffers.ts';
-import { STEP_ROTATION_ANGLE } from './consts.ts';
+import { STEP_ROTATION_ANGLE } from './config.ts';
 
 const MainVertexOutput = {
   outPos: d.builtin.position,
@@ -53,7 +53,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
   let calculatedPosition = d.vec2f(vertexPosition);
 
-  const instanceInfo = instanceInfoBuffer.$[instanceIndex];
+  const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
 
   // biggest triangle
   let color = d.vec4f(shiftedColorsBuffer.$[0]);
