@@ -18,7 +18,8 @@ export class UnrolledIterable implements SelfResolvable {
   readonly [$internal] = true;
 
   constructor(public readonly snippet: Snippet) {}
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+
+  [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
     return snip(
       stitch`${this.snippet}`,
       this.snippet.dataType as AnyData,
