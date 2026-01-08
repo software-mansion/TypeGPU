@@ -45,6 +45,7 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { arrayLength } from '../std/array.ts';
+import { UnrolledIterable } from '../../src/core/unroll/tgpuUnroll.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1063,36 +1064,22 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.forOf) {
       const [_, loopVar, iterable, body] = statement;
-      const iterableSnippet = this.expression(iterable);
 
-      if (isEphemeralSnippet(iterableSnippet)) {
+      const iterableExpr = this.expression(iterable);
+
+      const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
+      const iterableSnippet = shouldUnroll
+        ? iterableExpr.value.snippet
+        : iterableExpr;
+
+      if (isEphemeralSnippet(iterableSnippet) && !shouldUnroll) {
         throw new Error(
           '`for ... of ...` loops only support iterables stored in variables',
         );
       }
 
-      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
-      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
-      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
-      // so we can safely use `i`.
-      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
-      while (this.ctx.getById(index) !== null) {
-        index += 'i';
-      }
-
-      const elementSnippet = accessIndex(
-        iterableSnippet,
-        snip(index, u32, 'runtime'),
-      );
-      if (!elementSnippet) {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
-        );
-      }
-
       const iterableDataType = iterableSnippet.dataType;
       let elementCountSnippet: Snippet;
-      let elementType = elementSnippet.dataType;
       if (wgsl.isWgslArray(iterableDataType)) {
         elementCountSnippet = iterableDataType.elementCount > 0
           ? snip(
@@ -1123,6 +1110,26 @@ ${this.ctx.pre}else ${alternate}`;
       // an implicit pointer to it
       let loopVarKind = 'let';
       const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
+      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
+      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
+      // so we can safely use `i`.
+      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
+      while (this.ctx.getById(index) !== null) {
+        index += 'i';
+      }
+
+      const elementSnippet = accessIndex(
+        iterableSnippet,
+        snip(index, u32, 'runtime'),
+      );
+      if (!elementSnippet) {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+      let elementType = elementSnippet.dataType;
 
       if (!isEphemeralSnippet(elementSnippet)) {
         if (elementSnippet.origin === 'constant-tgpu-const-ref') {
