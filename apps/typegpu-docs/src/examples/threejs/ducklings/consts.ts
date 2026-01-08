@@ -1,7 +1,7 @@
 import * as d from 'typegpu/data';
 
 // water
-export const WIDTH = 128;
+export const WIDTH = 256;
 // Water size in system units.
 export const BOUNDS = 6;
 export const BOUNDS_HALF = BOUNDS * 0.5;

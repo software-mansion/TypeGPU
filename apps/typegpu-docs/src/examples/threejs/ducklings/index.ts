@@ -188,19 +188,18 @@ const waterMaterial = new THREE.MeshStandardNodeMaterial({
   side: THREE.DoubleSide,
 });
 
-const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32);
-
 waterMaterial.normalNode = t3.toTSL(() => {
   'use gpu';
-  const vertexIndexx = vertexIndex.$;
-  const normals = getCurrentNormals(d.u32(vertexIndexx));
+  const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32).$;
+  const normals = getCurrentNormals(d.u32(vertexIndex));
   return d.vec3f(normals.normalX, std.neg(normals.normalY), 1.0);
 });
 
 waterMaterial.positionNode = t3.toTSL(() => {
   'use gpu';
+  const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32).$;
   const posLocal = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
-  return d.vec3f(posLocal.x, posLocal.y, getCurrentHeight(d.u32(vertexIndex.$)));
+  return d.vec3f(posLocal.x, posLocal.y, getCurrentHeight(d.u32(vertexIndex)));
 });
 
 const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
@@ -364,14 +363,14 @@ renderer.setAnimationLoop(() => {
 
   frame++;
 
+  // ping pong buffers
   if (frame >= 7 - SPEED) {
-    // Ping-pong: alternate which buffer we read from and write to
     if (pingPong === 0) {
       renderer.compute(computeHeightAtoB);
-      readFromA.node.value = 0; // Material now reads from B (just written)
+      readFromA.node.value = 0; 
     } else {
       renderer.compute(computeHeightBtoA);
-      readFromA.node.value = 1; // Material now reads from A (just written)
+      readFromA.node.value = 1; 
     }
 
     pingPong = 1 - pingPong;
