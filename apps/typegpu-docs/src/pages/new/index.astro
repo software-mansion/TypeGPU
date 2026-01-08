@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import GithubIconSvg from "../../assets/github-icon.svg";
+import GithubIconDarkSvg from "../../assets/github-icon-dark.svg";
 import SwmLogomarkSvg from "../../assets/swm-logomark.svg";
 import SwmLogoSvg from "../../assets/typegpu-logo-light.svg";
 import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
@@ -53,11 +54,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
             class="no-underline"
             rel="noreferrer"
           >
-            <p
-              class="text-blue-900 dark:text-gray-100"
-            >
-              Docs
-            </p>
+            <p class="text-blue-900 dark:text-gray-100">Docs</p>
           </a>
           <!-- GitHub -->
           <a
@@ -67,7 +64,12 @@ import PageLayout from "../../layouts/PageLayout.astro";
           >
             <Image
               src={GithubIconSvg}
-              class="opacity-75 fill-blue-900 dark:fill-gray-100 w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10"
+              class="dark:hidden opacity-75 fill-blue-900 w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10"
+              alt="GitHub Logo"
+            />
+            <Image
+              src={GithubIconDarkSvg}
+              class="hidden dark:block opacity-75 fill-gray-100 w-6 sm:w-8 md:w-10 h-6 sm:h-8 md:h-10"
               alt="GitHub Logo"
             />
           </a>
@@ -145,9 +147,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
     </section>
 
     <!-- TypeGPU examples -->
-    <section
-      class="mx-auto px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]"
-    >
+    <section class="mx-auto px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]">
       <div class="flex flex-col gap-6 pb-14">
         <h2
           class="font-medium text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
@@ -165,9 +165,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
     </section>
 
     <!-- Videos -->
-    <section
-      class="mx-auto px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]"
-    >
+    <section class="mx-auto px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]">
       <div class="flex flex-col gap-6 pb-20">
         <h2
           class="font-medium text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
@@ -185,9 +183,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
     </section>
 
     <!-- Backlog -->
-    <section
-      class="mx-auto my-12 px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]"
-    >
+    <section class="mx-auto my-12 px-6 lg:px-72 md:max-w-214 lg:max-w-[1024px]">
       <div class="flex flex-col gap-6 pb-20">
         <h2
           class="font-medium text-blue-950 dark:text-gray-100 text-2xl md:text-4xl center"
