@@ -56,8 +56,8 @@ describe('camera thresholding example', () => {
         var colycbcr = (colorUniform * rgbToYcbcrMatrix);
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));
-        let distance = length(vec2f(crDiff, cbDiff));
-        if ((distance < pow(thresholdBuffer, 2f))) {
+        let distance_1 = length(vec2f(crDiff, cbDiff));
+        if ((distance_1 < pow(thresholdBuffer, 2f))) {
           col = vec4f();
         }
         return col;

@@ -177,10 +177,191 @@ const bannedTokens = new Set([
   'sampler',
 ]);
 
+const builtins = new Set([
+  // constructors
+  'array',
+  'bool',
+  'f16',
+  'f32',
+  'i32',
+  'u32',
+  'mat2x2',
+  'mat2x3',
+  'mat2x4',
+  'mat3x2',
+  'mat3x3',
+  'mat3x4',
+  'mat4x2',
+  'mat4x3',
+  'mat4x4',
+  'vec2',
+  'vec3',
+  'vec4',
+  // bitcast
+  'bitcast',
+  // logical
+  'all',
+  'any',
+  'select',
+  // array
+  'arrayLength',
+  // numeric
+  'abs',
+  'acos',
+  'acosh',
+  'asin',
+  'asinh',
+  'atan',
+  'atanh',
+  'atan2',
+  'ceil',
+  'clamp',
+  'cos',
+  'cosh',
+  'countLeadingZeros',
+  'countOneBits',
+  'countTrailingZeros',
+  'cross',
+  'degrees',
+  'determinant',
+  'distance',
+  'dot',
+  'dot4U8Packed',
+  'dot4I8Packed',
+  'exp',
+  'exp2',
+  'extractBits',
+  'faceForward',
+  'firstLeadingBit',
+  'firstTrailingBit',
+  'floor',
+  'fma',
+  'fract',
+  'frexp',
+  'insertBits',
+  'inverseSqrt',
+  'ldexp',
+  'length',
+  'log',
+  'log2',
+  'max',
+  'min',
+  'mix',
+  'modf',
+  'normalize',
+  'pow',
+  'quantizeToF16',
+  'radians',
+  'reflect',
+  'refract',
+  'reverseBits',
+  'round',
+  'saturate',
+  'sign',
+  'sin',
+  'sinh',
+  'smoothstep',
+  'sqrt',
+  'step',
+  'tan',
+  'tanh',
+  'transpose',
+  'trunc',
+  // derivative
+  'dpdx',
+  'dpdxCoarse',
+  'dpdxFine',
+  'dpdy',
+  'dpdyCoarse',
+  'dpdyFine',
+  'fwidth',
+  'fwidthCoarse',
+  'fwidthFine',
+  // texture
+  'textureDimensions',
+  'textureGather',
+  'textureGatherCompare',
+  'textureLoad',
+  'textureNumLayers',
+  'textureNumLevels',
+  'textureNumSamples',
+  'textureSample',
+  'textureSampleBias',
+  'textureSampleCompare',
+  'textureSampleCompareLevel',
+  'textureSampleGrad',
+  'textureSampleLevel',
+  'textureSampleBaseClampToEdge',
+  'textureStore',
+  // atomic
+  'atomicLoad',
+  'atomicStore',
+  'atomicAdd',
+  'atomicSub',
+  'atomicMax',
+  'atomicMin',
+  'atomicAnd',
+  'atomicOr',
+  'atomicXor',
+  'atomicExchange',
+  'atomicCompareExchangeWeak',
+  // data packing
+  'pack4x8snorm',
+  'pack4x8unorm',
+  'pack4xI8',
+  'pack4xU8',
+  'pack4xI8Clamp',
+  'pack4xU8Clamp',
+  'pack2x16snorm',
+  'pack2x16unorm',
+  'pack2x16float',
+  // data unpacking
+  'unpack4x8snorm',
+  'unpack4x8unorm',
+  'unpack4xI8',
+  'unpack4xU8',
+  'unpack2x16snorm',
+  'unpack2x16unorm',
+  'unpack2x16float',
+  // synchronization
+  'storageBarrier',
+  'textureBarrier',
+  'workgroupBarrier',
+  'workgroupUniformLoad',
+  // subgroup
+  'subgroupAdd',
+  'subgroupExclusiveAdd',
+  'subgroupInclusiveAdd',
+  'subgroupAll',
+  'subgroupAnd',
+  'subgroupAny',
+  'subgroupBallot',
+  'subgroupBroadcast',
+  'subgroupBroadcastFirst',
+  'subgroupElect',
+  'subgroupMax',
+  'subgroupMin',
+  'subgroupMul',
+  'subgroupExclusiveMul',
+  'subgroupInclusiveMul',
+  'subgroupOr',
+  'subgroupShuffle',
+  'subgroupShuffleDown',
+  'subgroupShuffleUp',
+  'subgroupShuffleXor',
+  'subgroupXor',
+  // quad operations
+  'quadBroadcast',
+  'quadSwapDiagonal',
+  'quadSwapX',
+  'quadSwapY',
+]);
+
 export interface NameRegistry {
   /**
    * Creates a valid WGSL identifier, each guaranteed to be unique
-   * in the lifetime of a single resolution process.
+   * in the lifetime of a single resolution process
+   * (excluding non-global identifiers from popped scopes).
    * Should append "_" to primer, followed by some id.
    * @param primer Used in the generation process, makes the identifier more recognizable.
    * @param global Whether the name should be registered in the global scope (true), or in the current function scope (false)
@@ -224,7 +405,20 @@ function sanitizePrimer(primer: string | undefined) {
  * isValidIdentifier("_"); // ERROR
  * isValidIdentifier("my variable"); // ERROR
  */
-export function isValidIdentifier(ident: string): boolean {
+function isValidIdentifier(ident: string): boolean {
+  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
+    throw new Error(
+      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
+    );
+  }
+  const prefix = ident.split('_')[0] as string;
+  return !bannedTokens.has(prefix) && !builtins.has(prefix);
+}
+
+/**
+ * Same as `isValidIdentifier`, except does not check for builtin clashes.
+ */
+export function isValidProp(ident: string): boolean {
   if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
     throw new Error(
       `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
@@ -241,7 +435,10 @@ abstract class NameRegistryImpl implements NameRegistry {
   readonly #usedFunctionScopeNamesStack: Set<string>[];
 
   constructor() {
-    this.#usedNames = new Set<string>(bannedTokens);
+    this.#usedNames = new Set<string>([
+      ...bannedTokens,
+      ...builtins,
+    ]);
     this.#usedFunctionScopeNamesStack = [];
   }
 
