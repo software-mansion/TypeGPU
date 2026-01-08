@@ -14,12 +14,21 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import {
+  BOUNCE_DAMPING,
   BOUNDS,
+  DUCK_STRIDE,
+  INITIAL_MOUSE_DEEP,
+  INITIAL_MOUSE_SIZE,
+  INITIAL_VISCOSITY,
   limit,
+  LINEAR_DAMPING,
   NUM_DUCKS,
   SPEED,
   SUN_POSITION,
+  VERTICAL_RESPONSE_FACTOR,
+  WATER_PUSH_FACTOR,
   WIDTH,
+  Y_OFFSET,
 } from './consts.ts';
 import { initializeHeightArrays } from './utils.ts';
 import { createGpuHelpers } from './gpuHelpers.ts';
@@ -67,9 +76,9 @@ const prevHeightStorage = t3.instancedArray(prevHeightArray, d.f32);
 // Uniforms using t3.uniform
 const mousePos = t3.uniform(new THREE.Vector2(), d.vec2f);
 const mouseSpeed = t3.uniform(new THREE.Vector2(), d.vec2f);
-const mouseDeep = t3.uniform(0.5, d.f32);
-const mouseSize = t3.uniform(0.12, d.f32);
-const viscosity = t3.uniform(0.96, d.f32);
+const mouseDeep = t3.uniform(INITIAL_MOUSE_DEEP, d.f32);
+const mouseSize = t3.uniform(INITIAL_MOUSE_SIZE, d.f32);
+const viscosity = t3.uniform(INITIAL_VISCOSITY, d.f32);
 const readFromA = t3.uniform(1, d.u32);
 
 // State
@@ -247,12 +256,11 @@ scene.add(meshRay);
 // Duck instance data storage
 const duckPositions = new Float32Array(NUM_DUCKS * 3);
 const duckVelocities = new Float32Array(NUM_DUCKS * 2);
-const duckStride = 3;
 
 for (let i = 0; i < NUM_DUCKS; i++) {
-  duckPositions[i * duckStride + 0] = (Math.random() - 0.5) * BOUNDS * 0.7;
-  duckPositions[i * duckStride + 1] = 0;
-  duckPositions[i * duckStride + 2] = (Math.random() - 0.5) * BOUNDS * 0.7;
+  duckPositions[i * DUCK_STRIDE + 0] = (Math.random() - 0.5) * BOUNDS * 0.7;
+  duckPositions[i * DUCK_STRIDE + 1] = 0;
+  duckPositions[i * DUCK_STRIDE + 2] = (Math.random() - 0.5) * BOUNDS * 0.7;
   duckVelocities[i * 2 + 0] = 0;
   duckVelocities[i * 2 + 1] = 0;
 }
@@ -263,12 +271,6 @@ const duckVelocityStorage = t3.instancedArray(duckVelocities, d.vec2f);
 // ducks compute shader
 const computeDucks = t3.toTSL(() => {
   'use gpu';
-  const yOffset = -0.04;
-  const verticalResponseFactor = 0.98;
-  const waterPushFactor = 0.015;
-  const linearDamping = 0.92;
-  const bounceDamping = -0.4;
-
   const idx = t3.instanceIndex.$;
   const instancePosition = d.vec3f(duckPositionStorage.$[idx]);
   const velocity = d.vec2f(duckVelocityStorage.$[idx]);
@@ -289,18 +291,18 @@ const computeDucks = t3.toTSL(() => {
   const waterHeight = getCurrentHeight(d.u32(heightInstanceIndex));
   const normals = getCurrentNormals(d.u32(heightInstanceIndex));
 
-  const targetY = std.add(waterHeight, yOffset);
+  const targetY = std.add(waterHeight, Y_OFFSET);
   const deltaY = std.sub(targetY, instancePosition.y);
   instancePosition.y = std.add(
     instancePosition.y,
-    std.mul(deltaY, verticalResponseFactor),
+    std.mul(deltaY, VERTICAL_RESPONSE_FACTOR),
   );
 
-  const pushX = std.mul(normals.normalX, waterPushFactor);
-  const pushZ = std.mul(normals.normalY, waterPushFactor);
+  const pushX = std.mul(normals.normalX, WATER_PUSH_FACTOR);
+  const pushZ = std.mul(normals.normalY, WATER_PUSH_FACTOR);
 
-  velocity.x = std.mul(velocity.x, linearDamping);
-  velocity.y = std.mul(velocity.y, linearDamping);
+  velocity.x = std.mul(velocity.x, LINEAR_DAMPING);
+  velocity.y = std.mul(velocity.y, LINEAR_DAMPING);
   velocity.x = std.add(velocity.x, pushX);
   velocity.y = std.add(velocity.y, pushZ);
 
@@ -310,18 +312,18 @@ const computeDucks = t3.toTSL(() => {
   // Clamp position to pool bounds
   if (instancePosition.x < std.neg(limit)) {
     instancePosition.x = std.neg(limit);
-    velocity.x = std.mul(velocity.x, bounceDamping);
+    velocity.x = std.mul(velocity.x, BOUNCE_DAMPING);
   } else if (instancePosition.x > limit) {
     instancePosition.x = limit;
-    velocity.x = std.mul(velocity.x, bounceDamping);
+    velocity.x = std.mul(velocity.x, BOUNCE_DAMPING);
   }
 
   if (instancePosition.z < std.neg(limit)) {
     instancePosition.z = std.neg(limit);
-    velocity.y = std.mul(velocity.y, bounceDamping);
+    velocity.y = std.mul(velocity.y, BOUNCE_DAMPING);
   } else if (instancePosition.z > limit) {
     instancePosition.z = limit;
-    velocity.y = std.mul(velocity.y, bounceDamping);
+    velocity.y = std.mul(velocity.y, BOUNCE_DAMPING);
   }
 
   duckPositionStorage.$[idx] = d.vec3f(instancePosition);
@@ -485,7 +487,7 @@ observer.observe(canvas);
 // Export controls for the example panel
 export const controls = {
   'Mouse Size': {
-    initial: 0.12,
+    initial: INITIAL_MOUSE_SIZE,
     min: 0.1,
     max: 0.3,
     step: 0.01,
@@ -494,7 +496,7 @@ export const controls = {
     },
   },
   'Mouse Deep': {
-    initial: 0.2,
+    initial: INITIAL_MOUSE_DEEP,
     min: 0.1,
     max: 1,
     step: 0.01,
@@ -503,7 +505,7 @@ export const controls = {
     },
   },
   'Viscosity': {
-    initial: 0.96,
+    initial: INITIAL_VISCOSITY,
     min: 0.9,
     max: 0.96,
     step: 0.001,
