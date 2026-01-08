@@ -85,9 +85,45 @@ jobs:
             const fs = require('fs');
             const comparison = fs.readFileSync('comparison.md', 'utf8');
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '## 📊 Bundle Size Comparison\n\n' + comparison
-            });
+            const botCommentIdentifier = '## 📊 Bundle Size Comparison\n\n';
+
+            async function findBotComment(issueNumber) {
+              if (!issueNumber) return null;
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+              });
+              return comments.data.find((comment) =>
+                comment.body.includes(botCommentIdentifier)
+              );
+            }
+
+            async function createOrUpdateComment(issueNumber) {
+              if (!issueNumber) {
+                console.log('No issue number provided. Cannot post or update comment.');
+                return;
+              }
+
+              const existingComment = await findBotComment(issueNumber);
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  ...context.repo,
+                  comment_id: existingComment.id,
+                  body: botCommentIdentifier + comparison,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: issueNumber,
+                  body: botCommentIdentifier + comparison,
+                });
+              }
+            }
+
+            const issueNumber = context.issue.number;
+            if (!issueNumber) {
+              console.log('No issue number found in context. Skipping comment.');
+            } else {
+              await createOrUpdateComment(issueNumber);
+            }
