@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
+import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -219,7 +220,7 @@ describe('tgpu.accessor', () => {
       ImageData,
       // The default value for the accessor, but can be swapped the
       // same way a slot can
-      layout.bound.image,
+      () => layout.$.image,
     );
 
     const getPixel = (x: number, y: number) => {
@@ -454,6 +455,67 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         ctx.counter += 1f;
+      }"
+    `);
+  });
+
+  it('can provide texture views', ({ root }) => {
+    const texture = root.createTexture({
+      format: 'rgba8unorm',
+      size: [100, 100],
+    }).$usage('storage');
+
+    const storageView = texture.createView(d.textureStorage2d('rgba8unorm'));
+
+    const textureAccess = tgpu['~unstable'].accessor(
+      d.textureStorage2d('rgba8unorm'),
+      storageView,
+    );
+
+    const main = () => {
+      'use gpu';
+      std.textureStore(textureAccess.$, d.vec2u(), d.vec4f(1));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var item: texture_storage_2d<rgba8unorm, write>;
+
+      fn main() {
+        textureStore(item, vec2u(), vec4f(1));
+      }"
+    `);
+  });
+
+  it('allows for slot access', ({ root }) => {
+    const ImageData = (count: number) =>
+      d.struct({
+        pixels: d.arrayOf(d.vec3f, count),
+      });
+
+    const layout = tgpu.bindGroupLayout({
+      image: { storage: ImageData },
+    });
+
+    const pixelIdx = tgpu.slot(0);
+    const pixelAccess = tgpu['~unstable'].accessor(
+      d.f32,
+      () => layout.$.image.pixels[pixelIdx.$]!.x,
+    );
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      const hello = pixelAccess.$;
+    }).with(pixelIdx, 4);
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct item {
+        pixels: array<vec3f>,
+      }
+
+      @group(0) @binding(0) var<storage, read> image: item;
+
+      fn main() {
+        let hello = image.pixels[4].x;
       }"
     `);
   });
