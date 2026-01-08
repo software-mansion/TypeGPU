@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "description": "Tree-shake testing app for TypeGPU",
-  "type": "module",
   "scripts": {
     "test": "node index.ts"
   },
