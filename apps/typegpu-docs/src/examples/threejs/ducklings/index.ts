@@ -204,12 +204,11 @@ const waterMaterial = new THREE.MeshStandardNodeMaterial({
   side: THREE.DoubleSide,
 });
 
-waterMaterial.normalNode = t3.toTSL(() => {
+waterMaterial.normalNode = TSL.transformNormalToView(t3.toTSL(() => {
   'use gpu';
-  const vertexIndex = t3.fromTSL(TSL.vertexIndex, d.u32).$;
-  const normals = getCurrentNormals(d.u32(vertexIndex));
+  const normals = getCurrentNormals(d.u32(t3.vertexIndex.$));
   return d.vec3f(normals.normalX, std.neg(normals.normalY), 1.0);
-});
+})).toVertexStage();
 
 waterMaterial.positionNode = t3.toTSL(() => {
   'use gpu';
@@ -495,7 +494,7 @@ export const controls = {
     },
   },
   'Mouse Deep': {
-    initial: 0.5,
+    initial: 0.2,
     min: 0.1,
     max: 1,
     step: 0.01,
