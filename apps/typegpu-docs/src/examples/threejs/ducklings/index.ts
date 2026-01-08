@@ -42,7 +42,7 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 2.0, 4);
 camera.lookAt(0, 0, 0);
 
-const controls = new OrbitControls(camera, canvas);
+const orbitControls = new OrbitControls(camera, canvas);
 
 // Sun
 const sun = new THREE.DirectionalLight(0xffffff, 4.0);
@@ -408,7 +408,7 @@ function onPointerUp() {
   mouseDown = false;
   firstClick = false;
   updateOriginMouseDown = false;
-  controls.enabled = true;
+  orbitControls.enabled = true;
 }
 
 function onPointerMove(event: PointerEvent) {
@@ -422,7 +422,7 @@ canvas.addEventListener('pointerdown', onPointerDown);
 canvas.addEventListener('pointerup', onPointerUp);
 
 function raycast() {
-  if (mouseDown && (firstClick || !controls.enabled)) {
+  if (mouseDown && (firstClick || !orbitControls.enabled)) {
     raycaster.setFromCamera(mouseCoords, camera);
     const intersects = raycaster.intersectObject(meshRay);
 
@@ -442,7 +442,7 @@ function raycast() {
       mousePos.node.value.set(point.x, point.z);
 
       if (firstClick) {
-        controls.enabled = false;
+        orbitControls.enabled = false;
       }
     } else {
       updateOriginMouseDown = true;
@@ -471,7 +471,7 @@ const observer = new ResizeObserver(onResize);
 observer.observe(canvas);
 
 // Export controls for the example panel
-export const controlsConfig = {
+export const controls = {
   'Mouse Size': {
     initial: 0.12,
     min: 0.1,
