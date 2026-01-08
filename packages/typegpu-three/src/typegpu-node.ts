@@ -17,12 +17,14 @@ interface TgpuFnNodeData extends THREE.NodeData {
   };
 }
 
-class BuilderData {
-  names: WeakMap<object, string>;
-  namespace: Namespace;
+class StageData {
+  readonly stage: 'vertex' | 'fragment' | 'compute' | null;
+  readonly names: WeakMap<object, string>;
+  readonly namespace: Namespace;
   codeGeneratedThusFar: string;
 
-  constructor() {
+  constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
+    this.stage = stage;
     this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
     this.codeGeneratedThusFar = '';
@@ -35,11 +37,28 @@ class BuilderData {
   }
 }
 
+class BuilderData {
+  stageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, StageData>;
+
+  constructor() {
+    this.stageDataMap = new Map();
+  }
+
+  getStageData(stage: 'vertex' | 'fragment' | 'compute' | null): StageData {
+    let stageData = this.stageDataMap.get(stage);
+    if (!stageData) {
+      stageData = new StageData(stage);
+      this.stageDataMap.set(stage, stageData);
+    }
+    return stageData;
+  }
+}
+
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 
 interface TgpuFnNodeContext {
   readonly builder: THREE.NodeBuilder;
-  readonly builderData: BuilderData;
+  readonly stageData: StageData;
   readonly dependencies: TSLAccessor<d.AnyWgslData, THREE.Node>[];
 }
 
@@ -89,6 +108,8 @@ class TgpuFnNode<T> extends THREE.Node {
       builderDataMap.set(builder, builderData);
     }
 
+    const stageData = builderData.getStageData(builder.shaderStage);
+
     if (!nodeData.custom) {
       if (currentlyGeneratingFnNodeCtx !== undefined) {
         console.warn('[@typegpu/three] Nested function generation detected');
@@ -96,28 +117,26 @@ class TgpuFnNode<T> extends THREE.Node {
 
       const ctx: TgpuFnNodeContext = {
         builder,
-        builderData,
+        stageData,
         dependencies: [],
       };
       currentlyGeneratingFnNodeCtx = ctx;
       let resolved: string;
       try {
         resolved = tgpu.resolve({
-          names: builderData.namespace,
+          names: stageData.namespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
         });
       } finally {
         currentlyGeneratingFnNodeCtx = undefined;
       }
-      
+
       const [code = '', functionId] = resolved.split('___ID___').map((s) =>
         s.trim()
-    );
-    console.log(code);
-    console.log(ctx.dependencies);
-      builderData.codeGeneratedThusFar += code;
-      let lastFnStart = builderData.codeGeneratedThusFar.indexOf(
+      );
+      stageData.codeGeneratedThusFar += code;
+      let lastFnStart = stageData.codeGeneratedThusFar.indexOf(
         `\nfn ${functionId}`,
       );
       if (lastFnStart === -1) {
@@ -126,7 +145,7 @@ class TgpuFnNode<T> extends THREE.Node {
       }
 
       // Extracting the function code
-      const fnCode = builderData.codeGeneratedThusFar.slice(lastFnStart).trim();
+      const fnCode = stageData.codeGeneratedThusFar.slice(lastFnStart).trim();
 
       nodeData.custom = {
         functionId: functionId ?? '',
@@ -152,10 +171,10 @@ class TgpuFnNode<T> extends THREE.Node {
 
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     const builderData = builderDataMap.get(builder) as BuilderData;
+    const stageData = builderData.getStageData(builder.shaderStage);
 
     // Building dependencies
     for (const dep of nodeData.custom.dependencies) {
-      console.log('Building dependency', dep);
       dep.node.build(builder);
     }
     nodeData.custom.priorCode.build(builder);
@@ -165,7 +184,7 @@ class TgpuFnNode<T> extends THREE.Node {
         continue;
       }
 
-      const varName = builderData.names.get(dep.var);
+      const varName = stageData.names.get(dep.var);
       const varValue = dep.node.build(builder);
       // @ts-expect-error: It's there
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
@@ -197,8 +216,11 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.node = node;
     this.#dataType = dataType;
 
-    // @ts-expect-error: The properties exist on the node
-    if (!node.isStorageBufferNode && !node.isUniformNode) {
+    // node.isTextureNode - temporary workaround for textures
+    if (
+      // @ts-expect-error: The properties exist on the node
+      (!node.isStorageBufferNode && !node.isUniformNode) || node.isTextureNode
+    ) {
       this.var = tgpu.privateVar(dataType);
     }
   }

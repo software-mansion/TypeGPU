@@ -4,6 +4,7 @@ import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu from '../src/index.ts';
+import * as std from '../src/std/index.ts';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -969,5 +970,43 @@ describe('v4b', () => {
         }"
       `);
     });
+  });
+});
+
+describe('type predicates', () => {
+  it('prunes branches', () => {
+    const ceil = (input: d.v3f | d.v3i): d.v3i => {
+      'use gpu';
+      if (input.kind === 'vec3f') {
+        return d.vec3i(std.ceil(input));
+      } else {
+        return d.vec3i(input);
+      }
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = ceil(d.vec3f(1, 2, 3));
+      const bar = ceil(d.vec3i(1, 2, 3));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn ceil_1(input: vec3f) -> vec3i {
+        {
+          return vec3i(ceil(input));
+        }
+      }
+
+      fn ceil_2(input: vec3i) -> vec3i {
+        {
+          return input;
+        }
+      }
+
+      fn main() {
+        var foo = ceil_1(vec3f(1, 2, 3));
+        var bar = ceil_2(vec3i(1, 2, 3));
+      }"
+    `);
   });
 });

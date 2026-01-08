@@ -20,11 +20,11 @@ import {
   vec4h,
 } from '../../src/data/vector.ts';
 import {
-  accessIndex,
-  accessProp,
   coerceToSnippet,
   numericLiteralToSnippet,
 } from '../../src/tgsl/generationHelpers.ts';
+import { accessIndex } from '../../src/tgsl/accessIndex.ts';
+import { accessProp } from '../../src/tgsl/accessProp.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip } from '../../src/data/snippet.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';

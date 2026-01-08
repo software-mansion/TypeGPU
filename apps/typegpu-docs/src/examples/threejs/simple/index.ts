@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import * as TSL from 'three/tsl';
 import * as t3 from '@typegpu/three';
 import { perlin3d } from '@typegpu/noise';
 import * as d from 'typegpu/data';
@@ -6,7 +7,7 @@ import { tanh } from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const renderer = new THREE.WebGPURenderer({ canvas });
+const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 await renderer.init();
 
@@ -26,6 +27,20 @@ material.colorNode = t3.toTSL(() => {
   const coords = t3.uv().$.mul(2);
   const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
   return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
+});
+
+// Undulating vertices
+const positionAttrib = t3.fromTSL(TSL.attribute('position', 'vec3'), d.vec3f);
+material.positionNode = t3.toTSL(() => {
+  'use gpu';
+  const localPos = positionAttrib.$;
+  const t = t3.time.$;
+  const patternX = perlin3d.sample(localPos.add(d.vec3f(t, 0, 0)));
+  const patternY = perlin3d.sample(localPos.add(d.vec3f(t, 0, 1)));
+  const patternZ = perlin3d.sample(localPos.add(d.vec3f(t, 0, 2)));
+  return localPos.add(
+    d.vec3f(patternX, patternY, patternZ).mul(0.5),
+  );
 });
 
 const mesh = new THREE.Mesh(

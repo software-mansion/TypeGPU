@@ -87,7 +87,7 @@ export function getUniqueName(
   namespace: NamespaceInternal,
   resource: object,
 ): string {
-  const name = namespace.nameRegistry.makeUnique(getName(resource));
+  const name = namespace.nameRegistry.makeUnique(getName(resource), true);
   for (const listener of namespace.listeners.name) {
     listener({ target: resource, name });
   }
@@ -95,7 +95,7 @@ export function getUniqueName(
 }
 
 export function namespace(options?: NamespaceOptions | undefined): Namespace {
-  const { names = 'random' } = options || {};
+  const { names = 'strict' } = options ?? {};
 
   return new NamespaceImpl(
     names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
