@@ -21,6 +21,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          version: 10.15.1
           run_install: false
 
       - name: Set up Node.js
@@ -79,7 +80,7 @@ jobs:
           script: |
             const fs = require('fs');
             const comparison = fs.readFileSync('comparison.md', 'utf8');
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
