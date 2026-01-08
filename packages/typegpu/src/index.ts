@@ -21,6 +21,7 @@ import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 import { namespace } from './core/resolve/namespace.ts';
+import { unroll } from './core/unroll/tgpuUnroll.ts';
 
 export const tgpu = {
   fn,
@@ -74,6 +75,8 @@ export const tgpu = {
     rawCodeSnippet,
 
     simulate,
+
+    unroll,
   },
 };
 export default tgpu;
