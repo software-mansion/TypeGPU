@@ -1,11 +1,10 @@
-import { arrayOf } from '../../src/data/array.ts';
 import { $internal, $resolve } from '../../src/shared/symbols.ts';
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
   isSnippet,
-  ResolvedSnippet,
+  type ResolvedSnippet,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
@@ -21,7 +20,7 @@ import {
   type FunctionScopeLayer,
   getOwnSnippet,
   type ResolutionCtx,
-  SelfResolvable,
+  type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
