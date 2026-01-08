@@ -2,6 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import { arrayOf, type } from "arktype";
+import assert from "node:assert";
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -34,9 +35,12 @@ function groupResultsByExample(results: typeof BenchmarkResults.infer) {
 }
 
 function calculateTrend(
-  prSize: number,
-  targetSize: number,
+  prSize: number | undefined,
+  targetSize: number | undefined,
 ): { emoji: string; percent: string; diff: number } {
+  if (prSize === undefined || targetSize === undefined) {
+    return { emoji: "❔", percent: "-", diff: 0 };
+  }
   if (prSize === targetSize) {
     return { emoji: "➖", percent: "0.0%", diff: 0 };
   }
@@ -44,14 +48,6 @@ function calculateTrend(
   const percent = ((diff / targetSize) * 100).toFixed(1);
   const emoji = diff > 0 ? "▲" : "▼";
   return { emoji, percent: `${diff > 0 ? "+" : ""}${percent}%`, diff };
-}
-
-async function readExampleContent(examplePath: string): Promise<string> {
-  try {
-    return await fs.readFile(examplePath, "utf8");
-  } catch {
-    return "// Example content not found";
-  }
 }
 
 async function generateSingleTableReport(
@@ -68,29 +64,24 @@ async function generateSingleTableReport(
     ...Object.keys(targetGrouped),
   ]);
 
-  let output = prResults === targetResults
-    ? "Comparing PR results against PR results since there are no target branch results.\n\n"
-    : "\n\n";
+  let output = "\n\n";
 
   // Summary statistics
   let totalIncrease = 0,
     totalDecrease = 0,
-    totalUnchanged = 0;
-  const comparisons = [];
+    totalUnchanged = 0,
+    totalUnknown = 0;
 
   for (const example of allExamples) {
     for (const bundler of sharedBundlers) {
       const prSize = prGrouped[example]?.[bundler];
       const targetSize = targetGrouped[example]?.[bundler];
+      assert(prSize);
 
-      if (prSize !== undefined && targetSize !== undefined) {
-        const trend = calculateTrend(prSize, targetSize);
-        if (trend.diff > 0) totalIncrease++;
-        else if (trend.diff < 0) totalDecrease++;
-        else totalUnchanged++;
-
-        comparisons.push({ example, bundler, prSize, targetSize, trend });
-      }
+      if (targetSize === undefined) totalUnknown++;
+      else if (prSize > targetSize) totalIncrease++;
+      else if (prSize < targetSize) totalDecrease++;
+      else totalUnchanged++;
     }
   }
 
@@ -98,6 +89,7 @@ async function generateSingleTableReport(
   output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
   output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
   output += `- ➖ **Unchanged**: ${totalUnchanged} bundles\n\n`;
+  output += `- ❔ **Unknown**: ${totalUnknown} bundles\n\n`;
 
   // Main comparison table
   output += "## 📋 Bundle Size Comparison\n\n";
@@ -124,34 +116,14 @@ async function generateSingleTableReport(
       const prSize = prGrouped[example]?.[bundler];
       const targetSize = targetGrouped[example]?.[bundler];
 
-      if (prSize !== undefined && targetSize !== undefined) {
-        const trend = calculateTrend(prSize, targetSize);
-        output += ` | ${prSize}/${targetSize} ${trend.percent} ${trend.emoji}`;
-      } else if (prSize !== undefined) {
-        output += ` | ${prSize}/-`;
-      } else if (targetSize !== undefined) {
-        output += ` | -/${targetSize}`;
-      } else {
-        output += " | -";
-      }
+      const trend = calculateTrend(prSize, targetSize);
+      output += ` | ${targetSize ?? "N/A"} -> ${
+        prSize ?? "N/A"
+      } ${trend.percent} ${trend.emoji}`;
     }
     output += " |\n";
   }
   output += "\n";
-
-  // Example code sections
-  output += "---\n\n";
-  output += "## 💻 Example Code\n\n";
-
-  for (const example of [...allExamples].sort()) {
-    const examplePath = `./examples/${example}`;
-    const exampleContent = await readExampleContent(examplePath);
-
-    output += `### ${example}\n\n`;
-    output += "```typescript\n";
-    output += exampleContent.trim();
-    output += "\n```\n\n";
-  }
 
   return output;
 }
@@ -177,18 +149,13 @@ async function main() {
   }
 
   // Try to read and validate target results
-  let targetResults: typeof BenchmarkResults.infer | null = null;
+  let targetResults: typeof BenchmarkResults.infer = [];
   if (targetFile) {
     try {
       const targetContent = await fs.readFile(targetFile, "utf8");
       targetResults = BenchmarkResults.assert(JSON.parse(targetContent));
     } catch (error) {
       console.warn("Could not read or validate target results:", error);
-      console.warn(
-        "This may be a result of a breaking change in the comparison algorithm.\n" +
-          "Comparing PR results against PR results instead.",
-      );
-      targetResults = prResults;
     }
   }
 
