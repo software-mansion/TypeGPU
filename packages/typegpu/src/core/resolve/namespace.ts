@@ -87,7 +87,7 @@ export function getUniqueName(
   namespace: NamespaceInternal,
   resource: object,
 ): string {
-  const name = namespace.nameRegistry.makeUnique(getName(resource));
+  const name = namespace.nameRegistry.makeUnique(getName(resource), true);
   for (const listener of namespace.listeners.name) {
     listener({ target: resource, name });
   }

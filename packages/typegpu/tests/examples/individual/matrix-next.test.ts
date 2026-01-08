@@ -18,74 +18,74 @@ describe('matrix(next) example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct MatrixInfo_2 {
+      "struct MatrixInfo {
         firstRowCount: u32,
         firstColumnCount: u32,
         secondColumnCount: u32,
       }
 
-      @group(0) @binding(3) var<uniform> dimensions_1: MatrixInfo_2;
+      @group(0) @binding(3) var<uniform> dimensions_1: MatrixInfo;
 
-      fn getTileIndex_3(row: u32, col: u32) -> u32 {
+      fn getTileIndex(row: u32, col: u32) -> u32 {
         return (col + (row * 16u));
       }
 
-      fn getIndex_4(row: u32, col: u32, columns: u32) -> u32 {
+      fn getIndex(row: u32, col: u32, columns: u32) -> u32 {
         return (col + (row * columns));
       }
 
-      @group(0) @binding(0) var<storage, read> firstMatrix_5: array<i32>;
+      @group(0) @binding(0) var<storage, read> firstMatrix: array<i32>;
 
-      var<workgroup> tileA_6: array<i32, 256>;
+      var<workgroup> tileA: array<i32, 256>;
 
-      @group(0) @binding(1) var<storage, read> secondMatrix_7: array<i32>;
+      @group(0) @binding(1) var<storage, read> secondMatrix: array<i32>;
 
-      var<workgroup> tileB_8: array<i32, 256>;
+      var<workgroup> tileB: array<i32, 256>;
 
-      @group(0) @binding(2) var<storage, read_write> resultMatrix_9: array<i32>;
+      @group(0) @binding(2) var<storage, read_write> resultMatrix: array<i32>;
 
-      struct computeSharedMemory_Input_10 {
+      struct computeSharedMemory_Input {
         @builtin(global_invocation_id) gid: vec3u,
         @builtin(local_invocation_id) lid: vec3u,
         @builtin(workgroup_id) wid: vec3u,
       }
 
-      @compute @workgroup_size(16, 16) fn computeSharedMemory_0(input: computeSharedMemory_Input_10) {
+      @compute @workgroup_size(16, 16) fn computeSharedMemory(input: computeSharedMemory_Input) {
         let dimensions = (&dimensions_1);
         let numTiles = u32((f32((((*dimensions).firstColumnCount + 16u) - 1u)) / 16f));
         let globalRow = ((input.wid.x * 16u) + input.lid.x);
         let globalCol = ((input.wid.y * 16u) + input.lid.y);
         let localRow = input.lid.x;
         let localCol = input.lid.y;
-        let tileIdx = getTileIndex_3(localRow, localCol);
+        let tileIdx = getTileIndex(localRow, localCol);
         var accumulatedResult = 0;
         for (var tileIndex = 0u; (tileIndex < numTiles); tileIndex++) {
           let matrixACol = ((tileIndex * 16u) + localCol);
           var valueA = 0;
           if (((globalRow < (*dimensions).firstRowCount) && (matrixACol < (*dimensions).firstColumnCount))) {
-            let indexA = getIndex_4(globalRow, matrixACol, (*dimensions).firstColumnCount);
-            valueA = firstMatrix_5[indexA];
+            let indexA = getIndex(globalRow, matrixACol, (*dimensions).firstColumnCount);
+            valueA = firstMatrix[indexA];
           }
-          tileA_6[tileIdx] = valueA;
+          tileA[tileIdx] = valueA;
           let matrixBRow = ((tileIndex * 16u) + localRow);
           var valueB = 0;
           if (((matrixBRow < (*dimensions).firstColumnCount) && (globalCol < (*dimensions).secondColumnCount))) {
-            let indexB = getIndex_4(matrixBRow, globalCol, (*dimensions).secondColumnCount);
-            valueB = secondMatrix_7[indexB];
+            let indexB = getIndex(matrixBRow, globalCol, (*dimensions).secondColumnCount);
+            valueB = secondMatrix[indexB];
           }
-          tileB_8[tileIdx] = valueB;
+          tileB[tileIdx] = valueB;
           workgroupBarrier();
           let effectiveTileSize = min(16u, ((*dimensions).firstColumnCount - (tileIndex * 16u)));
           for (var k = 0u; (k < effectiveTileSize); k++) {
-            let tileA_element = tileA_6[getTileIndex_3(localRow, k)];
-            let tileB_element = tileB_8[getTileIndex_3(k, localCol)];
+            let tileA_element = tileA[getTileIndex(localRow, k)];
+            let tileB_element = tileB[getTileIndex(k, localCol)];
             accumulatedResult += (tileA_element * tileB_element);
           }
           workgroupBarrier();
         }
         if (((globalRow < (*dimensions).firstRowCount) && (globalCol < (*dimensions).secondColumnCount))) {
-          let outputIndex = getIndex_4(globalRow, globalCol, (*dimensions).secondColumnCount);
-          resultMatrix_9[outputIndex] = accumulatedResult;
+          let outputIndex = getIndex(globalRow, globalCol, (*dimensions).secondColumnCount);
+          resultMatrix[outputIndex] = accumulatedResult;
         }
       }"
     `);

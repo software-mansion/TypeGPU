@@ -252,10 +252,10 @@ describe('TgpuBindGroupLayout', () => {
         vel: vec3f,
       }
 
-      @group(0) @binding(0) var<storage, read_write> boids: array<Boid>;
+      @group(0) @binding(0) var<storage, read_write> boids_1: array<Boid>;
 
       fn getFirst() -> Boid {
-        let boids = (&boids);
+        let boids = (&boids_1);
         return (*boids)[0i];
       }"
     `);

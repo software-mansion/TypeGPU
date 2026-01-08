@@ -375,6 +375,35 @@ describe('struct', () => {
       }"
     `);
   });
+
+  it('throws when struct prop has whitespace in name', () => {
+    expect(() => struct({ 'my prop': f32 }))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
+      );
+  });
+
+  it('throws when struct prop uses a reserved word', () => {
+    expect(() => struct({ struct: f32 }))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
+      );
+  });
+
+  it('allows builtin names as struct props', () => {
+    const myStruct = struct({
+      min: u32,
+      fract: f32,
+      subgroupAdd: i32,
+    });
+    expect(tgpu.resolve([myStruct])).toMatchInlineSnapshot(`
+      "struct myStruct {
+        min: u32,
+        fract: f32,
+        subgroupAdd: i32,
+      }"
+    `);
+  });
 });
 
 describe('abstruct', () => {

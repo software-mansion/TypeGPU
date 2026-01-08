@@ -262,4 +262,30 @@ describe('shellless', () => {
       - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
     `);
   });
+
+  it('should cache shellless implementations in namespace', () => {
+    const foo = () => {
+      'use gpu';
+      return 4.1;
+    };
+
+    const bar = () => {
+      'use gpu';
+      return 4.2 * foo();
+    };
+
+    const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+    expect(tgpu.resolve([foo], { names })).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 4.1;
+      }"
+    `);
+
+    expect(tgpu.resolve([bar], { names })).toMatchInlineSnapshot(`
+      "fn bar() -> f32 {
+        return (4.2f * foo());
+      }"
+    `);
+  });
 });

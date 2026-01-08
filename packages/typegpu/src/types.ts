@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
@@ -76,14 +76,14 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   functionType: 'normal' | TgpuShaderStage;
-  args: Snippet[];
-  argAliases: Record<string, Snippet>;
+  argTypes: AnyData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
   body: Block;
+  params: FuncParameter[];
   externalMap: Record<string, unknown>;
 }
 

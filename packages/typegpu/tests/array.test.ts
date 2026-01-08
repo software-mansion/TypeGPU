@@ -329,6 +329,51 @@ describe('array', () => {
       }"
     `);
   });
+
+  it('throws when using refs in arrays', () => {
+    const foo = tgpu.fn([])(() => {
+      const myVec = d.vec2f(1, 2);
+      const result = [d.vec2f(3, 4), myVec];
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'myVec' reference cannot be used in an array constructor.
+      -----
+      Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws when using argument refs in arrays', () => {
+    const foo = tgpu.fn([d.vec2f])((myVec) => {
+      const result = [d.vec2f(3, 4), myVec];
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'myVec' reference cannot be used in an array constructor.
+      -----
+      Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('allows using ephemeral refs in arrays', () => {
+    const foo = tgpu.fn([d.u32])((n) => {
+      const m = d.u32(1);
+      const result = [1, n, m];
+    });
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo(n: u32) {
+        const m = 1u;
+        var result = array<u32, 3>(1u, n, m);
+      }"
+    `);
+  });
 });
 
 describe('array.length', () => {

@@ -254,12 +254,28 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
 
       canvas.parentElement?.replaceChild(container, canvas);
 
-      const onResize: ResizeObserverCallback = (entries) => {
-        const size = entries[0]?.devicePixelContentBoxSize[0];
-        if (size) {
-          newCanvas.width = size.inlineSize;
-          newCanvas.height = size.blockSize;
+      const onResize: ResizeObserverCallback = ([entry]) => {
+        if (!entry) {
+          return;
         }
+
+        // Despite what the types say this property does not exist in Safari (hence the optional chaining).
+        const dpcb = entry.devicePixelContentBoxSize?.[0] as
+          | ResizeObserverSize
+          | undefined;
+
+        const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
+        const box = dpcb ??
+          (Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize);
+
+        if (!box) {
+          return;
+        }
+
+        newCanvas.width = Math.round(box.inlineSize * dpr);
+        newCanvas.height = Math.round(box.blockSize * dpr);
       };
 
       const observer = new ResizeObserver(onResize);

@@ -139,7 +139,7 @@ export function replaceExternalsInWgsl(
     }
 
     console.warn(
-      `During resolution, the external '${externalName}' has been omitted. Only primitives, TGPU resources and plain JS objects can be used as externals.`,
+      `During resolution, the external '${externalName}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
     );
 
     return acc;

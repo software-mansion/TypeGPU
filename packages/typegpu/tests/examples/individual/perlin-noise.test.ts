@@ -17,115 +17,115 @@ describe('perlin noise example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      @group(1) @binding(0) var<uniform> size_3: vec4u;
+      @group(1) @binding(0) var<uniform> size_1: vec4u;
 
-      @group(1) @binding(1) var<storage, read_write> memory_4: array<vec3f>;
+      @group(1) @binding(1) var<storage, read_write> memory: array<vec3f>;
 
-      var<private> seed_8: vec2f;
+      var<private> seed: vec2f;
 
-      fn seed3_7(value: vec3f) {
-        seed_8 = (value.xy + vec2f(value.z));
+      fn seed3(value: vec3f) {
+        seed = (value.xy + vec2f(value.z));
       }
 
-      fn randSeed3_6(seed: vec3f) {
-        seed3_7(seed);
+      fn randSeed3(seed: vec3f) {
+        seed3(seed);
       }
 
-      fn item_10() -> f32 {
-        let a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
-        seed_8.x = fract((cos(a) * 136.8168f));
-        seed_8.y = fract((cos(b) * 534.7645f));
-        return seed_8.y;
+      fn item() -> f32 {
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
-      fn randOnUnitSphere_9() -> vec3f {
-        let z = ((2f * item_10()) - 1f);
+      fn randOnUnitSphere() -> vec3f {
+        let z = ((2f * item()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * item_10());
+        let theta = (6.283185307179586f * item());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
-      fn computeJunctionGradient_5(pos: vec3i) -> vec3f {
-        randSeed3_6((1e-3 * vec3f(pos)));
-        return randOnUnitSphere_9();
+      fn computeJunctionGradient(pos: vec3i) -> vec3f {
+        randSeed3((1e-3 * vec3f(pos)));
+        return randOnUnitSphere();
       }
 
-      fn mainCompute_2(x: u32, y: u32, z: u32) {
-        let size = (&size_3);
+      fn mainCompute_1(x: u32, y: u32, z: u32) {
+        let size = (&size_1);
         let idx = ((x + (y * (*size).x)) + ((z * (*size).x) * (*size).y));
-        memory_4[idx] = computeJunctionGradient_5(vec3i(i32(x), i32(y), i32(z)));
+        memory[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input_11 {
+      struct mainCompute_Input {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(8, 8, 4) fn mainCompute_0(in: mainCompute_Input_11)  {
-        if (any(in.id >= sizeUniform_1)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
           return;
         }
-        mainCompute_2(in.id.x, in.id.y, in.id.z);
+        mainCompute_1(in.id.x, in.id.y, in.id.z);
       }
 
-      struct fullScreenTriangle_Input_1 {
+      struct fullScreenTriangle_Input {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      struct fullScreenTriangle_Output_2 {
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> gridSize_4: f32;
+      @group(0) @binding(0) var<uniform> gridSize: f32;
 
-      @group(0) @binding(1) var<uniform> time_5: f32;
+      @group(0) @binding(1) var<uniform> time: f32;
 
-      @group(1) @binding(0) var<uniform> perlin3dCache__size_9: vec4u;
+      @group(1) @binding(0) var<uniform> perlin3dCache__size: vec4u;
 
-      @group(1) @binding(1) var<storage, read> perlin3dCache__memory_10: array<vec3f>;
+      @group(1) @binding(1) var<storage, read> perlin3dCache__memory: array<vec3f>;
 
-      fn getJunctionGradient_8(pos: vec3i) -> vec3f {
-        var size = vec3i(perlin3dCache__size_9.xyz);
+      fn getJunctionGradient(pos: vec3i) -> vec3f {
+        var size = vec3i(perlin3dCache__size.xyz);
         let x = (((pos.x % size.x) + size.x) % size.x);
         let y = (((pos.y % size.y) + size.y) % size.y);
         let z = (((pos.z % size.z) + size.z) % size.z);
-        return perlin3dCache__memory_10[((x + (y * size.x)) + ((z * size.x) * size.y))];
+        return perlin3dCache__memory[((x + (y * size.x)) + ((z * size.x) * size.y))];
       }
 
-      fn dotProdGrid_7(pos: vec3f, junction: vec3f) -> f32 {
+      fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
         var relative = (pos - junction);
-        var gridVector = getJunctionGradient_8(vec3i(junction));
+        var gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl_11(t: vec3f) -> vec3f {
+      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
         return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
       }
 
-      fn sample_6(pos: vec3f) -> f32 {
+      fn sample(pos: vec3f) -> f32 {
         var minJunction = floor(pos);
-        let xyz = dotProdGrid_7(pos, minJunction);
-        let xyZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 0, 1)));
-        let xYz = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 0)));
-        let xYZ = dotProdGrid_7(pos, (minJunction + vec3f(0, 1, 1)));
-        let Xyz = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 0)));
-        let XyZ = dotProdGrid_7(pos, (minJunction + vec3f(1, 0, 1)));
-        let XYz = dotProdGrid_7(pos, (minJunction + vec3f(1, 1, 0)));
-        let XYZ = dotProdGrid_7(pos, (minJunction + vec3f(1)));
+        let xyz = dotProdGrid(pos, minJunction);
+        let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
+        let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
+        let xYZ = dotProdGrid(pos, (minJunction + vec3f(0, 1, 1)));
+        let Xyz = dotProdGrid(pos, (minJunction + vec3f(1, 0, 0)));
+        let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
+        let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
+        let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl_11(partial);
+        var smoothPartial = quinticInterpolationImpl(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -135,20 +135,20 @@ describe('perlin noise example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn exponentialSharpen_12(n: f32, sharpness2: f32) -> f32 {
+      fn exponentialSharpen(n: f32, sharpness2: f32) -> f32 {
         return (sign(n) * pow(abs(n), (1f - sharpness2)));
       }
 
-      @group(0) @binding(2) var<uniform> sharpness_13: f32;
+      @group(0) @binding(2) var<uniform> sharpness: f32;
 
-      struct mainFragment_Input_14 {
+      struct mainFragment_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment_3(input: mainFragment_Input_14) -> @location(0) vec4f {
-        var uv = (gridSize_4 * input.uv);
-        let n = sample_6(vec3f(uv, time_5));
-        let sharp = exponentialSharpen_12(n, sharpness_13);
+      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
+        var uv = (gridSize * input.uv);
+        let n = sample(vec3f(uv, time));
+        let sharp = exponentialSharpen(n, sharpness);
         let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);
         var light = vec3f(1, 0.30000001192092896, 0.5);

@@ -14,6 +14,7 @@ export const exampleCategories = [
   { key: 'image-processing', label: 'Image processing' },
   { key: 'simulation', label: 'Simulation' },
   { key: 'algorithms', label: 'Algorithms' },
+  { key: 'threejs', label: 'Three.js' },
   { key: 'geometry', label: 'Geometry' },
   { key: 'tests', label: 'Tests' },
 ];

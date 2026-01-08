@@ -164,7 +164,7 @@ export class IcosphereGenerator {
         1,
       );
 
-      const newVertices = [
+      const newVertices = d.arrayOf(d.vec4f, 12)([
         // Triangle A: [v1, v12, v31]
         v1,
         v12,
@@ -181,7 +181,7 @@ export class IcosphereGenerator {
         v12,
         v23,
         v31,
-      ];
+      ]);
 
       const baseIndexNext = triangleIndex * 12;
       for (let i = d.u32(0); i < 12; i++) {
