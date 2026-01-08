@@ -39,12 +39,12 @@ describe('tgpu.accessor', () => {
     };
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
-      "fn item() -> vec3f {
+      "fn colorAccess() -> vec3f {
         return vec3f(1, 2, 3);
       }
 
       fn getColor() -> vec3f {
-        return item();
+        return colorAccess();
       }"
     `);
   });

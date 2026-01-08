@@ -2,7 +2,7 @@ import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
-import { getName, hasTinyestMetadata } from '../../shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
@@ -148,6 +148,15 @@ abstract class AccessorBase<
 
   $name(label: string) {
     this.slot.$name(label);
+
+    // Passing the name down to the default callback, if it has no name yet
+    if (
+      this.defaultValue && typeof this.defaultValue === 'function' &&
+      !getName(this.defaultValue)
+    ) {
+      setName(this.defaultValue as object, label);
+    }
+
     return this;
   }
 
