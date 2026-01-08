@@ -26,17 +26,6 @@ const EXCLUDED_FUNCTIONS = new Set([
   'mat4x4', // exists as d.mat4x4f
 ]);
 
-function normalizeToSnakeCase(name: string): string {
-  return name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-}
-
-function isFunctionInSpec(typegpuFn: string): boolean {
-  const normalized = normalizeToSnakeCase(typegpuFn);
-  return (
-    ALL_SPEC_FUNCTIONS.has(normalized) || ALL_SPEC_FUNCTIONS.has(typegpuFn)
-  );
-}
-
 function isFunctionMissingFromTypegpu(specFn: string): boolean {
   if (EXCLUDED_FUNCTIONS.has(specFn)) {
     return false;
@@ -50,22 +39,9 @@ console.log(`TypeGPU exported functions: ${TYPEGPU_FUNCTIONS.size}`);
 console.log(`WGSL spec functions: ${ALL_SPEC_FUNCTIONS.size}`);
 console.log(`Excluded from comparison: ${EXCLUDED_FUNCTIONS.size}\n`);
 
-const functionsInTypegpuButNotInSpec = [...TYPEGPU_FUNCTIONS].filter((fn) => {
-  return !isFunctionInSpec(fn);
-});
-
 const missingFunctions = [...ALL_SPEC_FUNCTIONS].filter((fn) => {
   return isFunctionMissingFromTypegpu(fn);
 });
-
-console.log('--- Functions in TypeGPU but not in WGSL spec ---');
-if (functionsInTypegpuButNotInSpec.length === 0) {
-  console.log('(none)');
-} else {
-  for (const fn of functionsInTypegpuButNotInSpec) {
-    console.log(`  - ${fn}`);
-  }
-}
 
 console.log('\n--- Missing WGSL functions in TypeGPU ---');
 if (missingFunctions.length === 0) {
