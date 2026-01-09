@@ -26,20 +26,19 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
   return grouped;
 }
 
-function calculateTrend(
+function calculateTrendMessage(
   prSize: number | undefined,
   targetSize: number | undefined,
-): { emoji: string; percent: string } {
+): string {
   if (prSize === undefined || targetSize === undefined) {
-    return { emoji: '', percent: '' };
+    return '';
   }
   if (prSize === targetSize) {
-    return { emoji: '➖', percent: '0.0%' };
+    return '(➖)';
   }
   const diff = prSize - targetSize;
   const percent = ((diff / targetSize) * 100).toFixed(1);
-  const emoji = diff > 0 ? '▲' : '▼';
-  return { emoji, percent: `${diff > 0 ? '+' : ''}${percent}%` };
+  return `(${diff > 0 ? '+' : '-'}${percent}%)`;
 }
 
 function prettifySize(size: number | undefined) {
@@ -129,10 +128,9 @@ async function generateSingleTableReport(
       const prSize = prGrouped[test]?.[bundler];
       const targetSize = targetGrouped[test]?.[bundler];
 
-      const trend = calculateTrend(prSize, targetSize);
-      output += ` | ${prettifySize(targetSize)} -> ${
-        prettifySize(prSize)
-      } ${trend.percent} ${trend.emoji}`;
+      output += ` | ${prettifySize(prSize)} ${
+        calculateTrendMessage(prSize, targetSize)
+      }`;
     }
     output += ' |\n';
   }
