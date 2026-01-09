@@ -1,0 +1,95 @@
+---
+import { Image } from "astro:assets";
+import ExternalOpenSvg from "../assets/externalopen.svg";
+import CausticsGif from "../assets/hero/caustics_bg.webp";
+import RayMarchingGif from "../assets/hero/rayMarch_bg.webp";
+import JellySliderGif from "../assets/hero/jellySlider_bg.jpg";
+import FishGif from "../assets/hero/fish_bg.webp";
+import ReflectionGif from "../assets/hero/reflection_bg.jpg";
+import vaporRaveGif from "../assets/hero/rave_bg.webp";
+
+import HoverExampleIsland from "./HoverExampleIsland";
+
+const galleryItems = [
+	{
+		asset: ReflectionGif,
+		title: "Reflection",
+		exampleKey: "rendering--cubemap-reflection",
+	},
+	{
+		asset: JellySliderGif,
+		title: "Jelly Slider",
+		exampleKey: "rendering--jelly-slider",
+	},
+	{
+		asset: vaporRaveGif,
+		title: "VaporRave",
+		exampleKey: "simple--vaporrave",
+	},
+	{
+		asset: RayMarchingGif,
+		title: "Ray Marching",
+		exampleKey: "rendering--ray-marching",
+	},
+	{
+		asset: FishGif,
+		title: "3D Fish",
+		exampleKey: "rendering--3d-fish",
+	},
+	{
+		asset: CausticsGif,
+		title: "Caustics",
+		exampleKey: "rendering--caustics",
+	},
+];
+---
+
+{/* Interactive gallery */}
+<div
+	class="sm:hidden mb-4 px-4 py-3 border dark:text-white border-accent-500 text-sm text-center"
+>
+	Hint: tap the example with two fingers to preview
+</div>
+<div class="gap-6 grid sm:grid-cols-2 xl:grid-cols-2">
+	{
+		galleryItems.map((item) => (
+			<div
+				class="group relative aspect-square overflow-hidden"
+				data-example-card
+				style="touch-action: pan-x pan-y;"
+			>
+				<a
+					href={`/TypeGPU/examples/#example=${item.exampleKey}`}
+					class="bottom-6 no-underline inset-x-6 px-4 z-10 absolute flex items-center justify-between gap-3 bg-white h-16 text-blue-900"
+				>
+					<span class="truncate font-medium text-sm max-w-[70%]">
+						{item.title}
+					</span>
+					<img
+						src={ExternalOpenSvg.src}
+						alt="Open example"
+						class="h-6 w-6 flex-shrink-0"
+						loading="lazy"
+					/>
+				</a>
+				<Image
+					src={item.asset}
+					alt="TypeGPU Example"
+					class="w-full h-full object-contain transition duration-300 ease-out"
+				/>
+
+				<div
+					data-hover-overlay
+					class="absolute inset-0 flex justify-center items-center opacity-0 pointer-events-none transition duration-300 ease-out group-hover:opacity-100 group-hover:pointer-events-auto data-[active=true]:opacity-100 data-[active=true]:pointer-events-auto"
+				>
+					<div class="backdrop-blur w-full h-full pointer-events-auto">
+						<HoverExampleIsland
+							client:visible
+							exampleKey={item.exampleKey}
+						/>
+					</div>
+				</div>
+			</div>
+		))
+	}
+</div>
