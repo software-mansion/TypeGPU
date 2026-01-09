@@ -93,6 +93,7 @@ const createCodeEditorComponent = (
             enabled: false,
           },
           readOnly: true,
+          domReadOnly: true,
         }}
       />
     </div>

@@ -1,5 +1,7 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: not helpful at all in shaders */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as d from '../../src/data/index.ts';
+import * as std from '../../src/std/index.ts';
 import tgpu from '../../src/index.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
@@ -590,6 +592,48 @@ describe('wgsl generator js type inference', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Tried to define variable 'myArr' of unknown type]
+    `);
+  });
+
+  it('is generic over number of arguments', () => {
+    const f32Array = d.arrayOf(d.f32);
+
+    const interpolate = (progress: number, from: number[], to: number[]) => {
+      'use gpu';
+      const result = f32Array(from.length)();
+      for (let i = 0; i < from.length; i++) {
+        result[i] = std.mix(from[i]!, to[i]!, progress);
+      }
+      return result;
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = interpolate(0.1, [0, 0.5, 1], [100, 200, 100]);
+      const bar = interpolate(0.6, [0, 0.5], [100, 40.5]);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn interpolate(progress: f32, from_1: array<f32, 3>, to: array<i32, 3>) -> array<f32, 3> {
+        var result = array<f32, 3>();
+        for (var i = 0; (i < 3i); i++) {
+          result[i] = mix(from_1[i], f32(to[i]), progress);
+        }
+        return result;
+      }
+
+      fn interpolate_1(progress: f32, from_1: array<f32, 2>, to: array<f32, 2>) -> array<f32, 2> {
+        var result = array<f32, 2>();
+        for (var i = 0; (i < 2i); i++) {
+          result[i] = mix(from_1[i], to[i], progress);
+        }
+        return result;
+      }
+
+      fn main() {
+        var foo = interpolate(0.1f, array<f32, 3>(0., 0.5, 1.), array<i32, 3>(100, 200, 100));
+        var bar = interpolate_1(0.6f, array<f32, 2>(0., 0.5), array<f32, 2>(100., 40.5));
+      }"
     `);
   });
 });
