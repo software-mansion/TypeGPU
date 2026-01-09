@@ -60,10 +60,11 @@ import {
 export const builtinNames = [
   'vertex_index',
   'instance_index',
-  'position',
   'clip_distances',
+  'position',
   'front_facing',
   'frag_depth',
+  'primitive_index',
   'sample_index',
   'sample_mask',
   'fragment',
@@ -74,6 +75,8 @@ export const builtinNames = [
   'num_workgroups',
   'subgroup_invocation_id',
   'subgroup_size',
+  'subgroup_id',
+  'num_subgroups',
 ] as const;
 
 export type BuiltinName = (typeof builtinNames)[number];
