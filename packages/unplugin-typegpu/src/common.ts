@@ -152,9 +152,6 @@ const resourceConstructors: string[] = [
   'accessor',
   'comptime',
   ...fnShellFunctionNames,
-  // d
-  'struct',
-  'unstruct',
   // root
   'createBuffer',
   'createMutable',
@@ -166,6 +163,11 @@ const resourceConstructors: string[] = [
   'createTexture',
   'createSampler',
   'createComparisonSampler',
+  // d
+  'struct',
+  'unstruct',
+  // other
+  'createView',
 ];
 
 /**

@@ -92,6 +92,21 @@ describe('autonaming', () => {
     expect(getName(myLayout)).toBe('myLayout');
   });
 
+  it('names views', ({ root }) => {
+    const texture = root['~unstable'].createTexture({
+      size: [256, 256],
+      format: 'rgba8unorm',
+    }).$usage('sampled', 'storage');
+
+    const sampledView = texture.createView(d.texture2d(d.f32));
+    const storageView = texture.createView(
+      d.textureStorage2d('rgba8unorm', 'read-only'),
+    );
+
+    expect(getName(sampledView)).toBe('sampledView');
+    expect(getName(storageView)).toBe('storageView');
+  });
+
   it('does not rename already named resources', () => {
     const myStruct = d.struct({ a: d.u32 }).$name('IntStruct');
     const myFunction = tgpu.fn([])(() => 0).$name('ConstFunction');
