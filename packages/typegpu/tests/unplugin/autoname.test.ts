@@ -45,6 +45,10 @@ describe('autonaming', () => {
         tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
       )
       .createPipeline();
+    const myGuardedPipeline = root['~unstable']
+      .createGuardedComputePipeline(() => {
+        'use gpu';
+      });
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -63,6 +67,7 @@ describe('autonaming', () => {
     expect(getName(myUniform)).toBe('myUniform');
     expect(getName(myQuerySet)).toBe('myQuerySet');
     expect(getName(myPipeline)).toBe('myPipeline');
+    expect(getName(myGuardedPipeline)).toBe('myGuardedPipeline');
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');

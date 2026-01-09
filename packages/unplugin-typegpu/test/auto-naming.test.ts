@@ -469,6 +469,53 @@ describe('[BABEL] auto naming', () => {
         console.log(MyController);"
       `);
   });
+
+  it('works with guarded pipelines', () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const root = await tgpu.init();
+
+      const myGuardedPipeline = root['~unstable']
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        });
+
+      const anotherGuardedPipeline = root['~unstable']
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        }).dispatchThreads();
+
+      console.log(myGuardedPipeline, anotherGuardedPipeline);
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        const root = await tgpu.init();
+        const myGuardedPipeline = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root['~unstable'].createGuardedComputePipeline(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => {
+            return {};
+          }
+        }) && $.f)({})), "myGuardedPipeline");
+        const anotherGuardedPipeline = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root['~unstable'].createGuardedComputePipeline(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => {
+            return {};
+          }
+        }) && $.f)({})).dispatchThreads(), "anotherGuardedPipeline");
+        console.log(myGuardedPipeline, anotherGuardedPipeline);"
+      `);
+  });
 });
 
 describe('[ROLLUP] auto naming', () => {
@@ -958,6 +1005,56 @@ describe('[ROLLUP] auto naming', () => {
               }
 
               console.log(MyController);
+        "
+      `);
+  });
+
+  it('works with guarded pipelines', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const root = await tgpu.init();
+
+      const myGuardedPipeline = root['~unstable']
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        });
+
+      const anotherGuardedPipeline = root['~unstable']
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        }).dispatchThreads();
+
+      console.log(myGuardedPipeline, anotherGuardedPipeline);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true }))
+      .toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+
+        const root = await tgpu.init();
+
+              const myGuardedPipeline = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root['~unstable']
+                .createGuardedComputePipeline((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                  'use gpu';
+                }), {
+                      v: 1,
+                      name: undefined,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: () => ({}),
+                    }) && $.f)({}))), "myGuardedPipeline"));
+
+              const anotherGuardedPipeline = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root['~unstable']
+                .createGuardedComputePipeline((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                  'use gpu';
+                }), {
+                      v: 1,
+                      name: undefined,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: () => ({}),
+                    }) && $.f)({}))).dispatchThreads(), "anotherGuardedPipeline"));
+
+              console.log(myGuardedPipeline, anotherGuardedPipeline);
         "
       `);
   });

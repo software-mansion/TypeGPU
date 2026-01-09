@@ -148,7 +148,6 @@ const resourceConstructors: string[] = [
   'privateVar',
   'workgroupVar',
   'const',
-  // tgpu['~unstable']
   'slot',
   'accessor',
   'comptime',
@@ -162,7 +161,6 @@ const resourceConstructors: string[] = [
   'createReadonly',
   'createUniform',
   'createQuerySet',
-  // root['~unstable']
   'createPipeline',
   'createGuardedComputePipeline',
   'createTexture',
