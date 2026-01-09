@@ -14,7 +14,7 @@ const ResultRecord = type({
 
 const BenchmarkResults = arrayOf(ResultRecord);
 
-function groupResultsBytest(results: typeof BenchmarkResults.infer) {
+function groupResultsByTest(results: typeof BenchmarkResults.infer) {
   const grouped: Record<string, Record<string, number>> = {};
   for (const result of results) {
     if (!grouped[result.testFilename]) {
