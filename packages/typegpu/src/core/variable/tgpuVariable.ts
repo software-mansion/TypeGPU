@@ -26,6 +26,7 @@ export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
   TDataType extends AnyData = AnyData,
 > extends TgpuNamable {
+  readonly resourceType: 'var';
   readonly [$gpuValueOf]: InferGPU<TDataType>;
   value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;
@@ -76,6 +77,7 @@ export function isVariable<T extends TgpuVar>(
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   readonly [$internal] = {};
+  readonly resourceType: 'var';
   readonly #scope: TScope;
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
@@ -85,6 +87,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
     dataType: TDataType,
     initialValue?: InferGPU<TDataType> | undefined,
   ) {
+    this.resourceType = 'var';
     this.#scope = scope;
     this.#dataType = dataType;
     this.#initialValue = initialValue;
