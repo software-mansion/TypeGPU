@@ -153,6 +153,7 @@ export {
   textureSampleBaseClampToEdge,
   textureSampleBias,
   textureSampleCompare,
+  textureSampleCompareLevel,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';
