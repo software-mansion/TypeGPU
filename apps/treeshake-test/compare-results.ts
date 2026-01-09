@@ -14,15 +14,6 @@ const ResultRecord = type({
 
 const BenchmarkResults = arrayOf(ResultRecord);
 
-function getAllBundlers(
-  prResults: typeof BenchmarkResults.infer,
-  targetResults: typeof BenchmarkResults.infer,
-) {
-  const prBundlers = new Set(prResults.map((r) => r.bundler));
-  const targetBundlers = new Set(targetResults.map((r) => r.bundler));
-  return new Set([...prBundlers, ...targetBundlers]);
-}
-
 function groupResultsByExample(results: typeof BenchmarkResults.infer) {
   const grouped: Record<string, Record<string, number>> = {};
   for (const result of results) {
@@ -37,17 +28,33 @@ function groupResultsByExample(results: typeof BenchmarkResults.infer) {
 function calculateTrend(
   prSize: number | undefined,
   targetSize: number | undefined,
-): { emoji: string; percent: string; diff: number } {
+): { emoji: string; percent: string } {
   if (prSize === undefined || targetSize === undefined) {
-    return { emoji: "❔", percent: "-", diff: 0 };
+    return { emoji: "", percent: "" };
   }
   if (prSize === targetSize) {
-    return { emoji: "➖", percent: "0.0%", diff: 0 };
+    return { emoji: "➖", percent: "0.0%" };
   }
   const diff = prSize - targetSize;
   const percent = ((diff / targetSize) * 100).toFixed(1);
   const emoji = diff > 0 ? "▲" : "▼";
-  return { emoji, percent: `${diff > 0 ? "+" : ""}${percent}%`, diff };
+  return { emoji, percent: `${diff > 0 ? "+" : ""}${percent}%` };
+}
+
+function prettifySize(size: number | undefined) {
+  if (size === undefined) {
+    return "N/A";
+  }
+  const units = ["B", "kB", "MB", "GB", "TB"];
+  let unitIndex = 0;
+  let sizeInUnits = size;
+  while (sizeInUnits > 1024 && unitIndex < units.length) {
+    sizeInUnits /= 1024;
+    unitIndex += 1;
+  }
+  return `${
+    Number.isInteger(sizeInUnits) ? sizeInUnits : sizeInUnits.toFixed(2)
+  } ${units[unitIndex]}`;
 }
 
 async function generateSingleTableReport(
@@ -122,8 +129,8 @@ async function generateSingleTableReport(
       const targetSize = targetGrouped[example]?.[bundler];
 
       const trend = calculateTrend(prSize, targetSize);
-      output += ` | ${targetSize ?? "N/A"} -> ${
-        prSize ?? "N/A"
+      output += ` | ${prettifySize(targetSize)} -> ${
+        prettifySize(prSize)
       } ${trend.percent} ${trend.emoji}`;
     }
     output += " |\n";
