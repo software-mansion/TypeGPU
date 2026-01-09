@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import * as fs from "node:fs/promises";
 import { arrayOf, type } from "arktype";
 import assert from "node:assert";
+import * as fs from "node:fs/promises";
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -20,6 +20,7 @@ function groupResultsByExample(results: typeof BenchmarkResults.infer) {
     if (!grouped[result.exampleFilename]) {
       grouped[result.exampleFilename] = {};
     }
+    // biome-ignore lint/style/noNonNullAssertion: it's there...
     grouped[result.exampleFilename]![result.bundler] = result.size;
   }
   return grouped;
@@ -151,16 +152,15 @@ async function main() {
   }
 
   // Read and validate PR results
-  const prContent = await fs.readFile(prFile, "utf8");
   let prResults: typeof BenchmarkResults.infer;
-
   try {
+    const prContent = await fs.readFile(prFile, "utf8");
     prResults = BenchmarkResults.assert(JSON.parse(prContent));
   } catch (error) {
     throw new Error("PR results validation failed", { cause: error });
   }
 
-  // Try to read and validate target results
+  // Read and validate target results
   let targetResults: typeof BenchmarkResults.infer = [];
   if (targetFile) {
     try {

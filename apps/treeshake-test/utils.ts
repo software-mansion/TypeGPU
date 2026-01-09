@@ -1,8 +1,8 @@
 import { build as esbuild } from "esbuild";
-import { build as tsdown } from "tsdown";
-import webpack from "webpack";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { build as tsdown } from "tsdown";
+import webpack from "webpack";
 
 export type ResultRecord = {
   exampleUrl: URL;
