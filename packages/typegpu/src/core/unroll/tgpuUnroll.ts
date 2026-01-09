@@ -1,13 +1,16 @@
 import { stitch } from '../resolve/stitch.ts';
 import { $internal, $resolve } from '../../../src/shared/symbols.ts';
-import { WgslTypeError } from '../../../src/errors.ts';
 import { inCodegenMode } from '../../../src/execMode.ts';
 import { setName } from '../../../src/shared/meta.ts';
-import { DualFn } from '../../../src/data/dualFn.ts';
+import type { DualFn } from '../../../src/data/dualFn.ts';
 
-import { AnyData } from '../../../src/data/dataTypes.ts';
-import { ResolvedSnippet, snip, Snippet } from '../../../src/data/snippet.ts';
-import { ResolutionCtx, SelfResolvable } from 'src/types.ts';
+import type { AnyData } from '../../../src/data/dataTypes.ts';
+import {
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../../../src/data/snippet.ts';
+import type { ResolutionCtx, SelfResolvable } from 'src/types.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for

@@ -3,6 +3,7 @@ import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
+  isEphemeralSnippet,
   isSnippet,
   type ResolvedSnippet,
   snip,
@@ -24,6 +25,12 @@ import {
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
+import * as wgsl from '../data/wgslTypes.ts';
+import { u32 } from '../data/numeric.ts';
+import { invariant, WgslTypeError } from '../../src/errors.ts';
+import { arrayLength } from '../std/array.ts';
+import { accessIndex } from './accessIndex.ts';
+import { createPtrFromOrigin, implicitFrom } from '../../src/data/ptr.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -159,3 +166,89 @@ export class ArrayExpression implements SelfResolvable {
     );
   }
 }
+
+export const forOfHelpers = {
+  getLoopVarKind(elementSnippet: Snippet) {
+    // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+    // an implicit pointer to it
+    return elementSnippet.origin === 'constant-tgpu-const-ref'
+      ? 'const'
+      : 'let';
+  },
+  getValidIndexName(ctx: GenerationCtx) {
+    // Our index name will be some element from infinite sequence (i, ii, iii, ...).
+    // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
+    // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
+    // so we can safely use `i`.
+    let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
+    while (ctx.getById(index) !== null) {
+      index += 'i';
+    }
+
+    return index;
+  },
+  getElementSnippet(iterableSnippet: Snippet, index: string) {
+    const elementSnippet = accessIndex(
+      iterableSnippet,
+      snip(index, u32, 'runtime'),
+    );
+
+    if (!elementSnippet) {
+      throw new WgslTypeError(
+        '`for ... of ...` loops only support array or vector iterables',
+      );
+    }
+
+    return elementSnippet;
+  },
+  getElementType(elementSnippet: Snippet) {
+    let elementType = elementSnippet.dataType;
+
+    if (
+      isEphemeralSnippet(elementSnippet) ||
+      elementSnippet.origin === 'constant-tgpu-const-ref' ||
+      elementSnippet.origin === 'runtime-tgpu-const-ref'
+    ) {
+      return elementType;
+    }
+
+    if (!wgsl.isPtr(elementType)) {
+      const ptrType = createPtrFromOrigin(
+        elementSnippet.origin,
+        concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
+      );
+      invariant(
+        ptrType !== undefined,
+        `Creating pointer type from origin ${elementSnippet.origin}`,
+      );
+      elementType = ptrType;
+    }
+
+    return implicitFrom(elementType);
+  },
+  getElementCountSnippet(iterableSnippet: Snippet) {
+    const iterableDataType = iterableSnippet.dataType;
+
+    if (wgsl.isWgslArray(iterableDataType)) {
+      return iterableDataType.elementCount > 0
+        ? snip(
+          `${iterableDataType.elementCount}`,
+          u32,
+          'constant',
+        )
+        : arrayLength[$internal].gpuImpl(iterableSnippet);
+    }
+
+    if (wgsl.isVec(iterableDataType)) {
+      return snip(
+        `${Number(iterableDataType.type.match(/\d/))}`,
+        u32,
+        'constant',
+      );
+    }
+
+    throw new WgslTypeError(
+      '`for ... of ...` loops only support array or vector iterables',
+    );
+  },
+} as const;
