@@ -12,18 +12,14 @@ describe('autonaming', () => {
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
-
-    expect(getName(mySlot)).toBe('mySlot');
-    expect(getName(myLayout)).toBe('myLayout');
-    expect(getName(myVertexLayout)).toBe('myVertexLayout');
-  });
-
-  it("autonames resources created using tgpu['~unstable']", () => {
     const myAccessor = tgpu['~unstable'].accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
     const myConst = tgpu.const(d.f32, 1);
 
+    expect(getName(mySlot)).toBe('mySlot');
+    expect(getName(myLayout)).toBe('myLayout');
+    expect(getName(myVertexLayout)).toBe('myVertexLayout');
     expect(getName(myAccessor)).toBe('myAccessor');
     expect(getName(myPrivateVar)).toBe('myPrivateVar');
     expect(getName(myWorkgroupVar)).toBe('myWorkgroupVar');
@@ -44,15 +40,6 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-
-    expect(getName(myBuffer)).toBe('myBuffer');
-    expect(getName(myMutable)).toBe('myMutable');
-    expect(getName(myReadonly)).toBe('myReadonly');
-    expect(getName(myUniform)).toBe('myUniform');
-    expect(getName(myQuerySet)).toBe('myQuerySet');
-  });
-
-  it("autonames resources created using root['~unstable']", ({ root }) => {
     const myPipeline = root['~unstable']
       .withCompute(
         tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
@@ -70,6 +57,11 @@ describe('autonaming', () => {
       compare: 'equal',
     });
 
+    expect(getName(myBuffer)).toBe('myBuffer');
+    expect(getName(myMutable)).toBe('myMutable');
+    expect(getName(myReadonly)).toBe('myReadonly');
+    expect(getName(myUniform)).toBe('myUniform');
+    expect(getName(myQuerySet)).toBe('myQuerySet');
     expect(getName(myPipeline)).toBe('myPipeline');
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
@@ -84,7 +76,7 @@ describe('autonaming', () => {
     const myFn = tgpu.fn(
       [Item],
       Item,
-    ) /* wgsl */`(item: Item) -> Item { return item; }`
+    ) /* wgsl */`(item) { return item; }`
       .$uses({ Item });
     const myLayout = tgpu
       .bindGroupLayout({ foo: { uniform: d.vec3f } })
