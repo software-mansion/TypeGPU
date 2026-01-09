@@ -8,24 +8,24 @@ import {
 } from './utils.ts';
 
 const DIST_DIR = new URL('./dist/', import.meta.url);
-const EXAMPLES_DIR = new URL('./examples/', import.meta.url);
+const EXAMPLES_DIR = new URL('./tests/', import.meta.url);
 
 /**
- * A list of example filenames in the examples directory.
- * E.g.: ['example1.ts', 'example2.ts', ...]
+ * A list of test filenames in the tests directory.
+ * E.g.: ['test1.ts', 'test2.ts', ...]
  */
-const examples = await fs.readdir(EXAMPLES_DIR);
+const tests = await fs.readdir(EXAMPLES_DIR);
 
-async function bundleExample(
-  exampleFilename: string,
+async function bundleTest(
+  testFilename: string,
   bundler: string,
-  bundle: (exampleUrl: URL, outUrl: URL) => Promise<URL>,
+  bundle: (testUrl: URL, outUrl: URL) => Promise<URL>,
 ): Promise<ResultRecord> {
-  const exampleUrl = new URL(exampleFilename, EXAMPLES_DIR);
-  const outUrl = await bundle(exampleUrl, DIST_DIR);
+  const testUrl = new URL(testFilename, EXAMPLES_DIR);
+  const outUrl = await bundle(testUrl, DIST_DIR);
   const size = await getFileSize(outUrl);
 
-  return { exampleFilename, exampleUrl, bundler, size };
+  return { testFilename, testUrl, bundler, size };
 }
 
 async function main() {
@@ -33,15 +33,15 @@ async function main() {
   await fs.mkdir(DIST_DIR, { recursive: true });
 
   const results = await Promise.allSettled(
-    examples.flatMap((example) => [
-      bundleExample(example, 'esbuild', bundleWithEsbuild),
-      bundleExample(example, 'tsdown', bundleWithTsdown),
-      bundleExample(example, 'webpack', bundleWithWebpack),
+    tests.flatMap((test) => [
+      bundleTest(test, 'esbuild', bundleWithEsbuild),
+      bundleTest(test, 'tsdown', bundleWithTsdown),
+      bundleTest(test, 'webpack', bundleWithWebpack),
     ]),
   );
 
   if (results.some((result) => result.status === 'rejected')) {
-    console.error('Some examples failed to bundle.');
+    console.error('Some tests failed to bundle.');
     for (const result of results) {
       if (result.status === 'rejected') {
         console.error(result.reason);

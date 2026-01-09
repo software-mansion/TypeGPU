@@ -5,8 +5,8 @@ import { build as tsdown } from 'tsdown';
 import webpack from 'webpack';
 
 export type ResultRecord = {
-  exampleUrl: URL;
-  exampleFilename: string;
+  testUrl: URL;
+  testFilename: string;
   bundler: string;
   size: number;
 };

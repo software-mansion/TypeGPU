@@ -6,22 +6,22 @@ import * as fs from 'node:fs/promises';
 
 // Define schema for benchmark results
 const ResultRecord = type({
-  exampleFilename: 'string',
-  exampleUrl: 'string',
+  testFilename: 'string',
+  testUrl: 'string',
   bundler: 'string',
   size: 'number',
 });
 
 const BenchmarkResults = arrayOf(ResultRecord);
 
-function groupResultsByExample(results: typeof BenchmarkResults.infer) {
+function groupResultsBytest(results: typeof BenchmarkResults.infer) {
   const grouped: Record<string, Record<string, number>> = {};
   for (const result of results) {
-    if (!grouped[result.exampleFilename]) {
-      grouped[result.exampleFilename] = {};
+    if (!grouped[result.testFilename]) {
+      grouped[result.testFilename] = {};
     }
     // biome-ignore lint/style/noNonNullAssertion: it's there...
-    grouped[result.exampleFilename]![result.bundler] = result.size;
+    grouped[result.testFilename]![result.bundler] = result.size;
   }
   return grouped;
 }
@@ -62,8 +62,8 @@ async function generateSingleTableReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
 ) {
-  const prGrouped = groupResultsByExample(prResults);
-  const targetGrouped = groupResultsByExample(targetResults);
+  const prGrouped = groupResultsByTest(prResults);
+  const targetGrouped = groupResultsByTest(targetResults);
 
   // Get all unique bundlers from both branches
   const allBundlers = new Set([
@@ -71,8 +71,8 @@ async function generateSingleTableReport(
     ...new Set(targetResults.map((r) => r.bundler)),
   ]);
 
-  // Get all unique examples from both branches
-  const allExamples = new Set([
+  // Get all unique tests from both branches
+  const allTests = new Set([
     ...Object.keys(prGrouped),
     ...Object.keys(targetGrouped),
   ]);
@@ -85,10 +85,10 @@ async function generateSingleTableReport(
     totalUnchanged = 0,
     totalUnknown = 0;
 
-  for (const example of allExamples) {
+  for (const test of allTests) {
     for (const bundler of allBundlers) {
-      const prSize = prGrouped[example]?.[bundler];
-      const targetSize = targetGrouped[example]?.[bundler];
+      const prSize = prGrouped[test]?.[bundler];
+      const targetSize = targetGrouped[test]?.[bundler];
       assert(prSize !== undefined);
 
       if (targetSize === undefined) totalUnknown++;
@@ -108,7 +108,7 @@ async function generateSingleTableReport(
   output += '## 📋 Bundle Size Comparison\n\n';
 
   // Table header
-  output += '| Example';
+  output += '| Test';
   for (const bundler of allBundlers) {
     output += ` | ${bundler}`;
   }
@@ -122,12 +122,12 @@ async function generateSingleTableReport(
   output += ' |\n';
 
   // Table rows
-  for (const example of [...allExamples].sort()) {
-    output += `| ${example}`;
+  for (const test of [...allTests].sort()) {
+    output += `| ${test}`;
 
     for (const bundler of allBundlers) {
-      const prSize = prGrouped[example]?.[bundler];
-      const targetSize = targetGrouped[example]?.[bundler];
+      const prSize = prGrouped[test]?.[bundler];
+      const targetSize = targetGrouped[test]?.[bundler];
 
       const trend = calculateTrend(prSize, targetSize);
       output += ` | ${prettifySize(targetSize)} -> ${
