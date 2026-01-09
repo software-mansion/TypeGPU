@@ -248,7 +248,7 @@ describe('autonaming', () => {
     expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
 
-  it('autonames this private prop assignment', ({ root }) => {
+  it('autonames private prop assignment', ({ root }) => {
     class MyController {
       #myBuffer;
 

@@ -263,6 +263,7 @@ class WithBindingImpl implements WithBinding {
   wrappedCallback(in.id.x, in.id.y, in.id.z);
 }`.$uses({ sizeUniform, wrappedCallback });
 
+    // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
     const pipeline = (() =>
       this
         .withCompute(mainCompute)
