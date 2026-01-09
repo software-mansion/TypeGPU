@@ -6,11 +6,7 @@ import type {
 } from '../../core/buffer/buffer.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
-import {
-  type Disarray,
-  getCustomLocation,
-  LooseDecorated,
-} from '../../data/dataTypes.ts';
+import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
@@ -20,7 +16,7 @@ import type {
 } from '../../data/texture.ts';
 import {
   type AnyWgslData,
-  Decorated,
+  type Decorated,
   isWgslData,
   type U16,
   type U32,
@@ -39,9 +35,7 @@ import type { InferGPURecord } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   Assume,
-  Equal,
   NeverRecordToOptional,
-  UndefinedToOptional,
 } from '../../shared/utilityTypes.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
@@ -59,10 +53,11 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
-import type {
-  AnyAutoCustoms,
-  AutoFragmentIn,
-  AutoFragmentOut,
+import {
+  type AnyAutoCustoms,
+  AutoFragmentFn,
+  type AutoFragmentIn,
+  type AutoFragmentOut,
 } from '../function/autoIO.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
@@ -472,6 +467,7 @@ type Memo = {
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
+  usedVertexLayouts: TgpuVertexLayout[];
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -733,10 +729,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     });
 
-    const missingVertexLayouts = new Set(internals.core.usedVertexLayouts);
-
-    const usedVertexLayouts = internals.core.usedVertexLayouts;
-    usedVertexLayouts.forEach((vertexLayout, idx) => {
+    const missingVertexLayouts = new Set(memo.usedVertexLayouts);
+    memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
       const buffer = internals.priors.vertexLayoutMap?.get(vertexLayout);
       if (buffer) {
         missingVertexLayouts.delete(vertexLayout);
@@ -838,51 +832,41 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
 class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
-  readonly usedVertexLayouts: TgpuVertexLayout[];
-
   private _memo: Memo | undefined;
-  private readonly _vertexBufferLayouts: GPUVertexBufferLayout[];
-  private readonly _targets: GPUColorTargetState[] | [null];
+
+  // TODO: Add auto-vertex fns
+  #vertexFn: TgpuVertexFn;
+  #fragmentFn?:
+    | TgpuFragmentFn
+    | AutoFragmentFn
+    | undefined;
 
   constructor(public readonly options: RenderPipelineCoreOptions) {
-    const { descriptor } = options;
-    const { vertex, fragment, targets, attribs } = descriptor;
-
-    const connectedAttribs = connectAttributesToShader(
-      vertex.shell.in ?? {},
-      // biome-ignore lint/style/noNonNullAssertion: they're there
-      attribs!,
-    );
-
-    this._vertexBufferLayouts = connectedAttribs.bufferDefinitions;
-    this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
-
-    this._targets = fragment && targets
-      ? connectTargetsToShader(
-        (fragment as TgpuFragmentFn | undefined)?.shell.out,
-        targets,
-      )
-      : [null];
+    this.#vertexFn = options.descriptor.vertex;
+    this.#fragmentFn = options.descriptor.fragment &&
+        typeof options.descriptor.fragment === 'function'
+      // TODO: Pass in vertex output
+      ? new AutoFragmentFn(options.descriptor.fragment, {})
+      : options.descriptor.fragment;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const { slotBindings, descriptor } = this.options;
-    const { vertex, fragment } = descriptor;
+    const { slotBindings } = this.options;
 
     const locations = matchUpVaryingLocations(
-      vertex.shell.out,
-      (fragment as TgpuFragmentFn | undefined)?.shell.in,
-      getName(vertex) ?? '<unnamed>',
-      getName(fragment) ?? '<unnamed>',
+      this.#vertexFn.shell.out,
+      (this.#fragmentFn as TgpuFragmentFn | undefined)?.shell.in,
+      getName(this.#vertexFn) ?? '<unnamed>',
+      getName(this.#fragmentFn) ?? '<unnamed>',
     );
 
     return ctx.withVaryingLocations(
       locations,
       () =>
         ctx.withSlots(slotBindings, () => {
-          ctx.resolve(vertex);
-          if (fragment) {
-            ctx.resolve(fragment);
+          ctx.resolve(this.#vertexFn);
+          if (this.#fragmentFn) {
+            ctx.resolve(this.#fragmentFn);
           }
           return snip('', Void, /* origin */ 'runtime');
         }),
@@ -894,119 +878,135 @@ class RenderPipelineCore implements SelfResolvable {
   }
 
   public unwrap(): Memo {
-    if (this._memo === undefined) {
-      const { root, descriptor: tgpuDescriptor } = this.options;
-      const device = root.device;
-      const enableExtensions = wgslExtensions.filter((extension) =>
-        root.enabledFeatures.has(wgslExtensionToFeatureName[extension])
-      );
+    if (this._memo !== undefined) {
+      return this._memo;
+    }
 
-      // Resolving code
-      let resolutionResult: ResolutionResult;
+    const { root, descriptor: tgpuDescriptor } = this.options;
+    const device = root.device;
+    const enableExtensions = wgslExtensions.filter((extension) =>
+      root.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+    );
 
-      let resolveMeasure: PerformanceMeasure | undefined;
-      const ns = namespace({ names: root.nameRegistrySetting });
-      if (PERF?.enabled) {
-        const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: root.shaderGenerator,
-          root,
-        });
-        resolveMeasure = performance.measure('typegpu:resolution', {
-          start: resolveStart.name,
-        });
-      } else {
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: root.shaderGenerator,
-          root,
-        });
-      }
+    // Resolving code
+    let resolutionResult: ResolutionResult;
 
-      const { code, usedBindGroupLayouts, catchall, logResources } =
-        resolutionResult;
-
-      if (catchall !== undefined) {
-        usedBindGroupLayouts[catchall[0]]?.$name(
-          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
-        );
-      }
-
-      const module = device.createShaderModule({
-        label: `${getName(this) ?? '<unnamed>'} - Shader`,
-        code,
+    let resolveMeasure: PerformanceMeasure | undefined;
+    const ns = namespace({ names: root.nameRegistrySetting });
+    if (PERF?.enabled) {
+      const resolveStart = performance.mark('typegpu:resolution:start');
+      resolutionResult = resolve(this, {
+        namespace: ns,
+        enableExtensions,
+        shaderGenerator: root.shaderGenerator,
+        root,
       });
+      resolveMeasure = performance.measure('typegpu:resolution', {
+        start: resolveStart.name,
+      });
+    } else {
+      resolutionResult = resolve(this, {
+        namespace: ns,
+        enableExtensions,
+        shaderGenerator: root.shaderGenerator,
+        root,
+      });
+    }
 
-      const descriptor: GPURenderPipelineDescriptor = {
-        layout: device.createPipelineLayout({
-          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-          bindGroupLayouts: usedBindGroupLayouts.map((l) => root.unwrap(l)),
-        }),
-        vertex: {
-          module,
-          buffers: this._vertexBufferLayouts,
-        },
+    const { code, usedBindGroupLayouts, catchall, logResources } =
+      resolutionResult;
+
+    if (catchall !== undefined) {
+      usedBindGroupLayouts[catchall[0]]?.$name(
+        `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+      );
+    }
+
+    const module = device.createShaderModule({
+      label: `${getName(this) ?? '<unnamed>'} - Shader`,
+      code,
+    });
+
+    const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
+    const connectedAttribs = connectAttributesToShader(
+      vertex.shell.in ?? {},
+      attribs,
+    );
+
+    const connectedTargets = fragment && targets
+      ? connectTargetsToShader(
+        (fragment as TgpuFragmentFn | undefined)?.shell.out,
+        targets,
+      )
+      : [null];
+
+    const descriptor: GPURenderPipelineDescriptor = {
+      layout: device.createPipelineLayout({
+        label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+        bindGroupLayouts: usedBindGroupLayouts.map((l) => root.unwrap(l)),
+      }),
+      vertex: {
+        module,
+        buffers: connectedAttribs.bufferDefinitions,
+      },
+    };
+
+    const label = getName(this);
+    if (label !== undefined) {
+      descriptor.label = label;
+    }
+
+    if (tgpuDescriptor.fragment) {
+      descriptor.fragment = {
+        module,
+        targets: connectedTargets,
       };
+    }
 
-      const label = getName(this);
-      if (label !== undefined) {
-        descriptor.label = label;
-      }
-
-      if (tgpuDescriptor.fragment) {
-        descriptor.fragment = {
-          module,
-          targets: this._targets,
+    if (tgpuDescriptor.primitive) {
+      if (isWgslData(tgpuDescriptor.primitive.stripIndexFormat)) {
+        descriptor.primitive = {
+          ...tgpuDescriptor.primitive,
+          stripIndexFormat: {
+            u32: 'uint32',
+            u16: 'uint16',
+          }[tgpuDescriptor.primitive.stripIndexFormat.type] as GPUIndexFormat,
         };
+      } else {
+        descriptor.primitive = tgpuDescriptor.primitive as GPUPrimitiveState;
       }
+    }
 
-      if (tgpuDescriptor.primitive) {
-        if (isWgslData(tgpuDescriptor.primitive.stripIndexFormat)) {
-          descriptor.primitive = {
-            ...tgpuDescriptor.primitive,
-            stripIndexFormat: {
-              u32: 'uint32',
-              u16: 'uint16',
-            }[tgpuDescriptor.primitive.stripIndexFormat.type] as GPUIndexFormat,
-          };
-        } else {
-          descriptor.primitive = tgpuDescriptor.primitive as GPUPrimitiveState;
-        }
-      }
+    if (tgpuDescriptor.depthStencil) {
+      descriptor.depthStencil = tgpuDescriptor.depthStencil;
+    }
 
-      if (tgpuDescriptor.depthStencil) {
-        descriptor.depthStencil = tgpuDescriptor.depthStencil;
-      }
+    if (tgpuDescriptor.multisample) {
+      descriptor.multisample = tgpuDescriptor.multisample;
+    }
 
-      if (tgpuDescriptor.multisample) {
-        descriptor.multisample = tgpuDescriptor.multisample;
-      }
+    this._memo = {
+      pipeline: device.createRenderPipeline(descriptor),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+    };
 
-      this._memo = {
-        pipeline: device.createRenderPipeline(descriptor),
-        usedBindGroupLayouts,
-        catchall,
-        logResources,
-      };
+    if (PERF?.enabled) {
+      (async () => {
+        const start = performance.mark('typegpu:compile-start');
+        await device.queue.onSubmittedWorkDone();
+        const compileMeasure = performance.measure('typegpu:compiled', {
+          start: start.name,
+        });
 
-      if (PERF?.enabled) {
-        (async () => {
-          const start = performance.mark('typegpu:compile-start');
-          await device.queue.onSubmittedWorkDone();
-          const compileMeasure = performance.measure('typegpu:compiled', {
-            start: start.name,
-          });
-
-          PERF?.record('resolution', {
-            resolveDuration: resolveMeasure?.duration,
-            compileDuration: compileMeasure.duration,
-            wgslSize: code.length,
-          });
-        })();
-      }
+        PERF?.record('resolution', {
+          resolveDuration: resolveMeasure?.duration,
+          compileDuration: compileMeasure.duration,
+          wgslSize: code.length,
+        });
+      })();
     }
 
     return this._memo;

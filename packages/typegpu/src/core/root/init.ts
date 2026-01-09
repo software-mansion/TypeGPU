@@ -729,7 +729,7 @@ class TgpuRootImpl extends WithBindingImpl
       });
 
       const missingVertexLayouts = new Set<TgpuVertexLayout>();
-      core.usedVertexLayouts.forEach((vertexLayout, idx) => {
+      memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
         const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
         const opts = priorBuffer
           ? {
