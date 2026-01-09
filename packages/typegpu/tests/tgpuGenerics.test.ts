@@ -21,7 +21,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return original + wrapped;
     };
 
-    // Should generate only one function definition for getDouble
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
         return 0f * 2f;
