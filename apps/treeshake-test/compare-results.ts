@@ -39,9 +39,9 @@ function calculateTrendMessage(
   const diff = prSize - targetSize;
   const percent = ((diff / targetSize) * 100).toFixed(1);
   if (diff > 0) {
-    return `(**+${percent}%**)`;
+    return `($\${\\color{red}+${percent}}$$)`;
   }
-  return `(${percent}%)`;
+  return `($\${\\color{green}${percent}}$$)`;
 }
 
 function prettifySize(size: number | undefined) {
