@@ -6,7 +6,6 @@ import * as fs from 'node:fs/promises';
 // Define schema for benchmark results
 const ResultRecord = type({
   testFilename: 'string',
-  testUrl: 'string',
   bundler: 'string',
   size: 'number',
 });

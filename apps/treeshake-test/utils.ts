@@ -8,7 +8,6 @@ import webpackPlugin from 'unplugin-typegpu/webpack';
 import rolldownPlugin from 'unplugin-typegpu/rolldown';
 
 export type ResultRecord = {
-  testUrl: URL;
   testFilename: string;
   bundler: string;
   size: number;

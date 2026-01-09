@@ -24,7 +24,7 @@ async function bundleTest(
   const outUrl = await bundle(testUrl, DIST_DIR);
   const size = await getFileSize(outUrl);
 
-  return { testFilename, testUrl, bundler, size };
+  return { testFilename, bundler, size };
 }
 
 async function main() {
