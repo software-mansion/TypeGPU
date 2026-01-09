@@ -17,6 +17,25 @@ jobs:
           version: 10.27.0
           run_install: false
 
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: pr-branch
+
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          path: target-branch
+          ref: ${{ github.base_ref }}
+
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
+        run: pnpm install
+
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -26,28 +45,9 @@ jobs:
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
 
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          path: pr-branch
-
-      - name: Install dependencies (PR branch)
-        working-directory: pr-branch
-        run: pnpm install
-
       - name: Run tree-shake test on PR branch
         working-directory: pr-branch
         run: pnpm --filter treeshake-test test
-
-      - name: Checkout target branch
-        uses: actions/checkout@v4
-        with:
-          path: target-branch
-          ref: ${{ github.base_ref }}
-
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install
 
       - name: Run tree-shake test on target branch
         working-directory: target-branch
