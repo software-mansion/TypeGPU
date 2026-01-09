@@ -21,21 +21,10 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import {
-  type AnyData,
-  isData,
-  undecorate,
-  UnknownData,
-} from './data/dataTypes.ts';
+import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import {
-  isPtr,
-  isWgslArray,
-  isWgslStruct,
-  Void,
-  type WgslStruct,
-} from './data/wgslTypes.ts';
+import { isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -78,15 +67,14 @@ import type {
   ResolutionCtx,
   TgpuShaderStage,
   Wgsl,
-  WithOwnSnippet,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { hasTinyestMetadata } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
-import { PropAccess } from './tgsl/accessProp.ts';
+import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
-import { IOData } from './core/function/fnTypes.ts';
+import type { IOData } from './core/function/fnTypes.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -168,7 +156,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
-    argAliases: Record<string, Snippet | WithOwnSnippet>,
+    argAliases: Record<string, Snippet>,
     returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer {
@@ -249,7 +237,7 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         if (layer.argAliases[id]) {
-          return coerceToSnippet(layer.argAliases[id]);
+          return layer.argAliases[id];
         }
 
         const external = layer.externalMap[id];
@@ -475,7 +463,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       this.#namespaceInternal.nameRegistry.pushFunctionScope();
       const args: Snippet[] = [];
-      const argAliases: [string, Snippet | WithOwnSnippet][] = [];
+      const argAliases: [string, Snippet][] = [];
 
       for (const [i, argType] of options.argTypes.entries()) {
         const astParam = options.params[i];
@@ -505,12 +493,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           case FuncParameterType.destructuredObject: {
             const objSnippet = snip(`_arg_${i}`, argType, origin);
             args.push(objSnippet);
-            argAliases.push(...astParam.props.map(({ name, alias }) =>
-              [
-                alias,
-                new PropAccess(objSnippet, name),
-              ] as [string, WithOwnSnippet]
-            ));
+            argAliases.push(
+              ...astParam.props.map(({ name, alias }) =>
+                [alias, accessProp(objSnippet, name)] as [string, Snippet]
+              ),
+            );
             break;
           }
           case undefined:

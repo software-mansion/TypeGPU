@@ -65,12 +65,16 @@ export class AutoFragmentFn implements SelfResolvable {
 
   #core: FnCore;
 
-  constructor(impl: AutoFragmentFnImpl, varyings: Record<string, AnyData>) {
+  constructor(
+    impl: AutoFragmentFnImpl,
+    varyings: Record<string, AnyData>,
+    locations?: Record<string, number> | undefined,
+  ) {
     this.impl = impl;
     this.autoIn = new AutoStruct({
       ...builtinFragmentIn,
       ...varyings,
-    });
+    }, locations);
     this.#core = createFnCore(impl, '@fragment ');
   }
 

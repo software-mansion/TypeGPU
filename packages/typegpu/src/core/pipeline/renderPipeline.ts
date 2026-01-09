@@ -859,7 +859,7 @@ class RenderPipelineCore implements SelfResolvable {
                   !isBuiltin(dataType)
                 ),
               );
-              ctx.resolve(new AutoFragmentFn(fragment, vertexOut));
+              ctx.resolve(new AutoFragmentFn(fragment, vertexOut, locations));
             } else {
               ctx.resolve(fragment);
             }

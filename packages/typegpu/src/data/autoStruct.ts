@@ -21,9 +21,15 @@ export class AutoStruct implements SelfResolvable {
    */
   readonly remapped: Record<string, string>;
 
-  constructor(validProps: Record<string, AnyData>) {
+  #locations: Record<string, number> | undefined;
+
+  constructor(
+    validProps: Record<string, AnyData>,
+    locations?: Record<string, number> | undefined,
+  ) {
     this.validProps = validProps;
     this.remapped = {};
+    this.#locations = locations;
   }
 
   accessProp(target: unknown, key: string): ResolvedSnippet | undefined {
@@ -34,11 +40,15 @@ export class AutoStruct implements SelfResolvable {
 
     let wgslKey = this.remapped[key];
     if (!wgslKey) {
-      // Find a unique key
-      wgslKey = key.replace('$', ''); // Starting with the original key without '$' (identity for non-builtins)
-      let idx = 1;
-      while (wgslKey in this.validProps) {
-        wgslKey = `${key}_${++idx}`;
+      if (key.includes('$')) {
+        // Find a unique key
+        wgslKey = key.replace('$', ''); // Starting with the original key without '$' (identity for non-builtins)
+        let idx = 1;
+        while (wgslKey in this.validProps) {
+          wgslKey = `${key}_${++idx}`;
+        }
+      } else {
+        wgslKey = key;
       }
       this.remapped[key] = wgslKey;
     }
@@ -47,12 +57,14 @@ export class AutoStruct implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    // TODO: Pass varying location
-    const regularStruct = createIoSchema(Object.fromEntries(
-      Object.entries(this.remapped).map(([jsKey, wgslKey]) => {
-        return [wgslKey, this.validProps[jsKey]] as [string, IOData];
-      }),
-    ));
+    const regularStruct = createIoSchema(
+      Object.fromEntries(
+        Object.entries(this.remapped).map(([jsKey, wgslKey]) => {
+          return [wgslKey, this.validProps[jsKey]] as [string, IOData];
+        }),
+      ),
+      this.#locations,
+    );
 
     return ctx.resolve(regularStruct);
   }

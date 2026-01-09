@@ -1158,7 +1158,7 @@ describe('root.createRenderPipeline', () => {
     }
   });
 
-  it('generates a struct that matches the access pattern for shell-less fragments', ({ root }) => {
+  it('generates a struct that matches the access pattern for shell-less fragments (only builtins)', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       vertex: vertex,
       fragment: ({ $frontFacing }) => {
@@ -1186,6 +1186,41 @@ describe('root.createRenderPipeline', () => {
       @fragment fn item(_arg_0: item_1) -> @location(0) vec4f {
         if (_arg_0.frontFacing) {
           return vec4f(1, 0, 0, 1);
+        }
+        return vec4f(0, 1, 0, 1);
+      }"
+    `);
+  });
+
+  it('generates a struct that matches the access pattern for shell-less fragments', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: vertex,
+      fragment: ({ $frontFacing, b }) => {
+        'use gpu';
+        if ($frontFacing) {
+          return d.vec4f(b, 0, 1);
+        }
+        return d.vec4f(0, 1, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @location(0) a: vec3f,
+        @location(1) b: vec2f,
+      }
+
+      @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
+
+      struct item_1 {
+        @builtin(front_facing) frontFacing: bool,
+        @location(1) b: vec2f,
+      }
+
+      @fragment fn item(_arg_0: item_1) -> @location(0) vec4f {
+        if (_arg_0.frontFacing) {
+          return vec4f(_arg_0.b, 0f, 1f);
         }
         return vec4f(0, 1, 0, 1);
       }"
