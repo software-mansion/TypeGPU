@@ -392,7 +392,8 @@ function createGenericFn<Callback extends AnyFn>(
     },
   };
 
-  // delegate to the original callback
+  // delegating to the original callback is not enough here? 
+  // maybe wrapping the callback with providing context and then resolvingis needed?
   const call = ((...args: Parameters<Callback>): ReturnType<Callback> => {
     return callback(...args) as ReturnType<Callback>;
   }) as Callback;
