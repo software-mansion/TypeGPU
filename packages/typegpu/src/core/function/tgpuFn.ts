@@ -182,6 +182,13 @@ export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
 }
 
+export function isGenericFn<Callback extends AnyFn>(
+  value: unknown | TgpuGenericFn<Callback>,
+): value is TgpuGenericFn<Callback> {
+  return isMarkedInternal(value) &&
+    (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function';
+}
+
 // --------------
 // Implementation
 // --------------
@@ -392,8 +399,6 @@ function createGenericFn<Callback extends AnyFn>(
     },
   };
 
-  // delegating to the original callback is not enough here? 
-  // maybe wrapping the callback with providing context and then resolvingis needed?
   const call = ((...args: Parameters<Callback>): ReturnType<Callback> => {
     return callback(...args) as ReturnType<Callback>;
   }) as Callback;
