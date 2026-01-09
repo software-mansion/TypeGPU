@@ -83,10 +83,9 @@ export function setName(definition: object, name: string): void {
 }
 
 /**
- * Can be assigned a name. Not to be confused with
- * being able to HAVE a name.
+ * Can be assigned a name. Not to be confused with just having a name.
  * The `$name` function should use `setName` to rename the object itself,
- * or rename the object `$getNameForward` symbol points to instead if applicable.
+ * even if `$getNameForward` symbol is present.
  */
 export interface TgpuNamable {
   $name(label: string): this;

@@ -232,7 +232,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   $name(label: string): this {
-    setName(this._core, label);
+    setName(this, label);
     return this;
   }
 }

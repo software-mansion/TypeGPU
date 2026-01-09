@@ -2,7 +2,7 @@ import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
-import { getName } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
@@ -109,7 +109,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   }
 
   $name(label: string) {
-    this.slot.$name(label);
+    setName(this, label);
     return this;
   }
 

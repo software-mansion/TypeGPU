@@ -74,12 +74,14 @@ import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts'
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
 
 // ----------
 // Public API
 // ----------
 
-export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]>
+  extends TgpuNamable {
   /**
    * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.

@@ -154,7 +154,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
-      setName(core, newLabel);
+      setName(this, newLabel);
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }
