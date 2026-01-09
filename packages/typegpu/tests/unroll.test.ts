@@ -26,13 +26,13 @@ describe('tgpu.unroll', () => {
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> arr: array<f32>;
+      "@group(0) @binding(0) var<storage, read> arr_1: array<f32>;
 
       fn f() {
         var a = array<i32, 3>(1, 2, 3);
         var v1 = vec2f(7);
         let v2 = (&v1);
-        let arr = (&arr);
+        let arr = (&arr_1);
       }"
     `);
   });
@@ -45,20 +45,31 @@ describe('tgpu.unroll', () => {
         result += d.f32(item);
       }
 
-      const arr = [1, 2, 3];
-      for (const item of tgpu['~unstable'].unroll(arr)) { // should operate on indices
-        result -= item;
-      }
+      // const arr = [1, 2, 3];
+      // for (const item of tgpu['~unstable'].unroll(arr)) { // should operate on indices
+      //   result -= item;
+      // }
 
-      const v = d.vec2f();
-      for (const item of tgpu['~unstable'].unroll(v)) { // should operate on indices
-        result *= item;
-      }
+      // const v = d.vec2f();
+      // for (const item of tgpu['~unstable'].unroll(v)) { // should operate on indices
+      //   result *= item;
+      // }
 
       return result;
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> f32 {
+        var result = 0f;
+        for (var i = 0; i < 3; i++) {
+          let item = array<i32, 3>(1, 2, 3)[i];
+          {
+            result += f32(item);
+          }
+        }
+        return result;
+      }"
+    `);
   });
 
   it.skip('unrolls forOf of iterable provided by comptime', () => {

@@ -34,6 +34,7 @@ import {
 import {
   ArrayExpression,
   concretize,
+  forOfHelpers,
   type GenerationCtx,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
@@ -44,7 +45,6 @@ import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { arrayLength } from '../std/array.ts';
 import { UnrolledIterable } from '../../src/core/unroll/tgpuUnroll.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -1065,120 +1065,71 @@ ${this.ctx.pre}else ${alternate}`;
     if (statement[0] === NODE.forOf) {
       const [_, loopVar, iterable, body] = statement;
 
-      const iterableExpr = this.expression(iterable);
-
-      const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
-      const iterableSnippet = shouldUnroll
-        ? iterableExpr.value.snippet
-        : iterableExpr;
-
-      if (isEphemeralSnippet(iterableSnippet) && !shouldUnroll) {
-        throw new Error(
-          '`for ... of ...` loops only support iterables stored in variables',
-        );
-      }
-
-      const iterableDataType = iterableSnippet.dataType;
-      let elementCountSnippet: Snippet;
-      if (wgsl.isWgslArray(iterableDataType)) {
-        elementCountSnippet = iterableDataType.elementCount > 0
-          ? snip(
-            `${iterableDataType.elementCount}`,
-            u32,
-            'constant',
-          )
-          : arrayLength[$internal].gpuImpl(iterableSnippet);
-      } else if (wgsl.isVec(iterableDataType)) {
-        elementCountSnippet = snip(
-          `${Number(iterableDataType.type.match(/\d/))}`,
-          u32,
-          'constant',
-        );
-      } else {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
-        );
-      }
-
       if (loopVar[0] !== NODE.const) {
         throw new WgslTypeError(
           'Only `for (const ... of ... )` loops are supported',
         );
       }
 
-      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
-      // an implicit pointer to it
-      let loopVarKind = 'let';
-      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+      const iterableExpr = this.expression(iterable);
+      const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
+      const iterableSnippet = shouldUnroll
+        ? iterableExpr.value.snippet
+        : iterableExpr;
+      const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
 
-      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
-      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
-      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
-      // so we can safely use `i`.
-      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
-      while (this.ctx.getById(index) !== null) {
-        index += 'i';
+      if (shouldUnroll && ephemeralIterable) {
+        throw new Error('Not implemented');
       }
 
-      const elementSnippet = accessIndex(
-        iterableSnippet,
-        snip(index, u32, 'runtime'),
-      );
-      if (!elementSnippet) {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
+      if (shouldUnroll && !ephemeralIterable) {
+        throw new Error('Not implemented');
+      }
+
+      if (!shouldUnroll && !ephemeralIterable) {
+        const index = forOfHelpers.getValidIndexName(this.ctx);
+        const elementSnippet = forOfHelpers.getElementSnippet(
+          iterableSnippet,
+          index,
         );
+        const elementCountSnippet = forOfHelpers.getElementCountSnippet(
+          iterableSnippet,
+        );
+        const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+        const loopVarKind = forOfHelpers.getLoopVarKind(elementSnippet);
+        const elementType = forOfHelpers.getElementType(elementSnippet);
+
+        const loopVarSnippet = snip(
+          loopVarName,
+          elementType,
+          elementSnippet.origin,
+        );
+        this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+        const forStr =
+          stitch`${this.ctx.pre}for (var ${index} = 0; ${index} < ${
+            tryConvertSnippet(elementCountSnippet, u32, false)
+          }; ${index}++) {`;
+
+        this.ctx.indent();
+
+        const loopVarDeclStr =
+          stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+            tryConvertSnippet(elementSnippet, elementType as AnyData, false)
+          };`;
+
+        const bodyStr = `${this.ctx.pre}${
+          this.block(blockifySingleStatement(body))
+        }`;
+
+        this.ctx.dedent();
+
+        return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
       }
-      let elementType = elementSnippet.dataType;
 
-      if (!isEphemeralSnippet(elementSnippet)) {
-        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
-          loopVarKind = 'const';
-        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
-          loopVarKind = 'let';
-        } else {
-          loopVarKind = 'let';
-          if (!wgsl.isPtr(elementType)) {
-            const ptrType = createPtrFromOrigin(
-              elementSnippet.origin,
-              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
-            );
-            invariant(
-              ptrType !== undefined,
-              `Creating pointer type from origin ${elementSnippet.origin}`,
-            );
-            elementType = ptrType;
-          }
-
-          elementType = implicitFrom(elementType);
-        }
-      }
-
-      const loopVarSnippet = snip(
-        loopVarName,
-        elementType,
-        elementSnippet.origin,
+      throw new Error(
+        '`for ... of ...` loops only support iterables stored in variables',
       );
-      this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
-      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0; ${index} < ${
-        tryConvertSnippet(elementCountSnippet, u32, false)
-      }; ${index}++) {`;
-
-      this.ctx.indent();
-
-      const loopVarDeclStr =
-        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
-          tryConvertSnippet(elementSnippet, elementType as AnyData, false)
-        };`;
-
-      const bodyStr = `${this.ctx.pre}${
-        this.block(blockifySingleStatement(body))
-      }`;
-
-      this.ctx.dedent();
-
-      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.continue) {
