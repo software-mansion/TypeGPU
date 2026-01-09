@@ -33,8 +33,6 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
   }[keyof T]
 >;
 
-export type Equal<T, U> = [T, U] extends [U, T] ? true : false;
-
 /**
  * Removes properties from record type that equal `Prop`
  */
