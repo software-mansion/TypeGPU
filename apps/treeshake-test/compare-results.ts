@@ -58,7 +58,7 @@ function prettifySize(size: number | undefined) {
   } ${units[unitIndex]}`;
 }
 
-async function generateSingleTableReport(
+async function generateReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
 ) {
@@ -142,7 +142,7 @@ async function generateSingleTableReport(
 async function main() {
   const [prFile, targetFile] = process.argv.slice(2);
 
-  if (!prFile) {
+  if (!prFile || !targetFile) {
     console.error(
       'Usage: compare-results.js <pr-results.json> [target-results.json]',
     );
@@ -170,7 +170,7 @@ async function main() {
   }
 
   // Generate appropriate report
-  const markdownReport = await generateSingleTableReport(
+  const markdownReport = await generateReport(
     prResults,
     targetResults,
   );
