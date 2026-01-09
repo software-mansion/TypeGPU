@@ -2,8 +2,9 @@ import { builtin } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
+import { vec4f } from '../../data/vector.ts';
 import type { AnyVecInstance, v4f } from '../../data/wgslTypes.ts';
-import type { InferRecord } from '../../shared/repr.ts';
+import type { InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -40,13 +41,14 @@ export type AutoFragmentIn<T extends AnyAutoCustoms> =
   & T
   & InferRecord<typeof builtinFragmentIn>;
 
+const builtinFragmentOut = {
+  '$fragDepth': builtin.fragDepth,
+  '$sampleMask': builtin.sampleMask,
+} as const;
+
 export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
   T extends undefined | v4f ? T
-    : {
-      // builtins
-      $fragDepth?: number | undefined;
-      $sampleMask?: number | undefined;
-    };
+    : T & Partial<InferGPURecord<typeof builtinFragmentOut>>;
 
 type AutoFragmentFnImpl = (
   input: AutoFragmentIn<AnyAutoCustoms>,
@@ -61,7 +63,7 @@ export class AutoFragmentFn implements SelfResolvable {
   declare resourceType: 'auto-fragment-fn';
 
   impl: AutoFragmentFnImpl;
-  autoIn: AutoStruct;
+  #autoIn: AutoStruct;
 
   #core: FnCore;
 
@@ -71,15 +73,23 @@ export class AutoFragmentFn implements SelfResolvable {
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;
-    this.autoIn = new AutoStruct({
-      ...builtinFragmentIn,
-      ...varyings,
-    }, locations);
+    this.#autoIn = new AutoStruct(
+      {
+        ...builtinFragmentIn,
+        ...varyings,
+      },
+      undefined,
+      locations,
+    );
     this.#core = createFnCore(impl, '@fragment ');
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [this.autoIn], undefined);
+    return this.#core.resolve(
+      ctx,
+      [this.#autoIn],
+      new AutoStruct(builtinFragmentOut, vec4f),
+    );
   }
 }
 

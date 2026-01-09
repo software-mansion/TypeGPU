@@ -44,6 +44,7 @@ import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -280,13 +281,16 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: AnyData,
+    expectedType: AnyData | AutoStruct,
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
 
     try {
       const result = this.expression(expression);
+      if (expectedType instanceof AutoStruct) {
+        return result;
+      }
       return tryConvertSnippet(result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
@@ -663,39 +667,59 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.objectExpr) {
       // Object Literal
       const obj = expression[1];
-
       const structType = this.ctx.expectedType;
 
-      if (!structType || !wgsl.isWgslStruct(structType)) {
-        throw new WgslTypeError(
-          `No target type could be inferred for object with keys [${
-            Object.keys(obj).join(', ')
-          }], please wrap the object in the corresponding schema.`,
+      if (structType instanceof AutoStruct) {
+        const entries = Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => {
+            const accessed = structType.accessProp(key);
+            if (value === undefined || !accessed) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const [wgslKey, dataType] = accessed;
+            return [wgslKey, this.typedExpression(value, dataType)];
+          }),
+        );
+
+        const completeStruct = structType.completeStruct;
+        const convertedSnippets = convertStructValues(completeStruct, entries);
+
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          completeStruct,
+          /* origin */ 'runtime',
         );
       }
 
-      const entries = Object.fromEntries(
-        Object.entries(structType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new WgslTypeError(
-              `Missing property ${key} in object literal for struct ${structType}`,
-            );
-          }
-          const result = this.typedExpression(
-            val,
-            value as AnyData,
-          );
-          return [key, result];
-        }),
-      );
+      if (wgsl.isWgslStruct(structType)) {
+        const entries = Object.fromEntries(
+          Object.entries(structType.propTypes).map(([key, value]) => {
+            const val = obj[key];
+            if (val === undefined) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const result = this.typedExpression(val, value as AnyData);
+            return [key, result];
+          }),
+        );
 
-      const convertedSnippets = convertStructValues(structType, entries);
+        const convertedSnippets = convertStructValues(structType, entries);
 
-      return snip(
-        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
-        structType,
-        /* origin */ 'runtime',
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          structType,
+          /* origin */ 'runtime',
+        );
+      }
+
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${
+          Object.keys(obj).join(', ')
+        }], please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -806,10 +830,7 @@ ${this.ctx.pre}}`;
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
         let returnSnippet = expectedReturnType
-          ? this.typedExpression(
-            returnNode,
-            expectedReturnType,
-          )
+          ? this.typedExpression(returnNode, expectedReturnType)
           : this.expression(returnNode);
 
         if (returnSnippet.value instanceof RefOperator) {

@@ -75,6 +75,7 @@ import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import type { IOData } from './core/function/fnTypes.ts';
+import { AutoStruct } from './data/autoStruct.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -157,7 +158,7 @@ class ItemStateStackImpl implements ItemStateStack {
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
-    returnType: AnyData | undefined,
+    returnType: AnyData | AutoStruct | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
@@ -500,8 +501,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             );
             break;
           }
-          case undefined:
-            args.push(snip(`_arg_${i}`, argType, origin));
+          case undefined: {
+            // Only push the argument if it's not an auto-struct.
+            // If we're not using an auto-struct, it's not going to
+            // have any properties anyway.
+            if (!(argType instanceof AutoStruct)) {
+              args.push(snip(`_arg_${i}`, argType, origin));
+            }
+          }
         }
       }
 
@@ -518,6 +525,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const body = this.#shaderGenerator.functionDefinition(options.body);
 
       let returnType = options.returnType;
+      if (returnType instanceof AutoStruct) {
+        // We're expecting an "auto" return type, so if there were structs returned,
+        // we accept the struct, otherwise we let the rest of the code unify on a
+        // primitive type.
+        if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+          returnType = returnType.completeStruct;
+        } else {
+          returnType = undefined;
+        }
+      }
+
       if (!returnType) {
         const returnTypes = [...scope.reportedReturnTypes];
         if (returnTypes.length === 0) {
@@ -1019,7 +1037,7 @@ export function resolve(
   };
 }
 
-export function resolveFunctionHeader(
+function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
   returnType: AnyData,

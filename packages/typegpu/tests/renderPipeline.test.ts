@@ -1226,6 +1226,38 @@ describe('root.createRenderPipeline', () => {
       }"
     `);
   });
+
+  it('generates a struct that matches a shell-less fragment return value', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: vertex,
+      fragment: () => {
+        'use gpu';
+        return {
+          color: d.vec4f(0, 1, 0, 1),
+          $fragDepth: 0,
+        };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @location(0) a: vec3f,
+        @location(1) b: vec2f,
+      }
+
+      @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
+
+      struct item_1 {
+        @location(0) color: vec4f,
+        @builtin(frag_depth) fragDepth: f32,
+      }
+
+      @fragment fn item() -> item_1 {
+        return item_1(vec4f(0, 1, 0, 1), 0f);
+      }"
+    `);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {

@@ -175,7 +175,11 @@ export function accessProp(
   }
 
   if (target.dataType instanceof AutoStruct) {
-    return (target.dataType as AutoStruct).accessProp(target.value, propName);
+    const result = (target.dataType as AutoStruct).accessProp(propName);
+    if (!result) {
+      return undefined;
+    }
+    return snip(stitch`${target}.${result[0]}`, result[1], 'argument');
   }
 
   if (isPtr(target.dataType)) {

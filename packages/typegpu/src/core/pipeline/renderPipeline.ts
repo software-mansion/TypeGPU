@@ -1,4 +1,4 @@
-import type { OmitBuiltins } from '../../builtin.ts';
+import type { AnyBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type {
   IndexFlag,
   TgpuBuffer,
@@ -281,8 +281,8 @@ export type FragmentOutToTargets<T> =
     ? GPUColorTargetState
   : T extends Record<string, unknown> // a record
   ? {
-      // Stripping all decorated properties
-      [Key in keyof T as T[Key] extends Decorated ? never : Key]: GPUColorTargetState;
+      // Stripping all builtin properties
+      [Key in keyof T as T[Key] extends AnyBuiltin ? never : Key extends `$${string}` ? never : Key]: GPUColorTargetState;
     }
   : GPUColorTargetState;
 

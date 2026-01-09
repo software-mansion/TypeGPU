@@ -27,7 +27,7 @@ export interface FnCore {
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: AnyData | undefined,
+    returnType: AnyData | AutoStruct | undefined,
   ): ResolvedSnippet;
 }
 
