@@ -39,7 +39,7 @@ import {
   Time,
   timeAccess,
 } from './schemas.ts';
-import { Camera, setupOrbitCamera } from './setup-orbit-camera.ts';
+import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
