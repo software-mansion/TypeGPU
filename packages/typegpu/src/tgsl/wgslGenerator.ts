@@ -549,27 +549,36 @@ ${this.ctx.pre}}`;
         return callee.value.operator(callee.value.lhs, rhs);
       }
 
-      if (!isMarkedInternal(callee.value)) {
-        const args = argNodes.map((arg) => this.expression(arg));
-        const shellless = this.ctx.shelllessRepo.get(
-          callee.value as (...args: never[]) => unknown,
-          args,
-        );
-        if (shellless) {
-          const converted = args.map((s, idx) => {
-            const argType = shellless.argTypes[idx] as AnyData;
-            return tryConvertSnippet(s, argType, /* verbose */ false);
-          });
+      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
+        const slotPairs = isGenericFn(callee.value)
+          ? callee.value[$providing]?.pairs
+          : [];
+        const callback = isGenericFn(callee.value)
+          ? callee.value.callback
+          : (callee.value as (...args: never[]) => unknown);
 
-          return this.ctx.withResetIndentLevel(() => {
-            const snippet = this.ctx.resolve(shellless);
-            return snip(
-              stitch`${snippet.value}(${converted})`,
-              snippet.dataType,
-              /* origin */ 'runtime',
-            );
-          });
-        }
+        this.ctx.withSlots(slotPairs, () => {
+          const args = argNodes.map((arg) => this.expression(arg));
+          const shellless = this.ctx.shelllessRepo.get(
+            callback,
+            args,
+          );
+          if (shellless) {
+            const converted = args.map((s, idx) => {
+              const argType = shellless.argTypes[idx] as AnyData;
+              return tryConvertSnippet(s, argType, /* verbose */ false);
+            });
+
+            return this.ctx.withResetIndentLevel(() => {
+              const snippet = this.ctx.resolve(shellless);
+              return snip(
+                stitch`${snippet.value}(${converted})`,
+                snippet.dataType,
+                /* origin */ 'runtime',
+              );
+            });
+          }
+        });
 
         throw new Error(
           `Function '${
