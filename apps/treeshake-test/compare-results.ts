@@ -89,7 +89,7 @@ async function generateSingleTableReport(
     for (const bundler of allBundlers) {
       const prSize = prGrouped[example]?.[bundler];
       const targetSize = targetGrouped[example]?.[bundler];
-      assert(prSize);
+      assert(prSize !== undefined);
 
       if (targetSize === undefined) totalUnknown++;
       else if (prSize > targetSize) totalIncrease++;
