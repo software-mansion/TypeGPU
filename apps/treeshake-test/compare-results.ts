@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { arrayOf, type } from 'arktype';
-import assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 
 // Define schema for benchmark results
@@ -39,9 +38,9 @@ function calculateTrendMessage(
   const diff = prSize - targetSize;
   const percent = ((diff / targetSize) * 100).toFixed(1);
   if (diff > 0) {
-    return `($\${\\color{red}+${percent}}\\\\%$$)`;
+    return `($\${\\color{red}+${percent}\\\\%}$$)`;
   }
-  return `($\${\\color{green}${percent}}\\\\%$$)`;
+  return `($\${\\color{green}${percent}\\\\%}$$)`;
 }
 
 function prettifySize(size: number | undefined) {
@@ -91,9 +90,8 @@ async function generateSingleTableReport(
     for (const bundler of allBundlers) {
       const prSize = prGrouped[test]?.[bundler];
       const targetSize = targetGrouped[test]?.[bundler];
-      assert(prSize !== undefined);
 
-      if (targetSize === undefined) totalUnknown++;
+      if (targetSize === undefined || prSize === undefined) totalUnknown++;
       else if (prSize > targetSize) totalIncrease++;
       else if (prSize < targetSize) totalDecrease++;
       else totalUnchanged++;
@@ -118,7 +116,7 @@ async function generateSingleTableReport(
 
   // Table separator
   output += '|---------';
-  for (const bundler of allBundlers) {
+  for (const _ of allBundlers) {
     output += '|---------';
   }
   output += ' |\n';

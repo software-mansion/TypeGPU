@@ -89,6 +89,10 @@ export async function bundleWithTsdown(
 
   try {
     await tsdown({
+      outputOptions: {
+        name: path.basename(outPath.pathname),
+        dir: path.dirname(outPath.pathname),
+      },
       minify: true,
       platform: 'neutral',
       clean: false,
