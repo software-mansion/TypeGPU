@@ -1,6 +1,5 @@
 import * as fs from 'node:fs/promises';
 import {
-  bundleWithEsbuild,
   bundleWithTsdown,
   bundleWithWebpack,
   getFileSize,
@@ -34,7 +33,8 @@ async function main() {
 
   const results = await Promise.allSettled(
     tests.flatMap((test) => [
-      bundleTest(test, 'esbuild', bundleWithEsbuild),
+      // https://github.com/software-mansion/TypeGPU/issues/2026
+      // bundleTest(test, 'esbuild', bundleWithEsbuild),
       bundleTest(test, 'tsdown', bundleWithTsdown),
       bundleTest(test, 'webpack', bundleWithWebpack),
     ]),

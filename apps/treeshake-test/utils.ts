@@ -3,6 +3,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { build as tsdown } from 'tsdown';
 import webpack from 'webpack';
+import esbuildPlugin from 'unplugin-typegpu/esbuild';
+import webpackPlugin from 'unplugin-typegpu/webpack';
+import rolldownPlugin from 'unplugin-typegpu/rolldown';
 
 export type ResultRecord = {
   testUrl: URL;
@@ -18,6 +21,7 @@ export async function bundleWithEsbuild(
   const entryFileName = path.basename(entryUrl.pathname, '.ts');
   const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
   await esbuild({
+    plugins: [esbuildPlugin({})],
     entryPoints: [entryUrl.pathname],
     bundle: true,
     outfile: outPath.pathname,
@@ -43,6 +47,7 @@ export async function bundleWithWebpack(
           path: path.dirname(outPath.pathname),
           filename: path.basename(outPath.pathname),
         },
+        plugins: [webpackPlugin({})],
         module: {
           rules: [
             {
@@ -89,6 +94,7 @@ export async function bundleWithTsdown(
 
   try {
     await tsdown({
+      plugins: [rolldownPlugin({})],
       outputOptions: {
         name: path.basename(outPath.pathname),
         dir: path.dirname(outPath.pathname),

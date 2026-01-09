@@ -110,7 +110,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.3.1(@types/react@19.1.8)
+        version: 1.3.5
 
   apps/infra-benchmarks:
     devDependencies:
@@ -123,6 +123,9 @@ importers:
       typegpu:
         specifier: workspace:*
         version: link:../../packages/typegpu
+      unplugin-typegpu:
+        specifier: ^0.9.0
+        version: 0.9.0(typegpu@packages+typegpu)
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -2685,8 +2688,8 @@ packages:
   '@types/bun@1.2.22':
     resolution: {integrity: sha512-5A/KrKos2ZcN0c6ljRSOa1fYIyCKhZfIVYeuyb4snnvomnpFqC0tTsEkdqNxbAgExV384OETQ//WAjl3XbYqQA==}
 
-  '@types/bun@1.3.1':
-    resolution: {integrity: sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ==}
+  '@types/bun@1.3.5':
+    resolution: {integrity: sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w==}
 
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
@@ -3240,10 +3243,8 @@ packages:
     peerDependencies:
       '@types/react': ^19
 
-  bun-types@1.3.1:
-    resolution: {integrity: sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw==}
-    peerDependencies:
-      '@types/react': ^19
+  bun-types@1.3.5:
+    resolution: {integrity: sha512-inmAYe2PFLs0SUbFOWSVD24sg1jFlMPxOjOSSCYqUgn4Hsc3rDc7dFvfVYjFPNHtov6kgUeulV4SxbuIV/stPw==}
 
   bundle-require@5.1.0:
     resolution: {integrity: sha512-3WrrOuZiyaaZPWiEt4G3+IffISVC9HYlWueJEBWED4ZH4aIAC2PnkdnuRrR94M+w6yGWn4AglWtJtBI8YqvgoA==}
@@ -6172,6 +6173,14 @@ packages:
     resolution: {integrity: sha512-74pmf47HY/bHqamcCMGris+1AtGGsqTZ3Hc/UK4QvSmRuf/9PIF9753+c8XBh7JfX2r9KeZtVjOYjd6vFpc0qQ==}
     engines: {node: '>=18.0.0'}
 
+  tinyest-for-wgsl@0.2.0:
+    resolution: {integrity: sha512-aFKlgGEjQJYcq31+5ykwyd0Cbw5BCb3s/ATje9wlkgyNPwKtSZCSXAPsCswjaQBCiHXub0onzsfgYvy7ez8t0Q==}
+    engines: {node: '>=12.20.0'}
+
+  tinyest@0.2.0:
+    resolution: {integrity: sha512-k8XL8FipMVboHtNwAJ6PgGVkWk+9hWEROGoxEXJKmO9ZOXehlBgdGY5uCkGRgT60TYJhtfOelvC/ikMpKYAmHA==}
+    engines: {node: '>=12.20.0'}
+
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
@@ -6462,6 +6471,11 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
+
+  unplugin-typegpu@0.9.0:
+    resolution: {integrity: sha512-xEuOgh9u5BXAG+T2kiBKT2Dn5+gTkcBeHFGMMNMjOx5NT6HcKI/uu6XucAnGxaE/hkJzwR6aQxxmMe6lhbcxcg==}
+    peerDependencies:
+      typegpu: ^0.9.0
 
   unplugin@2.3.5:
     resolution: {integrity: sha512-RyWSb5AHmGtjjNQ6gIlA67sHOsWpsbWpwDokLwTcejVdOjEkJZh7QKu14J00gDDVSh8kGH4KYC/TNBceXFZhtw==}
@@ -6856,6 +6870,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -8920,11 +8935,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@types/bun@1.3.1(@types/react@19.1.8)':
+  '@types/bun@1.3.5':
     dependencies:
-      bun-types: 1.3.1(@types/react@19.1.8)
-    transitivePeerDependencies:
-      - '@types/react'
+      bun-types: 1.3.5
 
   '@types/chai@5.2.2':
     dependencies:
@@ -9681,10 +9694,9 @@ snapshots:
       '@types/node': 24.10.0
       '@types/react': 19.1.8
 
-  bun-types@1.3.1(@types/react@19.1.8):
+  bun-types@1.3.5:
     dependencies:
       '@types/node': 24.10.0
-      '@types/react': 19.1.8
 
   bundle-require@5.1.0(esbuild@0.25.10):
     dependencies:
@@ -13191,6 +13203,12 @@ snapshots:
 
   tinybench@3.1.1: {}
 
+  tinyest-for-wgsl@0.2.0:
+    dependencies:
+      tinyest: 0.2.0
+
+  tinyest@0.2.0: {}
+
   tinyexec@0.3.2: {}
 
   tinyexec@1.0.1: {}
@@ -13543,6 +13561,19 @@ snapshots:
     optional: true
 
   universalify@2.0.1: {}
+
+  unplugin-typegpu@0.9.0(typegpu@packages+typegpu):
+    dependencies:
+      '@babel/standalone': 7.27.0
+      defu: 6.1.4
+      estree-walker: 3.0.3
+      magic-string-ast: 1.0.0
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      tinyest: 0.2.0
+      tinyest-for-wgsl: 0.2.0
+      typegpu: link:packages/typegpu
+      unplugin: 2.3.5
 
   unplugin@2.3.5:
     dependencies:
