@@ -664,7 +664,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     const colorAttachments = descriptor.fragment
       ? (connectAttachmentToShader(
-        (descriptor.fragment as TgpuFragmentFn | undefined)?.shell.out,
+        (descriptor.fragment as TgpuFragmentFn | undefined)?.shell?.out,
         internals.priors.colorAttachment ?? {},
       ).map((attachment) => {
         if (isTexture(attachment.view)) {
@@ -834,39 +834,35 @@ class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
-  // TODO: Add auto-vertex fns
-  #vertexFn: TgpuVertexFn;
-  #fragmentFn?:
-    | TgpuFragmentFn
-    | AutoFragmentFn
-    | undefined;
-
-  constructor(public readonly options: RenderPipelineCoreOptions) {
-    this.#vertexFn = options.descriptor.vertex;
-    this.#fragmentFn = options.descriptor.fragment &&
-        typeof options.descriptor.fragment === 'function'
-      // TODO: Pass in vertex output
-      ? new AutoFragmentFn(options.descriptor.fragment, {})
-      : options.descriptor.fragment;
-  }
+  constructor(public readonly options: RenderPipelineCoreOptions) {}
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
+    const { vertex, fragment } = this.options.descriptor;
 
     const locations = matchUpVaryingLocations(
-      this.#vertexFn.shell.out,
-      (this.#fragmentFn as TgpuFragmentFn | undefined)?.shell.in,
-      getName(this.#vertexFn) ?? '<unnamed>',
-      getName(this.#fragmentFn) ?? '<unnamed>',
+      vertex.shell.out,
+      (fragment as TgpuFragmentFn | undefined)?.shell?.in,
+      getName(vertex) ?? '<unnamed>',
+      getName(fragment) ?? '<unnamed>',
     );
 
     return ctx.withVaryingLocations(
       locations,
       () =>
         ctx.withSlots(slotBindings, () => {
-          ctx.resolve(this.#vertexFn);
-          if (this.#fragmentFn) {
-            ctx.resolve(this.#fragmentFn);
+          ctx.resolve(vertex);
+          if (fragment) {
+            if (typeof fragment === 'function') {
+              const vertexOut = Object.fromEntries(
+                Object.entries(vertex.shell.out).filter(([, dataType]) =>
+                  !isBuiltin(dataType)
+                ),
+              );
+              ctx.resolve(new AutoFragmentFn(fragment, vertexOut));
+            } else {
+              ctx.resolve(fragment);
+            }
           }
           return snip('', Void, /* origin */ 'runtime');
         }),
@@ -935,7 +931,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const connectedTargets = fragment && targets
       ? connectTargetsToShader(
-        (fragment as TgpuFragmentFn | undefined)?.shell.out,
+        (fragment as TgpuFragmentFn | undefined)?.shell?.out,
         targets,
       )
       : [null];

@@ -1068,7 +1068,7 @@ describe('root.createRenderPipeline', () => {
     out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
   })`{ return Out(); }`;
 
-  it.skip('allows fragment functions to use a subset of the vertex output', ({ root }) => {
+  it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
     const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
     const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
       in: { pos: d.builtin.frontFacing },
@@ -1156,6 +1156,40 @@ describe('root.createRenderPipeline', () => {
     for (const pipeline of pipelines) {
       expect(pipeline).toBeDefined();
     }
+  });
+
+  it('generates a struct that matches the access pattern for shell-less fragments', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: vertex,
+      fragment: ({ $frontFacing }) => {
+        'use gpu';
+        if ($frontFacing) {
+          return d.vec4f(1, 0, 0, 1);
+        }
+        return d.vec4f(0, 1, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @location(0) a: vec3f,
+        @location(1) b: vec2f,
+      }
+
+      @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
+
+      struct item_1 {
+        @builtin(front_facing) frontFacing: bool,
+      }
+
+      @fragment fn item(_arg_0: item_1) -> @location(0) vec4f {
+        if (_arg_0.frontFacing) {
+          return vec4f(1, 0, 0, 1);
+        }
+        return vec4f(0, 1, 0, 1);
+      }"
+    `);
   });
 });
 

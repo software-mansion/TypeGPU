@@ -41,15 +41,14 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable']
-  .createRenderPipeline({
-    vertex: mainVertex,
-    fragment: ({ uv }) => {
-      'use gpu';
-      return getGradientColor((uv.x + uv.y) / 2);
-    },
-    targets: { format: presentationFormat },
-  });
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: mainVertex,
+  fragment: ({ uv }) => {
+    'use gpu';
+    return getGradientColor((uv.x + uv.y) / 2);
+  },
+  targets: { format: presentationFormat },
+});
 
 pipeline
   .withColorAttachment({

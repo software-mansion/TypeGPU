@@ -96,7 +96,7 @@ export type FunctionScopeLayer = {
   type: 'functionScope';
   functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   args: Snippet[];
-  argAliases: Record<string, Snippet>;
+  argAliases: Record<string, Snippet | WithOwnSnippet>;
   externalMap: Record<string, unknown>;
   /**
    * The return type of the function. If undefined, the type should be inferred

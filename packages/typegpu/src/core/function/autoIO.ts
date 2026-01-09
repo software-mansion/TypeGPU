@@ -1,8 +1,9 @@
+import { builtin } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
-import { bool, u32 } from '../../data/numeric.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import { vec4f } from '../../data/vector.ts';
 import type { AnyVecInstance, v4f } from '../../data/wgslTypes.ts';
+import type { InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -25,28 +26,19 @@ export type AutoVertexOut<T extends AnyAutoCustoms> =
     $position?: v4f | undefined;
   };
 
-// const builtinFragmentIn = {
-//   '$position': vec4f,
-//   '$frontFacing': bool,
-//   '$primitiveIndex': u32,
-//   '$sampleIndex',
-//   '$sampleMask',
-//   '$subgroupInvocationId',
-//   '$subgroupSize',
-// } as const;
+const builtinFragmentIn = {
+  '$position': builtin.position,
+  '$frontFacing': builtin.frontFacing,
+  '$primitiveIndex': builtin.primitiveIndex,
+  '$sampleIndex': builtin.sampleIndex,
+  '$sampleMask': builtin.sampleMask,
+  '$subgroupInvocationId': builtin.subgroupInvocationId,
+  '$subgroupSize': builtin.subgroupSize,
+} as const;
 
 export type AutoFragmentIn<T extends AnyAutoCustoms> =
   & T
-  & {
-    // builtins
-    $position: v4f;
-    $frontFacing: boolean;
-    $primitiveIndex: number;
-    $sampleIndex: number;
-    $sampleMask: number;
-    $subgroupInvocationId: number;
-    $subgroupSize: number;
-  };
+  & InferRecord<typeof builtinFragmentIn>;
 
 export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
   T extends undefined | v4f ? T
@@ -73,17 +65,17 @@ export class AutoFragmentFn implements SelfResolvable {
 
   #core: FnCore;
 
-  constructor(impl: AutoFragmentFnImpl, varyings: AnyAutoCustoms) {
+  constructor(impl: AutoFragmentFnImpl, varyings: Record<string, AnyData>) {
     this.impl = impl;
-    this.autoIn = new AutoStruct([
+    this.autoIn = new AutoStruct({
       ...builtinFragmentIn,
-      ...Object.keys(varyings),
-    ]);
+      ...varyings,
+    });
     this.#core = createFnCore(impl, '@fragment ');
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [AUtoS], undefined);
+    return this.#core.resolve(ctx, [this.autoIn], undefined);
   }
 }
 

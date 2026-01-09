@@ -1,5 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AutoStruct } from '../../data/autoStruct.ts';
+import type { AutoStruct } from '../../data/autoStruct.ts';
 import { type AnyData, undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
