@@ -14,7 +14,6 @@ describe('tgpu.fn with shell-less callback', () => {
 
     const getDouble4 = tgpu.fn([], d.f32)(getDouble);
 
-
     const main = () => {
       'use gpu';
       const foo = getDouble();
@@ -31,8 +30,7 @@ describe('tgpu.fn with shell-less callback', () => {
         return getDouble_1();
       }"
     `);
-  }); 
-
+  });
 
   it('provides .with() method for binding accessors', () => {
     const countAccess = tgpu['~unstable'].accessor(d.f32, 2);
@@ -43,7 +41,6 @@ describe('tgpu.fn with shell-less callback', () => {
     };
 
     const getDouble4 = tgpu.fn([], d.f32)(getDouble);
-
 
     const main = () => {
       'use gpu';
@@ -105,5 +102,4 @@ describe('tgpu.fn with shell-less callback', () => {
       }"
     `);
   }); // to tym bardziej
-
 });

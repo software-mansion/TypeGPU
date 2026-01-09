@@ -151,7 +151,6 @@ export function fn<
   argTypesOrCallback: Args | AnyFn,
   returnType?: Return | undefined,
 ): TgpuFnShell<Args, Return> | TgpuGenericFn<AnyFn> {
-  
   if (typeof argTypesOrCallback === 'function') {
     return createGenericFn(argTypesOrCallback, []);
   }
