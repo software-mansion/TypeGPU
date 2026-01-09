@@ -1,14 +1,14 @@
-import * as fs from "node:fs/promises";
+import * as fs from 'node:fs/promises';
 import {
   bundleWithEsbuild,
   bundleWithTsdown,
   bundleWithWebpack,
   getFileSize,
   type ResultRecord,
-} from "./utils.ts";
+} from './utils.ts';
 
-const DIST_DIR = new URL("./dist/", import.meta.url);
-const EXAMPLES_DIR = new URL("./examples/", import.meta.url);
+const DIST_DIR = new URL('./dist/', import.meta.url);
+const EXAMPLES_DIR = new URL('./examples/', import.meta.url);
 
 /**
  * A list of example filenames in the examples directory.
@@ -29,21 +29,21 @@ async function bundleExample(
 }
 
 async function main() {
-  console.log("Starting bundler efficiency measurement...");
+  console.log('Starting bundler efficiency measurement...');
   await fs.mkdir(DIST_DIR, { recursive: true });
 
   const results = await Promise.allSettled(
     examples.flatMap((example) => [
-      bundleExample(example, "esbuild", bundleWithEsbuild),
-      bundleExample(example, "tsdown", bundleWithTsdown),
-      bundleExample(example, "webpack", bundleWithWebpack),
+      bundleExample(example, 'esbuild', bundleWithEsbuild),
+      bundleExample(example, 'tsdown', bundleWithTsdown),
+      bundleExample(example, 'webpack', bundleWithWebpack),
     ]),
   );
 
-  if (results.some((result) => result.status === "rejected")) {
-    console.error("Some examples failed to bundle.");
+  if (results.some((result) => result.status === 'rejected')) {
+    console.error('Some examples failed to bundle.');
     for (const result of results) {
-      if (result.status === "rejected") {
+      if (result.status === 'rejected') {
         console.error(result.reason);
       }
     }
@@ -56,11 +56,11 @@ async function main() {
 
   // Save results as JSON
   await fs.writeFile(
-    "results.json",
+    'results.json',
     JSON.stringify(successfulResults, null, 2),
   );
 
-  console.log("\nMeasurement complete. Results saved to results.json");
+  console.log('\nMeasurement complete. Results saved to results.json');
 }
 
 await main();

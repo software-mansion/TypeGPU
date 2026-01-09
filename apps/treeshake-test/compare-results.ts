@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-import { arrayOf, type } from "arktype";
-import assert from "node:assert";
-import * as fs from "node:fs/promises";
+import { arrayOf, type } from 'arktype';
+import assert from 'node:assert';
+import * as fs from 'node:fs/promises';
 
 // Define schema for benchmark results
 const ResultRecord = type({
-  exampleFilename: "string",
-  exampleUrl: "string",
-  bundler: "string",
-  size: "number",
+  exampleFilename: 'string',
+  exampleUrl: 'string',
+  bundler: 'string',
+  size: 'number',
 });
 
 const BenchmarkResults = arrayOf(ResultRecord);
@@ -31,22 +31,22 @@ function calculateTrend(
   targetSize: number | undefined,
 ): { emoji: string; percent: string } {
   if (prSize === undefined || targetSize === undefined) {
-    return { emoji: "", percent: "" };
+    return { emoji: '', percent: '' };
   }
   if (prSize === targetSize) {
-    return { emoji: "➖", percent: "0.0%" };
+    return { emoji: '➖', percent: '0.0%' };
   }
   const diff = prSize - targetSize;
   const percent = ((diff / targetSize) * 100).toFixed(1);
-  const emoji = diff > 0 ? "▲" : "▼";
-  return { emoji, percent: `${diff > 0 ? "+" : ""}${percent}%` };
+  const emoji = diff > 0 ? '▲' : '▼';
+  return { emoji, percent: `${diff > 0 ? '+' : ''}${percent}%` };
 }
 
 function prettifySize(size: number | undefined) {
   if (size === undefined) {
-    return "N/A";
+    return 'N/A';
   }
-  const units = ["B", "kB", "MB", "GB", "TB"];
+  const units = ['B', 'kB', 'MB', 'GB', 'TB'];
   let unitIndex = 0;
   let sizeInUnits = size;
   while (sizeInUnits > 1024 && unitIndex < units.length) {
@@ -77,7 +77,7 @@ async function generateSingleTableReport(
     ...Object.keys(targetGrouped),
   ]);
 
-  let output = "\n\n";
+  let output = '\n\n';
 
   // Summary statistics
   let totalIncrease = 0,
@@ -98,28 +98,28 @@ async function generateSingleTableReport(
     }
   }
 
-  output += "## 📈 Summary\n\n";
+  output += '## 📈 Summary\n\n';
   output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
   output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
   output += `- ➖ **Unchanged**: ${totalUnchanged} bundles\n\n`;
   output += `- ❔ **Unknown**: ${totalUnknown} bundles\n\n`;
 
   // Main comparison table
-  output += "## 📋 Bundle Size Comparison\n\n";
+  output += '## 📋 Bundle Size Comparison\n\n';
 
   // Table header
-  output += "| Example";
+  output += '| Example';
   for (const bundler of allBundlers) {
     output += ` | ${bundler}`;
   }
-  output += " |\n";
+  output += ' |\n';
 
   // Table separator
-  output += "|---------";
+  output += '|---------';
   for (const bundler of allBundlers) {
-    output += "|---------";
+    output += '|---------';
   }
-  output += " |\n";
+  output += ' |\n';
 
   // Table rows
   for (const example of [...allExamples].sort()) {
@@ -134,9 +134,9 @@ async function generateSingleTableReport(
         prettifySize(prSize)
       } ${trend.percent} ${trend.emoji}`;
     }
-    output += " |\n";
+    output += ' |\n';
   }
-  output += "\n";
+  output += '\n';
 
   return output;
 }
@@ -146,7 +146,7 @@ async function main() {
 
   if (!prFile) {
     console.error(
-      "Usage: compare-results.js <pr-results.json> [target-results.json]",
+      'Usage: compare-results.js <pr-results.json> [target-results.json]',
     );
     process.exit(1);
   }
@@ -154,20 +154,20 @@ async function main() {
   // Read and validate PR results
   let prResults: typeof BenchmarkResults.infer;
   try {
-    const prContent = await fs.readFile(prFile, "utf8");
+    const prContent = await fs.readFile(prFile, 'utf8');
     prResults = BenchmarkResults.assert(JSON.parse(prContent));
   } catch (error) {
-    throw new Error("PR results validation failed", { cause: error });
+    throw new Error('PR results validation failed', { cause: error });
   }
 
   // Read and validate target results
   let targetResults: typeof BenchmarkResults.infer = [];
   if (targetFile) {
     try {
-      const targetContent = await fs.readFile(targetFile, "utf8");
+      const targetContent = await fs.readFile(targetFile, 'utf8');
       targetResults = BenchmarkResults.assert(JSON.parse(targetContent));
     } catch (error) {
-      console.warn("Could not read or validate target results:", error);
+      console.warn('Could not read or validate target results:', error);
     }
   }
 
