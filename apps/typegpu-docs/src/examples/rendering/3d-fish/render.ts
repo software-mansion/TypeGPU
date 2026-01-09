@@ -10,15 +10,6 @@ import {
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
-type Varyings = {
-  worldPosition: d.v3f;
-  worldNormal: d.v3f;
-  variant: number;
-  textureUV: d.v2f;
-  applySeaFog: number; // 0/1
-  applySeaDesaturation: number; // 0/1
-};
-
 export const vertexShader = tgpu['~unstable'].vertexFn({
   in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,

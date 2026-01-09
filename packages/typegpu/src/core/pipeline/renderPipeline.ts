@@ -6,7 +6,11 @@ import type {
 } from '../../core/buffer/buffer.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
-import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
+import {
+  type Disarray,
+  getCustomLocation,
+  LooseDecorated,
+} from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
@@ -16,6 +20,7 @@ import type {
 } from '../../data/texture.ts';
 import {
   type AnyWgslData,
+  Decorated,
   isWgslData,
   type U16,
   type U32,
@@ -35,6 +40,7 @@ import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   Assume,
   Equal,
+  NeverRecordToOptional,
   UndefinedToOptional,
 } from '../../shared/utilityTypes.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
@@ -152,16 +158,14 @@ export type TgpuRenderPipelineDescriptor<
     TgpuRenderPipelineDescriptorCommons,
     'vertex' | 'fragment' | 'attribs' | 'targets'
   >
-  & UndefinedToOptional<{
+  & NeverRecordToOptional<{
     vertex: TgpuVertexFn<
       VertexIn,
       VertexOut & OmitBuiltins<NoInfer<FragmentIn>>
     >;
     fragment: TgpuFragmentFn<FragmentIn, FragmentOut>;
 
-    // biome-ignore lint/complexity/noBannedTypes: we do use that type
-    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
-      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
 
@@ -174,15 +178,13 @@ export type TgpuRenderPipelineDescriptor__ShelllessFrag<
     TgpuRenderPipelineDescriptorCommons,
     'vertex' | 'fragment' | 'attribs' | 'targets'
   >
-  & UndefinedToOptional<{
+  & NeverRecordToOptional<{
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
     fragment: (
       input: AutoFragmentIn<Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>>,
     ) => AutoFragmentOut<FragmentOut>;
 
-    // biome-ignore lint/complexity/noBannedTypes: we do use that type
-    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
-      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
 
@@ -194,7 +196,7 @@ export type TgpuNoColorRenderPipelineDescriptor<
     TgpuRenderPipelineDescriptorCommons,
     'vertex' | 'fragment' | 'attribs' | 'targets'
   >
-  & UndefinedToOptional<{
+  & NeverRecordToOptional<{
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
     fragment?:
       | ((
@@ -204,10 +206,8 @@ export type TgpuNoColorRenderPipelineDescriptor<
       ) => undefined)
       | undefined;
 
-    // biome-ignore lint/complexity/noBannedTypes: we do use that type
-    attribs: Equal<NoInfer<VertexIn>, {}> extends true ? undefined
-      : LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
-    targets?: undefined;
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    targets?: Record<string, never>;
   }>;
 
 export interface HasIndexBuffer {
@@ -270,20 +270,35 @@ export interface TgpuRenderPipeline<Output = unknown>
   ): void;
 }
 
-export type FragmentOutToTargets<T> = T extends
-  | undefined
-  | { readonly [$internal]: unknown; type: 'void' }
-  | Record<string, never> ? undefined
-  : T extends { readonly [$internal]: unknown } ? GPUColorTargetState
-  : T extends Record<string, unknown>
-    ? { [Key in keyof T]: GPUColorTargetState }
-  : T extends { type: 'void' } ? Record<string, never>
+// deno-fmt-ignore: More readable branching logic
+export type FragmentOutToTargets<T> =
+  T extends
+      // (shell-less) no return
+      | undefined
+      | Decorated
+      // (shelled) no return
+      // TODO: Try d.Void
+      | { readonly [$internal]: unknown; type: 'void' }
+      // (shelled) empty object
+      | Record<string, never>
+    ? Record<string, never>
+  : T extends { readonly [$internal]: unknown } // a schema
+    ? GPUColorTargetState
+  : T extends Record<string, unknown> // a record
+  ? {
+      // Stripping all decorated properties
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]: GPUColorTargetState;
+    }
   : GPUColorTargetState;
 
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
 } ? ColorAttachment
-  : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
+  : T extends Record<string, unknown> ? {
+      // Stripping all decorated properties
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
+        ColorAttachment;
+    }
   : never;
 
 export type AnyFragmentTargets =

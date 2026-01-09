@@ -124,7 +124,7 @@ type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
 type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
 /**
- * TODO: Remove if favor of createRenderPipeline's validation
+ * TODO: Remove in favor of createRenderPipeline's validation
  */
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
