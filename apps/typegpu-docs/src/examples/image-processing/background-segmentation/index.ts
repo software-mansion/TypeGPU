@@ -7,6 +7,7 @@ import tgpu, {
 } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
@@ -20,7 +21,6 @@ import {
 } from './schemas.ts';
 import {
   computeFn,
-  drawWithMaskFragment,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
@@ -168,9 +168,53 @@ const blurPipelines = [false, true].map((flip) =>
 
 const drawWithMaskPipeline = root['~unstable']
   .with(paramsAccessor, paramsUniform)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(drawWithMaskFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: (({ uv }) => {
+      'use gpu';
+      const originalColor = std.textureSampleBaseClampToEdge(
+        drawWithMaskLayout.$.inputTexture,
+        drawWithMaskLayout.$.sampler,
+        uv,
+      );
+
+      let blurredColor = d.vec4f();
+      if (paramsAccessor.$.useGaussian === 1) {
+        blurredColor = std.textureSampleBaseClampToEdge(
+          drawWithMaskLayout.$.inputBlurredTexture,
+          drawWithMaskLayout.$.sampler,
+          uv,
+        );
+      } else {
+        blurredColor = std.textureSampleBias(
+          drawWithMaskLayout.$.inputBlurredTexture,
+          drawWithMaskLayout.$.sampler,
+          uv,
+          paramsAccessor.$.sampleBias,
+        );
+      }
+
+      const cropBounds = paramsAccessor.$.cropBounds;
+      const uvMin = cropBounds.xy;
+      const uvMax = cropBounds.zw;
+      const maskUV = d.vec2f(uv).sub(uvMin).div(uvMax.sub(uvMin));
+      const sampledMask = std.textureSampleBaseClampToEdge(
+        drawWithMaskLayout.$.maskTexture,
+        drawWithMaskLayout.$.sampler,
+        maskUV,
+      ).x;
+
+      const inCropRegion = uv.x >= uvMin.x &&
+        uv.x <= uvMax.x &&
+        uv.y >= uvMin.y &&
+        uv.y <= uvMax.y;
+      // use mask only inside the crop region
+      const mask = std.select(0, sampledMask, inCropRegion);
+
+      return std.mix(blurredColor, originalColor, mask);
+    }),
+    targets: { format: presentationFormat },
+  });
 
 // recalculating mask
 
