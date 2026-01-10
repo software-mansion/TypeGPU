@@ -165,12 +165,11 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     .add(normalSample.mul(weights.outside));
 });
 
-const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, {
-    format: presentationFormat,
-  })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
 let isRectangleFixed = false;
 

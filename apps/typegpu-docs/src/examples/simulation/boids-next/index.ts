@@ -156,15 +156,16 @@ const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    v: vertexLayout.attrib,
-    center: instanceLayout.attrib.position,
-    velocity: instanceLayout.attrib.velocity,
+  .createRenderPipeline({
+    attribs: {
+      v: vertexLayout.attrib,
+      center: instanceLayout.attrib.position,
+      velocity: instanceLayout.attrib.velocity,
+    },
+    vertex: mainVert,
+    fragment: mainFrag,
+    targets: { format: presentationFormat },
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
-  .createPipeline()
   .with(vertexLayout, triangleVertexBuffer);
 
 const computeBindGroupLayout = tgpu.bindGroupLayout({

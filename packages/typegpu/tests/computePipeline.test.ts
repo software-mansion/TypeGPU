@@ -15,9 +15,9 @@ describe('TgpuComputePipeline', () => {
       // do something
     });
 
-    const computePipeline = root
-      .withCompute(entryFn)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: entryFn,
+    });
 
     expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
 
@@ -39,7 +39,9 @@ describe('TgpuComputePipeline', () => {
       layout.bound.alpha; // Using an entry of the layout
     });
 
-    const pipeline = root.withCompute(entryFn).createPipeline();
+    const pipeline = root.createComputePipeline({
+      compute: entryFn,
+    });
 
     expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(
       new MissingBindGroupsError([layout]),
@@ -57,9 +59,9 @@ describe('TgpuComputePipeline', () => {
         // do something
       });
 
-    const computePipeline = root
-      .withCompute(main)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: main,
+    });
 
     expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(32) fn main() {
@@ -73,9 +75,9 @@ describe('TgpuComputePipeline', () => {
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
       });
-    const computePipeline = root
-      .withCompute(main)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: main,
+    });
 
     const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
     const bindGroup1 = root.createBindGroup(layout1, {
@@ -100,8 +102,7 @@ describe('TgpuComputePipeline', () => {
 
       const callback = vi.fn();
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       expect(pipeline).toBeDefined();
@@ -122,8 +123,7 @@ describe('TgpuComputePipeline', () => {
 
       const callback = vi.fn();
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
@@ -146,8 +146,7 @@ describe('TgpuComputePipeline', () => {
       const callback2 = vi.fn();
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback1)
         .withPerformanceCallback(callback2);
 
@@ -174,8 +173,7 @@ describe('TgpuComputePipeline', () => {
 
       expect(() => {
         root
-          .withCompute(entryFn)
-          .createPipeline()
+          .createComputePipeline({ compute: entryFn })
           .withPerformanceCallback(callback);
       }).toThrow(
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
@@ -195,8 +193,7 @@ describe('TgpuComputePipeline', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
@@ -223,8 +220,7 @@ describe('TgpuComputePipeline', () => {
       });
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet: rawQuerySet,
           beginningOfPassWriteIndex: 2,
@@ -247,24 +243,21 @@ describe('TgpuComputePipeline', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline1 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
         });
 
       const pipeline2 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           endOfPassWriteIndex: 1,
         });
 
       const pipeline3 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
         });
@@ -300,8 +293,7 @@ describe('TgpuComputePipeline', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 1,
@@ -341,8 +333,8 @@ describe('TgpuComputePipeline', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline().withTimestampWrites({
+        .createComputePipeline({ compute: entryFn })
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
@@ -350,8 +342,7 @@ describe('TgpuComputePipeline', () => {
         .with(bindGroup);
 
       const pipeline2 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .with(bindGroup)
         .withTimestampWrites({
           querySet,
@@ -392,8 +383,7 @@ describe('TgpuComputePipeline', () => {
       const callback = vi.fn();
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 3,
@@ -436,8 +426,7 @@ describe('TgpuComputePipeline', () => {
       const callback = vi.fn();
 
       let pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       const autoQuerySet = pipeline[$internal].priors.timestampWrites?.querySet;
@@ -482,7 +471,7 @@ describe('TgpuComputePipeline', () => {
       const a = d.arrayOf(d.f32, 3)();
     });
 
-    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 
@@ -527,7 +516,7 @@ describe('TgpuComputePipeline', () => {
       }
     });
 
-    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 

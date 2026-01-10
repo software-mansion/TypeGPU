@@ -56,17 +56,26 @@ import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
+  FragmentOutInferred,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
 import type {
   TgpuVertexFn,
   VertexInConstrained,
   VertexOutConstrained,
+  VertexOutInferred,
 } from '../function/tgpuVertexFn.ts';
-import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
+import type {
+  TgpuComputePipeline,
+  TgpuComputePipelineDescriptor,
+} from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
+  TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
+  TgpuRenderPipelineDescriptor,
+  TgpuRenderPipelineDescriptor__Shellless,
+  TgpuRenderPipelineDescriptor__ShelllessFrag,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
@@ -116,6 +125,9 @@ type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
 
 type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
+/**
+ * TODO: Remove in favor of createRenderPipeline's validation
+ */
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
@@ -153,6 +165,9 @@ export type ValidateFragmentIn<
 export interface WithVertex<
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > {
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   withFragment<
     FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
@@ -160,6 +175,9 @@ export interface WithVertex<
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
   ): WithFragment<FragmentOut>;
 
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   withPrimitive(
     primitiveState:
       | GPUPrimitiveState
@@ -169,14 +187,23 @@ export interface WithVertex<
       | undefined,
   ): WithFragment<Void>;
 
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   withDepthStencil(
     depthStencilState: GPUDepthStencilState | undefined,
   ): WithFragment<Void>;
 
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   withMultisample(
     multisampleState: GPUMultisampleState | undefined,
   ): WithFragment<Void>;
 
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   createPipeline(): TgpuRenderPipeline<Void>;
 }
 
@@ -228,9 +255,65 @@ export interface WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
+  createComputePipeline<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+    descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
+  ): TgpuComputePipeline;
+
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+  >(
+    descriptor: TgpuNoColorRenderPipelineDescriptor<VertexIn, VertexOut>,
+  ): TgpuRenderPipeline<Void>;
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+    FragmentIn extends FragmentInConstrained,
+    FragmentOut extends FragmentOutConstrained,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor<
+      VertexIn,
+      VertexOut,
+      FragmentIn,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutConstrained,
+    FragmentOut extends FragmentOutInferred,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor__ShelllessFrag<
+      VertexIn,
+      VertexOut,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<
+    VertexOut extends VertexOutInferred,
+    FragmentOut extends FragmentOutInferred,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor__Shellless<
+      Record<string, never>,
+      VertexOut,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutInferred,
+    FragmentOut extends FragmentOutInferred,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor__Shellless<
+      VertexIn,
+      VertexOut,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.
-   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * This is different from `createComputePipeline` in that it does a bounds check on the
    * thread id, where as regular pipelines do not and work in units of workgroups.
    *
    * @param callback A function converted to WGSL and executed on the GPU.
@@ -277,6 +360,9 @@ export interface WithBinding {
     callback: (...args: TArgs) => void,
   ): TgpuGuardedComputePipeline<TArgs>;
 
+  /**
+   * @deprecated Use `root.createRenderPipeline` instead.
+   */
   withVertex<
     VertexIn extends VertexInConstrained,
     VertexOut extends VertexOutConstrained,

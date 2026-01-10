@@ -223,10 +223,11 @@ export const controls = {
         alphaMode: 'premultiplied',
       });
 
-      const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
-        .withFragment(mainFragment, { format: presentationFormat })
-        .createPipeline();
+      const pipeline = root['~unstable'].createRenderPipeline({
+        vertex: mainVertex,
+        fragment: mainFragment,
+        targets: { format: presentationFormat },
+      });
 
       pipeline
         .withColorAttachment({
@@ -240,10 +241,11 @@ export const controls = {
   },
   'Draw indexed': {
     onButtonClick: () => {
-      const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
-        .withFragment(mainFragment, { format: presentationFormat })
-        .createPipeline();
+      const pipeline = root['~unstable'].createRenderPipeline({
+        vertex: mainVertex,
+        fragment: mainFragment,
+        targets: { format: presentationFormat },
+      });
 
       const indexBuffer = root
         .createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2])

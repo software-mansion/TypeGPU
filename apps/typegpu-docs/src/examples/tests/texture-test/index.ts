@@ -115,10 +115,11 @@ function createPipelineForFormat(format: TestFormat) {
     channel: channelUniform,
   });
 
-  const pipeline = root['~unstable']
-    .withVertex(fullScreenTriangle)
-    .withFragment(fragmentFunction, { format: presentationFormat })
-    .createPipeline();
+  const pipeline = root['~unstable'].createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: fragmentFunction,
+    targets: { format: presentationFormat },
+  });
 
   return { layout, pipeline };
 }

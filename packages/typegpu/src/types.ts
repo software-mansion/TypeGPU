@@ -47,6 +47,7 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import type { AutoStruct } from './data/autoStruct.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -81,7 +82,7 @@ export interface FnToWgslOptions {
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: AnyData | AutoStruct | undefined;
   body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
@@ -102,7 +103,7 @@ export type FunctionScopeLayer = {
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: AnyData | AutoStruct | undefined;
   /**
    * All types used in `return` statements.
    */
