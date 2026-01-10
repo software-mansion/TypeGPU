@@ -63,6 +63,7 @@ import type {
   TgpuVertexFn,
   VertexInConstrained,
   VertexOutConstrained,
+  VertexOutInferred,
 } from '../function/tgpuVertexFn.ts';
 import type {
   TgpuComputePipeline,
@@ -73,6 +74,7 @@ import type {
   TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
   TgpuRenderPipelineDescriptor,
+  TgpuRenderPipelineDescriptor__Shellless,
   TgpuRenderPipelineDescriptor__ShelllessFrag,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
@@ -282,6 +284,27 @@ export interface WithBinding {
     FragmentOut extends FragmentOutInferred,
   >(
     descriptor: TgpuRenderPipelineDescriptor__ShelllessFrag<
+      VertexIn,
+      VertexOut,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<
+    VertexOut extends VertexOutInferred,
+    FragmentOut extends FragmentOutInferred,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor__Shellless<
+      Record<string, never>,
+      VertexOut,
+      FragmentOut
+    >,
+  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<
+    VertexIn extends VertexInConstrained,
+    VertexOut extends VertexOutInferred,
+    FragmentOut extends FragmentOutInferred,
+  >(
+    descriptor: TgpuRenderPipelineDescriptor__Shellless<
       VertexIn,
       VertexOut,
       FragmentOut

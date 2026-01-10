@@ -6,7 +6,11 @@ import type {
 } from '../../core/buffer/buffer.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
-import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
+import {
+  AnyData,
+  type Disarray,
+  getCustomLocation,
+} from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
@@ -15,6 +19,7 @@ import type {
   WgslTextureDepthMultisampled2d,
 } from '../../data/texture.ts';
 import {
+  AnyVecInstance,
   type AnyWgslData,
   type Decorated,
   isWgslData,
@@ -23,6 +28,7 @@ import {
   type v4f,
   Void,
   type WgslArray,
+  WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
@@ -58,6 +64,9 @@ import {
   AutoFragmentFn,
   type AutoFragmentIn,
   type AutoFragmentOut,
+  AutoVertexFn,
+  type AutoVertexIn,
+  type AutoVertexOut,
 } from '../function/autoIO.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
@@ -70,6 +79,7 @@ import type {
   TgpuVertexFn,
   VertexInConstrained,
   VertexOutConstrained,
+  VertexOutInferred,
 } from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -118,7 +128,9 @@ export type TgpuPrimitiveState =
   | undefined;
 
 export type TgpuRenderPipelineDescriptorCommons = {
-  vertex: TgpuVertexFn;
+  vertex:
+    | TgpuVertexFn
+    | ((input: AutoVertexIn<AnyAutoCustoms>) => AutoVertexOut<AnyAutoCustoms>);
   fragment?:
     | TgpuFragmentFn
     | ((
@@ -180,6 +192,29 @@ export type TgpuRenderPipelineDescriptor__ShelllessFrag<
     ) => AutoFragmentOut<FragmentOut>;
 
     attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
+    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
+  }>;
+
+export type TgpuRenderPipelineDescriptor__Shellless<
+  VertexIn extends VertexInConstrained = VertexInConstrained,
+  VertexOut extends VertexOutInferred = VertexOutInferred,
+  FragmentOut extends FragmentOutInferred = FragmentOutInferred,
+> =
+  & Omit<
+    TgpuRenderPipelineDescriptorCommons,
+    'vertex' | 'fragment' | 'attribs' | 'targets'
+  >
+  & NeverRecordToOptional<{
+    vertex: (
+      input: AutoVertexIn<
+        Assume<InferGPURecord<NoInfer<VertexIn>>, AnyAutoCustoms>
+      >,
+    ) => AutoVertexOut<VertexOut>;
+    fragment: (
+      input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
+    ) => AutoFragmentOut<FragmentOut>;
+
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
 
@@ -270,21 +305,24 @@ export type FragmentOutToTargets<T> =
   T extends
       // (shell-less) no return
       | undefined
-      | Decorated
+      // (shelled) builtin return
+      | AnyBuiltin
       // (shelled) no return
       // TODO: Try d.Void
       | { readonly [$internal]: unknown; type: 'void' }
       // (shelled) empty object
       | Record<string, never>
     ? Record<string, never>
-  : T extends { readonly [$internal]: unknown } // a schema
+  : T extends
+      | { readonly [$internal]: unknown } // a schema
+      | number | boolean | AnyVecInstance // an instance
     ? GPUColorTargetState
   : T extends Record<string, unknown> // a record
-  ? {
-      // Stripping all builtin properties
-      [Key in keyof T as T[Key] extends AnyBuiltin ? never : Key extends `$${string}` ? never : Key]: GPUColorTargetState;
-    }
-  : GPUColorTargetState;
+  // Stripping all builtin properties
+  ? { [Key in keyof OmitBuiltins<T>]: GPUColorTargetState; }
+  // The widest type is here on purpose. It allows createRenderPipeline
+  // to correctly choose the right overload.
+  : GPUColorTargetState | Record<string, GPUColorTargetState>;
 
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
@@ -841,7 +879,7 @@ class RenderPipelineCore implements SelfResolvable {
     const { vertex, fragment } = this.options.descriptor;
 
     const locations = matchUpVaryingLocations(
-      vertex.shell.out,
+      (vertex as TgpuVertexFn | undefined)?.shell?.out,
       (fragment as TgpuFragmentFn | undefined)?.shell?.in,
       getName(vertex) ?? '<unnamed>',
       getName(fragment) ?? '<unnamed>',
@@ -851,15 +889,23 @@ class RenderPipelineCore implements SelfResolvable {
       locations,
       () =>
         ctx.withSlots(slotBindings, () => {
-          ctx.resolve(vertex);
+          let vertexOut: WgslStruct<Record<string, AnyData>>;
+          if (typeof vertex === 'function') {
+            // TODO: Pass attributes
+            vertexOut = ctx.resolve(new AutoVertexFn(vertex, {}, locations))
+              .dataType as WgslStruct;
+          } else {
+            vertexOut = ctx.resolve(vertex).dataType as WgslStruct;
+          }
+
           if (fragment) {
             if (typeof fragment === 'function') {
-              const vertexOut = Object.fromEntries(
-                Object.entries(vertex.shell.out).filter(([, dataType]) =>
+              const varyings = Object.fromEntries(
+                Object.entries(vertexOut.propTypes).filter(([, dataType]) =>
                   !isBuiltin(dataType)
                 ),
               );
-              ctx.resolve(new AutoFragmentFn(fragment, vertexOut, locations));
+              ctx.resolve(new AutoFragmentFn(fragment, varyings, locations));
             } else {
               ctx.resolve(fragment);
             }
@@ -925,7 +971,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
     const connectedAttribs = connectAttributesToShader(
-      vertex.shell.in ?? {},
+      (vertex as TgpuVertexFn | undefined)?.shell?.in ?? {},
       attribs,
     );
 
@@ -1014,8 +1060,8 @@ class RenderPipelineCore implements SelfResolvable {
  * Logs a warning, when they don't match in terms of custom locations
  */
 export function matchUpVaryingLocations(
-  vertexOut: IORecord,
-  fragmentIn: IORecord | undefined,
+  vertexOut: IORecord | undefined = {},
+  fragmentIn: IORecord | undefined = {},
   vertexFnName: string,
   fragmentFnName: string,
 ) {
@@ -1035,7 +1081,7 @@ export function matchUpVaryingLocations(
     }
   }
 
-  for (const [key, value] of Object.entries(fragmentIn ?? {})) {
+  for (const [key, value] of Object.entries(fragmentIn)) {
     const customLocation = getCustomLocation(value);
     if (customLocation === undefined) {
       continue;

@@ -3,38 +3,48 @@ import { AutoStruct } from '../../data/autoStruct.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
-import type { AnyVecInstance, v4f } from '../../data/wgslTypes.ts';
-import type { InferGPURecord, InferRecord } from '../../shared/repr.ts';
+import type { v4f } from '../../data/wgslTypes.ts';
+import type {
+  InferGPU,
+  InferGPURecord,
+  InferRecord,
+} from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
+import type { BaseIOData } from './fnTypes.ts';
 
-export type AnyAutoCustoms = Record<string, number | AnyVecInstance>;
+export type AnyAutoCustoms = Record<
+  string,
+  number | InferGPU<BaseIOData> | number[]
+>;
+
+const builtinVertexIn = {
+  $vertexIndex: builtin.vertexIndex,
+  $instanceIndex: builtin.instanceIndex,
+} as const;
 
 export type AutoVertexIn<T extends AnyAutoCustoms> =
   & T
-  & {
-    // builtins
-    $vertexIndex: number;
-    $instanceIndex: number;
-  };
+  & InferRecord<typeof builtinVertexIn>;
+
+const builtinVertexOut = {
+  $clipDistances: builtin.clipDistances,
+  $position: builtin.position,
+} as const;
 
 export type AutoVertexOut<T extends AnyAutoCustoms> =
   & T
-  & {
-    // builtins
-    $clipDistances?: number[] | undefined;
-    $position?: v4f | undefined;
-  };
+  & Partial<InferGPURecord<typeof builtinVertexOut>>;
 
 const builtinFragmentIn = {
-  '$position': builtin.position,
-  '$frontFacing': builtin.frontFacing,
-  '$primitiveIndex': builtin.primitiveIndex,
-  '$sampleIndex': builtin.sampleIndex,
-  '$sampleMask': builtin.sampleMask,
-  '$subgroupInvocationId': builtin.subgroupInvocationId,
-  '$subgroupSize': builtin.subgroupSize,
+  $position: builtin.position,
+  $frontFacing: builtin.frontFacing,
+  $primitiveIndex: builtin.primitiveIndex,
+  $sampleIndex: builtin.sampleIndex,
+  $sampleMask: builtin.sampleMask,
+  $subgroupInvocationId: builtin.subgroupInvocationId,
+  $subgroupSize: builtin.subgroupSize,
 } as const;
 
 export type AutoFragmentIn<T extends AnyAutoCustoms> =
@@ -42,8 +52,8 @@ export type AutoFragmentIn<T extends AnyAutoCustoms> =
   & InferRecord<typeof builtinFragmentIn>;
 
 const builtinFragmentOut = {
-  '$fragDepth': builtin.fragDepth,
-  '$sampleMask': builtin.sampleMask,
+  $fragDepth: builtin.fragDepth,
+  $sampleMask: builtin.sampleMask,
 } as const;
 
 export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
@@ -63,9 +73,9 @@ export class AutoFragmentFn implements SelfResolvable {
   declare resourceType: 'auto-fragment-fn';
 
   impl: AutoFragmentFnImpl;
-  #autoIn: AutoStruct;
-
   #core: FnCore;
+  #autoIn: AutoStruct;
+  #autoOut: AutoStruct;
 
   constructor(
     impl: AutoFragmentFnImpl,
@@ -73,25 +83,59 @@ export class AutoFragmentFn implements SelfResolvable {
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;
+    this.#core = createFnCore(impl, '@fragment ');
     this.#autoIn = new AutoStruct(
-      {
-        ...builtinFragmentIn,
-        ...varyings,
-      },
+      { ...builtinFragmentIn, ...varyings },
       undefined,
       locations,
     );
-    this.#core = createFnCore(impl, '@fragment ');
+    this.#autoOut = new AutoStruct(builtinFragmentOut, vec4f);
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(
-      ctx,
-      [this.#autoIn],
-      new AutoStruct(builtinFragmentOut, vec4f),
-    );
+    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
   }
 }
 
 AutoFragmentFn.prototype[$internal] = true;
 AutoFragmentFn.prototype.resourceType = 'auto-fragment-fn';
+
+type AutoVertexFnImpl = (
+  input: AutoVertexIn<AnyAutoCustoms>,
+) => AutoVertexOut<AnyAutoCustoms>;
+
+/**
+ * Only used internally
+ */
+export class AutoVertexFn implements SelfResolvable {
+  // Prototype properties
+  declare [$internal]: true;
+  declare resourceType: 'auto-vertex-fn';
+
+  impl: AutoVertexFnImpl;
+  #core: FnCore;
+  #autoIn: AutoStruct;
+  #autoOut: AutoStruct;
+
+  constructor(
+    impl: AutoVertexFnImpl,
+    attribs: Record<string, AnyData>,
+    locations?: Record<string, number> | undefined,
+  ) {
+    this.impl = impl;
+    this.#core = createFnCore(impl, '@vertex ');
+    this.#autoIn = new AutoStruct(
+      { ...builtinVertexIn, ...attribs },
+      undefined,
+      locations,
+    );
+    this.#autoOut = new AutoStruct(builtinVertexOut, undefined);
+  }
+
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
+  }
+}
+
+AutoVertexFn.prototype[$internal] = true;
+AutoVertexFn.prototype.resourceType = 'auto-vertex-fn';

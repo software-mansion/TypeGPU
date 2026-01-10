@@ -179,7 +179,7 @@ export function accessProp(
     if (!result) {
       return undefined;
     }
-    return snip(stitch`${target}.${result[0]}`, result[1], 'argument');
+    return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
   }
 
   if (isPtr(target.dataType)) {

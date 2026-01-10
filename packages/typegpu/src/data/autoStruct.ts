@@ -18,14 +18,14 @@ export class AutoStruct implements SelfResolvable {
   declare type: 'auto-struct';
 
   /**
-   * JS key -> data type
+   * js key -> data type
    */
   readonly #validProps: Record<string, AnyData>;
   /**
-   * JS key -> WGSL key
-   * @example '$position' -> 'position'
+   * js key -> { prop: 'wgsl key', type: ... }
+   * @example '$position' -> { prop: 'position', type: ... }
    */
-  readonly #remapped: Record<string, string>;
+  readonly #allocated: Record<string, { prop: string; type: AnyData }>;
 
   #usedWgslKeys: Set<string>;
   #locations: Record<string, number> | undefined;
@@ -39,22 +39,27 @@ export class AutoStruct implements SelfResolvable {
   ) {
     this.#validProps = validProps;
     this.#typeForExtraProps = typeForExtraProps;
-    this.#remapped = {};
+    this.#allocated = {};
     this.#locations = locations;
     this.#usedWgslKeys = new Set();
   }
 
-  accessProp(key: string): [string, AnyData] | undefined {
+  accessProp(key: string): { prop: string; type: AnyData } | undefined {
     // If the prop is not found in validProps, we consider it an extra property
     const dataType = this.#validProps[key] ?? this.#typeForExtraProps;
     if (!dataType) {
       return undefined;
     }
 
-    let wgslKey = this.#remapped[key];
-    if (!wgslKey) {
+    return this.provideProp(key, dataType);
+  }
+
+  provideProp(key: string, dataType: AnyData): { prop: string; type: AnyData } {
+    let alloc = this.#allocated[key];
+    if (!alloc) {
+      let wgslKey = key;
       // Builtins always start with '$'
-      if (key.includes('$')) {
+      if (wgslKey.includes('$')) {
         // Finding a unique key
         wgslKey = key.replace('$', ''); // Starting with the original key without '$' (identity for non-builtins)
         let idx = 1;
@@ -63,28 +68,25 @@ export class AutoStruct implements SelfResolvable {
         }
       } else {
         // Finding a unique key
-        wgslKey = key;
         let idx = 1;
         while (this.#usedWgslKeys.has(wgslKey)) {
           wgslKey = `${key}_${++idx}`;
         }
       }
       this.#usedWgslKeys.add(wgslKey);
-      this.#remapped[key] = wgslKey;
+      alloc = { prop: wgslKey, type: dataType };
+      this.#allocated[key] = alloc;
     }
 
-    return [wgslKey, dataType];
+    return alloc;
   }
 
   get completeStruct() {
     if (!this.#cachedStruct) {
       this.#cachedStruct = createIoSchema(
         Object.fromEntries(
-          Object.entries(this.#remapped).map(([jsKey, wgslKey]) => {
-            return [
-              wgslKey,
-              this.#validProps[jsKey] ?? this.#typeForExtraProps,
-            ] as [string, IOData];
+          Object.entries(this.#allocated).map(([key, alloc]) => {
+            return [alloc.prop, alloc.type] as [string, IOData];
           }),
         ),
         this.#locations,

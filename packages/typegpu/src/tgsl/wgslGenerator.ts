@@ -672,14 +672,23 @@ ${this.ctx.pre}}`;
       if (structType instanceof AutoStruct) {
         const entries = Object.fromEntries(
           Object.entries(obj).map(([key, value]) => {
-            const accessed = structType.accessProp(key);
-            if (value === undefined || !accessed) {
-              throw new WgslTypeError(
-                `Missing property ${key} in object literal for struct ${structType}`,
-              );
+            let accessed = structType.accessProp(key);
+            let expr: Snippet;
+            if (accessed) {
+              // Generating the expression expecting a specific type
+              expr = this.typedExpression(value, accessed.type);
+            } else {
+              // Generating the expression and inferring the type instead
+              expr = this.expression(value);
+              if (expr.dataType.type === 'unknown') {
+                throw new WgslTypeError(
+                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                );
+              }
+              accessed = structType.provideProp(key, expr.dataType as AnyData);
             }
-            const [wgslKey, dataType] = accessed;
-            return [wgslKey, this.typedExpression(value, dataType)];
+
+            return [accessed.prop, expr];
           }),
         );
 

@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: they're useful */
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
@@ -1255,6 +1256,57 @@ describe('root.createRenderPipeline', () => {
 
       @fragment fn item() -> item_1 {
         return item_1(vec4f(0, 1, 0, 1), 0f);
+      }"
+    `);
+  });
+
+  it('generates a struct that matches a shell-less vertex return value', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const pos = [
+          d.vec2f(0.0, 0.5),
+          d.vec2f(-0.5, -0.5),
+          d.vec2f(0.5, -0.5),
+        ];
+        return {
+          $position: d.vec4f(pos[$vertexIndex]!, 0, 1),
+          uv: pos[$vertexIndex]!.add(d.vec2f(0.5)),
+        };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        return { color: d.vec4f(uv, 0, 1), $fragDepth: 0 };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        @builtin(position) position: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      struct item_2 {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn item(_arg_0: item_2) -> item_1 {
+        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        return item_1(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
+      }
+
+      struct item_4 {
+        @location(0) color: vec4f,
+        @builtin(frag_depth) fragDepth: f32,
+      }
+
+      struct item_5 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn item_3(_arg_0: item_5) -> item_4 {
+        return item_4(vec4f(_arg_0.uv, 0f, 1f), 0f);
       }"
     `);
   });
