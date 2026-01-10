@@ -7,7 +7,7 @@ import type {
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import {
-  AnyData,
+  type AnyData,
   type Disarray,
   getCustomLocation,
 } from '../../data/dataTypes.ts';
@@ -19,16 +19,15 @@ import type {
   WgslTextureDepthMultisampled2d,
 } from '../../data/texture.ts';
 import {
-  AnyVecInstance,
+  type AnyVecInstance,
   type AnyWgslData,
-  type Decorated,
   isWgslData,
   type U16,
   type U32,
   type v4f,
   Void,
   type WgslArray,
-  WgslStruct,
+  type WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
@@ -310,8 +309,7 @@ export type FragmentOutToTargets<T> =
       // (shelled) builtin return
       | AnyBuiltin
       // (shelled) no return
-      // TODO: Try d.Void
-      | { readonly [$internal]: unknown; type: 'void' }
+      | Void
       // (shelled) empty object
       | Record<string, never>
     ? Record<string, never>
@@ -329,11 +327,8 @@ export type FragmentOutToTargets<T> =
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
 } ? ColorAttachment
-  : T extends Record<string, unknown> ? {
-      // Stripping all decorated properties
-      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
-        ColorAttachment;
-    }
+  : T extends Record<string, unknown>
+    ? { [Key in keyof OmitBuiltins<T>]: ColorAttachment }
   : never;
 
 export type AnyFragmentTargets =
