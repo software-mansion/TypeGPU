@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+const purple = d.vec4f(0.769, 0.392, 1, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
 const getGradientColor = (ratio: number) => {
@@ -16,17 +16,8 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const pipeline = root['~unstable'].createRenderPipeline({
   vertex: ({ $vertexIndex }) => {
     'use gpu';
-    const pos = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const uv = [
-      d.vec2f(0.5, 1.0),
-      d.vec2f(0.0, 0.0),
-      d.vec2f(1.0, 0.0),
-    ];
+    const pos = [d.vec2f(0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+    const uv = [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)];
 
     return {
       $position: d.vec4f(pos[$vertexIndex], 0, 1),
