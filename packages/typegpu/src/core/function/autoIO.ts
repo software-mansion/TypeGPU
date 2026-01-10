@@ -12,7 +12,7 @@ import type {
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { BaseIOData } from './fnTypes.ts';
+import type { AnyFn, BaseIOData } from './fnTypes.ts';
 
 export type AnyAutoCustoms = Record<
   string,
@@ -60,10 +60,6 @@ export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
   T extends undefined | v4f ? T
     : T & Partial<InferGPURecord<typeof builtinFragmentOut>>;
 
-type AutoFragmentFnImpl = (
-  input: AutoFragmentIn<AnyAutoCustoms>,
-) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>;
-
 /**
  * Only used internally
  */
@@ -72,13 +68,13 @@ export class AutoFragmentFn implements SelfResolvable {
   declare [$internal]: true;
   declare resourceType: 'auto-fragment-fn';
 
-  impl: AutoFragmentFnImpl;
+  impl: AnyFn;
   #core: FnCore;
   #autoIn: AutoStruct;
   #autoOut: AutoStruct;
 
   constructor(
-    impl: AutoFragmentFnImpl,
+    impl: AnyFn,
     varyings: Record<string, AnyData>,
     locations?: Record<string, number> | undefined,
   ) {
@@ -100,10 +96,6 @@ export class AutoFragmentFn implements SelfResolvable {
 AutoFragmentFn.prototype[$internal] = true;
 AutoFragmentFn.prototype.resourceType = 'auto-fragment-fn';
 
-type AutoVertexFnImpl = (
-  input: AutoVertexIn<AnyAutoCustoms>,
-) => AutoVertexOut<AnyAutoCustoms>;
-
 /**
  * Only used internally
  */
@@ -112,13 +104,13 @@ export class AutoVertexFn implements SelfResolvable {
   declare [$internal]: true;
   declare resourceType: 'auto-vertex-fn';
 
-  impl: AutoVertexFnImpl;
+  impl: AnyFn;
   #core: FnCore;
   #autoIn: AutoStruct;
   #autoOut: AutoStruct;
 
   constructor(
-    impl: AutoVertexFnImpl,
+    impl: AnyFn,
     attribs: Record<string, AnyData>,
     locations?: Record<string, number> | undefined,
   ) {

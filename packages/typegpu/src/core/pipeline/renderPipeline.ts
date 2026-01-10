@@ -130,7 +130,9 @@ export type TgpuPrimitiveState =
 export type TgpuRenderPipelineDescriptorCommons = {
   vertex:
     | TgpuVertexFn
-    | ((input: AutoVertexIn<AnyAutoCustoms>) => AutoVertexOut<AnyAutoCustoms>);
+    | ((
+      input: AutoVertexIn<Record<string, never>>,
+    ) => AutoVertexOut<AnyAutoCustoms>);
   fragment?:
     | TgpuFragmentFn
     | ((
