@@ -48,9 +48,8 @@ const pipeline = root['~unstable'].createRenderPipeline({
     let off = d
       .vec2f(
         perlin3d.sample(d.vec3f(ouv, t)),
-        perlin3d.sample(d.vec3f(ouv, t + 10)),
-      )
-      .add(-0.1);
+        perlin3d.sample(d.vec3f(ouv.mul(2), t + 10)) * 0.5,
+      ).add(-0.1);
     // Sharpening the offset
     off = tanhVec(off.mul(sharpness));
     // Offsetting the sample point by the distortion
