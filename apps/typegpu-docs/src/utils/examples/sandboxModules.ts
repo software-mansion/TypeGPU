@@ -1,7 +1,4 @@
-import { entries, fromEntries, map, pipe } from 'remeda';
-
-import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';
-import dtsWgpuMatrix from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
+import { atom } from 'jotai';
 
 interface SandboxModuleDefinition {
   typeDef:
@@ -13,14 +10,14 @@ interface SandboxModuleDefinition {
     | undefined;
 }
 
-function srcFileToModule(
-  [filepath, content]: [string, string],
+async function srcFileToModule(
+  [filepath, sourceImport]: [string, () => Promise<string>],
   baseUrl: string,
-): [moduleKey: string, moduleDef: SandboxModuleDefinition] {
+): Promise<[moduleKey: string, moduleDef: SandboxModuleDefinition]> {
   const filename = filepath.replace(baseUrl, '');
   const def = {
     filename,
-    content,
+    content: await sourceImport(),
   };
 
   return [
@@ -32,10 +29,10 @@ function srcFileToModule(
   ] as const;
 }
 
-function dtsFileToModule(
-  [filepath, content]: [string, string],
+async function dtsFileToModule(
+  [filepath, sourceImport]: [string, () => Promise<string>],
   baseUrl: string,
-): [moduleKey: string, moduleDef: SandboxModuleDefinition] {
+): Promise<[moduleKey: string, moduleDef: SandboxModuleDefinition]> {
   const filename = filepath.replace(baseUrl, '');
 
   return [
@@ -43,106 +40,119 @@ function dtsFileToModule(
     {
       typeDef: {
         filename,
-        content,
+        content: await sourceImport(),
       },
     },
   ] as const;
 }
 
-const allPackagesSrcFiles = pipe(
-  entries(
-    import.meta.glob([
-      '../../../../../packages/*/src/**/*.ts',
-      '../../../../../packages/*/package.json',
-    ], {
-      query: 'raw',
-      eager: true,
-      import: 'default',
-    }) as Record<string, string>,
-  ),
-  map((dtsFile) => srcFileToModule(dtsFile, '../../../../../packages/')),
-  fromEntries(),
+const allPackagesSrcImports = import.meta.glob<string>([
+  '../../../../../packages/*/src/**/*.ts',
+  '../../../../../packages/*/package.json',
+], {
+  query: 'raw',
+  import: 'default',
+});
+
+const threeImports = import.meta.glob<string>(
+  '../../../node_modules/@types/three/**/*.d.ts',
+  {
+    query: 'raw',
+    import: 'default',
+  },
 );
 
-const threeModules = pipe(
-  entries(
-    import.meta.glob(
-      '../../../node_modules/@types/three/**/*.d.ts',
-      {
-        query: 'raw',
-        eager: true,
-        import: 'default',
-      },
-    ) as Record<string, string>,
-  ),
-  map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
-  fromEntries(),
+const mediacaptureImports = import.meta.glob<string>(
+  '../../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
+  {
+    query: 'raw',
+    import: 'default',
+  },
 );
 
-const mediacaptureModules = pipe(
-  entries(
-    import.meta.glob(
-      '../../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
-      {
-        query: 'raw',
-        eager: true,
-        import: 'default',
-      },
-    ) as Record<string, string>,
-  ),
-  map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
-  fromEntries(),
-);
+// Using an async atom so that the async computation is cached
+export const sandboxModulesAtom = atom(async () => {
+  const [dtsWebGPU, dtsWgpuMatrix] = await Promise.all([
+    import('@webgpu/types/dist/index.d.ts?raw'),
+    import('wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw'),
+  ]);
 
-export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
-  ...allPackagesSrcFiles,
-  ...threeModules,
-  ...mediacaptureModules,
+  const allPackagesSrcFiles = Object.fromEntries(
+    await Promise.all(
+      Object.entries(allPackagesSrcImports).map((dtsFile) =>
+        srcFileToModule(dtsFile, '../../../../../packages/')
+      ),
+    ),
+  );
 
-  '@webgpu/types': {
-    typeDef: { content: dtsWebGPU },
-  },
-  'wgpu-matrix': {
-    typeDef: { filename: 'wgpu-matrix.d.ts', content: dtsWgpuMatrix },
-  },
-  tinyest: {
-    import: { reroute: 'tinyest/src/index.ts' },
-    typeDef: { reroute: 'tinyest/src/index.ts' },
-  },
-  typegpu: {
-    import: { reroute: 'typegpu/src/index.ts' },
-    typeDef: { reroute: 'typegpu/src/index.ts' },
-  },
-  'typegpu/data': {
-    import: { reroute: 'typegpu/src/data/index.ts' },
-    typeDef: { reroute: 'typegpu/src/data/index.ts' },
-  },
-  'typegpu/std': {
-    import: { reroute: 'typegpu/src/std/index.ts' },
-    typeDef: { reroute: 'typegpu/src/std/index.ts' },
-  },
+  const threeModules = Object.fromEntries(
+    await Promise.all(
+      Object.entries(threeImports).map((dtsFile) =>
+        dtsFileToModule(dtsFile, '../../../node_modules/')
+      ),
+    ),
+  );
 
-  // Three.js, for examples of @typegpu/three
-  'three': {
-    typeDef: { reroute: '@types/three/build/three.module.d.ts' },
-  },
-  'three/webgpu': {
-    typeDef: { reroute: '@types/three/build/three.webgpu.d.ts' },
-  },
-  'three/tsl': {
-    typeDef: { reroute: '@types/three/build/three.tsl.d.ts' },
-  },
+  const mediacaptureModules = Object.fromEntries(
+    await Promise.all(
+      Object.entries(mediacaptureImports).map((dtsFile) =>
+        dtsFileToModule(dtsFile, '../../../node_modules/')
+      ),
+    ),
+  );
 
-  // Utility modules
-  '@typegpu/noise': {
-    import: { reroute: 'typegpu-noise/src/index.ts' },
-    typeDef: { reroute: 'typegpu-noise/src/index.ts' },
-  },
-  '@typegpu/color': {
-    import: { reroute: 'typegpu-color/src/index.ts' },
-    typeDef: { reroute: 'typegpu-color/src/index.ts' },
-  },
-  '@typegpu/three': {
-    typeDef: { reroute: 'typegpu-three/src/index.ts' },
-  },
-};
+  const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
+    ...allPackagesSrcFiles,
+    ...threeModules,
+    ...mediacaptureModules,
+
+    '@webgpu/types': {
+      typeDef: { content: dtsWebGPU.default },
+    },
+    'wgpu-matrix': {
+      typeDef: { filename: 'wgpu-matrix.d.ts', content: dtsWgpuMatrix.default },
+    },
+    tinyest: {
+      import: { reroute: 'tinyest/src/index.ts' },
+      typeDef: { reroute: 'tinyest/src/index.ts' },
+    },
+    typegpu: {
+      import: { reroute: 'typegpu/src/index.ts' },
+      typeDef: { reroute: 'typegpu/src/index.ts' },
+    },
+    'typegpu/data': {
+      import: { reroute: 'typegpu/src/data/index.ts' },
+      typeDef: { reroute: 'typegpu/src/data/index.ts' },
+    },
+    'typegpu/std': {
+      import: { reroute: 'typegpu/src/std/index.ts' },
+      typeDef: { reroute: 'typegpu/src/std/index.ts' },
+    },
+
+    // Three.js, for examples of @typegpu/three
+    'three': {
+      typeDef: { reroute: '@types/three/build/three.module.d.ts' },
+    },
+    'three/webgpu': {
+      typeDef: { reroute: '@types/three/build/three.webgpu.d.ts' },
+    },
+    'three/tsl': {
+      typeDef: { reroute: '@types/three/build/three.tsl.d.ts' },
+    },
+
+    // Utility modules
+    '@typegpu/noise': {
+      import: { reroute: 'typegpu-noise/src/index.ts' },
+      typeDef: { reroute: 'typegpu-noise/src/index.ts' },
+    },
+    '@typegpu/color': {
+      import: { reroute: 'typegpu-color/src/index.ts' },
+      typeDef: { reroute: 'typegpu-color/src/index.ts' },
+    },
+    '@typegpu/three': {
+      typeDef: { reroute: 'typegpu-three/src/index.ts' },
+    },
+  };
+
+  return SANDBOX_MODULES;
+});

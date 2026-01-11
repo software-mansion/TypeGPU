@@ -1,5 +1,6 @@
 import pathe from 'pathe';
 import * as R from 'remeda';
+import { atom } from 'jotai';
 import type {
   Example,
   ExampleMetadata,
@@ -46,20 +47,27 @@ function pathToExampleKey(path: string): string {
 }
 
 function globToExampleFiles(
-  record: Record<string, string>,
-): Record<string, ExampleSrcFile[]> {
+  record: Record<string, () => Promise<string>>,
+): Record<
+  string,
+  ({ exampleKey: string; file: () => Promise<ExampleSrcFile> })[]
+> {
   return R.pipe(
     record,
-    R.mapValues((content, key): ExampleSrcFile => {
+    R.mapValues((content, key) => {
       const pathRelToExamples = pathe.relative('./', key);
       const categoryDir = pathRelToExamples.split('/')[0];
       const exampleDir = pathRelToExamples.split('/')[1];
       const examplePath = pathe.join(categoryDir, exampleDir);
+      const exampleKey = pathToExampleKey(key);
 
       return {
-        exampleKey: pathToExampleKey(key),
-        path: pathe.relative(examplePath, key),
-        content,
+        exampleKey,
+        file: async () => ({
+          exampleKey,
+          path: pathe.relative(examplePath, key),
+          content: await content(),
+        }),
       };
     }),
     R.values(),
@@ -76,37 +84,32 @@ const metaFiles = R.pipe(
 );
 
 const readonlyTsFiles = R.pipe(
-  import.meta.glob('./**/*.ts', {
+  import.meta.glob<string>('./**/*.ts', {
     query: 'raw',
-    eager: true,
     import: 'default',
-  }) as Record<string, string>,
+  }),
   globToExampleFiles,
 );
 
 const tsFilesImportFunctions = R.pipe(
-  import.meta.glob('./**/index.ts') as Record<
-    string,
-    () => Promise<unknown>
-  >,
+  import.meta.glob('./**/index.ts'),
   R.mapKeys(pathToExampleKey),
 );
 
 const htmlFiles = R.pipe(
-  import.meta.glob('./**/index.html', {
+  import.meta.glob<string>('./**/index.html', {
     query: 'raw',
-    eager: true,
     import: 'default',
-  }) as Record<string, string>,
+  }),
   globToExampleFiles,
 );
 
 const thumbnailFiles = R.pipe(
-  import.meta.glob('./**/thumbnail.png', {
+  import.meta.glob<string | [string, string]>('./**/thumbnail.png', {
     eager: true,
     import: 'default',
     query: 'w=512;1024',
-  }) as Record<string, string | [string, string]>,
+  }),
   R.mapKeys(pathToExampleKey),
   R.mapValues((
     value,
@@ -127,9 +130,18 @@ export const examples = R.pipe(
     ({
       key,
       metadata: value,
-      tsFiles: readonlyTsFiles[key] ?? [],
+      contentAtom: atom(async () => {
+        const [htmlFile, ...tsFiles] = await Promise.all([
+          htmlFiles[key]?.[0].file(),
+          ...readonlyTsFiles[key].map((file) => file.file()),
+        ]);
+
+        return {
+          htmlFile,
+          tsFiles,
+        };
+      }),
       tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
-      htmlFile: htmlFiles[key]?.[0] ?? '',
       thumbnails: thumbnailFiles[key],
     }) satisfies Example
   ),

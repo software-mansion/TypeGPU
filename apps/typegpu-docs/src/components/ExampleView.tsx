@@ -67,7 +67,8 @@ function useExample(
 }
 
 export function ExampleView({ example }: Props) {
-  const { tsFiles, tsImport, htmlFile } = example;
+  const { tsImport, contentAtom } = example;
+  const { htmlFile, tsFiles } = useAtomValue(contentAtom);
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
@@ -88,7 +89,7 @@ export function ExampleView({ example }: Props) {
       return;
     }
     exampleHtmlRef.current.innerHTML = htmlFile.content;
-  }, [htmlFile]);
+  }, [htmlFile.content]);
 
   useExample(tsImport, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef);

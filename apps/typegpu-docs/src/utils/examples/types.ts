@@ -1,4 +1,5 @@
 import { type } from 'arktype';
+import type { Atom } from 'jotai';
 
 export type ExampleMetadata = typeof ExampleMetadata.infer;
 export const ExampleMetadata = type({
@@ -32,9 +33,13 @@ export interface ThumbnailPair {
 
 export type Example = {
   key: string;
-  tsFiles: ExampleSrcFile[];
+  contentAtom: Atom<
+    Promise<{
+      htmlFile: ExampleSrcFile;
+      tsFiles: ExampleSrcFile[];
+    }>
+  >;
   tsImport: () => Promise<unknown>;
-  htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
   thumbnails?: ThumbnailPair;
 };
