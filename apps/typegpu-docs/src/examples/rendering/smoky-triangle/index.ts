@@ -5,16 +5,21 @@ import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 
-const blue = d.vec3f(0.114, 0.447, 0.941).mul(0.5);
-const purple = d.vec3f(0.769, 0.392, 1.0).mul(2);
-const sharpness = 20;
-const distortion = 0.05;
-const timeUniform = root.createUniform(d.f32);
+const fromColor = root.createUniform(d.vec3f);
+const polarCoords = root.createUniform(d.u32);
+const squashed = root.createUniform(d.u32);
+const toColor = root.createUniform(d.vec3f);
+const sharpness = root.createUniform(d.f32);
+const distortion = root.createUniform(d.f32);
+const time = root.createUniform(d.f32);
 const grainSeed = root.createUniform(d.f32);
 
 const getGradientColor = (ratio: number) => {
   'use gpu';
-  return std.mix(blue, purple, std.smoothstep(0.2, 0.8, ratio));
+  if (squashed.$ === 1) {
+    return std.mix(fromColor.$, toColor.$, std.smoothstep(0.1, 0.9, ratio));
+  }
+  return std.mix(fromColor.$, toColor.$, ratio);
 };
 
 const tanhVec = (v: d.v2f): d.v2f => {
@@ -43,19 +48,25 @@ const pipeline = root['~unstable'].createRenderPipeline({
   },
   fragment: ({ uv }) => {
     'use gpu';
-    const t = timeUniform.$ * 0.1;
-    const ouv = uv.mul(5).add(d.vec2f(0, t));
+    const t = time.$ * 0.1;
+    const ouv = uv.mul(5).add(d.vec2f(0, -t));
     let off = d
       .vec2f(
         perlin3d.sample(d.vec3f(ouv, t)),
         perlin3d.sample(d.vec3f(ouv.mul(2), t + 10)) * 0.5,
       ).add(-0.1);
     // Sharpening the offset
-    off = tanhVec(off.mul(sharpness));
+    off = tanhVec(off.mul(sharpness.$));
     // Offsetting the sample point by the distortion
-    const p = uv.add(off.mul(distortion));
+    const p = uv.add(off.mul(distortion.$));
 
-    const factor = (p.x + p.y) * 0.7; // How far along the diagonal we are
+    // const factor = (p.x - p.y + 0.7) * 0.7; // How far along the diagonal we are
+    let factor = d.f32(0);
+    if (polarCoords.$ === 1) {
+      factor = std.length(p.sub(d.vec2f(0.5, 0.3)).mul(2));
+    } else {
+      factor = (p.x + p.y) * 0.7; // How far along the diagonal we are
+    }
     return std.saturate(d.vec4f(grain(getGradientColor(factor), uv), 1));
   },
   targets: { format: presentationFormat },
@@ -72,7 +83,7 @@ context.configure({
 
 let frameId: number;
 function frame(timestamp: number) {
-  timeUniform.write(timestamp / 1000);
+  time.write(timestamp / 1000);
   grainSeed.write(Math.floor(Math.random() * 100));
   pipeline
     .withColorAttachment({
@@ -85,6 +96,71 @@ function frame(timestamp: number) {
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+export const controls = {
+  'Distortion': {
+    initial: 0.05,
+    min: 0,
+    max: 0.2,
+    step: 0.001,
+    onSliderChange(v: number) {
+      distortion.write(v);
+    },
+  },
+  'Sharpness': {
+    initial: 4.5,
+    min: 0,
+    max: 7,
+    step: 0.1,
+    onSliderChange(v: number) {
+      sharpness.write(v ** 2);
+    },
+  },
+  'From Color': {
+    initial: [0.057, 0.2235, 0.4705],
+    onColorChange(value: readonly [number, number, number]) {
+      fromColor.write(d.vec3f(...value));
+    },
+  },
+  'To Color': {
+    initial: [1.538, 0.784, 2],
+    onColorChange(value: readonly [number, number, number]) {
+      toColor.write(d.vec3f(...value));
+    },
+  },
+  'Polar Coordinates': {
+    initial: false,
+    onToggleChange(value: boolean) {
+      polarCoords.write(value ? 1 : 0);
+    },
+  },
+  'Squashed': {
+    initial: true,
+    onToggleChange(value: boolean) {
+      squashed.write(value ? 1 : 0);
+    },
+  },
+  'Clouds Preset': {
+    onButtonClick() {
+      distortion.write(0.05);
+      sharpness.write(4.5 ** 2);
+      fromColor.write(d.vec3f(0.057, 0.2235, 0.4705));
+      toColor.write(d.vec3f(1.538, 0.784, 2));
+      polarCoords.write(0);
+      squashed.write(1);
+    },
+  },
+  'Fire Preset': {
+    onButtonClick() {
+      distortion.write(0.1);
+      sharpness.write(7 ** 2);
+      fromColor.write(d.vec3f(2, 0.4, 0.5));
+      toColor.write(d.vec3f(0, 0, 0.4));
+      polarCoords.write(1);
+      squashed.write(0);
+    },
+  },
+};
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
