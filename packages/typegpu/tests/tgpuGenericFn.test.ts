@@ -5,7 +5,7 @@ import { it } from './utils/extendedIt.ts';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
   it('generates only one definition when both original and wrapped function are used', () => {
-    const countAccess = tgpu['~unstable'].accessor(d.f32, 0);
+    const countAccess = tgpu['~unstable'].accessor(d.f32, 2);
 
     const getDouble = () => {
       'use gpu';
@@ -23,13 +23,13 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
-        return 0f * 2f;
+        return 4f;
       }
 
       fn main() -> f32 {
         let original = getDouble();
         let wrapped = getDouble();
-        return original + wrapped ;
+        return (original + wrapped);
       }"
     `);
   });
