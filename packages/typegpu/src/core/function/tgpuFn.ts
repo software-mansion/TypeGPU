@@ -221,7 +221,7 @@ function createFn<ImplSchema extends AnyFn>(
 
     [$getNameForward]: core,
     $name(label: string): This {
-      setName(core, label);
+      setName(this, label);
       return this;
     },
 
@@ -325,7 +325,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
     [$getNameForward]: innerFn,
     $name(label: string): This {
-      innerFn.$name(label);
+      setName(this, label);
       return this;
     },
 

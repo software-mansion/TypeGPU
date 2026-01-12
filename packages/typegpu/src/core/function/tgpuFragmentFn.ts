@@ -197,7 +197,7 @@ function createFragmentFn(
     [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
-      setName(core, newLabel);
+      setName(this, newLabel);
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
