@@ -1039,7 +1039,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.block) {
-      return this.block(statement);
+      return `${this.ctx.pre}${this.block(statement)}`;
     }
 
     if (statement[0] === NODE.for) {
