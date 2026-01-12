@@ -97,6 +97,7 @@ async function generateReport(
     }
   }
 
+  output += '## 📊 Bundle Size Comparison\n\n';
   output += '## 📈 Summary\n\n';
   output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
   output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
