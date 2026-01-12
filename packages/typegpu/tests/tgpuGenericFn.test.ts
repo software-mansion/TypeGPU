@@ -61,7 +61,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     `);
   });
 
-  it('keeps a single definition when wrapped is called multiple times', () => {
+  it('does not duplicate the same function', () => {
     const countAccess = tgpu['~unstable'].accessor(d.f32, 0);
 
     const getDouble = () => {
