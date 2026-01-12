@@ -72,7 +72,7 @@ requestAnimationFrame(draw);
 const resizeObserver = new ResizeObserver(() => {
   updateAspectRatio(canvas.width, canvas.height);
   updateGridParams();
-  updateInstanceInfoBufferAndBindGroup()
+  updateInstanceInfoBufferAndBindGroup();
 });
 
 resizeObserver.observe(canvas);
