@@ -167,7 +167,7 @@ const renderPipeline = root['~unstable']
   .createPipeline()
   .with(vertexLayout, triangleVertexBuffer);
 
-const computeBindGroupLayout = tgpu.bindGroupLayout({
+const layout = tgpu.bindGroupLayout({
   currentTrianglePos: { storage: TriangleDataArray },
   nextTrianglePos: {
     storage: TriangleDataArray,
@@ -175,34 +175,32 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
   },
 });
 
-const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
-
 const simulate = (index: number) => {
   'use gpu';
-  const instanceInfo = TriangleData(currentTrianglePos.value[index]);
+  const instanceInfo = TriangleData(layout.$.currentTrianglePos[index]);
   let separation = d.vec2f();
   let alignment = d.vec2f();
   let cohesion = d.vec2f();
   let alignmentCount = 0;
   let cohesionCount = 0;
 
-  for (let i = d.u32(0); i < currentTrianglePos.value.length; i++) {
+  for (let i = d.u32(0); i < layout.$.currentTrianglePos.length; i++) {
     if (i === index) {
       continue;
     }
-    const other = currentTrianglePos.value[i];
+    const other = layout.$.currentTrianglePos[i];
     const dist = std.distance(instanceInfo.position, other.position);
-    if (dist < params.value.separationDistance) {
+    if (dist < params.$.separationDistance) {
       separation = std.add(
         separation,
         std.sub(instanceInfo.position, other.position),
       );
     }
-    if (dist < params.value.alignmentDistance) {
+    if (dist < params.$.alignmentDistance) {
       alignment = std.add(alignment, other.velocity);
       alignmentCount++;
     }
-    if (dist < params.value.cohesionDistance) {
+    if (dist < params.$.cohesionDistance) {
       cohesion = std.add(cohesion, other.position);
       cohesionCount++;
     }
@@ -215,14 +213,14 @@ const simulate = (index: number) => {
     cohesion = std.sub(cohesion, instanceInfo.position);
   }
 
-  let velocity = std.mul(params.value.separationStrength, separation);
+  let velocity = std.mul(params.$.separationStrength, separation);
   velocity = std.add(
     velocity,
-    std.mul(params.value.alignmentStrength, alignment),
+    std.mul(params.$.alignmentStrength, alignment),
   );
   velocity = std.add(
     velocity,
-    std.mul(params.value.cohesionStrength, cohesion),
+    std.mul(params.$.cohesionStrength, cohesion),
   );
 
   instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
@@ -246,14 +244,14 @@ const simulate = (index: number) => {
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = TriangleData(instanceInfo);
+  layout.$.nextTrianglePos[index] = TriangleData(instanceInfo);
 };
 
 const simulatePipeline = root['~unstable']
   .createGuardedComputePipeline(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
-  root.createBindGroup(computeBindGroupLayout, {
+  root.createBindGroup(layout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
   })

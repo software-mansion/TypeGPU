@@ -29,6 +29,9 @@ type DeepReadonly<T> = T extends { [$internal]: unknown } ? T
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
   readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 

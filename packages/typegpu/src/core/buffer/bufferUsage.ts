@@ -43,6 +43,9 @@ export interface TgpuBufferUsage<
   readonly [$repr]: Infer<TData>;
 
   readonly [$gpuValueOf]: InferGPU<TData>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
@@ -53,12 +56,18 @@ export interface TgpuBufferUsage<
 
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
@@ -169,7 +178,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.read()`',
+          : '.$ is inaccessible during normal JS execution. Try `.read()`',
       );
     }
 
@@ -204,7 +213,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.write()`',
+          : '.$ is inaccessible during normal JS execution. Try `.write()`',
       );
     }
 

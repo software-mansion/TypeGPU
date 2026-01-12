@@ -19,6 +19,9 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 }
@@ -28,6 +31,9 @@ export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
@@ -59,6 +65,9 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   >;
 
   readonly [$gpuValueOf]: InferGPU<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
 }
