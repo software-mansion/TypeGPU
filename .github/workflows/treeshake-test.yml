@@ -67,7 +67,7 @@ jobs:
             const fs = require('fs');
             const comparison = fs.readFileSync('comparison.md', 'utf8');
 
-            const botCommentIdentifier = '<!-- treeshake-test-bot-comment -->\n';
+            const botCommentIdentifier = '<!-- treeshake-test-bot-comment -->';
 
             async function findBotComment(issueNumber) {
               if (!issueNumber) return null;
