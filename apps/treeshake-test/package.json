@@ -5,7 +5,8 @@
   "description": "Treeshake testing app for TypeGPU",
   "type": "module",
   "scripts": {
-    "test": "tsx generate-tests.ts && node index.ts"
+    "generate-tests": "tsx generate-tests.ts",
+    "test": "node index.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*",

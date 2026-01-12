@@ -2,6 +2,7 @@ name: Tree-shake test
 
 on:
   pull_request:
+workflow_dispatch:
 
 jobs:
   treeshake-test:
@@ -44,6 +45,16 @@ jobs:
           cache-dependency-path: |
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
+
+      - name: Generate import tests on PR branch (only if dispatched manually)
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: pr-branch
+        run: pnpm --filter treeshake-test generate-tests
+
+      - name: Generate import tests on target branch (only if dispatched manually)
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: target-branch
+        run: pnpm --filter treeshake-test generate-tests
 
       - name: Run tree-shake test on PR branch
         working-directory: pr-branch
