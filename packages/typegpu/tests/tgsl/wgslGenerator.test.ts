@@ -1227,5 +1227,25 @@ describe('wgslGenerator', () => {
 - Try to wrap right-hand side with a schema \`YourStructSchema(...)\`.
 -----`,
     );
+  it('generates correct indentation for nested blocks', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      let res = 0;
+      {
+        const f = 2;
+        res += f;
+      }
+      return res;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var res = 0;
+        {
+          const f = 2;
+          res += f;
+        }
+        return res;
+      }"
+    `);
   });
 });
