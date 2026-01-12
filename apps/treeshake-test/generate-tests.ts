@@ -32,10 +32,7 @@ async function generateTestFiles() {
   );
 
   for (const { export: exportName, from } of imports) {
-    const testContent = `// Auto-generated test file for tree-shaking analysis
-    import { ${exportName} } from '${from}';
-
-    // Use the import to prevent it from being tree-shaken
+    const testContent = `import { ${exportName} } from '${from}';
     console.log(typeof ${exportName});
     `;
 
@@ -56,13 +53,6 @@ async function generateTestFiles() {
   //     const fileName = `tgpu-${prop}.ts`;
   //     await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
   // }
-
-  // console.log(
-  //   `Generated ${1 + namedExports.length + tgpuProps.length} test files`,
-  // );
-  // console.log(`  - 1 default export test`);
-  // console.log(`  - ${namedExports.length} named export tests`);
-  // console.log(`  - ${tgpuProps.length} tgpu property tests`);
 }
 
 await generateTestFiles();
