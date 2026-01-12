@@ -45,6 +45,7 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
+import type { SlotValuePair } from '../core/slot/slotTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -551,8 +552,8 @@ ${this.ctx.pre}}`;
       }
 
       if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
-        const slotPairs = isGenericFn(callee.value)
-          ? callee.value[$providing]?.pairs
+        const slotPairs: SlotValuePair[] = isGenericFn(callee.value)
+          ? (callee.value[$providing]?.pairs ?? [])
           : [];
         const callback = isGenericFn(callee.value)
           ? callee.value.callback
