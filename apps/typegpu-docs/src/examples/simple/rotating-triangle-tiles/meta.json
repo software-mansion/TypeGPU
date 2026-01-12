@@ -1,6 +1,6 @@
 {
   "title": "Rotating Triangle Tiles",
   "category": "simple",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["experimental", "fragment shader", "instancing"],
+  "dev": false
 }
