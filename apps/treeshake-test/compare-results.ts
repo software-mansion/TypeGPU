@@ -58,6 +58,46 @@ function prettifySize(size: number | undefined) {
   } ${units[unitIndex]}`;
 }
 
+function generateTable(
+  tests: string[],
+  allBundlers: Set<string>,
+  prGrouped: Record<string, Record<string, number>>,
+  targetGrouped: Record<string, Record<string, number>>,
+) {
+  let output = '';
+  // Table header
+  output += '| Test';
+  for (const bundler of allBundlers) {
+    output += ` | ${bundler}`;
+  }
+  output += ' |\n';
+
+  // Table separator.
+  output += '|---------';
+  for (const _ of allBundlers) {
+    output += '|---------';
+  }
+  output += ' |\n';
+
+  // Table rows
+  for (const test of tests) {
+    output += `| ${test}`;
+
+    for (const bundler of allBundlers) {
+      const prSize = prGrouped[test]?.[bundler];
+      const targetSize = targetGrouped[test]?.[bundler];
+
+      output += ` | ${prettifySize(prSize)} ${
+        calculateTrendMessage(prSize, targetSize)
+      }`;
+    }
+    output += ' |\n';
+  }
+  output += '\n';
+
+  return output;
+}
+
 async function generateReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
@@ -107,35 +147,24 @@ async function generateReport(
   // Main comparison table
   output += '## 📋 Bundle Size Comparison\n\n';
 
-  // Table header
-  output += '| Test';
-  for (const bundler of allBundlers) {
-    output += ` | ${bundler}`;
+  const staticTests = [...allTests].filter((t) => !t.startsWith('import_'))
+    .sort();
+  const dynamicTests = [...allTests].filter((t) => t.startsWith('import_'))
+    .sort();
+
+  output += generateTable(staticTests, allBundlers, prGrouped, targetGrouped);
+
+  if (dynamicTests.length > 0) {
+    output += `
+<details>
+<summary>Import tests</summary>
+
+${generateTable(dynamicTests, allBundlers, prGrouped, targetGrouped)}
+</details>\n`;
+  } else {
+    output +=
+      `If you wish to run a comparison for every export as well, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
   }
-  output += ' |\n';
-
-  // Table separator
-  output += '|---------';
-  for (const _ of allBundlers) {
-    output += '|---------';
-  }
-  output += ' |\n';
-
-  // Table rows
-  for (const test of [...allTests].sort()) {
-    output += `| ${test}`;
-
-    for (const bundler of allBundlers) {
-      const prSize = prGrouped[test]?.[bundler];
-      const targetSize = targetGrouped[test]?.[bundler];
-
-      output += ` | ${prettifySize(prSize)} ${
-        calculateTrendMessage(prSize, targetSize)
-      }`;
-    }
-    output += ' |\n';
-  }
-  output += '\n';
 
   return output;
 }
