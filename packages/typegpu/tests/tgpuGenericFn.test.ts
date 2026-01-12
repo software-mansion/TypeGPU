@@ -42,7 +42,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return countAccess.$ * 2;
     };
 
-    const getDouble4 = tgpu.fn(getDouble);
+    const getDouble4 = tgpu.fn(tgpu.fn(getDouble));
 
     const main = () => {
       'use gpu';
@@ -50,9 +50,15 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     };
 
     const wgsl = tgpu.resolve([main]);
-    expect(wgsl).toContain('fn getDouble()');
-    expect(wgsl).toContain('fn main()');
-    expect(wgsl).toContain('return getDouble();');
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn getDouble() -> f32 {
+        return 0f;
+      }
+
+      fn main() -> f32 {
+        return getDouble();
+      }"
+    `);
   });
 
   it('keeps a single definition when wrapped is called multiple times', () => {
@@ -71,6 +77,14 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     };
 
     const wgsl = tgpu.resolve([main]);
-    expect(wgsl.match(/fn\s+getDouble\s*\(/g)?.length ?? 0).toBe(1);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn getDouble() -> f32 {
+        return 0f;
+      }
+
+      fn main() -> f32 {
+        return (getDouble() + getDouble());
+      }"
+    `);
   });
 });
