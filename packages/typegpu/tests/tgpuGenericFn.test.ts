@@ -42,7 +42,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return countAccess.$ * 2;
     };
 
-    const getDouble4 = tgpu.fn(tgpu.fn(getDouble));
+    const getDouble4 = tgpu.fn(getDouble);
 
     const main = () => {
       'use gpu';
