@@ -129,7 +129,7 @@ async function generateReport(
       const targetSize = targetGrouped[test]?.[bundler];
 
       output += ` | ${prettifySize(prSize)} ${
-        calculateTrendMessage(prSize, Math.random() * 100000)
+        calculateTrendMessage(prSize, targetSize)
       }`;
     }
     output += ' |\n';
