@@ -1,6 +1,6 @@
 import type { IOData } from '../core/function/fnTypes.ts';
 import { createIoSchema } from '../core/function/ioSchema.ts';
-import { getName } from '../shared/meta.ts';
+import { getName, setName } from '../shared/meta.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -91,6 +91,11 @@ export class AutoStruct implements SelfResolvable {
         ),
         this.#locations,
       );
+      const ownName = getName(this);
+      // Passing the given name forward
+      if (ownName) {
+        setName(this.#cachedStruct, ownName);
+      }
     }
 
     return this.#cachedStruct;

@@ -4,7 +4,6 @@ import * as std from 'typegpu/std';
 import {
   blockDim,
   blurLayout,
-  drawWithMaskLayout,
   filterDim,
   flipSlot,
   generateMaskLayout,

@@ -149,7 +149,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const vertexMain = tgpu['~unstable'].vertexFn({
       in: { vid: d.builtin.vertexIndex },
       out: { pos: d.builtin.position },
-      // biome-ignore lint/style/noNonNullAssertion: it's fine
     })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
 
     const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -1180,11 +1179,11 @@ describe('root.createRenderPipeline', () => {
 
       @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
 
-      struct item_1 {
+      struct FragmentIn {
         @builtin(front_facing) frontFacing: bool,
       }
 
-      @fragment fn item(_arg_0: item_1) -> @location(0) vec4f {
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
         if (_arg_0.frontFacing) {
           return vec4f(1, 0, 0, 1);
         }
@@ -1214,12 +1213,12 @@ describe('root.createRenderPipeline', () => {
 
       @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
 
-      struct item_1 {
+      struct FragmentIn {
         @builtin(front_facing) frontFacing: bool,
         @location(1) b: vec2f,
       }
 
-      @fragment fn item(_arg_0: item_1) -> @location(0) vec4f {
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
         if (_arg_0.frontFacing) {
           return vec4f(_arg_0.b, 0f, 1f);
         }
@@ -1249,13 +1248,13 @@ describe('root.createRenderPipeline', () => {
 
       @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
 
-      struct item_1 {
+      struct FragmentOut {
         @location(0) color: vec4f,
         @builtin(frag_depth) fragDepth: f32,
       }
 
-      @fragment fn item() -> item_1 {
-        return item_1(vec4f(0, 1, 0, 1), 0f);
+      @fragment fn fragmentFn() -> FragmentOut {
+        return FragmentOut(vec4f(0, 1, 0, 1), 0f);
       }"
     `);
   });
@@ -1282,31 +1281,31 @@ describe('root.createRenderPipeline', () => {
     });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "struct item_1 {
+      "struct VertexOut {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct item_2 {
+      struct VertexIn {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn item(_arg_0: item_2) -> item_1 {
+      @vertex fn item(_arg_0: VertexIn) -> VertexOut {
         var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return item_1(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
+        return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
       }
 
-      struct item_4 {
+      struct FragmentOut {
         @location(0) color: vec4f,
         @builtin(frag_depth) fragDepth: f32,
       }
 
-      struct item_5 {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn item_3(_arg_0: item_5) -> item_4 {
-        return item_4(vec4f(_arg_0.uv, 0f, 1f), 0f);
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> FragmentOut {
+        return FragmentOut(vec4f(_arg_0.uv, 0f, 1f), 0f);
       }"
     `);
   });

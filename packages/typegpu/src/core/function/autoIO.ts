@@ -4,6 +4,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
 import type { v4f } from '../../data/wgslTypes.ts';
+import { getName, setName } from '../../shared/meta.ts';
 import type {
   InferGPU,
   InferGPURecord,
@@ -79,13 +80,19 @@ export class AutoFragmentFn implements SelfResolvable {
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;
+    // If the implementation is not named, we can fallback to "fragmentFn"
+    if (!getName(impl)) {
+      setName(impl, 'fragmentFn');
+    }
     this.#core = createFnCore(impl, '@fragment ');
     this.#autoIn = new AutoStruct(
       { ...builtinFragmentIn, ...varyings },
       undefined,
       locations,
     );
+    setName(this.#autoIn, 'FragmentIn');
     this.#autoOut = new AutoStruct(builtinFragmentOut, vec4f);
+    setName(this.#autoOut, 'FragmentOut');
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -121,7 +128,9 @@ export class AutoVertexFn implements SelfResolvable {
       undefined,
       locations,
     );
+    setName(this.#autoIn, 'VertexIn');
     this.#autoOut = new AutoStruct(builtinVertexOut, undefined);
+    setName(this.#autoOut, 'VertexOut');
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
