@@ -559,13 +559,18 @@ ${this.ctx.pre}}`;
           ? callee.value.callback
           : (callee.value as (...args: never[]) => unknown);
 
-        this.ctx.withSlots(slotPairs, () => {
-          const args = argNodes.map((arg) => this.expression(arg));
-          const shellless = this.ctx.shelllessRepo.get(
-            callback,
-            args,
-          );
-          if (shellless) {
+        const shelllessCall = this.ctx.withSlots(
+          slotPairs,
+          (): Snippet | undefined => {
+            const args = argNodes.map((arg) => this.expression(arg));
+            const shellless = this.ctx.shelllessRepo.get(
+              callback,
+              args,
+            );
+            if (!shellless) {
+              return undefined;
+            }
+
             const converted = args.map((s, idx) => {
               const argType = shellless.argTypes[idx] as AnyData;
               return tryConvertSnippet(s, argType, /* verbose */ false);
@@ -579,8 +584,12 @@ ${this.ctx.pre}}`;
                 /* origin */ 'runtime',
               );
             });
-          }
-        });
+          },
+        );
+
+        if (shelllessCall) {
+          return shelllessCall;
+        }
 
         throw new Error(
           `Function '${
