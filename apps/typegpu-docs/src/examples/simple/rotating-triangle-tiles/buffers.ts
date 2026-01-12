@@ -4,7 +4,7 @@ import { colors } from './geometry.ts';
 import { root } from './root.ts';
 import { triangleVertices } from './geometry.ts';
 import { createInstanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
-import { GridParams, gridParams } from './config.ts';
+import { gridParams } from './config.ts';
 
 const animationProgressUniform = root.createUniform(d.f32);
 
@@ -32,7 +32,6 @@ function getInstanceInfoBindGroup() {
 }
 
 function createInstanceInfoBufferAndBindGroup() {
-
   const instanceInfoBuffer = root.createReadonly(
     InstanceInfoArray(gridParams.triangleCount),
     createInstanceInfoArray(),
@@ -45,22 +44,21 @@ function createInstanceInfoBufferAndBindGroup() {
   return { instanceInfoBuffer, instanceInfoBindGroup };
 }
 
-
 function updateInstanceInfoBufferAndBindGroup() {
   ({ instanceInfoBuffer, instanceInfoBindGroup } =
-    createInstanceInfoBufferAndBindGroup())
+    createInstanceInfoBufferAndBindGroup());
 }
 
-const gridParamsBuffer = root.createUniform(GridParams, gridParams);
-const aspectRatioBuffer = root.createUniform(d.f32, 1)
+const scaleBuffer = root.createUniform(d.f32, gridParams.tileDensity);
+const aspectRatioBuffer = root.createUniform(d.f32, 1);
 
 export {
   animationProgressUniform,
   aspectRatioBuffer,
   getInstanceInfoBindGroup,
-  gridParamsBuffer,
   instanceInfoLayout,
+  scaleBuffer,
   shiftedColorsBuffer,
   triangleVerticesBuffer,
-  updateInstanceInfoBufferAndBindGroup
+  updateInstanceInfoBufferAndBindGroup,
 };

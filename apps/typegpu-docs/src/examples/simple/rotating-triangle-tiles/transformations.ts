@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
-import { aspectRatioBuffer, gridParamsBuffer } from './buffers.ts';
+import { aspectRatioBuffer, scaleBuffer } from './buffers.ts';
 import { baseTriangleHalfHeight } from './geometry.ts';
 
 const interpolate = tgpu.fn(
@@ -20,8 +20,8 @@ const interpolate = tgpu.fn(
     const inputInterval = inputUpperEndpoint - inputLowerEndpoint;
     const progressPercentage = inputProgress / inputInterval;
     const outputInterval = std.sub(outputUpperEndpoint, outputLowerEndpoint);
-    const outputValue =
-      outputLowerEndpoint + outputInterval * progressPercentage;
+    const outputValue = outputLowerEndpoint +
+      outputInterval * progressPercentage;
     return outputValue;
   },
 );
@@ -64,7 +64,7 @@ function instanceTransform(
   const transformedPoint = std.add(
     // rotate accordingly
     rotate(
-      std.mul(position, gridParamsBuffer.$.userScale),
+      std.mul(position, scaleBuffer.$),
       instanceInfo.rotationAngle,
     ),
     // add instance offsets with top left corner offset
@@ -74,6 +74,7 @@ function instanceTransform(
     ),
   );
 
+  // squish/stretch triangles horizontally
   return d.mat2x2f(1 / aspectRatioBuffer.$, 0, 0, 1).mul(transformedPoint);
 }
 
@@ -81,11 +82,12 @@ function instanceTransform(
 // top vertex lies on top of canvas's top left corner
 function getZeroOffset() {
   'use gpu';
-  const zeroXOffset = baseTriangleHalfHeight * gridParamsBuffer.$.userScale - 1 * aspectRatioBuffer.$;
+  const zeroXOffset = baseTriangleHalfHeight * scaleBuffer.$ -
+    1 * aspectRatioBuffer.$;
   // make the top of the very first triangle touch the border
-  const zeroYOffset = 1 - gridParamsBuffer.$.userScale;
+  const zeroYOffset = 1 - scaleBuffer.$;
 
   return d.vec2f(zeroXOffset, zeroYOffset);
 }
 
-export { interpolateBezier, rotate, instanceTransform };
+export { instanceTransform, interpolateBezier, rotate };

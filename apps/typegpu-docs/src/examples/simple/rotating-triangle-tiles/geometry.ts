@@ -8,9 +8,9 @@ const indigo = d.vec4f(0.38, 0.333, 0.96, 1);
 const colors = [green, yellow, indigo];
 
 const originalVertices = [
-  d.vec2f(std.sqrt(3)/2, -1/2),
-  d.vec2f(0, 2/2),
-  d.vec2f(-std.sqrt(3)/2, -1/2),
+  d.vec2f(std.sqrt(3) / 2, -1 / 2),
+  d.vec2f(0, 2 / 2),
+  d.vec2f(-std.sqrt(3) / 2, -1 / 2),
 ];
 
 const baseTriangleSide = 3 / 2;
@@ -26,4 +26,10 @@ const triangleVertices = [
   ...halvedVertices, // the smallest triangle growing from zero to half the size
 ];
 
-export { colors, triangleVertices, baseTriangleHalfHeight, baseTriangleSide, baseTriangleCentroidToMidpointLength };
+export {
+  baseTriangleCentroidToMidpointLength,
+  baseTriangleHalfHeight,
+  baseTriangleSide,
+  colors,
+  triangleVertices,
+};
