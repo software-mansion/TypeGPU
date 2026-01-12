@@ -2,6 +2,7 @@
 
 import { arrayOf, type } from 'arktype';
 import * as fs from 'node:fs/promises';
+import { CHANGE_THRESHOLD, ResultsTable } from './results-table.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -24,80 +25,6 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
   return grouped;
 }
 
-function calculateTrendMessage(
-  prSize: number | undefined,
-  targetSize: number | undefined,
-): string {
-  if (prSize === undefined || targetSize === undefined) {
-    return '';
-  }
-  if (prSize === targetSize) {
-    return '(➖)';
-  }
-  const diff = prSize - targetSize;
-  const percent = ((diff / targetSize) * 100).toFixed(1);
-  if (diff > 0) {
-    return `($\${\\color{red}+${percent}\\\\%}$$)`;
-  }
-  return `($\${\\color{green}${percent}\\\\%}$$)`;
-}
-
-function prettifySize(size: number | undefined) {
-  if (size === undefined) {
-    return 'N/A';
-  }
-  const units = ['B', 'kB', 'MB', 'GB', 'TB'];
-  let unitIndex = 0;
-  let sizeInUnits = size;
-  while (sizeInUnits > 1024 && unitIndex < units.length) {
-    sizeInUnits /= 1024;
-    unitIndex += 1;
-  }
-  return `${
-    Number.isInteger(sizeInUnits) ? sizeInUnits : sizeInUnits.toFixed(2)
-  } ${units[unitIndex]}`;
-}
-
-function generateTable(
-  tests: string[],
-  allBundlers: Set<string>,
-  prGrouped: Record<string, Record<string, number>>,
-  targetGrouped: Record<string, Record<string, number>>,
-) {
-  let output = '';
-  // Table header
-  output += '| Test';
-  for (const bundler of allBundlers) {
-    output += ` | ${bundler}`;
-  }
-  output += ' |\n';
-
-  // Table separator.
-  output += '|---------';
-  for (const _ of allBundlers) {
-    output += '|---------';
-  }
-  output += ' |\n';
-
-  // Table rows
-  for (const test of tests) {
-    output += `| ${test}`;
-
-    for (const bundler of allBundlers) {
-      const prSize = prGrouped[test]?.[bundler];
-      const targetSize = targetGrouped[test]?.[bundler];
-
-      output += ` | ${prettifySize(prSize)} ${
-        calculateTrendMessage(prSize, targetSize)
-      }`;
-    }
-    output += ' |\n';
-  }
-  output += '\n';
-
-  return output;
-}
-
 async function generateReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
@@ -116,6 +43,12 @@ async function generateReport(
     ...Object.keys(prGrouped),
     ...Object.keys(targetGrouped),
   ]);
+
+  // Split tests into static and dynamic
+  const staticTests = [...allTests].filter((t) => !t.startsWith('import_'))
+    .sort();
+  const dynamicTests = [...allTests].filter((t) => t.startsWith('import_'))
+    .sort();
 
   let output = '\n\n';
 
@@ -142,25 +75,33 @@ async function generateReport(
   output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
   output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
   output += `- ➖ **Unchanged**: ${totalUnchanged} bundles\n\n`;
-  output += `- ❔ **Unknown**: ${totalUnknown} bundles\n\n`;
+  output += totalUnknown > 0
+    ? `- ❔ **Unknown**: ${totalUnknown} bundles\n`
+    : '';
+  output += '\n';
 
   // Main comparison table
-  output += '## 📋 Bundle Size Comparison\n\n';
+  output += `## 📋 Bundle Size Comparison (only tests differing by at least ${
+    CHANGE_THRESHOLD * 100
+  }%)\n\n`;
 
-  const staticTests = [...allTests].filter((t) => !t.startsWith('import_'))
-    .sort();
-  const dynamicTests = [...allTests].filter((t) => t.startsWith('import_'))
-    .sort();
+  const staticTable = new ResultsTable(allBundlers);
+  staticTests.forEach((test) => {
+    const prResults = prGrouped[test];
+    const targetResults = targetGrouped[test];
+    staticTable.addRow(test, prResults, targetResults);
+  });
 
-  output += generateTable(staticTests, allBundlers, prGrouped, targetGrouped);
+  output += `Static test results:\n${staticTable}\n\n`;
 
   if (dynamicTests.length > 0) {
-    output += `
-<details>
-<summary>Import tests</summary>
-
-${generateTable(dynamicTests, allBundlers, prGrouped, targetGrouped)}
-</details>\n`;
+    const dynamicTable = new ResultsTable(allBundlers);
+    dynamicTests.forEach((test) => {
+      const prResults = prGrouped[test];
+      const targetResults = targetGrouped[test];
+      dynamicTable.addRow(test, prResults, targetResults);
+    });
+    output += `Dynamic test results:\n${dynamicTable}\n\n`;
   } else {
     output +=
       `If you wish to run a comparison for every export as well, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
