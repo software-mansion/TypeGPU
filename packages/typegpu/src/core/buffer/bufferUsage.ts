@@ -109,7 +109,7 @@ class TgpuFixedBufferImpl<
   }
 
   $name(label: string) {
-    this.buffer.$name(label);
+    setName(this, label);
     return this;
   }
 

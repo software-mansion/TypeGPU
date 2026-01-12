@@ -24,7 +24,7 @@ import {
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -119,6 +119,7 @@ import { vec3f, vec3u } from '../../data/vector.ts';
 import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
+import { setName } from '../../shared/meta.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -192,6 +193,15 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
 
   get sizeUniform() {
     return this.#sizeUniform;
+  }
+
+  [$internal] = true;
+  get [$getNameForward]() {
+    return this.#pipeline;
+  }
+  $name(label: string): this {
+    setName(this, label);
+    return this;
   }
 }
 
@@ -272,7 +282,9 @@ class WithBindingImpl implements WithBinding {
   wrappedCallback(in.id.x, in.id.y, in.id.z);
 }`.$uses({ sizeUniform, wrappedCallback });
 
-    const pipeline = this.createComputePipeline({ compute: mainCompute });
+    // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
+    const pipeline =
+      (() => this.createComputePipeline({ compute: mainCompute }))();
 
     return new TgpuGuardedComputePipelineImpl(
       root,

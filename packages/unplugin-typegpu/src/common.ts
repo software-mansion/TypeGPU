@@ -148,21 +148,16 @@ const resourceConstructors: string[] = [
   'privateVar',
   'workgroupVar',
   'const',
-  // tgpu['~unstable']
   'slot',
   'accessor',
   'comptime',
   ...fnShellFunctionNames,
-  // d
-  'struct',
-  'unstruct',
   // root
   'createBuffer',
   'createMutable',
   'createReadonly',
   'createUniform',
   'createQuerySet',
-  // root['~unstable']
   'createPipeline',
   'createComputePipeline',
   'createGuardedComputePipeline',
@@ -170,6 +165,11 @@ const resourceConstructors: string[] = [
   'createTexture',
   'createSampler',
   'createComparisonSampler',
+  // d
+  'struct',
+  'unstruct',
+  // other
+  'createView',
 ];
 
 /**
@@ -226,6 +226,12 @@ function tryFindIdentifier(
   node: acorn.AnyNode | babel.Node,
 ): string | undefined {
   if (node.type === 'Identifier') {
+    return node.name;
+  }
+  if (node.type === 'PrivateName') {
+    return tryFindIdentifier(node.id);
+  }
+  if (node.type === 'PrivateIdentifier') {
     return node.name;
   }
   if (node.type === 'MemberExpression') {
