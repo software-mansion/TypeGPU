@@ -378,7 +378,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   $name(label: string): this {
-    setName(this[$internal].core, label);
+    setName(this, label);
     return this;
   }
 

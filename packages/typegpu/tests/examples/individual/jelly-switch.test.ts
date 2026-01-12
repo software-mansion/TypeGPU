@@ -60,7 +60,7 @@ describe('jelly switch example', () => {
         projInv: mat4x4f,
       }
 
-      @group(0) @binding(1) var<uniform> cameraUniform: Camera;
+      @group(0) @binding(1) var<uniform> uniform_1: Camera;
 
       struct Ray {
         origin: vec3f,
@@ -69,8 +69,8 @@ describe('jelly switch example', () => {
 
       fn getRay(ndc: vec2f) -> Ray {
         var clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
-        let invView = (&cameraUniform.viewInv);
-        let invProj = (&cameraUniform.projInv);
+        let invView = (&uniform_1.viewInv);
+        let invProj = (&uniform_1.projInv);
         var viewPos = ((*invProj) * clipPos);
         var viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
         var worldPos = ((*invView) * viewPosNormalized);
