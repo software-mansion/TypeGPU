@@ -1,6 +1,10 @@
 import * as d from 'typegpu/data';
 import { gridParams } from './config.ts';
-import { baseTriangleCentroidToMidpointLength, baseTriangleHalfHeight, baseTriangleSide } from './geometry.ts';
+import {
+  baseTriangleCentroidToMidpointLength,
+  baseTriangleHalfHeight,
+  baseTriangleSide,
+} from './geometry.ts';
 
 const InstanceInfo = d.struct({ offset: d.vec2f, rotationAngle: d.f32 });
 const InstanceInfoArray = d.arrayOf(InstanceInfo);
@@ -14,7 +18,8 @@ function createInstanceInfoArray() {
 
       let info: d.Infer<typeof InstanceInfo>;
 
-      const offsetX = (column - 1) * baseTriangleHalfHeight * gridParams.userScale;
+      const offsetX = (column - 1) * baseTriangleHalfHeight *
+        gridParams.userScale;
 
       if (column % 2 === 1) {
         info = {
@@ -23,7 +28,7 @@ function createInstanceInfoArray() {
             baseTriangleCentroidToMidpointLength * gridParams.userScale,
           ),
           rotationAngle: 60,
-        }
+        };
       } else {
         info = {
           offset: d.vec2f(offsetX, 0),
@@ -42,4 +47,4 @@ function createInstanceInfoArray() {
   return instanceInfoArray;
 }
 
-export { createInstanceInfoArray, InstanceInfoArray, InstanceInfo };
+export { createInstanceInfoArray, InstanceInfo, InstanceInfoArray };
