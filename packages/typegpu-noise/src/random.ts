@@ -43,14 +43,13 @@ export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => randomGeneratorSlot.value.sample());
 
-export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu
-  .fn([], d.vec3f)(() =>
-    d.vec3f(
-      randomGeneratorSlot.value.sample(),
-      randomGeneratorSlot.value.sample(),
-      randomGeneratorSlot.value.sample(),
-    )
-  );
+export const randInUnitCube: TgpuFn<() => d.Vec3f> = tgpu.fn([], d.vec3f)(() =>
+  d.vec3f(
+    randomGeneratorSlot.$.sample(),
+    randomGeneratorSlot.$.sample(),
+    randomGeneratorSlot.$.sample(),
+  )
+);
 
 export const randOnUnitCube: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() => {

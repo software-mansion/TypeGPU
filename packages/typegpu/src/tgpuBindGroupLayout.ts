@@ -299,12 +299,18 @@ export interface TgpuBindGroupLayout<
   readonly [$internal]: true;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
+  /**
+   * @deprecated Use `layout.$.foo` instead of `layout.bound.foo.$`
+   */
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
   readonly [$gpuValueOf]: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
