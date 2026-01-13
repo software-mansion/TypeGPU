@@ -1,5 +1,3 @@
-export const CHANGE_THRESHOLD = 0.000;
-
 type TestName = string;
 type BundlerName = string;
 type ResultSize = number | undefined;
@@ -9,9 +7,11 @@ type Row = Map<BundlerName, { pr: ResultSize; target: ResultSize }>;
 export class ResultsTable {
   #bundlers: Set<BundlerName>;
   #results: Map<TestName, Row>;
-  constructor(bundlers: Set<string>) {
+  #threshold: number;
+  constructor(bundlers: Set<string>, threshold: number) {
     this.#bundlers = bundlers;
     this.#results = new Map();
+    this.#threshold = threshold;
   }
 
   addRow(
@@ -71,7 +71,9 @@ export class ResultsTable {
     if (this.#results.size > 20) {
       output = `
 <details>
-<summary><b>‼️ Click to reveal the results table (${this.#results.size} entries).</b>**</summary>
+<summary><b>${
+        this.#threshold > 0 ? '‼️ ' : ''
+      }Click to reveal the results table (${this.#results.size} entries).</b></summary>
 
 ${output}
 
@@ -93,7 +95,7 @@ ${output}
       }
       if (
         pr && target &&
-        Math.max(pr / target, target / pr) >= 1 + CHANGE_THRESHOLD
+        Math.max(pr / target, target / pr) >= 1 + this.#threshold
       ) {
         return true;
       }

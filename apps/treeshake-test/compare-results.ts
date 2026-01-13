@@ -2,7 +2,7 @@
 
 import { arrayOf, type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { CHANGE_THRESHOLD, ResultsTable } from './results-table.ts';
+import { ResultsTable } from './results-table.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -81,30 +81,32 @@ async function generateReport(
   output += '\n';
 
   // Main comparison table
-  output += `## 📋 Bundle Size Comparison (only tests differing by at least ${
-    CHANGE_THRESHOLD * 100
-  }%)\n\n`;
+  output += `## 📋 Bundle Size Comparison\n\n`;
+  const staticTable = new ResultsTable(allBundlers, 0.005);
+  const dynamicTable = new ResultsTable(allBundlers, 0.005);
+  const allTable = new ResultsTable(allBundlers, 0);
 
-  const staticTable = new ResultsTable(allBundlers);
   staticTests.forEach((test) => {
     const prResults = prGrouped[test];
     const targetResults = targetGrouped[test];
     staticTable.addRow(test, prResults, targetResults);
+    allTable.addRow(test, prResults, targetResults);
   });
 
-  output += `Static test results:\n${staticTable}\n\n`;
+  dynamicTests.forEach((test) => {
+    const prResults = prGrouped[test];
+    const targetResults = targetGrouped[test];
+    dynamicTable.addRow(test, prResults, targetResults);
+    allTable.addRow(test, prResults, targetResults);
+  });
 
-  if (dynamicTests.length > 0) {
-    const dynamicTable = new ResultsTable(allBundlers);
-    dynamicTests.forEach((test) => {
-      const prResults = prGrouped[test];
-      const targetResults = targetGrouped[test];
-      dynamicTable.addRow(test, prResults, targetResults);
-    });
-    output += `Dynamic test results:\n${dynamicTable}\n\n`;
-  } else {
+  output += `Interesting static test results:\n${staticTable}\n\n`;
+  output += `Interesting dynamic test results:\n${dynamicTable}\n\n`;
+  output += `All test results:\n${allTable}\n\n`;
+
+  if (allBundlers.size === 0) {
     output +=
-      `If you wish to run a comparison for every export as well, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
+      `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
   }
 
   return output;
