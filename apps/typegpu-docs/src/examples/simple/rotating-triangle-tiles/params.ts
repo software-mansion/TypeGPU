@@ -6,6 +6,7 @@ import {
   stepRotationBuffer,
   updateInstanceInfoBufferAndBindGroup,
 } from './buffers.ts';
+import { MAGIC_NUMBER } from './geometry.ts';
 
 const INIT_TILE_DENSITY = 0.1;
 const INITIAL_STEP_ROTATION = 60;
@@ -108,14 +109,11 @@ function updateGridParams(newValue?: number) {
 
 // snugly put all of the triangles inside the canvas
 function createGridParams(tileDensity: number) {
-  const MAGIC_NUMBER = 1.331;
-  const userScale = tileDensity;
-  const trianglesPerColumn = Math.ceil(MAGIC_NUMBER / userScale);
+  const trianglesPerColumn = Math.ceil(MAGIC_NUMBER / tileDensity);
   const trianglesPerRow = Math.ceil(trianglesPerColumn * aspectRatio * 2);
 
   return {
     tileDensity,
-    userScale,
     trianglesPerRow,
     triangleCount: trianglesPerColumn * trianglesPerRow,
   };

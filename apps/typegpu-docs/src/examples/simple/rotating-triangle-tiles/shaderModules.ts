@@ -50,7 +50,7 @@ const MidgroundVertexOutput = {
   maskP0: d.interpolate('flat', d.vec2f),
   maskP1: d.interpolate('flat', d.vec2f),
   maskP2: d.interpolate('flat', d.vec2f),
-  worldPos: d.vec2f,
+  vertexClipPos: d.vec2f,
 };
 
 const midgroundVertex = tgpu['~unstable'].vertexFn({
@@ -103,7 +103,7 @@ const midgroundVertex = tgpu['~unstable'].vertexFn({
     maskP0,
     maskP1,
     maskP2,
-    worldPos: finalPosition,
+    vertexClipPos: finalPosition,
   };
 });
 
@@ -115,10 +115,10 @@ function edgeFunction(a: d.v2f, b: d.v2f, p: d.v2f) {
 const midgroundFragment = tgpu['~unstable'].fragmentFn({
   in: MidgroundVertexOutput,
   out: d.vec4f,
-})(({ maskP0, maskP1, maskP2, worldPos }) => {
-  const e0 = edgeFunction(maskP0, maskP1, worldPos);
-  const e1 = edgeFunction(maskP1, maskP2, worldPos);
-  const e2 = edgeFunction(maskP2, maskP0, worldPos);
+})(({ maskP0, maskP1, maskP2, vertexClipPos }) => {
+  const e0 = edgeFunction(maskP0, maskP1, vertexClipPos);
+  const e1 = edgeFunction(maskP1, maskP2, vertexClipPos);
+  const e2 = edgeFunction(maskP2, maskP0, vertexClipPos);
 
   if ((e0 > 0 || e1 > 0 || e2 > 0) && drawOverNeighborsBuffer.$ === 0) {
     std.discard();

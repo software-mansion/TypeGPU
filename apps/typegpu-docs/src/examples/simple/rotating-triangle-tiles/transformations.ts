@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
 import { aspectRatioBuffer, scaleBuffer } from './buffers.ts';
-import { BASE_TRIANGLE_HALF_HEIGHT } from './geometry.ts';
+import { BASE_TRIANGLE_HALF_SIDE } from './geometry.ts';
 
 const interpolate = tgpu.fn(
   [d.f32, d.f32, d.f32, d.f32, d.f32],
@@ -82,7 +82,7 @@ function instanceTransform(
 // top vertex lies on top of canvas's top left corner
 function getZeroOffset() {
   'use gpu';
-  const zeroXOffset = BASE_TRIANGLE_HALF_HEIGHT * scaleBuffer.$ -
+  const zeroXOffset = BASE_TRIANGLE_HALF_SIDE * scaleBuffer.$ -
     1 * aspectRatioBuffer.$;
   // make the top of the very first triangle touch the border
   const zeroYOffset = 1 - scaleBuffer.$;

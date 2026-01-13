@@ -134,7 +134,7 @@ export const controls = {
   'Tile density': {
     initial: INIT_TILE_DENSITY,
     min: 0.01,
-    max: 1,
+    max: 1.33,
     step: 0.01,
     onSliderChange: updateGridParams,
   },
