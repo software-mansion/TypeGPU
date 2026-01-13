@@ -101,7 +101,7 @@ async function generateReport(
   output += `### Dynamic test results:\n${dynamicTable}\n\n`;
 
   output += `## 📋 All results\n\n`;
-  output += `### All test results:\n${allTable}\n\n`;
+  output += `${allTable}\n\n`;
 
   if (allBundlers.size === 1) {
     output +=

@@ -34,7 +34,7 @@ export class ResultsTable {
 
   toString() {
     if (this.#results.size === 0) {
-      return '*No major changes.*';
+      return '\b*No major changes.*';
     }
 
     let output = '';
