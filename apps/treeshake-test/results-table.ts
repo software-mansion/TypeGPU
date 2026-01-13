@@ -1,4 +1,4 @@
-export const CHANGE_THRESHOLD = 0.005;
+export const CHANGE_THRESHOLD = 0.000;
 
 type TestName = string;
 type BundlerName = string;
@@ -34,7 +34,7 @@ export class ResultsTable {
 
   toString() {
     if (this.#results.size === 0) {
-      return 'No major changes.';
+      return '*No major changes.*';
     }
 
     let output = '';
@@ -85,7 +85,7 @@ export class ResultsTable {
       }
       if (
         pr && target &&
-        Math.max(pr / target, target / pr) > 1 + CHANGE_THRESHOLD
+        Math.max(pr / target, target / pr) >= 1 + CHANGE_THRESHOLD
       ) {
         return true;
       }
