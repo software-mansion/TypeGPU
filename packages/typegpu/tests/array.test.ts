@@ -263,7 +263,9 @@ describe('array', () => {
       testArray: { storage: d.arrayOf(d.u32) },
     });
 
-    expect(tgpu.resolve([testLayout])).toMatchInlineSnapshot(`"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`);
+    expect(tgpu.resolve([testLayout])).toMatchInlineSnapshot(
+      `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
+    );
   });
 
   it('can be immediately-invoked and initialized in TGSL', () => {
