@@ -8,6 +8,10 @@ export const $internal = Symbol(`typegpu:${version}:$internal`);
  * The getter to the value of this resource, accessible on the GPU
  */
 export const $gpuValueOf = Symbol(`typegpu:${version}:$gpuValueOf`);
+/**
+ * If this symbol is present, this means that getName and setName
+ * will refer to object behind this property instead.
+ */
 export const $getNameForward = Symbol(`typegpu:${version}:$getNameForward`);
 /**
  * Marks an object with slot-value bindings

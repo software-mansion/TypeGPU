@@ -14,6 +14,7 @@ import {
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyEphemeral,
   isVecInstance,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -154,7 +155,27 @@ export class ArrayExpression implements SelfResolvable {
   ) {
   }
 
+  toString(): string {
+    return 'ArrayExpression';
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    for (const elem of this.elements) {
+      // We check if there are no references among the elements
+      if (
+        (elem.origin === 'argument' &&
+          !isNaturallyEphemeral(elem.dataType)) ||
+        !isEphemeralSnippet(elem)
+      ) {
+        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetType =
+          ctx.resolve(concretize(elem.dataType as AnyData)).value;
+        throw new WgslTypeError(
+          `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+        );
+      }
+    }
+
     const arrayType = `array<${
       ctx.resolve(this.elementType).value
     }, ${this.elements.length}>`;
