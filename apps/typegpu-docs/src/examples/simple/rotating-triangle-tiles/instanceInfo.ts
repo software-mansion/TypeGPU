@@ -2,8 +2,8 @@ import * as d from 'typegpu/data';
 import { getGridParams } from './params.ts';
 import {
   BASE_TRIANGLE_CENTROID_TO_MIDPOINT_LENGTH,
-  BASE_TRIANGLE_HALF_HEIGHT,
-  BASE_TRIANGLE_SIDE,
+  BASE_TRIANGLE_HALF_SIDE,
+  BASE_TRIANGLE_HEIGHT,
 } from './geometry.ts';
 
 const InstanceInfo = d.struct({ offset: d.vec2f, rotationAngle: d.f32 });
@@ -18,15 +18,15 @@ function createInstanceInfoArray() {
 
       let info: d.Infer<typeof InstanceInfo>;
 
-      const offsetX = (column - 1) * BASE_TRIANGLE_HALF_HEIGHT *
-        getGridParams().userScale;
+      const offsetX = (column - 1) * BASE_TRIANGLE_HALF_SIDE *
+        getGridParams().tileDensity;
 
       if (column % 2 === 1) {
         info = {
           offset: d.vec2f(
             offsetX,
             BASE_TRIANGLE_CENTROID_TO_MIDPOINT_LENGTH *
-              getGridParams().userScale,
+              getGridParams().tileDensity,
           ),
           rotationAngle: 60,
         };
@@ -37,7 +37,8 @@ function createInstanceInfoArray() {
         };
       }
 
-      info.offset.y += -row * BASE_TRIANGLE_SIDE * getGridParams().userScale;
+      info.offset.y += -row * BASE_TRIANGLE_HEIGHT *
+        getGridParams().tileDensity;
       // hide empty pixel lines
       info.offset.y *= 0.9999;
 
