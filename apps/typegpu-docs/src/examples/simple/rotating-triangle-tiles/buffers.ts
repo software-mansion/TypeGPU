@@ -4,7 +4,11 @@ import { colors } from './geometry.ts';
 import { root } from './root.ts';
 import { triangleVertices } from './geometry.ts';
 import { createInstanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
-import { gridParams } from './config.ts';
+import {
+  gridParams,
+  INITIAL_MIDDLE_SQUARE_SCALE,
+  INITIAL_STEP_ROTATION,
+} from './config.ts';
 
 const animationProgressUniform = root.createUniform(d.f32);
 
@@ -24,8 +28,7 @@ const instanceInfoLayout = tgpu.bindGroupLayout({
   instanceInfo: { storage: InstanceInfoArray },
 });
 
-let { instanceInfoBuffer, instanceInfoBindGroup } =
-  createInstanceInfoBufferAndBindGroup();
+let instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
 
 function getInstanceInfoBindGroup() {
   return instanceInfoBindGroup;
@@ -41,24 +44,35 @@ function createInstanceInfoBufferAndBindGroup() {
     instanceInfo: instanceInfoBuffer.buffer,
   });
 
-  return { instanceInfoBuffer, instanceInfoBindGroup };
+  return instanceInfoBindGroup;
 }
 
 function updateInstanceInfoBufferAndBindGroup() {
-  ({ instanceInfoBuffer, instanceInfoBindGroup } =
-    createInstanceInfoBufferAndBindGroup());
+  instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
 }
 
 const scaleBuffer = root.createUniform(d.f32, gridParams.tileDensity);
 const aspectRatioBuffer = root.createUniform(d.f32, 1);
 
+const stepRotationBuffer = root.createUniform(d.f32, INITIAL_STEP_ROTATION);
+
+const middleSquareScaleBuffer = root.createUniform(
+  d.f32,
+  INITIAL_MIDDLE_SQUARE_SCALE,
+);
+
+const drawOverNeighborsBuffer = root.createUniform(d.u32, 0);
+
 export {
   animationProgressUniform,
   aspectRatioBuffer,
+  drawOverNeighborsBuffer,
   getInstanceInfoBindGroup,
   instanceInfoLayout,
+  middleSquareScaleBuffer,
   scaleBuffer,
   shiftedColorsBuffer,
+  stepRotationBuffer,
   triangleVerticesBuffer,
   updateInstanceInfoBufferAndBindGroup,
 };
