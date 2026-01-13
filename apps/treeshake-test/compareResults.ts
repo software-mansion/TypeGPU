@@ -94,7 +94,7 @@ async function generateReport(
   output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
   output += '| :---: | :---: | :---: | :---: |\n';
   output +=
-    `| **${totalDecreased}** | **${totalUnchanged}** | **${totalUnchanged}** | **${totalUnknown}** |\n\n`;
+    `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
   output += `## 👀 Notable results\n\n`;
   output += `### Static test results:\n${staticTable}\n\n`;
