@@ -8,51 +8,54 @@ const TESTS_DIR = new URL('./tests/', import.meta.url);
 async function generateTestFiles() {
   await fs.mkdir(TESTS_DIR, { recursive: true });
 
-  const imports: { export: string; from: string }[] = [];
-  imports.push(
-    ...(
-      Object.keys(tgpuAll)
-        .filter((key) => key !== 'default')
-        .map((exportName) => ({ export: exportName, from: 'typegpu' }))
-    ),
-  );
-  imports.push(
-    ...(
-      Object.keys(dAll)
-        .filter((key) => key !== 'default')
-        .map((exportName) => ({ export: exportName, from: 'typegpu/data' }))
-    ),
-  );
-  imports.push(
-    ...(
-      Object.keys(stdAll)
-        .filter((key) => key !== 'default')
-        .map((exportName) => ({ export: exportName, from: 'typegpu/std' }))
-    ),
-  );
+  const tgpuAllImports = Object.keys(tgpuAll)
+    .filter((key) => key !== 'default')
+    .map((exportName) => ({
+      export: exportName,
+      from: 'typegpu',
+      log: exportName,
+    }));
 
-  for (const { export: exportName, from } of imports) {
-    const testContent = `import { ${exportName} } from '${from}';
-    console.log(typeof ${exportName});
+  const dAllImports = Object.keys(dAll)
+    .map((exportName) => ({
+      export: exportName,
+      from: 'typegpu/data',
+      log: exportName,
+    }));
+
+  const stdAllImports = Object.keys(stdAll)
+    .map((exportName) => ({
+      export: exportName,
+      from: 'typegpu/std',
+      log: exportName,
+    }));
+
+  const tgpuImports = Object.keys(tgpuAll.tgpu)
+    .filter((key) => key !== '~unstable')
+    .map((exportName) => ({
+      export: 'tgpu',
+      from: 'typegpu',
+      log: `tgpu.${exportName}`,
+    }));
+
+  const imports: { export: string; from: string; log: string }[] = [
+    ...tgpuAllImports,
+    ...dAllImports,
+    ...stdAllImports,
+    ...tgpuImports,
+  ];
+
+  for (const { export: exportName, from, log } of imports) {
+    const testContent = `
+import { ${exportName} } from '${from}';
+console.log(typeof ${log});
     `;
 
-    const fileName = `import_${exportName}_from_${from.replaceAll('/', '')}.ts`;
+    const fileName = `import_${exportName}_from_${
+      from.replaceAll('/', '')
+    }_consolelog(${log}).ts`;
     await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
   }
-
-  //   // Generate tests for tgpu object properties
-  //   const tgpuProps = Object.keys(tgpu);
-  //   for (const prop of tgpuProps) {
-  //     const testContent = `// Auto-generated test file for tree-shaking analysis
-  // import tgpu from 'typegpu';
-
-  // // Use the import to prevent it from being tree-shaken
-  // console.log(typeof tgpu.${prop});
-  // `;
-
-  //     const fileName = `tgpu-${prop}.ts`;
-  //     await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
-  // }
 }
 
 await generateTestFiles();
