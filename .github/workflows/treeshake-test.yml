@@ -53,11 +53,11 @@ jobs:
 
       - name: Generate import tests on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test generate-tests
+        run: pnpm --filter treeshake-test generateTests
 
       - name: Generate import tests on target branch
         working-directory: target-branch
-        run: pnpm --filter treeshake-test generate-tests
+        run: pnpm --filter treeshake-test generateTests
 
       - name: Run tree-shake test on PR branch
         working-directory: pr-branch
