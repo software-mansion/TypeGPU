@@ -296,11 +296,16 @@ export interface WithBinding {
     VertexOut extends VertexOutInferred,
     FragmentOut extends FragmentOutInferred,
   >(
-    descriptor: TgpuRenderPipelineDescriptor__Shellless<
-      Record<string, never>,
-      VertexOut,
-      FragmentOut
-    >,
+    descriptor:
+      & Omit<
+        TgpuRenderPipelineDescriptor__Shellless<
+          Record<string, never>,
+          VertexOut,
+          FragmentOut
+        >,
+        'attribs'
+      >
+      & { attribs?: undefined },
   ): TgpuRenderPipeline<FragmentOut>;
   createRenderPipeline<
     Attribs extends Record<string, TgpuVertexAttrib>,

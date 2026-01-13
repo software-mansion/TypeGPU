@@ -216,6 +216,10 @@ export type TgpuRenderPipelineDescriptor__Shellless<
     'vertex' | 'fragment' | 'attribs' | 'targets'
   >
   & NeverRecordToOptional<{
+    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
+  }>
+  & {
+    attribs: Attribs;
     vertex: (
       input: AutoVertexIn<
         InferGPURecord<AttribRecordToDefaultDataTypes<NoInfer<Attribs>>>
@@ -224,10 +228,7 @@ export type TgpuRenderPipelineDescriptor__Shellless<
     fragment: (
       input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
     ) => AutoFragmentOut<FragmentOut>;
-
-    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
-  }>
-  & { attribs: Attribs };
+  };
 
 export type TgpuNoColorRenderPipelineDescriptor<
   VertexIn extends VertexInConstrained = VertexInConstrained,
@@ -903,7 +904,6 @@ class RenderPipelineCore implements SelfResolvable {
                 [key, value],
               ) => [key, formatToWGSLType[value.format]]),
             );
-            // TODO: Pass attributes
             vertexOut = ctx.resolve(
               new AutoVertexFn(vertex, defaultAttribData, locations),
             )
