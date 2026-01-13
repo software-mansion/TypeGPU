@@ -1,10 +1,11 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: it's useful */
 import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
-import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
+import type { WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
@@ -14,6 +15,7 @@ import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
+import { expectDataTypeOf } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -257,107 +259,34 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct resources for nested struct with atomics in a complex expression', ({ root }) => {
-    const testBuffer = root
-      .createBuffer(
-        d
-          .struct({
-            a: d.vec4f,
-            b: d
-              .struct({
-                aa: d.arrayOf(
-                  d
-                    .struct({ x: d.atomic(d.u32), y: d.atomic(d.i32) })
-                    .$name('DeeplyNestedStruct'),
-                  64,
-                ),
-              })
-              .$name('NestedStruct'),
-          })
-          .$name('TestStruct'),
-      )
-      .$usage('storage');
-
-    const testUsage = testBuffer.as('mutable');
-
-    const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-      const vec = std.mix(d.vec4f(), testUsage.value.a, value);
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
-      return vec;
-    });
-
-    const astInfo = getMetaData(
-      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    const testMutable = root.createMutable(
+      d.struct({
+        a: d.vec4f,
+        b: d.struct({
+          aa: d.arrayOf(
+            d.struct({ x: d.atomic(d.u32), y: d.atomic(d.i32) })
+              .$name('DeeplyNestedStruct'),
+            64,
+          ),
+        }).$name('NestedStruct'),
+      }).$name('TestStruct'),
     );
 
-    if (!astInfo?.ast) {
-      throw new Error('Expected prebuilt AST to be present');
-    }
+    expectDataTypeOf(() => {
+      'use gpu';
+      std.atomicLoad(testMutable.$.b.aa[0]!.y);
+    }).toStrictEqual(d.i32);
 
-    expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
-    );
+    expectDataTypeOf(() => {
+      'use gpu';
+      const value = std.atomicLoad(testMutable.$.b.aa[0]!.y);
+      std.mix(d.vec4f(), testMutable.$.a, value);
+    }).toStrictEqual(d.vec4f);
 
-    if (
-      astInfo.ast.params.filter((arg) => arg.type !== 'i').length > 0
-    ) {
-      throw new Error('Expected arguments as identifier names in ast');
-    }
-
-    const args = astInfo.ast.params.map((arg) =>
-      snip(
-        (arg as { type: 'i'; name: string }).name,
-        d.u32,
-        /* origin */ 'runtime',
-      )
-    );
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        args,
-        {},
-        d.vec4f,
-        (astInfo.externals as () => Record<string, unknown>)() ?? {},
-      );
-
-      // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-      //                           ^ this part should be a i32
-      const res = wgslGenerator.expression(
-        (astInfo.ast?.body[1][0] as tinyest.Const)[2],
-      );
-
-      expect(res.dataType).toStrictEqual(d.i32);
-
-      // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
-      //                        ^ this part should be a vec4f
-      ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('var', 'value', d.i32, 'runtime');
-      const res2 = wgslGenerator.expression(
-        (astInfo.ast?.body[1][1] as tinyest.Const)[2],
-      );
-      ctx[$internal].itemStateStack.popBlockScope();
-
-      expect(res2.dataType).toStrictEqual(d.vec4f);
-
-      // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
-      //                            ^ this part should be an atomic u32
-      //            ^ this part should be void
-      ctx[$internal].itemStateStack.pushBlockScope();
-      wgslGenerator.blockVariable('var', 'vec', d.vec4f, 'function');
-      const res3 = wgslGenerator.expression(
-        (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
-      );
-      const res4 = wgslGenerator.expression(
-        astInfo.ast?.body[1][2] as tinyest.Expression,
-      );
-      ctx[$internal].itemStateStack.popBlockScope();
-
-      expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
-      expect(res4.dataType).toStrictEqual(Void);
-    });
+    expectDataTypeOf(() => {
+      'use gpu';
+      testMutable.$.b.aa[0]!.x;
+    }).toStrictEqual(d.atomic(d.u32));
   });
 
   it('creates correct code for for statements', () => {
