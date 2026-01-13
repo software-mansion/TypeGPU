@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "generate-tests": "tsx generate-tests.ts",
-    "test": "node index.ts"
+    "test": "node runTests.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*",

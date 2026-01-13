@@ -4,7 +4,7 @@ import {
   bundleWithWebpack,
   getFileSize,
   type ResultRecord,
-} from './utils.ts';
+} from './bundleWith.ts';
 
 type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 

@@ -2,7 +2,7 @@
 
 import { arrayOf, type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { ResultsTable } from './results-table.ts';
+import { ResultsTable } from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
