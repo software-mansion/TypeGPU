@@ -137,17 +137,26 @@ This can be used to precompute and inject a value into the final shader code.
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
-const hsvToRgb = tgpu.fn([d.f32, d.f32, d.f32], d.vec3f)``;
-
 // ---cut---
-const injectRand01 = tgpu['~unstable']
-  .comptime(() => Math.random());
+const color = tgpu['~unstable']
+  .comptime((int: number) => {
+    const r = (int >> 16) & 0xff;
+    const g = (int >> 8) & 0xff;
+    const b = int & 0xff;
+    return d.vec3f(r / 255, g / 255, b / 255);
+  });
 
-const getColor = tgpu.fn([d.vec3f])((diffuse) => {
+const material = tgpu.fn([d.vec3f], d.vec3f)((diffuse) => {
   'use gpu';
-  const albedo = hsvToRgb(injectRand01(), 1, 0.5);
+  const albedo = color(0xff00ff);
   return albedo.mul(diffuse);
 });
+
+const shader = tgpu.resolve([material]);
+// fn material(diffuse: vec3f) -> vec3f {
+//   var albedo = vec3f(1, 0, 1);
+//   return (albedo * diffuse);
+// }
 ```
 
 Note how the function passed into `comptime` doesn't have to be marked with
