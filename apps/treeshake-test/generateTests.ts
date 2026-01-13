@@ -51,7 +51,7 @@ import { ${exportName} } from '${from}';
 console.log(typeof ${log});
     `;
 
-    const fileName = `${log}_from_${from.replaceAll('/', '')}`;
+    const fileName = `${log}_from_${from.replaceAll('/', '')}.ts`;
     await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
   }
 }
