@@ -97,7 +97,7 @@ describe('oklab example', () => {
         let k_m = ((-0.1055613458f * a) - (0.0638541728f * b));
         let k_s = ((-0.0894841775f * a) - (1.291485548f * b));
         var S = ((((k0 + (k1 * a)) + (k2 * b)) + ((k3 * a) * a)) + ((k4 * a) * b));
-      {
+        {
           let l_ = (1f + (S * k_l));
           let m_ = (1f + (S * k_m));
           let s_ = (1f + (S * k_s));
@@ -143,7 +143,7 @@ describe('oklab example', () => {
         }
         else {
           t = ((cusp.C * (L0 - 1f)) / ((C1 * (cusp.L - 1f)) + (cusp.C * (L0 - L1))));
-      {
+          {
             let dL = (L1 - L0);
             let dC = C1;
             let k_l = ((0.3963377774f * a) + (0.2158037573f * b));
@@ -152,7 +152,7 @@ describe('oklab example', () => {
             let l_dt = (dL + (dC * k_l));
             let m_dt = (dL + (dC * k_m));
             let s_dt = (dL + (dC * k_s));
-      {
+            {
               let L = ((L0 * (1f - t)) + (t * L1));
               let C = (t * C1);
               let l_ = (L + (C * k_l));
