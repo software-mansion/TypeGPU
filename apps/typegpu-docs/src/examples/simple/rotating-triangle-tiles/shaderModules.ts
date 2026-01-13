@@ -13,8 +13,8 @@ import {
   middleSquareScaleBuffer,
   shiftedColorsBuffer,
   stepRotationBuffer,
-  triangleVerticesBuffer,
 } from './buffers.ts';
+import { originalVertices } from './geometry.ts';
 
 //clear background color
 const backgroundVertex = tgpu['~unstable'].vertexFn({
@@ -47,7 +47,6 @@ const backgroundFragment = tgpu['~unstable'].fragmentFn({
 
 const MidgroundVertexOutput = {
   outPos: d.builtin.position,
-  color: d.vec4f,
   maskP0: d.interpolate('flat', d.vec2f),
   maskP1: d.interpolate('flat', d.vec2f),
   maskP2: d.interpolate('flat', d.vec2f),
@@ -63,12 +62,9 @@ const midgroundVertex = tgpu['~unstable'].vertexFn({
 })(({ vertexIndex, instanceIndex }) => {
   const SMALLEST_LOOPING_ROTATION_ANGLE = d.f32(120);
 
-  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex];
-  let calculatedPosition = d.vec2f(vertexPosition);
+  const vertexPosition = d.vec2f(originalVertices.$[vertexIndex]);
 
   const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
-
-  const color = d.vec4f(shiftedColorsBuffer.$[1]);
 
   const angle = interpolateBezier(
     animationProgressUniform.$,
@@ -83,28 +79,27 @@ const midgroundVertex = tgpu['~unstable'].vertexFn({
     middleSquareScaleBuffer.$,
   );
 
-  calculatedPosition = rotate(vertexPosition, angle);
+  let calculatedPosition = rotate(vertexPosition, angle);
   calculatedPosition = std.mul(calculatedPosition, scaleFactor);
 
   const finalPosition = instanceTransform(calculatedPosition, instanceInfo);
 
   // mask transform
   const maskP0 = instanceTransform(
-    triangleVerticesBuffer.$.positions[0],
+    d.vec2f(originalVertices.$[0]),
     instanceInfo,
   );
   const maskP1 = instanceTransform(
-    triangleVerticesBuffer.$.positions[1],
+    d.vec2f(originalVertices.$[1]),
     instanceInfo,
   );
   const maskP2 = instanceTransform(
-    triangleVerticesBuffer.$.positions[2],
+    d.vec2f(originalVertices.$[2]),
     instanceInfo,
   );
 
   return {
     outPos: d.vec4f(finalPosition, 0, 1),
-    color,
     maskP0,
     maskP1,
     maskP2,
@@ -120,7 +115,7 @@ function edgeFunction(a: d.v2f, b: d.v2f, p: d.v2f) {
 const midgroundFragment = tgpu['~unstable'].fragmentFn({
   in: MidgroundVertexOutput,
   out: d.vec4f,
-})(({ color, maskP0, maskP1, maskP2, worldPos }) => {
+})(({ maskP0, maskP1, maskP2, worldPos }) => {
   const e0 = edgeFunction(maskP0, maskP1, worldPos);
   const e1 = edgeFunction(maskP1, maskP2, worldPos);
   const e2 = edgeFunction(maskP2, maskP0, worldPos);
@@ -129,13 +124,10 @@ const midgroundFragment = tgpu['~unstable'].fragmentFn({
     std.discard();
   }
 
+  const color = d.vec4f(shiftedColorsBuffer.$[1]);
+
   return color;
 });
-
-const ForegroundVertexOutput = {
-  outPos: d.builtin.position,
-  color: d.vec4f,
-};
 
 // smallest triangle
 const foregroundVertex = tgpu['~unstable'].vertexFn({
@@ -143,14 +135,14 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
     vertexIndex: d.builtin.vertexIndex,
     instanceIndex: d.builtin.instanceIndex,
   },
-  out: ForegroundVertexOutput,
+  out: { outPos: d.builtin.position },
 })(({ vertexIndex, instanceIndex }) => {
-  const vertexPosition = triangleVerticesBuffer.$.positions[vertexIndex + 6];
-  let calculatedPosition = d.vec2f(vertexPosition);
+  const vertexPosition = d.vec2f(originalVertices.$[vertexIndex]);
+  let calculatedPosition = d.mat2x2f(0.5, 0, 0, 0.5).mul(
+    vertexPosition,
+  );
 
   const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
-
-  const color = d.vec4f(shiftedColorsBuffer.$[2]);
 
   const angle = interpolateBezier(
     animationProgressUniform.$,
@@ -159,21 +151,21 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
   );
 
   const scaleFactor = animationProgressUniform.$;
-  calculatedPosition = rotate(vertexPosition, angle);
+  calculatedPosition = rotate(calculatedPosition, angle);
   calculatedPosition = std.mul(calculatedPosition, scaleFactor);
 
   const finalPosition = instanceTransform(calculatedPosition, instanceInfo);
 
   return {
     outPos: d.vec4f(finalPosition, 0, 1),
-    color,
   };
 });
 
 const foregroundFragment = tgpu['~unstable'].fragmentFn({
-  in: ForegroundVertexOutput,
   out: d.vec4f,
-})(({ color }) => {
+})(() => {
+  const color = d.vec4f(shiftedColorsBuffer.$[2]);
+
   return color;
 });
 

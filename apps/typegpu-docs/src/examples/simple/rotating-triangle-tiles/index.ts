@@ -18,22 +18,24 @@ import {
 } from './shaderModules.ts';
 import {
   getAnimationDuration,
+  getCubicBezierControlPoints,
+  getCubicBezierControlPointsString,
   gridParams,
   INIT_TILE_DENSITY,
   INITIAL_STEP_ROTATION,
+  parseControlPoints,
   ROTATION_OPTIONS,
   updateAnimationDuration,
   updateAspectRatio,
   updateGridParams,
   updateStepRotation,
-} from './config.ts';
-
-const ease = createBezier(0.18, 0.7, 0.68, 1.03);
+} from './params.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
+let ease = createBezier(getCubicBezierControlPoints());
 updateAspectRatio(canvas.width, canvas.height);
 
 context.configure({
@@ -126,7 +128,7 @@ export function onCleanup() {
   root.destroy();
 }
 
-// Example controls and cleanup
+// Example controls
 
 export const controls = {
   'Tile density': {
@@ -139,7 +141,7 @@ export const controls = {
   'Animation duration': {
     initial: getAnimationDuration(),
     min: 250,
-    max: 25000,
+    max: 3500,
     step: 25,
     onSliderChange: updateAnimationDuration,
   },
@@ -152,6 +154,24 @@ export const controls = {
     initial: false,
     onToggleChange(value: boolean) {
       drawOverNeighborsBuffer.write(value ? 1 : 0);
+    },
+  },
+  'Cubic Bezier Control Points': {
+    initial: getCubicBezierControlPointsString(),
+    async onTextChange(value: string) {
+      const newPoints = parseControlPoints(value);
+
+      ease = createBezier(
+        newPoints,
+      );
+    },
+  },
+  'Edit Cubic Bezier Points': {
+    onButtonClick: () => {
+      window.open(
+        `https://cubic-bezier.com/?#${getCubicBezierControlPoints().join()}`,
+        '_blank',
+      );
     },
   },
 };
