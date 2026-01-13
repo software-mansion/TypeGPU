@@ -34,25 +34,22 @@ export class ResultsTable {
 
   toString() {
     if (this.#results.size === 0) {
-      return '\b*No major changes.*';
+      return '*No major changes.*';
     }
 
     let output = '';
-    // Table header
     output += '| Test';
     for (const bundler of this.#bundlers) {
       output += ` | ${bundler}`;
     }
     output += ' |\n';
 
-    // Table separator.
     output += '|---------';
     for (const _ of this.#bundlers) {
       output += '|---------';
     }
     output += ' |\n';
 
-    // Table rows
     for (const [test, row] of this.#results.entries()) {
       output += `| ${test.replaceAll('_', ' ')}`;
 

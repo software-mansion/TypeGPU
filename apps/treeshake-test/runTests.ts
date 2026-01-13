@@ -14,7 +14,7 @@ const TESTS_DIR = new URL('./tests/', import.meta.url);
 async function bundleTest(
   testFilename: string,
   bundler: string,
-  bundle: (testUrl: URL, outUrl: URL) => Promise<URL>,
+  bundle: Bundler,
 ): Promise<ResultRecord> {
   const testUrl = new URL(testFilename, TESTS_DIR);
   const outUrl = await bundle(testUrl, DIST_DIR);

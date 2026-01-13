@@ -2,4 +2,4 @@ dist/
 
 results.md
 results.json
-tests/import*
+tests/*_from_*
