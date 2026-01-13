@@ -84,6 +84,7 @@ import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
+import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 
 // ----------
 // Public API
@@ -302,12 +303,12 @@ export interface WithBinding {
     >,
   ): TgpuRenderPipeline<FragmentOut>;
   createRenderPipeline<
-    VertexIn extends VertexInConstrained,
+    Attribs extends Record<string, TgpuVertexAttrib>,
     VertexOut extends VertexOutInferred,
     FragmentOut extends FragmentOutInferred,
   >(
     descriptor: TgpuRenderPipelineDescriptor__Shellless<
-      VertexIn,
+      Attribs,
       VertexOut,
       FragmentOut
     >,

@@ -122,6 +122,10 @@ export class AutoVertexFn implements SelfResolvable {
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;
+    // If the implementation is not named, we can fallback to "vertexFn"
+    if (!getName(impl)) {
+      setName(impl, 'vertexFn');
+    }
     this.#core = createFnCore(impl, '@vertex ');
     this.#autoIn = new AutoStruct(
       { ...builtinVertexIn, ...attribs },

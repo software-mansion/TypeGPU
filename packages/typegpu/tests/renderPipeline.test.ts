@@ -1290,7 +1290,7 @@ describe('root.createRenderPipeline', () => {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn item(_arg_0: VertexIn) -> VertexOut {
+      @vertex fn vertexFn(_arg_0: VertexIn) -> VertexOut {
         var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
       }
@@ -1306,6 +1306,53 @@ describe('root.createRenderPipeline', () => {
 
       @fragment fn fragmentFn(_arg_0: FragmentIn) -> FragmentOut {
         return FragmentOut(vec4f(_arg_0.uv, 0f, 1f), 0f);
+      }"
+    `);
+  });
+
+  it('generates a struct that matches vertex attributes', ({ root }) => {
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const pipeline = root.createRenderPipeline({
+      attribs: { localPos: vertexLayout.attrib },
+      vertex: ({ $vertexIndex, localPos }) => {
+        'use gpu';
+        const uv = [
+          d.vec2f(0.5, 1),
+          d.vec2f(0, 0),
+          d.vec2f(1, 0),
+        ];
+
+        return { $position: d.vec4f(localPos, 1), uv: uv[$vertexIndex]! };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        return d.vec4f(uv, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+        @location(0) localPos: vec3f,
+      }
+
+      @vertex fn vertexFn(_arg_0: VertexIn) -> VertexOut {
+        var uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
+        return VertexOut(vec4f(_arg_0.localPos, 1f), uv[_arg_0.vertexIndex]);
+      }
+
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return vec4f(_arg_0.uv, 0f, 1f);
       }"
     `);
   });

@@ -18,6 +18,7 @@ import type {
   WgslTextureDepth2d,
   WgslTextureDepthMultisampled2d,
 } from '../../data/texture.ts';
+import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import {
   type AnyVecInstance,
   type AnyWgslData,
@@ -42,7 +43,10 @@ import type {
   Assume,
   NeverRecordToOptional,
 } from '../../shared/utilityTypes.ts';
-import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
+import type {
+  AnyVertexAttribs,
+  TgpuVertexAttrib,
+} from '../../shared/vertexFormat.ts';
 import {
   isBindGroup,
   isBindGroupLayout,
@@ -93,7 +97,10 @@ import {
 } from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
+import type {
+  AttribRecordToDefaultDataTypes,
+  LayoutToAllowedAttribs,
+} from '../vertexLayout/vertexAttribute.ts';
 import {
   isVertexLayout,
   type TgpuVertexLayout,
@@ -197,7 +204,10 @@ export type TgpuRenderPipelineDescriptor__ShelllessFrag<
   }>;
 
 export type TgpuRenderPipelineDescriptor__Shellless<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
+  Attribs extends Record<string, TgpuVertexAttrib> = Record<
+    string,
+    TgpuVertexAttrib
+  >,
   VertexOut extends VertexOutInferred = VertexOutInferred,
   FragmentOut extends FragmentOutInferred = FragmentOutInferred,
 > =
@@ -208,16 +218,16 @@ export type TgpuRenderPipelineDescriptor__Shellless<
   & NeverRecordToOptional<{
     vertex: (
       input: AutoVertexIn<
-        Assume<InferGPURecord<NoInfer<VertexIn>>, AnyAutoCustoms>
+        InferGPURecord<AttribRecordToDefaultDataTypes<NoInfer<Attribs>>>
       >,
     ) => AutoVertexOut<VertexOut>;
     fragment: (
       input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
     ) => AutoFragmentOut<FragmentOut>;
 
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
-  }>;
+  }>
+  & { attribs: Attribs };
 
 export type TgpuNoColorRenderPipelineDescriptor<
   VertexIn extends VertexInConstrained = VertexInConstrained,
@@ -873,7 +883,7 @@ class RenderPipelineCore implements SelfResolvable {
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
-    const { vertex, fragment } = this.options.descriptor;
+    const { vertex, fragment, attribs = {} } = this.options.descriptor;
 
     const locations = matchUpVaryingLocations(
       (vertex as TgpuVertexFn | undefined)?.shell?.out,
@@ -888,8 +898,15 @@ class RenderPipelineCore implements SelfResolvable {
         ctx.withSlots(slotBindings, () => {
           let vertexOut: WgslStruct<Record<string, AnyData>>;
           if (typeof vertex === 'function') {
+            const defaultAttribData = Object.fromEntries(
+              Object.entries(attribs as Record<string, TgpuVertexAttrib>).map((
+                [key, value],
+              ) => [key, formatToWGSLType[value.format]]),
+            );
             // TODO: Pass attributes
-            vertexOut = ctx.resolve(new AutoVertexFn(vertex, {}, locations))
+            vertexOut = ctx.resolve(
+              new AutoVertexFn(vertex, defaultAttribData, locations),
+            )
               .dataType as WgslStruct;
           } else {
             vertexOut = ctx.resolve(vertex).dataType as WgslStruct;

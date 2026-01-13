@@ -66,7 +66,9 @@ export type UndefinedToOptional<T> =
 export type NeverRecordToOptional<T> =
   & {
     // Props where the value extends `Record<string, never>` -> make them optional
-    [K in keyof T as T[K] extends Record<string, never> ? K : never]?: T[K];
+    [K in keyof T as T[K] extends Record<string, never> ? K : never]?:
+      | T[K]
+      | undefined;
   }
   & {
     // All other props remain unchanged
