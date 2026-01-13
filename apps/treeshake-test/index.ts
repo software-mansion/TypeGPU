@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import {
   bundleWithTsdown,
-  bundleWithWebpack,
+  // bundleWithWebpack,
   getFileSize,
   type ResultRecord,
 } from './utils.ts';
@@ -31,33 +31,28 @@ async function main() {
   console.log('Starting bundler efficiency measurement...');
   await fs.mkdir(DIST_DIR, { recursive: true });
 
-  const bundlers = [
-    // https://github.com/software-mansion/TypeGPU/issues/2026
-    // { name: 'esbuild', fn: bundleWithEsbuild },
-    { name: 'tsdown', fn: bundleWithTsdown },
-    { name: 'webpack', fn: bundleWithWebpack },
-  ];
+  const results = await Promise.allSettled(
+    tests.flatMap((test) => [
+      // https://github.com/software-mansion/TypeGPU/issues/2026
+      // bundleTest(test, 'esbuild', bundleWithEsbuild),
+      bundleTest(test, 'tsdown', bundleWithTsdown),
+      // bundleTest(test, 'webpack', bundleWithWebpack),
+    ]),
+  );
 
-  const successfulResults: ResultRecord[] = [];
-  let hasErrors = false;
-
-  for (const test of tests) {
-    for (const bundler of bundlers) {
-      try {
-        const result = await bundleTest(test, bundler.name, bundler.fn);
-        successfulResults.push(result);
-      } catch (error) {
-        console.error(`Failed to bundle ${test} with ${bundler.name}:`, error);
-        hasErrors = true;
+  if (results.some((result) => result.status === 'rejected')) {
+    console.error('Some tests failed to bundle.');
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(result.reason);
       }
     }
-  }
-
-  if (hasErrors) {
-    console.error('\nSome tests failed to bundle.');
     process.exit(1);
   }
 
+  const successfulResults = (
+    results as PromiseFulfilledResult<ResultRecord>[]
+  ).map((result) => result.value);
   // Save results as JSON
   await fs.writeFile(
     'results.json',
