@@ -14,15 +14,14 @@ const originalVertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(-std.sqrt(3) / 2, -0.5),
 ]);
 
-const baseTriangleSide = 3 / 2;
-const baseTriangleCentroidToMidpointLength = 0.5;
-const baseTriangleHeight = std.sqrt(3);
-const baseTriangleHalfHeight = baseTriangleHeight * 0.5;
+const BASE_TRIANGLE_SIDE = 3 / 2;
+const BASE_TRIANGLE_CENTROID_TO_MIDPOINT_LENGTH = 0.5;
+const BASE_TRIANGLE_HALF_HEIGHT = std.sqrt(3) * 0.5;
 
 export {
-  baseTriangleCentroidToMidpointLength,
-  baseTriangleHalfHeight,
-  baseTriangleSide,
+  BASE_TRIANGLE_CENTROID_TO_MIDPOINT_LENGTH,
+  BASE_TRIANGLE_HALF_HEIGHT,
+  BASE_TRIANGLE_SIDE,
   colors,
   originalVertices,
 };
