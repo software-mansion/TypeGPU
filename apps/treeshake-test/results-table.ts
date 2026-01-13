@@ -8,7 +8,7 @@ export class ResultsTable {
   #bundlers: Set<BundlerName>;
   #results: Map<TestName, Row>;
   #threshold: number;
-  constructor(bundlers: Set<string>, threshold: number) {
+  constructor(bundlers: Set<BundlerName>, threshold: number) {
     this.#bundlers = bundlers;
     this.#results = new Map();
     this.#threshold = threshold;
@@ -87,9 +87,6 @@ ${output}
     for (const cell of row) {
       const pr = cell[1].pr;
       const target = cell[1].target;
-      if (pr === undefined && target) {
-        return true;
-      }
       if (pr && target === undefined) {
         return true;
       }
