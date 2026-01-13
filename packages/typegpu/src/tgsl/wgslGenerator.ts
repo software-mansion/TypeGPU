@@ -1110,7 +1110,62 @@ ${this.ctx.pre}else ${alternate}`;
       const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
 
       if (shouldUnroll && ephemeralIterable) {
-        throw new Error('Not implemented');
+        if (iterableSnippet.value instanceof ArrayExpression) {
+          const elementSnippet = forOfHelpers.getElementSnippet(
+            iterableSnippet,
+            'i', // never will use that, can be arbitrary
+          );
+
+          // we need dummy variable to resolve body of the loop
+          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+          const elementType = forOfHelpers.getElementType(elementSnippet);
+
+          const loopVarSnippet = snip(
+            loopVarName,
+            elementType,
+            elementSnippet.origin,
+          );
+          this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+          const baseIterationStr = `${this.ctx.pre}${
+            this.block(blockifySingleStatement(body))
+          }`;
+
+          const values = Array.isArray(iterableSnippet.value)
+            ? iterableSnippet.value
+            : iterableSnippet.value.elements;
+
+          const re = new RegExp(`\\b${loopVarName}\\b`, 'g');
+          const iterations = values.map((e) =>
+            baseIterationStr.replace(re, stitch`${e}`)
+          );
+
+          return iterations.join('\n');
+        }
+
+        // if (Array.isArray(iterableSnippet.value)) {
+        //   const elementSnippet = forOfHelpers.getElementSnippet(
+        //     iterableSnippet,
+        //     'i', never will use that, can be arbitrary
+        //   );
+
+        //   console.log({ iterableSnippet, elementSnippet });
+
+        //   // we need dummy variable to resolve body of the loop
+        //   const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+        //   const elementType = forOfHelpers.getElementType(elementSnippet);
+
+        //   const loopVarSnippet = snip(
+        //     loopVarName,
+        //     elementType,
+        //     elementSnippet.origin,
+        //   );
+        //   this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+        //   return '';
+        // }
+
+        throw new WgslTypeError('Cannot unroll. Unsupported iterable.');
       }
 
       if (shouldUnroll && !ephemeralIterable) {
