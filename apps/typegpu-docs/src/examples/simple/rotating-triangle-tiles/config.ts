@@ -1,13 +1,16 @@
 import * as d from 'typegpu/data';
 import {
   aspectRatioBuffer,
+  middleSquareScaleBuffer,
   scaleBuffer,
+  stepRotationBuffer,
   updateInstanceInfoBufferAndBindGroup,
 } from './buffers.ts';
 
-const initAnimationDuration = 1000;
-const initTileDensity = 0.1;
-const STEP_ROTATION_ANGLE = 60;
+const INIT_TILE_DENSITY = 0.1;
+const INITIAL_STEP_ROTATION = 60;
+const INITIAL_MIDDLE_SQUARE_SCALE = 2;
+const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
 let aspectRatio = 1;
 
@@ -16,7 +19,37 @@ function updateAspectRatio(width: number, height: number) {
   aspectRatioBuffer.write(aspectRatio);
 }
 
-let animationDuration = initAnimationDuration;
+let animationDuration = 1000;
+
+function getAnimationDuration() {
+  return animationDuration;
+}
+
+const ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = [
+  [0, 1.5],
+  [60, 2],
+  [120, 2],
+  [180, 3],
+];
+
+const ROTATION_OPTIONS = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.flatMap(
+  (element) => element[0],
+);
+
+function updateStepRotation(newValue: number) {
+  stepRotationBuffer.write(newValue);
+
+  // update middle triangle scale so that it doesn't
+  // show already hidden color
+
+  const scale = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.find((element) =>
+    element[0] === newValue
+  )?.[1];
+
+  middleSquareScaleBuffer.write(
+    scale ?? DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY,
+  );
+}
 
 const GridParams = d.struct({
   tileDensity: d.f32,
@@ -25,7 +58,7 @@ const GridParams = d.struct({
   triangleCount: d.u32,
 });
 
-let gridParams = createGridParams(initTileDensity);
+let gridParams = createGridParams(INIT_TILE_DENSITY);
 
 function updateGridParams(newValue?: number) {
   const value = newValue ?? gridParams.tileDensity;
@@ -54,13 +87,16 @@ function updateAnimationDuration(newValue: number) {
 }
 
 export {
-  animationDuration,
   createGridParams,
+  getAnimationDuration,
   GridParams,
   gridParams,
-  initTileDensity,
-  STEP_ROTATION_ANGLE,
+  INIT_TILE_DENSITY,
+  INITIAL_MIDDLE_SQUARE_SCALE,
+  INITIAL_STEP_ROTATION,
+  ROTATION_OPTIONS,
   updateAnimationDuration,
   updateAspectRatio,
   updateGridParams,
+  updateStepRotation,
 };

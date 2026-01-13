@@ -1,20 +1,31 @@
 import { colors } from './geometry.ts';
 import {
   animationProgressUniform,
+  drawOverNeighborsBuffer,
   getInstanceInfoBindGroup,
   shiftedColorsBuffer,
   updateInstanceInfoBufferAndBindGroup,
 } from './buffers.ts';
 import { createBezier } from './bezier.ts';
 import { root } from './root.ts';
-import { mainFragment, mainVertex } from './shaderModules.ts';
 import {
-  animationDuration,
+  backgroundFragment,
+  backgroundVertex,
+  foregroundFragment,
+  foregroundVertex,
+  midgroundFragment,
+  midgroundVertex,
+} from './shaderModules.ts';
+import {
+  getAnimationDuration,
   gridParams,
-  initTileDensity,
+  INIT_TILE_DENSITY,
+  INITIAL_STEP_ROTATION,
+  ROTATION_OPTIONS,
   updateAnimationDuration,
   updateAspectRatio,
   updateGridParams,
+  updateStepRotation,
 } from './config.ts';
 
 const ease = createBezier(0.18, 0.7, 0.68, 1.03);
@@ -31,16 +42,27 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex)
-  .withFragment(mainFragment, { format: presentationFormat })
+const backgroundPipeline = root['~unstable']
+  .withVertex(backgroundVertex)
+  .withFragment(backgroundFragment, { format: presentationFormat })
+  .createPipeline();
+
+const midgroundPipeline = root['~unstable']
+  .withVertex(midgroundVertex)
+  .withFragment(midgroundFragment, { format: presentationFormat })
+  .createPipeline();
+
+const foregroundPipeline = root['~unstable']
+  .withVertex(foregroundVertex)
+  .withFragment(foregroundFragment, { format: presentationFormat })
   .createPipeline();
 
 // main drawing loop
 let isRunning = true;
 
 function getShiftedColors(timestamp: number) {
-  const shiftBy = Math.floor(timestamp / animationDuration) % colors.length;
+  const shiftBy = Math.floor(timestamp / getAnimationDuration()) %
+    colors.length;
   return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
 }
 
@@ -49,18 +71,38 @@ function draw(timestamp: number) {
 
   shiftedColorsBuffer.write(getShiftedColors(timestamp));
   animationProgressUniform.write(
-    ease((timestamp % animationDuration) / animationDuration),
+    ease((timestamp % getAnimationDuration()) / getAnimationDuration()),
   );
 
-  pipeline
+  const view = context.getCurrentTexture().createView();
+
+  backgroundPipeline
+    .withColorAttachment(
+      {
+        view,
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ).draw(6);
+
+  midgroundPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
+      view,
+      loadOp: 'load',
       storeOp: 'store',
     })
     .with(getInstanceInfoBindGroup())
-    .draw(9, gridParams.triangleCount);
+    .draw(3, gridParams.triangleCount);
+
+  foregroundPipeline
+    .withColorAttachment({
+      view,
+      loadOp: 'load',
+      storeOp: 'store',
+    })
+    .with(getInstanceInfoBindGroup())
+    .draw(3, gridParams.triangleCount);
 
   requestAnimationFrame(draw);
 }
@@ -87,20 +129,29 @@ export function onCleanup() {
 // Example controls and cleanup
 
 export const controls = {
-  'tile density': {
-    initial: initTileDensity,
+  'Tile density': {
+    initial: INIT_TILE_DENSITY,
     min: 0.01,
     max: 1,
     step: 0.01,
     onSliderChange: updateGridParams,
   },
-  'animation duration': {
-    initial: animationDuration,
+  'Animation duration': {
+    initial: getAnimationDuration(),
     min: 250,
-    max: 2500,
+    max: 25000,
     step: 25,
-    onSliderChange: (newValue: number) => {
-      updateAnimationDuration(newValue);
+    onSliderChange: updateAnimationDuration,
+  },
+  'Rotation in degrees': {
+    initial: INITIAL_STEP_ROTATION,
+    options: ROTATION_OPTIONS,
+    onSelectChange: updateStepRotation,
+  },
+  'Draw over neighbors': {
+    initial: false,
+    onToggleChange(value: boolean) {
+      drawOverNeighborsBuffer.write(value ? 1 : 0);
     },
   },
 };
