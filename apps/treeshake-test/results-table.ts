@@ -54,7 +54,7 @@ export class ResultsTable {
 
     // Table rows
     for (const [test, row] of this.#results.entries()) {
-      output += `| ${test}`;
+      output += `| ${test.replaceAll('_', ' ')}`;
 
       for (const bundler of this.#bundlers) {
         const prSize = row.get(bundler)?.pr;

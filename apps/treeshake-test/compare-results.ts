@@ -45,9 +45,9 @@ async function generateReport(
   ]);
 
   // Split tests into static and dynamic
-  const staticTests = [...allTests].filter((t) => !t.startsWith('import_'))
+  const staticTests = [...allTests].filter((t) => !t.includes('_from_'))
     .sort();
-  const dynamicTests = [...allTests].filter((t) => t.startsWith('import_'))
+  const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
     .sort();
 
   let output = '\n\n';
