@@ -290,13 +290,19 @@ export type UnwrapRuntimeConstructor<
   T extends AnyData | ((_: number) => AnyData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
+interface BindGroupLayoutInternals<
+  Entries extends Record<string, TgpuLayoutEntry | null>,
+> {
+  bound: { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
+}
+
 export interface TgpuBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
     string,
     TgpuLayoutEntry | null
   >,
 > extends TgpuNamable {
-  readonly [$internal]: true;
+  readonly [$internal]: BindGroupLayoutInternals<Entries>;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   /**
@@ -504,14 +510,10 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  public readonly [$internal] = true;
+  public readonly [$internal]: BindGroupLayoutInternals<Entries>;
   private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
-
-  public readonly bound = {} as {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
 
   public readonly value = {} as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
@@ -528,6 +530,9 @@ class TgpuBindGroupLayoutImpl<
   constructor(public readonly entries: Entries) {
     let idx = 0;
 
+    const bound = {} as { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
+    this[$internal] = { bound };
+
     for (const [key, entry] of Object.entries(entries)) {
       if (entry === null) {
         idx++;
@@ -537,8 +542,8 @@ class TgpuBindGroupLayoutImpl<
       const membership: LayoutMembership = { layout: this, key, idx };
 
       if ('uniform' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuLaidOutBufferImpl(
           'uniform',
           entry.uniform,
           membership,
@@ -550,8 +555,8 @@ class TgpuBindGroupLayoutImpl<
           ? entry.storage
           : entry.storage(0);
 
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuLaidOutBufferImpl(
           entry.access ?? 'readonly',
           dataType,
           membership,
@@ -559,32 +564,32 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('texture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutTextureViewImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.texture,
           membership,
         );
       }
 
       if ('storageTexture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutTextureViewImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.storageTexture,
           membership,
         );
       }
 
       if ('externalTexture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuExternalTextureImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuExternalTextureImpl(
           entry.externalTexture,
           membership,
         );
       }
 
       if ('sampler' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-        (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(
+        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        (bound[key] as any) = new TgpuLaidOutSamplerImpl(
           entry.sampler === 'comparison'
             ? wgslComparisonSampler()
             : wgslSampler(),
@@ -594,8 +599,8 @@ class TgpuBindGroupLayoutImpl<
 
       Object.defineProperty(this.value, key, {
         get: () => {
-          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-          return (this.bound[key] as any).value;
+          // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+          return (bound[key] as any).value;
         },
       });
 
@@ -614,6 +619,10 @@ class TgpuBindGroupLayoutImpl<
   $name(label: string): this {
     setName(this, label);
     return this;
+  }
+
+  public get bound() {
+    return this[$internal].bound;
   }
 
   $idx(index?: number): this {
