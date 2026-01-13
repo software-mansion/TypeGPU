@@ -1,7 +1,8 @@
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import type { Monaco } from '@monaco-editor/react';
-import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
+import { sandboxModulesAtom } from '../../../utils/examples/sandboxModules.ts';
 import { tsCompilerOptions } from '../../../utils/liveEditor/embeddedTypeScript.ts';
+import { getDefaultStore } from 'jotai';
 
 export const LANGUAGE_MAP: Record<string, string> = {
   wgsl: 'wgsl',
@@ -38,41 +39,48 @@ export const readOnlyEditorOptions = {
 };
 
 export function setupMonacoEditor(monaco: Monaco) {
+  // NOTE: This is not recommended, as the default store is not always the one you want,
+  // but in this particular case, it's totally fine.
+  const store = getDefaultStore();
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
-  const reroutes = pipe(
-    entries(SANDBOX_MODULES),
-    map(([key, moduleDef]) => {
-      if ('reroute' in moduleDef.typeDef) {
-        return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
-      }
-      return null;
-    }),
-    filter(isTruthy),
-    fromEntries(),
-  );
+  (async () => {
+    const SANDBOX_MODULES = await store.get(sandboxModulesAtom);
 
-  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
-    if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(
-        moduleDef.typeDef.content,
-        moduleDef.typeDef.filename,
-      );
+    const reroutes = pipe(
+      entries(SANDBOX_MODULES),
+      map(([key, moduleDef]) => {
+        if ('reroute' in moduleDef.typeDef) {
+          return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
+        }
+        return null;
+      }),
+      filter(isTruthy),
+      fromEntries(),
+    );
 
-      if (
-        moduleDef.typeDef.filename &&
-        moduleDef.typeDef.filename !== moduleKey
-      ) {
-        reroutes[moduleKey] = [
-          ...(reroutes[moduleKey] ?? []),
+    for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
+      if ('content' in moduleDef.typeDef) {
+        tsDefaults.addExtraLib(
+          moduleDef.typeDef.content,
           moduleDef.typeDef.filename,
-        ];
+        );
+
+        if (
+          moduleDef.typeDef.filename &&
+          moduleDef.typeDef.filename !== moduleKey
+        ) {
+          reroutes[moduleKey] = [
+            ...(reroutes[moduleKey] ?? []),
+            moduleDef.typeDef.filename,
+          ];
+        }
       }
     }
-  }
 
-  tsDefaults.setCompilerOptions({
-    ...tsCompilerOptions,
-    paths: reroutes,
+    tsDefaults.setCompilerOptions({
+      ...tsCompilerOptions,
+      paths: reroutes,
+    });
   });
 }
