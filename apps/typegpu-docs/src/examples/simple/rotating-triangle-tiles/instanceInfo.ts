@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import { gridParams } from './config.ts';
+import { gridParams } from './params.ts';
 import {
   baseTriangleCentroidToMidpointLength,
   baseTriangleHalfHeight,

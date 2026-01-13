@@ -1,5 +1,6 @@
 // Generate by AI
-export function createBezier(x1: number, y1: number, x2: number, y2: number) {
+export function createBezier(params: number[]) {
+  const [x1, y1, x2, y2] = params;
   // Pre-calculate polynomial coefficients
   // 3*x1, 3*(x2-x1)-cx, 1-cx-bx, etc.
   const cx = 3 * x1;
