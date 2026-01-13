@@ -32,13 +32,13 @@ async function generateReport(
   const prGrouped = groupResultsByTest(prResults);
   const targetGrouped = groupResultsByTest(targetResults);
 
-  // Get all unique bundlers from both branches
+  // All unique bundlers from both branches
   const allBundlers = new Set([
     ...new Set(prResults.map((r) => r.bundler)),
     ...new Set(targetResults.map((r) => r.bundler)),
   ]);
 
-  // Get all unique tests from both branches
+  // All unique tests from both branches
   const allTests = new Set([
     ...Object.keys(prGrouped),
     ...Object.keys(targetGrouped),
@@ -50,13 +50,11 @@ async function generateReport(
   const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
     .sort();
 
-  let output = '\n\n';
-
   // Summary statistics
-  let totalIncrease = 0,
-    totalDecrease = 0,
-    totalUnchanged = 0,
-    totalUnknown = 0;
+  let totalDecreased = 0;
+  let totalIncreased = 0;
+  let totalUnchanged = 0;
+  let totalUnknown = 0;
 
   for (const test of allTests) {
     for (const bundler of allBundlers) {
@@ -64,24 +62,13 @@ async function generateReport(
       const targetSize = targetGrouped[test]?.[bundler];
 
       if (targetSize === undefined || prSize === undefined) totalUnknown++;
-      else if (prSize > targetSize) totalIncrease++;
-      else if (prSize < targetSize) totalDecrease++;
+      else if (prSize > targetSize) totalIncreased++;
+      else if (prSize < targetSize) totalDecreased++;
       else totalUnchanged++;
     }
   }
 
-  output += '## 📊 Bundle Size Comparison\n\n';
-  output += '## 📈 Summary\n\n';
-  output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
-  output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
-  output += `- ➖ **Unchanged**: ${totalUnchanged} bundles\n\n`;
-  output += totalUnknown > 0
-    ? `- ❔ **Unknown**: ${totalUnknown} bundles\n`
-    : '';
-  output += '\n';
-
-  // Main comparison table
-  output += `## 📋 Bundle Size Comparison\n\n`;
+  // Comparison tables
   const staticTable = new ResultsTable(allBundlers, 0.005);
   const dynamicTable = new ResultsTable(allBundlers, 0.005);
   const allTable = new ResultsTable(allBundlers, 0);
@@ -100,11 +87,23 @@ async function generateReport(
     allTable.addRow(test, prResults, targetResults);
   });
 
-  output += `Interesting static test results:\n${staticTable}\n\n`;
-  output += `Interesting dynamic test results:\n${dynamicTable}\n\n`;
-  output += `All test results:\n${allTable}\n\n`;
+  // Markdown generation
+  let output = '';
 
-  if (allBundlers.size === 0) {
+  output += '## 📊 Bundle Size Comparison\n\n';
+  output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
+  output += '| :---: | :---: | :---: | :---: |\n';
+  output +=
+    `| **${totalDecreased}** | **${totalUnchanged}** | **${totalUnchanged}** | **${totalUnknown}** |\n\n`;
+
+  output += `## 👀 Notable results\n\n`;
+  output += `### Static test results:\n${staticTable}\n\n`;
+  output += `### Dynamic test results:\n${dynamicTable}\n\n`;
+
+  output += `## 📋 All results\n\n`;
+  output += `### All test results:\n${allTable}\n\n`;
+
+  if (allBundlers.size === 1) {
     output +=
       `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
   }

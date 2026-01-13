@@ -11,12 +11,6 @@ type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 const DIST_DIR = new URL('./dist/', import.meta.url);
 const TESTS_DIR = new URL('./tests/', import.meta.url);
 
-/**
- * A list of test filenames in the tests directory.
- * E.g.: ['test1.ts', 'test2.ts', ...]
- */
-const tests = await fs.readdir(TESTS_DIR);
-
 async function bundleTest(
   testFilename: string,
   bundler: string,
@@ -58,6 +52,8 @@ async function main() {
   }
 
   console.log(`Running for bundlers: [${bundlers.map((e) => e[0])}].`);
+
+  const tests = await fs.readdir(TESTS_DIR);
 
   const results = await Promise.allSettled(
     tests.flatMap((test) =>
