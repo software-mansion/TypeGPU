@@ -108,7 +108,7 @@ export class TgpuBufferShorthandImpl<
   }
 
   $name(label: string): this {
-    setName(this[$getNameForward], label);
+    setName(this, label);
     return this;
   }
 
