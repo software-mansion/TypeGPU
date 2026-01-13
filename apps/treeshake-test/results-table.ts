@@ -68,10 +68,10 @@ export class ResultsTable {
     }
     output += '\n';
 
-    if (this.#results.size > 10) {
+    if (this.#results.size > 20) {
       output = `
 <details>
-<summary>Click to reveal the results table:</summary>
+<summary><b>‼️ Click to reveal the results table (${this.#results.size} entries).</b>**</summary>
 
 ${output}
 

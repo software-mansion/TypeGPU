@@ -1,10 +1,12 @@
 import * as fs from 'node:fs/promises';
 import {
   bundleWithTsdown,
-  // bundleWithWebpack,
+  bundleWithWebpack,
   getFileSize,
   type ResultRecord,
 } from './utils.ts';
+
+type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 
 const DIST_DIR = new URL('./dist/', import.meta.url);
 const TESTS_DIR = new URL('./tests/', import.meta.url);
@@ -27,17 +29,42 @@ async function bundleTest(
   return { testFilename, bundler, size };
 }
 
+/**
+ * Runs bundlers that are included in options.
+ */
 async function main() {
   console.log('Starting bundler efficiency measurement...');
   await fs.mkdir(DIST_DIR, { recursive: true });
+  const availableBundlers: Record<string, Bundler> = {
+    // https://github.com/software-mansion/TypeGPU/issues/2026
+    // esbuild: bundleWithEsbuild,
+    tsdown: bundleWithTsdown,
+    webpack: bundleWithWebpack,
+  };
+
+  const bundlers: [string, Bundler][] = [];
+  for (const option of process.argv.slice(2)) {
+    const bundlerName = option.slice(2); // "--bundler"
+    const bundler = availableBundlers[bundlerName];
+    if (bundler) {
+      bundlers.push([bundlerName, bundler]);
+    } else {
+      console.error(`Bundler '${bundlerName}' is unavailable.`);
+      console.error(
+        `Available bundlers: ${Object.keys(availableBundlers).join(', ')}`,
+      );
+      process.exit(1);
+    }
+  }
+
+  console.log(`Running for bundlers: [${bundlers.map((e) => e[0])}].`);
 
   const results = await Promise.allSettled(
-    tests.flatMap((test) => [
-      // https://github.com/software-mansion/TypeGPU/issues/2026
-      // bundleTest(test, 'esbuild', bundleWithEsbuild),
-      bundleTest(test, 'tsdown', bundleWithTsdown),
-      // bundleTest(test, 'webpack', bundleWithWebpack),
-    ]),
+    tests.flatMap((test) =>
+      bundlers.map(([bundlerName, bundler]) =>
+        bundleTest(test, bundlerName, bundler)
+      )
+    ),
   );
 
   if (results.some((result) => result.status === 'rejected')) {
