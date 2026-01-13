@@ -20,7 +20,7 @@ import {
   getAnimationDuration,
   getCubicBezierControlPoints,
   getCubicBezierControlPointsString,
-  gridParams,
+  getGridParams,
   INIT_TILE_DENSITY,
   INITIAL_STEP_ROTATION,
   parseControlPoints,
@@ -95,7 +95,7 @@ function draw(timestamp: number) {
       storeOp: 'store',
     })
     .with(getInstanceInfoBindGroup())
-    .draw(3, gridParams.triangleCount);
+    .draw(3, getGridParams().triangleCount);
 
   foregroundPipeline
     .withColorAttachment({
@@ -104,7 +104,7 @@ function draw(timestamp: number) {
       storeOp: 'store',
     })
     .with(getInstanceInfoBindGroup())
-    .draw(3, gridParams.triangleCount);
+    .draw(3, getGridParams().triangleCount);
 
   requestAnimationFrame(draw);
 }
