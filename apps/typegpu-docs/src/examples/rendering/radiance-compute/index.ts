@@ -1,8 +1,13 @@
-import tgpu from 'typegpu';
+import * as sdf from '@typegpu/sdf';
+import tgpu, {
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuTexture,
+} from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import * as sdf from '@typegpu/sdf';
+import { DragController } from './drag-controller.ts';
 import {
   SceneData,
   sceneData,
@@ -10,7 +15,6 @@ import {
   sceneSDF,
   updateElementPosition,
 } from './scene.ts';
-import { DragController } from './drag-controller.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -23,7 +27,7 @@ context.configure({
 });
 
 const OUTPUT_RESOLUTION: [number, number] = [canvas.width, canvas.height];
-const LIGHTING_RESOLUTION = 0.4;
+const LIGHTING_RESOLUTION = 0.35;
 
 const [outputProbesX, outputProbesY] = OUTPUT_RESOLUTION;
 const aspect = outputProbesX / outputProbesY;
@@ -37,28 +41,33 @@ const cascadeProbesX = aspect >= 1
 const cascadeProbesY = aspect >= 1
   ? cascadeProbesMin
   : Math.round(cascadeProbesMin / aspect);
-const cascadeDimX = cascadeProbesX * 2; // 2x2 stored rays per probe
+const cascadeDimX = cascadeProbesX * 2;
 const cascadeDimY = cascadeProbesY * 2;
 
 const interval0 = 1 / cascadeProbesMin;
-const maxIntervalStart = 1.5; // ~diagonal in UV space
+const maxIntervalStart = 1.5;
 const cascadeAmount = Math.ceil(
-  Math.log2(maxIntervalStart * 3 / interval0 + 1) / 2,
+  Math.log2((maxIntervalStart * 3) / interval0 + 1) / 2,
 );
 
-const cascadesTextureA = root['~unstable']
-  .createTexture({
-    size: [cascadeDimX, cascadeDimY, cascadeAmount],
-    format: 'rgba16float',
-  })
-  .$usage('storage', 'sampled');
+type CascadeTexture =
+  & TgpuTexture<{
+    size: [number, number, number];
+    format: 'rgba16float';
+  }>
+  & StorageFlag
+  & SampledFlag;
 
-const cascadesTextureB = root['~unstable']
-  .createTexture({
-    size: [cascadeDimX, cascadeDimY, cascadeAmount],
-    format: 'rgba16float',
-  })
-  .$usage('storage', 'sampled');
+const cascadeTextures = Array.from(
+  { length: 2 },
+  () =>
+    root['~unstable']
+      .createTexture({
+        size: [cascadeDimX, cascadeDimY, cascadeAmount],
+        format: 'rgba16float',
+      })
+      .$usage('storage', 'sampled'),
+) as [CascadeTexture, CascadeTexture];
 
 const radianceFieldTex = root['~unstable']
   .createTexture({
@@ -128,7 +137,9 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   const dim2 = cascadeDimUniform.$;
-  if (gid.x >= dim2.x || gid.y >= dim2.y) return;
+  if (gid.x >= dim2.x || gid.y >= dim2.y) {
+    return;
+  }
 
   const layer = cascadeIndexUniform.$;
   const probes = probesUniform.$;
@@ -156,7 +167,7 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
   const cascadeProbesMinVal = d.f32(std.min(cascadeProbes.x, cascadeProbes.y));
   const interval0 = 1.0 / cascadeProbesMinVal;
   const pow4 = d.f32(d.u32(1) << (layer * d.u32(2)));
-  const startUv = interval0 * (pow4 - 1.0) / 3.0;
+  const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
   const endUv = startUv + interval0 * pow4;
   const eps = 0.5 / cascadeProbesMinVal;
   const minStep = 0.25 / cascadeProbesMinVal;
@@ -165,9 +176,9 @@ const cascadePassCompute = tgpu['~unstable'].computeFn({
 
   // Cast 4 rays per stored texel (2x2 block) and average
   for (let i = 0; i < 4; i++) {
-    const dirActual = dirStored.mul(d.u32(2)).add(
-      d.vec2u(d.u32(i) & d.u32(1), d.u32(i) >> d.u32(1)),
-    );
+    const dirActual = dirStored
+      .mul(d.u32(2))
+      .add(d.vec2u(d.u32(i) & d.u32(1), d.u32(i) >> d.u32(1)));
     const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
     const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
     const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
@@ -284,7 +295,10 @@ const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
   );
 });
 
-const ACESFilm = tgpu.fn([d.vec3f], d.vec3f)((x) => {
+const ACESFilm = tgpu.fn(
+  [d.vec3f],
+  d.vec3f,
+)((x) => {
   const a = 2.51;
   const b = 0.03;
   const c = 2.43;
@@ -298,8 +312,11 @@ const finalRadianceFieldFrag = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const field = std.textureSample(radianceFieldView.$, radianceSampler.$, uv)
-    .xyz;
+  const field = std.textureSample(
+    radianceFieldView.$,
+    radianceSampler.$,
+    uv,
+  ).xyz;
   const outRgb = std.saturate(field);
   return d.vec4f(ACESFilm(outRgb), 1.0);
 });
@@ -318,7 +335,7 @@ const overlayFrag = tgpu['~unstable'].fragmentFn({
   const baseColor = ACESFilm(std.saturate(field));
 
   if (overlayEnabledUniform.$ === d.u32(0)) {
-    return d.vec4f(baseColor, 1.0);
+    return d.vec4f(baseColor, 1);
   }
 
   const debugLayer = overlayDebugCascadeUniform.$;
@@ -335,17 +352,17 @@ const overlayFrag = tgpu['~unstable'].fragmentFn({
 
   // Interval for ray visualization
   const cascadeProbesMinVal = d.f32(std.min(cascadeProbes.x, cascadeProbes.y));
-  const interval0 = 1.0 / cascadeProbesMinVal;
+  const interval0 = 1 / cascadeProbesMinVal;
   const pow4 = d.f32(d.u32(1) << (debugLayer * d.u32(2)));
-  const endUv = interval0 * (pow4 - 1.0) / 3.0 + interval0 * pow4;
+  const endUv = (interval0 * (pow4 - 1)) / 3 + interval0 * pow4;
 
   // Visual parameters
-  const probeSpacing = std.min(1.0 / d.f32(probes.x), 1.0 / d.f32(probes.y));
+  const probeSpacing = std.min(1 / d.f32(probes.x), 1 / d.f32(probes.y));
   const probeRadius = std.max(probeSpacing * 0.08, 0.002);
   const rayThickness = std.max(probeSpacing * 0.03, 0.001);
 
-  let minProbeDist = d.f32(1000.0);
-  let minRayDist = d.f32(1000.0);
+  let minProbeDist = d.f32(1000);
+  let minRayDist = d.f32(1000);
   let closestRayColor = d.vec3f();
 
   const centerProbe = d.vec2i(std.floor(uv.mul(d.vec2f(probes))));
@@ -355,9 +372,13 @@ const overlayFrag = tgpu['~unstable'].fragmentFn({
     for (let px = -1; px <= 1; px++) {
       const probeXY = centerProbe.add(d.vec2i(px, py));
       if (
-        probeXY.x < 0 || probeXY.x >= d.i32(probes.x) || probeXY.y < 0 ||
+        probeXY.x < 0 ||
+        probeXY.x >= d.i32(probes.x) ||
+        probeXY.y < 0 ||
         probeXY.y >= d.i32(probes.y)
-      ) continue;
+      ) {
+        continue;
+      }
 
       const probe = d.vec2u(probeXY);
       const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
@@ -366,15 +387,15 @@ const overlayFrag = tgpu['~unstable'].fragmentFn({
         sdf.sdDisk(uv.sub(probePos), probeRadius),
       );
 
-      // Only draw rays near probe
-      if (std.length(uv.sub(probePos)) > probeSpacing * 0.7) continue;
+      if (std.length(uv.sub(probePos)) > probeSpacing * 0.7) {
+        continue;
+      }
 
-      // Sample subset of rays
-      const rayStep = std.max(d.u32(1), rayCountActual / d.u32(24));
+      const rayStep = std.max(1, d.u32(rayCountActual / 24));
       let ri = d.u32(0);
       while (ri < rayCountActual) {
         const rayIndex = d.f32(ri) + 0.5;
-        const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) -
+        const angle = (rayIndex / rayCountActual) * (Math.PI * 2) -
           Math.PI;
         const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
         const rayDist = sdf.sdLine(
@@ -434,8 +455,8 @@ const cascadePassBindGroups = Array.from(
   { length: cascadeAmount },
   (_, layer) => {
     const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
-    const dstTexture = writeToA ? cascadesTextureA : cascadesTextureB;
-    const srcTexture = writeToA ? cascadesTextureB : cascadesTextureA;
+    const dstTexture = cascadeTextures[writeToA ? 0 : 1];
+    const srcTexture = cascadeTextures[writeToA ? 1 : 0];
 
     return root.createBindGroup(cascadePassBGL, {
       upper: srcTexture.createView(d.texture2d(d.f32), {
@@ -455,30 +476,25 @@ const buildRadianceFieldPipeline = root['~unstable']
   .withCompute(buildRadianceFieldCompute)
   .createPipeline();
 
-const buildRadianceFieldBG_A = root.createBindGroup(buildRadianceFieldBGL, {
-  src: cascadesTextureA.createView(d.texture2d(d.f32), {
-    baseArrayLayer: 0,
-    arrayLayerCount: 1,
-  }),
-  srcSampler: cascadeSampler,
-  dst: radianceFieldStoreView,
-});
+const createBuildRadianceFieldBG = (textureIndex: number) =>
+  root.createBindGroup(buildRadianceFieldBGL, {
+    src: cascadeTextures[textureIndex].createView(d.texture2d(d.f32), {
+      baseArrayLayer: 0,
+      arrayLayerCount: 1,
+    }),
+    srcSampler: cascadeSampler,
+    dst: radianceFieldStoreView,
+  });
 
-const buildRadianceFieldBG_B = root.createBindGroup(buildRadianceFieldBGL, {
-  src: cascadesTextureB.createView(d.texture2d(d.f32), {
-    baseArrayLayer: 0,
-    arrayLayerCount: 1,
-  }),
-  srcSampler: cascadeSampler,
-  dst: radianceFieldStoreView,
-});
+const buildRadianceFieldBindGroups = [
+  createBuildRadianceFieldBG(0),
+  createBuildRadianceFieldBG(1),
+];
 
 function buildRadianceField() {
-  // Determine which texture has cascade 0 after ping-pong
   const cascade0InA = (cascadeAmount - 1) % 2 === 0;
-  const buildRadianceFieldBG = cascade0InA
-    ? buildRadianceFieldBG_A
-    : buildRadianceFieldBG_B;
+  const buildRadianceFieldBG =
+    buildRadianceFieldBindGroups[cascade0InA ? 0 : 1];
 
   buildRadianceFieldPipeline
     .with(buildRadianceFieldBG)
@@ -506,36 +522,35 @@ function runCascadesTopDown() {
 }
 
 function updateLighting() {
-  runCascadesTopDown(); // Fused raymarch + merge
-  buildRadianceField(); // Build final radiance field from cascade 0
+  runCascadesTopDown();
+  buildRadianceField();
 }
 updateLighting();
 
-// Create bind groups for overlay debug - need both A and B textures for ping-pong
-const overlayDebugBG_A = root.createBindGroup(overlayDebugBGL, {
-  cascadeTex: cascadesTextureA.createView(d.texture2dArray(d.f32)),
-  cascadeSampler: cascadeSampler,
-});
+const createOverlayDebugBG = (textureIndex: number) =>
+  root.createBindGroup(overlayDebugBGL, {
+    cascadeTex: cascadeTextures[textureIndex].createView(
+      d.texture2dArray(d.f32),
+    ),
+    cascadeSampler: cascadeSampler,
+  });
 
-const overlayDebugBG_B = root.createBindGroup(overlayDebugBGL, {
-  cascadeTex: cascadesTextureB.createView(d.texture2dArray(d.f32)),
-  cascadeSampler: cascadeSampler,
-});
+const overlayDebugBindGroups = [
+  createOverlayDebugBG(0),
+  createOverlayDebugBG(1),
+];
 
 const renderPipeline = root['~unstable']
   .withVertex(fullScreenTriangle)
   .withFragment(overlayFrag, { format: presentationFormat })
   .createPipeline();
 
-let isRunning = true;
 let frameId: number;
 let debugLayer = 0;
 
 async function frame() {
-  if (!isRunning) return; // Prevent using destroyed device
-
   const writeToA = (cascadeAmount - 1 - debugLayer) % 2 === 0;
-  const overlayDebugBG = writeToA ? overlayDebugBG_A : overlayDebugBG_B;
+  const overlayDebugBG = overlayDebugBindGroups[writeToA ? 0 : 1];
 
   renderPipeline
     .with(overlayDebugBG)
@@ -553,7 +568,6 @@ function updateUniforms() {
   sceneDataUniform.write(sceneData);
 }
 
-// Set up drag controller for interactive scene manipulation
 const dragController = new DragController(
   canvas,
   (id, position) => {
@@ -569,7 +583,6 @@ const dragController = new DragController(
 );
 
 export function onCleanup() {
-  isRunning = false; // Stop the loop logic immediately
   dragController.destroy();
   if (frameId !== null) {
     cancelAnimationFrame(frameId);
