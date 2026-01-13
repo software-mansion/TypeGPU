@@ -3,6 +3,7 @@ import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
+  isEphemeralSnippet,
   isSnippet,
   type ResolvedSnippet,
   snip,
@@ -13,6 +14,7 @@ import {
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyEphemeral,
   isVecInstance,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -24,6 +26,7 @@ import {
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
+import { WgslTypeError } from '../../src/errors.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -147,7 +150,27 @@ export class ArrayExpression implements SelfResolvable {
   ) {
   }
 
+  toString(): string {
+    return 'ArrayExpression';
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    for (const elem of this.elements) {
+      // We check if there are no references among the elements
+      if (
+        (elem.origin === 'argument' &&
+          !isNaturallyEphemeral(elem.dataType)) ||
+        !isEphemeralSnippet(elem)
+      ) {
+        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetType =
+          ctx.resolve(concretize(elem.dataType as AnyData)).value;
+        throw new WgslTypeError(
+          `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+        );
+      }
+    }
+
     const arrayType = `array<${
       ctx.resolve(this.elementType).value
     }, ${this.elements.length}>`;
