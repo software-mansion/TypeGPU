@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import {
-  // bundleWithTsdown,
-  bundleWithWebpack,
+  bundleWithTsdown,
+  // bundleWithWebpack,
   getFileSize,
   type ResultRecord,
 } from './utils.ts';
@@ -35,8 +35,8 @@ async function main() {
     tests.flatMap((test) => [
       // https://github.com/software-mansion/TypeGPU/issues/2026
       // bundleTest(test, 'esbuild', bundleWithEsbuild),
-      // bundleTest(test, 'tsdown', bundleWithTsdown),
-      bundleTest(test, 'webpack', bundleWithWebpack),
+      bundleTest(test, 'tsdown', bundleWithTsdown),
+      // bundleTest(test, 'webpack', bundleWithWebpack),
     ]),
   );
 

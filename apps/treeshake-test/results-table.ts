@@ -68,9 +68,17 @@ export class ResultsTable {
     }
     output += '\n';
 
-    if (output) {
-      return output;
+    if (this.#results.size > 10) {
+      output = `
+<details>
+<summary>Click to reveal the results table:</summary>
+
+${output}
+
+</details>`;
     }
+
+    return output;
   }
 
   #isInteresting(row: Row) {
