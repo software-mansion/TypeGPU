@@ -3,6 +3,11 @@ name: Tree-shake test
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Target branch to compare against'
+        required: true
+        default: 'main'
 
 jobs:
   treeshake-test:
@@ -27,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: target-branch
-          ref: ${{ github.base_ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
       - name: Install dependencies (PR branch)
         working-directory: pr-branch
@@ -118,3 +123,7 @@ jobs:
             } else {
               await createOrUpdateComment(issueNumber);
             }
+            await core.summary
+              .addHeading('Tree-shake Test Results')
+              .addRaw(comparison)
+              .write();
