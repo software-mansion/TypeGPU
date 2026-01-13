@@ -200,7 +200,7 @@ describe('gravity example', () => {
         return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), input.position.xyz);
       }
 
-      @group(0) @binding(1) var item: texture_cube<f32>;
+      @group(0) @binding(1) var skyBox: texture_cube<f32>;
 
       @group(0) @binding(2) var sampler_1: sampler;
 
@@ -209,7 +209,7 @@ describe('gravity example', () => {
       }
 
       @fragment fn skyBoxFragment(input: skyBoxFragment_Input) -> @location(0) vec4f {
-        return textureSample(item, sampler_1, normalize(input.texCoord));
+        return textureSample(skyBox, sampler_1, normalize(input.texCoord));
       }
 
       struct CelestialBody {
