@@ -1,7 +1,6 @@
 import { SimplexNoise } from 'three/addons/math/SimplexNoise.js';
 import { waterMaxHeight, WIDTH } from './consts.ts';
 
-// initial height values - simplex noise
 const simplex = new SimplexNoise();
 
 export function noise(x: number, y: number): number {

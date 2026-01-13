@@ -60,12 +60,11 @@ camera.lookAt(0, 0, 0);
 
 const orbitControls = new OrbitControls(camera, canvas);
 
-// Sun
 const sun = new THREE.DirectionalLight(0xffffff, 4.0);
 sun.position.set(SUN_POSITION[0], SUN_POSITION[1], SUN_POSITION[2]);
 scene.add(sun);
 
-// height storage buffers
+// Initialize height storage buffers
 const { heightArray, prevHeightArray } = initializeHeightArrays();
 
 // Ping-pong height storage buffers
@@ -73,7 +72,6 @@ const heightStorageA = t3.instancedArray(new Float32Array(heightArray), d.f32);
 const heightStorageB = t3.instancedArray(new Float32Array(heightArray), d.f32);
 const prevHeightStorage = t3.instancedArray(prevHeightArray, d.f32);
 
-// Uniforms using t3.uniform
 const mousePos = t3.uniform(new THREE.Vector2(), d.vec2f);
 const mouseSpeed = t3.uniform(new THREE.Vector2(), d.vec2f);
 const mouseDeep = t3.uniform(INITIAL_MOUSE_DEEP, d.f32);
@@ -81,7 +79,6 @@ const mouseSize = t3.uniform(INITIAL_MOUSE_SIZE, d.f32);
 const viscosity = t3.uniform(INITIAL_VISCOSITY, d.f32);
 const readFromA = t3.uniform(1, d.u32);
 
-// State
 let mouseDown = false;
 let firstClick = true;
 let updateOriginMouseDown = false;
@@ -91,7 +88,6 @@ let frame = 0;
 let pingPong = 0;
 let ducksEnabled = true;
 
-// Create GPU helper functions with closure over storage buffers
 const { getNeighborIndices, getCurrentHeight, getCurrentNormals } =
   createGpuHelpers(
     heightStorageA,
@@ -330,7 +326,7 @@ const computeDucks = t3.toTSL(() => {
   duckVelocityStorage.$[idx] = d.vec2f(velocity);
 }).compute(NUM_DUCKS);
 
-// Load environment and duck model
+// load environment and duck model
 const hdrLoader = new HDRLoader().setPath(
   'https://threejs.org/examples/textures/equirectangular/',
 );
