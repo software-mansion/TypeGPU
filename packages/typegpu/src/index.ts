@@ -119,7 +119,7 @@ export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type {
   TgpuPrimitiveState,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptorCommons,
+  TgpuRenderPipelineDescriptor,
 } from './core/pipeline/renderPipeline.ts';
 export type {
   TgpuComputePipeline,

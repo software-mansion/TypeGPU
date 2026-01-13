@@ -73,7 +73,7 @@ import type {
   FragmentOutToTargets,
   TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptor,
+  TgpuRenderPipelineDescriptor__Shelled,
   TgpuRenderPipelineDescriptor__Shellless,
   TgpuRenderPipelineDescriptor__ShelllessFrag,
 } from '../pipeline/renderPipeline.ts';
@@ -274,7 +274,7 @@ export interface WithBinding {
     FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
   >(
-    descriptor: TgpuRenderPipelineDescriptor<
+    descriptor: TgpuRenderPipelineDescriptor__Shelled<
       VertexIn,
       VertexOut,
       FragmentIn,

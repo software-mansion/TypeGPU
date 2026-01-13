@@ -67,7 +67,7 @@ import {
   INTERNAL_createRenderPipeline,
   type TgpuPrimitiveState,
   type TgpuRenderPipeline,
-  type TgpuRenderPipelineDescriptorCommons,
+  type TgpuRenderPipelineDescriptor,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
@@ -243,7 +243,7 @@ class WithBindingImpl implements WithBinding {
   }
 
   createRenderPipeline(
-    descriptor: TgpuRenderPipelineDescriptorCommons,
+    descriptor: TgpuRenderPipelineDescriptor,
   ): TgpuRenderPipeline {
     return INTERNAL_createRenderPipeline({
       root: this._getRoot(),
@@ -331,7 +331,7 @@ class WithVertexImpl implements WithVertex {
   readonly #root: ExperimentalTgpuRoot;
   readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
   readonly #partialDescriptor: Omit<
-    TgpuRenderPipelineDescriptorCommons,
+    TgpuRenderPipelineDescriptor,
     'fragment' | 'targets'
   >;
 
@@ -339,7 +339,7 @@ class WithVertexImpl implements WithVertex {
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
     partialDescriptor: Omit<
-      TgpuRenderPipelineDescriptorCommons,
+      TgpuRenderPipelineDescriptor,
       'fragment' | 'targets'
     >,
   ) {
@@ -403,12 +403,12 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   readonly #root: ExperimentalTgpuRoot;
   readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
-  readonly #descriptor: TgpuRenderPipelineDescriptorCommons;
+  readonly #descriptor: TgpuRenderPipelineDescriptor;
 
   constructor(
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuRenderPipelineDescriptorCommons,
+    descriptor: TgpuRenderPipelineDescriptor,
   ) {
     this.#root = root;
     this.#slotBindings = slotBindings;

@@ -133,7 +133,23 @@ export type TgpuPrimitiveState =
   })
   | undefined;
 
-export type TgpuRenderPipelineDescriptorCommons = {
+export interface TgpuRenderPipelineDescriptorBase {
+  /**
+   * Describes the primitive-related properties of the pipeline.
+   */
+  primitive?: TgpuPrimitiveState | undefined;
+  /**
+   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
+   */
+  depthStencil?: GPUDepthStencilState | undefined;
+  /**
+   * Describes the multi-sampling properties of the pipeline.
+   */
+  multisample?: GPUMultisampleState | undefined;
+}
+
+export interface TgpuRenderPipelineDescriptor
+  extends TgpuRenderPipelineDescriptorBase {
   vertex:
     | TgpuVertexFn
     | ((
@@ -148,38 +164,23 @@ export type TgpuRenderPipelineDescriptorCommons = {
 
   attribs?: AnyVertexAttribs | undefined;
   targets?: AnyFragmentTargets | undefined;
+}
 
-  /**
-   * Describes the primitive-related properties of the pipeline.
-   */
-  primitive?: TgpuPrimitiveState | undefined;
-  /**
-   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
-   */
-  depthStencil?: GPUDepthStencilState | undefined;
-  /**
-   * Describes the multi-sampling properties of the pipeline.
-   */
-  multisample?: GPUMultisampleState | undefined;
-};
-
-export type TgpuRenderPipelineDescriptor<
+export type TgpuRenderPipelineDescriptor__Shelled<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
   FragmentIn extends FragmentInConstrained = FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained = FragmentOutConstrained,
 > =
-  & Omit<
-    TgpuRenderPipelineDescriptorCommons,
-    'vertex' | 'fragment' | 'attribs' | 'targets'
-  >
-  & NeverRecordToOptional<{
+  & TgpuRenderPipelineDescriptorBase
+  & {
     vertex: TgpuVertexFn<
       VertexIn,
       VertexOut & OmitBuiltins<NoInfer<FragmentIn>>
     >;
     fragment: TgpuFragmentFn<FragmentIn, FragmentOut>;
-
+  }
+  & NeverRecordToOptional<{
     attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
@@ -189,16 +190,14 @@ export type TgpuRenderPipelineDescriptor__ShelllessFrag<
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
   FragmentOut extends FragmentOutInferred = FragmentOutInferred,
 > =
-  & Omit<
-    TgpuRenderPipelineDescriptorCommons,
-    'vertex' | 'fragment' | 'attribs' | 'targets'
-  >
-  & NeverRecordToOptional<{
+  & TgpuRenderPipelineDescriptorBase
+  & {
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
     fragment: (
       input: AutoFragmentIn<Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>>,
     ) => AutoFragmentOut<FragmentOut>;
-
+  }
+  & NeverRecordToOptional<{
     attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
     targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
   }>;
@@ -211,13 +210,7 @@ export type TgpuRenderPipelineDescriptor__Shellless<
   VertexOut extends VertexOutInferred = VertexOutInferred,
   FragmentOut extends FragmentOutInferred = FragmentOutInferred,
 > =
-  & Omit<
-    TgpuRenderPipelineDescriptorCommons,
-    'vertex' | 'fragment' | 'attribs' | 'targets'
-  >
-  & NeverRecordToOptional<{
-    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
-  }>
+  & TgpuRenderPipelineDescriptorBase
   & {
     attribs: Attribs;
     vertex: (
@@ -228,17 +221,17 @@ export type TgpuRenderPipelineDescriptor__Shellless<
     fragment: (
       input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
     ) => AutoFragmentOut<FragmentOut>;
-  };
+  }
+  & NeverRecordToOptional<
+    { targets: FragmentOutToTargets<NoInfer<FragmentOut>> }
+  >;
 
 export type TgpuNoColorRenderPipelineDescriptor<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > =
-  & Omit<
-    TgpuRenderPipelineDescriptorCommons,
-    'vertex' | 'fragment' | 'attribs' | 'targets'
-  >
-  & NeverRecordToOptional<{
+  & TgpuRenderPipelineDescriptorBase
+  & {
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
     fragment?:
       | ((
@@ -248,8 +241,10 @@ export type TgpuNoColorRenderPipelineDescriptor<
       ) => undefined)
       | undefined;
 
+    targets?: Record<string, never> | undefined;
+  }
+  & NeverRecordToOptional<{
     attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
-    targets?: Record<string, never>;
   }>;
 
 export interface HasIndexBuffer {
@@ -475,7 +470,7 @@ export type AnyFragmentColorAttachment =
 export type RenderPipelineCoreOptions = {
   root: ExperimentalTgpuRoot;
   slotBindings: [TgpuSlot<unknown>, unknown][];
-  descriptor: TgpuRenderPipelineDescriptorCommons;
+  descriptor: TgpuRenderPipelineDescriptor;
 };
 
 export function INTERNAL_createRenderPipeline(
