@@ -4,7 +4,7 @@ import { colors } from './geometry.ts';
 import { root } from './root.ts';
 import { createInstanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
 import {
-  gridParams,
+  getGridParams,
   INITIAL_MIDDLE_SQUARE_SCALE,
   INITIAL_STEP_ROTATION,
 } from './params.ts';
@@ -14,10 +14,6 @@ const animationProgressUniform = root.createUniform(d.f32);
 const shiftedColorsBuffer = root.createReadonly(d.arrayOf(d.vec4f, 3), [
   ...colors,
 ]);
-
-const TriangleVertices = d.struct({
-  positions: d.arrayOf(d.vec2f, 9),
-});
 
 const instanceInfoLayout = tgpu.bindGroupLayout({
   instanceInfo: { storage: InstanceInfoArray },
@@ -31,7 +27,7 @@ function getInstanceInfoBindGroup() {
 
 function createInstanceInfoBufferAndBindGroup() {
   const instanceInfoBuffer = root.createReadonly(
-    InstanceInfoArray(gridParams.triangleCount),
+    InstanceInfoArray(getGridParams().triangleCount),
     createInstanceInfoArray(),
   );
 
@@ -46,7 +42,7 @@ function updateInstanceInfoBufferAndBindGroup() {
   instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
 }
 
-const scaleBuffer = root.createUniform(d.f32, gridParams.tileDensity);
+const scaleBuffer = root.createUniform(d.f32, getGridParams().tileDensity);
 const aspectRatioBuffer = root.createUniform(d.f32, 1);
 
 const stepRotationBuffer = root.createUniform(d.f32, INITIAL_STEP_ROTATION);

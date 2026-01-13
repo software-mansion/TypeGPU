@@ -95,6 +95,10 @@ const GridParams = d.struct({
 
 let gridParams = createGridParams(INIT_TILE_DENSITY);
 
+function getGridParams() {
+  return gridParams;
+}
+
 function updateGridParams(newValue?: number) {
   const value = newValue ?? gridParams.tileDensity;
   gridParams = createGridParams(value);
@@ -126,8 +130,8 @@ export {
   getAnimationDuration,
   getCubicBezierControlPoints,
   getCubicBezierControlPointsString,
+  getGridParams,
   GridParams,
-  gridParams,
   INIT_TILE_DENSITY,
   INITIAL_MIDDLE_SQUARE_SCALE,
   INITIAL_STEP_ROTATION,
