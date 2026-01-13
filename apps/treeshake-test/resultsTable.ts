@@ -55,7 +55,7 @@ export class ResultsTable {
 
       for (const bundler of this.#bundlers) {
         const prSize = row.get(bundler)?.pr;
-        const targetSize = row.get(bundler)?.pr;
+        const targetSize = row.get(bundler)?.target;
 
         output += ` | ${prettifySize(prSize)} ${
           calculateTrendMessage(prSize, targetSize)
