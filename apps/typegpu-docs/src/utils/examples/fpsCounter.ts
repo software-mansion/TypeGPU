@@ -8,7 +8,6 @@ export class FPSCounter {
   #frames: number[] = []; // works like np.roll
   #lastTime = performance.now();
   #rafId: number | null = null;
-  #isDisposed = false;
   originalRAF: (callback: FrameRequestCallback) => number;
   patchedRAF: (callback: FrameRequestCallback) => number;
 
@@ -44,9 +43,7 @@ export class FPSCounter {
     }
   }
 
-  private update = (): void => {    if (this.#isDisposed) {
-      return;
-    }
+  private update = (): void => {
     if (this.#frames.length > 0) {
       const avgFrameTime = this.#frames.reduce((a, b) => a + b, 0) / this.#frames.length;
       const fps = Math.round(1000 / avgFrameTime);
@@ -68,7 +65,6 @@ export class FPSCounter {
 
 
   public dispose(): void {
-    this.#isDisposed = true;
     window.requestAnimationFrame = this.originalRAF;
 
     if (this.#rafId !== null) {
