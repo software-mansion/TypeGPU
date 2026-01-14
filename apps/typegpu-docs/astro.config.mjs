@@ -13,6 +13,7 @@ import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import rehypeMathJax from 'rehype-mathjax';
 import remarkMath from 'remark-math';
+import { relative, resolve } from 'pathe';
 
 /**
  * @template T
@@ -22,6 +23,7 @@ const stripFalsy = (items) =>
   items.filter(/** @return {item is Exclude<T, boolean>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
+const EXAMPLES_DIR = resolve('./src/examples');
 
 // https://astro.build/config
 export default defineConfig({
@@ -41,6 +43,24 @@ export default defineConfig({
     rehypePlugins: [rehypeMathJax],
   },
   vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.startsWith(EXAMPLES_DIR) && id.endsWith('.ts')) {
+              const relativePath = relative(EXAMPLES_DIR, id);
+              const [category, example] = relativePath.split('/');
+              if (example === undefined) {
+                return null;
+              }
+
+              return `example-${category}--${example}`;
+            }
+          },
+          onlyExplicitManualChunks: true,
+        },
+      },
+    },
     define: {
       // Required for '@rolldown/browser' to work.
       'process.env.NODE_DEBUG_NATIVE': '""',
