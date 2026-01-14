@@ -1,8 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fullScreenTriangle } from 'typegpu/common';
 import { sdRoundedBox2d } from '@typegpu/sdf';
-import { fullScreenTriangle } from './common.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -24,7 +24,7 @@ imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
 const sampledView = imageTexture.createView();
-const sampler = tgpu['~unstable'].sampler({
+const sampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
@@ -97,6 +97,7 @@ const applyTint = (color: d.v3f, tint: d.Infer<typeof TintParams>) => {
 
 const sampleWithChromaticAberration = (
   tex: d.texture2d<d.F32>,
+  sampler: d.sampler,
   uv: d.v2f,
   offset: number,
   dir: d.v2f,
@@ -137,18 +138,19 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   const blurSample = std.textureSampleBias(
     sampledView.$,
-    sampler,
+    sampler.$,
     uv,
     paramsUniform.$.blur,
   );
   const refractedSample = sampleWithChromaticAberration(
     sampledView.$,
+    sampler.$,
     uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
     paramsUniform.$.chromaticStrength * normalizedDist,
     dir,
     paramsUniform.$.blur * paramsUniform.$.edgeBlurMultiplier,
   );
-  const normalSample = std.textureSampleLevel(sampledView.$, sampler, uv, 0);
+  const normalSample = std.textureSampleLevel(sampledView.$, sampler.$, uv, 0);
 
   const tint = TintParams({
     color: paramsUniform.$.tintColor,

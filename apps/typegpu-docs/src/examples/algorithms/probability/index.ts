@@ -17,10 +17,9 @@ const replot = async (
   currentDistribution: Distribution,
   animate = false,
 ) => {
-  let samples = undefined;
   const prng = getPRNG(currentDistribution);
 
-  samples = await executor.executeMoreWorkers(prng.prng);
+  const samples = await executor.executeMoreWorkers(prng.prng);
   await plotter.plot(samples, prng, animate);
 };
 
@@ -97,11 +96,7 @@ export const controls = {
     onButtonClick() {
       c.distributions
         .map((dist) =>
-          tgpu.resolve({
-            externals: {
-              f: executor.cachedPipeline(getPRNG(dist).prng),
-            },
-          })
+          tgpu.resolve([executor.cachedPipeline(getPRNG(dist).prng)])
         )
         .map((r) => root.device.createShaderModule({ code: r }));
     },

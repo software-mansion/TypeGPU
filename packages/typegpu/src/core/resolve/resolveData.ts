@@ -5,6 +5,7 @@ import {
   isLooseData,
   type Unstruct,
 } from '../../data/dataTypes.ts';
+import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
 import {
   accessModeMap,
   isWgslStorageTexture,
@@ -42,7 +43,6 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { isValidIdentifier } from '../../nameRegistry.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -121,11 +121,6 @@ function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseData],
 ) {
-  if (!isValidIdentifier(key)) {
-    throw new Error(
-      `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-    );
-  }
   return `  ${getAttributesString(property)}${key}: ${
     ctx.resolve(property as AnyWgslData).value
   },\n`;
@@ -300,6 +295,10 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return data.type.startsWith('texture_depth')
       ? data.type
       : `${data.type}<${data.sampleType.type}>`;
+  }
+
+  if (isWgslComparisonSampler(data) || isWgslSampler(data)) {
+    return data.type;
   }
 
   assertExhaustive(data, 'resolveData');

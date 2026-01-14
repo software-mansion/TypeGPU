@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import { comparisonSampler, sampler } from '../src/core/sampler/sampler.ts';
 import * as d from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
@@ -20,7 +19,6 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
@@ -224,10 +222,42 @@ describe('TgpuBindGroupLayout', () => {
     const main = tgpu.fn([])`() { textureLoad(fooTexture); }`
       .$uses({ fooTexture });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
       fn main() { textureLoad(fooTexture); }"
+    `);
+  });
+
+  it('takes a pointer to layout.$... if assigned to a const variable', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const layout = tgpu.bindGroupLayout({
+      boids: { storage: d.arrayOf(Boid), access: 'mutable' },
+    });
+
+    const getFirst = () => {
+      'use gpu';
+      const boids = layout.$.boids;
+      // biome-ignore lint/style/noNonNullAssertion: it's definitely there
+      return Boid(boids[0]!);
+    };
+
+    expect(tgpu.resolve([getFirst])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      @group(0) @binding(0) var<storage, read_write> boids_1: array<Boid>;
+
+      fn getFirst() -> Boid {
+        let boids = (&boids_1);
+        return (*boids)[0i];
+      }"
     `);
   });
 });
@@ -455,7 +485,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = tgpu['~unstable'].sampler({
+      const sampler = root['~unstable'].createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
       });
@@ -482,11 +512,11 @@ describe('TgpuBindGroup', () => {
 
     it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({ root }) => {
       root.createBindGroup(layout, {
-        foo: sampler({ minFilter: 'linear' }),
+        foo: root.createSampler({ minFilter: 'linear' }),
       });
 
       root.createBindGroup(layout, {
-        foo: sampler({ minFilter: 'nearest' }),
+        foo: root.createSampler({ minFilter: 'nearest' }),
       });
 
       root.createBindGroup(layout, {
@@ -495,7 +525,7 @@ describe('TgpuBindGroup', () => {
 
       root.createBindGroup(layout, {
         // @ts-expect-error
-        foo: comparisonSampler({ compare: 'less' }),
+        foo: root['~unstable'].createComparisonSampler({ compare: 'less' }),
       });
     });
   });
@@ -535,7 +565,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with a typed sampler', ({ root }) => {
-      const sampler = tgpu['~unstable'].comparisonSampler({
+      const sampler = root['~unstable'].createComparisonSampler({
         compare: 'equal',
       });
 
@@ -561,21 +591,25 @@ describe('TgpuBindGroup', () => {
 
     it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({ root }) => {
       root.createBindGroup(layout, {
-        foo: comparisonSampler({ compare: 'equal' }),
+        foo: root.createComparisonSampler({ compare: 'equal' }),
       });
 
       root.createBindGroup(layout, {
         foo: root.device.createSampler(),
       });
 
-      root.createBindGroup(layout, {
-        // @ts-expect-error
-        foo: sampler({ minFilter: 'linear' }),
+      (() => {
+        root.createBindGroup(layout, {
+          // @ts-expect-error
+          foo: root.createSampler({ minFilter: 'linear' }),
+        });
       });
 
-      root.createBindGroup(layout, {
-        // @ts-expect-error
-        foo: sampler({ minFilter: 'nearest' }),
+      (() => {
+        root.createBindGroup(layout, {
+          // @ts-expect-error
+          foo: root.createSampler({ minFilter: 'nearest' }),
+        });
       });
     });
   });

@@ -1,7 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isNaturallyEphemeral,
+} from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -105,7 +109,7 @@ class TgpuFixedBufferImpl<
   }
 
   $name(label: string) {
-    this.buffer.$name(label);
+    setName(this, label);
     return this;
   }
 
@@ -126,7 +130,11 @@ class TgpuFixedBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+    );
   }
 
   toString(): string {
@@ -135,11 +143,16 @@ class TgpuFixedBufferImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, dataType);
+        return snip(
+          this,
+          dataType,
+          isNaturallyEphemeral(dataType) ? 'runtime' : usage,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -246,7 +259,11 @@ export class TgpuLaidOutBufferImpl<
       };`,
     );
 
-    return snip(id, dataType);
+    return snip(
+      id,
+      dataType,
+      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+    );
   }
 
   toString(): string {
@@ -254,12 +271,17 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as unknown as AnyData;
+    const schema = this.dataType as AnyData;
+    const usage = this.usage;
 
     return new Proxy({
       [$internal]: true,
       get [$ownSnippet]() {
-        return snip(this, schema);
+        return snip(
+          this,
+          schema,
+          isNaturallyEphemeral(schema) ? 'runtime' : usage,
+        );
       },
       [$resolve]: (ctx) => ctx.resolve(this),
       toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -286,15 +308,12 @@ const mutableUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
 >();
 
-/**
- * @deprecated Use buffer.as('mutable') instead.
- */
-export function asMutable<TData extends AnyWgslData>(
+export function mutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+      `Cannot call as('mutable') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -313,15 +332,12 @@ const readonlyUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
 >();
 
-/**
- * @deprecated Use buffer.as('readonly') instead.
- */
-export function asReadonly<TData extends AnyWgslData>(
+export function readonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+      `Cannot call as('readonly') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -340,15 +356,12 @@ const uniformUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
 >();
 
-/**
- * @deprecated Use buffer.as('uniform') instead.
- */
-export function asUniform<TData extends AnyWgslData>(
+export function uniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & UniformFlag,
 ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
+      `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
     );
   }
 

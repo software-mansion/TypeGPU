@@ -7,7 +7,6 @@ import tgpu, {
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
@@ -62,7 +61,7 @@ describe('TgpuComputePipeline', () => {
       .withCompute(main)
       .createPipeline();
 
-    expect(asWgsl(computePipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(32) fn main() {
 
       }"
@@ -164,7 +163,7 @@ describe('TgpuComputePipeline', () => {
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
       const originalFeatures = device.features;
-      //@ts-ignore
+      //@ts-expect-error
       device.features = new Set();
 
       const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
@@ -182,7 +181,7 @@ describe('TgpuComputePipeline', () => {
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
 
-      //@ts-ignore
+      //@ts-expect-error
       device.features = originalFeatures;
     });
   });
@@ -496,11 +495,11 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f32, 3>();
       }"
     `);
@@ -541,17 +540,17 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f16, 3>();
         {
-          a[0] = f16(_arg_0.gid.x);
+          a[0i] = f16(_arg_0.gid.x);
         }
         {
-          a[1] = 1;
+          a[1i] = 1h;
         }
 
       }"

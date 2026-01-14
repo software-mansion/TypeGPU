@@ -7,7 +7,7 @@ import type { v3h } from '../../../src/data/wgslTypes.ts';
 
 describe('frexp', () => {
   it('gets inferred correctly', () => {
-    let err: Error | undefined = undefined;
+    let err: Error | undefined;
     try {
       const x = frexp(1);
       expectTypeOf(x).toEqualTypeOf<{ fract: number; exp: number }>();
