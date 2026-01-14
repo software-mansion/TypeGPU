@@ -4,7 +4,7 @@ import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { AnyData, Disarray } from './data/dataTypes.ts';
 import type { WgslArray } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
-import { DEV } from './shared/env.ts';
+import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 
 const prefix = 'Invariant failed';
@@ -22,7 +22,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (!DEV) {
+  if (!DEV && !TEST) {
     throw new Error(prefix);
   }
 

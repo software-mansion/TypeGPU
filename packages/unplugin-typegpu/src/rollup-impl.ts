@@ -198,7 +198,11 @@ export const rollUpImpl = (rawOptions: Options) => {
               v: ${FORMAT_VERSION},
               name: ${name ? `"${name}"` : 'undefined'},
               ast: ${embedJSON({ params, body, externalNames })},
-              get externals() { return {${externalNames.join(', ')}}; },
+              externals: () => ({${
+            externalNames.map((e) => e === 'this' ? '"this": this' : e).join(
+              ', ',
+            )
+          }}),
             }`;
 
           assignMetadata(magicString, def, metadata);

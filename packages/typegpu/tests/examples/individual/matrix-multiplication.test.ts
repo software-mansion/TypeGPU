@@ -17,14 +17,14 @@ describe('matrix multiplication example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct MatrixStruct_0 {
+      "struct MatrixStruct {
         size: vec2f,
         numbers: array<f32, 36>,
       }
 
-      @group(0) @binding(0) var<storage, read> firstMatrix: MatrixStruct_0;
-      @group(0) @binding(1) var<storage, read> secondMatrix: MatrixStruct_0;
-      @group(0) @binding(2) var<storage, read_write> resultMatrix: MatrixStruct_0;
+      @group(0) @binding(0) var<storage, read> firstMatrix: MatrixStruct;
+      @group(0) @binding(1) var<storage, read> secondMatrix: MatrixStruct;
+      @group(0) @binding(2) var<storage, read_write> resultMatrix: MatrixStruct;
 
       @compute @workgroup_size(8, 8)
       fn main(@builtin(global_invocation_id) global_id: vec3u) {

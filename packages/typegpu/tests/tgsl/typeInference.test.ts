@@ -1,10 +1,11 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: not helpful at all in shaders */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as d from '../../src/data/index.ts';
+import * as std from '../../src/std/index.ts';
 import tgpu from '../../src/index.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 
 describe('wgsl generator type inference', () => {
@@ -26,7 +27,7 @@ describe('wgsl generator type inference', () => {
       const myStruct = Outer({ inner: { prop: d.vec2f() } });
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Inner {
         prop: vec2f,
       }
@@ -47,7 +48,7 @@ describe('wgsl generator type inference', () => {
       return { vel: d.vec2f(), pos: d.vec2f(1, 1) };
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec2f,
         vel: vec2f,
@@ -67,7 +68,7 @@ describe('wgsl generator type inference', () => {
       return { inner: { prop: d.vec2f() } };
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Inner {
         prop: vec2f,
       }
@@ -95,7 +96,7 @@ describe('wgsl generator type inference', () => {
       const myArrayU32 = ArrayU32([7, 8]);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
         var myArrayF32 = array<f32, 2>(1f, 2f);
         var myArrayF16 = array<f16, 2>(3h, 4h);
@@ -113,7 +114,7 @@ describe('wgsl generator type inference', () => {
       const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }]);
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot create value of type 'arrayOf(struct:Struct, 2)' from an array of length: 1]
@@ -130,7 +131,7 @@ describe('wgsl generator type inference', () => {
       }]);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Struct {
         prop: vec2f,
       }
@@ -144,12 +145,12 @@ describe('wgsl generator type inference', () => {
   it('coerces argument to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const id = tgpu.fn([Boid], Boid)((a) => a);
+    const id = tgpu.fn([Boid], Boid)((a) => Boid(a));
     const myFn = tgpu.fn([])(() => {
       const myBoid = id({ vel: d.vec2f(), pos: d.vec2f(1, 1) });
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec2f,
         vel: vec2f,
@@ -181,7 +182,7 @@ describe('wgsl generator type inference', () => {
       );
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Pos {
         x: u32,
         y: u32,
@@ -207,7 +208,7 @@ describe('wgsl generator type inference', () => {
       (x, y) => x + y,
     );
 
-    expect(() => asWgsl(add)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:add: Cannot convert value of type 'u32' to type 'void']
@@ -219,7 +220,7 @@ describe('wgsl generator type inference', () => {
       return 1 as unknown as d.v3f;
     });
 
-    expect(() => asWgsl(add)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:add: Cannot convert value of type 'abstractInt' to type 'vec3f']
@@ -233,7 +234,7 @@ describe('wgsl generator type inference', () => {
       return 1.1;
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() -> u32 {
         return 1u;
       }"
@@ -252,7 +253,7 @@ describe('wgsl generator type inference', () => {
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: No target type could be inferred for object with keys [pos, vel], please wrap the object in the corresponding schema.]
@@ -267,7 +268,7 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot convert value of type 'vec2<bool>' to type 'bool']
@@ -282,7 +283,7 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot convert value of type 'mat2x2f' to type 'bool']
@@ -299,7 +300,7 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot convert value of type 'abstractInt' to type 'bool']
@@ -311,7 +312,7 @@ describe('wgsl generator type inference', () => {
       const myArr = [];
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot infer the type of an empty array literal.]
@@ -338,7 +339,7 @@ describe('wgsl generator js type inference', () => {
       const result = Result(arr);
     });
 
-    expect(asWgsl(foo)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         var result = array<f32, 3>(1f, 2f, 3f);
       }"
@@ -357,7 +358,7 @@ describe('wgsl generator js type inference', () => {
       myFn(structValue);
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct MyStruct {
         v: vec2f,
       }
@@ -382,7 +383,7 @@ describe('wgsl generator js type inference', () => {
       const myStruct = Outer(structValue);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Inner {
         prop: vec2f,
       }
@@ -405,7 +406,7 @@ describe('wgsl generator js type inference', () => {
       return structValue;
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec2f,
         vel: vec2f,
@@ -426,7 +427,7 @@ describe('wgsl generator js type inference', () => {
       return structValue;
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Inner {
         prop: vec2f,
       }
@@ -458,7 +459,7 @@ describe('wgsl generator js type inference', () => {
       const myArrayU32 = ArrayU32(arrayValueU32);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
         var myArrayF32 = array<f32, 2>(1f, 2f);
         var myArrayF16 = array<f16, 2>(3h, 4h);
@@ -477,7 +478,7 @@ describe('wgsl generator js type inference', () => {
       const myStructArray = StructArray(arrayValue);
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Cannot create value of type 'arrayOf(struct:Struct, 2)' from an array of length: 1]
@@ -493,7 +494,7 @@ describe('wgsl generator js type inference', () => {
       const myStructArray = StructArray(arrayValue);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Struct {
         prop: vec2f,
       }
@@ -507,13 +508,13 @@ describe('wgsl generator js type inference', () => {
   it('coerces argument to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const id = tgpu.fn([Boid], Boid)((a) => a);
+    const id = tgpu.fn([Boid], Boid)((a) => Boid(a));
     const structValue = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
     const myFn = tgpu.fn([])(() => {
       const myBoid = id(structValue);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec2f,
         vel: vec2f,
@@ -544,7 +545,7 @@ describe('wgsl generator js type inference', () => {
       nop(structValue, nestedStructValue, arrayValue);
     });
 
-    expect(asWgsl(myFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "struct Pos {
         x: u32,
         y: u32,
@@ -574,7 +575,7 @@ describe('wgsl generator js type inference', () => {
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Tried to define variable 'unrelated' of unknown type]
@@ -587,10 +588,52 @@ describe('wgsl generator js type inference', () => {
       const myArr = arrayValue;
     });
 
-    expect(() => asWgsl(myFn)).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Tried to define variable 'myArr' of unknown type]
+    `);
+  });
+
+  it('is generic over number of arguments', () => {
+    const f32Array = d.arrayOf(d.f32);
+
+    const interpolate = (progress: number, from: number[], to: number[]) => {
+      'use gpu';
+      const result = f32Array(from.length)();
+      for (let i = 0; i < from.length; i++) {
+        result[i] = std.mix(from[i]!, to[i]!, progress);
+      }
+      return result;
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = interpolate(0.1, [0, 0.5, 1], [100, 200, 100]);
+      const bar = interpolate(0.6, [0, 0.5], [100, 40.5]);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn interpolate(progress: f32, from_1: array<f32, 3>, to: array<i32, 3>) -> array<f32, 3> {
+        var result = array<f32, 3>();
+        for (var i = 0; (i < 3i); i++) {
+          result[i] = mix(from_1[i], f32(to[i]), progress);
+        }
+        return result;
+      }
+
+      fn interpolate_1(progress: f32, from_1: array<f32, 2>, to: array<f32, 2>) -> array<f32, 2> {
+        var result = array<f32, 2>();
+        for (var i = 0; (i < 2i); i++) {
+          result[i] = mix(from_1[i], to[i], progress);
+        }
+        return result;
+      }
+
+      fn main() {
+        var foo = interpolate(0.1f, array<f32, 3>(0., 0.5, 1.), array<i32, 3>(100, 200, 100));
+        var bar = interpolate_1(0.6f, array<f32, 2>(0., 0.5), array<f32, 2>(100., 40.5));
+      }"
     `);
   });
 });

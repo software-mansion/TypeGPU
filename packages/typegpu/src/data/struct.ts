@@ -1,3 +1,4 @@
+import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -39,6 +40,14 @@ function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
+  Object.keys(props).forEach((key) => {
+    if (!isValidProp(key)) {
+      throw new Error(
+        `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
+      );
+    }
+  });
+
   // In the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls.
   const structSchema = (instanceProps?: TProps) =>

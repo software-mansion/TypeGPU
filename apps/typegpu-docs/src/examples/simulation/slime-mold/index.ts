@@ -60,7 +60,7 @@ root['~unstable'].createGuardedComputePipeline((x) => {
 const params = root.createUniform(Params, defaultParams);
 const deltaTime = root.createUniform(d.f32, 0.016);
 
-const textures = [0, 1].map((i) =>
+const textures = [0, 1].map(() =>
   root['~unstable']
     .createTexture({
       size: [resolution.x, resolution.y],

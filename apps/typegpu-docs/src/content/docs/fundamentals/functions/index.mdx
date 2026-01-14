@@ -61,7 +61,7 @@ const range = main();
 //    ^?
 
 // #2) Used to generate WGSL
-const wgsl = tgpu.resolve({ externals: { main } });
+const wgsl = tgpu.resolve([main]);
 //    ^?
 
 // #3) Executed on the GPU (generates WGSL underneath)
@@ -323,7 +323,7 @@ function manhattanDistance(a: d.v3f, b: d.v3f) {
   const dy = std.abs(a.y - b.y);
   const dz = std.abs(a.z - b.z);
 
-  return std.max(dx, std.max(dy, dz));
+  return std.max(dx, dy, dz);
 }
 ```
 
@@ -433,7 +433,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
 You can see for yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
-// results of calling tgpu.resolve({ externals: { getGradientColor } })
+// results of calling tgpu.resolve([getGradientColor])
 
 fn getBlue_1() -> vec4f{
   return vec4f(0.114, 0.447, 0.941, 1);

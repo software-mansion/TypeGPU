@@ -24,73 +24,6 @@ function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
 }
 
-const BINARY_OP_MAP = {
-  '==': '==',
-  '!=': '!=',
-  '===': '==',
-  '!==': '!=',
-  '<': '<',
-  '<=': '<=',
-  '>': '>',
-  '>=': '>=',
-  '<<': '<<',
-  '>>': '>>',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TGSL.');
-  },
-  '+': '+',
-  '-': '-',
-  '*': '*',
-  '/': '/',
-  '%': '%',
-  '|': '|',
-  '^': '^',
-  '&': '&',
-  get in(): never {
-    throw new Error('The `in` operator is unsupported in TGSL.');
-  },
-  get instanceof(): never {
-    throw new Error('The `instanceof` operator is unsupported in TGSL.');
-  },
-  '**': '**',
-  get '|>'(): never {
-    throw new Error('The `|>` operator is unsupported in TGSL.');
-  },
-} as const;
-
-const LOGICAL_OP_MAP = {
-  '||': '||',
-  '&&': '&&',
-  get '??'(): never {
-    throw new Error('The `??` operator is unsupported in TGSL.');
-  },
-} as const;
-
-const ASSIGNMENT_OP_MAP = {
-  '=': '=',
-  '+=': '+=',
-  '-=': '-=',
-  '*=': '*=',
-  '/=': '/=',
-  '%=': '%=',
-  '<<=': '<<=',
-  '>>=': '>>=',
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TGSL.');
-  },
-  '|=': '|=',
-  '^=': '^=',
-  '&=': '&=',
-  get '**='(): never {
-    throw new Error('The `**=` operator is unsupported in TGSL.');
-  },
-  '||=': '||=',
-  '&&=': '&&=',
-  get '??='(): never {
-    throw new Error('The `??=` operator is unsupported in TGSL.');
-  },
-} as const;
-
 const Transpilers: Partial<
   {
     [Type in JsNode['type']]: (
@@ -143,25 +76,42 @@ const Transpilers: Partial<
     return node.name;
   },
 
+  ThisExpression(ctx) {
+    ctx.externalNames.add('this');
+    return 'this';
+  },
+
   BinaryExpression(ctx, node) {
-    const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.binaryExpr, left, wgslOp, right];
+    return [
+      NODE.binaryExpr,
+      left,
+      node.operator as tinyest.BinaryOperator,
+      right,
+    ];
   },
 
   LogicalExpression(ctx, node) {
-    const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.logicalExpr, left, wgslOp, right];
+    return [
+      NODE.logicalExpr,
+      left,
+      node.operator as tinyest.LogicalOperator,
+      right,
+    ];
   },
 
   AssignmentExpression(ctx, node) {
-    const wgslOp = ASSIGNMENT_OP_MAP[node.operator as acorn.AssignmentOperator];
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.assignmentExpr, left, wgslOp, right];
+    return [
+      NODE.assignmentExpr,
+      left,
+      node.operator as tinyest.AssignmentOperator,
+      right,
+    ];
   },
 
   UnaryExpression(ctx, node) {

@@ -4,45 +4,45 @@ import { abs, add, dot, length, max, min, saturate, sub } from 'typegpu/std';
 
 /**
  * Signed distance function for a sphere
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param radius Radius of the sphere
  */
-export const sdSphere = tgpu.fn([vec3f, f32], f32)((p, radius) => {
-  return length(p) - radius;
+export const sdSphere = tgpu.fn([vec3f, f32], f32)((point, radius) => {
+  return length(point) - radius;
 });
 
 /**
  * Signed distance function for a 3d box
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param size Half-dimensions of the box
  */
-export const sdBox3d = tgpu.fn([vec3f, vec3f], f32)((p, size) => {
-  const d = sub(abs(p), size);
+export const sdBox3d = tgpu.fn([vec3f, vec3f], f32)((point, size) => {
+  const d = sub(abs(point), size);
   return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0);
 });
 
 /**
  * Signed distance function for a rounded 3d box
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param size Half-dimensions of the box
  * @param cornerRadius Box corner radius
  */
 export const sdRoundedBox3d = tgpu
-  .fn([vec3f, vec3f, f32], f32)((p, size, cornerRadius) => {
-    const d = add(sub(abs(p), size), vec3f(cornerRadius));
+  .fn([vec3f, vec3f, f32], f32)((point, size, cornerRadius) => {
+    const d = add(sub(abs(point), size), vec3f(cornerRadius));
     return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0) -
       cornerRadius;
   });
 
 /**
  * Signed distance function for a hollow box frame
- * @param p Point to evaluate
+ * @param point Point to evaluate
  * @param size Half-dimensions of the box
  * @param thickness Frame thickness
  */
 export const sdBoxFrame3d = tgpu
-  .fn([vec3f, vec3f, f32], f32)((p, size, thickness) => {
-    const p1 = sub(abs(p), size);
+  .fn([vec3f, vec3f, f32], f32)((point, size, thickness) => {
+    const p1 = sub(abs(point), size);
     const q = sub(abs(add(p1, thickness)), vec3f(thickness));
 
     // Calculate three possible distances for each main axis being the outer one
@@ -61,38 +61,40 @@ export const sdBoxFrame3d = tgpu
 
 /**
  * Signed distance function for a 3D line segment
- * @param p Point to evaluate
- * @param a First endpoint of the line
- * @param b Second endpoint of the line
+ * @param point Point to evaluate
+ * @param A First endpoint of the line
+ * @param B Second endpoint of the line
  */
-export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((p, a, b) => {
-  const pa = sub(p, a);
-  const ba = sub(b, a);
+export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((point, A, B) => {
+  const pa = sub(point, A);
+  const ba = sub(B, A);
   const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
   return length(sub(pa, ba.mul(h)));
 });
 
 /**
  * Signed distance function for an infinite plane
- * @param p Point to evaluate
- * @param n Normal vector of the plane (must be normalized)
- * @param h Height/offset of the plane along the normal
+ * @param point Point to evaluate
+ * @param normal Normal vector of the plane (must be normalized)
+ * @param height Height/offset of the plane along the normal
  */
-export const sdPlane = tgpu.fn([vec3f, vec3f, f32], f32)((p, n, h) => {
-  return dot(p, n) + h;
-});
+export const sdPlane = tgpu.fn([vec3f, vec3f, f32], f32)(
+  (point, normal, height) => {
+    return dot(point, normal) + height;
+  },
+);
 
 /**
  * Signed distance function for a 3D capsule
- * @param p Point to evaluate
- * @param a First endpoint of the capsule segment
- * @param b Second endpoint of the capsule segment
+ * @param point Point to evaluate
+ * @param A First endpoint of the capsule segment
+ * @param B Second endpoint of the capsule segment
  * @param radius Radius of the capsule
  */
 export const sdCapsule = tgpu
-  .fn([vec3f, vec3f, vec3f, f32], f32)((p, a, b, radius) => {
-    const pa = sub(p, a);
-    const ba = sub(b, a);
+  .fn([vec3f, vec3f, vec3f, f32], f32)((point, A, B, radius) => {
+    const pa = sub(point, A);
+    const ba = sub(B, A);
     const h = saturate(dot(pa, ba) / dot(ba, ba));
     return length(sub(pa, ba.mul(h))) - radius;
   });
