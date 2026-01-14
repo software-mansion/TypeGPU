@@ -11,10 +11,10 @@ import {
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import {
-  isEphemeralOrigin,
   isEphemeralSnippet,
   isSnippet,
   type Origin,
+  type ResolvedSnippet,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
@@ -224,41 +224,10 @@ ${this.ctx.pre}}`;
 
   public blockVariable(
     varType: 'var' | 'let' | 'const',
-    id: string,
-    dataType: wgsl.AnyWgslData | UnknownData,
-    origin: Origin,
-  ): Snippet {
-    const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-    let varOrigin: Origin;
-    if (
-      origin === 'constant-tgpu-const-ref' ||
-      origin === 'runtime-tgpu-const-ref'
-    ) {
-      // Even types that aren't naturally referential (like vectors or structs) should
-      // be treated as constant references when assigned to a const.
-      varOrigin = origin;
-    } else if (origin === 'argument') {
-      if (naturallyEphemeral) {
-        varOrigin = 'runtime';
-      } else {
-        varOrigin = 'argument';
-      }
-    } else if (!naturallyEphemeral) {
-      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
-    } else if (origin === 'constant' && varType === 'const') {
-      varOrigin = 'constant';
-    } else {
-      varOrigin = 'runtime';
-    }
-
-    const snippet = snip(
-      this.ctx.makeNameValid(id),
-      dataType,
-      /* origin */ varOrigin,
-    );
-    this.ctx.defineVariable(id, snippet);
-    return snippet;
+    lhs: ResolvedSnippet,
+    rhs: Snippet,
+  ): string {
+    return stitch`${this.ctx.pre}${varType} ${lhs.value} = ${rhs};`;
   }
 
   public identifier(id: string): Snippet {
@@ -916,10 +885,6 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      const ephemeral = isEphemeralSnippet(eq);
-      let dataType = eq.dataType as wgsl.AnyWgslData;
-      const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
       if (isLooseData(eq.dataType)) {
         throw new Error(
           `Cannot create variable '${rawId}' with loose data type.`,
@@ -947,10 +912,40 @@ ${this.ctx.pre}else ${alternate}`;
         };`;
       }
 
+      const ephemeral = isEphemeralSnippet(eq);
+      let dataType = eq.dataType as wgsl.AnyWgslData;
+      let varOrigin: Origin = 'runtime';
+      const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
+
+      if (eq.origin === 'argument') {
+        varOrigin = ephemeral ? 'runtime' : 'argument';
+
+        if (stmtType === NODE.let && !ephemeral) {
+          const rhsStr = this.ctx.resolve(eq.value).value;
+          const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
+
+          throw new WgslTypeError(
+            `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
+  -----
+  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+  -----`,
+          );
+        }
+
+        if (stmtType === NODE.const) {
+          // Arguments cannot be mutated, so we 'let' them be (kill me)
+          varType = 'let';
+        }
+      } //
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
-      if (!ephemeral) {
+      else if (!ephemeral) {
         // Referential
+
+        // It's a reference to something else, so we inherit their origin
+        varOrigin = eq.origin;
+
         if (stmtType === NODE.let) {
           const rhsStr = this.ctx.resolve(eq.value).value;
           const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
@@ -991,41 +986,41 @@ ${this.ctx.pre}else ${alternate}`;
       } else {
         // Non-referential
 
-        if (stmtType === NODE.const) {
-          if (eq.origin === 'argument') {
-            // Arguments cannot be mutated, so we 'let' them be (kill me)
-            varType = 'let';
-          } else if (naturallyEphemeral) {
+        if (naturallyEphemeral) {
+          // Primitives
+
+          if (stmtType === NODE.const) {
             varType = eq.origin === 'constant' ? 'const' : 'let';
+            varOrigin = eq.origin === 'constant' ? 'constant' : 'runtime';
           }
         } else {
-          // stmtType === NODE.let
+          // Non-primitives
 
-          if (eq.origin === 'argument') {
-            if (!naturallyEphemeral) {
-              const rhsStr = this.ctx.resolve(eq.value).value;
-              const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
-
-              throw new WgslTypeError(
-                `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
-  -----
-  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
-  -----`,
-              );
-            }
-          }
+          // We're creating a new variable with an ephemeral snippet,
+          // but referencing that variable down the line will have the
+          // origin of 'this-function'.
+          varOrigin = 'this-function';
         }
       }
 
-      const snippet = this.blockVariable(
+      if (
+        eq.origin === 'constant-tgpu-const-ref' ||
+        eq.origin === 'runtime-tgpu-const-ref'
+      ) {
+        // Even types that aren't naturally referential (like vectors or structs) should
+        // be treated as constant references when assigned to a const.
+        varOrigin = eq.origin;
+      }
+
+      const varName = this.ctx.makeNameValid(rawId);
+      const lhs = snip(varName, concretize(dataType), varOrigin);
+      this.ctx.defineVariable(rawId, lhs);
+
+      return this.blockVariable(
         varType,
-        rawId,
-        concretize(dataType),
-        eq.origin,
+        lhs,
+        tryConvertSnippet(eq, dataType, false),
       );
-      return stitch`${this.ctx.pre}${varType} ${snippet
-        .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
     }
 
     if (statement[0] === NODE.block) {

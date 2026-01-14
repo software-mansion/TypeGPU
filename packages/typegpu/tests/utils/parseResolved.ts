@@ -12,9 +12,7 @@ import { $internal } from '../../src/shared/symbols.ts';
 import { CodegenState } from '../../src/types.ts';
 
 function extractSnippetFromFn(cb: () => unknown): Snippet {
-  const ctx = new ResolutionCtxImpl({
-    namespace: namespace({ names: 'strict' }),
-  });
+  const ctx = new ResolutionCtxImpl({ namespace: namespace() });
 
   return provideCtx(
     ctx,

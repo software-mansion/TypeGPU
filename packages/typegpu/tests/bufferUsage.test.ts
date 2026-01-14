@@ -88,6 +88,22 @@ describe('TgpuBufferUniform', () => {
         .as('uniform')
     ).toThrow();
   });
+
+  it('cannot be mutated', ({ root }) => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
+
+    const boidUniform = root.createUniform(Boid);
+
+    const main = () => {
+      'use gpu';
+      boidUniform.$.pos.x += 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
 });
 
 describe('TgpuBufferMutable', () => {

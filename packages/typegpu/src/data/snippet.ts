@@ -1,7 +1,8 @@
-import { undecorate } from './dataTypes.ts';
-import type { AnyData, UnknownData } from './dataTypes.ts';
+import { stitch } from '../core/resolve/stitch.ts';
 import { DEV } from '../shared/env.ts';
-import { isNumericSchema } from './wgslTypes.ts';
+import type { AnyData, UnknownData } from './dataTypes.ts';
+import { undecorate } from './dataTypes.ts';
+import { isNaturallyEphemeral, isNumericSchema } from './wgslTypes.ts';
 
 export type Origin =
   | 'uniform'
@@ -29,12 +30,45 @@ export type Origin =
   | 'constant-tgpu-const-ref' /* turns into a `const` when assigned to a variable */
   | 'runtime-tgpu-const-ref' /* turns into a `let` when assigned to a variable */;
 
-export function isEphemeralOrigin(space: Origin) {
-  return space === 'runtime' || space === 'constant' || space === 'argument';
+export function isEphemeralSnippet(snippet: Snippet) {
+  if (snippet.origin === 'argument') {
+    // Arguments are considered ephemeral if their data type
+    // is naturally ephemeral.
+    // (primitives => true, non-primitives => false).
+    return isNaturallyEphemeral(snippet.dataType);
+  }
+  return snippet.origin === 'runtime' || snippet.origin === 'constant';
 }
 
-export function isEphemeralSnippet(snippet: Snippet) {
-  return isEphemeralOrigin(snippet.origin);
+/**
+ * Returns a reason if the snippet is immutable, or undefined if it is mutable.
+ */
+export function getImmutableReason(snippet: Snippet): string | undefined {
+  if (snippet.origin === 'argument') {
+    return stitch`Cannot mutate '${snippet}', arguments are immutable. You can copy them into a local variable first.`;
+  }
+
+  if (
+    snippet.origin === 'constant' ||
+    snippet.origin === 'constant-tgpu-const-ref' ||
+    snippet.origin === 'runtime-tgpu-const-ref'
+  ) {
+    return stitch`Cannot mutate '${snippet}', constants are immutable.`;
+  }
+
+  if (snippet.origin === 'uniform') {
+    return stitch`Cannot mutate '${snippet}', uniforms are immutable.`;
+  }
+
+  if (snippet.origin === 'handle') {
+    return stitch`Cannot mutate '${snippet}', handles are immutable.`;
+  }
+
+  if (snippet.origin === 'readonly') {
+    return stitch`Cannot mutate '${snippet}', it's bound as a readonly resource.`;
+  }
+
+  return undefined; // Mutable 🎉
 }
 
 export const originToPtrParams = {
