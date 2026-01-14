@@ -13,6 +13,7 @@ import * as d from '../src/data/index.ts';
 import './utils/webgpuGlobals.ts';
 import { attest } from '@ark/attest';
 import tgpu from '../src/index.ts';
+import { getName } from '../src/shared/meta.ts';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
@@ -174,6 +175,19 @@ describe('TgpuTexture', () => {
       })
       // @ts-expect-error
       .$usage('storage');
+  });
+
+  it('creates namable views', ({ root }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512, 12],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled');
+
+    const sampled1 = texture.createView(d.texture2d(d.i32)).$name('myView');
+
+    expect(getName(sampled1)).toBe('myView');
   });
 
   it('creates a sampled texture view with correct type', ({ root }) => {
