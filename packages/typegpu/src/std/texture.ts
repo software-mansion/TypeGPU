@@ -6,7 +6,7 @@ import {
   type WgslTexture,
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
@@ -37,6 +37,7 @@ import type {
   textureDepth2d,
   textureDepth2dArray,
   textureDepthCube,
+  textureDepthCubeArray,
   textureExternal,
   textureMultisampled2d,
   textureStorage1d,
@@ -109,7 +110,7 @@ function sampleCpu(
   _offsetOrArrayIndex?: v2i | v3i | number,
   _maybeOffset?: v2i | v3i,
 ): v4f | number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -170,7 +171,7 @@ function sampleBiasCpu(
   _biasOrOffset?: number | v2i | v3i,
   _maybeOffset?: v2i | v3i,
 ): v4f {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling with bias relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -288,7 +289,7 @@ function sampleLevelCpu(
   _offsetOrArrayIndex?: v2i | v3i | number,
   _maybeOffset?: v2i | v3i,
 ): v4f | number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -363,7 +364,7 @@ function textureLoadCpu(
   _coords: number | v2i | v2u | v3i | v3u,
   _levelOrArrayIndex?: number,
 ): TexelData {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -424,7 +425,7 @@ function textureStoreCpu(
   _arrayIndexOrValue?: number | TexelData,
   _maybeValue?: TexelData,
 ): void {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -471,7 +472,7 @@ function textureDimensionsCpu(
   _texture: WgslTexture | WgslStorageTexture | WgslExternalTexture,
   _level?: number,
 ): number | v2u | v3u {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -537,7 +538,7 @@ function textureSampleCompareCpu<T extends textureDepthCube>(
   coords: v3f,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends textureCubeArray>(
+function textureSampleCompareCpu<T extends textureDepthCubeArray>(
   texture: T,
   sampler: comparisonSampler,
   coords: v3f,
@@ -552,7 +553,7 @@ function textureSampleCompareCpu(
   _depthRefOrOffset?: number | v2i,
   _maybeOffset?: v2i,
 ): number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -567,10 +568,74 @@ export const textureSampleCompare = dualImpl({
   }),
 });
 
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCube>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCubeArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu(
+  _texture: WgslTexture,
+  _sampler: comparisonSampler,
+  _coords: v2f | v3f,
+  _depthRefOrArrayIndex: number,
+  _depthRefOrOffset?: number | v2i,
+  _maybeOffset?: v2i,
+): number {
+  throw new MissingCpuImplError(
+    'Texture comparison sampling with level relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureSampleCompareLevel = dualImpl({
+  name: 'textureSampleCompareLevel',
+  normalImpl: textureSampleCompareLevelCpu,
+  codegenImpl: (...args) => stitch`textureSampleCompareLevel(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: f32,
+  }),
+});
+
 function textureSampleBaseClampToEdgeCpu<
   T extends texture2d | textureExternal,
 >(texture: T, sampler: sampler, coords: v2f): v4f {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
   );
 }
