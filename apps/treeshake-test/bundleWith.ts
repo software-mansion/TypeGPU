@@ -2,10 +2,10 @@ import { build as esbuild } from 'esbuild';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { build as tsdown } from 'tsdown';
-import webpack from 'webpack';
 import esbuildPlugin from 'unplugin-typegpu/esbuild';
-import webpackPlugin from 'unplugin-typegpu/webpack';
 import rolldownPlugin from 'unplugin-typegpu/rolldown';
+import webpackPlugin from 'unplugin-typegpu/webpack';
+import webpack from 'webpack';
 
 export type ResultRecord = {
   testFilename: string;
