@@ -31,6 +31,8 @@ export function ExampleLink(props: Props) {
 
   return (
     <a
+      // Even though we prevent the default behavior of this link
+      // it is good to have this set semantically.
       href={`#example=${exampleKey}`}
       onClick={handleClick}
       className={cs(
