@@ -3,10 +3,7 @@ import type { AnySceneElement } from './scene.ts';
 import { sceneElements } from './scene.ts';
 import * as d from 'typegpu/data';
 
-export interface DragTarget {
-  id: string;
-  element: AnySceneElement;
-}
+type DragTarget = AnySceneElement;
 
 export class DragController {
   private isDragging = false;
@@ -28,34 +25,23 @@ export class DragController {
   }
 
   private hitTestDisk(uv: d.v2f, center: d.v2f, radius: number): boolean {
-    const dist = sdDisk(uv.sub(center), radius);
-    return dist <= radius;
+    return sdDisk(uv.sub(center), radius) <= 0;
   }
 
   private hitTestBox(uv: d.v2f, center: d.v2f, size: d.v2f): boolean {
-    const dist = sdBox2d(uv.sub(center), size.mul(1));
-    return dist <= 0;
+    return sdBox2d(uv.sub(center), size) <= 0;
   }
 
   private hitTest(clientX: number, clientY: number): DragTarget | null {
     const uv = this.canvasToUV(clientX, clientY);
-
-    for (const element of sceneElements) {
-      let hit = false;
-
-      if (element.type === 'disk') {
-        const radius = element.size as number;
-        hit = this.hitTestDisk(uv, element.position, radius);
-      } else if (element.type === 'box') {
-        const size = element.size as d.v2f;
-        hit = this.hitTestBox(uv, element.position, size);
-      }
-
+    for (const el of sceneElements) {
+      const hit = el.type === 'disk'
+        ? this.hitTestDisk(uv, el.position, el.size as number)
+        : this.hitTestBox(uv, el.position, el.size as d.v2f);
       if (hit) {
-        return { id: element.id, element };
+        return el;
       }
     }
-
     return null;
   }
 

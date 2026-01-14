@@ -8,12 +8,11 @@ export interface SceneElement<T extends 'box' | 'disk'> {
   position: d.v2f;
   size: T extends 'box' ? d.v2f : number;
   emission?: d.v3f;
-  dataIndex: number; // Index in sceneData.disks or sceneData.boxes
+  dataIndex: number;
 }
 export type AnySceneElement = SceneElement<'box'> | SceneElement<'disk'>;
 
 export const sceneElements: AnySceneElement[] = [
-  // 3 RGB lights (disks with emission)
   {
     id: 'light-red',
     type: 'disk',
@@ -38,8 +37,6 @@ export const sceneElements: AnySceneElement[] = [
     size: 0.05,
     dataIndex: 2,
   },
-
-  // 3 occluders
   {
     id: 'box-1',
     type: 'box',
@@ -91,7 +88,6 @@ export function updateElementPosition(id: string, position: d.v2f): void {
     return;
   }
 
-  // Direct O(1) array access using stored index
   element.position = position;
   if (element.type === 'disk') {
     sceneData.disks[element.dataIndex].pos = position;
@@ -118,8 +114,8 @@ const BoxData = d.struct({
 });
 
 export const SceneData = d.struct({
-  disks: d.arrayOf(DiskData, 4),
-  boxes: d.arrayOf(BoxData, 2),
+  disks: d.arrayOf(DiskData, sceneData.disks.length),
+  boxes: d.arrayOf(BoxData, sceneData.boxes.length),
 });
 
 export const sceneDataAccess = tgpu['~unstable'].accessor(SceneData);
