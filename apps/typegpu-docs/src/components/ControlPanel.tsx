@@ -1,14 +1,15 @@
 import cs from 'classnames';
-import { useAtom, useAtomValue } from 'jotai';
-import { useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import { menuShownAtom } from '../utils/examples/menuShownAtom.ts';
+import {
+  codeEditorShownAtom,
+  menuShownAtom,
+} from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
