@@ -64,7 +64,7 @@
       "sharp"
     ],
     "overrides": {
-      "rollup": "4.34.8",
+      "rollup": "^4.55.1",
       "three": "catalog:example"
     }
   }
