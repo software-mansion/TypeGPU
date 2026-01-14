@@ -1,6 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import { fragmentFn } from './shaders/fragment.ts';
+import { sizeSlot, vertexFn } from './shaders/vertex.ts';
 
 let gameSize = 64;
 let timestep = 15;
@@ -21,146 +23,105 @@ function createGame() {
   const size = d.vec2u(gameSize);
 
   const computeLayout = tgpu.bindGroupLayout({
-  current: { storage: d.arrayOf(d.u32) },
-  next: { storage: d.arrayOf(d.u32), access: 'mutable' },
-});
+    current: { storage: d.arrayOf(d.u32) },
+    next: { storage: d.arrayOf(d.u32), access: 'mutable' },
+  });
 
-const getIndex = (x: number, y: number) => {
-  'use gpu';
-  return (y % size.y) * size.x + (x % size.x);
-};
-
-const getCell = (x: number, y: number) => {
-  'use gpu';
-  return computeLayout.$.current[getIndex(x, y)];
-};
-
-const countNeighbors = (x: number, y: number) => {
-  'use gpu';
-  // biome-ignore format: clearer that way
-  return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) +
-    getCell(x - 1, y) + getCell(x + 1, y) +
-    getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
-};
-
-const computeFn = root['~unstable'].createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  const n = countNeighbors(x, y);
-  computeLayout.$.next[getIndex(x, y)] = d.u32(
-    std.select(n === 3, n === 2 || n === 3, getCell(x, y) === 1),
-  );
-});
-
-const squareBuffer = root
-  .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
-  .$usage('vertex');
-
-const squareVertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2u), 'vertex');
-const cellsVertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
-
-const vertexFn = tgpu['~unstable'].vertexFn({
-  in: {
-    iid: d.builtin.instanceIndex,
-    cell: d.u32,
-    pos: d.vec2u,
-  },
-  out: {
-    pos: d.builtin.position,
-    cell: d.interpolate('flat', d.u32),
-    uv: d.vec2f,
-  },
-})(({ iid, cell, pos }) => {
-  const w = d.u32(size.x);
-  const h = d.u32(size.y);
-
-  const col = iid % w;
-  const row = d.u32(iid / w);
-
-  const gx = col + pos.x;
-  const gy = row + pos.y;
-
-  const maxWH = d.f32(std.max(w, h));
-  const x = (d.f32(gx) * 2 - d.f32(w)) / maxWH;
-  const y = (d.f32(gy) * 2 - d.f32(h)) / maxWH;
-
-  return {
-    pos: d.vec4f(x, y, 0, 1),
-    cell,
-    uv: d.vec2f((x + 1) * 0.5, (y + 1) * 0.5),
+  const getIndex = (x: number, y: number) => {
+    'use gpu';
+    return (y % size.y) * size.x + (x % size.x);
   };
-});
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    cell: d.interpolate('flat', d.u32),
-    uv: d.vec2f,
-  },
-  out: d.vec4f,
-})(({ cell, uv }) => {
-  if (cell === d.u32(0)) {
-    std.discard();
-  }
-  const u = uv.div(1.5);
-  return d.vec4f(u.x, u.y, 1 - u.x, 0.8);
-});
+  const getCell = (x: number, y: number) => {
+    'use gpu';
+    return computeLayout.$.current[getIndex(x, y)];
+  };
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexFn, {
-    cell: cellsVertexLayout.attrib,
-    pos: squareVertexLayout.attrib,
-  })
-  .withFragment(fragmentFn, {
-    format: presentationFormat,
-  })
-  .withPrimitive({ topology: 'triangle-strip' })
-  .createPipeline();
+  const countNeighbors = (x: number, y: number) => {
+    'use gpu';
+    // biome-ignore format: clearer that way
+    return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) +
+      getCell(x - 1, y) + getCell(x + 1, y) +
+      getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
+  };
 
-const length = size.x * size.y;
-const buffers = [
-  root
-    .createBuffer(
-      d.arrayOf(d.u32, length),
-      Array.from({ length }, () => (Math.random() < 0.25 ? 1 : 0)),
-    )
-    .$usage('storage', 'vertex'),
-  root.createBuffer(d.arrayOf(d.u32, length)).$usage('storage', 'vertex'),
-];
-const bindGroups = [0, 1].map((i) =>
-  root.createBindGroup(computeLayout, {
-    current: buffers[i],
-    next: buffers[1 - i],
-  }),
-);
+  const computeFn = root['~unstable'].createGuardedComputePipeline((x, y) => {
+    'use gpu';
+    const n = countNeighbors(x, y);
+    computeLayout.$.next[getIndex(x, y)] = d.u32(
+      std.select(n === 3, n === 2 || n === 3, getCell(x, y) === 1),
+    );
+  });
 
-let swap = 0;
-let lastTimestamp = performance.now();
-function run(timestamp: number) {
-  if (timestamp - lastTimestamp <= timestep) {
-    return;
-  }
-  lastTimestamp = timestamp;
+  const squareBuffer = root
+    .createBuffer(d.arrayOf(d.vec2u, 4), [
+      d.vec2u(0, 0),
+      d.vec2u(1, 0),
+      d.vec2u(0, 1),
+      d.vec2u(1, 1),
+    ])
+    .$usage('vertex');
 
-  computeFn.with(bindGroups[swap]).dispatchThreads(size.x, size.y);
+  const squareVertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2u), 'vertex');
+  const cellsVertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
+  const renderPipeline = root['~unstable']
+    .with(sizeSlot, size)
+    .withVertex(vertexFn, {
+      cell: cellsVertexLayout.attrib,
+      pos: squareVertexLayout.attrib,
     })
-    .with(cellsVertexLayout, buffers[1 - swap])
-    //@ts-expect-error: an array of u32 is compatible with an array of vec2u but it's cursed
-    .with(squareVertexLayout, squareBuffer)
-    .draw(4, length);
+    .withFragment(fragmentFn, {
+      format: presentationFormat,
+    })
+    .withPrimitive({ topology: 'triangle-strip' })
+    .createPipeline();
 
-  swap ^= 1;
-}
+  const length = size.x * size.y;
+  const buffers = [
+    root
+      .createBuffer(
+        d.arrayOf(d.u32, length),
+        Array.from({ length }, () => (Math.random() < 0.25 ? 1 : 0)),
+      )
+      .$usage('storage', 'vertex'),
+    root.createBuffer(d.arrayOf(d.u32, length)).$usage('storage', 'vertex'),
+  ];
+  const bindGroups = [0, 1].map((i) =>
+    root.createBindGroup(computeLayout, {
+      current: buffers[i],
+      next: buffers[1 - i],
+    })
+  );
+
+  let swap = 0;
+  let lastTimestamp = performance.now();
+  function run(timestamp: number) {
+    if (timestamp - lastTimestamp <= timestep) {
+      return;
+    }
+    lastTimestamp = timestamp;
+
+    computeFn.with(bindGroups[swap]).dispatchThreads(size.x, size.y);
+
+    renderPipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .with(cellsVertexLayout, buffers[1 - swap])
+      .with(squareVertexLayout, squareBuffer)
+      .draw(4, length);
+
+    swap ^= 1;
+  }
 
   return { run, cleanup: () => {} };
 }
 
 let game = createGame();
-let disposed = false;
+const disposed = false;
 
 function animate(timestamp: number) {
   if (disposed) return;
@@ -171,6 +132,8 @@ function animate(timestamp: number) {
 }
 
 requestAnimationFrame(animate);
+
+// #region Example controls & Cleanup
 
 export const controls = {
   size: {
@@ -213,3 +176,5 @@ export function onCleanup() {
   game.cleanup();
   root.destroy();
 }
+
+// #endregion
