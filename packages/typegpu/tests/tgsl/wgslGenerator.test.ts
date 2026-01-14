@@ -1168,4 +1168,26 @@ describe('wgslGenerator', () => {
       - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
     `);
   });
+
+  it('generates correct indentation for nested blocks', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      let res = 0;
+      {
+        const f = 2;
+        res += f;
+      }
+      return res;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var res = 0;
+        {
+          const f = 2;
+          res += f;
+        }
+        return res;
+      }"
+    `);
+  });
 });

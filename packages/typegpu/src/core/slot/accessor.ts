@@ -147,7 +147,7 @@ abstract class AccessorBase<
   }
 
   $name(label: string) {
-    this.slot.$name(label);
+    setName(this, label);
 
     // Passing the name down to the default callback, if it has no name yet
     if (
