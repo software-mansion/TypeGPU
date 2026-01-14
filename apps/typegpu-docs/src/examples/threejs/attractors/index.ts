@@ -21,12 +21,7 @@ const scene = new THREE.Scene();
 
 // camera
 
-const camera = new THREE.PerspectiveCamera(
-  25,
-  1,
-  0.1,
-  100,
-);
+const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 100);
 camera.position.set(3, 5, 8);
 
 // ambient light
@@ -100,26 +95,17 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   arrowHelper.scale.setScalar(0.325);
   reference.add(arrowHelper);
 
-  const ring = new THREE.Mesh(
-    helpersRingGeometry,
-    helpersMaterial,
-  );
+  const ring = new THREE.Mesh(helpersRingGeometry, helpersMaterial);
   ring.rotation.x = -Math.PI * 0.5;
   arrowHelper.add(ring);
 
-  const arrow = new THREE.Mesh(
-    helpersArrowGeometry,
-    helpersMaterial,
-  );
+  const arrow = new THREE.Mesh(helpersArrowGeometry, helpersMaterial);
   arrow.position.x = 1;
   arrow.position.z = 0.2;
   arrow.rotation.x = Math.PI * 0.5;
   arrowHelper.add(arrow);
 
-  const attractorControls = new TransformControls(
-    camera,
-    renderer.domElement,
-  );
+  const attractorControls = new TransformControls(camera, renderer.domElement);
 
   attractorControls.mode = 'translate';
   attractorControls.size = 0.5;
@@ -127,19 +113,14 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   attractorControls.enabled = true;
   scene.add(attractorControls.getHelper());
 
-  attractorControls.addEventListener(
-    'dragging-changed',
-    (event) => {
-      orbitControls.enabled = !event.value;
-    },
-  );
+  attractorControls.addEventListener('dragging-changed', (event) => {
+    orbitControls.enabled = !event.value;
+  });
 
   attractorControls.addEventListener('change', () => {
     position.copy(reference.position);
     orientation.copy(
-      new THREE.Vector3(0, 1, 0).applyQuaternion(
-        reference.quaternion,
-      ),
+      new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion),
     );
   });
 
@@ -195,7 +176,7 @@ const initCompute = t3.toTSL(() => {
   const instanceIndex = t3.instanceIndex.$;
   randf.seed(instanceIndex / count + comptimeRandom());
 
-  const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
+  const basePosition = randf.inUnitCube()
     .sub(0.5)
     .mul(d.vec3f(5, 0.2, 5));
   positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
