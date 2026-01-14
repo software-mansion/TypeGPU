@@ -2,6 +2,12 @@ name: Tree-shake test
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Target branch to compare against'
+        required: true
+        default: 'main'
 
 jobs:
   treeshake-test:
@@ -26,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: target-branch
-          ref: ${{ github.base_ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
       - name: Install dependencies (PR branch)
         working-directory: pr-branch
@@ -45,17 +51,25 @@ jobs:
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
 
+      - name: Generate import tests on PR branch
+        working-directory: pr-branch
+        run: pnpm --filter treeshake-test generate-tests
+
+      - name: Generate import tests on target branch
+        working-directory: target-branch
+        run: pnpm --filter treeshake-test generate-tests
+
       - name: Run tree-shake test on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test test
+        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Run tree-shake test on target branch
         working-directory: target-branch
-        run: pnpm --filter treeshake-test test
+        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results
         run: |
-          node pr-branch/apps/treeshake-test/compare-results.ts \
+          node pr-branch/apps/treeshake-test/compareResults.ts \
             pr-branch/apps/treeshake-test/results.json \
             target-branch/apps/treeshake-test/results.json \
             > comparison.md
@@ -109,3 +123,7 @@ jobs:
             } else {
               await createOrUpdateComment(issueNumber);
             }
+            await core.summary
+              .addHeading('Tree-shake Test Results')
+              .addRaw(comparison)
+              .write();
