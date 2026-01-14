@@ -204,7 +204,7 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T extends AnyWgslData>(
+  with<T extends AnyData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
     value: AccessorIn<T> | MutableAccessorIn<T>,
   ): WithBinding {
