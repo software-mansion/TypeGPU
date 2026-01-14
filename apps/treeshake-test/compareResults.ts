@@ -2,6 +2,7 @@
 
 import { arrayOf, type } from 'arktype';
 import * as fs from 'node:fs/promises';
+import { ResultsTable } from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -24,40 +25,6 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
   return grouped;
 }
 
-function calculateTrendMessage(
-  prSize: number | undefined,
-  targetSize: number | undefined,
-): string {
-  if (prSize === undefined || targetSize === undefined) {
-    return '';
-  }
-  if (prSize === targetSize) {
-    return '(➖)';
-  }
-  const diff = prSize - targetSize;
-  const percent = ((diff / targetSize) * 100).toFixed(1);
-  if (diff > 0) {
-    return `($\${\\color{red}+${percent}\\\\%}$$)`;
-  }
-  return `($\${\\color{green}${percent}\\\\%}$$)`;
-}
-
-function prettifySize(size: number | undefined) {
-  if (size === undefined) {
-    return 'N/A';
-  }
-  const units = ['B', 'kB', 'MB', 'GB', 'TB'];
-  let unitIndex = 0;
-  let sizeInUnits = size;
-  while (sizeInUnits > 1024 && unitIndex < units.length) {
-    sizeInUnits /= 1024;
-    unitIndex += 1;
-  }
-  return `${
-    Number.isInteger(sizeInUnits) ? sizeInUnits : sizeInUnits.toFixed(2)
-  } ${units[unitIndex]}`;
-}
-
 async function generateReport(
   prResults: typeof BenchmarkResults.infer,
   targetResults: typeof BenchmarkResults.infer,
@@ -65,25 +32,29 @@ async function generateReport(
   const prGrouped = groupResultsByTest(prResults);
   const targetGrouped = groupResultsByTest(targetResults);
 
-  // Get all unique bundlers from both branches
+  // All unique bundlers from both branches
   const allBundlers = new Set([
     ...new Set(prResults.map((r) => r.bundler)),
     ...new Set(targetResults.map((r) => r.bundler)),
   ]);
 
-  // Get all unique tests from both branches
+  // All unique tests from both branches
   const allTests = new Set([
     ...Object.keys(prGrouped),
     ...Object.keys(targetGrouped),
   ]);
 
-  let output = '\n\n';
+  // Split tests into static and dynamic
+  const staticTests = [...allTests].filter((t) => !t.includes('_from_'))
+    .sort();
+  const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
+    .sort();
 
   // Summary statistics
-  let totalIncrease = 0,
-    totalDecrease = 0,
-    totalUnchanged = 0,
-    totalUnknown = 0;
+  let totalDecreased = 0;
+  let totalIncreased = 0;
+  let totalUnchanged = 0;
+  let totalUnknown = 0;
 
   for (const test of allTests) {
     for (const bundler of allBundlers) {
@@ -91,51 +62,51 @@ async function generateReport(
       const targetSize = targetGrouped[test]?.[bundler];
 
       if (targetSize === undefined || prSize === undefined) totalUnknown++;
-      else if (prSize > targetSize) totalIncrease++;
-      else if (prSize < targetSize) totalDecrease++;
+      else if (prSize > targetSize) totalIncreased++;
+      else if (prSize < targetSize) totalDecreased++;
       else totalUnchanged++;
     }
   }
 
+  // Comparison tables
+  const staticTable = new ResultsTable(allBundlers, 0.005);
+  const dynamicTable = new ResultsTable(allBundlers, 0.005);
+  const allTable = new ResultsTable(allBundlers, 0);
+
+  staticTests.forEach((test) => {
+    const prResults = prGrouped[test];
+    const targetResults = targetGrouped[test];
+    staticTable.addRow(test, prResults, targetResults);
+    allTable.addRow(test, prResults, targetResults);
+  });
+
+  dynamicTests.forEach((test) => {
+    const prResults = prGrouped[test];
+    const targetResults = targetGrouped[test];
+    dynamicTable.addRow(test, prResults, targetResults);
+    allTable.addRow(test, prResults, targetResults);
+  });
+
+  // Markdown generation
+  let output = '';
+
   output += '## 📊 Bundle Size Comparison\n\n';
-  output += '## 📈 Summary\n\n';
-  output += `- 📈 **Increased**: ${totalIncrease} bundles\n`;
-  output += `- 📉 **Decreased**: ${totalDecrease} bundles\n`;
-  output += `- ➖ **Unchanged**: ${totalUnchanged} bundles\n\n`;
-  output += `- ❔ **Unknown**: ${totalUnknown} bundles\n\n`;
+  output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
+  output += '| :---: | :---: | :---: | :---: |\n';
+  output +=
+    `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
-  // Main comparison table
-  output += '## 📋 Bundle Size Comparison\n\n';
+  output += `## 👀 Notable results\n\n`;
+  output += `### Static test results:\n${staticTable}\n\n`;
+  output += `### Dynamic test results:\n${dynamicTable}\n\n`;
 
-  // Table header
-  output += '| Test';
-  for (const bundler of allBundlers) {
-    output += ` | ${bundler}`;
+  output += `## 📋 All results\n\n`;
+  output += `${allTable}\n\n`;
+
+  if (allBundlers.size === 1) {
+    output +=
+      `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
   }
-  output += ' |\n';
-
-  // Table separator
-  output += '|---------';
-  for (const _ of allBundlers) {
-    output += '|---------';
-  }
-  output += ' |\n';
-
-  // Table rows
-  for (const test of [...allTests].sort()) {
-    output += `| ${test}`;
-
-    for (const bundler of allBundlers) {
-      const prSize = prGrouped[test]?.[bundler];
-      const targetSize = targetGrouped[test]?.[bundler];
-
-      output += ` | ${prettifySize(prSize)} ${
-        calculateTrendMessage(prSize, targetSize)
-      }`;
-    }
-    output += ' |\n';
-  }
-  output += '\n';
 
   return output;
 }
