@@ -106,13 +106,13 @@ jobs:
                 await github.rest.issues.updateComment({
                   ...context.repo,
                   comment_id: existingComment.id,
-                  body: botCommentIdentifier + comparison,
+                  body: botCommentIdentifier + '\n' + comparison,
                 });
               } else {
                 await github.rest.issues.createComment({
                   ...context.repo,
                   issue_number: issueNumber,
-                  body: botCommentIdentifier + comparison,
+                  body: botCommentIdentifier + '\n' + comparison,
                 });
               }
             }
@@ -124,6 +124,5 @@ jobs:
               await createOrUpdateComment(issueNumber);
             }
             await core.summary
-              .addHeading('Tree-shake Test Results')
               .addRaw(comparison)
               .write();
