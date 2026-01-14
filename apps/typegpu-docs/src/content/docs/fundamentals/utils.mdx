@@ -130,7 +130,7 @@ tgpu.resolve([innerPipeline]);
 
 ## *tgpu.comptime*
 
-`tgpu['~unstable'].comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
+`tgpu.comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
@@ -138,13 +138,12 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // ---cut---
-const color = tgpu['~unstable']
-  .comptime((int: number) => {
-    const r = (int >> 16) & 0xff;
-    const g = (int >> 8) & 0xff;
-    const b = int & 0xff;
-    return d.vec3f(r / 255, g / 255, b / 255);
-  });
+const color = tgpu.comptime((int: number) => {
+  const r = (int >> 16) & 0xff;
+  const g = (int >> 8) & 0xff;
+  const b = int & 0xff;
+  return d.vec3f(r / 255, g / 255, b / 255);
+});
 
 const material = tgpu.fn([d.vec3f], d.vec3f)((diffuse) => {
   'use gpu';

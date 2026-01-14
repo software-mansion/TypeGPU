@@ -24,6 +24,7 @@ import { namespace } from './core/resolve/namespace.ts';
 
 export const tgpu = {
   fn,
+  comptime,
   bindGroupLayout,
   vertexLayout,
   slot,
@@ -46,6 +47,9 @@ export const tgpu = {
     fragmentFn,
     vertexFn,
     computeFn,
+    /**
+     * @deprecated This feature is now stable, use tgpu.comptime.
+     */
     comptime,
     /**
      * @deprecated This feature is now stable, use tgpu.vertexLayout.

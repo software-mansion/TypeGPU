@@ -22,12 +22,16 @@ export type TgpuComptime<T extends (...args: never[]) => unknown> =
  *
  * @example
  * ```ts
- * const injectRand01 = tgpu['~unstable']
- *   .comptime(() => Math.random());
+ * const color = tgpu.comptime((int: number) => {
+ *   const r = (int >> 16) & 0xff;
+ *   const g = (int >> 8) & 0xff;
+ *   const b = int & 0xff;
+ *   return d.vec3f(r / 255, g / 255, b / 255);
+ * });
  *
- * const getColor = (diffuse: d.v3f) => {
+ * const material = (diffuse: d.v3f): d.v3f => {
  *   'use gpu';
- *   const albedo = hsvToRgb(injectRand01(), 1, 0.5);
+ *   const albedo = color(0xff00ff);
  *   return albedo.mul(diffuse);
  * };
  * ```
