@@ -587,16 +587,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      const usedSlots = this._itemStateStack.pop('slotBinding').usedSet;
-      pairs.forEach((pair) => {
-        if (!usedSlots.has(pair[0])) {
-          console.warn(
-            `Slot '${getName(pair[0])}' with value '${
-              pair[1]
-            }' was provided in a 'with' method despite not being utilized during resolution. Please verify that this slot was intended for use and that, in case of WGSL-implemented functions, it is properly declared with the '$uses' method.`,
-          );
-        }
-      });
+      this._itemStateStack.pop('slotBinding');
     }
   }
 
