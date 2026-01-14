@@ -1,7 +1,7 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import type { ReactNode } from 'react';
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
@@ -15,6 +15,7 @@ import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
+import { createFPSCounter } from '../utils/examples/fpsCounter.ts';
 
 interface ExampleLayoutProps {
   children?: ReactNode | undefined;
@@ -26,6 +27,13 @@ export function ExampleLayout(props: ExampleLayoutProps) {
   const [codeShownMobile, setCodeShownMobile] = useAtom(
     codeEditorShownMobileAtom,
   );
+
+  useEffect(() => {
+    const fpsCounter = createFPSCounter();
+    return () => {
+      fpsCounter.dispose();
+    };
+  }, []);
 
   return (
     <>
