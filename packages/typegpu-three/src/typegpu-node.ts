@@ -275,7 +275,7 @@ function convertTypeToExplicit(type: string) {
 }
 
 let sharedBuilder: WGSLNodeBuilder | undefined;
-export const fromTSL = tgpu['~unstable'].comptime<
+export const fromTSL = tgpu.comptime<
   & (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
     type: (length: number) => T,

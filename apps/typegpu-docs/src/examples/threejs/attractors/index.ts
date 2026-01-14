@@ -170,7 +170,7 @@ const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 // typegpu accessors
 
-const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
+const comptimeRandom = tgpu['~unstable'].derived(() => Math.random());
 
 const velocityBufferAttributeTA = t3.fromTSL(
   velocityBuffer.node.toAttribute(),
@@ -193,7 +193,7 @@ const sphericalToVec3 = (phi: number, theta: number) => {
 const initCompute = t3.toTSL(() => {
   'use gpu';
   const instanceIndex = t3.instanceIndex.$;
-  randf.seed(instanceIndex / count + comptimeRandom());
+  randf.seed(instanceIndex / count + comptimeRandom.$);
 
   const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
     .sub(0.5)
@@ -213,7 +213,7 @@ reset();
 
 const getParticleMassMultiplier = () => {
   'use gpu';
-  randf.seed(t3.instanceIndex.$ / count + comptimeRandom());
+  randf.seed(t3.instanceIndex.$ / count + comptimeRandom.$);
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
   const base = 0.25 + randf.sample() * 3 / 4;
   return base;
