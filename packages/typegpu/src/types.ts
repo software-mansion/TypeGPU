@@ -112,7 +112,6 @@ export type FunctionScopeLayer = {
 export type SlotBindingLayer = {
   type: 'slotBinding';
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
-  usedSet: WeakSet<TgpuSlot<unknown>>;
 };
 
 export type BlockScopeLayer = {

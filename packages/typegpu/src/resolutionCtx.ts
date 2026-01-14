@@ -82,7 +82,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { getName, hasTinyestMetadata } from './shared/meta.ts';
+import { hasTinyestMetadata } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 
 /**
@@ -136,7 +136,6 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
-      usedSet: new WeakSet(),
     });
   }
 
@@ -193,7 +192,6 @@ class ItemStateStackImpl implements ItemStateStack {
         const boundValue = layer.bindingMap.get(slot);
 
         if (boundValue !== undefined) {
-          layer.usedSet.add(slot);
           return boundValue as T;
         }
       } else if (
