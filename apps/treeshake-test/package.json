@@ -15,7 +15,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "arktype": "1.0.29-alpha",
-    "esbuild": "^0.25.10",
+    "esbuild": "^0.25.11",
     "ts-loader": "^9.5.4",
     "tsdown": "^0.15.6",
     "tsx": "^4.19.2",
