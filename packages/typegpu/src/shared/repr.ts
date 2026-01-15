@@ -1,4 +1,6 @@
+import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { Disarray, Undecorate } from '../data/dataTypes.ts';
+import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
 import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
@@ -11,6 +13,8 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from './symbols.ts';
+import type { ViewDimensionToDimension } from '../core/texture/textureFormats.ts';
+import type { Default } from './utilityTypes.ts';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -118,6 +122,96 @@ export type IsValidBufferSchema<T> = (
   | IsValidVertexSchema<T>
   | IsValidIndexSchema<T>
 ) extends false ? false : true;
+
+/**
+ * Validates if a texture can be used as sampled texture
+ */
+export type IsValidSampledTextureUsage<TTexture extends TgpuTexture> =
+  TTexture['usableAsSampled'] extends true ? true
+    : {
+      readonly invalidSampled:
+        "Texture not usable as sampled, call $usage('sampled') first";
+    };
+
+/**
+ * Validates if a texture can be used as storage texture
+ */
+export type IsValidStorageTextureUsage<TTexture extends TgpuTexture> =
+  TTexture['usableAsStorage'] extends true ? true
+    : {
+      readonly invalidStorage:
+        "Texture not usable as storage, call $usage('storage') first";
+    };
+
+/**
+ * Validates if a texture view dimension is compatible with the texture dimension
+ */
+export type IsValidSubdimension<
+  TTexture extends TgpuTexture,
+  TSchema extends WgslTexture | WgslStorageTexture,
+> = ViewDimensionToDimension[
+  TSchema['dimension']
+] extends infer TVDim
+  ? TVDim extends Default<TTexture['props']['dimension'], '2d'> ? true
+  : {
+    readonly invalidViewDim: `Texture dimension '${Default<
+      TTexture['props']['dimension'],
+      '2d'
+    >}' incompatible with view dimension '${TSchema['dimension']}'`;
+  }
+  : never;
+
+export type IsValidStorageFormat<
+  TTexture extends TgpuTexture,
+  TSchema extends WgslStorageTexture,
+> = TSchema['format'] extends TTexture['props']['format'] ? true
+  : TTexture['props']['viewFormats'] extends readonly unknown[]
+    ? TSchema['format'] extends TTexture['props']['viewFormats'][number] ? true
+    : FormatError<TSchema, TTexture>
+  : FormatError<TSchema, TTexture>;
+
+type FormatError<
+  TSchema extends WgslStorageTexture,
+  TTexture extends TgpuTexture,
+> = {
+  readonly invalidFormat: `Storage texture format '${TSchema[
+    'format'
+  ]}' incompatible with texture format '${TTexture['props'][
+    'format'
+  ]}'`;
+};
+
+type IsExactly<T, U> = [T] extends [U] ? ([U] extends [T] ? true : false)
+  : false;
+type SelfOrErrors<TSelf, T> = IsExactly<T, true> extends true ? TSelf
+  : `(Error) ${T[Extract<keyof T, `invalid${string}`>] & string}`;
+
+export type ValidStorageUsage<
+  TTexture extends TgpuTexture,
+  TSchema extends WgslStorageTexture,
+> =
+  & IsValidStorageTextureUsage<TTexture>
+  & IsValidSubdimension<TTexture, TSchema>
+  & IsValidStorageFormat<TTexture, TSchema>;
+
+export type ValidSampledUsage<
+  TTexture extends TgpuTexture,
+  TSchema extends WgslTexture,
+> =
+  & IsValidSampledTextureUsage<TTexture>
+  & IsValidSubdimension<TTexture, TSchema>;
+
+/**
+ * Validates texture view schema against texture usage
+ */
+export type ValidateTextureViewSchema<
+  TTexture extends TgpuTexture,
+  TSchema extends WgslTexture | WgslStorageTexture,
+> = TSchema extends WgslStorageTexture
+  ? SelfOrErrors<TSchema, ValidStorageUsage<TTexture, TSchema>>
+  : TSchema extends WgslTexture
+    ? SelfOrErrors<TSchema, ValidSampledUsage<TTexture, TSchema>>
+  : never;
 
 export type ExtractInvalidSchemaError<T, TPrefix extends string = ''> =
   [T] extends [{ readonly [$invalidSchemaReason]: string }]

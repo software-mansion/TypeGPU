@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
@@ -25,10 +25,7 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
-import type {
-  TgpuAnyTextureView,
-  TgpuTexture,
-} from './core/texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
 import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
@@ -66,26 +63,27 @@ export type ResolvableObject =
   | TgpuAccessor
   | TgpuExternalTexture
   | TgpuTexture
-  | TgpuAnyTextureView
+  | TgpuTextureView
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
-  | TgpuFn;
+  | ((...args: never[]) => unknown);
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
-  args: Snippet[];
-  argAliases: Record<string, Snippet>;
+  functionType: 'normal' | TgpuShaderStage;
+  argTypes: AnyData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
   body: Block;
+  params: FuncParameter[];
   externalMap: Record<string, unknown>;
 }
 
@@ -96,6 +94,7 @@ export type ItemLayer = {
 
 export type FunctionScopeLayer = {
   type: 'functionScope';
+  functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   args: Snippet[];
   argAliases: Record<string, Snippet>;
   externalMap: Record<string, unknown>;
@@ -120,6 +119,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   popSlotBindings(): void;
   pushFunctionScope(
+    functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     /**
@@ -318,6 +318,12 @@ export interface WithOwnSnippet {
 
 export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
+}
+
+export function isKnownAtComptime(snippet: Snippet): boolean {
+  return (typeof snippet.value !== 'string' ||
+    snippet.dataType.type === 'unknown') &&
+    getOwnSnippet(snippet.value) === undefined;
 }
 
 export function isWgsl(value: unknown): value is Wgsl {

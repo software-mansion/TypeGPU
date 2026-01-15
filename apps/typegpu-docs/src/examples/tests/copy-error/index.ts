@@ -1,7 +1,3 @@
-// irrelevant import so the file becomes a module
-import tgpu from 'typegpu';
-const t = tgpu;
-
 // setup
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
@@ -101,3 +97,11 @@ if (!table) {
 table.innerText = (input.getUint32(12) === result.getUint32(12))
   ? 'The bug DOES NOT occur on this device.'
   : 'The bug DOES occur on this device.';
+
+// #region Example controls and cleanup
+
+export function onCleanup() {
+  device?.destroy();
+}
+
+// #endregion

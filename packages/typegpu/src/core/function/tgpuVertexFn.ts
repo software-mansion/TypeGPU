@@ -77,19 +77,7 @@ export type TgpuVertexFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
-      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-      & ((
-        implementation: string,
-      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
-  };
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
 
 export interface TgpuVertexFn<
   VertexIn extends VertexInConstrained = VertexInConstrained,
@@ -154,9 +142,7 @@ export function vertexFn<
     ...values: unknown[]
   ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuVertexFnShell<VertexIn, VertexOut>;
+  return Object.assign(call, shell) as TgpuVertexFnShell<VertexIn, VertexOut>;
 }
 
 // --------------
@@ -189,7 +175,7 @@ function createVertexFn(
     [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
-      setName(core, newLabel);
+      setName(this, newLabel);
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }

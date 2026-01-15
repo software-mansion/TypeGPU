@@ -1,12 +1,20 @@
-import { $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
+import {
+  $gpuValueOf,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type {
-  ResolutionCtx,
-  SelfResolvable,
-  WithOwnSnippet,
-} from '../../types.ts';
+import {
+  textureExternal,
+  type WgslExternalTexture,
+} from '../../data/texture.ts';
+import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { inCodegenMode } from '../../execMode.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { Infer } from '../../shared/repr.ts';
 
 // ----------
 // Public API
@@ -27,32 +35,63 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 // --------------
 
 export class TgpuExternalTextureImpl
-  implements TgpuExternalTexture, SelfResolvable, WithOwnSnippet {
-  public readonly resourceType = 'external-texture';
+  implements TgpuExternalTexture, SelfResolvable {
+  readonly resourceType = 'external-texture';
   readonly [$internal] = true;
+  readonly #membership: LayoutMembership;
 
-  constructor(private readonly _membership: LayoutMembership) {
-    setName(this, _membership.key);
+  constructor(
+    public readonly schema: WgslExternalTexture,
+    membership: LayoutMembership,
+  ) {
+    this.#membership = membership;
+    setName(this, membership.key);
   }
-
-  // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-  // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-  [$ownSnippet] = snip(this, this as any);
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: texture_external;`,
+      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
+        ctx.resolve(this.schema).value
+      };`,
     );
 
-    // TODO: do not treat self-resolvable as wgsl data (when we have proper texture schemas)
-    // biome-ignore lint/suspicious/noExplicitAny: This is necessary until we have texture schemas
-    return snip(id, this as any);
+    return snip(id, textureExternal(), 'handle');
+  }
+
+  get [$gpuValueOf](): Infer<WgslExternalTexture> {
+    const schema = this.schema;
+
+    return new Proxy(
+      {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, schema, 'handle');
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `textureExternal:${getName(this) ?? '<unnamed>'}.$`,
+      },
+      valueProxyHandler,
+    ) as unknown as Infer<WgslExternalTexture>;
+  }
+
+  get $(): Infer<WgslExternalTexture> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+    );
+  }
+
+  get value(): Infer<WgslExternalTexture> {
+    return this.$;
   }
 
   toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+    return `textureExternal:${getName(this) ?? '<unnamed>'}`;
   }
 }

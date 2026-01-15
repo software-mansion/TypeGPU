@@ -40,6 +40,7 @@ export class Executor {
       & StorageFlag,
     ]
   >;
+  // they can be WeakMaps, because we always have reference to distribution and PRNG
   readonly #pipelineCache: WeakMap<
     TgpuFn,
     WeakMap<StatefulGenerator, TgpuComputePipeline>
@@ -100,38 +101,27 @@ export class Executor {
     });
   }
 
-  #pipelineCacheHas(
-    distribution: TgpuFn<() => d.Vec3f>,
-    generator: StatefulGenerator,
-  ): boolean {
-    const generatorMap = this.#pipelineCache.get(distribution);
-    if (!generatorMap) {
-      return false;
-    }
-
-    return generatorMap.has(generator);
-  }
-
   #pipelineCacheSet(
     distribution: TgpuFn<() => d.Vec3f>,
     generator: StatefulGenerator,
     pipeline: TgpuComputePipeline,
   ) {
-    if (!this.#pipelineCache.has(distribution)) {
-      this.#pipelineCache.set(distribution, new Map([[generator, pipeline]]));
-      return;
+    let distributionMap = this.#pipelineCache.get(distribution);
+    if (!distributionMap) {
+      distributionMap = new Map([[generator, pipeline]]);
+      this.#pipelineCache.set(distribution, distributionMap);
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: just checked it above
-    this.#pipelineCache.get(distribution)!.set(generator, pipeline);
+    distributionMap.set(generator, pipeline);
   }
 
   pipelineCacheGet(
     distribution: TgpuFn<() => d.Vec3f>,
     generator: StatefulGenerator,
   ): TgpuComputePipeline {
-    if (!this.#pipelineCacheHas(distribution, generator)) {
-      const pipeline = this.#root['~unstable']
+    let pipeline = this.#pipelineCache.get(distribution)?.get(generator);
+    if (!pipeline) {
+      pipeline = this.#root['~unstable']
         .with(randomGeneratorSlot, generator)
         .with(this.#distributionSlot, distribution)
         .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
@@ -139,8 +129,7 @@ export class Executor {
       this.#pipelineCacheSet(distribution, generator, pipeline);
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: just checked it above
-    return this.#pipelineCache.get(distribution)!.get(generator)!;
+    return pipeline;
   }
 
   async executeMoreWorkers(
@@ -150,7 +139,7 @@ export class Executor {
     const pipeline = this.pipelineCacheGet(distribution, generator);
 
     pipeline
-      .with(this.#bindGroupLayout, this.#bindGroup)
+      .with(this.#bindGroup)
       .dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();

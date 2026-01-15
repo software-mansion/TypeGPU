@@ -4,7 +4,6 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params.ts';
 import {
-  ModelData,
   ModelVertexInput,
   ModelVertexOutput,
   renderBindGroupLayout as layout,
@@ -17,17 +16,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
 })((input) => {
   // rotate the model so that it aligns with model's direction of movement
   // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-  // TODO: replace it with struct copy when Chromium is fixed
-  const currentModelData = ModelData({
-    position: layout.$.modelData[input.instanceIndex].position,
-    direction: layout.$.modelData[input.instanceIndex].direction,
-    scale: layout.$.modelData[input.instanceIndex].scale,
-    variant: layout.$.modelData[input.instanceIndex].variant,
-    applySeaDesaturation:
-      layout.$.modelData[input.instanceIndex].applySeaDesaturation,
-    applySeaFog: layout.$.modelData[input.instanceIndex].applySeaFog,
-    applySinWave: layout.$.modelData[input.instanceIndex].applySinWave,
-  });
+  const currentModelData = layout.$.modelData[input.instanceIndex];
 
   // apply sin wave to imitate swimming motion
   let wavedVertex = PosAndNormal({
@@ -93,11 +82,6 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-const sampleTexture = tgpu.fn([d.vec2f], d.vec4f)`(uv) {
-  return textureSample(layout.$.modelTexture, layout.$.sampler, uv);
-}
-`.$uses({ layout });
-
 export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
@@ -106,7 +90,11 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
 
-  const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+  const textureColorWithAlpha = std.textureSample(
+    layout.$.modelTexture,
+    layout.$.sampler,
+    input.textureUV,
+  );
   const textureColor = textureColorWithAlpha.xyz;
 
   const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
@@ -136,7 +124,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     std.sub(layout.$.camera.position.xyz, input.worldPosition),
   );
 
-  let desaturatedColor = lightedColor;
+  let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {
     const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
       3;
@@ -148,7 +136,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     desaturatedColor = hsvToRgb(hsv);
   }
 
-  let foggedColor = desaturatedColor;
+  let foggedColor = d.vec3f(desaturatedColor);
   if (input.applySeaFog === 1) {
     const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
     const fogFactor = fogParameter / (1 + fogParameter);

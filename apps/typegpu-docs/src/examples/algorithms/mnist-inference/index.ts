@@ -165,8 +165,8 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       const isLastLayer = i === buffers.length - 1;
 
       let boundPipeline = pipeline
-        .with(ioLayout, ioBindGroups[i])
-        .with(weightsBiasesLayout, weightsBindGroups[i]);
+        .with(ioBindGroups[i])
+        .with(weightsBindGroups[i]);
 
       if (querySet && (isFirstLayer || isLastLayer)) {
         const descriptor = {
@@ -425,12 +425,7 @@ export const controls = {
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () =>
       [defaultCompute, subgroupCompute]
-        .map((fn) =>
-          tgpu.resolve({
-            externals: { fn },
-            enableExtensions: ['subgroups'],
-          })
-        )
+        .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
 };

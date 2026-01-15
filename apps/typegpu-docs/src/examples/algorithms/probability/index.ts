@@ -19,11 +19,10 @@ const replot = async (
   currentGenerator: Generator,
   animate = false,
 ) => {
-  let samples = undefined;
   const prng = getPRNG(currentDistribution);
   const gen = getGenerator(currentGenerator);
 
-  samples = await executor.executeMoreWorkers(prng.prng, gen);
+  const samples = await executor.executeMoreWorkers(prng.prng, gen);
   await plotter.plot(samples, prng, animate);
 };
 

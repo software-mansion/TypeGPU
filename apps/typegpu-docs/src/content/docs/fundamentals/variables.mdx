@@ -30,7 +30,7 @@ const increment = tgpu['~unstable'].computeFn({
 
 const pipeline = root['~unstable'].withCompute(increment).createPipeline();
 
-console.log(tgpu.resolve({ externals: { pipeline } }));
+console.log(tgpu.resolve([pipeline]));
 ```
 
 ```wgsl
@@ -61,10 +61,11 @@ const root = await tgpu.init();
 // ---cut---
 const threadCounter = tgpu.privateVar(d.u32, 0);
 
-const getNext = tgpu.fn([], d.i32)(() => {
+const getNext = () => {
+  'use gpu';
   threadCounter.$ += 1;
   return [42, 418, 23][threadCounter.$];
-})
+};
 
 const myComputeFn = tgpu['~unstable'].computeFn({
   workgroupSize: [64],
@@ -96,13 +97,14 @@ const boid = tgpu.const(Boid, {
   vel: d.vec3u(4, 5, 6),
 });
 
-const func = tgpu.fn([])(() => {
+const func = () => {
+  'use gpu';
   const pos = boid.$;
   const vel = boid.$.vel;
   const velX = boid.$.vel.x;
-});
+};
 ```
 
 :::caution
-TypeGPU does not support defining `tgpu.const()` variables inside TGSL.
+TypeGPU does not support defining `tgpu.const()` variables inside a TypeGPU function.
 :::

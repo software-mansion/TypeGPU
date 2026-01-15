@@ -20,110 +20,98 @@ describe('uniformity test example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangleVertexShader_Output_1 {
+      "struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangleVertexShader_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @vertex fn fullScreenTriangleVertexShader_0(input: fullScreenTriangleVertexShader_Input_2) -> fullScreenTriangleVertexShader_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangleVertexShader_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
+      @group(0) @binding(0) var<uniform> canvasRatioUniform: f32;
+
+      @group(0) @binding(1) var<uniform> gridSizeUniform: f32;
+
+      var<private> seed: vec2f;
+
+      fn seed2(value: vec2f) {
+        seed = value;
       }
 
-      @group(0) @binding(0) var<uniform> canvasRatioUniform_4: f32;
-
-      @group(0) @binding(1) var<uniform> gridSizeUniform_5: f32;
-
-      var<private> seed_8: vec2f;
-
-      fn seed2_7(value: vec2f) {
-        seed_8 = value;
-      }
-
-      fn randSeed2_6(seed: vec2f) {
-        seed2_7(seed);
-      }
-
-      fn item_10() -> f32 {
-        var a = dot(seed_8, vec2f(23.140779495239258, 232.6168975830078));
-        var b = dot(seed_8, vec2f(54.47856521606445, 345.8415222167969));
-        seed_8.x = fract((cos(a) * 136.8168));
-        seed_8.y = fract((cos(b) * 534.7645));
-        return seed_8.y;
-      }
-
-      fn randFloat01_9() -> f32 {
-        return item_10();
-      }
-
-      struct _Input_11 {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn item_3(input: _Input_11) -> @location(0) vec4f {
-        var uv = (((input.uv + 1) / 2) * vec2f(canvasRatioUniform_4, 1));
-        var gridedUV = floor((uv * gridSizeUniform_5));
-        randSeed2_6(gridedUV);
-        return vec4f(vec3f(randFloat01_9()), 1);
-      }
-
-      struct fullScreenTriangleVertexShader_Output_1 {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      struct fullScreenTriangleVertexShader_Input_2 {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn fullScreenTriangleVertexShader_0(input: fullScreenTriangleVertexShader_Input_2) -> fullScreenTriangleVertexShader_Output_1 {
-        var pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangleVertexShader_Output_1(vec4f(pos[input.vertexIndex], 0, 1), pos[input.vertexIndex]);
-      }
-
-      @group(0) @binding(0) var<uniform> canvasRatioUniform_4: f32;
-
-      @group(0) @binding(1) var<uniform> gridSizeUniform_5: f32;
-
-      var<private> seed_8: u32;
-
-      fn item_7(value: vec2f) {
-        seed_8 = u32(((value.x * 32768) + (value.y * 1024)));
-      }
-
-      fn randSeed2_6(seed: vec2f) {
-        item_7(seed);
-      }
-
-      fn u32To01Float_11(val: u32) -> f32{
-          let exponent: u32 = 0x3f800000;
-          let mantissa: u32 = 0x007fffff & val;
-          var ufloat: u32 = (exponent | mantissa);
-          return bitcast<f32>(ufloat) - 1f;
+      fn randSeed2(seed: vec2f) {
+        {
+          seed2(seed);
         }
-
-      fn item_10() -> f32 {
-        seed_8 = ((seed_8 * 1664525) + 1013904223);
-        return u32To01Float_11(seed_8);
       }
 
-      fn randFloat01_9() -> f32 {
-        return item_10();
+      fn sample() -> f32 {
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
-      struct _Input_12 {
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      struct fragmentShader_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn item_3(input: _Input_12) -> @location(0) vec4f {
-        var uv = (((input.uv + 1) / 2) * vec2f(canvasRatioUniform_4, 1));
-        var gridedUV = floor((uv * gridSizeUniform_5));
-        randSeed2_6(gridedUV);
-        return vec4f(vec3f(randFloat01_9()), 1);
+      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
+        var uv = (((input.uv + 1) / 2) * vec2f(canvasRatioUniform, 1f));
+        var gridedUV = floor((uv * gridSizeUniform));
+        randSeed2(gridedUV);
+        return vec4f(vec3f(randFloat01()), 1f);
+      }
+
+      var<private> seed_1: u32;
+
+      fn seed2_1(value: vec2f) {
+        seed_1 = u32(((value.x * 32768f) + (value.y * 1024f)));
+      }
+
+      fn randSeed2_1(seed_1: vec2f) {
+        {
+          seed2_1(seed_1);
+        }
+      }
+
+      fn u32To01Float(value: u32) -> f32 {
+        let mantissa = (value >> 9u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample_1() -> f32 {
+        seed_1 = ((seed_1 * 1664525u) + 1013904223u);
+        return u32To01Float(seed_1);
+      }
+
+      fn randFloat01_1() -> f32 {
+        return sample_1();
+      }
+
+      struct fragmentShader_Input_1 {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentShader_1(input: fragmentShader_Input_1) -> @location(0) vec4f {
+        var uv = (((input.uv + 1) / 2) * vec2f(canvasRatioUniform, 1f));
+        var gridedUV = floor((uv * gridSizeUniform));
+        randSeed2_1(gridedUV);
+        return vec4f(vec3f(randFloat01_1()), 1f);
       }"
     `);
   });

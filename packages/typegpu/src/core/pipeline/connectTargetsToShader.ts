@@ -1,5 +1,6 @@
-import { isVoid } from '../../data/wgslTypes.ts';
+import { isBuiltin } from '../../data/attributes.ts';
 import { isData } from '../../data/dataTypes.ts';
+import { isVoid } from '../../data/wgslTypes.ts';
 import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
 import type { AnyFragmentTargets } from './renderPipeline.ts';
 
@@ -17,6 +18,9 @@ export function connectTargetsToShader(
     if (isVoid(shaderOutputLayout)) {
       return [];
     }
+    if (shaderOutputLayout.type === 'decorated') {
+      return [];
+    }
 
     if (!isColorTargetState(targets)) {
       throw new Error(
@@ -29,6 +33,12 @@ export function connectTargetsToShader(
 
   const result: GPUColorTargetState[] = [];
   for (const key of Object.keys(shaderOutputLayout)) {
+    const outputValue = (shaderOutputLayout as Record<string, unknown>)[key];
+
+    if (isBuiltin(outputValue)) {
+      continue;
+    }
+
     const matchingTarget = (targets as Record<string, GPUColorTargetState>)[
       key
     ];

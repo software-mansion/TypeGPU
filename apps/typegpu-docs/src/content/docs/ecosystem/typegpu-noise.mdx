@@ -260,7 +260,7 @@ let bindGroup = initBindGroup(d.vec3u(10, 10, 1));
 
 // Dispatching the pipeline
 pipeline
-  .with(dynamicLayout, bindGroup)
+  .with(bindGroup)
   .dispatchWorkgroups(1);
 
 // Can be called again to reinitialize the cache with
@@ -290,27 +290,23 @@ import {
   type StatefulGenerator,
 } from '@typegpu/noise';
 
-export const LCG: StatefulGenerator = (() => {
+const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const u32To01Float = tgpu.fn([d.u32], d.f32)`(val){
-    let exponent: u32 = 0x3f800000;
-    let mantissa: u32 = 0x007fffff & val;
-    var ufloat: u32 = (exponent | mantissa);
-    return bitcast<f32>(ufloat) - 1f;
-  }`;
+  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
+    const mantissa = value >> 9;
+    const bits = 0x3F800000 | mantissa;
+    const f = std.bitcastU32toF32(bits);
+    return f - 1;
+  });
 
   return {
-    seed: (value: number) => {
-      'kernel';
-      seed.$ = d.u32(value * std.pow(32, 3));
-    },
     seed2: (value: d.v2f) => {
-      'kernel';
+      'use gpu';
       seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
     },
     sample: () => {
-      'kernel';
+      'use gpu';
       seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
       return u32To01Float(seed.$);
     },

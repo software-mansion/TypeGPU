@@ -6,9 +6,14 @@ import type {
   UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import type {
+  WgslComparisonSamplerProps,
+  WgslSamplerProps,
+} from '../../data/sampler.ts';
+import type {
   AnyWgslData,
   U16,
   U32,
+  Vec3u,
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
@@ -41,6 +46,10 @@ import type {
   TgpuReadonly,
   TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
+import type {
+  TgpuFixedComparisonSampler,
+  TgpuFixedSampler,
+} from '../sampler/sampler.ts';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFn } from '../function/tgpuFn.ts';
@@ -60,28 +69,69 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuTexture } from '../texture/texture.ts';
+import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
+import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
 
 // ----------
 // Public API
 // ----------
 
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]>
+  extends TgpuNamable {
+  /**
+   * Returns a pipeline wrapper with the specified bind group bound.
+   * Analogous to `TgpuComputePipeline.with(bindGroup)`.
+   */
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Dispatches the pipeline.
+   * Unlike `TgpuComputePipeline.dispatchWorkgroups()`, this method takes in the
+   * number of threads to run in each dimension.
+   *
+   * Under the hood, the number of expected threads is sent as a uniform, and
+   * "guarded" by a bounds check.
+   */
+  dispatchThreads(...args: TArgs): void;
+
+  /**
+   * The underlying pipeline used during `dispatchThreads`.
+   */
+  pipeline: TgpuComputePipeline;
+
+  /**
+   * The buffer used to automatically pass the thread count to the underlying pipeline during `dispatchThreads`.
+   * For pipelines with a dimension count lower than 3, the remaining coordinates are expected to be 1.
+   */
+  sizeUniform: TgpuUniform<Vec3u>;
+}
+
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
+
+type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
+
+type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
 
 export type ValidateFragmentIn<
   VertexOut extends VertexOutConstrained,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn> ? [
-      entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
-      targets: FragmentOutToTargets<FragmentOut>,
-    ]
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
+    ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
+      ? Args extends [infer T]
+        ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : Args extends [] | [infer T] ?
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
+          | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+      : never
+    : never
   : [
     entryFn: 'n/a',
     targets: 'n/a',
@@ -159,6 +209,10 @@ export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
+  with<T extends WgslTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): Configurable;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -176,15 +230,68 @@ export interface WithBinding {
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
+  /**
+   * Creates a compute pipeline that executes the given callback in an exact number of threads.
+   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * thread id, where as regular pipelines do not and work in units of workgroups.
+   *
+   * @param callback A function converted to WGSL and executed on the GPU.
+   *                 It can accept up to 3 parameters (x, y, z) which correspond to the global invocation ID
+   *                 of the executing thread.
+   *
+   * @example
+   * If no parameters are provided, the callback will be executed once, in a single thread.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline(() => {
+   *     'use gpu';
+   *     console.log('Hello, GPU!');
+   *   });
+   *
+   * fooPipeline.dispatchThreads();
+   * // [GPU] Hello, GPU!
+   * ```
+   *
+   * @example
+   * One parameter means n-threads will be executed in parallel.
+   *
+   * ```ts
+   * const fooPipeline = root
+   *   .createGuardedComputePipeline((x) => {
+   *     'use gpu';
+   *     if (x % 16 === 0) {
+   *       // Logging every 16th thread
+   *       console.log('I am the', x, 'thread');
+   *     }
+   *   });
+   *
+   * // executing 512 threads
+   * fooPipeline.dispatchThreads(512);
+   * // [GPU] I am the 256 thread
+   * // [GPU] I am the 272 thread
+   * // ... (30 hidden logs)
+   * // [GPU] I am the 16 thread
+   * // [GPU] I am the 240 thread
+   * ```
+   */
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): TgpuGuardedComputePipeline<TArgs>;
+
   withVertex<
     VertexIn extends VertexInConstrained,
     VertexOut extends VertexOutConstrained,
   >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
 
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends WgslTexture | WgslStorageTexture>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuTextureView<T> | Infer<T>,
+  ): WithBinding;
   with<T extends AnyWgslData>(
     accessor: TgpuAccessor<T>,
     value:
@@ -197,12 +304,45 @@ export interface WithBinding {
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
 
+type SrgbVariants = {
+  rgba8unorm: 'rgba8unorm-srgb';
+  bgra8unorm: 'bgra8unorm-srgb';
+  'bc1-rgba-unorm': 'bc1-rgba-unorm-srgb';
+  'bc2-rgba-unorm': 'bc2-rgba-unorm-srgb';
+  'bc3-rgba-unorm': 'bc3-rgba-unorm-srgb';
+  'bc7-rgba-unorm': 'bc7-rgba-unorm-srgb';
+  'etc2-rgb8unorm': 'etc2-rgb8unorm-srgb';
+  'etc2-rgb8a1unorm': 'etc2-rgb8a1unorm-srgb';
+  'etc2-rgba8unorm': 'etc2-rgba8unorm-srgb';
+  'astc-4x4-unorm': 'astc-4x4-unorm-srgb';
+  'astc-5x4-unorm': 'astc-5x4-unorm-srgb';
+  'astc-5x5-unorm': 'astc-5x5-unorm-srgb';
+  'astc-6x5-unorm': 'astc-6x5-unorm-srgb';
+  'astc-6x6-unorm': 'astc-6x6-unorm-srgb';
+  'astc-8x5-unorm': 'astc-8x5-unorm-srgb';
+  'astc-8x6-unorm': 'astc-8x6-unorm-srgb';
+  'astc-8x8-unorm': 'astc-8x8-unorm-srgb';
+  'astc-10x5-unorm': 'astc-10x5-unorm-srgb';
+  'astc-10x6-unorm': 'astc-10x6-unorm-srgb';
+  'astc-10x8-unorm': 'astc-10x8-unorm-srgb';
+  'astc-10x10-unorm': 'astc-10x10-unorm-srgb';
+  'astc-12x10-unorm': 'astc-12x10-unorm-srgb';
+  'astc-12x12-unorm': 'astc-12x12-unorm-srgb';
+};
+
+type SrgbVariantOrSelf<T extends GPUTextureFormat> = T extends
+  keyof SrgbVariants ? (SrgbVariants[T] | T)[] | undefined
+  : T extends `${infer Base}-srgb`
+    ? Base extends keyof SrgbVariants ? (T | SrgbVariants[Base])[] | undefined
+    : T[] | undefined
+  : T[] | undefined;
+
 export type CreateTextureOptions<
   TSize,
   TFormat extends GPUTextureFormat,
   TMipLevelCount extends number,
   TSampleCount extends number,
-  TViewFormat extends GPUTextureFormat,
+  TViewFormats extends GPUTextureFormat[],
   TDimension extends GPUTextureDimension,
 > = {
   /**
@@ -228,7 +368,9 @@ export type CreateTextureOptions<
    * when creating views of this texture.
    * @default []
    */
-  viewFormats?: TViewFormat[] | undefined;
+  viewFormats?: TViewFormats extends SrgbVariantOrSelf<NoInfer<TFormat>>
+    ? TViewFormats
+    : SrgbVariantOrSelf<NoInfer<TFormat>>;
   /**
    * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
    * @default '2d'
@@ -241,7 +383,7 @@ export type CreateTextureResult<
   TFormat extends GPUTextureFormat,
   TMipLevelCount extends number,
   TSampleCount extends number,
-  TViewFormat extends GPUTextureFormat,
+  TViewFormats extends GPUTextureFormat[],
   TDimension extends GPUTextureDimension,
 > = Prettify<
   & {
@@ -268,12 +410,14 @@ export type CreateTextureResult<
         // '1' is the default, omitting from type
         : TSampleCount extends 1 ? undefined
         : TSampleCount;
-      viewFormats: GPUTextureFormat extends TViewFormat
+      viewFormats: GPUTextureFormat[] extends TViewFormats
         // Omitted property means the default
+        // '[]' is the default, omitting from type
         ? undefined
-        // 'never[]' is the default, omitting from type
-        : TViewFormat[] extends never[] ? undefined
-        : TViewFormat[];
+        : TViewFormats extends never[] ? undefined
+        // As per WebGPU spec, the only format that can appear here is the srgb variant of the texture format or the base format if the texture format is srgb (or self)
+        : TViewFormats extends SrgbVariantOrSelf<TFormat> ? TViewFormats
+        : never;
     },
     undefined
   >
@@ -629,11 +773,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly shaderGenerator?:
     | ShaderGenerator
     | undefined;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -646,7 +785,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
-    TViewFormat extends GPUTextureFormat,
+    TViewFormats extends GPUTextureFormat[],
     TDimension extends GPUTextureDimension,
   >(
     props: CreateTextureOptions<
@@ -654,7 +793,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >,
   ): TgpuTexture<
@@ -663,7 +802,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
       TFormat,
       TMipLevelCount,
       TSampleCount,
-      TViewFormat,
+      TViewFormats,
       TDimension
     >
   >;
@@ -673,9 +812,16 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     callback: (pass: RenderPass) => void,
   ): void;
 
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(
+    props: WgslComparisonSamplerProps,
+  ): TgpuFixedComparisonSampler;
+
   /**
-   * Causes all commands enqueued by pipelines to be
-   * submitted to the GPU.
+   * @deprecated Used to cause all commands enqueued by pipelines to be
+   * submitted to the GPU, but now commands are immediately dispatched,
+   * which makes this method unnecessary.
    */
   flush(): void;
 }

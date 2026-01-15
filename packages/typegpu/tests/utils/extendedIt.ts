@@ -22,10 +22,14 @@ const navigatorMock = {
   },
 };
 
-const mockTexture = {
+const mockTexture = (descriptor: GPUTextureDescriptor) => ({
+  ...descriptor,
+  with: (descriptor.size as number[])[0] ?? 1,
+  height: (descriptor.size as number[])[1] ?? 1,
+  depthOrArrayLayers: (descriptor.size as number[])[2] ?? 1,
   createView: vi.fn(() => 'view'),
   destroy: vi.fn(),
-};
+});
 
 const mockCommandEncoder = {
   get mock() {
@@ -57,6 +61,7 @@ const mockRenderPassEncoder = {
   setPipeline: vi.fn(),
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
+  setStencilReference: vi.fn(),
 };
 
 const mockQuerySet = {
@@ -123,7 +128,7 @@ const mockDevice = {
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => mockTexture),
+  createTexture: vi.fn((descriptor) => mockTexture(descriptor)),
   importExternalTexture: vi.fn(() => 'mockExternalTexture'),
   queue: {
     copyExternalImageToTexture: vi.fn(),
@@ -173,3 +178,5 @@ export const it = base.extend<{
     root.destroy();
   },
 });
+
+export const test = it;
