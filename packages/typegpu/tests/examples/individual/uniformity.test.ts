@@ -52,7 +52,7 @@ describe('uniformity test example', () => {
         }
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -61,7 +61,7 @@ describe('uniformity test example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       struct fragmentShader_Input {
@@ -77,13 +77,13 @@ describe('uniformity test example', () => {
 
       var<private> seed_1: u32;
 
-      fn item_1(value: vec2f) {
+      fn item(value: vec2f) {
         seed_1 = u32(((value.x * 32768f) + (value.y * 1024f)));
       }
 
       fn randSeed2_1(seed_1: vec2f) {
         {
-          item_1(seed_1);
+          item(seed_1);
         }
       }
 
@@ -94,13 +94,13 @@ describe('uniformity test example', () => {
         return (f - 1f);
       }
 
-      fn item_2() -> f32 {
+      fn item_1() -> f32 {
         seed_1 = ((seed_1 * 1664525u) + 1013904223u);
         return u32To01Float(seed_1);
       }
 
       fn randFloat01_1() -> f32 {
-        return item_2();
+        return item_1();
       }
 
       struct fragmentShader_Input_1 {

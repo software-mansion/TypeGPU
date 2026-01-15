@@ -55,7 +55,7 @@ describe('caustics example', () => {
         }
       }
 
-      fn item() -> f32 {
+      fn sample_1() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -64,9 +64,9 @@ describe('caustics example', () => {
       }
 
       fn randOnUnitSphere() -> vec3f {
-        let z = ((2f * item()) - 1f);
+        let z = ((2f * sample_1()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * item());
+        let theta = (6.283185307179586f * sample_1());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);

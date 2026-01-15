@@ -31,7 +31,7 @@ describe('slime mold 3d example', () => {
         }
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -40,7 +40,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randUniformExclusive() -> f32 {
-        return ((item() * 0.9999998f) + 1e-7f);
+        return ((sample() * 0.9999998f) + 1e-7f);
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
@@ -50,7 +50,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randInUnitSphere() -> vec3f {
-        let u = item();
+        let u = sample();
         var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
@@ -61,17 +61,17 @@ describe('slime mold 3d example', () => {
         direction: vec3f,
       }
 
-      @group(0) @binding(1) var<storage, read_write> item_1: array<Agent, 800000>;
+      @group(0) @binding(1) var<storage, read_write> item: array<Agent, 800000>;
 
-      @group(0) @binding(2) var<storage, read_write> item_2: array<Agent, 800000>;
+      @group(0) @binding(2) var<storage, read_write> item_1: array<Agent, 800000>;
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed((f32(x) / 8e+5f));
         var pos = ((randInUnitSphere() * 64f) + vec3f(128));
         var center = vec3f(128);
         var dir = normalize((center - pos));
+        item[x] = Agent(pos, dir);
         item_1[x] = Agent(pos, dir);
-        item_2[x] = Agent(pos, dir);
       }
 
       struct mainCompute_Input {
@@ -202,7 +202,7 @@ describe('slime mold 3d example', () => {
         return SenseResult(weightedDir, totalWeight);
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -211,9 +211,9 @@ describe('slime mold 3d example', () => {
       }
 
       fn randOnUnitSphere() -> vec3f {
-        let z = ((2f * item()) - 1f);
+        let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * item());
+        let theta = (6.283185307179586f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -226,7 +226,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randUniformExclusive() -> f32 {
-        return ((item() * 0.9999998f) + 1e-7f);
+        return ((sample() * 0.9999998f) + 1e-7f);
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
@@ -236,7 +236,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randInUnitSphere() -> vec3f {
-        let u = item();
+        let u = sample();
         var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
@@ -360,7 +360,7 @@ describe('slime mold 3d example', () => {
         return RayBoxResult(tNear, tFar, hit);
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -369,7 +369,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       @group(1) @binding(0) var state: texture_3d<f32>;

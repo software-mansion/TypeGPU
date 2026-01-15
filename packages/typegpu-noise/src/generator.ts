@@ -43,7 +43,7 @@ export const BPETER: StatefulGenerator = (() => {
       seed.$.x = fract(cos(a) * 136.8168);
       seed.$.y = fract(cos(b) * 534.7645);
       return seed.$.y;
-    }),
+    }).$name('sample'),
   };
 })();
 

@@ -19,73 +19,43 @@ import { randomGeneratorSlot } from './generator.ts';
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-7; // don't ever get any lower than this
 
-export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = (() => {
-  const seedSlotNotEmpty = tgpu['~unstable'].derived(() => {
-    if (randomGeneratorSlot.$.seed) {
+const seedNotEmpty = tgpu['~unstable'].comptime(
+  (seedFnName: keyof typeof randomGeneratorSlot.$) => {
+    if (randomGeneratorSlot.$[seedFnName]) {
       return true;
     }
-    console.warn("Called `randf.seed`, but it wasn't provided");
+    console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
     return false;
-  });
+  },
+);
 
-  return tgpu.fn([d.f32])((seed) => {
-    if (seedSlotNotEmpty.$) {
-      // @ts-expect-error trust me
-      randomGeneratorSlot.$.seed(seed);
-    }
-  }).$name('randSeed');
-})();
+export const randSeed = tgpu.fn([d.f32])((seed) => {
+  if (seedNotEmpty('seed')) {
+    // @ts-expect-error trust me
+    randomGeneratorSlot.$.seed(seed);
+  }
+}).$name('randSeed');
 
-export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = (() => {
-  const seedSlotNotEmpty = tgpu['~unstable'].derived(() => {
-    if (randomGeneratorSlot.$.seed2) {
-      return true;
-    }
-    console.warn("Called `randf.seed2`, but it wasn't provided");
-    return false;
-  });
+export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
+  if (seedNotEmpty('seed2')) {
+    // @ts-expect-error trust me
+    randomGeneratorSlot.$.seed2(seed);
+  }
+}).$name('randSeed2');
 
-  return tgpu.fn([d.vec2f])((seed) => {
-    if (seedSlotNotEmpty.$) {
-      // @ts-expect-error trust me
-      randomGeneratorSlot.$.seed2(seed);
-    }
-  }).$name('randSeed2');
-})();
+export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
+  if (seedNotEmpty('seed3')) {
+    // @ts-expect-error trust me
+    randomGeneratorSlot.$.seed3(seed);
+  }
+}).$name('randSeed3');
 
-export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = (() => {
-  const seedSlotNotEmpty = tgpu['~unstable'].derived(() => {
-    if (randomGeneratorSlot.$.seed3) {
-      return true;
-    }
-    console.warn("Called `randf.seed3`, but it wasn't provided");
-    return false;
-  });
-
-  return tgpu.fn([d.vec3f])((seed) => {
-    if (seedSlotNotEmpty.$) {
-      // @ts-expect-error trust me
-      randomGeneratorSlot.$.seed3(seed);
-    }
-  }).$name('randSeed3');
-})();
-
-export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = (() => {
-  const seedSlotNotEmpty = tgpu['~unstable'].derived(() => {
-    if (randomGeneratorSlot.$.seed4) {
-      return true;
-    }
-    console.warn("Called `randf.seed4`, but it wasn't provided");
-    return false;
-  });
-
-  return tgpu.fn([d.vec4f])((seed) => {
-    if (seedSlotNotEmpty.$) {
-      // @ts-expect-error trust me
-      randomGeneratorSlot.$.seed4(seed);
-    }
-  }).$name('randSeed4');
-})();
+export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
+  if (seedNotEmpty('seed4')) {
+    // @ts-expect-error trust me
+    randomGeneratorSlot.$.seed4(seed);
+  }
+}).$name('randSeed4');
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => randomGeneratorSlot.$.sample());
