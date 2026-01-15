@@ -46,6 +46,10 @@ export class Plotter {
     this.#core.renderer.transitionTime = 1; // it is number from [0, 1] indicating the state of the animation - 1 means current
   }
 
+  destroy() {
+    this.#core.stop();
+  }
+
   async plot(samples: d.v3f[], prng: PRNG, animate = false): Promise<void> {
     let needNewBuffer = false;
     if (samples.length !== this.#count) {

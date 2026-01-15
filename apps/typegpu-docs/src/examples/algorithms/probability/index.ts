@@ -119,18 +119,16 @@ export const controls = {
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      for (const dist of c.distributions) {
-        for (const gen of c.generators) {
-          const code = tgpu.resolve({
-            externals: {
-              p: executor.pipelineCacheGet(
-                getPRNG(dist).prng,
-                getGenerator(gen),
-              ),
-            },
-          });
-          root.device.createShaderModule({ code });
-        }
+      for (const [i, j] of [[0, 0], [8, 1], [10, 0]]) {
+        const code = tgpu.resolve({
+          externals: {
+            p: executor.pipelineCacheGet(
+              getPRNG(c.distributions[i]).prng,
+              getGenerator(c.generators[j]),
+            ),
+          },
+        });
+        root.device.createShaderModule({ code });
       }
     },
   },
@@ -138,6 +136,7 @@ export const controls = {
 
 export function onCleanup() {
   root.destroy();
+  plotter.destroy();
 }
 
 // #endregion

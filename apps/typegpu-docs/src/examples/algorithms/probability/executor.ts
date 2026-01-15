@@ -108,7 +108,7 @@ export class Executor {
   ) {
     let distributionMap = this.#pipelineCache.get(distribution);
     if (!distributionMap) {
-      distributionMap = new Map([[generator, pipeline]]);
+      distributionMap = new Map();
       this.#pipelineCache.set(distribution, distributionMap);
     }
 
