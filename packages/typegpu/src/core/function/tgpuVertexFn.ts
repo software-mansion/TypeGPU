@@ -86,8 +86,9 @@ export type TgpuVertexFnShell<
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
 
 export interface TgpuVertexFn<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+  // @ts-expect-error: We override the variance
+  in VertexIn extends VertexInConstrained = VertexInConstrained,
+  out VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > extends TgpuNamable {
   readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;

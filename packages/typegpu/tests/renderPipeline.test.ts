@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: they're useful */
+import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
@@ -1355,6 +1356,24 @@ describe('root.createRenderPipeline', () => {
         return vec4f(_arg_0.uv, 0f, 1f);
       }"
     `);
+  });
+
+  it('bruh', ({ root }) => {
+    // @ts-expect-error: we're testing for completions
+    attest(() => root.createRenderPipeline({ 'v': 'v' }))
+      .completions();
+
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
+    root.createRenderPipeline({
+      attribs: { pos: vertexLayout.attrib, sup: vertexLayout.attrib },
+      vertex: (arg) => {
+        'use gpu';
+        return { $position: d.vec4f() };
+      },
+      fragment: () => {
+        return d.vec4f();
+      },
+    });
   });
 });
 

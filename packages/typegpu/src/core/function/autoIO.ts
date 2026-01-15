@@ -1,4 +1,4 @@
-import { builtin } from '../../builtin.ts';
+import { builtin, OmitBuiltins } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
@@ -35,7 +35,7 @@ const builtinVertexOut = {
 } as const;
 
 export type AutoVertexOut<T extends AnyAutoCustoms> =
-  & T
+  & OmitBuiltins<T>
   & Partial<InferGPURecord<typeof builtinVertexOut>>;
 
 const builtinFragmentIn = {

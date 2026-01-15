@@ -41,7 +41,9 @@ import type { InferGPURecord } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type {
   Assume,
+  Default,
   NeverRecordToOptional,
+  Prettify,
 } from '../../shared/utilityTypes.ts';
 import type {
   AnyVertexAttribs,
@@ -74,6 +76,7 @@ import {
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
+  FragmentInFromVertexOut,
   FragmentOutConstrained,
   FragmentOutInferred,
   TgpuFragmentFn,
@@ -133,52 +136,18 @@ export type TgpuPrimitiveState =
   })
   | undefined;
 
-export interface TgpuRenderPipelineDescriptorBase {
-  /**
-   * Describes the primitive-related properties of the pipeline.
-   */
-  primitive?: TgpuPrimitiveState | undefined;
-  /**
-   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
-   */
-  depthStencil?: GPUDepthStencilState | undefined;
-  /**
-   * Describes the multi-sampling properties of the pipeline.
-   */
-  multisample?: GPUMultisampleState | undefined;
-}
-
-export interface TgpuRenderPipelineDescriptor
-  extends TgpuRenderPipelineDescriptorBase {
-  vertex:
-    | TgpuVertexFn
-    | ((
-      input: AutoVertexIn<Record<string, never>>,
-    ) => AutoVertexOut<AnyAutoCustoms>);
-  fragment?:
-    | TgpuFragmentFn
-    | ((
-      input: AutoFragmentIn<AnyAutoCustoms>,
-    ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>)
-    | undefined;
-
-  attribs?: AnyVertexAttribs | undefined;
-  targets?: AnyFragmentTargets | undefined;
-}
-
 export type TgpuRenderPipelineDescriptor__Shelled<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
-  FragmentIn extends FragmentInConstrained = FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained = FragmentOutConstrained,
 > =
   & TgpuRenderPipelineDescriptorBase
   & {
-    vertex: TgpuVertexFn<
-      VertexIn,
-      VertexOut & OmitBuiltins<NoInfer<FragmentIn>>
+    vertex: TgpuVertexFn<VertexIn, VertexOut>;
+    fragment: TgpuFragmentFn<
+      FragmentInFromVertexOut<NoInfer<VertexOut>>,
+      FragmentOut
     >;
-    fragment: TgpuFragmentFn<FragmentIn, FragmentOut>;
   }
   & NeverRecordToOptional<{
     attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
@@ -210,7 +179,7 @@ export type TgpuRenderPipelineDescriptor__Shellless<
   VertexOut extends VertexOutInferred = VertexOutInferred,
   FragmentOut extends FragmentOutInferred = FragmentOutInferred,
 > =
-  & TgpuRenderPipelineDescriptorBase
+  & DescriptorBase
   & {
     attribs: Attribs;
     vertex: (
@@ -230,7 +199,7 @@ export type TgpuNoColorRenderPipelineDescriptor<
   VertexIn extends VertexInConstrained = VertexInConstrained,
   VertexOut extends VertexOutConstrained = VertexOutConstrained,
 > =
-  & TgpuRenderPipelineDescriptorBase
+  & DescriptorBase
   & {
     vertex: TgpuVertexFn<VertexIn, VertexOut>;
     fragment?:
@@ -305,6 +274,89 @@ export interface TgpuRenderPipeline<Output = unknown>
     firstVertex?: number,
     firstInstance?: number,
   ): void;
+}
+
+interface DescriptorBase {
+  /**
+   * Describes the primitive-related properties of the pipeline.
+   */
+  primitive?: TgpuPrimitiveState | undefined;
+  /**
+   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
+   */
+  depthStencil?: GPUDepthStencilState | undefined;
+  /**
+   * Describes the multi-sampling properties of the pipeline.
+   */
+  multisample?: GPUMultisampleState | undefined;
+}
+
+export declare namespace TgpuRenderPipeline {
+  interface Descriptor extends DescriptorBase {
+    vertex:
+      | TgpuVertexFn
+      | ((
+        input: AutoVertexIn<Record<string, never>>,
+      ) => AutoVertexOut<AnyAutoCustoms>);
+    fragment?:
+      | TgpuFragmentFn
+      | ((
+        input: AutoFragmentIn<AnyAutoCustoms>,
+      ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>)
+      | undefined;
+
+    attribs?: AnyVertexAttribs | undefined;
+    targets?: AnyFragmentTargets | undefined;
+  }
+
+  type ValidatingDescriptor<T> =
+    // Shelled
+    T extends {
+      vertex: TgpuVertexFn<infer VertexIn, infer VertexOut>;
+      fragment: TgpuFragmentFn<FragmentInConstrained, infer FragmentOut>;
+    } ? DescriptorBase & T & {
+        vertex: TgpuVertexFn<VertexIn, VertexOut>;
+        fragment: TgpuFragmentFn<
+          FragmentInFromVertexOut<VertexOut>,
+          FragmentOut
+        >;
+      }
+      // Shellless
+      : T extends {
+        attribs?: infer Attribs;
+        vertex: (arg: infer Arg, ...args: never[]) => unknown;
+        fragment: (...args: never[]) => unknown;
+      } ?
+          & DescriptorBase
+          & {
+            attribs?: Attribs & Record<string, TgpuVertexAttrib>;
+            vertex: (
+              input: AutoVertexIn<
+                & Arg
+                & Prettify<
+                  InferGPURecord<
+                    AttribRecordToDefaultDataTypes<
+                      Assume<Attribs, Record<string, TgpuVertexAttrib>>
+                    >
+                  >
+                >
+              >,
+            ) => AutoVertexOut<Assume<ReturnType<T['vertex']>, AnyAutoCustoms>>;
+            fragment: (...args: never[]) => unknown;
+            // fragment: (
+            //   input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
+            // ) => AutoFragmentOut<FragmentOut>;
+          }
+      // Case used during completion
+      : T & Descriptor;
+
+  type Create<T> = T extends {
+    vertex: TgpuVertexFn;
+    fragment: TgpuFragmentFn<FragmentInConstrained, infer FragmentOut>;
+  } ? TgpuRenderPipeline<FragmentOut>
+    : T extends { vertex: TgpuVertexFn; fragment?: undefined }
+      ? TgpuRenderPipeline<Void>
+    : never;
 }
 
 // deno-fmt-ignore: More readable branching logic

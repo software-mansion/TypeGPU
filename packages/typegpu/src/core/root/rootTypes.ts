@@ -56,14 +56,12 @@ import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
-  FragmentOutInferred,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
 import type {
   TgpuVertexFn,
   VertexInConstrained,
   VertexOutConstrained,
-  VertexOutInferred,
 } from '../function/tgpuVertexFn.ts';
 import type {
   TgpuComputePipeline,
@@ -71,11 +69,7 @@ import type {
 } from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
-  TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptor__Shelled,
-  TgpuRenderPipelineDescriptor__Shellless,
-  TgpuRenderPipelineDescriptor__ShelllessFrag,
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
@@ -84,7 +78,6 @@ import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 
 // ----------
 // Public API
@@ -262,62 +255,9 @@ export interface WithBinding {
     descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
   ): TgpuComputePipeline;
 
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-  >(
-    descriptor: TgpuNoColorRenderPipelineDescriptor<VertexIn, VertexOut>,
-  ): TgpuRenderPipeline<Void>;
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-    FragmentIn extends FragmentInConstrained,
-    FragmentOut extends FragmentOutConstrained,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__Shelled<
-      VertexIn,
-      VertexOut,
-      FragmentIn,
-      FragmentOut
-    >,
-  ): TgpuRenderPipeline<FragmentOut>;
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-    FragmentOut extends FragmentOutInferred,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__ShelllessFrag<
-      VertexIn,
-      VertexOut,
-      FragmentOut
-    >,
-  ): TgpuRenderPipeline<FragmentOut>;
-  createRenderPipeline<
-    VertexOut extends VertexOutInferred,
-    FragmentOut extends FragmentOutInferred,
-  >(
-    descriptor:
-      & Omit<
-        TgpuRenderPipelineDescriptor__Shellless<
-          Record<string, never>,
-          VertexOut,
-          FragmentOut
-        >,
-        'attribs'
-      >
-      & { attribs?: undefined },
-  ): TgpuRenderPipeline<FragmentOut>;
-  createRenderPipeline<
-    Attribs extends Record<string, TgpuVertexAttrib>,
-    VertexOut extends VertexOutInferred,
-    FragmentOut extends FragmentOutInferred,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__Shellless<
-      Attribs,
-      VertexOut,
-      FragmentOut
-    >,
-  ): TgpuRenderPipeline<FragmentOut>;
+  createRenderPipeline<T extends TgpuRenderPipeline.Descriptor>(
+    descriptor: TgpuRenderPipeline.ValidatingDescriptor<T>,
+  ): TgpuRenderPipeline.Create<T>;
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.
