@@ -69,3 +69,10 @@ export interface SimplePRNG {
   plotType: PlotType;
   prng: TgpuFn<() => d.Vec3f>;
 }
+
+export const Generator = {
+  BPETER: 'bpeter (default)',
+  LCG: 'lcg',
+} as const;
+
+export type Generator = typeof Generator[keyof typeof Generator];
