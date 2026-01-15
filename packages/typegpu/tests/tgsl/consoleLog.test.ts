@@ -35,33 +35,7 @@ describe('wgslGenerator with console.log', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('Does not reset the state after visiting one function', () => {
-    const fn1 = (n: number) => {
-      'use gpu';
-    };
-
-    const fn2 = (n: number) => {
-      'use gpu';
-      console.log(n);
-    };
-
-    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
-      () => {
-        fn1(1);
-        fn2(2);
-        return { pos: d.vec4f() };
-      },
-    );
-    expect(() => tgpu.resolve([vs])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - vertexFn:vs
-      - fn*:fn2(i32)
-      - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
-    `);
-  });
-
-  it('Throws appropriate error when in a vertex shader', () => {
+  it('Ignores console.logs in vertex shaders', () => {
     const myLog = (n: number) => {
       'use gpu';
       console.log(n);
@@ -73,44 +47,19 @@ describe('wgslGenerator with console.log', () => {
         return { pos: d.vec4f() };
       },
     );
-    expect(() => tgpu.resolve([vs])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - vertexFn:vs
-      - fn*:myLog(i32)
-      - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
-    `);
-  });
+    expect(tgpu.resolve([vs])).toMatchInlineSnapshot(`
+      "fn myLog(n: i32) {
+        /* console.log() */;
+      }
 
-  it('Throws appropriate error when in a vertex shader during pipeline resolution', ({ root }) => {
-    const myLog = (n: number) => {
-      'use gpu';
-      console.log(n);
-    };
+      struct vs_Output {
+        @builtin(position) pos: vec4f,
+      }
 
-    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
-      () => {
-        myLog(5);
-        return { pos: d.vec4f() };
-      },
-    );
-    const fs = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
-      return d.vec4f();
-    });
-
-    const pipeline = root['~unstable']
-      .withVertex(vs)
-      .withFragment(fs, { format: 'rg8unorm' })
-      .createPipeline();
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - vertexFn:vs
-      - fn*:myLog(i32)
-      - fn:consoleLog: 'console.log' is not supported during vertex shader stage.]
+      @vertex fn vs() -> vs_Output {
+        myLog(5i);
+        return vs_Output(vec4f());
+      }"
     `);
   });
 
@@ -194,6 +143,91 @@ describe('wgslGenerator with console.log', () => {
 
       @fragment fn fs() -> @location(0) vec4f {
         log1(321u);
+        return vec4f();
+      }"
+    `);
+  });
+
+  it('Generates an overload for a function used on both stages', ({ root }) => {
+    const myLog = (n: number) => {
+      'use gpu';
+      console.log(n);
+    };
+
+    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
+      () => {
+        myLog(6);
+        return { pos: d.vec4f() };
+      },
+    );
+    const fs = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+      myLog(7);
+      return d.vec4f();
+    });
+
+    const pipeline = root['~unstable']
+      .withVertex(vs)
+      .withFragment(fs, { format: 'rg8unorm' })
+      .createPipeline();
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "fn myLog(n: i32) {
+        /* console.log() */;
+      }
+
+      struct vs_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vs() -> vs_Output {
+        myLog(6i);
+        return vs_Output(vec4f());
+      }
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeI32(n: i32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(n);
+      }
+
+      fn log1serializer(_arg_0: i32) {
+        serializeI32(_arg_0);
+      }
+
+      fn log1(_arg_0: i32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn myLog_1(n: i32) {
+        log1(n);
+      }
+
+      @fragment fn fs() -> @location(0) vec4f {
+        myLog_1(7i);
         return vec4f();
       }"
     `);
@@ -723,7 +757,7 @@ describe('wgslGenerator with console.log', () => {
     `);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Unsupported log method 'trace' was used in TGSL.",
+      "Unsupported log method 'trace'.",
     );
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
