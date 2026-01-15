@@ -338,7 +338,7 @@ describe('wgslGenerator', () => {
       const res2 = wgslGenerator.expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
-      ctx[$internal].itemStateStack.popBlockScope();
+      ctx[$internal].itemStateStack.pop('blockScope');
 
       expect(res2.dataType).toStrictEqual(d.vec4f);
 
@@ -353,7 +353,7 @@ describe('wgslGenerator', () => {
       const res4 = wgslGenerator.expression(
         astInfo.ast?.body[1][2] as tinyest.Expression,
       );
-      ctx[$internal].itemStateStack.popBlockScope();
+      ctx[$internal].itemStateStack.pop('blockScope');
 
       expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
       expect(res4.dataType).toStrictEqual(Void);
