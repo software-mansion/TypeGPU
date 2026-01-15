@@ -1,4 +1,4 @@
-import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
+import tgpu, { type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, cos, dot, fract } from 'typegpu/std';
 

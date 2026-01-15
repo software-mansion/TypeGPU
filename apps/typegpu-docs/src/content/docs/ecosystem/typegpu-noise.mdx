@@ -290,21 +290,17 @@ import {
   type StatefulGenerator,
 } from '@typegpu/noise';
 
-export const LCG: StatefulGenerator = (() => {
+const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const u32To01Float = tgpu.fn([d.u32], d.f32)`(val){
-    let exponent: u32 = 0x3f800000;
-    let mantissa: u32 = 0x007fffff & val;
-    var ufloat: u32 = (exponent | mantissa);
-    return bitcast<f32>(ufloat) - 1f;
-  }`;
+  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
+    const mantissa = value >> 9;
+    const bits = 0x3F800000 | mantissa;
+    const f = std.bitcastU32toF32(bits);
+    return f - 1;
+  });
 
   return {
-    seed: (value: number) => {
-      'use gpu';
-      seed.$ = d.u32(value * std.pow(32, 3));
-    },
     seed2: (value: d.v2f) => {
       'use gpu';
       seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));

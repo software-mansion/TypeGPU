@@ -3,7 +3,6 @@ import * as d from 'typegpu/data';
 import {
   cos,
   dot,
-  length,
   log,
   mul,
   normalize,
@@ -31,7 +30,7 @@ export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = (() => {
 
   return tgpu.fn([d.f32])((seed) => {
     if (seedSlotNotEmpty.$) {
-      // @ts-ignore trust me
+      // @ts-expect-error trust me
       randomGeneratorSlot.$.seed(seed);
     }
   });
@@ -48,7 +47,7 @@ export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = (() => {
 
   return tgpu.fn([d.vec2f])((seed) => {
     if (seedSlotNotEmpty.$) {
-      // @ts-ignore trust me
+      // @ts-expect-error trust me
       randomGeneratorSlot.$.seed2(seed);
     }
   });
@@ -65,7 +64,7 @@ export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = (() => {
 
   return tgpu.fn([d.vec3f])((seed) => {
     if (seedSlotNotEmpty.$) {
-      // @ts-ignore trust me
+      // @ts-expect-error trust me
       randomGeneratorSlot.$.seed3(seed);
     }
   });
@@ -82,7 +81,7 @@ export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = (() => {
 
   return tgpu.fn([d.vec4f])((seed) => {
     if (seedSlotNotEmpty.$) {
-      // @ts-ignore trust me
+      // @ts-expect-error trust me
       randomGeneratorSlot.$.seed4(seed);
     }
   });

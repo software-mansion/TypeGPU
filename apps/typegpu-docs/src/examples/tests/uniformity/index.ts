@@ -96,9 +96,7 @@ export const controls = {
               .createPipeline(),
           ], { names: namespace })
         )
-        .map((r) => {
-          root.device.createShaderModule({ code: r });
-        });
+        .map((r) => root.device.createShaderModule({ code: r }));
     },
   },
 };
