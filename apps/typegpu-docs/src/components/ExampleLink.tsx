@@ -3,7 +3,7 @@ import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent, ReactNode } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { menuShownMobileAtom } from '../utils/examples/menuShownAtom.ts';
+import { menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import useEvent from '../utils/useEvent.ts';
 import { useHydrated } from '../utils/useHydrated.ts';
 
@@ -17,12 +17,14 @@ export function ExampleLink(props: Props) {
 
   const hydrated = useHydrated();
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
-  const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
+  const setMenuShown = useSetAtom(menuShownAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
     e.preventDefault();
     setCurrentExample(exampleKey ?? RESET);
-    setMenuShownMobile(false);
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      setMenuShown(false);
+    }
   });
 
   const isCurrentExample = hydrated && currentExample === exampleKey;
