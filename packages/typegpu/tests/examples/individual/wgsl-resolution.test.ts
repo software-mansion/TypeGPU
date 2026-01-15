@@ -23,9 +23,9 @@ describe('wgsl resolution example', () => {
       }
 
       fn rotate_util(v: vec2f, angle: f32) -> vec2f {
-        let cos = cos(angle);
-        let sin = sin(angle);
-        return vec2f(((v.x * cos) - (v.y * sin)), ((v.x * sin) + (v.y * cos)));
+        let cos_1 = cos(angle);
+        let sin_1 = sin(angle);
+        return vec2f(((v.x * cos_1) - (v.y * sin_1)), ((v.x * sin_1) + (v.y * cos_1)));
       }
 
       @group(1) @binding(0) var<uniform> colorPalette: vec3f;

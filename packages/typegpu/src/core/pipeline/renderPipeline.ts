@@ -8,9 +8,14 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { WgslTexture } from '../../data/texture.ts';
+import type {
+  WgslTexture,
+  WgslTextureDepth2d,
+  WgslTextureDepthMultisampled2d,
+} from '../../data/texture.ts';
 import {
   type AnyWgslData,
+  type Decorated,
   isWgslData,
   type U16,
   type U32,
@@ -50,7 +55,9 @@ import type { TgpuSlot } from '../slot/slotTypes.ts';
 import {
   isTexture,
   isTextureView,
+  type TextureInternals,
   type TgpuTexture,
+  type TgpuTextureRenderView,
   type TgpuTextureView,
 } from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
@@ -120,6 +127,10 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     attachment: DepthStencilAttachment,
   ): this;
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this;
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -141,20 +152,34 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
 }
 
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
-  ? GPUColorTargetState
-  : T extends Record<string, unknown>
-    ? { [Key in keyof T]: GPUColorTargetState }
+  ? T extends Decorated ? Record<string, never>
+  : GPUColorTargetState
+  : T extends Record<string, unknown> ? {
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
+        GPUColorTargetState;
+    }
   : T extends { type: 'void' } ? Record<string, never>
   : never;
 
 export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData
-  ? ColorAttachment
-  : T extends Record<string, unknown> ? { [Key in keyof T]: ColorAttachment }
+  ? T extends Decorated ? Record<string, never>
+  : ColorAttachment
+  : T extends Record<string, unknown> ? {
+      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
+        ColorAttachment;
+    }
+  : T extends { type: 'void' } ? Record<string, never>
   : never;
 
 export type AnyFragmentTargets =
   | GPUColorTargetState
   | Record<string, GPUColorTargetState>;
+
+interface ColorTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: GPUTextureFormat };
+}
 
 export interface ColorAttachment {
   /**
@@ -162,9 +187,10 @@ export interface ColorAttachment {
    * color attachment.
    */
   view:
-    | (TgpuTexture & RenderFlag)
+    | (ColorTextureConstraint & RenderFlag)
     | GPUTextureView
-    | TgpuTextureView<WgslTexture>;
+    | TgpuTextureView<WgslTexture>
+    | TgpuTextureRenderView;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -198,12 +224,30 @@ export interface ColorAttachment {
   storeOp: GPUStoreOp;
 }
 
+export type DepthStencilFormat =
+  | 'stencil8'
+  | 'depth16unorm'
+  | 'depth24plus'
+  | 'depth24plus-stencil8'
+  | 'depth32float'
+  | 'depth32float-stencil8';
+
+interface DepthStencilTextureConstraint {
+  readonly [$internal]: TextureInternals;
+  readonly resourceType: 'texture';
+  readonly props: { format: DepthStencilFormat };
+}
+
 export interface DepthStencilAttachment {
   /**
    * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
-  view: (TgpuTexture & RenderFlag) | GPUTextureView;
+  view:
+    | (DepthStencilTextureConstraint & RenderFlag)
+    | TgpuTextureView<WgslTextureDepth2d | WgslTextureDepthMultisampled2d>
+    | TgpuTextureRenderView
+    | GPUTextureView;
   /**
    * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
    * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
@@ -292,6 +336,7 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
+  readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
       buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer;
@@ -333,7 +378,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   $name(label: string): this {
-    setName(this[$internal].core, label);
+    setName(this, label);
     return this;
   }
 
@@ -439,6 +484,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as this;
   }
 
+  withStencilReference(
+    reference: GPUStencilValue,
+  ): this {
+    const internals = this[$internal];
+
+    return new TgpuRenderPipelineImpl(internals.core, {
+      ...internals.priors,
+      stencilReference: reference,
+    }) as this;
+  }
+
   withIndexBuffer(
     buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
     offsetElements?: number,
@@ -535,22 +591,27 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       ),
     };
 
-    if (internals.priors.depthStencilAttachment !== undefined) {
-      const attachment = internals.priors.depthStencilAttachment;
-      if (isTexture(attachment.view)) {
-        renderPassDescriptor.depthStencilAttachment = {
-          ...attachment,
-          view: branch.unwrap(attachment.view).createView(),
-        };
-      } else {
-        renderPassDescriptor.depthStencilAttachment =
-          attachment as GPURenderPassDepthStencilAttachment;
-      }
+    const depthStencil = internals.priors.depthStencilAttachment;
+    if (depthStencil !== undefined) {
+      const view = isTexture(depthStencil.view)
+        ? branch.unwrap(depthStencil.view).createView()
+        : isTextureView(depthStencil.view)
+        ? branch.unwrap(depthStencil.view)
+        : depthStencil.view;
+
+      renderPassDescriptor.depthStencilAttachment = {
+        ...depthStencil,
+        view,
+      } as GPURenderPassDepthStencilAttachment;
     }
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
+
+    if (internals.priors.stencilReference !== undefined) {
+      pass.setStencilReference(internals.priors.stencilReference);
+    }
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 

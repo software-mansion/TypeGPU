@@ -1,10 +1,7 @@
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { comptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
-import { UnknownData } from './dataTypes.ts';
-import { snip, type Snippet } from './snippet.ts';
 import type { AnyData, Disarray } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
-import type { AnyWgslData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -43,39 +40,14 @@ interface DisarrayConstructor {
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const disarrayOf = createDualImpl(
-  // JS implementation
+export const disarrayOf = comptime(
   ((elementType, elementCount) => {
     if (elementCount === undefined) {
       return (count: number) => cpu_disarrayOf(elementType, count);
     }
     return cpu_disarrayOf(elementType, elementCount);
   }) as DisarrayConstructor,
-  // CODEGEN implementation
-  (elementType, elementCount) => {
-    if (elementCount === undefined || elementCount.value === undefined) {
-      const partial = (count: Snippet) =>
-        disarrayOf[$internal].gpuImpl(elementType, count);
-      // Marking so the WGSL generator lets this function through
-      partial[$internal] = true;
-
-      return snip(partial, UnknownData, /* origin */ 'constant');
-    }
-
-    if (typeof elementCount.value !== 'number') {
-      throw new Error(
-        `Cannot create disarray schema with count unknown at compile-time: '${elementCount.value}'`,
-      );
-    }
-
-    return snip(
-      cpu_disarrayOf(elementType.value as AnyWgslData, elementCount.value),
-      elementType.value as AnyWgslData,
-      /* origin */ 'runtime',
-    );
-  },
-  'disarrayOf',
-);
+).$name('disarrayOf');
 
 export function cpu_disarrayOf<TElement extends AnyData>(
   elementType: TElement,

@@ -301,7 +301,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
         let index = input.gid.x;
         const iterationF = 0f;
-        const sign = 0;
+        const sign_1 = 0;
         var change = vec4f();
       }"
     `);
@@ -328,7 +328,7 @@ describe('TGSL tgpu.fn function', () => {
       @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
         let index = _arg_0.gid.x;
         const iterationF = 0f;
-        const sign = 0;
+        const sign_1 = 0;
         var change = vec4f();
       }"
     `);
@@ -1005,6 +1005,19 @@ describe('tgsl fn when using plugin', () => {
       fn one() -> f32 {
         return (mainFn() + 2f);
       }"
+    `);
+  });
+
+  it('throws a readable error when assigning to a value defined outside of tgsl', () => {
+    let a = 0;
+    const f = tgpu.fn([])(() => {
+      a = 2;
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
   });
 });

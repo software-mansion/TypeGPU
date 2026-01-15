@@ -26,7 +26,7 @@ import {
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   ExtractBindGroupInputFromLayout,
@@ -120,6 +120,7 @@ import { vec3f, vec3u } from '../../data/vector.ts';
 import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
+import { setName } from '../../shared/meta.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -194,6 +195,15 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
   get sizeUniform() {
     return this.#sizeUniform;
   }
+
+  [$internal] = true;
+  get [$getNameForward]() {
+    return this.#pipeline;
+  }
+  $name(label: string): this {
+    setName(this, label);
+    return this;
+  }
 }
 
 class WithBindingImpl implements WithBinding {
@@ -253,9 +263,11 @@ class WithBindingImpl implements WithBinding {
   wrappedCallback(in.id.x, in.id.y, in.id.z);
 }`.$uses({ sizeUniform, wrappedCallback });
 
-    const pipeline = this
-      .withCompute(mainCompute)
-      .createPipeline();
+    // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
+    const pipeline = (() =>
+      this
+        .withCompute(mainCompute)
+        .createPipeline())();
 
     return new TgpuGuardedComputePipelineImpl(
       root,
@@ -267,7 +279,7 @@ class WithBindingImpl implements WithBinding {
 
   withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+    attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
@@ -275,7 +287,7 @@ class WithBindingImpl implements WithBinding {
       depthStencilState: undefined,
       slotBindings: this._slotBindings,
       vertexFn,
-      vertexAttribs: attribs as AnyVertexAttribs,
+      vertexAttribs: (attribs ?? {}) as AnyVertexAttribs,
       multisampleState: undefined,
     });
   }
@@ -315,16 +327,19 @@ class WithVertexImpl implements WithVertex {
 
   withFragment(
     fragmentFn: TgpuFragmentFn | 'n/a',
-    targets: AnyFragmentTargets | 'n/a',
+    targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
   ): WithFragment {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
-    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+    invariant(
+      targets === undefined || typeof targets !== 'string',
+      'Just type mismatch validation',
+    );
 
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
-      targets,
+      targets: targets ?? {},
     });
   }
 
@@ -845,7 +860,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   const {
     adapter: adapterOpt,
     device: deviceOpt,
-    unstable_names: names = 'random',
+    unstable_names: names = 'strict',
     unstable_logOptions,
   } = options ?? {};
 
@@ -904,7 +919,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
 export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
-    unstable_names: names = 'random',
+    unstable_names: names = 'strict',
     unstable_logOptions,
   } = options ?? {};
 

@@ -7,6 +7,7 @@ import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 import {
   mock3DModelLoading,
+  mockCreateImageBitmap,
   mockImageLoading,
   mockResizeObserver,
 } from '../utils/commonMocks.ts';
@@ -21,13 +22,36 @@ describe('gravity example', () => {
       setupMocks: () => {
         mockImageLoading();
         mock3DModelLoading();
+        mockCreateImageBitmap();
         mockResizeObserver();
       },
-      expectedCalls: 4,
+      expectedCalls: 6,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct CelestialBody_2 {
+      "
+      struct VertexOutput {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex
+      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
+        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
+      }
+
+
+      @group(0) @binding(0) var src: texture_2d<f32>;
+      @group(0) @binding(1) var samp: sampler;
+
+      @fragment
+      fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+        return textureSample(src, samp, uv);
+      }
+
+      struct CelestialBody {
         destroyed: u32,
         position: vec3f,
         velocity: vec3f,
@@ -38,17 +62,17 @@ describe('gravity example', () => {
         ambientLightFactor: f32,
       }
 
-      @group(0) @binding(1) var<storage, read> inState_1: array<CelestialBody_2>;
+      @group(0) @binding(1) var<storage, read> inState: array<CelestialBody>;
 
-      @group(0) @binding(0) var<uniform> celestialBodiesCount_3: i32;
+      @group(0) @binding(0) var<uniform> celestialBodiesCount: i32;
 
-      fn radiusOf_4(body: CelestialBody_2) -> f32 {
+      fn radiusOf(body: CelestialBody) -> f32 {
         return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
-      fn isSmaller_5(currentId: u32, otherId: u32) -> bool {
-        let current = (&inState_1[currentId]);
-        let other = (&inState_1[otherId]);
+      fn isSmaller(currentId: u32, otherId: u32) -> bool {
+        let current = (&inState[currentId]);
+        let other = (&inState[otherId]);
         if (((*current).mass < (*other).mass)) {
           return true;
         }
@@ -58,25 +82,25 @@ describe('gravity example', () => {
         return false;
       }
 
-      @group(0) @binding(2) var<storage, read_write> outState_6: array<CelestialBody_2>;
+      @group(0) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      struct computeCollisionsShader_Input_7 {
+      struct computeCollisionsShader_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn computeCollisionsShader_0(input: computeCollisionsShader_Input_7) {
+      @compute @workgroup_size(1) fn computeCollisionsShader(input: computeCollisionsShader_Input) {
         let currentId = input.gid.x;
-        var current = inState_1[currentId];
+        var current = inState[currentId];
         if ((current.destroyed == 0u)) {
-          for (var otherId = 0u; (otherId < u32(celestialBodiesCount_3)); otherId++) {
-            let other = (&inState_1[otherId]);
-            if ((((((otherId == currentId) || ((*other).destroyed == 1u)) || (current.collisionBehavior == 0u)) || ((*other).collisionBehavior == 0u)) || (distance(current.position, (*other).position) >= (radiusOf_4(current) + radiusOf_4((*other)))))) {
+          for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
+            let other = (&inState[otherId]);
+            if ((((((otherId == currentId) || ((*other).destroyed == 1u)) || (current.collisionBehavior == 0u)) || ((*other).collisionBehavior == 0u)) || (distance(current.position, (*other).position) >= (radiusOf(current) + radiusOf((*other)))))) {
               continue;
             }
             if (((current.collisionBehavior == 1u) && ((*other).collisionBehavior == 1u))) {
-              if (isSmaller_5(currentId, otherId)) {
+              if (isSmaller(currentId, otherId)) {
                 var dir = normalize((current.position - (*other).position));
-                current.position = ((*other).position + (dir * (radiusOf_4(current) + radiusOf_4((*other)))));
+                current.position = ((*other).position + (dir * (radiusOf(current) + radiusOf((*other)))));
               }
               var posDiff = (current.position - (*other).position);
               var velDiff = (current.velocity - (*other).velocity);
@@ -84,7 +108,7 @@ describe('gravity example', () => {
               current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99);
             }
             else {
-              let isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller_5(currentId, otherId)));
+              let isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller(currentId, otherId)));
               if (isCurrentAbsorbed) {
                 current.destroyed = 1u;
               }
@@ -97,17 +121,17 @@ describe('gravity example', () => {
             }
           }
         }
-        outState_6[currentId] = current;
+        outState[currentId] = current;
       }
 
-      struct Time_2 {
+      struct Time {
         passed: f32,
         multiplier: f32,
       }
 
-      @group(0) @binding(0) var<uniform> time_1: Time_2;
+      @group(0) @binding(0) var<uniform> time: Time;
 
-      struct CelestialBody_4 {
+      struct CelestialBody {
         destroyed: u32,
         position: vec3f,
         velocity: vec3f,
@@ -118,77 +142,77 @@ describe('gravity example', () => {
         ambientLightFactor: f32,
       }
 
-      @group(1) @binding(1) var<storage, read> inState_3: array<CelestialBody_4>;
+      @group(1) @binding(1) var<storage, read> inState: array<CelestialBody>;
 
-      @group(1) @binding(0) var<uniform> celestialBodiesCount_5: i32;
+      @group(1) @binding(0) var<uniform> celestialBodiesCount: i32;
 
-      fn radiusOf_6(body: CelestialBody_4) -> f32 {
+      fn radiusOf(body: CelestialBody) -> f32 {
         return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
-      @group(1) @binding(2) var<storage, read_write> outState_7: array<CelestialBody_4>;
+      @group(1) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      struct computeGravityShader_Input_8 {
+      struct computeGravityShader_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn computeGravityShader_0(input: computeGravityShader_Input_8) {
-        let dt = (time_1.passed * time_1.multiplier);
+      @compute @workgroup_size(1) fn computeGravityShader(input: computeGravityShader_Input) {
+        let dt = (time.passed * time.multiplier);
         let currentId = input.gid.x;
-        var current = inState_3[currentId];
+        var current = inState[currentId];
         if ((current.destroyed == 0u)) {
-          for (var otherId = 0u; (otherId < u32(celestialBodiesCount_5)); otherId++) {
-            let other = (&inState_3[otherId]);
+          for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
+            let other = (&inState[otherId]);
             if (((otherId == currentId) || ((*other).destroyed == 1u))) {
               continue;
             }
-            let dist = max((radiusOf_6(current) + radiusOf_6((*other))), distance(current.position, (*other).position));
+            let dist = max((radiusOf(current) + radiusOf((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
             var direction = normalize(((*other).position - current.position));
             current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
           }
           current.position = (current.position + (current.velocity * dt));
         }
-        outState_7[currentId] = current;
+        outState[currentId] = current;
       }
 
-      struct Camera_2 {
+      struct Camera {
         position: vec4f,
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_1: Camera_2;
+      @group(0) @binding(0) var<uniform> camera: Camera;
 
-      struct skyBoxVertex_Output_3 {
+      struct skyBoxVertex_Output {
         @builtin(position) pos: vec4f,
         @location(0) texCoord: vec3f,
       }
 
-      struct skyBoxVertex_Input_4 {
+      struct skyBoxVertex_Input {
         @location(0) position: vec3f,
         @location(1) uv: vec2f,
       }
 
-      @vertex fn skyBoxVertex_0(input: skyBoxVertex_Input_4) -> skyBoxVertex_Output_3 {
-        var viewPos = (camera_1.view * vec4f(input.position, 0f)).xyz;
-        return skyBoxVertex_Output_3((camera_1.projection * vec4f(viewPos, 1f)), input.position.xyz);
+      @vertex fn skyBoxVertex(input: skyBoxVertex_Input) -> skyBoxVertex_Output {
+        var viewPos = (camera.view * vec4f(input.position, 0f)).xyz;
+        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), input.position.xyz);
       }
 
-      @group(0) @binding(1) var item_6: texture_cube<f32>;
+      @group(0) @binding(1) var skyBox: texture_cube<f32>;
 
-      @group(0) @binding(2) var sampler_7: sampler;
+      @group(0) @binding(2) var sampler_1: sampler;
 
-      struct skyBoxFragment_Input_8 {
+      struct skyBoxFragment_Input {
         @location(0) texCoord: vec3f,
       }
 
-      @fragment fn skyBoxFragment_5(input: skyBoxFragment_Input_8) -> @location(0) vec4f {
-        return textureSample(item_6, sampler_7, normalize(input.texCoord));
+      @fragment fn skyBoxFragment(input: skyBoxFragment_Input) -> @location(0) vec4f {
+        return textureSample(skyBox, sampler_1, normalize(input.texCoord));
       }
 
-      struct CelestialBody_2 {
+      struct CelestialBody {
         destroyed: u32,
         position: vec3f,
         velocity: vec3f,
@@ -199,22 +223,22 @@ describe('gravity example', () => {
         ambientLightFactor: f32,
       }
 
-      @group(1) @binding(1) var<storage, read> celestialBodies_1: array<CelestialBody_2>;
+      @group(1) @binding(1) var<storage, read> celestialBodies: array<CelestialBody>;
 
-      fn radiusOf_3(body: CelestialBody_2) -> f32 {
+      fn radiusOf(body: CelestialBody) -> f32 {
         return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
       }
 
-      struct Camera_5 {
+      struct Camera {
         position: vec4f,
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
       }
 
-      @group(0) @binding(0) var<uniform> camera_4: Camera_5;
+      @group(0) @binding(0) var<uniform> camera_1: Camera;
 
-      struct mainVertex_Output_6 {
+      struct mainVertex_Output {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
         @location(1) normals: vec3f,
@@ -224,28 +248,28 @@ describe('gravity example', () => {
         @location(5) ambientLightFactor: f32,
       }
 
-      struct mainVertex_Input_7 {
+      struct mainVertex_Input {
         @location(0) position: vec3f,
         @location(1) normal: vec3f,
         @location(2) uv: vec2f,
         @builtin(instance_index) instanceIndex: u32,
       }
 
-      @vertex fn mainVertex_0(input: mainVertex_Input_7) -> mainVertex_Output_6 {
-        let currentBody = (&celestialBodies_1[input.instanceIndex]);
-        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf_3((*currentBody))));
-        let camera = (&camera_4);
+      @vertex fn mainVertex(input: mainVertex_Input) -> mainVertex_Output {
+        let currentBody = (&celestialBodies[input.instanceIndex]);
+        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf((*currentBody))));
+        let camera = (&camera_1);
         var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
-        return mainVertex_Output_6(positionOnCanvas, input.uv, input.normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
+        return mainVertex_Output(positionOnCanvas, input.uv, input.normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
-      @group(1) @binding(0) var celestialBodyTextures_9: texture_2d_array<f32>;
+      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
 
-      @group(0) @binding(1) var sampler_10: sampler;
+      @group(0) @binding(1) var sampler_1: sampler;
 
-      @group(0) @binding(2) var<uniform> lightSource_11: vec3f;
+      @group(0) @binding(2) var<uniform> lightSource: vec3f;
 
-      struct mainFragment_Input_12 {
+      struct mainFragment_Input {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
         @location(1) normals: vec3f,
@@ -255,15 +279,15 @@ describe('gravity example', () => {
         @location(5) ambientLightFactor: f32,
       }
 
-      @fragment fn mainFragment_8(input: mainFragment_Input_12) -> @location(0) vec4f {
+      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
         if ((input.destroyed == 1u)) {
           discard;;
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures_9, sampler_10, input.uv, input.sphereTextureIndex).xyz;
+        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).xyz;
         var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
         let normal = input.normals;
-        var lightDirection = normalize((lightSource_11 - input.worldPosition));
+        var lightDirection = normalize((lightSource - input.worldPosition));
         let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         var litColor = (ambient + diffuse);

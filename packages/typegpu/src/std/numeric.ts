@@ -1,8 +1,4 @@
-import {
-  createDualImpl,
-  dualImpl,
-  MissingCpuImplError,
-} from '../core/function/dualImpl.ts';
+import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyData } from '../data/dataTypes.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
@@ -14,7 +10,7 @@ import {
   i32,
   u32,
 } from '../data/numeric.ts';
-import { snip, Snippet } from '../data/snippet.ts';
+import type { Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -619,31 +615,23 @@ type FrexpOverload = {
   ): Infer<typeof FrexpResults[T['kind']]>;
 };
 
-export const frexp: FrexpOverload = createDualImpl(
-  // CPU implementation
-  (value: number): {
-    fract: number;
-    exp: number;
-  } => {
-    throw new MissingCpuImplError(
-      'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
-  // GPU implementation
-  (value) => {
-    const returnType =
-      FrexpResults[value.dataType.type as keyof typeof FrexpResults];
+export const frexp = dualImpl<FrexpOverload>({
+  name: 'frexp',
+  normalImpl:
+    'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  signature: (value) => {
+    const returnType = FrexpResults[value.type as keyof typeof FrexpResults];
 
     if (!returnType) {
       throw new Error(
-        `Unsupported data type for frexp: ${value.dataType.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
+        `Unsupported data type for frexp: ${value.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
       );
     }
 
-    return snip(stitch`frexp(${value})`, returnType, /* origin */ 'runtime');
+    return { argTypes: [value], returnType };
   },
-  'frexp',
-);
+  codegenImpl: (value) => stitch`frexp(${value})`,
+});
 
 function cpuInsertBits(
   e: number,
@@ -984,27 +972,22 @@ export const reflect = dualImpl({
   codegenImpl: (e1, e2) => stitch`reflect(${e1}, ${e2})`,
 });
 
-export const refract = createDualImpl(
-  // CPU implementation
-  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T => {
-    throw new MissingCpuImplError(
-      'CPU implementation for refract not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  },
-  // GPU implementation
-  (e1, e2, e3) =>
-    snip(
-      stitch`refract(${e1}, ${e2}, ${e3})`,
-      e1.dataType,
-      /* origin */ 'runtime',
-    ),
-  'refract',
-  (e1, e2, e3) => [
-    e1.dataType as AnyWgslData,
-    e2.dataType as AnyWgslData,
-    isHalfPrecisionSchema(e1) ? f16 : f32,
-  ],
-);
+export const refract = dualImpl<
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number) => T
+>({
+  name: 'refract',
+  normalImpl:
+    'CPU implementation for refract not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  codegenImpl: (e1, e2, e3) => stitch`refract(${e1}, ${e2}, ${e3})`,
+  signature: (e1, e2, _e3) => ({
+    argTypes: [
+      e1 as AnyWgslData,
+      e2 as AnyWgslData,
+      isHalfPrecisionSchema(e1) ? f16 : f32,
+    ],
+    returnType: e1,
+  }),
+});
 function cpuReverseBits(value: number): number;
 function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {

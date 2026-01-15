@@ -10,7 +10,12 @@ export interface MetaData {
     body: Block;
     externalNames: string[];
   } | undefined;
-  externals?: Record<string, unknown> | undefined;
+  externals?:
+    // Passing a record happens prior to version 0.9.0
+    // TODO: Support for this can be removed down the line
+    | Record<string, unknown>
+    | (() => Record<string, unknown>)
+    | undefined;
 }
 
 /**
@@ -78,10 +83,9 @@ export function setName(definition: object, name: string): void {
 }
 
 /**
- * Can be assigned a name. Not to be confused with
- * being able to HAVE a name.
+ * Can be assigned a name. Not to be confused with just having a name.
  * The `$name` function should use `setName` to rename the object itself,
- * or rename the object `$getNameForward` symbol points to instead if applicable.
+ * even if `$getNameForward` symbol is present.
  */
 export interface TgpuNamable {
   $name(label: string): this;

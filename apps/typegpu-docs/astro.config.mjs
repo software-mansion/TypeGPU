@@ -211,6 +211,16 @@ export default defineConfig({
               label: '@typegpu/noise',
               slug: 'ecosystem/typegpu-noise',
             },
+            {
+              label: '@typegpu/three',
+              slug: 'ecosystem/typegpu-three',
+              badge: { text: 'new' },
+            },
+            {
+              label: '@typegpu/sdf',
+              slug: 'ecosystem/typegpu-sdf',
+              badge: { text: 'new' },
+            },
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',

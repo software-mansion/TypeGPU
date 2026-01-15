@@ -109,7 +109,7 @@ class TgpuFixedBufferImpl<
   }
 
   $name(label: string) {
-    this.buffer.$name(label);
+    setName(this, label);
     return this;
   }
 
@@ -308,15 +308,12 @@ const mutableUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
 >();
 
-/**
- * @deprecated Use buffer.as('mutable') instead.
- */
-export function asMutable<TData extends AnyWgslData>(
+export function mutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+      `Cannot call as('mutable') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -335,15 +332,12 @@ const readonlyUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
 >();
 
-/**
- * @deprecated Use buffer.as('readonly') instead.
- */
-export function asReadonly<TData extends AnyWgslData>(
+export function readonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+      `Cannot call as('readonly') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -362,15 +356,12 @@ const uniformUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
 >();
 
-/**
- * @deprecated Use buffer.as('uniform') instead.
- */
-export function asUniform<TData extends AnyWgslData>(
+export function uniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & UniformFlag,
 ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
+      `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
     );
   }
 

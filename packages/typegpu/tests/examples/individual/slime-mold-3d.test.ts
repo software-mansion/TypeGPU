@@ -17,72 +17,81 @@ describe('slime mold 3d example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform_1: vec3u;
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      var<private> seed_5: vec2f;
+      var<private> seed: vec2f;
 
-      fn seed_4(value: f32) {
-        seed_5 = vec2f(value, 0f);
+      fn seed_1(value: f32) {
+        seed = vec2f(value, 0f);
       }
 
-      fn randSeed_3(seed: f32) {
-        seed_4(seed);
+      fn randSeed(seed: f32) {
+        seed_1(seed);
       }
 
-      fn item_7() -> f32 {
-        let a = dot(seed_5, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_5, vec2f(54.47856521606445, 345.8415222167969));
-        seed_5.x = fract((cos(a) * 136.8168f));
-        seed_5.y = fract((cos(b) * 534.7645f));
-        return seed_5.y;
+      fn item() -> f32 {
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
-      fn randUniformExclusive_9() -> f32 {
-        return ((item_7() * 0.9999998f) + 1e-7f);
+      fn randUniformExclusive() -> f32 {
+        return ((item() * 0.9999998f) + 1e-7f);
       }
 
-      fn randNormal_8(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive_9());
-        let R = sqrt((-2f * log(randUniformExclusive_9())));
+      fn randNormal(mu: f32, sigma: f32) -> f32 {
+        let theta = (6.283185307179586f * randUniformExclusive());
+        let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
 
-      fn randInUnitSphere_6() -> vec3f {
-        let u = item_7();
-        var v = vec3f(randNormal_8(0f, 1f), randNormal_8(0f, 1f), randNormal_8(0f, 1f));
+      fn randInUnitSphere() -> vec3f {
+        let u = item();
+        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
         var vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
       }
 
-      struct Agent_11 {
+      struct Agent {
         position: vec3f,
         direction: vec3f,
       }
 
-      @group(0) @binding(1) var<storage, read_write> agentsData_10: array<Agent_11, 800000>;
+      @group(0) @binding(1) var<storage, read_write> item_1: array<Agent, 800000>;
 
-      fn wrappedCallback_2(x: u32, _arg_1: u32, _arg_2: u32) {
-        randSeed_3((f32(x) / 8e+5f));
-        var pos = ((randInUnitSphere_6() * 64f) + vec3f(128));
+      @group(0) @binding(2) var<storage, read_write> item_2: array<Agent, 800000>;
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        randSeed((f32(x) / 8e+5f));
+        var pos = ((randInUnitSphere() * 64f) + vec3f(128));
         var center = vec3f(128);
         var dir = normalize((center - pos));
-        agentsData_10[x] = Agent_11(pos, dir);
+        item_1[x] = Agent(pos, dir);
+        item_2[x] = Agent(pos, dir);
       }
 
-      struct mainCompute_Input_12 {
+      struct mainCompute_Input {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute_0(in: mainCompute_Input_12)  {
-        if (any(in.id >= sizeUniform_1)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback_2(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(in.id.x, in.id.y, in.id.z);
       }
 
-      @group(1) @binding(0) var oldState_1: texture_storage_3d<r32float, read>;
+      @group(1) @binding(0) var oldState: texture_3d<f32>;
 
-      struct Params_3 {
+      @group(1) @binding(2) var sampler_1: sampler;
+
+      fn getSummand(uv: vec3f, offset: vec3f) -> f32 {
+        return textureSampleLevel(oldState, sampler_1, (uv + offset), 0).x;
+      }
+
+      struct Params {
         deltaTime: f32,
         moveSpeed: f32,
         sensorAngle: f32,
@@ -91,71 +100,52 @@ describe('slime mold 3d example', () => {
         evaporationRate: f32,
       }
 
-      @group(0) @binding(0) var<uniform> params_2: Params_3;
+      @group(0) @binding(0) var<uniform> params: Params;
 
-      @group(1) @binding(1) var newState_4: texture_storage_3d<r32float, write>;
+      @group(1) @binding(1) var newState: texture_storage_3d<r32float, write>;
 
-      struct blur_Input_5 {
+      struct blur_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(4, 4, 4) fn blur_0(_arg_0: blur_Input_5) {
-        var dims = textureDimensions(oldState_1);
+      @compute @workgroup_size(4, 4, 4) fn blur(_arg_0: blur_Input) {
+        var dims = textureDimensions(oldState);
         if ((((_arg_0.gid.x >= dims.x) || (_arg_0.gid.y >= dims.y)) || (_arg_0.gid.z >= dims.z))) {
           return;
         }
+        var uv = ((vec3f(_arg_0.gid) + 0.5) / vec3f(dims));
         var sum = 0f;
-        var count = 0f;
-        for (var offsetZ = -1; (offsetZ <= 1i); offsetZ++) {
-          for (var offsetY = -1; (offsetY <= 1i); offsetY++) {
-            for (var offsetX = -1; (offsetX <= 1i); offsetX++) {
-              var samplePos = (vec3i(_arg_0.gid.xyz) + vec3i(offsetX, offsetY, offsetZ));
-              var dimsi = vec3i(dims);
-              if (((((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y)) && (samplePos.z >= 0i)) && (samplePos.z < dimsi.z))) {
-                let value = textureLoad(oldState_1, vec3u(samplePos)).x;
-                sum = (sum + value);
-                count = (count + 1f);
-              }
-            }
-          }
-        }
-        let blurred = (sum / count);
-        let newValue = saturate((blurred - params_2.evaporationRate));
-        textureStore(newState_4, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
+        sum += getSummand(uv, (vec3f(-1, 0, 0) / vec3f(dims)));
+        sum += getSummand(uv, (vec3f(1, 0, 0) / vec3f(dims)));
+        sum += getSummand(uv, (vec3f(0, -1, 0) / vec3f(dims)));
+        sum += getSummand(uv, (vec3f(0, 1, 0) / vec3f(dims)));
+        sum += getSummand(uv, (vec3f(0, 0, -1) / vec3f(dims)));
+        sum += getSummand(uv, (vec3f(0, 0, 1) / vec3f(dims)));
+        let blurred = (sum / 6f);
+        let newValue = saturate((blurred - params.evaporationRate));
+        textureStore(newState, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
-      var<private> seed_3: vec2f;
+      var<private> seed: vec2f;
 
-      fn seed_2(value: f32) {
-        seed_3 = vec2f(value, 0f);
+      fn seed_1(value: f32) {
+        seed = vec2f(value, 0f);
       }
 
-      fn randSeed_1(seed: f32) {
-        seed_2(seed);
+      fn randSeed(seed: f32) {
+        seed_1(seed);
       }
 
-      @group(1) @binding(0) var oldState_4: texture_storage_3d<r32float, read>;
+      @group(1) @binding(1) var oldState: texture_storage_3d<r32float, read>;
 
-      struct Agent_6 {
+      struct Agent {
         position: vec3f,
         direction: vec3f,
       }
 
-      @group(0) @binding(0) var<storage, read_write> agentsData_5: array<Agent_6, 800000>;
+      @group(1) @binding(0) var<storage, read> oldAgents: array<Agent>;
 
-      fn item_8() -> f32 {
-        let a = dot(seed_3, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_3, vec2f(54.47856521606445, 345.8415222167969));
-        seed_3.x = fract((cos(a) * 136.8168f));
-        seed_3.y = fract((cos(b) * 534.7645f));
-        return seed_3.y;
-      }
-
-      fn randFloat01_7() -> f32 {
-        return item_8();
-      }
-
-      fn getPerpendicular_10(dir: vec3f) -> vec3f {
+      fn getPerpendicular(dir: vec3f) -> vec3f {
         var axis = vec3f(1, 0, 0);
         let absX = abs(dir.x);
         let absY = abs(dir.y);
@@ -171,7 +161,7 @@ describe('slime mold 3d example', () => {
         return normalize(cross(dir, axis));
       }
 
-      struct Params_12 {
+      struct Params {
         deltaTime: f32,
         moveSpeed: f32,
         sensorAngle: f32,
@@ -180,84 +170,101 @@ describe('slime mold 3d example', () => {
         evaporationRate: f32,
       }
 
-      @group(0) @binding(1) var<uniform> params_11: Params_12;
+      @group(0) @binding(0) var<uniform> params: Params;
 
-      struct SenseResult_13 {
+      struct SenseResult {
         weightedDir: vec3f,
         totalWeight: f32,
       }
 
-      fn sense3D_9(pos: vec3f, direction: vec3f) -> SenseResult_13 {
-        var dims = textureDimensions(oldState_4);
+      fn sense3D(pos: vec3f, direction: vec3f) -> SenseResult {
+        var dims = textureDimensions(oldState);
         var dimsf = vec3f(dims);
         var weightedDir = vec3f();
         var totalWeight = 0f;
-        var perp1 = getPerpendicular_10(direction);
+        var perp1 = getPerpendicular(direction);
         var perp2 = cross(direction, perp1);
         const numSamples = 8;
         for (var i = 0; (i < numSamples); i++) {
           let theta = (((f32(i) / f32(numSamples)) * 2f) * 3.141592653589793f);
           var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
-          var sensorDir = normalize((direction + (coneOffset * sin(params_11.sensorAngle))));
-          var sensorPos = (pos + (sensorDir * params_11.sensorDistance));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
           var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
-          let weight = textureLoad(oldState_4, sensorPosInt).x;
+          let weight = textureLoad(oldState, sensorPosInt).x;
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
         }
-        return SenseResult_13(weightedDir, totalWeight);
+        return SenseResult(weightedDir, totalWeight);
       }
 
-      fn randUniformExclusive_17() -> f32 {
-        return ((item_8() * 0.9999998f) + 1e-7f);
+      fn item() -> f32 {
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
-      fn randNormal_16(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive_17());
-        let R = sqrt((-2f * log(randUniformExclusive_17())));
-        return (((R * sin(theta)) * sigma) + mu);
+      fn randOnUnitSphere() -> vec3f {
+        let z = ((2f * item()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * item());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
+        return vec3f(x, y, z);
       }
 
-      fn randInUnitSphere_15() -> vec3f {
-        let u = item_8();
-        var v = vec3f(randNormal_16(0f, 1f), randNormal_16(0f, 1f), randNormal_16(0f, 1f));
-        var vNorm = normalize(v);
-        return (vNorm * pow(u, 0.33f));
-      }
-
-      fn randInUnitHemisphere_14(normal: vec3f) -> vec3f {
-        var value = randInUnitSphere_15();
+      fn randOnUnitHemisphere(normal: vec3f) -> vec3f {
+        var value = randOnUnitSphere();
         let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
 
-      @group(1) @binding(1) var newState_18: texture_storage_3d<r32float, write>;
+      fn randUniformExclusive() -> f32 {
+        return ((item() * 0.9999998f) + 1e-7f);
+      }
 
-      struct updateAgents_Input_19 {
+      fn randNormal(mu: f32, sigma: f32) -> f32 {
+        let theta = (6.283185307179586f * randUniformExclusive());
+        let R = sqrt((-2f * log(randUniformExclusive())));
+        return (((R * sin(theta)) * sigma) + mu);
+      }
+
+      fn randInUnitSphere() -> vec3f {
+        let u = item();
+        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
+        var vNorm = normalize(v);
+        return (vNorm * pow(u, 0.33f));
+      }
+
+      fn randInUnitHemisphere(normal: vec3f) -> vec3f {
+        var value = randInUnitSphere();
+        let alignment = dot(normal, value);
+        return (sign(alignment) * value);
+      }
+
+      @group(1) @binding(2) var<storage, read_write> newAgents: array<Agent>;
+
+      @group(1) @binding(3) var newState_1: texture_storage_3d<r32float, write>;
+
+      struct updateAgents_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(64) fn updateAgents_0(_arg_0: updateAgents_Input_19) {
+      @compute @workgroup_size(64) fn updateAgents(_arg_0: updateAgents_Input) {
         if ((_arg_0.gid.x >= 800000u)) {
           return;
         }
-        randSeed_1(((f32(_arg_0.gid.x) / 8e+5f) + 0.1f));
-        var dims = textureDimensions(oldState_4);
+        randSeed(((f32(_arg_0.gid.x) / 8e+5f) + 0.1f));
+        var dims = textureDimensions(oldState);
         var dimsf = vec3f(dims);
-        let agent = (&agentsData_5[_arg_0.gid.x]);
-        let random = randFloat01_7();
+        let agent = (&oldAgents[_arg_0.gid.x]);
         var direction = normalize((*agent).direction);
-        var senseResult = sense3D_9((*agent).position, direction);
-        if ((senseResult.totalWeight > 0.01f)) {
-          var targetDir = normalize(senseResult.weightedDir);
-          direction = normalize((direction + (targetDir * (params_11.turnSpeed * params_11.deltaTime))));
-        }
-        else {
-          var perp = getPerpendicular_10(direction);
-          var randomOffset = (perp * ((((random * 2f) - 1f) * params_11.turnSpeed) * params_11.deltaTime));
-          direction = normalize((direction + randomOffset));
-        }
-        var newPos = ((*agent).position + (direction * (params_11.moveSpeed * params_11.deltaTime)));
+        var senseResult = sense3D((*agent).position, direction);
+        var targetDirection = select(randOnUnitHemisphere(direction), normalize(senseResult.weightedDir), (senseResult.totalWeight > 0.01f));
+        direction = normalize((direction + (targetDirection * (params.turnSpeed * params.deltaTime))));
+        var newPos = ((*agent).position + (direction * (params.moveSpeed * params.deltaTime)));
         var center = (dimsf / 2);
         if (((newPos.x < 0f) || (newPos.x >= dimsf.x))) {
           newPos.x = clamp(newPos.x, 0f, (dimsf.x - 1f));
@@ -265,7 +272,7 @@ describe('slime mold 3d example', () => {
           if ((newPos.x > 1f)) {
             normal = vec3f(-1, 0, 0);
           }
-          var randomDir = randInUnitHemisphere_14(normal);
+          var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
           direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
         }
@@ -275,7 +282,7 @@ describe('slime mold 3d example', () => {
           if ((newPos.y > 1f)) {
             normal = vec3f(0, -1, 0);
           }
-          var randomDir = randInUnitHemisphere_14(normal);
+          var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
           direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
         }
@@ -285,47 +292,57 @@ describe('slime mold 3d example', () => {
           if ((newPos.z > 1f)) {
             normal = vec3f(0, 0, -1);
           }
-          var randomDir = randInUnitHemisphere_14(normal);
+          var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
           direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
         }
-        agentsData_5[_arg_0.gid.x] = Agent_6(newPos, direction);
-        let oldState = textureLoad(oldState_4, vec3u(newPos)).x;
-        let newState = (oldState + 1f);
-        textureStore(newState_18, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
+        newAgents[_arg_0.gid.x] = Agent(newPos, direction);
+        let oldState_1 = textureLoad(oldState, vec3u(newPos)).x;
+        let newState = (oldState_1 + 1f);
+        textureStore(newState_1, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
       }
 
-      struct fullScreenTriangle_Input_1 {
+      struct fullScreenTriangle_Input {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      struct fullScreenTriangle_Output_2 {
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle_0(in: fullScreenTriangle_Input_1) -> fullScreenTriangle_Output_2 {
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output_2(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      struct Camera_5 {
+      var<private> seed: vec2f;
+
+      fn seed2(value: vec2f) {
+        seed = value;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      struct Camera {
         viewProj: mat4x4f,
         invViewProj: mat4x4f,
         position: vec3f,
       }
 
-      @group(0) @binding(0) var<uniform> cameraData_4: Camera_5;
+      @group(0) @binding(0) var<uniform> cameraData: Camera;
 
-      struct RayBoxResult_7 {
+      struct RayBoxResult {
         tNear: f32,
         tFar: f32,
         hit: bool,
       }
 
-      fn rayBoxIntersection_6(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult_7 {
+      fn rayBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult {
         var invDir = (vec3f(1) / rayDir);
         var t0 = ((boxMin - rayOrigin) * invDir);
         var t1 = ((boxMax - rayOrigin) * invDir);
@@ -334,58 +351,76 @@ describe('slime mold 3d example', () => {
         let tNear = max(max(tmin.x, tmin.y), tmin.z);
         let tFar = min(min(tmax.x, tmax.y), tmax.z);
         let hit = ((tFar >= tNear) && (tFar >= 0f));
-        return RayBoxResult_7(tNear, tFar, hit);
+        return RayBoxResult(tNear, tFar, hit);
       }
 
-      @group(1) @binding(0) var state_8: texture_3d<f32>;
+      fn item() -> f32 {
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
+      }
 
-      @group(0) @binding(1) var sampler_9: sampler;
+      fn randFloat01() -> f32 {
+        return item();
+      }
 
-      struct fragmentShader_Input_10 {
+      @group(1) @binding(0) var state: texture_3d<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      struct fragmentShader_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentShader_3(_arg_0: fragmentShader_Input_10) -> @location(0) vec4f {
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        randSeed2(_arg_0.uv);
         var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
         var ndcNear = vec4f(ndc, -1f, 1f);
         var ndcFar = vec4f(ndc, 1f, 1f);
-        var worldNear = (cameraData_4.invViewProj * ndcNear);
-        var worldFar = (cameraData_4.invViewProj * ndcFar);
+        var worldNear = (cameraData.invViewProj * ndcNear);
+        var worldFar = (cameraData.invViewProj * ndcFar);
         var rayOrigin = (worldNear.xyz / worldNear.w);
         var rayEnd = (worldFar.xyz / worldFar.w);
         var rayDir = normalize((rayEnd - rayOrigin));
         var boxMin = vec3f();
         var boxMax = vec3f(256);
-        var isect = rayBoxIntersection_6(rayOrigin, rayDir, boxMin, boxMax);
+        var isect = rayBoxIntersection(rayOrigin, rayDir, boxMin, boxMax);
         if (!isect.hit) {
           return vec4f();
         }
-        let tStart = max(isect.tNear, 0f);
+        let jitter = (randFloat01() * 20f);
+        let tStart = max((isect.tNear + jitter), jitter);
         let tEnd = isect.tFar;
-        const numSteps = 128;
-        let stepSize = ((tEnd - tStart) / f32(numSteps));
+        let intersectionLength = (tEnd - tStart);
+        const baseStepsPerUnit = 0.30000001192092896f;
+        const minSteps = 8i;
+        const maxSteps = 48i;
+        let adaptiveSteps = clamp(i32((intersectionLength * baseStepsPerUnit)), minSteps, maxSteps);
+        let numSteps = adaptiveSteps;
+        let stepSize = (intersectionLength / f32(numSteps));
         const thresholdLo = 0.05999999865889549f;
         const thresholdHi = 0.25f;
         const gamma = 1.399999976158142f;
-        const sigmaT = 0.05000000074505806f;
+        const sigmaT = 0.10000000149011612f;
         var albedo = vec3f(0.5699999928474426, 0.4399999976158142, 0.9599999785423279);
         var transmittance = 1f;
         var accum = vec3f();
         const TMin = 0.0010000000474974513f;
-        for (var i = 0; (i < numSteps); i++) {
-          if ((transmittance <= TMin)) {
-            break;
-          }
+        var i = 0i;
+        while (((i < numSteps) && (transmittance > TMin))) {
           let t = (tStart + ((f32(i) + 0.5f) * stepSize));
           var pos = (rayOrigin + (rayDir * t));
           var texCoord = (pos / vec3f(256));
-          let sampleValue = textureSampleLevel(state_8, sampler_9, texCoord, 0).x;
+          let sampleValue = textureSampleLevel(state, sampler_1, texCoord, 0).x;
           let d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
           let density = pow(d0, gamma);
           let alphaSrc = (1f - exp(((-(sigmaT) * density) * stepSize)));
           var contrib = (albedo * alphaSrc);
           accum = (accum + (contrib * transmittance));
           transmittance = (transmittance * (1f - alphaSrc));
+          i += 1i;
         }
         let alpha = (1f - transmittance);
         return vec4f(accum, alpha);

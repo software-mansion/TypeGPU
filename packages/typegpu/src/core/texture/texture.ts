@@ -8,13 +8,15 @@ import {
 } from '../../data/texture.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
-import type {
-  TextureFormatInfo,
-  ViewDimensionToDimension,
+import {
+  getTextureFormatInfo,
+  type TextureFormatInfo,
+  type TextureFormats,
+  type ViewDimensionToDimension,
 } from './textureFormats.ts';
 import {
   $gpuValueOf,
@@ -32,7 +34,6 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
-import { type TextureFormats, textureFormats } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
 import {
@@ -41,7 +42,7 @@ import {
   resampleImage,
 } from './textureUtils.ts';
 
-type TextureInternals = {
+export type TextureInternals = {
   unwrap(): GPUTexture;
 };
 
@@ -49,9 +50,7 @@ type TextureViewInternals = {
   readonly unwrap: (() => GPUTextureView) | undefined;
 };
 
-// ----------
 // Public API
-// ----------
 
 export type TexelData = Vec4u | Vec4i | Vec4f;
 
@@ -134,7 +133,7 @@ function getDescriptorForProps<T extends TextureProps>(
 ): WgslTextureProps {
   return {
     dimension: (props.dimension ?? '2d') as Default<T['dimension'], '2d'>,
-    sampleType: textureFormats[props.format].channelType,
+    sampleType: getTextureFormatInfo(props.format).channelType,
     multisampled: !((props.sampleCount ?? 1) === 1) as Default<
       T['sampleCount'],
       1
@@ -143,54 +142,18 @@ function getDescriptorForProps<T extends TextureProps>(
   };
 }
 
-export type TextureAspect = 'color' | 'depth' | 'stencil';
-export type DepthStencilFormats =
-  | 'depth24plus-stencil8'
-  | 'depth32float-stencil8';
-export type DepthFormats = 'depth16unorm' | 'depth24plus' | 'depth32float';
-export type StencilFormats = 'stencil8';
-
-export type AspectsForFormat<T extends GPUTextureFormat> =
-  GPUTextureFormat extends T ? TextureAspect[]
-    : T extends DepthStencilFormats ? ('depth' | 'stencil')[]
-    : T extends DepthFormats ? 'depth'[]
-    : T extends StencilFormats ? 'stencil'[]
-    : 'color'[];
-
-function getAspectsForFormat<T extends GPUTextureFormat>(
-  format: T,
-): AspectsForFormat<T> {
-  if (format === 'depth24plus-stencil8' || format === 'depth32float-stencil8') {
-    return ['depth', 'stencil'] as AspectsForFormat<T>;
-  }
-  if (
-    format === 'depth16unorm' ||
-    format === 'depth24plus' ||
-    format === 'depth32float'
-  ) {
-    return ['depth'] as AspectsForFormat<T>;
-  }
-  if (format === 'stencil8') {
-    return ['stencil'] as AspectsForFormat<T>;
-  }
-  return ['color'] as AspectsForFormat<T>;
-}
-
 type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   size: T['size'];
   format: T['format'];
   sampleCount?: T['sampleCount'];
 }>;
 
-/**
- * @param TProps all properties that distinguish this texture apart from other textures on the type level.
- */
-export interface TgpuTexture<TProps extends TextureProps = TextureProps>
+// biome-ignore lint/suspicious/noExplicitAny: we can't tame the validation otherwise
+export interface TgpuTexture<TProps extends TextureProps = any>
   extends TgpuNamable {
   readonly [$internal]: TextureInternals;
   readonly resourceType: 'texture';
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
-  readonly aspects: AspectsForFormat<TProps['format']>;
   readonly destroyed: boolean;
 
   // Extensions
@@ -206,14 +169,20 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
     ...args: this['usableAsSampled'] extends true ? []
       : [ValidateTextureViewSchema<this, WgslTexture>]
   ): TgpuTextureView<DefaultViewSchema<TProps>>;
-  createView<T extends WgslTexture | WgslStorageTexture>(
+  createView(
+    schema: 'render',
+    viewDescriptor?: TgpuTextureViewDescriptor,
+  ): TgpuTextureRenderView;
+  createView<T extends WgslTexture>(
     schema: ValidateTextureViewSchema<this, T>,
     viewDescriptor?: TgpuTextureViewDescriptor & {
-      sampleType?: T extends WgslTexture
-        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
-        : never
+      sampleType?: T['sampleType'] extends F32 ? 'float' | 'unfilterable-float'
         : never;
     },
+  ): TgpuTextureView<T>;
+  createView<T extends WgslStorageTexture>(
+    schema: ValidateTextureViewSchema<this, T>,
+    viewDescriptor?: TgpuTextureViewDescriptor,
   ): TgpuTextureView<T>;
 
   clear(mipLevel?: number | 'all'): void;
@@ -230,7 +199,7 @@ export interface TgpuTextureView<
   TSchema extends WgslStorageTexture | WgslTexture =
     | WgslStorageTexture
     | WgslTexture,
-> {
+> extends TgpuNamable {
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
@@ -238,6 +207,12 @@ export interface TgpuTextureView<
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
   $: Infer<TSchema>;
+}
+
+export interface TgpuTextureRenderView {
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType: 'texture-view';
+  readonly descriptor: TgpuTextureViewDescriptor;
 }
 
 export function INTERNAL_createTexture(
@@ -269,14 +244,13 @@ class TgpuTextureImpl<TProps extends TextureProps>
   implements TgpuTexture<TProps> {
   readonly [$internal]: TextureInternals;
   readonly resourceType = 'texture';
-  readonly aspects: AspectsForFormat<this['props']['format']>;
   usableAsSampled = false;
   usableAsStorage = false;
   usableAsRender = false;
 
   #formatInfo: TextureFormatInfo;
   // biome-ignore lint/correctness/noUnusedPrivateClassMembers: wdym, it is used 10 lines below
-  #byteSize: number;
+  #byteSize: number | 'non-copyable';
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   #texture: GPUTexture | null = null;
@@ -289,12 +263,14 @@ class TgpuTextureImpl<TProps extends TextureProps>
     const format = props.format as TProps['format'];
 
     this.#branch = branch;
-    this.#formatInfo = textureFormats[format];
-    this.#byteSize = (props.size[0] as number) *
-      (props.size[1] ?? 1) *
-      (props.size[2] ?? 1) *
-      this.#formatInfo.texelSize;
-    this.aspects = getAspectsForFormat(format);
+    this.#formatInfo = getTextureFormatInfo(format);
+    const texelSize = this.#formatInfo.texelSize;
+    this.#byteSize = texelSize === 'non-copyable'
+      ? 'non-copyable'
+      : (props.size[0] as number) *
+        (props.size[1] ?? 1) *
+        (props.size[2] ?? 1) *
+        texelSize;
 
     this[$internal] = {
       unwrap: () => {
@@ -344,24 +320,32 @@ class TgpuTextureImpl<TProps extends TextureProps>
   createView(
     ...args: this['usableAsSampled'] extends true ? [] : [never]
   ): TgpuTextureView<DefaultViewSchema<TProps>>;
-  createView<T extends WgslTexture | WgslStorageTexture>(
-    schema: never,
+  createView(
+    schema: 'render',
+    viewDescriptor?: TgpuTextureViewDescriptor,
+  ): TgpuTextureRenderView;
+  createView<T extends WgslTexture>(
+    schema: T,
     viewDescriptor?: TgpuTextureViewDescriptor & {
-      sampleType?: T extends WgslTexture
-        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
-        : never
+      sampleType?: T['sampleType'] extends F32 ? 'float' | 'unfilterable-float'
         : never;
     },
   ): TgpuTextureView<T>;
+  createView<T extends WgslStorageTexture>(
+    schema: T,
+    viewDescriptor?: TgpuTextureViewDescriptor,
+  ): TgpuTextureView<T>;
   createView<T extends WgslTexture | WgslStorageTexture>(
-    schema?: never,
+    schema?: T | 'render',
     viewDescriptor?: TgpuTextureViewDescriptor & {
-      sampleType?: T extends WgslTexture
-        ? T['sampleType']['type'] extends 'f32' ? 'float' | 'unfilterable-float'
-        : never
+      sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float'
         : never;
     },
-  ): TgpuTextureView<T> {
+  ): TgpuTextureView<T> | TgpuTextureRenderView {
+    if (schema === 'render') {
+      return new TgpuTextureRenderViewImpl(this as TgpuTexture, viewDescriptor);
+    }
+
     return new TgpuFixedTextureViewImpl(
       schema ??
         (textureDescriptorToSchema(getDescriptorForProps(this.props)) as T),
@@ -378,10 +362,17 @@ class TgpuTextureImpl<TProps extends TextureProps>
       Math.max(1, Math.floor((this.props.size[2] ?? 1) / scale)),
     ];
 
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
     this.#branch.device.queue.writeTexture(
       { texture: this[$internal].unwrap(), mipLevel: mip },
-      new Uint8Array(width * height * depth * this.#formatInfo.texelSize),
-      { bytesPerRow: this.#formatInfo.texelSize * width, rowsPerImage: height },
+      new Uint8Array(width * height * depth * texelSize),
+      { bytesPerRow: texelSize * width, rowsPerImage: height },
       [width, height, depth],
     );
   }
@@ -479,8 +470,14 @@ class TgpuTextureImpl<TProps extends TextureProps>
     const mipHeight = Math.max(1, (this.props.size[1] ?? 1) >> mipLevel);
     const mipDepth = Math.max(1, (this.props.size[2] ?? 1) >> mipLevel);
 
-    const expectedSize = mipWidth * mipHeight * mipDepth *
-      this.#formatInfo.texelSize;
+    const texelSize = this.#formatInfo.texelSize;
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const expectedSize = mipWidth * mipHeight * mipDepth * texelSize;
     const actualSize = source.byteLength ?? (source as ArrayBuffer).byteLength;
 
     if (actualSize !== expectedSize) {
@@ -496,7 +493,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
       },
       'buffer' in source ? source.buffer : source,
       {
-        bytesPerRow: this.#formatInfo.texelSize * mipWidth,
+        bytesPerRow: texelSize * mipWidth,
         rowsPerImage: mipHeight,
       },
       [mipWidth, mipHeight, mipDepth],
@@ -601,32 +598,18 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       unwrap: () => {
         if (!this.#view) {
           const schema = this.schema;
-          let descriptor: GPUTextureViewDescriptor;
-          if (isWgslStorageTexture(schema)) {
-            descriptor = {
-              label: getName(this) ?? '<unnamed>',
-              format: this.#descriptor?.format ?? schema.format,
-              dimension: schema.dimension,
-            };
-          } else {
-            descriptor = {
-              label: getName(this) ?? '<unnamed>',
-              format: this.#descriptor?.format ??
-                this.#baseTexture.props.format,
-              dimension: schema.dimension,
-            };
-          }
-
-          if (this.#descriptor?.mipLevelCount !== undefined) {
-            descriptor.mipLevelCount = this.#descriptor.mipLevelCount;
-          }
-          if (this.#descriptor?.arrayLayerCount !== undefined) {
-            descriptor.arrayLayerCount = this.#descriptor.arrayLayerCount;
-          }
+          const format = isWgslStorageTexture(schema)
+            ? schema.format
+            : this.#baseTexture.props.format;
 
           this.#view = this.#baseTexture[$internal]
             .unwrap()
-            .createView(descriptor);
+            .createView({
+              ...this.#descriptor,
+              label: getName(this) ?? '<unnamed>',
+              format: this.#descriptor?.format ?? format,
+              dimension: schema.dimension,
+            });
         }
         return this.#view;
       },
@@ -755,11 +738,37 @@ export class TgpuLaidOutTextureViewImpl<
     }
 
     throw new Error(
-      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+      `Accessed view '${
+        getName(this) ?? '<unnamed>'
+      }' outside of codegen mode. Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead`,
     );
   }
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  $name(label: string): this {
+    setName(this, label);
+    return this;
+  }
+}
+
+export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
+  readonly [$internal]: TextureViewInternals;
+  readonly resourceType = 'texture-view' as const;
+
+  constructor(
+    baseTexture: TgpuTexture,
+    readonly descriptor: TgpuTextureViewDescriptor = {},
+  ) {
+    this[$internal] = {
+      unwrap: () => {
+        return baseTexture[$internal].unwrap().createView({
+          label: getName(this) ?? '<unnamed>',
+          ...this.descriptor,
+        });
+      },
+    };
   }
 }

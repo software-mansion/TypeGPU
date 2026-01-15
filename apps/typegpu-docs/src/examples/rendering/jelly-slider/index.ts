@@ -889,6 +889,7 @@ function createBindGroups() {
 
 let bindGroups = createBindGroups();
 
+let animationFrameHandle: number;
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
@@ -907,7 +908,7 @@ function render(timestamp: number) {
 
   rayMarchPipeline
     .withColorAttachment({
-      view: root.unwrap(textures[currentFrame].sampled),
+      view: textures[currentFrame].sampled,
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -928,7 +929,7 @@ function render(timestamp: number) {
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
-  requestAnimationFrame(render);
+  animationFrameHandle = requestAnimationFrame(render);
 }
 
 function handleResize() {
@@ -950,7 +951,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-requestAnimationFrame(render);
+animationFrameHandle = requestAnimationFrame(render);
 
 // #region Example controls and cleanup
 
@@ -977,7 +978,7 @@ async function autoSetQuaility() {
 
     measurePipeline
       .withColorAttachment({
-        view: root.unwrap(testTexture).createView(),
+        view: testTexture,
         loadOp: 'clear',
         storeOp: 'store',
       })
@@ -1067,6 +1068,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrameHandle);
   resizeObserver.disconnect();
   root.destroy();
 }

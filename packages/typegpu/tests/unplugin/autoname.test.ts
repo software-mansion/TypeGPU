@@ -12,18 +12,14 @@ describe('autonaming', () => {
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
-
-    expect(getName(mySlot)).toBe('mySlot');
-    expect(getName(myLayout)).toBe('myLayout');
-    expect(getName(myVertexLayout)).toBe('myVertexLayout');
-  });
-
-  it("autonames resources created using tgpu['~unstable']", () => {
     const myAccessor = tgpu['~unstable'].accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
     const myConst = tgpu.const(d.f32, 1);
 
+    expect(getName(mySlot)).toBe('mySlot');
+    expect(getName(myLayout)).toBe('myLayout');
+    expect(getName(myVertexLayout)).toBe('myVertexLayout');
     expect(getName(myAccessor)).toBe('myAccessor');
     expect(getName(myPrivateVar)).toBe('myPrivateVar');
     expect(getName(myWorkgroupVar)).toBe('myWorkgroupVar');
@@ -44,20 +40,15 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-
-    expect(getName(myBuffer)).toBe('myBuffer');
-    expect(getName(myMutable)).toBe('myMutable');
-    expect(getName(myReadonly)).toBe('myReadonly');
-    expect(getName(myUniform)).toBe('myUniform');
-    expect(getName(myQuerySet)).toBe('myQuerySet');
-  });
-
-  it("autonames resources created using root['~unstable']", ({ root }) => {
     const myPipeline = root['~unstable']
       .withCompute(
         tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
       )
       .createPipeline();
+    const myGuardedPipeline = root['~unstable']
+      .createGuardedComputePipeline(() => {
+        'use gpu';
+      });
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -70,7 +61,13 @@ describe('autonaming', () => {
       compare: 'equal',
     });
 
+    expect(getName(myBuffer)).toBe('myBuffer');
+    expect(getName(myMutable)).toBe('myMutable');
+    expect(getName(myReadonly)).toBe('myReadonly');
+    expect(getName(myUniform)).toBe('myUniform');
+    expect(getName(myQuerySet)).toBe('myQuerySet');
     expect(getName(myPipeline)).toBe('myPipeline');
+    expect(getName(myGuardedPipeline)).toBe('myGuardedPipeline');
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');
@@ -84,7 +81,7 @@ describe('autonaming', () => {
     const myFn = tgpu.fn(
       [Item],
       Item,
-    ) /* wgsl */`(item: Item) -> Item { return item; }`
+    ) /* wgsl */`(item) { return item; }`
       .$uses({ Item });
     const myLayout = tgpu
       .bindGroupLayout({ foo: { uniform: d.vec3f } })
@@ -93,6 +90,21 @@ describe('autonaming', () => {
     expect(getName(myBuffer)).toBe('myBuffer');
     expect(getName(myFn)).toBe('myFn');
     expect(getName(myLayout)).toBe('myLayout');
+  });
+
+  it('names views', ({ root }) => {
+    const texture = root['~unstable'].createTexture({
+      size: [256, 256],
+      format: 'rgba8unorm',
+    }).$usage('sampled', 'storage');
+
+    const sampledView = texture.createView(d.texture2d(d.f32));
+    const storageView = texture.createView(
+      d.textureStorage2d('rgba8unorm', 'read-only'),
+    );
+
+    expect(getName(sampledView)).toBe('sampledView');
+    expect(getName(storageView)).toBe('storageView');
   });
 
   it('does not rename already named resources', () => {
@@ -202,5 +214,55 @@ describe('autonaming', () => {
         myFun();
       }"
     `);
+  });
+
+  it('autonames class properties', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames object member assignment', ({ root }) => {
+    const items: { myBuffer: unknown } = { myBuffer: undefined };
+
+    items.myBuffer = root.createUniform(d.u32);
+
+    expect(getName(items.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames this prop assignment', ({ root }) => {
+    class MyController {
+      myBuffer;
+
+      constructor() {
+        this.myBuffer = root.createUniform(d.u32);
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
+  });
+
+  it('autonames private prop assignment', ({ root }) => {
+    class MyController {
+      #myBuffer;
+
+      constructor() {
+        this.#myBuffer = root.createUniform(d.u32);
+      }
+
+      get myBuffer() {
+        return this.#myBuffer;
+      }
+    }
+
+    const myController = new MyController();
+
+    expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
 });

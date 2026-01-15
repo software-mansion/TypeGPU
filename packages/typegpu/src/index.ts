@@ -6,8 +6,10 @@ import { constant } from './core/constant/tgpuConstant.ts';
 import { declare } from './core/declare/tgpuDeclare.ts';
 import { computeFn } from './core/function/tgpuComputeFn.ts';
 import { fn } from './core/function/tgpuFn.ts';
+import { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 import { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 import { vertexFn } from './core/function/tgpuVertexFn.ts';
+import { comptime } from './core/function/comptime.ts';
 import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { simulate } from './core/simulate/tgpuSimulate.ts';
 import { init, initFromDevice } from './core/root/init.ts';
@@ -44,6 +46,7 @@ export const tgpu = {
     fragmentFn,
     vertexFn,
     computeFn,
+    comptime,
     /**
      * @deprecated This feature is now stable, use tgpu.vertexLayout.
      */
@@ -68,6 +71,7 @@ export const tgpu = {
      */
     const: constant,
     declare,
+    rawCodeSnippet,
 
     simulate,
   },
@@ -139,6 +143,10 @@ export type {
   TgpuDerived,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
+export type {
+  RawCodeSnippetOrigin,
+  TgpuRawCodeSnippet,
+} from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
 export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
@@ -167,6 +175,7 @@ export type {
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';
 export type { TgpuFn, TgpuFnShell } from './core/function/tgpuFn.ts';
+export type { TgpuComptime } from './core/function/comptime.ts';
 export type {
   TgpuVertexFn,
   TgpuVertexFnShell,

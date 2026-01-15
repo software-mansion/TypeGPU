@@ -176,7 +176,7 @@ describe('wgslGenerator', () => {
       [],
       {},
       d.u32,
-      astInfo.externals ?? {},
+      (astInfo.externals as () => Record<string, unknown>)() ?? {},
     );
 
     provideCtx(ctx, () => {
@@ -243,7 +243,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.u32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: return testUsage.value[3];
@@ -320,7 +320,7 @@ describe('wgslGenerator', () => {
         args,
         {},
         d.vec4f,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
@@ -478,7 +478,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.vec4u,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       wgslGenerator.initGenerator(ctx);
@@ -515,7 +515,7 @@ describe('wgslGenerator', () => {
         [snip('idx', d.u32, /* origin */ 'runtime')],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: return derivedV2f.value[idx];
@@ -559,7 +559,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.u32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const arr = [1, 2, 3]
@@ -656,7 +656,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
@@ -745,7 +745,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       wgslGenerator.initGenerator(ctx);
@@ -791,7 +791,7 @@ describe('wgslGenerator', () => {
         [],
         {},
         d.f32,
-        astInfo.externals ?? {},
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
       // Check for: const value = testSlot.value.value;
@@ -937,7 +937,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:translate4: Cannot read properties of undefined (reading 'dataType')]
+      - fn:translate4: Cannot read properties of undefined (reading 'x')]
     `);
   });
 
@@ -994,36 +994,6 @@ describe('wgslGenerator', () => {
         return (n + macro_1);
       }"
     `);
-  });
-
-  it('throws when struct prop has whitespace in name', () => {
-    const TestStruct = d.struct({ 'my prop': d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
-      `);
-  });
-
-  it('throws when struct prop uses a reserved word', () => {
-    const TestStruct = d.struct({ struct: d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Property key 'struct' is a reserved WGSL word. Choose a different name.]
-      `);
   });
 
   it('throws when an identifier starts with underscores', () => {
@@ -1145,7 +1115,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var matrix = mat4x4f();
+        var matrix = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let column = (&matrix[1i]);
         let element = (*column)[0i];
         let directElement = matrix[1i][0i];
@@ -1196,6 +1166,28 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
+    `);
+  });
+
+  it('generates correct indentation for nested blocks', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      let res = 0;
+      {
+        const f = 2;
+        res += f;
+      }
+      return res;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var res = 0;
+        {
+          const f = 2;
+          res += f;
+        }
+        return res;
+      }"
     `);
   });
 });

@@ -32,32 +32,32 @@ describe('TgpuRenderPipeline', () => {
 
     // Using none
     const pipeline = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vert)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are erased from the vertex output)
     const pipeline2 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragment, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragment)
       .createPipeline();
 
     // Using none (builtins are ignored in the fragment input)
     const pipeline3 = root
-      .withVertex(vert, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vert)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using none (builtins are ignored in both input and output,
     // so their conflict of the `pos` key is fine)
     const pipeline4 = root
-      .withVertex(vertWithBuiltin, {})
-      .withFragment(emptyFragmentWithBuiltin, {})
+      .withVertex(vertWithBuiltin)
+      .withFragment(emptyFragmentWithBuiltin)
       .createPipeline();
 
     // Using all
     const pipeline5 = root
-      .withVertex(vert, {})
+      .withVertex(vert)
       .withFragment(fullFragment, { format: 'rgba8unorm' })
       .createPipeline();
 
@@ -137,6 +137,52 @@ describe('TgpuRenderPipeline', () => {
       tgpu['~unstable'].fragmentFn({ out: {} }),
       // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+  });
+
+  it('properly handles custom depth output in fragment functions', ({ root }) => {
+    const vertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
+      d.vec2f(-1, -1),
+      d.vec2f(3, -1),
+      d.vec2f(-1, 3),
+    ]);
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      in: { vid: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position },
+      // biome-ignore lint/style/noNonNullAssertion: it's fine
+    })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
+
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      out: { color: d.vec4f, depth: d.builtin.fragDepth },
+    })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
+
+    const pipeline = root
+      .withVertex(vertexMain, {})
+      .withFragment(fragmentMain, { color: { format: 'rgba8unorm' } })
+      .createPipeline();
+
+    pipeline.withColorAttachment({
+      color: {
+        view: {} as unknown as GPUTextureView,
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    });
+
+    expect(() => {
+      pipeline.withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+        // @ts-expect-error
+        depth: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+    });
   });
 
   it('type checks passed bind groups', ({ root }) => {
@@ -747,6 +793,53 @@ describe('TgpuRenderPipeline', () => {
         },
       }),
     );
+  });
+
+  it('should handle stencil reference value correctly', ({ root, commandEncoder }) => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({
+        out: { pos: d.builtin.position },
+      })('')
+      .$name('vertex');
+
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({
+        out: { color: d.vec4f },
+      })('')
+      .$name('fragment');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .withDepthStencil({
+        format: 'stencil8',
+        stencilFront: { passOp: 'replace' },
+      })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      })
+      .withDepthStencilAttachment({
+        view: {} as unknown as GPUTextureView,
+        stencilLoadOp: 'clear',
+        stencilStoreOp: 'store',
+        stencilClearValue: 5,
+      })
+      .withStencilReference(3);
+
+    pipeline.draw(3);
+
+    const renderPassEncoder = commandEncoder.mock.beginRenderPass();
+    expect(renderPassEncoder.setStencilReference)
+      .toHaveBeenCalledExactlyOnceWith(3);
+
+    pipeline.withStencilReference(7).draw(3);
+
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 7);
   });
 
   it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
