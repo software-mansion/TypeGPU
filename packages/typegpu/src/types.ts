@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { Block, FuncParameter } from 'tinyest';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type {
   TgpuBufferMutable,
@@ -76,14 +76,14 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   functionType: 'normal' | TgpuShaderStage;
-  args: Snippet[];
-  argAliases: Record<string, Snippet>;
+  argTypes: AnyData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
   body: Block;
+  params: FuncParameter[];
   externalMap: Record<string, unknown>;
 }
 
@@ -109,15 +109,29 @@ export type FunctionScopeLayer = {
   reportedReturnTypes: Set<AnyData>;
 };
 
+export type SlotBindingLayer = {
+  type: 'slotBinding';
+  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+};
+
+export type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, Snippet>;
+};
+
+export type StackLayer =
+  | ItemLayer
+  | SlotBindingLayer
+  | FunctionScopeLayer
+  | BlockScopeLayer;
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  popItem(): void;
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
-  popSlotBindings(): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -129,10 +143,11 @@ export interface ItemStateStack {
     returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
-  popFunctionScope(): void;
   pushBlockScope(): void;
-  popBlockScope(): void;
-  pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
+
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;

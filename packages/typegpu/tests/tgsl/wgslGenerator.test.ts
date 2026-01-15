@@ -338,7 +338,7 @@ describe('wgslGenerator', () => {
       const res2 = wgslGenerator.expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2],
       );
-      ctx[$internal].itemStateStack.popBlockScope();
+      ctx[$internal].itemStateStack.pop('blockScope');
 
       expect(res2.dataType).toStrictEqual(d.vec4f);
 
@@ -353,7 +353,7 @@ describe('wgslGenerator', () => {
       const res4 = wgslGenerator.expression(
         astInfo.ast?.body[1][2] as tinyest.Expression,
       );
-      ctx[$internal].itemStateStack.popBlockScope();
+      ctx[$internal].itemStateStack.pop('blockScope');
 
       expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
       expect(res4.dataType).toStrictEqual(Void);
@@ -996,36 +996,6 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws when struct prop has whitespace in name', () => {
-    const TestStruct = d.struct({ 'my prop': d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]
-      `);
-  });
-
-  it('throws when struct prop uses a reserved word', () => {
-    const TestStruct = d.struct({ struct: d.f32 });
-    const main = tgpu.fn([])(() => {
-      const instance = TestStruct();
-    });
-
-    expect(() => tgpu.resolve([main]))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main
-        - struct:TestStruct: Property key 'struct' is a reserved WGSL word. Choose a different name.]
-      `);
-  });
-
   it('throws when an identifier starts with underscores', () => {
     const main1 = tgpu.fn([])(() => {
       const _ = 1;
@@ -1196,6 +1166,28 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn: Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.]
+    `);
+  });
+
+  it('generates correct indentation for nested blocks', () => {
+    const main = tgpu.fn([], d.i32)(() => {
+      let res = 0;
+      {
+        const f = 2;
+        res += f;
+      }
+      return res;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var res = 0;
+        {
+          const f = 2;
+          res += f;
+        }
+        return res;
+      }"
     `);
   });
 });

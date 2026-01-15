@@ -21,10 +21,21 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { type AnyData, isData, UnknownData } from './data/dataTypes.ts';
+import {
+  type AnyData,
+  isData,
+  undecorate,
+  UnknownData,
+} from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import { isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import {
+  isPtr,
+  isWgslArray,
+  isWgslStruct,
+  Void,
+  type WgslStruct,
+} from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -66,6 +77,7 @@ import type {
   ItemStateStack,
   ResolutionCtx,
   ShaderStage,
+  StackLayer,
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
@@ -75,6 +87,7 @@ import { hasTinyestMetadata } from './shared/meta.ts';
 import { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 import { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 import { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+import { FuncParameterType } from 'tinyest';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -95,23 +108,8 @@ export type ResolutionCtxImplOptions = {
   readonly namespace: Namespace;
 };
 
-type SlotBindingLayer = {
-  type: 'slotBinding';
-  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
-};
-
-type BlockScopeLayer = {
-  type: 'blockScope';
-  declarations: Map<string, Snippet>;
-};
-
 class ItemStateStackImpl implements ItemStateStack {
-  private _stack: (
-    | ItemLayer
-    | SlotBindingLayer
-    | FunctionScopeLayer
-    | BlockScopeLayer
-  )[] = [];
+  private _stack: StackLayer[] = [];
   private _itemDepth = 0;
 
   get itemDepth(): number {
@@ -138,19 +136,11 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popItem() {
-    this.pop('item');
-  }
-
   pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
     });
-  }
-
-  popSlotBindings() {
-    this.pop('slotBinding');
   }
 
   pushFunctionScope(
@@ -174,10 +164,6 @@ class ItemStateStackImpl implements ItemStateStack {
     return scope;
   }
 
-  popFunctionScope() {
-    this.pop('functionScope');
-  }
-
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
@@ -185,20 +171,19 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  popBlockScope() {
-    this.pop('blockScope');
-  }
-
-  pop(type?: (typeof this._stack)[number]['type']) {
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+  pop(type?: StackLayer['type']) {
     const layer = this._stack[this._stack.length - 1];
     if (!layer || (type && layer.type !== type)) {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
     }
 
-    this._stack.pop();
+    const poppedValue = this._stack.pop();
     if (type === 'item') {
       this._itemDepth--;
     }
+    return poppedValue;
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T | undefined {
@@ -335,7 +320,7 @@ interface FixedBindingConfig {
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  readonly #namespace: NamespaceInternal;
+  readonly #namespaceInternal: NamespaceInternal;
   readonly #shaderGenerator: ShaderGenerator;
 
   /**
@@ -384,15 +369,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#logGenerator = opts.root
       ? new LogGeneratorImpl(opts.root)
       : new LogGeneratorNullImpl();
-    this.#namespace = opts.namespace[$internal];
+    this.#namespaceInternal = opts.namespace[$internal];
   }
 
   getUniqueName(resource: object): string {
-    return getUniqueName(this.#namespace, resource);
+    return getUniqueName(this.#namespaceInternal, resource);
   }
 
   makeNameValid(name: string): string {
-    return this.#namespace.nameRegistry.makeValid(name);
+    return this.#namespaceInternal.nameRegistry.makeValid(name);
   }
 
   get pre(): string {
@@ -410,7 +395,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   get shelllessRepo() {
-    return this.#namespace.shelllessRepo;
+    return this.#namespaceInternal.shelllessRepo;
   }
 
   indent(): string {
@@ -450,7 +435,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   popBlockScope() {
-    this._itemStateStack.popBlockScope();
+    this._itemStateStack.pop('blockScope');
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
@@ -469,15 +454,67 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   fnToWgsl(
     options: FnToWgslOptions,
   ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
-    const scope = this._itemStateStack.pushFunctionScope(
-      options.functionType,
-      options.args,
-      options.argAliases,
-      options.returnType,
-      options.externalMap,
-    );
+    let fnScopePushed = false;
 
     try {
+      this.#namespaceInternal.nameRegistry.pushFunctionScope();
+      const args: Snippet[] = [];
+      const argAliases: [string, Snippet][] = [];
+
+      for (const [i, argType] of options.argTypes.entries()) {
+        const astParam = options.params[i];
+        // We know if arguments are passed by reference or by value, because we
+        // enforce that based on the whether the argument is a pointer or not.
+        //
+        // It still applies for shell-less functions, since we determine the type
+        // of the argument based on the argument's referentiality.
+        // In other words, if we pass a reference to a function, it's typed as a pointer,
+        // otherwise it's typed as a value.
+        const origin = isPtr(argType)
+          ? argType.addressSpace === 'storage'
+            ? argType.access === 'read' ? 'readonly' : 'mutable'
+            : argType.addressSpace
+          : 'argument';
+
+        switch (astParam?.type) {
+          case FuncParameterType.identifier: {
+            const rawName = astParam.name;
+            const snippet = snip(this.makeNameValid(rawName), argType, origin);
+            args.push(snippet);
+            if (snippet.value !== rawName) {
+              argAliases.push([rawName, snippet]);
+            }
+            break;
+          }
+          case FuncParameterType.destructuredObject: {
+            args.push(snip(`_arg_${i}`, argType, origin));
+            argAliases.push(...astParam.props.map(({ name, alias }) => {
+              // Undecorating, as the struct type can contain builtins
+              const destrType = undecorate(
+                (options.argTypes[i] as WgslStruct).propTypes[name],
+              );
+
+              return [
+                alias,
+                snip(`_arg_${i}.${name}`, destrType, 'argument'),
+              ] as [string, Snippet];
+            }));
+            break;
+          }
+          case undefined:
+            args.push(snip(`_arg_${i}`, argType, origin));
+        }
+      }
+
+      const scope = this._itemStateStack.pushFunctionScope(
+        options.functionType,
+        args,
+        Object.fromEntries(argAliases),
+        options.returnType,
+        options.externalMap,
+      );
+      fnScopePushed = true;
+
       this.#shaderGenerator.initGenerator(this);
       const body = this.#shaderGenerator.functionDefinition(options.body);
 
@@ -505,12 +542,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       return {
-        head: resolveFunctionHeader(this, options.args, returnType),
+        head: resolveFunctionHeader(this, args, returnType),
         body,
         returnType,
       };
     } finally {
-      this._itemStateStack.popFunctionScope();
+      if (fnScopePushed) {
+        this._itemStateStack.pop('functionScope');
+      }
+      this.#namespaceInternal.nameRegistry.popFunctionScope();
     }
   }
 
@@ -560,7 +600,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      this._itemStateStack.popSlotBindings();
+      this._itemStateStack.pop('slotBinding');
     }
   }
 
@@ -603,7 +643,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   _getOrCompute<T>(derived: TgpuDerived<T>): T {
     // All memoized versions of `derived`
-    const instances = this.#namespace.memoizedDerived.get(derived) ?? [];
+    const instances = this.#namespaceInternal.memoizedDerived.get(derived) ??
+      [];
 
     this._itemStateStack.pushItem();
 
@@ -638,7 +679,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespace.memoizedDerived.set(derived, instances);
+      this.#namespaceInternal.memoizedDerived.set(derived, instances);
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
@@ -647,7 +688,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [derived]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
@@ -656,7 +697,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    */
   _getOrInstantiate(item: object): ResolvedSnippet {
     // All memoized versions of `item`
-    const instances = this.#namespace.memoizedResolves.get(item) ?? [];
+    const instances = this.#namespaceInternal.memoizedResolves.get(item) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -685,7 +726,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       } else if (hasTinyestMetadata(item)) {
         // Resolving a function with tinyest metadata directly means calling it with no arguments, since
         // we cannot infer the types of the arguments from a WGSL string.
-        const shellless = this.#namespace.shelllessRepo.get(
+        const shellless = this.#namespaceInternal.shelllessRepo.get(
           item,
           /* no arguments */ undefined,
         );
@@ -709,7 +750,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespace.memoizedResolves.set(item, instances);
+      this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;
     } catch (err) {
@@ -719,7 +760,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [item]);
     } finally {
-      this._itemStateStack.popItem();
+      this._itemStateStack.pop('item');
     }
   }
 
@@ -730,7 +771,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
-        !this.#namespace.memoizedResolves.has(item)
+        !this.#namespaceInternal.memoizedResolves.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
