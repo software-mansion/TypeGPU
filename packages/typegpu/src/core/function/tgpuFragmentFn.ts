@@ -3,11 +3,14 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { Undecorate } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
+  BaseData,
   Decorated,
   Interpolate,
   Location,
+  v4f,
   Vec4f,
   Vec4i,
   Vec4u,
@@ -19,7 +22,9 @@ import {
   setName,
   type TgpuNamable,
 } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
+import type { Assume } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -43,6 +48,17 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
+export type FragmentInFromVertexOut<T> =
+  & {
+    [K in keyof T]:
+      | Undecorate<T[K]>
+      | Decorated<
+        Assume<Undecorate<T[K]>, BaseData>,
+        (Location | Interpolate)[]
+      >;
+  }
+  & Record<string, AnyFragmentInputBuiltin>;
+
 type FragmentColorValue = Vec4f | Vec4i | Vec4u;
 
 export type FragmentOutConstrained = IOLayout<
@@ -50,6 +66,11 @@ export type FragmentOutConstrained = IOLayout<
   | Decorated<FragmentColorValue, (Location | Interpolate)[]>
   | AnyFragmentOutputBuiltin
 >;
+
+export type FragmentOutInferred =
+  | undefined
+  | v4f
+  | Record<string, v4f | InferGPU<AnyFragmentOutputBuiltin>>;
 
 /**
  * Describes a fragment entry function signature (its arguments, return type and targets)
@@ -96,8 +117,10 @@ export type TgpuFragmentFnShell<
   ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>);
 
 export interface TgpuFragmentFn<
-  Varying extends FragmentInConstrained = FragmentInConstrained,
-  Output extends FragmentOutConstrained = FragmentOutConstrained,
+  // @ts-expect-error: We override the variance
+  in Varying extends FragmentInConstrained = FragmentInConstrained,
+  // @ts-expect-error: We override the variance
+  out Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
   readonly [$internal]: true;
   readonly shell: TgpuFragmentFnShellHeader<Varying, Output>;

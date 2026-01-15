@@ -1,4 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
+import type { AutoStruct } from '../../data/autoStruct.ts';
 import { type AnyData, undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
@@ -17,12 +18,16 @@ export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
     ctx: ResolutionCtx,
-    argTypes: AnyData[],
+    /**
+     * The argument types can be AutoStruct if they're determined based on usage
+     * (like in auto-entry functions).
+     */
+    argTypes: (AnyData | AutoStruct)[],
     /**
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: AnyData | undefined,
+    returnType: AnyData | AutoStruct | undefined,
   ): ResolvedSnippet;
 }
 

@@ -1,3 +1,4 @@
+import type { AutoStruct } from '../data/autoStruct.ts';
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
@@ -65,10 +66,10 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: AnyData | AutoStruct | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: AnyData | undefined;
+  readonly topFunctionReturnType: AnyData | AutoStruct | undefined;
 
   indent(): string;
   dedent(): string;

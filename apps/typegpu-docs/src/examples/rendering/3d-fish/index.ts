@@ -182,16 +182,18 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, modelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  attribs: modelVertexLayout.attrib,
+  vertex: vertexShader,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -451,19 +453,15 @@ window.addEventListener('mousemove', mouseMoveEventListener);
 
 // Touch controls
 
-canvas.addEventListener(
-  'touchstart',
-  async (event) => {
-    event.preventDefault();
-    if (event.touches.length === 1) {
-      previousMouseX = event.touches[0].clientX;
-      previousMouseY = event.touches[0].clientY;
-      updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
-      controlsPopup.style.opacity = '0';
-    }
-  },
-  { passive: false },
-);
+canvas.addEventListener('touchstart', async (event) => {
+  event.preventDefault();
+  if (event.touches.length === 1) {
+    previousMouseX = event.touches[0].clientX;
+    previousMouseY = event.touches[0].clientY;
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+    controlsPopup.style.opacity = '0';
+  }
+}, { passive: false });
 
 const touchMoveEventListener = (event: TouchEvent) => {
   if (event.touches.length === 1) {

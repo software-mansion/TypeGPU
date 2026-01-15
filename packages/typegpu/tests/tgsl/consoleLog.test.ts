@@ -115,9 +115,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(d.u32(10));
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -177,9 +175,9 @@ describe('wgslGenerator with console.log', () => {
       console.log(d.u32(20));
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({
+      compute: fn,
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -259,9 +257,9 @@ describe('wgslGenerator with console.log', () => {
       );
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({
+      compute: fn,
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -341,9 +339,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(complexStruct);
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
@@ -463,9 +459,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(complexStruct);
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
@@ -590,9 +584,7 @@ describe('wgslGenerator with console.log', () => {
       );
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
 
     expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:

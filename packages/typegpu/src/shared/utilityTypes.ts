@@ -53,12 +53,39 @@ export type NullableToOptional<T> =
     [K in keyof T as T[K] extends null ? never : K]: T[K];
   };
 
+export type UndefinedToOptional<T> =
+  & {
+    // Props where the value extends `undefined` -> make them optional
+    [K in keyof T as T[K] extends undefined ? K : never]?: T[K];
+  }
+  & {
+    // All other props remain unchanged
+    [K in keyof T as T[K] extends undefined ? never : K]: T[K];
+  };
+
+export type NeverRecordToOptional<T> =
+  & {
+    // Props where the value extends `Record<string, never>` -> make them optional
+    [K in keyof T as T[K] extends Record<string, never> ? K : never]?:
+      | T[K]
+      | undefined;
+  }
+  & {
+    // All other props remain unchanged
+    [K in keyof T as T[K] extends Record<string, never> ? never : K]: T[K];
+  };
+
 /**
  * The opposite of Readonly<T>
  */
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
+
+/**
+ * Source: https://code.lol/post/programming/higher-kinded-types/
+ */
+export type Assume<T, U> = T extends U ? T : U;
 
 /**
  * Any typed array
