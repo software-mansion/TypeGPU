@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
 import tgpu from '../src/index.ts';
+import * as std from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -362,5 +362,33 @@ describe('tgpu.slot', () => {
         return color;
       }"
     `);
+  });
+
+  it('includes slot bindings in toString', () => {
+    const firstSlot = tgpu.slot<number>();
+    const secondSlot = tgpu.slot<number>();
+    const thirdSlot = tgpu.slot<number>();
+
+    const getSize = tgpu.fn([], d.f32)(() =>
+      firstSlot.$ + secondSlot.$ + thirdSlot.$
+    )
+      .with(firstSlot, 1)
+      .with(secondSlot, 2)
+      .with(thirdSlot, 3);
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
+    );
+  });
+
+  it('safe stringifies in toString', () => {
+    const slot = tgpu.slot<d.v4f>();
+
+    const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
+      .with(slot, d.vec4f(1, 2, 3, 4));
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
+    );
   });
 });
