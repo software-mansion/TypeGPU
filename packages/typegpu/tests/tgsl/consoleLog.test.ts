@@ -59,6 +59,7 @@ describe('wgslGenerator with console.log', () => {
 
       @vertex fn vs() -> vs_Output {
         myLog(5i);
+        /* console.log() */;
         return vs_Output(vec4f());
       }"
     `);
