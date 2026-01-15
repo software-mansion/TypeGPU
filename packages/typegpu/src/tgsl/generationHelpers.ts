@@ -1,12 +1,20 @@
+import { $internal, $resolve } from '../../src/shared/symbols.ts';
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isEphemeralSnippet,
+  isSnippet,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyEphemeral,
   isVecInstance,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -14,8 +22,11 @@ import {
   type FunctionScopeLayer,
   getOwnSnippet,
   type ResolutionCtx,
+  type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
+import { stitch } from '../../src/core/resolve/stitch.ts';
+import { WgslTypeError } from '../../src/errors.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -126,4 +137,48 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   return snip(value, UnknownData, /* origin */ 'constant');
+}
+
+// defers the resolution of array expressions
+export class ArrayExpression implements SelfResolvable {
+  readonly [$internal] = true;
+
+  constructor(
+    public readonly elementType: AnyWgslData,
+    public readonly type: AnyWgslData,
+    public readonly elements: Snippet[],
+  ) {
+  }
+
+  toString(): string {
+    return 'ArrayExpression';
+  }
+
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    for (const elem of this.elements) {
+      // We check if there are no references among the elements
+      if (
+        (elem.origin === 'argument' &&
+          !isNaturallyEphemeral(elem.dataType)) ||
+        !isEphemeralSnippet(elem)
+      ) {
+        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetType =
+          ctx.resolve(concretize(elem.dataType as AnyData)).value;
+        throw new WgslTypeError(
+          `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+        );
+      }
+    }
+
+    const arrayType = `array<${
+      ctx.resolve(this.elementType).value
+    }, ${this.elements.length}>`;
+
+    return snip(
+      stitch`${arrayType}(${this.elements})`,
+      this.type,
+      /* origin */ 'runtime',
+    );
+  }
 }
