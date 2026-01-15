@@ -44,6 +44,7 @@ describe('wgslGenerator with console.log', () => {
     const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
       () => {
         myLog(5);
+        console.log(6);
         return { pos: d.vec4f() };
       },
     );

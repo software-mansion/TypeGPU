@@ -257,14 +257,14 @@ export const controls = {
         in: { pos: d.builtin.position },
         out: d.vec4f,
       })(() => {
-        // console.log('A log made from fragment stage.');
+        console.log('A log made from fragment stage.');
         helper();
 
         return d.vec4f(0.769, 0.392, 1.0, 1);
       });
 
       const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
+        .withVertex(mainVertex)
         .withFragment(mainFragment, { format: presentationFormat })
         .createPipeline();
 
