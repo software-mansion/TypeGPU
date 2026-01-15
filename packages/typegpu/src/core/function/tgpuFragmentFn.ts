@@ -22,6 +22,7 @@ import {
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -226,11 +227,12 @@ function createFragmentFn(
       }
       core.applyExternals({ Out: outputType });
 
-      return core.resolve(
-        ctx,
-        inputWithLocation ? [inputWithLocation] : [],
-        shell.returnType,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
+        core.resolve(
+          ctx,
+          inputWithLocation ? [inputWithLocation] : [],
+          shell.returnType,
+        ));
     },
 
     toString() {

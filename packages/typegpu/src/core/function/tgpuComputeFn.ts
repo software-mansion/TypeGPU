@@ -9,6 +9,7 @@ import {
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
@@ -168,11 +169,12 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      return core.resolve(
-        ctx,
-        shell.argTypes,
-        shell.returnType,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'compute']], () =>
+        core.resolve(
+          ctx,
+          shell.argTypes,
+          shell.returnType,
+        ));
     },
 
     toString() {

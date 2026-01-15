@@ -18,6 +18,7 @@ import {
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -205,11 +206,12 @@ function createVertexFn(
         core.applyExternals({ Out: outputWithLocation });
       }
 
-      return core.resolve(
-        ctx,
-        shell.argTypes,
-        outputWithLocation,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+        core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+        ));
     },
 
     toString() {

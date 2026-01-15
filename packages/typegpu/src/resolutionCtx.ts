@@ -439,11 +439,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
-    if (this._currentStage === 'vertex') {
-      throw new Error(
-        `'console.log' is not supported during vertex shader stage.`,
-      );
-    }
     return this.#logGenerator.generateLog(this, op, args);
   }
 
