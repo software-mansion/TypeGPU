@@ -58,12 +58,8 @@ export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type {
   TgpuPrimitiveState,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptor,
 } from './core/pipeline/renderPipeline.ts';
-export type {
-  TgpuComputePipeline,
-  TgpuComputePipelineDescriptor,
-} from './core/pipeline/computePipeline.ts';
+export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type {
   IndexFlag,
   TgpuBuffer,
@@ -146,3 +142,7 @@ export type { Namespace } from './core/resolve/namespace.ts';
 // Exported for being able to track use of these global extensions easier,
 // and to establish a solid contract between tooling using them.
 export type { INTERNAL_GlobalExt } from './shared/meta.ts';
+
+/** @deprecated Use TgpuRenderPipeline.Descriptor */
+export type TgpuRenderPipelineDescriptor =
+  import('./core/pipeline/renderPipeline.ts').TgpuRenderPipeline.Descriptor;

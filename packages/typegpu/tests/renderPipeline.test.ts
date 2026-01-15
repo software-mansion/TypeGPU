@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import tgpu, {
+  common,
   d,
   MissingBindGroupsError,
   type TgpuFragmentFnShell,
@@ -147,7 +148,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const vertexMain = tgpu['~unstable'].vertexFn({
       in: { vid: d.builtin.vertexIndex },
       out: { pos: d.builtin.position },
-      // biome-ignore lint/style/noNonNullAssertion: it's fine
     })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
 
     const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -191,7 +191,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       bar: d.vec3f(),
     }));
     const fragmentMain = tgpu['~unstable'].fragmentFn({
-      in: { bar: d.location(0, d.vec3f) },
+      in: { bar: d.vec3f },
       out: d.vec4f,
     })(() => d.vec4f());
     const renderPipeline = root
@@ -1089,6 +1089,7 @@ describe('root.createRenderPipeline', () => {
         vertex,
         fragment: () => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1102,6 +1103,7 @@ describe('root.createRenderPipeline', () => {
         vertex: vertexWithBuiltin,
         fragment: () => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1115,6 +1117,7 @@ describe('root.createRenderPipeline', () => {
         vertex,
         fragment: ({ $frontFacing }) => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1129,6 +1132,7 @@ describe('root.createRenderPipeline', () => {
         vertex: vertexWithBuiltin,
         fragment: ({ $frontFacing }) => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1170,6 +1174,8 @@ describe('root.createRenderPipeline', () => {
       targets: { format: 'rgba8unorm' },
     });
 
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<d.Vec4f>>();
+
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vertex_Output {
         @location(0) a: vec3f,
@@ -1203,6 +1209,8 @@ describe('root.createRenderPipeline', () => {
       },
       targets: { format: 'rgba8unorm' },
     });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<d.Vec4f>>();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vertex_Output {
@@ -1239,6 +1247,10 @@ describe('root.createRenderPipeline', () => {
       targets: { color: { format: 'rgba8unorm' } },
     });
 
+    expectTypeOf(pipeline).toEqualTypeOf<
+      TgpuRenderPipeline<{ color: d.Vec4f }>
+    >();
+
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vertex_Output {
         @location(0) a: vec3f,
@@ -1259,7 +1271,9 @@ describe('root.createRenderPipeline', () => {
   });
 
   it('generates a struct that matches a shell-less vertex return value', ({ root }) => {
+    const layout = tgpu.vertexLayout((count) => d.arrayOf(d.vec3f, count));
     const pipeline = root.createRenderPipeline({
+      attribs: { a: layout.attrib },
       vertex: ({ $vertexIndex }) => {
         'use gpu';
         const pos = [
@@ -1278,6 +1292,10 @@ describe('root.createRenderPipeline', () => {
       },
       targets: { color: { format: 'rgba8unorm' } },
     });
+
+    expectTypeOf(pipeline).toEqualTypeOf<
+      TgpuRenderPipeline<{ color: d.Vec4f }>
+    >();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
@@ -1329,6 +1347,8 @@ describe('root.createRenderPipeline', () => {
       },
       targets: { format: 'rgba8unorm' },
     });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<d.Vec4f>>();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
@@ -1530,5 +1550,39 @@ describe('matchUpVaryingLocations', () => {
       b: 1,
       c: 0,
     });
+  });
+});
+
+describe('TgpuRenderPipeline', () => {
+  it('any pipeline is assignable to default type', ({ root }) => {
+    const pipeline = root['~unstable'].createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: () => {
+        return d.vec4f(1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const helper = (_pipe: TgpuRenderPipeline) => {
+      // Do something...
+    };
+
+    helper(pipeline);
+  });
+
+  it('a "wider" pipeline is assignable to a "thinner" pipeline', ({ root }) => {
+    const pipeline = root['~unstable'].createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: tgpu['~unstable'].fragmentFn({ out: { a: d.vec4f } })(() => {
+        return { a: d.vec4f(1) };
+      }),
+      targets: { a: { format: 'rgba8unorm' } },
+    });
+
+    const helper = (_pipe: TgpuRenderPipeline<{ a: d.Vec4f }>) => {
+      // Do something...
+    };
+
+    helper(pipeline);
   });
 });

@@ -9,12 +9,7 @@ import {
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
-import {
-  isEphemeralSnippet,
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -41,13 +36,9 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $internal, $ownSnippet, $resolve, $gpuCallable } from '../shared/symbols.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
-import {
-  isKnownAtComptime,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../types.ts';
+import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
 const infixKinds = [
@@ -178,7 +169,7 @@ export function accessProp(
   }
 
   if (target.dataType instanceof AutoStruct) {
-    const result = (target.dataType as AutoStruct).accessProp(propName);
+    const result = target.dataType.accessProp(propName);
     if (!result) {
       return undefined;
     }
@@ -238,33 +229,4 @@ export function accessProp(
   }
 
   return undefined;
-}
-
-/**
- * A self-resolvable value representing deferred property access.
- */
-export class PropAccess implements SelfResolvable {
-  readonly [$internal]: true;
-  readonly target: Snippet;
-  readonly prop: string;
-
-  constructor(target: Snippet, prop: string) {
-    this[$internal] = true;
-    this.target = target;
-    this.prop = prop;
-  }
-
-  get [$ownSnippet](): Snippet {
-    const prop = accessProp(this.target, this.prop);
-    if (!prop) {
-      throw new Error(
-        stitch`Property ${this.prop} not found on '${this.target}'`,
-      );
-    }
-    return prop;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.resolve(this[$ownSnippet]);
-  }
 }

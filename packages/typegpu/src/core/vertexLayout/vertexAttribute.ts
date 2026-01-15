@@ -3,7 +3,10 @@ import type {
   LooseDecorated,
   Unstruct,
 } from '../../data/dataTypes.ts';
-import type { FormatToWGSLType } from '../../data/vertexFormatData.ts';
+import type {
+  FormatToAcceptedData,
+  FormatToWGSLType,
+} from '../../data/vertexFormatData.ts';
 import type { Decorated, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
 import type {
   KindToAcceptedAttribMap,
@@ -49,4 +52,10 @@ export type AttribRecordToDefaultDataTypes<
   T extends Record<string, TgpuVertexAttrib>,
 > = {
   [Key in keyof T]: FormatToWGSLType<T[Key]['format']>;
+};
+
+export type AttribRecordToAcceptedDataTypes<
+  T extends Record<string, TgpuVertexAttrib>,
+> = {
+  [Key in keyof T]: FormatToAcceptedData[T[Key]['format']];
 };

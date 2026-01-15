@@ -37,18 +37,12 @@ import {
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
-  readonly branch: ExperimentalTgpuRoot;
+  readonly root: ExperimentalTgpuRoot;
 }
 
 // ----------
 // Public API
 // ----------
-
-export type TgpuComputePipelineDescriptor<
-  Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>,
-> = {
-  compute: TgpuComputeFn<Input>;
-};
 
 export interface TgpuComputePipeline
   extends TgpuNamable, SelfResolvable, Timeable {
@@ -72,10 +66,18 @@ export interface TgpuComputePipeline
   ): void;
 }
 
+export declare namespace TgpuComputePipeline {
+  export type Descriptor<
+    Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>,
+  > = {
+    compute: TgpuComputeFn<Input>;
+  };
+}
+
 export function INTERNAL_createComputePipeline(
   branch: ExperimentalTgpuRoot,
   slotBindings: [TgpuSlot<unknown>, unknown][],
-  descriptor: TgpuComputePipelineDescriptor,
+  descriptor: TgpuComputePipeline.Descriptor,
 ) {
   return new TgpuComputePipelineImpl(
     new ComputePipelineCore(branch, slotBindings, descriptor),
@@ -114,7 +116,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       get priors() {
         return _priors;
       },
-      get branch() {
+      get root() {
         return _core.root;
       },
     };
@@ -250,12 +252,12 @@ class ComputePipelineCore implements SelfResolvable {
   private _memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
-  #descriptor: TgpuComputePipelineDescriptor;
+  #descriptor: TgpuComputePipeline.Descriptor;
 
   constructor(
     public readonly root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuComputePipelineDescriptor,
+    descriptor: TgpuComputePipeline.Descriptor,
   ) {
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;

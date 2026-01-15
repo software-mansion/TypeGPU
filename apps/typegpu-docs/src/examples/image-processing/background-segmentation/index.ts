@@ -169,7 +169,7 @@ const drawWithMaskPipeline = root['~unstable']
   .with(paramsAccess, paramsUniform)
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
-    fragment: (({ uv }) => {
+    fragment: ({ uv }) => {
       'use gpu';
       const originalColor = std.textureSampleBaseClampToEdge(
         drawWithMaskLayout.$.inputTexture,
@@ -178,7 +178,7 @@ const drawWithMaskPipeline = root['~unstable']
       );
 
       let blurredColor = d.vec4f();
-      if (paramsAccessor.$.useGaussian === 1) {
+      if (paramsAccess.$.useGaussian === 1) {
         blurredColor = std.textureSampleBaseClampToEdge(
           drawWithMaskLayout.$.inputBlurredTexture,
           drawWithMaskLayout.$.sampler,
@@ -189,11 +189,11 @@ const drawWithMaskPipeline = root['~unstable']
           drawWithMaskLayout.$.inputBlurredTexture,
           drawWithMaskLayout.$.sampler,
           uv,
-          paramsAccessor.$.sampleBias,
+          paramsAccess.$.sampleBias,
         );
       }
 
-      const cropBounds = paramsAccessor.$.cropBounds;
+      const cropBounds = paramsAccess.$.cropBounds;
       const uvMin = cropBounds.xy;
       const uvMax = cropBounds.zw;
       const maskUV = d.vec2f(uv).sub(uvMin).div(uvMax.sub(uvMin));
@@ -211,7 +211,7 @@ const drawWithMaskPipeline = root['~unstable']
       const mask = std.select(0, sampledMask, inCropRegion);
 
       return std.mix(blurredColor, originalColor, mask);
-    }),
+    },
     targets: { format: presentationFormat },
   });
 

@@ -129,7 +129,7 @@ function setPipeline({
   pipeline = root['~unstable']
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
-    .with(oklabGamutClipAlphaAccess, alphaFromUniforms)
+    .with(oklabGamutClipAlphaAccess, () => uniforms.$.alpha)
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: mainFragment,

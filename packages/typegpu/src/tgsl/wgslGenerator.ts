@@ -286,6 +286,9 @@ ${this.ctx.pre}}`;
     try {
       const result = this.expression(expression);
       if (expectedType instanceof AutoStruct) {
+        // We provide a certain AutoStruct object to later
+        // investigate what props were accessed. No need to
+        // convert the result.
         return result;
       }
       return tryConvertSnippet(this.ctx, result, expectedType);
@@ -645,12 +648,12 @@ ${this.ctx.pre}}`;
             } else {
               // Generating the expression and inferring the type instead
               expr = this.expression(value);
-              if (expr.dataType.type === 'unknown') {
+              if (expr.dataType === UnknownData) {
                 throw new WgslTypeError(
                   stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
                 );
               }
-              accessed = structType.provideProp(key, expr.dataType as AnyData);
+              accessed = structType.provideProp(key, expr.dataType);
             }
 
             return [accessed.prop, expr];
@@ -658,7 +661,11 @@ ${this.ctx.pre}}`;
         );
 
         const completeStruct = structType.completeStruct;
-        const convertedSnippets = convertStructValues(completeStruct, entries);
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          completeStruct,
+          entries,
+        );
 
         return snip(
           stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,

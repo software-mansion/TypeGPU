@@ -1,7 +1,7 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { isData } from '../../data/dataTypes.ts';
 import { isVoid } from '../../data/wgslTypes.ts';
-import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { AnyFragmentTargets } from './renderPipeline.ts';
 
 function isColorTargetState(
@@ -11,7 +11,7 @@ function isColorTargetState(
 }
 
 export function connectTargetsToShader(
-  shaderOutputLayout: FragmentOutConstrained | undefined,
+  shaderOutputLayout: TgpuFragmentFn.Out | undefined,
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
   // For shell-less entry functions, we determine the layout based on solely the targets

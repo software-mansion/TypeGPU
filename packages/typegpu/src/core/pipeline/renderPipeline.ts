@@ -7,9 +7,9 @@ import type {
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import {
-  AnyData,
   type Disarray,
   getCustomLocation,
+  type UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
@@ -20,16 +20,15 @@ import type {
 } from '../../data/texture.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import {
-  AnyVecInstance,
+  type AnyVecInstance,
   type BaseData,
-  type Decorated,
   isWgslData,
   type U16,
   type U32,
   type v4f,
   Void,
   type WgslArray,
-  WgslStruct,
+  type WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   MissingBindGroupsError,
@@ -38,12 +37,7 @@ import {
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
-import type { InferGPURecord } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
-import type {
-  Assume,
-  NeverRecordToOptional,
-} from '../../shared/utilityTypes.ts';
 import type {
   AnyVertexAttribs,
   TgpuVertexAttrib,
@@ -72,19 +66,8 @@ import {
   type AutoVertexIn,
   type AutoVertexOut,
 } from '../function/autoIO.ts';
-import type { IORecord } from '../function/fnTypes.ts';
-import type {
-  FragmentInConstrained,
-  FragmentOutConstrained,
-  FragmentOutInferred,
-  TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
-import type {
-  TgpuVertexFn,
-  VertexInConstrained,
-  VertexOutConstrained,
-  VertexOutInferred,
-} from '../function/tgpuVertexFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
@@ -98,10 +81,6 @@ import {
 } from '../texture/texture.ts';
 import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
-import type {
-  AttribRecordToDefaultDataTypes,
-  LayoutToAllowedAttribs,
-} from '../vertexLayout/vertexAttribute.ts';
 import {
   isVertexLayout,
   type TgpuVertexLayout,
@@ -134,118 +113,6 @@ export type TgpuPrimitiveState =
   })
   | undefined;
 
-export interface TgpuRenderPipelineDescriptorBase {
-  /**
-   * Describes the primitive-related properties of the pipeline.
-   */
-  primitive?: TgpuPrimitiveState | undefined;
-  /**
-   * Describes the optional depth-stencil properties, including the testing, operations, and bias.
-   */
-  depthStencil?: GPUDepthStencilState | undefined;
-  /**
-   * Describes the multi-sampling properties of the pipeline.
-   */
-  multisample?: GPUMultisampleState | undefined;
-}
-
-export interface TgpuRenderPipelineDescriptor
-  extends TgpuRenderPipelineDescriptorBase {
-  vertex:
-    | TgpuVertexFn
-    | ((input: AutoVertexIn<AnyAutoCustoms>) => AutoVertexOut<AnyAutoCustoms>);
-  fragment?:
-    | TgpuFragmentFn
-    | ((
-      input: AutoFragmentIn<AnyAutoCustoms>,
-    ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>)
-    | undefined;
-
-  attribs?: AnyVertexAttribs | undefined;
-  targets?: AnyFragmentTargets | undefined;
-}
-
-export type TgpuRenderPipelineDescriptor__Shelled<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
-  FragmentIn extends FragmentInConstrained = FragmentInConstrained,
-  FragmentOut extends FragmentOutConstrained = FragmentOutConstrained,
-> =
-  & TgpuRenderPipelineDescriptorBase
-  & {
-    vertex: TgpuVertexFn<
-      VertexIn,
-      VertexOut & OmitBuiltins<NoInfer<FragmentIn>>
-    >;
-    fragment: TgpuFragmentFn<FragmentIn, FragmentOut>;
-  }
-  & NeverRecordToOptional<{
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
-    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
-  }>;
-
-export type TgpuRenderPipelineDescriptor__ShelllessFrag<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
-  FragmentOut extends FragmentOutInferred = FragmentOutInferred,
-> =
-  & TgpuRenderPipelineDescriptorBase
-  & {
-    vertex: TgpuVertexFn<VertexIn, VertexOut>;
-    fragment: (
-      input: AutoFragmentIn<Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>>,
-    ) => AutoFragmentOut<FragmentOut>;
-  }
-  & NeverRecordToOptional<{
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
-    targets: FragmentOutToTargets<NoInfer<FragmentOut>>;
-  }>;
-
-export type TgpuRenderPipelineDescriptor__Shellless<
-  Attribs extends Record<string, TgpuVertexAttrib> = Record<
-    string,
-    TgpuVertexAttrib
-  >,
-  VertexOut extends VertexOutInferred = VertexOutInferred,
-  FragmentOut extends FragmentOutInferred = FragmentOutInferred,
-> =
-  & TgpuRenderPipelineDescriptorBase
-  & {
-    attribs: Attribs;
-    vertex: (
-      input: AutoVertexIn<
-        InferGPURecord<AttribRecordToDefaultDataTypes<NoInfer<Attribs>>>
-      >,
-    ) => AutoVertexOut<VertexOut>;
-    fragment: (
-      input: AutoFragmentIn<OmitBuiltins<NoInfer<VertexOut>>>,
-    ) => AutoFragmentOut<FragmentOut>;
-  }
-  & NeverRecordToOptional<
-    { targets: FragmentOutToTargets<NoInfer<FragmentOut>> }
-  >;
-
-export type TgpuNoColorRenderPipelineDescriptor<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
-> =
-  & TgpuRenderPipelineDescriptorBase
-  & {
-    vertex: TgpuVertexFn<VertexIn, VertexOut>;
-    fragment?:
-      | ((
-        input: AutoFragmentIn<
-          Assume<InferGPURecord<VertexOut>, AnyAutoCustoms>
-        >,
-      ) => undefined)
-      | undefined;
-
-    targets?: Record<string, never> | undefined;
-  }
-  & NeverRecordToOptional<{
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<NoInfer<VertexIn>>>;
-  }>;
-
 export interface HasIndexBuffer {
   readonly hasIndexBuffer: true;
 
@@ -258,7 +125,7 @@ export interface HasIndexBuffer {
   ): void;
 }
 
-export interface TgpuRenderPipeline<Output = unknown>
+export interface TgpuRenderPipeline<in Targets = never>
   extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: RenderPipelineInternals;
   readonly resourceType: 'render-pipeline';
@@ -278,7 +145,7 @@ export interface TgpuRenderPipeline<Output = unknown>
   ): this;
   with(bindGroup: TgpuBindGroup): this;
 
-  withColorAttachment(attachment: FragmentOutToColorAttachment<Output>): this;
+  withColorAttachment(attachment: FragmentOutToColorAttachment<Targets>): this;
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this;
 
@@ -306,6 +173,40 @@ export interface TgpuRenderPipeline<Output = unknown>
   ): void;
 }
 
+export declare namespace TgpuRenderPipeline {
+  interface DescriptorBase {
+    /**
+     * Describes the primitive-related properties of the pipeline.
+     */
+    primitive?: TgpuPrimitiveState | undefined;
+    /**
+     * Describes the optional depth-stencil properties, including the testing, operations, and bias.
+     */
+    depthStencil?: GPUDepthStencilState | undefined;
+    /**
+     * Describes the multi-sampling properties of the pipeline.
+     */
+    multisample?: GPUMultisampleState | undefined;
+  }
+
+  interface Descriptor extends DescriptorBase {
+    vertex:
+      | TgpuVertexFn
+      | ((
+        input: AutoVertexIn<Record<string, never>>,
+      ) => AutoVertexOut<AnyAutoCustoms>);
+    fragment?:
+      | TgpuFragmentFn
+      | ((
+        input: AutoFragmentIn<Record<string, never>>,
+      ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>)
+      | undefined;
+
+    attribs?: AnyVertexAttribs | undefined;
+    targets?: AnyFragmentTargets | undefined;
+  }
+}
+
 // deno-fmt-ignore: More readable branching logic
 export type FragmentOutToTargets<T> =
   T extends
@@ -314,8 +215,7 @@ export type FragmentOutToTargets<T> =
       // (shelled) builtin return
       | AnyBuiltin
       // (shelled) no return
-      // TODO: Try d.Void
-      | { readonly [$internal]: unknown; type: 'void' }
+      | Void
       // (shelled) empty object
       | Record<string, never>
     ? Record<string, never>
@@ -335,10 +235,9 @@ export type FragmentOutToColorAttachment<T> = T extends {
 } ? ColorAttachment
   : T extends Record<string, unknown> ? {
       // Stripping all decorated properties
-      [Key in keyof T as T[Key] extends Decorated ? never : Key]:
-        ColorAttachment;
+      [Key in keyof UndecorateRecord<T>]: ColorAttachment;
     }
-  : never;
+  : Record<string, never>;
 
 export type AnyFragmentTargets =
   | undefined
@@ -473,7 +372,7 @@ export type AnyFragmentColorAttachment =
 export type RenderPipelineCoreOptions = {
   root: ExperimentalTgpuRoot;
   slotBindings: [TgpuSlot<unknown>, unknown][];
-  descriptor: TgpuRenderPipelineDescriptor;
+  descriptor: TgpuRenderPipeline.Descriptor;
 };
 
 export function INTERNAL_createRenderPipeline(
@@ -894,7 +793,7 @@ class RenderPipelineCore implements SelfResolvable {
       locations,
       () =>
         ctx.withSlots(slotBindings, () => {
-          let vertexOut: WgslStruct<Record<string, AnyData>>;
+          let vertexOut: WgslStruct;
           if (typeof vertex === 'function') {
             const defaultAttribData = Object.fromEntries(
               Object.entries(attribs as Record<string, TgpuVertexAttrib>).map((
@@ -903,8 +802,7 @@ class RenderPipelineCore implements SelfResolvable {
             );
             vertexOut = ctx.resolve(
               new AutoVertexFn(vertex, defaultAttribData, locations),
-            )
-              .dataType as WgslStruct;
+            ).dataType as WgslStruct;
           } else {
             vertexOut = ctx.resolve(vertex).dataType as WgslStruct;
           }
@@ -1071,8 +969,8 @@ class RenderPipelineCore implements SelfResolvable {
  * Logs a warning, when they don't match in terms of custom locations
  */
 export function matchUpVaryingLocations(
-  vertexOut: IORecord | undefined = {},
-  fragmentIn: IORecord | undefined = {},
+  vertexOut: TgpuVertexFn.Out | undefined = {},
+  fragmentIn: TgpuFragmentFn.In | undefined = {},
   vertexFnName: string,
   fragmentFnName: string,
 ) {

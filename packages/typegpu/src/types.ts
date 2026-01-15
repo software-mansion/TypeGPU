@@ -53,7 +53,6 @@ import type {
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
-import type { AutoStruct } from './data/autoStruct.ts';
 
 export type ResolvableObject =
   | SelfResolvable

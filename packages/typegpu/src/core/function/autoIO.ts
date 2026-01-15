@@ -1,9 +1,8 @@
-import { builtin } from '../../builtin.ts';
+import { builtin, type OmitBuiltins } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
-import type { v4f } from '../../data/wgslTypes.ts';
+import type { BaseData, v4f } from '../../data/wgslTypes.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type {
   InferGPU,
@@ -35,7 +34,7 @@ const builtinVertexOut = {
 } as const;
 
 export type AutoVertexOut<T extends AnyAutoCustoms> =
-  & T
+  & OmitBuiltins<T>
   & Partial<InferGPURecord<typeof builtinVertexOut>>;
 
 const builtinFragmentIn = {
@@ -62,7 +61,7 @@ export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
     : T & Partial<InferGPURecord<typeof builtinFragmentOut>>;
 
 type AutoFragmentFnImpl = (
-  input: AutoFragmentIn<AnyAutoCustoms>,
+  input: AutoFragmentIn<Record<string, never>>,
 ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>;
 
 /**
@@ -80,7 +79,7 @@ export class AutoFragmentFn implements SelfResolvable {
 
   constructor(
     impl: AutoFragmentFnImpl,
-    varyings: Record<string, AnyData>,
+    varyings: Record<string, BaseData>,
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;
@@ -108,7 +107,7 @@ AutoFragmentFn.prototype[$internal] = true;
 AutoFragmentFn.prototype.resourceType = 'auto-fragment-fn';
 
 type AutoVertexFnImpl = (
-  input: AutoVertexIn<AnyAutoCustoms>,
+  input: AutoVertexIn<Record<string, never>>,
 ) => AutoVertexOut<AnyAutoCustoms>;
 
 /**
@@ -126,7 +125,7 @@ export class AutoVertexFn implements SelfResolvable {
 
   constructor(
     impl: AutoVertexFnImpl,
-    attribs: Record<string, AnyData>,
+    attribs: Record<string, BaseData>,
     locations?: Record<string, number> | undefined,
   ) {
     this.impl = impl;

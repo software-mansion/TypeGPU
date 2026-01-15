@@ -9,8 +9,7 @@ description: A list of various utilities provided by TypeGPU.
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 // ---cut---
 const color = tgpu['~unstable']
@@ -44,8 +43,7 @@ When working on top of some existing shader code, sometimes you may know for cer
 In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 // ---cut---
 // `EXISTING_GLOBAL` is an identifier that we know will be in the

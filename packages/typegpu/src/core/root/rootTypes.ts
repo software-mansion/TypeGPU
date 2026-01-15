@@ -14,6 +14,7 @@ import type {
   BaseData,
   U16,
   U32,
+  v4f,
   Vec3u,
   Void,
   WgslArray,
@@ -21,12 +22,14 @@ import type {
 import type {
   ExtractInvalidSchemaError,
   Infer,
+  InferGPURecord,
   IsValidBufferSchema,
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
+  Assume,
   Mutable,
   OmitProps,
   Prettify,
@@ -53,27 +56,15 @@ import type {
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
+  FragmentInFromVertexOut,
   FragmentOutConstrained,
-  FragmentOutInferred,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn.ts';
-import type {
-  TgpuVertexFn,
-  VertexInConstrained,
-  VertexOutConstrained,
-  VertexOutInferred,
-} from '../function/tgpuVertexFn.ts';
-import type {
-  TgpuComputePipeline,
-  TgpuComputePipelineDescriptor,
-} from '../pipeline/computePipeline.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type {
   FragmentOutToTargets,
-  TgpuNoColorRenderPipelineDescriptor,
   TgpuRenderPipeline,
-  TgpuRenderPipelineDescriptor__Shelled,
-  TgpuRenderPipelineDescriptor__Shellless,
-  TgpuRenderPipelineDescriptor__ShelllessFrag,
 } from '../pipeline/renderPipeline.ts';
 import type {
   Eventual,
@@ -82,12 +73,21 @@ import type {
   TgpuSlot,
 } from '../slot/slotTypes.ts';
 import type { TgpuTexture } from '../texture/texture.ts';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
+import type {
+  AttribRecordToDefaultDataTypes,
+  LayoutToAllowedAttribs,
+} from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
-import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
+import type {
+  AnyAutoCustoms,
+  AutoFragmentIn,
+  AutoFragmentOut,
+  AutoVertexIn,
+  AutoVertexOut,
+} from '../function/autoIO.ts';
+import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 
 // ----------
 // Public API
@@ -135,7 +135,7 @@ type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
  * TODO: Remove in favor of createRenderPipeline's validation
  */
 export type ValidateFragmentIn<
-  VertexOut extends VertexOutConstrained,
+  VertexOut extends TgpuVertexFn.Out,
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
@@ -169,7 +169,7 @@ export type ValidateFragmentIn<
   ];
 
 export interface WithVertex<
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+  VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
 > {
   /**
    * @deprecated Use `root.createRenderPipeline` instead.
@@ -214,7 +214,7 @@ export interface WithVertex<
 }
 
 export interface WithFragment<
-  Output extends FragmentOutConstrained = FragmentOutConstrained,
+  Targets extends FragmentOutConstrained = FragmentOutConstrained,
 > {
   withPrimitive(
     primitiveState:
@@ -223,17 +223,17 @@ export interface WithFragment<
         stripIndexFormat?: U32 | U16;
       }
       | undefined,
-  ): WithFragment<Output>;
+  ): WithFragment<Targets>;
 
   withDepthStencil(
     depthStencilState: GPUDepthStencilState | undefined,
-  ): WithFragment<Output>;
+  ): WithFragment<Targets>;
 
   withMultisample(
     multisampleState: GPUMultisampleState | undefined,
-  ): WithFragment<Output>;
+  ): WithFragment<Targets>;
 
-  createPipeline(): TgpuRenderPipeline<Output>;
+  createPipeline(): TgpuRenderPipeline<Targets>;
 }
 
 export interface Withable<TSelf> {
@@ -254,71 +254,176 @@ export interface Configurable extends Withable<Configurable> {
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
+/**
+ * Gets rid of builtins, and turns instances into schemas
+ * @example d.v4f => d.Vec4f
+ * @example d.builtin.position => d.Void
+ * @example { a: d.v4f, $fragDepth: number } => { a: d.Vec4f }
+ */
+type NormalizeOutput<T> = T extends
+  { readonly [$internal]: unknown } | number | boolean
+  ? [OmitBuiltins<InstanceToSchema<T>>] extends [never] ? Void
+  : OmitBuiltins<InstanceToSchema<T>>
+  : { [K in keyof OmitBuiltins<T>]: InstanceToSchema<OmitBuiltins<T>[K]> };
+
 export interface WithBinding extends Withable<WithBinding> {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
 
   createComputePipeline<ComputeIn extends IORecord<AnyComputeBuiltin>>(
-    descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
+    descriptor: TgpuComputePipeline.Descriptor<ComputeIn>,
   ): TgpuComputePipeline;
 
   createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-  >(
-    descriptor: TgpuNoColorRenderPipelineDescriptor<VertexIn, VertexOut>,
-  ): TgpuRenderPipeline<Void>;
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-    FragmentIn extends FragmentInConstrained,
-    FragmentOut extends FragmentOutConstrained,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__Shelled<
-      VertexIn,
-      VertexOut,
-      FragmentIn,
-      FragmentOut
+    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    TVertexIn extends TgpuVertexFn.In = Record<string, any>,
+    TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
+      TVertexIn
     >,
-  ): TgpuRenderPipeline<FragmentOut>;
-  createRenderPipeline<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
-    FragmentOut extends FragmentOutInferred,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__ShelllessFrag<
-      VertexIn,
-      VertexOut,
-      FragmentOut
-    >,
-  ): TgpuRenderPipeline<FragmentOut>;
-  createRenderPipeline<
-    VertexOut extends VertexOutInferred,
-    FragmentOut extends FragmentOutInferred,
+    TVertexOut = unknown,
+    TFragmentOut = unknown,
   >(
     descriptor:
-      & Omit<
-        TgpuRenderPipelineDescriptor__Shellless<
-          Record<string, never>,
-          VertexOut,
-          FragmentOut
-        >,
-        'attribs'
-      >
-      & { attribs?: undefined },
-  ): TgpuRenderPipeline<FragmentOut>;
+      & TgpuRenderPipeline.DescriptorBase
+      & ({
+        attribs?: TAttribs;
+        vertex:
+          | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+          | ((
+            input: AutoVertexIn<
+              Assume<
+                InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>,
+                AnyAutoCustoms
+              >
+            >,
+          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+        fragment:
+          | TgpuFragmentFn<
+            FragmentInFromVertexOut<TVertexOut>,
+            Assume<TFragmentOut, TgpuFragmentFn.Out>
+          >
+          | ((
+            input: AutoFragmentIn<
+              Assume<
+                InferGPURecord<FragmentInFromVertexOut<TVertexOut>>,
+                AnyAutoCustoms
+              >
+            >,
+          ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
+        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+      }),
+  ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
-    Attribs extends Record<string, TgpuVertexAttrib>,
-    VertexOut extends VertexOutInferred,
-    FragmentOut extends FragmentOutInferred,
-  >(
-    descriptor: TgpuRenderPipelineDescriptor__Shellless<
-      Attribs,
-      VertexOut,
-      FragmentOut
+    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    TVertexIn extends TgpuVertexFn.In = Record<string, any>,
+    TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
+      TVertexIn
     >,
-  ): TgpuRenderPipeline<FragmentOut>;
+    TVertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
+  >(
+    descriptor:
+      & TgpuRenderPipeline.DescriptorBase
+      & {
+        attribs?: TAttribs;
+        vertex:
+          | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+          | ((
+            input: AutoVertexIn<
+              Assume<
+                InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>,
+                AnyAutoCustoms
+              >
+            >,
+          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+        fragment?:
+          | undefined
+          | TgpuFragmentFn<
+            FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+            Record<string, never> | Void
+          >
+          | ((
+            input: AutoFragmentIn<
+              Assume<
+                InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>,
+                AnyAutoCustoms
+              >
+            >,
+          ) => AutoFragmentOut<undefined>);
+        targets?: undefined;
+      },
+  ): TgpuRenderPipeline<Void>;
+  createRenderPipeline<
+    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    TVertexIn extends TgpuVertexFn.In = Record<string, any>,
+    TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
+      TVertexIn
+    >,
+    TVertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
+    TFragmentOut = unknown,
+  >(
+    descriptor:
+      & TgpuRenderPipeline.DescriptorBase
+      & (
+        | {
+          attribs?: TAttribs;
+          vertex:
+            | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+            | ((
+              input: AutoVertexIn<
+                Assume<
+                  InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>,
+                  AnyAutoCustoms
+                >
+              >,
+            ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+          fragment:
+            | ((
+              input: AutoFragmentIn<
+                Assume<
+                  InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>,
+                  AnyAutoCustoms
+                >
+              >,
+            ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>)
+            | TgpuFragmentFn<
+              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              Assume<TFragmentOut, TgpuFragmentFn.Out>
+            >;
+          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        }
+        | {
+          attribs?: TAttribs;
+          vertex:
+            | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+            | ((
+              input: AutoVertexIn<
+                Assume<
+                  InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>,
+                  AnyAutoCustoms
+                >
+              >,
+            ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+          fragment?:
+            | undefined
+            | TgpuFragmentFn<
+              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              Record<string, never>
+            >
+            | ((
+              input: AutoFragmentIn<
+                Assume<
+                  InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>,
+                  AnyAutoCustoms
+                >
+              >,
+            ) => AutoFragmentOut<undefined>);
+          targets?: undefined;
+        }
+      ),
+  ):
+    | TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>
+    | TgpuRenderPipeline<Void>;
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.
@@ -373,8 +478,8 @@ export interface WithBinding extends Withable<WithBinding> {
    * @deprecated Use `root.createRenderPipeline` instead.
    */
   withVertex<
-    VertexIn extends VertexInConstrained,
-    VertexOut extends VertexOutConstrained,
+    VertexIn extends TgpuVertexFn.In,
+    VertexOut extends TgpuVertexFn.Out,
   >(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>

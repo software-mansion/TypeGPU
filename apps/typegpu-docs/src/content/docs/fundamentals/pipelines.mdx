@@ -159,8 +159,7 @@ The `createComputePipeline` method creates a compute pipeline by accepting an op
 - `compute`: The `TgpuComputeFn` to use as the compute shader.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -184,8 +183,7 @@ Under the hood, it creates a compute pipeline that calls the provided callback o
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -214,8 +212,7 @@ Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import { randf } from '@typegpu/noise';
 
@@ -240,9 +237,7 @@ console.log(await waterLevelMutable.read());
 The result of `createGuardedComputePipeline` can have bind groups bound using the `with` method.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const layout = tgpu.bindGroupLayout({
@@ -305,7 +300,6 @@ tgpu.resolve([innerPipeline]);
 ## Execution
 
 ```ts
-// Assuming renderPipeline is created with createRenderPipeline
 renderPipeline
   .withColorAttachment({
     view: context.getCurrentTexture().createView(),
@@ -316,6 +310,9 @@ renderPipeline
 
 // Assuming computePipeline is created with createComputePipeline
 computePipeline.dispatchWorkgroups(16);
+
+// Assuming computePipeline2 is created with createGuardedComputePipeline
+computePipeline2.dispatchThreads(4);
 ```
 
 ### Attachments

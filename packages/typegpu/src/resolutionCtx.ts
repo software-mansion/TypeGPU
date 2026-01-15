@@ -21,7 +21,7 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
+import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
 import {
@@ -77,7 +77,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
@@ -471,7 +471,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             break;
           }
           case FuncParameterType.destructuredObject: {
-           const objSnippet = snip(`_arg_${i}`, argType, origin);
+            const objSnippet = snip(`_arg_${i}`, argType, origin);
             args.push(objSnippet);
             argAliases.push(
               ...astParam.props.map(({ name, alias }) =>
