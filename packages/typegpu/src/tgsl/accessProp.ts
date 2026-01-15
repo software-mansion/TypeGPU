@@ -41,7 +41,12 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $internal, $ownSnippet, $resolve, $gpuCallable } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../shared/symbols.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import {
   isKnownAtComptime,

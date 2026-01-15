@@ -645,12 +645,12 @@ ${this.ctx.pre}}`;
             } else {
               // Generating the expression and inferring the type instead
               expr = this.expression(value);
-              if (expr.dataType.type === 'unknown') {
+              if (expr.dataType === UnknownData) {
                 throw new WgslTypeError(
                   stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
                 );
               }
-              accessed = structType.provideProp(key, expr.dataType as AnyData);
+              accessed = structType.provideProp(key, expr.dataType);
             }
 
             return [accessed.prop, expr];
@@ -658,7 +658,11 @@ ${this.ctx.pre}}`;
         );
 
         const completeStruct = structType.completeStruct;
-        const convertedSnippets = convertStructValues(completeStruct, entries);
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          completeStruct,
+          entries,
+        );
 
         return snip(
           stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,

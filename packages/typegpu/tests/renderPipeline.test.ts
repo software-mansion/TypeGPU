@@ -147,7 +147,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const vertexMain = tgpu['~unstable'].vertexFn({
       in: { vid: d.builtin.vertexIndex },
       out: { pos: d.builtin.position },
-      // biome-ignore lint/style/noNonNullAssertion: it's fine
     })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
 
     const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -191,7 +190,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       bar: d.vec3f(),
     }));
     const fragmentMain = tgpu['~unstable'].fragmentFn({
-      in: { bar: d.location(0, d.vec3f) },
+      in: { bar: d.vec3f },
       out: d.vec4f,
     })(() => d.vec4f());
     const renderPipeline = root
@@ -1089,6 +1088,7 @@ describe('root.createRenderPipeline', () => {
         vertex,
         fragment: () => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1102,6 +1102,7 @@ describe('root.createRenderPipeline', () => {
         vertex: vertexWithBuiltin,
         fragment: () => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1115,6 +1116,7 @@ describe('root.createRenderPipeline', () => {
         vertex,
         fragment: ({ $frontFacing }) => {
           'use gpu';
+          return undefined;
         },
       }),
 
@@ -1129,6 +1131,7 @@ describe('root.createRenderPipeline', () => {
         vertex: vertexWithBuiltin,
         fragment: ({ $frontFacing }) => {
           'use gpu';
+          return undefined;
         },
       }),
 

@@ -24,7 +24,7 @@ import {
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -52,8 +52,12 @@ import {
 } from '../buffer/bufferShorthand.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import { fn, type TgpuFn } from '../function/tgpuFn.ts';
-import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
+import { fn } from '../function/tgpuFn.ts';
+import type {
+  FragmentInConstrained,
+  FragmentOutConstrained,
+  TgpuFragmentFn,
+} from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
@@ -65,7 +69,6 @@ import {
   INTERNAL_createRenderPipeline,
   type TgpuPrimitiveState,
   type TgpuRenderPipeline,
-  type TgpuRenderPipelineDescriptor,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
@@ -238,8 +241,8 @@ class WithBindingImpl implements WithBinding {
   }
 
   createRenderPipeline(
-    descriptor: TgpuRenderPipelineDescriptor,
-  ): TgpuRenderPipeline {
+    descriptor: TgpuRenderPipeline.Descriptor,
+  ): TgpuRenderPipeline<any> {
     return INTERNAL_createRenderPipeline({
       root: this._getRoot(),
       slotBindings: this._slotBindings,
@@ -287,12 +290,15 @@ class WithBindingImpl implements WithBinding {
     );
   }
 
-  withVertex<VertexIn extends IOLayout>(
-    vertexFn: TgpuVertexFn,
+  withVertex<
+    VertexIn extends Record<string, never>,
+    VertexOut extends TgpuVertexFn.Out,
+  >(
+    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
-  ): WithVertex {
+  ): WithVertex<VertexOut> {
     return new WithVertexImpl(this._getRoot(), this._slotBindings, {
-      vertex: vertexFn,
+      vertex: entryFn as TgpuVertexFn,
       attribs,
     });
   }
@@ -324,7 +330,7 @@ class WithVertexImpl implements WithVertex {
   readonly #root: ExperimentalTgpuRoot;
   readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
   readonly #partialDescriptor: Omit<
-    TgpuRenderPipelineDescriptor,
+    TgpuRenderPipeline.Descriptor,
     'fragment' | 'targets'
   >;
 
@@ -332,7 +338,7 @@ class WithVertexImpl implements WithVertex {
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
     partialDescriptor: Omit<
-      TgpuRenderPipelineDescriptor,
+      TgpuRenderPipeline.Descriptor,
       'fragment' | 'targets'
     >,
   ) {
@@ -342,10 +348,12 @@ class WithVertexImpl implements WithVertex {
   }
 
   withFragment(
-    fragmentFn: TgpuFragmentFn | 'n/a',
+    fragmentFn:
+      | TgpuFragmentFn<FragmentInConstrained, FragmentOutConstrained>
+      | 'n/a',
     targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
-  ): WithFragment {
+  ): WithFragment<FragmentOutConstrained> {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
     invariant(
       targets === undefined || typeof targets !== 'string',
@@ -359,7 +367,9 @@ class WithVertexImpl implements WithVertex {
     });
   }
 
-  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
+  withPrimitive(
+    primitive: TgpuPrimitiveState | undefined,
+  ): WithFragment<FragmentOutConstrained> {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       primitive,
@@ -368,7 +378,7 @@ class WithVertexImpl implements WithVertex {
 
   withDepthStencil(
     depthStencil: GPUDepthStencilState | undefined,
-  ): WithFragment {
+  ): WithFragment<FragmentOutConstrained> {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       depthStencil,
@@ -377,14 +387,14 @@ class WithVertexImpl implements WithVertex {
 
   withMultisample(
     multisample: GPUMultisampleState | undefined,
-  ): WithFragment {
+  ): WithFragment<FragmentOutConstrained> {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       multisample,
     });
   }
 
-  createPipeline(): TgpuRenderPipeline {
+  createPipeline(): TgpuRenderPipeline<FragmentOutConstrained> {
     return INTERNAL_createRenderPipeline({
       root: this.#root,
       slotBindings: this.#slotBindings,
@@ -396,19 +406,21 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   readonly #root: ExperimentalTgpuRoot;
   readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
-  readonly #descriptor: TgpuRenderPipelineDescriptor;
+  readonly #descriptor: TgpuRenderPipeline.Descriptor;
 
   constructor(
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuRenderPipelineDescriptor,
+    descriptor: TgpuRenderPipeline.Descriptor,
   ) {
     this.#root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
   }
 
-  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
+  withPrimitive(
+    primitive: TgpuPrimitiveState | undefined,
+  ): WithFragment {
     return new WithFragmentImpl(this.#root, this.#slotBindings, {
       ...this.#descriptor,
       primitive,
@@ -431,7 +443,7 @@ class WithFragmentImpl implements WithFragment {
     });
   }
 
-  createPipeline(): TgpuRenderPipeline {
+  createPipeline(): TgpuRenderPipeline<FragmentOutConstrained> {
     return INTERNAL_createRenderPipeline({
       root: this.#root,
       slotBindings: this.#slotBindings,

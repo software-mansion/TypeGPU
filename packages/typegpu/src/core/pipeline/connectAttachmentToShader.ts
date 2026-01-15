@@ -1,6 +1,6 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { isData } from '../../data/dataTypes.ts';
-import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type {
   AnyFragmentColorAttachment,
   ColorAttachment,
@@ -13,7 +13,7 @@ function isColorAttachment(
 }
 
 export function connectAttachmentToShader(
-  shaderOutputLayout: FragmentOutConstrained | undefined,
+  shaderOutputLayout: TgpuFragmentFn.Out | undefined,
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
   // For shell-less entry functions, we determine the layout based on solely the attachment

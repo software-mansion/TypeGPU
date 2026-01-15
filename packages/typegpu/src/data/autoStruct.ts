@@ -1,40 +1,42 @@
-import type { IOData } from '../core/function/fnTypes.ts';
 import { createIoSchema } from '../core/function/ioSchema.ts';
 import { getName, setName } from '../shared/meta.ts';
-import { $internal, $resolve } from '../shared/symbols.ts';
+import { $internal, $repr, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
 import type { ResolvedSnippet } from './snippet.ts';
-import type { WgslStruct } from './wgslTypes.ts';
+import type { BaseData, WgslStruct } from './wgslTypes.ts';
 
 /**
  * A requirement for the generated struct is that non-builtin properties need to
  * have the same name in WGSL as they do in JS. This allows locations to be properly
  * matched between the Vertex output and Fragment input.
  */
-export class AutoStruct implements SelfResolvable {
+export class AutoStruct implements BaseData, SelfResolvable {
   // Prototype properties
-  declare [$internal]: true;
+  declare [$internal]: Record<string, never>;
   declare type: 'auto-struct';
+
+  // Type-tokens, not available at runtime
+  declare readonly [$repr]: Record<string, unknown>;
+  // ---
 
   /**
    * js key -> data type
    */
-  readonly #validProps: Record<string, AnyData>;
+  readonly #validProps: Record<string, BaseData>;
   /**
    * js key -> { prop: 'wgsl key', type: ... }
    * @example '$position' -> { prop: 'position', type: ... }
    */
-  readonly #allocated: Record<string, { prop: string; type: AnyData }>;
+  readonly #allocated: Record<string, { prop: string; type: BaseData }>;
 
   #usedWgslKeys: Set<string>;
   #locations: Record<string, number> | undefined;
   #cachedStruct: WgslStruct | undefined;
-  #typeForExtraProps: AnyData | undefined;
+  #typeForExtraProps: BaseData | undefined;
 
   constructor(
-    validProps: Record<string, AnyData>,
-    typeForExtraProps: AnyData | undefined,
+    validProps: Record<string, BaseData>,
+    typeForExtraProps: BaseData | undefined,
     locations?: Record<string, number> | undefined,
   ) {
     this.#validProps = validProps;
@@ -44,7 +46,7 @@ export class AutoStruct implements SelfResolvable {
     this.#usedWgslKeys = new Set();
   }
 
-  accessProp(key: string): { prop: string; type: AnyData } | undefined {
+  accessProp(key: string): { prop: string; type: BaseData } | undefined {
     // If the prop is not found in validProps, we consider it an extra property
     const dataType = this.#validProps[key] ?? this.#typeForExtraProps;
     if (!dataType) {
@@ -54,7 +56,10 @@ export class AutoStruct implements SelfResolvable {
     return this.provideProp(key, dataType);
   }
 
-  provideProp(key: string, dataType: AnyData): { prop: string; type: AnyData } {
+  provideProp(
+    key: string,
+    dataType: BaseData,
+  ): { prop: string; type: BaseData } {
     let alloc = this.#allocated[key];
     if (!alloc) {
       let wgslKey = key;
@@ -86,7 +91,7 @@ export class AutoStruct implements SelfResolvable {
       this.#cachedStruct = createIoSchema(
         Object.fromEntries(
           Object.entries(this.#allocated).map(([key, alloc]) => {
-            return [alloc.prop, alloc.type] as [string, IOData];
+            return [alloc.prop, alloc.type];
           }),
         ),
         this.#locations,
@@ -110,5 +115,5 @@ export class AutoStruct implements SelfResolvable {
   }
 }
 
-AutoStruct.prototype[$internal] = true;
+AutoStruct.prototype[$internal] = {};
 AutoStruct.prototype.type = 'auto-struct';
