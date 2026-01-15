@@ -55,7 +55,6 @@ export type TgpuComputeFnShell<
     strings: TemplateStringsArray,
     ...values: unknown[]
   ) => TgpuComputeFn<ComputeIn>);
-  ) => TgpuComputeFn<ComputeIn>);
 
 export interface TgpuComputeFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
