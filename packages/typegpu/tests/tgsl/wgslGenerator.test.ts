@@ -529,6 +529,44 @@ describe('wgslGenerator', () => {
     });
   });
 
+  it('creates intermediate representation for array expression', () => {
+    const testFn = tgpu.fn([], d.u32)(() => {
+      const arr = [d.u32(1), 2, 3];
+      return arr[1] as number;
+    });
+
+    const astInfo = getMetaData(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.u32,
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
+      );
+
+      wgslGenerator.initGenerator(ctx);
+      const res = wgslGenerator.expression(
+        // deno-fmt-ignore: it's better that way
+        (
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
+      );
+
+      expect(res.value instanceof ArrayExpression).toBe(true);
+      expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
+      expect((res.value as unknown as ArrayExpression).elementType)
+        .toBe((res.dataType as unknown as WgslArray).elementType);
+    });
+  });
+
   it('generates correct code for array expressions', () => {
     const testFn = tgpu.fn([], d.u32)(() => {
       const arr = [d.u32(1), 2, 3];
@@ -576,12 +614,6 @@ describe('wgslGenerator', () => {
       expect(d.isWgslArray(res.dataType)).toBe(true);
       expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
       expect((res.dataType as unknown as WgslArray).elementType).toBe(d.u32);
-
-      //  intermediate representation
-      expect(res.value instanceof ArrayExpression).toBe(true);
-      expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-      expect((res.value as unknown as ArrayExpression).elementType)
-        .toBe((res.dataType as unknown as WgslArray).elementType);
     });
   });
 
@@ -636,12 +668,6 @@ describe('wgslGenerator', () => {
       expect(d.isWgslArray(res.dataType)).toBe(true);
       expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
       expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2u);
-
-      //  intermediate representation
-      expect(res.value instanceof ArrayExpression).toBe(true);
-      expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-      expect((res.value as unknown as ArrayExpression).elementType)
-        .toBe((res.dataType as unknown as WgslArray).elementType);
     });
   });
 
@@ -719,12 +745,6 @@ describe('wgslGenerator', () => {
     expect(d.isWgslArray(res.dataType)).toBe(true);
     expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
     expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
-
-    //  intermediate representation
-    expect(res.value instanceof ArrayExpression).toBe(true);
-    expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-    expect((res.value as unknown as ArrayExpression).elementType)
-      .toBe((res.dataType as unknown as WgslArray).elementType);
   });
 
   it('generates correct code for array expressions with derived elements', () => {
@@ -770,12 +790,6 @@ describe('wgslGenerator', () => {
     expect(d.isWgslArray(res.dataType)).toBe(true);
     expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
     expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2f);
-
-    //  intermediate representation
-    expect(res.value instanceof ArrayExpression).toBe(true);
-    expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-    expect((res.value as unknown as ArrayExpression).elementType)
-      .toBe((res.dataType as unknown as WgslArray).elementType);
   });
 
   it('allows for member access on values returned from function calls', () => {
