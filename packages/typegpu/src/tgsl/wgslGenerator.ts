@@ -556,7 +556,7 @@ ${this.ctx.pre}}`;
           ? (callee.value[$providing]?.pairs ?? [])
           : [];
         const callback = isGenericFn(callee.value)
-          ? callee.value.callback
+          ? callee.value[$internal].inner
           : (callee.value as (...args: never[]) => unknown);
 
         const shelllessCall = this.ctx.withSlots(

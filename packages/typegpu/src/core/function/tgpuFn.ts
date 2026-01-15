@@ -112,23 +112,24 @@ export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
 /**
  * A function wrapper that allows providing slot and accessor overrides for shellless functions
  */
-export interface TgpuGenericFn<Callback extends AnyFn> {
-  readonly [$internal]: true;
+export interface TgpuGenericFn<T extends AnyFn> {
+  readonly [$internal]: {
+    inner: T;
+  };
   readonly [$providing]?: Providing | undefined;
   readonly resourceType: 'generic-function';
-  readonly callback: Callback;
 
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuGenericFn<Callback>;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
+  with<S>(slot: TgpuSlot<S>, value: Eventual<S>): TgpuGenericFn<T>;
+  with<S extends AnyData>(
+    accessor: TgpuAccessor<S>,
     value:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
-  ): TgpuGenericFn<Callback>;
+      | TgpuFn<() => S>
+      | TgpuBufferUsage<S>
+      | TgpuBufferShorthand<S>
+      | Infer<S>,
+  ): TgpuGenericFn<T>;
 
-  (...args: Parameters<Callback>): ReturnType<Callback>;
+  (...args: Parameters<T>): ReturnType<T>;
 }
 
 export function fn<
@@ -140,9 +141,7 @@ export function fn<
   Return extends AnyData,
 >(argTypes: Args, returnType: Return): TgpuFnShell<Args, Return>;
 
-export function fn<Callback extends AnyFn>(
-  callback: Callback,
-): TgpuGenericFn<Callback>;
+export function fn<T extends AnyFn>(inner: T): TgpuGenericFn<T>;
 
 export function fn<
   Args extends AnyData[] | [],
@@ -371,43 +370,37 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   return fn;
 }
 
-function createGenericFn<Callback extends AnyFn>(
-  callback: Callback,
+function createGenericFn<T extends AnyFn>(
+  inner: T,
   pairs: SlotValuePair[],
-): TgpuGenericFn<Callback> {
-  type This = TgpuGenericFn<Callback>;
+): TgpuGenericFn<T> {
+  type This = TgpuGenericFn<T>;
 
   const fnBase = {
-    [$internal]: true as const,
+    [$internal]: { inner },
     resourceType: 'generic-function' as const,
-    callback,
-    [$providing]: pairs.length > 0
-      ? {
-        inner: callback,
-        pairs,
-      }
-      : undefined,
+    [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
 
     with(
       slot: TgpuSlot<unknown> | TgpuAccessor,
       value: unknown,
-    ): TgpuGenericFn<Callback> {
-      return createGenericFn(callback, [
+    ): TgpuGenericFn<T> {
+      return createGenericFn(inner, [
         ...pairs,
         [isAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
   };
 
-  const call = ((...args: Parameters<Callback>): ReturnType<Callback> => {
-    return callback(...args) as ReturnType<Callback>;
-  }) as Callback;
+  const call = ((...args: Parameters<T>): ReturnType<T> => {
+    return inner(...args) as ReturnType<T>;
+  }) as T;
 
   const genericFn = Object.assign(call, fnBase) as unknown as This;
 
   Object.defineProperty(genericFn, 'toString', {
     value() {
-      const fnLabel = getName(callback) ?? '<unnamed>';
+      const fnLabel = getName(inner) ?? '<unnamed>';
       if (pairs.length > 0) {
         return `fn*:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
       }
