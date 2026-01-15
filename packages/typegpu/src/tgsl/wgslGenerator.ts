@@ -218,6 +218,11 @@ ${this.ctx.pre}}`;
       ptrType,
       'function',
     );
+
+    if (snippet.dataType.type === 'unknown') {
+      throw Error(`Tried to define variable '${id}' of unknown type.`);
+    }
+
     this.ctx.defineVariable(id, snippet);
     return varName;
   }
@@ -257,6 +262,7 @@ ${this.ctx.pre}}`;
       dataType,
       /* origin */ varOrigin,
     );
+
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
@@ -1018,31 +1024,27 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
-      if (eq.dataType.type === 'unknown') {
-        if (Array.isArray(eq.value)) {
-          // for arrays we can give more specific suggestion
-          console.warn(
-            `You are likely trying to define variable \`${rawId}\` with a value \`[${eq.value}]\` of an unknown type.
------
-- Try to wrap right-hand side with a schema \`d.arrayOf(...)(...)\`.
------`,
-          );
-        } else {
-          console.warn(
-            `You are likely trying to define variable \`${rawId}\` with a value of an unknown type.
------
-- Try to wrap right-hand side with a schema \`YourStructSchema(...)\`.
------`,
-          );
-        }
-      }
-
       const snippet = this.blockVariable(
         varType,
         rawId,
         concretize(dataType),
         eq.origin,
       );
+
+      const id = snippet.value;
+      if (snippet.dataType.type === 'unknown') {
+        const schema = Array.isArray(eq.value)
+          ? `d.arrayOf(...)(${id})`
+          : `YourStructSchema(${id})`;
+
+        throw Error(
+          `Tried to define variable '${id}' of unknown type.
+-----
+- Try to wrap right-hand side with a schema \`${schema}\`.
+-----`,
+        );
+      }
+
       return stitch`${this.ctx.pre}${varType} ${snippet
         .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
     }

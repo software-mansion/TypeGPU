@@ -578,7 +578,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'unrelated' of unknown type]
+      - fn:myFn: Tried to define variable 'unrelated' of unknown type.
+      -----
+      - Try to wrap right-hand side with a schema \`YourStructSchema(unrelated)\`.
+      -----]
     `);
   });
 
@@ -591,7 +594,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'myArr' of unknown type]
+      - fn:myFn: Tried to define variable 'myArr' of unknown type.
+      -----
+      - Try to wrap right-hand side with a schema \`d.arrayOf(...)(myArr)\`.
+      -----]
     `);
   });
 
