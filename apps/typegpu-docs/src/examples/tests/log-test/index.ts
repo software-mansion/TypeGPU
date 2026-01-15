@@ -216,7 +216,7 @@ export const controls = {
   'Render pipeline': {
     onButtonClick: () => {
       const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
+        .withVertex(mainVertex)
         .withFragment(mainFragment, { format: presentationFormat })
         .createPipeline();
 
