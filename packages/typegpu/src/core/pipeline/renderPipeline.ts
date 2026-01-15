@@ -292,6 +292,7 @@ interface DescriptorBase {
 }
 
 export declare namespace TgpuRenderPipeline {
+  type Base = DescriptorBase;
   interface Descriptor extends DescriptorBase {
     vertex:
       | TgpuVertexFn
@@ -309,9 +310,9 @@ export declare namespace TgpuRenderPipeline {
     targets?: AnyFragmentTargets | undefined;
   }
 
-  type ValidatingDescriptor<T> =
+  type ValidatingDescriptor<TAttribs, TVertexOut, TFragmentOut> =
     // Shelled
-    T extends {
+    { vertex:  } extends {
       vertex: TgpuVertexFn<infer VertexIn, infer VertexOut>;
       fragment: TgpuFragmentFn<FragmentInConstrained, infer FragmentOut>;
     } ? DescriptorBase & T & {

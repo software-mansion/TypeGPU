@@ -20,12 +20,14 @@ import type {
 import type {
   ExtractInvalidSchemaError,
   Infer,
+  InferGPURecord,
   IsValidBufferSchema,
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
+  Assume,
   Mutable,
   OmitProps,
   Prettify,
@@ -73,11 +75,16 @@ import type {
 } from '../pipeline/renderPipeline.ts';
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
+import type {
+  AttribRecordToDefaultDataTypes,
+  LayoutToAllowedAttribs,
+} from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
+import { AutoVertexIn } from '../function/autoIO.ts';
+import { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 
 // ----------
 // Public API
@@ -255,9 +262,33 @@ export interface WithBinding {
     descriptor: TgpuComputePipelineDescriptor<ComputeIn>,
   ): TgpuComputePipeline;
 
-  createRenderPipeline<T extends TgpuRenderPipeline.Descriptor>(
-    descriptor: TgpuRenderPipeline.ValidatingDescriptor<T>,
-  ): TgpuRenderPipeline.Create<T>;
+  createRenderPipeline<
+    TAttribs,
+    TVertexOut extends VertexOutConstrained,
+    TFragmentOut,
+  >(
+    descriptor: TgpuRenderPipeline.Base & {
+      attribs: TAttribs & Record<string, TgpuVertexAttrib>;
+      // TODO: Make the vertex function type rely on `TAttribs`.
+      vertex:
+        | ((
+          input: AutoVertexIn<
+            Prettify<
+              InferGPURecord<
+                AttribRecordToDefaultDataTypes<
+                  Assume<TAttribs, Record<string, TgpuVertexAttrib>>
+                >
+              >
+            >
+          >,
+        ) => TVertexOut)
+        | TgpuVertexFn<
+          Assume<TAttribs, VertexInConstrained>,
+          TVertexOut
+        >;
+      // fragment: TgpuFragmentFn<TVertexOut, TFragmentOut>;
+    },
+  ): never;
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.

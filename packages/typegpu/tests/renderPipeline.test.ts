@@ -1365,14 +1365,27 @@ describe('root.createRenderPipeline', () => {
 
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
     root.createRenderPipeline({
-      attribs: { pos: vertexLayout.attrib, sup: vertexLayout.attrib },
-      vertex: (arg) => {
+      attribs: { pos: vertexLayout.attrib },
+      vertex: ({ pos }) => {
         'use gpu';
         return { $position: d.vec4f() };
       },
-      fragment: () => {
-        return d.vec4f();
-      },
+      // fragment: () => {
+      //   return d.vec4f();
+      // },
+    });
+
+    const vertexFoo = tgpu['~unstable'].vertexFn({
+      in: { pos: d.vec2f },
+      out: { a: d.vec3f, b: d.vec2f },
+    })`{ return Out(); }`;
+
+    root.createRenderPipeline({
+      attribs: { pos: vertexLayout.attrib },
+      vertex: vertexFoo,
+      // fragment: () => {
+      //   return d.vec4f();
+      // },
     });
   });
 });
