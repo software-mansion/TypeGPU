@@ -38,7 +38,9 @@ describe('3d fish example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       fn item() -> f32 {

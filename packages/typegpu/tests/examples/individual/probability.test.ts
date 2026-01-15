@@ -29,7 +29,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -81,7 +83,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -125,7 +129,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -170,7 +176,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -214,7 +222,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -253,7 +263,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -298,7 +310,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -360,7 +374,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -414,7 +430,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -458,7 +476,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -501,7 +521,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -549,7 +571,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -598,7 +622,9 @@ describe('probability distribution plot example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {

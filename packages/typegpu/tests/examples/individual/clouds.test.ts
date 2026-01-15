@@ -50,7 +50,9 @@ describe('clouds example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;

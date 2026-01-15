@@ -76,7 +76,9 @@ describe('jelly-slider example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       struct Camera {

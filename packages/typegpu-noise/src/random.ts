@@ -33,7 +33,7 @@ export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = (() => {
       // @ts-expect-error trust me
       randomGeneratorSlot.$.seed(seed);
     }
-  });
+  }).$name('randSeed');
 })();
 
 export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = (() => {
@@ -50,7 +50,7 @@ export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = (() => {
       // @ts-expect-error trust me
       randomGeneratorSlot.$.seed2(seed);
     }
-  });
+  }).$name('randSeed2');
 })();
 
 export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = (() => {
@@ -67,7 +67,7 @@ export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = (() => {
       // @ts-expect-error trust me
       randomGeneratorSlot.$.seed3(seed);
     }
-  });
+  }).$name('randSeed3');
 })();
 
 export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = (() => {
@@ -84,7 +84,7 @@ export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = (() => {
       // @ts-expect-error trust me
       randomGeneratorSlot.$.seed4(seed);
     }
-  });
+  }).$name('randSeed4');
 })();
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu

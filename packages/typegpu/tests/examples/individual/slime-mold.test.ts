@@ -26,7 +26,9 @@ describe('slime mold example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -116,7 +118,9 @@ describe('slime mold example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;

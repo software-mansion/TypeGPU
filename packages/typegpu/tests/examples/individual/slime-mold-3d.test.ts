@@ -26,7 +26,9 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       fn item() -> f32 {
@@ -133,7 +135,9 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed(seed: f32) {
-        seed_1(seed);
+        {
+          seed_1(seed);
+        }
       }
 
       @group(1) @binding(1) var oldState: texture_storage_3d<r32float, read>;
@@ -325,7 +329,9 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       struct Camera {
