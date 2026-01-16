@@ -770,6 +770,19 @@ ${this.ctx.pre}}`;
       );
     }
 
+    if (expression[0] === NODE.conditionalExpr) {
+      // ternary operator
+      const [_, test, consequent, alternative] = expression;
+      const testExpression = this.expression(test);
+      if (isKnownAtComptime(testExpression)) {
+        return testExpression.value
+          ? this.expression(consequent)
+          : this.expression(alternative);
+      } else {
+        throw new Error('AAA');
+      }
+    }
+
     if (expression[0] === NODE.stringLiteral) {
       return snip(expression[1], UnknownData, /* origin */ 'constant');
     }
