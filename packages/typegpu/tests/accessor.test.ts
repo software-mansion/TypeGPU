@@ -478,10 +478,10 @@ describe('tgpu.accessor', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var item: texture_storage_2d<rgba8unorm, write>;
+      "@group(0) @binding(0) var storageView: texture_storage_2d<rgba8unorm, write>;
 
       fn main() {
-        textureStore(item, vec2u(), vec4f(1));
+        textureStore(storageView, vec2u(), vec4f(1));
       }"
     `);
   });
