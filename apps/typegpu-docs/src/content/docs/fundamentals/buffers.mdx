@@ -147,7 +147,7 @@ You can also pass an initial value to the `root.createBuffer` function.
 When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
 
 ```ts twoslash
-import tgpu. { d } from 'typegpu';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 // Will be initialized to `100`
