@@ -33,10 +33,9 @@ import type {
 // ----------
 // Public API
 // ----------
-
 export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
-  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>> | undefined,
 ): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuAccessorImpl(
     schemaOrConstructor,
@@ -48,11 +47,11 @@ export function mutableAccessor<
   T extends AnyData | ((count: number) => AnyData),
 >(
   schemaOrConstructor: T,
-  defaultValue?: TgpuMutableAccessor.In<UnwrapRuntimeConstructor<NoInfer<T>>>,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>> | undefined,
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
-    defaultValue,
+    defaultValue as TgpuMutableAccessor.In<AnyData>,
   ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
