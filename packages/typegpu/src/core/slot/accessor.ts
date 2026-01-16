@@ -113,10 +113,6 @@ abstract class AccessorBase<
       if (isSnippet(value)) {
         value = value.value;
       }
-      const ownSnippet = getOwnSnippet(value);
-      if (ownSnippet) {
-        return ownSnippet;
-      }
     }
 
     const ownSnippet = getOwnSnippet(value);
