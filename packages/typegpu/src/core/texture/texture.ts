@@ -203,6 +203,7 @@ export interface TgpuTextureView<
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+  readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
@@ -652,6 +653,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  get size(): number[] {
+    return this.#baseTexture.props.size;
   }
 
   toString() {
