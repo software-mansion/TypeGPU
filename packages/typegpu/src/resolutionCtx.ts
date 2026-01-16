@@ -111,6 +111,7 @@ type SlotBindingLayer = {
 type BlockScopeLayer = {
   type: 'blockScope';
   declarations: Map<string, Snippet>;
+  externals: Map<string, Snippet>;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -190,6 +191,7 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'blockScope',
       declarations: new Map(),
+      externals: new Map(),
     });
   }
 
@@ -260,7 +262,8 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const snippet = layer.declarations.get(id);
+        // the order matters
+        const snippet = layer.declarations.get(id) ?? layer.externals.get(id);
         if (snippet !== undefined) {
           return snippet;
         }
@@ -287,6 +290,30 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     throw new Error('No block scope found to define a variable in.');
+  }
+
+  pushBlockExternals(externals: Record<string, Snippet>): void {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        Object.entries(externals).forEach(([id, snippet]) => {
+          layer.externals.set(id, snippet);
+        });
+        return;
+      }
+    }
+    throw new Error('No block scope found to push externals in.');
+  }
+
+  popBlockExternals(): void {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        layer.externals.clear();
+        return;
+      }
+    }
+    throw new Error('No block scope found to pop overrides from.');
   }
 }
 
@@ -409,6 +436,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
     return scope.returnType;
+  }
+
+  pushBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.pushBlockExternals(externals);
+  }
+  popBlockExternals() {
+    this._itemStateStack.popBlockExternals();
   }
 
   get shelllessRepo() {

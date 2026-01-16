@@ -33,6 +33,7 @@ import {
 } from './conversion.ts';
 import {
   ArrayExpression,
+  coerceToSnippet,
   concretize,
   forOfHelpers,
   type GenerationCtx,
@@ -46,6 +47,7 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { UnrolledIterable } from '../../src/core/unroll/tgpuUnroll.ts';
+import type { ExternalMap } from '../../src/core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -194,8 +196,19 @@ class WgslGenerator implements ShaderGenerator {
 
   public block(
     [_, statements]: tinyest.Block,
+    externalMap?: ExternalMap,
   ): string {
     this.ctx.pushBlockScope();
+
+    if (externalMap) {
+      const externals = Object.fromEntries(
+        Object.entries(externalMap).map((
+          [id, value],
+        ) => [id, coerceToSnippet(value)]),
+      );
+      this.ctx.pushBlockExternals(externals);
+    }
+
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))

@@ -70,7 +70,7 @@ describe('tgpu.unroll', () => {
       for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) {
         const boo = foo;
         { // broken indenting
-          let foo = boo.x;
+          const foo = boo.x;
           fooResult += foo;
         }
       }
@@ -84,14 +84,14 @@ describe('tgpu.unroll', () => {
         {
           var boo = vec3f(7);
           {
-            var foo2 = boo.x;
+            let foo2 = boo.x;
             fooResult += foo2;
           }
         }
         {
           var boo = vec3f(3);
           {
-            var foo2 = boo.x;
+            let foo2 = boo.x;
             fooResult += foo2;
           }
         }

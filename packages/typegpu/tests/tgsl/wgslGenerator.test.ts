@@ -15,6 +15,8 @@ import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
+import { resolutionAccess } from 'apps/typegpu-docs/src/examples/rendering/disco/consts.ts';
+import { ResultsTable } from 'apps/typegpu-docs/src/pages/benchmark/components/benchmark-results.tsx';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1666,5 +1668,72 @@ describe('wgslGenerator', () => {
         return res;
       }"
     `);
+  });
+
+  it('block externals do not override identifiers', () => {
+    const f = () => {
+      'use gpu';
+      const y = 100;
+      const x = y;
+      return x;
+    };
+
+    const parsed = getMetaData(f)?.ast?.body as tinyest.Block;
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.u32,
+        {},
+      );
+
+      const res = wgslGenerator.block(
+        parsed,
+        { x: 42 },
+      );
+
+      expect(res).toMatchInlineSnapshot(`
+        "{
+          const y = 100;
+          const x = y;
+          return u32(x);
+        }"
+      `);
+    });
+  });
+
+  it('block externals are injected correctly', () => {
+    const f = () => {
+      'use gpu';
+      for (const x of []) {
+        const y = x;
+      }
+    };
+
+    const parsed = getMetaData(f)?.ast?.body as tinyest.Block;
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.Void,
+        {},
+      );
+
+      const res = wgslGenerator.block(
+        // @ts-ignore
+        parsed[1][0][3] as tinyest.Block,
+        { x: 67 },
+      );
+
+      expect(res).toMatchInlineSnapshot(`
+        "{
+          const y = 67;
+        }"
+      `);
+    });
   });
 });
