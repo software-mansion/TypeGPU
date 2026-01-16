@@ -81,7 +81,7 @@ export function getName(definition: unknown): string | undefined {
   return getMetaData(definition)?.name;
 }
 
-export function setName(definition: object, name: string): void {
+export function setName(definition: object, name: string | undefined): void {
   if (isForwarded(definition)) {
     setName(definition[$getNameForward] as object, name);
   }
