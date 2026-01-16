@@ -807,9 +807,8 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      return `${this.ctx.pre}${
-        this.ctx.resolve(this.identifier(statement).value).value
-      };`;
+      const resolved = this.ctx.resolve(this.expression(statement).value).value;
+      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
     }
 
     if (typeof statement === 'boolean') {
@@ -1082,9 +1081,8 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    return `${this.ctx.pre}${
-      this.ctx.resolve(this.expression(statement).value).value
-    };`;
+    const resolved = this.ctx.resolve(this.expression(statement).value).value;
+    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
   }
 }
 

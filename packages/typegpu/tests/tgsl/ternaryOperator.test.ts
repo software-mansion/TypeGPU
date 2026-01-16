@@ -132,7 +132,7 @@ describe('ternary operator', () => {
     });
     expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
       "fn myFunction() {
-        ;
+
       }"
     `);
   });
