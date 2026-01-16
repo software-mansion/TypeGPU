@@ -13,7 +13,7 @@ import {
   initLayout,
   maskLayout,
   type MaskTexture,
-  paramsAccessor,
+  paramsAccess,
   pingPongLayout,
   SampleResult,
   VisualizationParams,
@@ -284,7 +284,7 @@ const createDistanceField = root['~unstable'].createGuardedComputePipeline(
 );
 
 const distancePipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
+  .with(paramsAccess, paramsUniform)
   .withVertex(fullScreenTriangle)
   .withFragment(distanceFrag, { format: presentationFormat })
   .createPipeline();

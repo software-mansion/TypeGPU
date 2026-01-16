@@ -58,8 +58,8 @@ function extractSnippetFromFn(cb: () => unknown): Snippet {
       } finally {
         if (pushedFnScope) {
           ctx.popBlockScope();
-          ctx[$internal].itemStateStack.popFunctionScope();
-          ctx[$internal].itemStateStack.popItem();
+          ctx[$internal].itemStateStack.pop('functionScope');
+          ctx[$internal].itemStateStack.pop('item');
         }
         ctx.popMode('codegen');
       }

@@ -110,15 +110,29 @@ export type FunctionScopeLayer = {
   reportedReturnTypes: Set<AnyData>;
 };
 
+export type SlotBindingLayer = {
+  type: 'slotBinding';
+  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+};
+
+export type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, Snippet>;
+};
+
+export type StackLayer =
+  | ItemLayer
+  | SlotBindingLayer
+  | FunctionScopeLayer
+  | BlockScopeLayer;
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  popItem(): void;
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
-  popSlotBindings(): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -130,10 +144,11 @@ export interface ItemStateStack {
     returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
-  popFunctionScope(): void;
   pushBlockScope(): void;
-  popBlockScope(): void;
-  pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
+
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;
