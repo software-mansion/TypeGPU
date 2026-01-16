@@ -128,13 +128,13 @@ describe('tgpu.slot', () => {
             return vec3f(0., 1., 0.);
           }
 
-      fn item() {
+      fn wrapper() {
             return getColor_1();
           }
 
       fn main() {
             getColor();
-            item();
+            wrapper();
           }"
     `);
   });
@@ -265,13 +265,13 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn fn1() { let value = 4; }
 
-      fn item_2() { fn1(); }
+      fn fn2() { fn1(); }
 
-      fn item_1() { item_2(); }
+      fn fn3() { fn2(); }
 
-      fn item() { item_1(); }
+      fn fn4() { fn3(); }
 
-      fn main() { item(); }"
+      fn main() { fn4(); }"
     `);
   });
 
@@ -378,7 +378,7 @@ describe('tgpu.slot', () => {
       .with(thirdSlot, 3);
 
     expect(getSize.toString()).toMatchInlineSnapshot(
-      `"fn:<unnamed>[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
+      `"fn:getSize[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
     );
   });
 
@@ -387,9 +387,10 @@ describe('tgpu.slot', () => {
 
     const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
       .with(slot, d.vec4f(1, 2, 3, 4));
+    console.log(getName(getSize));
 
     expect(getSize.toString()).toMatchInlineSnapshot(
-      `"fn:<unnamed>[slot=vec4f(1, 2, 3, 4)]"`,
+      `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
     );
   });
 
@@ -424,18 +425,18 @@ describe('tgpu.slot', () => {
         return vec3f();
       }
 
-      fn colorFn_1() -> vec3f {
+      fn redFn() -> vec3f {
         return vec3f(1, 0, 0);
       }
 
-      fn colorFn_2() -> vec3f {
+      fn blueFn() -> vec3f {
         return vec3f(0, 0, 1);
       }
 
       fn main() {
         colorFn();
-        colorFn_1();
-        colorFn_2();
+        redFn();
+        blueFn();
       }"
     `);
   });

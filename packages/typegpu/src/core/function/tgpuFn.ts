@@ -303,7 +303,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined,
     noComptime: true,
     signature: {
       argTypes: innerFn.shell.argTypes,
@@ -324,13 +324,15 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = getName(innerFn) ?? '<unnamed>';
+      const fnLabel = getName(this) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
 
   const innerName = getName(innerFn);
+  console.log('INNER NAME:', innerName);
+  console.log('CALL NAME:', getName(call));
   if (innerName) {
     setName(fn, innerName);
   }

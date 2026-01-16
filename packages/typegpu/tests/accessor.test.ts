@@ -24,7 +24,7 @@ describe('tgpu.accessor', () => {
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn red() -> vec3f{ return vec3f(1, 0, 0); }
 
-      fn item() -> vec3f{ return red(); }"
+      fn getColor() -> vec3f{ return red(); }"
     `);
   });
 
@@ -83,7 +83,7 @@ describe('tgpu.accessor', () => {
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> redUniform: vec3f;
 
-      fn item() -> vec3f{ return redUniform; }"
+      fn getColor() -> vec3f{ return redUniform; }"
     `);
   });
 
@@ -100,7 +100,7 @@ describe('tgpu.accessor', () => {
       .with(multiplierAccess, 2);
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(
-      `"fn item() -> vec3f{ return vec3f(1, 0, 0) * 2f; }"`,
+      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2f; }"`,
     );
   });
 
@@ -508,13 +508,13 @@ describe('tgpu.accessor', () => {
     }).with(pixelIdx, 4);
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "struct item_1 {
+      "struct item {
         pixels: array<vec3f>,
       }
 
-      @group(0) @binding(0) var<storage, read> image: item_1;
+      @group(0) @binding(0) var<storage, read> image: item;
 
-      fn item() {
+      fn main() {
         let hello = image.pixels[4].x;
       }"
     `);
