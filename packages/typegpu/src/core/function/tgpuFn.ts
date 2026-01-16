@@ -298,7 +298,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
-      return createBoundFunction(fn, [
+      return createBoundFunction(innerFn, [
         ...pairs,
         [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
