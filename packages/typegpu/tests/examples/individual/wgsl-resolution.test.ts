@@ -28,7 +28,7 @@ describe('wgsl resolution example', () => {
         return vec2f(((v.x * cos_1) - (v.y * sin_1)), ((v.x * sin_1) + (v.y * cos_1)));
       }
 
-      @group(1) @binding(0) var<uniform> colorPalette: vec3f;
+      @group(1) @binding(0) var<uniform> colorPalette_1: vec3f;
 
       struct vertex_shader_Output {
         @builtin(position) position: vec4f,
@@ -45,7 +45,8 @@ describe('wgsl resolution example', () => {
         let angle = get_rotation_from_velocity_util(input.velocity);
         var rotated = rotate_util(input.v, angle);
         var pos = vec4f((rotated.x + input.center.x), (rotated.y + input.center.y), 0f, 1f);
-        var color = vec4f(((sin((angle + colorPalette.x)) * 0.45f) + 0.45f), ((sin((angle + colorPalette.y)) * 0.45f) + 0.45f), ((sin((angle + colorPalette.z)) * 0.45f) + 0.45f), 1f);
+        let colorPalette = (&colorPalette_1);
+        var color = vec4f(((sin((angle + (*colorPalette).x)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).y)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).z)) * 0.45f) + 0.45f), 1f);
         return vertex_shader_Output(pos, color);
       }
 
@@ -63,7 +64,7 @@ describe('wgsl resolution example', () => {
         velocity: vec2f,
       }
 
-      @group(2) @binding(0) var<storage, read> currentTrianglePos: array<TriangleData>;
+      @group(2) @binding(0) var<storage, read> currentTrianglePos_1: array<TriangleData>;
 
       struct Params {
         separationDistance: f32,
@@ -84,17 +85,18 @@ describe('wgsl resolution example', () => {
 
       @compute @workgroup_size(1) fn compute_shader(input: compute_shader_Input) {
         let index = input.gid.x;
-        let instanceInfo = (&currentTrianglePos[index]);
+        let currentTrianglePos = (&currentTrianglePos_1);
+        let instanceInfo = (&(*currentTrianglePos)[index]);
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = 0u; (i < arrayLength(&currentTrianglePos)); i++) {
+        for (var i = 0u; (i < arrayLength(&(*currentTrianglePos))); i++) {
           if ((i == index)) {
             continue;
           }
-          let other = (&currentTrianglePos[i]);
+          let other = (&(*currentTrianglePos)[i]);
           let dist = distance((*instanceInfo).position, (*other).position);
           if ((dist < paramsBuffer.separationDistance)) {
             separation = (separation + ((*instanceInfo).position - (*other).position));

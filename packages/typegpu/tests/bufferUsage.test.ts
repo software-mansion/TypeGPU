@@ -33,7 +33,7 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const x = uniform.value;
+      const x = uniform.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -55,8 +55,8 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const pos = uniform.value.pos;
-      const velX = uniform.value.vel.x;
+      const pos = uniform.$.pos;
+      const velX = uniform.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -117,7 +117,7 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const x = mutable.value;
+      const x = mutable.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -141,8 +141,8 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const pos = mutable.value.pos;
-      const velX = mutable.value.vel.x;
+      const pos = mutable.$.pos;
+      const velX = mutable.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -222,7 +222,7 @@ describe('TgpuBufferReadonly', () => {
     const paramReadonly = paramBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const x = paramReadonly.value;
+      const x = paramReadonly.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -245,8 +245,8 @@ describe('TgpuBufferReadonly', () => {
     const boidReadonly = boidBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const pos = boidReadonly.value.pos;
-      const velX = boidReadonly.value.vel.x;
+      const pos = boidReadonly.$.pos;
+      const velX = boidReadonly.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -264,19 +264,16 @@ describe('TgpuBufferReadonly', () => {
     `);
   });
 
-  it('cannot be accessed via .$ or .value top-level', ({ root }) => {
+  it('cannot be accessed via .$ top-level', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
-    );
-    expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
+      `[Error: .$ is inaccessible during normal JS execution. Try \`.read()\`]`,
     );
   });
 
-  it('cannot be accessed via .$ or .value in a function called top-level', ({ root }) => {
+  it('cannot be accessed via .$ in a function called top-level', ({ root }) => {
     const fooBuffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = fooBuffer.as('readonly');
 

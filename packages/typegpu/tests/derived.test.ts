@@ -28,10 +28,10 @@ describe('TgpuDerived', () => {
 
   it('memoizes functions using derived values', () => {
     const foo = tgpu.slot<number>();
-    const double = tgpu['~unstable'].derived(() => foo.value * 2);
+    const double = tgpu['~unstable'].derived(() => foo.$ * 2);
 
     const getDouble = tgpu.fn([], d.f32)(() => {
-      return double.value;
+      return double.$;
     });
 
     const a = getDouble.with(foo, 2);
@@ -66,7 +66,7 @@ describe('TgpuDerived', () => {
     const gridSizeSlot = tgpu.slot<number>();
 
     const fill = tgpu['~unstable'].derived(() => {
-      const gridSize = gridSizeSlot.value;
+      const gridSize = gridSizeSlot.$;
 
       return tgpu.fn([d.arrayOf(d.f32, gridSize)])(
         (arr) => {/* do something */},
@@ -81,9 +81,9 @@ describe('TgpuDerived', () => {
     const threeArray: number[] = [1, 2, 3];
 
     const main = tgpu.fn([])(() => {
-      fill.value(oneArray);
-      fillWith2.value(twoArray);
-      fillWith3.value(threeArray);
+      fill.$(oneArray);
+      fillWith2.$(twoArray);
+      fillWith3.$(threeArray);
     })
       .with(gridSizeSlot, 1);
 
@@ -108,10 +108,10 @@ describe('TgpuDerived', () => {
     `);
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
+  it('allows access to value in tgsl functions through the .$ property ', ({ root }) => {
     const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
     const doubledVectorSlot = tgpu['~unstable'].derived(() => {
-      const vec = vectorSlot.value;
+      const vec = vectorSlot.$;
 
       return mul(2, vec);
     });
@@ -130,13 +130,13 @@ describe('TgpuDerived', () => {
     );
 
     const func = tgpu.fn([])(() => {
-      const pos = doubledVectorSlot.value;
-      const posX = doubledVectorSlot.value.x;
-      const vel = derivedUniformSlot.value.vel;
-      const velX = derivedUniformSlot.value.vel.x;
+      const pos = doubledVectorSlot.$;
+      const posX = doubledVectorSlot.$.x;
+      const vel = derivedUniformSlot.$.vel;
+      const velX = derivedUniformSlot.$.vel.x;
 
-      const vel_ = derivedDerivedUniformSlot.value.vel;
-      const velX_ = derivedDerivedUniformSlot.value.vel.x;
+      const vel_ = derivedDerivedUniformSlot.$.vel;
+      const velX_ = derivedDerivedUniformSlot.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -162,7 +162,7 @@ describe('TgpuDerived', () => {
   // in context of whether the function should automatically have
   // slot values set on derived and how to achieve that
   it('allows slot bindings to pass downstream from derived (#697)', () => {
-    const valueSlot = tgpu['~unstable'].slot(1);
+    const valueSlot = tgpu.slot(1);
 
     const derivedFn = tgpu['~unstable'].derived(() => {
       return tgpu.fn([], d.f32)(() => valueSlot.$)

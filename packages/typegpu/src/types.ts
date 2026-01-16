@@ -53,6 +53,7 @@ export type ResolvableObject =
   | TgpuBufferUsage
   | TgpuConst
   | TgpuDeclare
+  | TgpuBindGroupLayout
   | TgpuFn
   | TgpuComputeFn
   | TgpuFragmentFn

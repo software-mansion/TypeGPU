@@ -274,7 +274,7 @@ describe('tgpu.slot', () => {
     `);
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
+  it('allows access to value in tgsl functions through the .$ property ', ({ root }) => {
     const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
     const Boid = d.struct({
       pos: d.vec3f,
@@ -291,15 +291,15 @@ describe('tgpu.slot', () => {
     const colorAccessSlot = tgpu.slot(colorAccess);
 
     const func = tgpu.fn([])(() => {
-      const pos = vectorSlot.value;
-      const posX = vectorSlot.value.x;
-      const vel = uniformSlot.value.vel;
-      const velX = uniformSlot.value.vel.x;
+      const pos = vectorSlot.$;
+      const posX = vectorSlot.$.x;
+      const vel = uniformSlot.$.vel;
+      const velX = uniformSlot.$.vel.x;
 
-      const vel_ = uniformSlotSlot.value.vel;
-      const velX_ = uniformSlotSlot.value.vel.x;
+      const vel_ = uniformSlotSlot.$.vel;
+      const velX_ = uniformSlotSlot.$.vel.x;
 
-      const color = colorAccessSlot.value;
+      const color = colorAccessSlot.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`

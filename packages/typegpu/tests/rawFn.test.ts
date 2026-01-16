@@ -95,11 +95,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     });
 
     const vs = tgpu.fn([])`() {
-      out.highlighted = highlighted.index;
+      out.highlighted = layout.$.highlightedCircle.index;
 
-      let h = highlighted;
+      let h = layout.$.highlightedCircle;
       let x = a.b.c.highlighted.d;
-    }`.$uses({ highlighted: uniformBindGroupLayout.bound.highlightedCircle });
+    }`.$uses({ layout: uniformBindGroupLayout });
 
     expect(tgpu.resolve([vs])).toMatchInlineSnapshot(`
       "struct HighlightedCircle {

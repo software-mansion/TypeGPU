@@ -1,77 +1,47 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu from 'typegpu';
+import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
-const rareLayout = tgpu.bindGroupLayout({
-  sampling: { sampler: 'filtering' },
-  color: { uniform: d.vec3f },
-  threshold: { uniform: d.f32 },
-  uvTransform: { uniform: d.mat2x2f },
+const root = await tgpu.init();
+const device = root.device;
+
+const sampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
 });
 
-const frequentLayout = tgpu.bindGroupLayout({
+const color = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
+const threshold = root.createUniform(d.f32, 0.5);
+const uvTransform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
+
+const layout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const VertexOutput = d.struct({
-  position: d.builtin.position,
-  uv: d.location(0, d.vec2f),
-});
-
-const shaderCode = tgpu.resolve({
-  template: /* wgsl */ `
-
-@vertex
-fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
-  const pos = array(
-    vec2( 1.0,  1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0, -1.0),
-    vec2( 1.0,  1.0),
-    vec2(-1.0, -1.0),
-    vec2(-1.0,  1.0),
+const fragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const uv2 = uvTransform.$.mul(uv.sub(0.5)).add(0.5);
+  const col = std.textureSampleBaseClampToEdge(
+    layout.$.inputTexture,
+    sampler.$,
+    uv2,
   );
+  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
+  const colycbcr = color.$.mul(rgbToYcbcrMatrix.$);
 
-  const uv = array(
-    vec2(1.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(0.0, 0.0),
-  );
+  const crDiff = std.abs(ycbcr.y - colycbcr.y);
+  const cbDiff = std.abs(ycbcr.z - colycbcr.z);
+  const distance = std.length(d.vec2f(crDiff, cbDiff));
 
-  var output: VertexOutput;
-  output.position = vec4(pos[idx], 0.0, 1.0);
-  output.uv = uv[idx];
-  return output;
-}
-
-@fragment
-fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let uv2 = uvTransform * (uv - vec2f(0.5)) + vec2f(0.5);
-  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv2);
-  let ycbcr = col.rgb * rgbToYcbcrMatrix;
-  let colycbcr = color * rgbToYcbcrMatrix;
-
-  let crDiff = abs(ycbcr.g - colycbcr.g);
-  let cbDiff = abs(ycbcr.b - colycbcr.b);
-  let distance = length(vec2f(crDiff, cbDiff));
-
-  if (distance < pow(threshold, 2)) {
-    col = vec4f();
+  if (distance < (threshold.$ ** 2)) {
+    return d.vec4f();
   }
 
   return col;
-}
-
-`,
-  externals: {
-    ...rareLayout.bound,
-    ...frequentLayout.bound,
-    VertexOutput,
-    rgbToYcbcrMatrix,
-  },
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -90,9 +60,6 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const root = await tgpu.init();
-const device = root.device;
-
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -102,44 +69,10 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const thresholdBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
-
-const colorBuffer = root
-  .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
-  .$usage('uniform');
-
-const uvTransformBuffer = root
-  .createBuffer(d.mat2x2f, d.mat2x2f.identity())
-  .$usage('uniform');
-
-const sampler = device.createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
-
-const rareBindGroup = root.createBindGroup(rareLayout, {
-  color: colorBuffer,
-  sampling: sampler,
-  threshold: thresholdBuffer,
-  uvTransform: uvTransformBuffer,
-});
-
-const shaderModule = device.createShaderModule({
-  code: shaderCode,
-});
-
-const renderPipeline = device.createRenderPipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(rareLayout), root.unwrap(frequentLayout)],
-  }),
-  vertex: {
-    module: shaderModule,
-  },
-  fragment: {
-    module: shaderModule,
-    targets: [{ format: presentationFormat }],
-  },
-});
+const renderPipeline = root['~unstable']
+  .withVertex(fullScreenTriangle)
+  .withFragment(fragment, { format: presentationFormat })
+  .createPipeline();
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -164,24 +97,13 @@ function setUVTransformForIOS() {
     m = d.mat2x2f(-1, 0, 0, -1);
   }
 
-  uvTransformBuffer.write(m);
+  uvTransform.write(m);
 }
 
 if (isIOS) {
   setUVTransformForIOS();
   window.addEventListener('orientationchange', setUVTransformForIOS);
 }
-
-const renderPassDescriptor: GPURenderPassDescriptor = {
-  colorAttachments: [
-    {
-      view: undefined as unknown as GPUTextureView,
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    },
-  ],
-};
 
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined;
@@ -207,27 +129,18 @@ function processVideoFrame(
     onVideoChange(lastFrameSize);
   }
 
-  (
-    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
-  )[0].view = context.getCurrentTexture().createView();
+  const group = root.createBindGroup(layout, {
+    inputTexture: device.importExternalTexture({ source: video }),
+  });
 
-  const encoder = device.createCommandEncoder();
-
-  const pass = encoder.beginRenderPass(renderPassDescriptor);
-  pass.setPipeline(renderPipeline);
-  pass.setBindGroup(0, root.unwrap(rareBindGroup));
-  pass.setBindGroup(
-    1,
-    root.unwrap(
-      root.createBindGroup(frequentLayout, {
-        inputTexture: device.importExternalTexture({ source: video }),
-      }),
-    ),
-  );
-  pass.draw(6);
-  pass.end();
-
-  device.queue.submit([encoder.finish()]);
+  renderPipeline
+    .with(group)
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
@@ -238,17 +151,17 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 export const controls = {
   color: {
-    onColorChange: (value: readonly [number, number, number]) => {
-      colorBuffer.write(d.vec3f(...value));
-    },
     initial: [0, 1, 0] as const,
+    onColorChange: (value: readonly [number, number, number]) => {
+      color.write(d.vec3f(...value));
+    },
   },
   threshold: {
     initial: 0.1,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => thresholdBuffer.write(value),
+    onSliderChange: (value: number) => threshold.write(value),
   },
 };
 

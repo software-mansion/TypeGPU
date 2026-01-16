@@ -96,7 +96,7 @@ var<private> x: array<s, 2> = array<s, 2>(s(1u, vec2i(2, 3)), s(4u, vec2i(5, 6))
     );
   });
 
-  it('allows accessing variables in TGSL through .value', () => {
+  it('allows accessing variables in TGSL through .$', () => {
     const Boid = d.struct({
       pos: d.vec3f,
       vel: d.vec3u,
@@ -108,9 +108,9 @@ var<private> x: array<s, 2> = array<s, 2>(s(1u, vec2i(2, 3)), s(4u, vec2i(5, 6))
     });
 
     const func = tgpu.fn([])(() => {
-      const pos = boid.value;
-      const vel = boid.value.vel;
-      const velX = boid.value.vel.x;
+      const pos = boid.$;
+      const vel = boid.$.vel;
+      const velX = boid.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`

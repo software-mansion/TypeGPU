@@ -28,6 +28,9 @@ export interface TgpuVar<
 > extends TgpuNamable {
   readonly resourceType: 'var';
   readonly [$gpuValueOf]: InferGPU<TDataType>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;
 

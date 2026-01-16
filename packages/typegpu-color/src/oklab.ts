@@ -273,7 +273,7 @@ const gamutClipPreserveChroma = tgpu.fn([vec3f], vec3f)((lab) => {
 export const oklabGamutClipAlphaAccess = tgpu['~unstable'].accessor(f32, 0.2);
 
 const gamutClipAdaptiveL05 = tgpu.fn([vec3f], vec3f)((lab) => {
-  const alpha = oklabGamutClipAlphaAccess.value;
+  const alpha = oklabGamutClipAlphaAccess.$;
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -293,7 +293,7 @@ const gamutClipAdaptiveL05 = tgpu.fn([vec3f], vec3f)((lab) => {
 });
 
 const gamutClipAdaptiveL0cusp = tgpu.fn([vec3f], vec3f)((lab) => {
-  const alpha = oklabGamutClipAlphaAccess.value;
+  const alpha = oklabGamutClipAlphaAccess.$;
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -323,7 +323,7 @@ export const oklabGamutClip = {
 };
 
 export const oklabToRgb = tgpu.fn([vec3f], vec3f)((lab) => {
-  return linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.value(lab)));
+  return linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.$(lab)));
 });
 
 export const rgbToOklab = tgpu.fn([vec3f], vec3f)((rgb) => {

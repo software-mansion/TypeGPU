@@ -36,7 +36,7 @@ describe('TgpuComputePipeline', () => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
     const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-      layout.bound.alpha; // Using an entry of the layout
+      layout.$.alpha; // Using an entry of the layout
     });
 
     const pipeline = root.withCompute(entryFn).createPipeline();
@@ -334,7 +334,7 @@ describe('TgpuComputePipeline', () => {
 
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {
-          layout.bound.data;
+          layout.$.data;
         })
         .$uses({ layout });
 

@@ -193,7 +193,7 @@ describe('TgpuRoot', () => {
     const mainVertexUsing = tgpu['~unstable'].vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
-      layout.bound.foo.value;
+      layout.$.foo;
       return {
         pos: d.vec4f(),
       };

@@ -19,9 +19,9 @@ const computeRunTests = tgpu['~unstable']
     s = s && pointersTest();
 
     if (s) {
-      result.value = 1;
+      result.$ = 1;
     } else {
-      result.value = 0;
+      result.$ = 0;
     }
   });
 
