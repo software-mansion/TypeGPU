@@ -331,8 +331,6 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   });
 
   const innerName = getName(innerFn);
-  console.log('INNER NAME:', innerName);
-  console.log('CALL NAME:', getName(call));
   if (innerName) {
     setName(fn, innerName);
   }

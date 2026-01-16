@@ -387,7 +387,6 @@ describe('tgpu.slot', () => {
 
     const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
       .with(slot, d.vec4f(1, 2, 3, 4));
-    console.log(getName(getSize));
 
     expect(getSize.toString()).toMatchInlineSnapshot(
       `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
