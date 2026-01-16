@@ -3,8 +3,6 @@ import * as d from '../src/data/index.ts';
 import tgpu, {
   type TgpuBindGroupLayout,
   type TgpuBuffer,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
   type TgpuTextureView,
   type UniformFlag,
 } from '../src/index.ts';
