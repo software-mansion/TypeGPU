@@ -108,7 +108,7 @@ export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
 export type Providing = {
-  inner: unknown;
+  inner: object;
   pairs: SlotValuePair[];
 };
 

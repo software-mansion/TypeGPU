@@ -611,7 +611,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * @param name the temporary name to assign to the item (if missing, just returns `callback()`)
    */
   withRenamed<T>(
-    item: unknown,
+    item: object,
     name: string | undefined,
     callback: () => T,
   ): T {
