@@ -144,9 +144,7 @@ export type {
   TgpuUniform,
 } from './core/buffer/bufferShorthand.ts';
 export type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuDerived,
   TgpuMutableAccessor,
