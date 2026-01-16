@@ -76,7 +76,9 @@ describe('jelly-slider example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       struct Camera {
@@ -165,7 +167,7 @@ describe('jelly-slider example', () => {
 
       @group(0) @binding(6) var bezierTexture: texture_2d<f32>;
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -174,7 +176,7 @@ describe('jelly-slider example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       fn getNormalFromSdf(position: vec3f, epsilon: f32) -> vec3f {

@@ -32,10 +32,12 @@ describe('jump flood (voronoi) example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -44,7 +46,7 @@ describe('jump flood (voronoi) example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       @group(0) @binding(2) var<uniform> seedThresholdUniform: f32;
