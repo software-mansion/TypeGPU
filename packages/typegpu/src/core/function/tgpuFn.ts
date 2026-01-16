@@ -271,9 +271,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   innerFn: TgpuFn<ImplSchema>,
   pairs: SlotValuePair[],
 ): TgpuFn<ImplSchema> {
-  type This = TgpuFnBase<ImplSchema> & {
-    [$getNameForward]: TgpuFn<ImplSchema>;
-  };
+  type This = TgpuFnBase<ImplSchema>;
 
   const fnBase: This = {
     resourceType: 'function',
@@ -288,7 +286,6 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       return this;
     },
 
-    [$getNameForward]: innerFn,
     $name(label: string): This {
       setName(this, label);
       return this;
@@ -332,6 +329,11 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
+
+  const innerName = getName(innerFn);
+  if (innerName) {
+    setName(fn, innerName);
+  }
 
   return fn;
 }

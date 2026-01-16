@@ -100,7 +100,7 @@ describe('TgpuDerived', () => {
 
       }
 
-      fn main() {
+      fn item() {
         fill(array<f32, 1>(1f));
         fill_1(array<f32, 2>(1f, 2f));
         fill_2(array<f32, 3>(1f, 2f, 3f));
@@ -178,17 +178,17 @@ describe('TgpuDerived', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn innerFn() -> f32 {
+      "fn item() -> f32 {
         return 1f;
       }
 
-      fn innerFn_1() -> f32 {
+      fn item_1() -> f32 {
         return 2f;
       }
 
       fn main() {
-        innerFn();
-        innerFn_1();
+        item();
+        item_1();
       }"
     `);
   });
