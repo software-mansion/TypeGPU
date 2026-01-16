@@ -1734,4 +1734,43 @@ describe('wgslGenerator', () => {
       `);
     });
   });
+
+  it('block externals are injected correctly into nested block', () => {
+    const f = () => {
+      'use gpu';
+      for (const x of []) {
+        const z = x;
+        {
+          const y = x;
+        }
+      }
+    };
+
+    const parsed = getMetaData(f)?.ast?.body as tinyest.Block;
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.Void,
+        {},
+      );
+
+      const res = wgslGenerator.block(
+        // @ts-expect-error it's not undefined
+        parsed[1][0][3] as tinyest.Block,
+        { x: 67 },
+      );
+
+      expect(res).toMatchInlineSnapshot(`
+        "{
+          const z = 67;
+          {
+            const y = 67;
+          }
+        }"
+      `);
+    });
+  });
 });
