@@ -15,8 +15,6 @@ import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
-import { resolutionAccess } from 'apps/typegpu-docs/src/examples/rendering/disco/consts.ts';
-import { ResultsTable } from 'apps/typegpu-docs/src/pages/benchmark/components/benchmark-results.tsx';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1724,7 +1722,7 @@ describe('wgslGenerator', () => {
       );
 
       const res = wgslGenerator.block(
-        // @ts-ignore
+        // @ts-expect-error it's not undefined
         parsed[1][0][3] as tinyest.Block,
         { x: 67 },
       );
