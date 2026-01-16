@@ -1,8 +1,6 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { palette } from '../utils.ts';
+import tgpu, { d, std } from 'typegpu';
 import { resolutionAccess, timeAccess } from '../consts.ts';
+import { palette } from '../utils.ts';
 
 const aspectCorrected = (uv: d.v2f): d.v2f => {
   'use gpu';

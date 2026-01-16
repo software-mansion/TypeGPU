@@ -1,14 +1,14 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
 const Boid = d.struct({
   pos: d.vec3f,
 });
 
-const createRandomBoid = tgpu.fn([], Boid)(() => {
-  return { pos: randf.inUnitCube() };
-});
+const createRandomBoid = () => {
+  'use gpu';
+  return Boid({ pos: randf.inUnitCube() });
+};
 
 const shaderCode = tgpu.resolve([createRandomBoid]);
 

@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import type { TgpuComputePipeline, TgpuRoot, TgpuTextureView } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import { taaResolveLayout } from './dataTypes.ts';
 
 export const taaResolveFn = tgpu['~unstable'].computeFn({

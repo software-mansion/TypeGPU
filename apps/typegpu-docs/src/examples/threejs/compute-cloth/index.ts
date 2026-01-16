@@ -2,11 +2,9 @@
  * Based on: https://github.com/mrdoob/three.js/blob/dev/examples/webgpu_compute_cloth.html
  */
 
-import * as d from 'typegpu/data';
+import { d, std } from 'typegpu';
 import * as THREE from 'three/webgpu';
 import * as t3 from '@typegpu/three';
-import * as std from 'typegpu/std';
-
 import * as TSL from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';

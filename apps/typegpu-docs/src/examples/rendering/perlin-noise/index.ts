@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 
@@ -80,12 +78,12 @@ const renderPipelineBase = root['~unstable']
 const renderPipelines = {
   exponential: renderPipelineBase
     .with(sharpenFnSlot, exponentialSharpen)
-    .withVertex(fullScreenTriangle, {})
+    .withVertex(common.fullScreenTriangle, {})
     .withFragment(mainFragment, { format: presentationFormat })
     .createPipeline(),
   tanh: renderPipelineBase
     .with(sharpenFnSlot, tanhSharpen)
-    .withVertex(fullScreenTriangle, {})
+    .withVertex(common.fullScreenTriangle, {})
     .withFragment(mainFragment, { format: presentationFormat })
     .createPipeline(),
 };

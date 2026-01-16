@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { cos, sin } from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 // constants
 
@@ -87,8 +85,8 @@ const dataLayout = tgpu.vertexLayout(
 
 const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   const pos = d.vec2f(
-    (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle)),
+    (v.x * std.cos(angle)) - (v.y * std.sin(angle)),
+    (v.x * std.sin(angle)) + (v.y * std.cos(angle)),
   );
 
   return pos;

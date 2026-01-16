@@ -17,7 +17,7 @@ Because elements in TypeGPU vectors and matrices can be accessed with the `[]` o
 For example, you can create a vector and normalize it like this:
 
 ```ts
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { vec2 } from 'wgpu-matrix';
 
 const v = d.vec2f(1, 2);
@@ -34,7 +34,7 @@ If we didn't, we would get a `Float32Array` without modifying the original vecto
 If you wanted to initialize a matrix as an identity matrix, you could do it like this:
 
 ```ts
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 
 const m = mat4.identity(d.mat4x4f()); // returns a mat4x4f

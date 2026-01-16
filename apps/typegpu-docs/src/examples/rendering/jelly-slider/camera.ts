@@ -1,5 +1,5 @@
 import type { TgpuRoot, TgpuUniform } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 const Camera = d.struct({

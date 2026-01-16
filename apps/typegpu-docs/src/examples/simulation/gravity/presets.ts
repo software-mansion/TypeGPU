@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import type { CollisionBehavior, Preset, SphereTextureName } from './enums.ts';
 
 export interface PresetData {

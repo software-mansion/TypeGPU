@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {

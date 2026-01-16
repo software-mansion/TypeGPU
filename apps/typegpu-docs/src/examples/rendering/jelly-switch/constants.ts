@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import type { SpringProperties } from './spring.ts';
 
 // Rendering constants

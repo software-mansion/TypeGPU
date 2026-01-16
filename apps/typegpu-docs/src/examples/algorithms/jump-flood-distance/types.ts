@@ -1,9 +1,9 @@
 import tgpu, {
+  d,
   type SampledFlag,
   type StorageFlag,
   type TgpuTexture,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 
 export const VisualizationParams = d.struct({
   showInside: d.u32,

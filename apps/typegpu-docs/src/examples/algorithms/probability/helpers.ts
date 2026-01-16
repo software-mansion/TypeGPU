@@ -1,9 +1,8 @@
-import tgpu from 'typegpu';
 import { randf } from '@typegpu/noise';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
-import { Distribution, PlotType, type PRNG } from './types.ts';
 import * as c from './constants.ts';
+import { Distribution, PlotType, type PRNG } from './types.ts';
 
 const normal = d.vec3f(1.41, 1.41, 0);
 const z2D = 0.5;

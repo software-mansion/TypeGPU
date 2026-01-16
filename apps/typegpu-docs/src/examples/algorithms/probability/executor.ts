@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { randf } from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -10,8 +10,7 @@ import type {
   TgpuRoot,
   TgpuSlot,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+import tgpu, { d } from 'typegpu';
 
 export class Executor {
   // don't exceed max workgroup grid X dimension size

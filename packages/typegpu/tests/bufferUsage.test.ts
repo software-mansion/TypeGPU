@@ -1,8 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 
-import tgpu from '../src/index.ts';
-
-import * as d from '../src/data/index.ts';
+import { d, tgpu } from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { it } from './utils/extendedIt.ts';
 

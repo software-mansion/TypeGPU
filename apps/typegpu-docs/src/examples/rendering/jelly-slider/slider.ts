@@ -8,8 +8,7 @@ import type {
   TgpuTexture,
   TgpuUniform,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const BEZIER_TEXTURE_SIZE = [256, 128] as const;
 

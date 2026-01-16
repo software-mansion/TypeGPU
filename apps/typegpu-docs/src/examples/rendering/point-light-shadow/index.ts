@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
 import { PointLight } from './point-light.ts';
@@ -336,7 +333,7 @@ const pipelineMain = root['~unstable']
   .createPipeline();
 
 const pipelinePreview = root['~unstable']
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(previewFragment, { format: presentationFormat })
   .createPipeline();
 

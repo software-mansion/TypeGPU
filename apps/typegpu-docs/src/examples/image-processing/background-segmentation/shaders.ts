@@ -1,6 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
+import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
   blurLayout,
@@ -11,7 +10,6 @@ import {
   paramsAccess,
   prepareModelInputLayout,
 } from './schemas.ts';
-import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';

@@ -1,9 +1,9 @@
 import tgpu, {
+  d,
   type TgpuBindGroup,
   type TgpuComputeFn,
   type TgpuFragmentFn,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 import * as p from './params.ts';
 import {
   fragmentImageFn,

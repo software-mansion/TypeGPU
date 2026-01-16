@@ -1,6 +1,5 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },

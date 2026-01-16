@@ -113,8 +113,7 @@ that you can use in your app:
 ```ts
 import { useEffect } from 'react';
 import { Canvas, useDevice, useGPUContext } from 'react-native-wgpu';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },

@@ -1,12 +1,11 @@
-import tgpu, {
-  type TgpuBuffer,
-  type TgpuComputePipeline,
-  type TgpuRoot,
-  type UniformFlag,
-  type VertexFlag,
+import type {
+  TgpuBuffer,
+  TgpuComputePipeline,
+  TgpuRoot,
+  UniformFlag,
+  VertexFlag,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { ComputeVertex, Vertex } from './dataTypes.ts';
 import {
   calculateMidpoint,

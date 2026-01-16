@@ -7,8 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
 
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
 import * as e from './entities.ts';
