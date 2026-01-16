@@ -4,10 +4,8 @@ import type { GPUValueOf } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import {
-  type AccessorIn,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type Providing,
   type TgpuAccessor,
   type TgpuLazy,
@@ -71,7 +69,7 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
 
   with<TData extends AnyData>(
     slot: TgpuSlot<TData> | TgpuAccessor<TData> | TgpuMutableAccessor<TData>,
-    value: AccessorIn<TData> | MutableAccessorIn<TData>,
+    value: TgpuAccessor.In<TData> | TgpuMutableAccessor.In<TData>,
   ): TgpuLazy<T> {
     return new TgpuLazyImpl(this[$internal].compute, {
       inner: this[$providing]?.inner ?? this,
