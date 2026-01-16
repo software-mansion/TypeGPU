@@ -145,7 +145,6 @@ export type {
 } from './core/buffer/bufferShorthand.ts';
 export type {
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuDerived,
   TgpuMutableAccessor,

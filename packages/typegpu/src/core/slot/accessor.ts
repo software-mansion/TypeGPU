@@ -25,7 +25,6 @@ import {
 } from '../valueProxyUtils.ts';
 import { slot as slotConstructor } from './slot.ts';
 import type {
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -49,7 +48,7 @@ export function mutableAccessor<
   T extends AnyData | ((count: number) => AnyData),
 >(
   schemaOrConstructor: T,
-  defaultValue?: MutableAccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+  defaultValue?: TgpuMutableAccessor.In<UnwrapRuntimeConstructor<NoInfer<T>>>,
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
@@ -63,7 +62,7 @@ export function mutableAccessor<
 
 abstract class AccessorBase<
   T extends AnyData,
-  TValue extends TgpuAccessor.In<T> | MutableAccessorIn<T>,
+  TValue extends TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
 > implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
@@ -206,13 +205,13 @@ export class TgpuAccessorImpl<T extends AnyData>
 }
 
 export class TgpuMutableAccessorImpl<T extends AnyData>
-  extends AccessorBase<T, MutableAccessorIn<T>>
+  extends AccessorBase<T, TgpuMutableAccessor.In<T>>
   implements TgpuMutableAccessor<T> {
   readonly resourceType = 'mutable-accessor';
 
   constructor(
     schemaOrConstructor: T | ((count: number) => T),
-    defaultValue: MutableAccessorIn<T> | undefined = undefined,
+    defaultValue: TgpuMutableAccessor.In<T> | undefined = undefined,
   ) {
     super(schemaOrConstructor, defaultValue);
   }

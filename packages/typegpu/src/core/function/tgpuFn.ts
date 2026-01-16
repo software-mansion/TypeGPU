@@ -26,7 +26,6 @@ import {
   type Eventual,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
@@ -98,7 +97,7 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   ): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
 }
 

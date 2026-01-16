@@ -67,7 +67,6 @@ import type {
 } from '../pipeline/renderPipeline.ts';
 import type {
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -217,7 +216,7 @@ export interface Configurable {
   ): Configurable;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
   ): Configurable;
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
@@ -292,7 +291,7 @@ export interface WithBinding {
   ): WithBinding;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
   ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;

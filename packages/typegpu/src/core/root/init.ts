@@ -86,7 +86,6 @@ import type {
 import {
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type TgpuAccessor,
   type TgpuMutableAccessor,
   type TgpuSlot,
@@ -215,7 +214,7 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
-    value: TgpuAccessor.In<T> | MutableAccessorIn<T>,
+    value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
