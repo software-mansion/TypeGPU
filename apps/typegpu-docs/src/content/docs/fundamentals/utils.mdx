@@ -163,6 +163,63 @@ Note how the function passed into `comptime` doesn't have to be marked with
 `'use gpu'` and can use `Math`. That's because the function doesn't execute on the GPU, it gets
 executed before the shader code gets sent to the GPU.
 
+## Branch pruning
+
+If a condition is known at resolution time (*comptime*), then typegpu prunes the unvisited block.
+Comptime-known conditions include:
+- referenced js values and operations on such, like `std.pow(userSelection, 2) < THRESHOLD` (note that these values will be concretized during shader resolution, if `userSelection` may change over time, use buffers to provide it),
+- values provided via slots,
+- values returned by `comptime` functions.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+const counterEnabledSlot = tgpu.slot<boolean>(false);
+const counter = root.createMutable(d.u32);
+
+const myFunction = tgpu.fn([])(() => {
+  if (counterEnabledSlot.$) counter.$++;
+});
+//  fn myFunction() {
+//
+//  }
+
+const myFunctionWithCounter = myFunction.with(counterEnabledSlot, true);
+//  "@group(0) @binding(0) var<storage, read_write> counter: u32;
+//
+//  fn myFunction() {
+//    {
+//      counter++;
+//    }
+//  }"
+```
+
+:::note
+Conditions involving `tgpu.const` won't be automatically pruned, 
+since we treat `tgpu.const` as a way to opt-out of inlining.
+:::
+
+Branch pruning also works for ternary operators.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+const counterEnabledSlot = tgpu.slot<boolean>(false);
+const counter = root.createMutable(d.u32);
+// ---cut---
+const myFunction = tgpu.fn([])(() => {
+  counterEnabledSlot.$ ? counter.$++ : undefined;
+});
+```
+
+:::caution
+Ternary operator's condition must be a comptime-known value.
+This restraint is due to WGSL having no ternary operator equivalent. 
+:::
+
 ## *tgpu.rawCodeSnippet*
 
 When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
