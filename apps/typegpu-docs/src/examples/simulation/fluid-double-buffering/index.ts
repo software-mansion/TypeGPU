@@ -451,7 +451,6 @@ function makePipelines(
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
   const initWorldPipeline = root['~unstable']
-    .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline((xu, yu) => {
       'use gpu';

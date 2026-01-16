@@ -48,16 +48,14 @@ import {
   type VertexFlag,
 } from '../buffer/buffer.ts';
 import {
-  type TgpuBufferShorthand,
   TgpuBufferShorthandImpl,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import { fn, type TgpuFn } from '../function/tgpuFn.ts';
+import { fn } from '../function/tgpuFn.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
@@ -86,8 +84,12 @@ import type {
   WgslSamplerProps,
 } from '../../data/sampler.ts';
 import {
+  type AccessorIn,
   isAccessor,
+  isMutableAccessor,
+  type MutableAccessorIn,
   type TgpuAccessor,
+  type TgpuMutableAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import {
@@ -212,18 +214,13 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T extends AnyWgslData>(
-    slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value:
-      | T
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
+  with<T extends AnyData>(
+    slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
+    value: AccessorIn<T> | MutableAccessorIn<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
-      [isAccessor(slot) ? slot.slot : slot, value],
+      [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
     ]);
   }
 
