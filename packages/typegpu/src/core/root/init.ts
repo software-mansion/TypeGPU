@@ -84,7 +84,6 @@ import type {
   WgslSamplerProps,
 } from '../../data/sampler.ts';
 import {
-  type AccessorIn,
   isAccessor,
   isMutableAccessor,
   type MutableAccessorIn,
@@ -216,7 +215,7 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
-    value: AccessorIn<T> | MutableAccessorIn<T>,
+    value: TgpuAccessor.In<T> | MutableAccessorIn<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,

@@ -23,7 +23,6 @@ import {
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
-  type AccessorIn,
   type Eventual,
   isAccessor,
   isMutableAccessor,
@@ -95,7 +94,7 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
+    value: TgpuAccessor.In<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
