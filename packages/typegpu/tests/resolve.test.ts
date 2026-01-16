@@ -306,7 +306,7 @@ fn main() {
     const resolved = tgpu.resolve({
       template: `
       fn main () {
-        let c = functions.getColor() * layout.bound.intensity;
+        let c = functions.getColor() * layout.$.intensity;
       }`,
       externals: {
         layout,
@@ -345,7 +345,7 @@ fn main() {
     const resolved = tgpu.resolve({
       template: `
       fn main () {
-        let c = functions.getColor() * layout.bound.intensity;
+        let c = functions.getColor() * layout.$.intensity;
         let i = function.getWater();
       }`,
       externals: {

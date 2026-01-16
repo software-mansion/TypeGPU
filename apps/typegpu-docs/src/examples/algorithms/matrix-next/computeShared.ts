@@ -53,7 +53,7 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
       );
       valueA = computeLayout.$.firstMatrix[indexA];
     }
-    tileA.value[tileIdx] = valueA;
+    tileA.$[tileIdx] = valueA;
 
     const matrixBRow = tileIndex * TILE_SIZE + localRow;
     let valueB = 0;
@@ -69,7 +69,7 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
       );
       valueB = computeLayout.$.secondMatrix[indexB];
     }
-    tileB.value[tileIdx] = valueB;
+    tileB.$[tileIdx] = valueB;
 
     std.workgroupBarrier();
 
@@ -79,8 +79,8 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
     );
 
     for (let k = d.u32(0); k < effectiveTileSize; k++) {
-      const tileA_element = tileA.value[getTileIndex(localRow, k)];
-      const tileB_element = tileB.value[getTileIndex(k, localCol)];
+      const tileA_element = tileA.$[getTileIndex(localRow, k)];
+      const tileB_element = tileB.$[getTileIndex(k, localCol)];
       accumulatedResult += tileA_element * tileB_element;
     }
 
