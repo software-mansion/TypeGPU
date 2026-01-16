@@ -160,6 +160,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$internal].gpuImpl,
+  'void': () => snip('', wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
