@@ -95,20 +95,6 @@ describe('ternary operator', () => {
       `);
   });
 
-  it('should handle undefined', ({ root }) => {
-    const counter = root.createMutable(d.u32);
-
-    const myFunction = tgpu.fn([])(() => {
-      // biome-ignore lint/correctness/noConstantCondition: it's a test
-      false ? counter.$++ : undefined;
-    });
-    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
-      "fn myFunction() {
-        ;
-      }"
-    `);
-  });
-
   it('should not include unused dependencies', ({ root }) => {
     const mySlot = tgpu.slot<boolean>();
     const myUniform = root.createUniform(d.u32);
@@ -135,6 +121,20 @@ describe('ternary operator', () => {
           return myReadonly;
         }"
       `);
+  });
+
+  it('should handle undefined', ({ root }) => {
+    const counter = root.createMutable(d.u32);
+
+    const myFunction = tgpu.fn([])(() => {
+      // biome-ignore lint/correctness/noConstantCondition: it's a test
+      false ? counter.$++ : undefined;
+    });
+    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
+      "fn myFunction() {
+        ;
+      }"
+    `);
   });
 
   it('should throw when test is not comptime known', () => {
