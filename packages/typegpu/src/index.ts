@@ -3,6 +3,7 @@
  */
 
 import * as tgpu from './tgpu.ts';
+export * as tgpu from './tgpu.ts';
 export default tgpu;
 
 export {
