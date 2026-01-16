@@ -1,12 +1,12 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuBindGroup,
+  TgpuTexture,
 } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
+import tgpu, { common, d } from 'typegpu';
+
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
@@ -168,7 +168,7 @@ const blurPipelines = [false, true].map((flip) =>
 
 const drawWithMaskPipeline = root['~unstable']
   .with(paramsAccess, paramsUniform)
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
 

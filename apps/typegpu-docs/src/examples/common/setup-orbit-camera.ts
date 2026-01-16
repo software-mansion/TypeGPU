@@ -1,6 +1,5 @@
 import * as m from 'wgpu-matrix';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 export const Camera = d.struct({
   position: d.vec4f,

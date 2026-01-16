@@ -1,5 +1,5 @@
 import type { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import type { BoxGeometry } from './box-geometry.ts';
 import { InstanceData } from './types.ts';
 

@@ -1,6 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import {
   add,
   discard,

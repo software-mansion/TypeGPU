@@ -1,14 +1,12 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { sdPlane } from '@typegpu/sdf';
 import { perlin3d } from '@typegpu/noise';
+import { sdPlane } from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
 
-import { circles, grid } from './floor.ts';
 import * as c from './constants.ts';
-import { LightRay, Ray } from './types.ts';
-import { getSphere } from './sphere.ts';
+import { circles, grid } from './floor.ts';
 import { rayUnion } from './helpers.ts';
+import { getSphere } from './sphere.ts';
+import { LightRay, Ray } from './types.ts';
 
 // == INIT ==
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

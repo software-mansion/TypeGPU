@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;

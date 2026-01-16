@@ -1,7 +1,5 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { BoxIntersection } from './dataTypes.ts';
-import type { TgpuRoot } from 'typegpu';
 
 export const fresnelSchlick = (
   cosTheta: number,

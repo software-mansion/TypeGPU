@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 import {
   FOV_FACTOR,
   NOISE_TEXTURE_SIZE,
@@ -113,7 +110,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 
 const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 

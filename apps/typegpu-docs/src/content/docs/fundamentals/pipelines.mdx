@@ -22,8 +22,7 @@ A pipeline definition starts with the [root](/TypeGPU/fundamentals/roots) object
 
 ```ts twoslash
 /// <reference types="@webgpu/types" />
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -65,8 +64,7 @@ If the vertex shader does not use vertex attributes, then the latter argument sh
 The compatibility between vertex input types and vertex attribute formats is validated at the type level.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -115,8 +113,7 @@ The difference is that when there are multiple targets, they should be passed in
 This way each target is identified by a name and can be validated against the outputs of the fragment function.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -172,8 +169,7 @@ When a custom location is provided by the user (via the `d.location` attribute f
 as long as there is no conflict between vertex and fragment location value.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const vertex = tgpu['~unstable'].vertexFn({
   out: {
@@ -331,8 +327,7 @@ Compute pipelines are executed using the `dispatchWorkgroups` method, which acce
 The `drawIndexed` is analogous to draw, but takes advantage of [index buffer](/TypeGPU/fundamentals/buffers/#index-buffers) to explicitly map vertex data onto primitives. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 const presentationFormat = "rgba8unorm";
@@ -411,8 +406,7 @@ That way, they can be used with a regular WebGPU API, but unlike the `root['~uns
 resources.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 

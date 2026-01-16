@@ -1,5 +1,5 @@
 import type { IndexFlag, TgpuBuffer, TgpuRoot, VertexFlag } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import type { GeometryData } from './types.ts';
 import { InstanceData, VertexData } from './types.ts';
 

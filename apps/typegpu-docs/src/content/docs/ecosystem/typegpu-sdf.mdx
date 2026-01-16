@@ -22,8 +22,7 @@ Position, scale and translation of a shape can be adjusted by applying the inver
 Here is an example of a fragment shader that draws a disk of radius 0.25 on the center of a (presumably square) canvas:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const mainFragment = tgpu['~unstable'].fragmentFn({

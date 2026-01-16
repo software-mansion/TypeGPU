@@ -1,6 +1,5 @@
-import type { TgpuRoot } from 'typegpu';
+import { d, type TgpuRoot } from 'typegpu';
 import type { LayerData } from './data.ts';
-import * as d from 'typegpu/data';
 
 /**
  * The function extracts the header, shape and data from the layer

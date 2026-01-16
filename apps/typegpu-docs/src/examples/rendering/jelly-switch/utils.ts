@@ -1,6 +1,4 @@
-import type { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { type BoundingBox, BoxIntersection } from './dataTypes.ts';
 
 export const fresnelSchlick = (

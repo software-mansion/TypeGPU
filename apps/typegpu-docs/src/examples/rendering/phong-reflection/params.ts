@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { ExampleControls } from './schemas.ts';
 
 export const backgroundColor = d.vec3f(28, 28, 28).div(255);

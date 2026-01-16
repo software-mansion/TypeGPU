@@ -1,5 +1,4 @@
-import type { TgpuTexture } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, type TgpuTexture } from 'typegpu';
 import { CubeVertex } from './dataTypes.ts';
 
 function vert(position: [number, number, number], uv: [number, number]) {

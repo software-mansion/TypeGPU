@@ -60,8 +60,7 @@ Calling `t3.toTSL` with a TypeGPU function will return a TSL node, which can the
 <div class="flex-1 w-auto min-w-[0]">
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import * as THREE from 'three/webgpu';
 import * as t3 from '@typegpu/three';
@@ -113,8 +112,7 @@ There are a handful of builtin TSL node accessors in the `t3` namespace:
 <div class="flex-1 w-auto min-w-[0]">
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import * as THREE from 'three/webgpu';
 import * as t3 from '@typegpu/three';
@@ -140,9 +138,7 @@ Other TypeGPU functions (user-defined or from libraries) can be called to achiev
 <div class="flex-1 w-auto min-w-[0]">
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 // ---cut---
 import { perlin3d } from '@typegpu/noise';
 import * as THREE from 'three/webgpu';

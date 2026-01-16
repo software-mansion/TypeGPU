@@ -12,8 +12,7 @@ The **non-contagious** nature of TypeGPU means that ejecting out, in case raw We
 Some of the following code snippets assume that TypeGPU is already initialized.
 
 ```ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ...or pass in an existing WebGPU device
