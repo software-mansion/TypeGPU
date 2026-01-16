@@ -602,19 +602,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  /**
-   * Temporarily renames the item.
-   * Useful for resolutions with slots,
-   * since functions with different slots should have different names,
-   * and all hold the same inner function that is being resolved multiple times.
-   * @param item the item to rename
-   * @param name the temporary name to assign to the item (if missing, just returns `callback()`)
-   */
-  withRenamed<T>(
-    item: object,
-    name: string | undefined,
-    callback: () => T,
-  ): T {
+  withRenamed<T>(item: object, name: string | undefined, callback: () => T): T {
     if (!name) {
       return callback();
     }
