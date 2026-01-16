@@ -1,3 +1,5 @@
+// The version is inlined during build-time 🎉
+import { version } from '../../package.json';
 import type { Block, FuncParameter } from 'tinyest';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
@@ -28,22 +30,26 @@ export interface MetaData {
  * @internal
  */
 export type INTERNAL_GlobalExt = typeof globalThis & {
+  __TYPEGPU_VERSION__: string | undefined;
   __TYPEGPU_META__: WeakMap<object, MetaData>;
   __TYPEGPU_AUTONAME__: <T>(exp: T, label: string) => T;
   __TYPEGPU_MEASURE_PERF__?: boolean | undefined;
   __TYPEGPU_PERF_RECORDS__?: Map<string, unknown[]> | undefined;
 };
 
-Object.assign(globalThis, {
-  '__TYPEGPU_AUTONAME__': <T>(exp: T, label: string): T => {
-    if (isNamable(exp) && isMarkedInternal(exp) && !getName(exp)) {
-      exp.$name(label);
-    }
-    return exp;
-  },
-});
-
 const globalWithMeta = globalThis as INTERNAL_GlobalExt;
+
+if (globalWithMeta.__TYPEGPU_VERSION__ !== undefined) {
+  console.warn(
+    `Found duplicate TypeGPU version. First was ${globalWithMeta.__TYPEGPU_VERSION__}, this one is ${version}. This may cause unexpected behavior.`,
+  );
+}
+
+globalWithMeta.__TYPEGPU_VERSION__ = version;
+globalWithMeta.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
+  isNamable(exp) && isMarkedInternal(exp) && !getName(exp)
+    ? exp.$name(label)
+    : exp;
 
 /**
  * Performance measurements are only enabled in dev & test environments for now
