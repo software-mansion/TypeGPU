@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
-import { examples } from '../examples/exampleContent.ts';
+import { common, examples } from '../examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 
@@ -68,7 +68,11 @@ function ExamplePage() {
 
     if (currentExample in examples) {
       return (
-        <ExampleView key={currentExample} example={examples[currentExample]} />
+        <ExampleView
+          key={currentExample}
+          example={examples[currentExample]}
+          common={common}
+        />
       );
     }
 

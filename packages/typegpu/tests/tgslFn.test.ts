@@ -1007,4 +1007,17 @@ describe('tgsl fn when using plugin', () => {
       }"
     `);
   });
+
+  it('throws a readable error when assigning to a value defined outside of tgsl', () => {
+    let a = 0;
+    const f = tgpu.fn([])(() => {
+      a = 2;
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+    `);
+  });
 });
