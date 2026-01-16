@@ -779,7 +779,9 @@ ${this.ctx.pre}}`;
           ? this.expression(consequent)
           : this.expression(alternative);
       } else {
-        throw new Error('AAA');
+        throw new Error(
+          `Ternary operator is only supported for comptime-known checks (used with '${testExpression.value}'). For runtime checks, please use 'std.select' or if/else statements.`,
+        );
       }
     }
 
