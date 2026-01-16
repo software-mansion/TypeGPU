@@ -1722,8 +1722,7 @@ describe('wgslGenerator', () => {
       );
 
       const res = wgslGenerator.block(
-        // @ts-expect-error it's not undefined
-        parsed[1][0][3] as tinyest.Block,
+        ((parsed[1][0] as tinyest.ForOf)[3]) as tinyest.Block,
         { x: 67 },
       );
 
@@ -1758,8 +1757,7 @@ describe('wgslGenerator', () => {
       );
 
       const res = wgslGenerator.block(
-        // @ts-expect-error it's not undefined
-        parsed[1][0][3] as tinyest.Block,
+        ((parsed[1][0] as tinyest.ForOf)[3]) as tinyest.Block,
         { x: 67 },
       );
 
