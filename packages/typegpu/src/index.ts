@@ -6,6 +6,10 @@ import * as tgpu from './tgpu.ts';
 export * as tgpu from './tgpu.ts';
 export default tgpu;
 
+export * as d from './data/index.ts';
+export * as std from './std/index.ts';
+export * as common from './common/index.ts';
+
 export {
   MissingBindGroupsError,
   MissingLinksError,
