@@ -218,7 +218,7 @@ function createFn<ImplSchema extends AnyFn>(
   } as This;
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined, // the name is forwarded to the core anyway
     noComptime: true,
     signature: { argTypes: shell.argTypes, returnType: shell.returnType },
     normalImpl: (...args) =>
@@ -303,7 +303,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: undefined,
+    name: undefined, // setting name here would override autonaming
     noComptime: true,
     signature: {
       argTypes: innerFn.shell.argTypes,
