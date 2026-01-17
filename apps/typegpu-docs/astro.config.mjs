@@ -39,6 +39,10 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathJax],
+    shikiConfig: {
+      theme: 'one-dark-pro',
+      wrap: true,
+    },
   },
   vite: {
     define: {
@@ -80,6 +84,9 @@ export default defineConfig({
         './src/fonts/font-face.css',
         './src/mathjax.css',
       ],
+      expressiveCode: {
+        themes: ['github-dark'],
+      },
       plugins: stripFalsy([
         starlightBlog({
           navigation: 'none',
