@@ -134,7 +134,7 @@ export const projectToLineSegment = tgpu.fn([vec2f, vec2f, vec2f], vec2f)(
     const AB = sub(B, A);
     const t = clamp(dot(p, AB) / dot(AB, AB), 0, 1);
     const projP = addMul(A, AB, t);
-    return projP;
+    return vec2f(projP);
   },
 );
 

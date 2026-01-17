@@ -1,4 +1,4 @@
-import type { v2f } from 'typegpu/data';
+import { type v2f, vec2f } from 'typegpu/data';
 import { add, mul, select } from 'typegpu/std';
 import { addMul, bisectCcw, bisectNoCheck } from '../../utils.ts';
 import { intersectLines } from '../utils.ts';
@@ -35,33 +35,33 @@ export const roundJoin = joinShell(
       0.25,
     );
 
-    let uR = ur;
-    let u = midU;
+    let uR = vec2f(ur);
+    let u = vec2f(midU);
     let c = select(averageCenter, crossCenter, shouldCross);
-    let d = midD;
-    let dR = dr;
+    let d = vec2f(midD);
+    let dR = vec2f(dr);
 
     if (situationIndex === 2) {
-      uR = ur;
-      u = midR;
-      c = midR;
-      d = midR;
-      dR = dr;
+      uR = vec2f(ur);
+      u = vec2f(midR);
+      c = vec2f(midR);
+      d = vec2f(midR);
+      dR = vec2f(dr);
     }
 
     if (situationIndex === 3) {
-      uR = ur;
-      u = midL;
-      c = midL;
-      d = midL;
-      dR = dr;
+      uR = vec2f(ur);
+      u = vec2f(midL);
+      c = vec2f(midL);
+      d = vec2f(midL);
+      dR = vec2f(dr);
     }
 
     const joinIndex = joinPath.joinIndex;
     if (joinPath.depth >= 0) {
       const parents = [uR, u, d, dR];
-      let d0 = parents[(joinIndex * 2) & 3] as v2f;
-      let d1 = parents[(joinIndex * 2 + 1) & 3] as v2f;
+      let d0 = vec2f(parents[(joinIndex * 2) & 3] as v2f);
+      let d1 = vec2f(parents[(joinIndex * 2 + 1) & 3] as v2f);
       let dm = bisectCcw(d0, d1);
       let path = joinPath.path;
       for (let depth = joinPath.depth; depth > 0; depth -= 1) {

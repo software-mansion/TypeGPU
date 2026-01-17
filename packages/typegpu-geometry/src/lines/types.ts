@@ -1,5 +1,5 @@
-import { f32, i32, struct, u32, vec2f } from 'typegpu/data';
 import type { Infer } from 'typegpu/data';
+import { f32, i32, struct, u32, vec2f } from 'typegpu/data';
 
 export type JoinPath = Infer<typeof JoinPath>;
 export const JoinPath = struct({
