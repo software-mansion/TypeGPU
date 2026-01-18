@@ -89,17 +89,15 @@ describe('TgpuRenderPipeline', () => {
   });
 
   it('throws an error if bind groups are missing', ({ root }) => {
-    const utgpu = tgpu['~unstable'];
-
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const vertexFn = utgpu
-      .vertexFn({ out: { pos: d.builtin.position } })(
-        '() { layout.bound.alpha; }',
-      )
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({ out: { pos: d.builtin.position } })`{ layout.$.alpha; }`
       .$uses({ layout });
 
-    const fragmentFn = utgpu.fragmentFn({ out: { out: d.vec4f } })('() {}');
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      out: { out: d.vec4f },
+    })`{}`;
 
     const pipeline = root
       .withVertex(vertexFn, {})

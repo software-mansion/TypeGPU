@@ -7,10 +7,16 @@ import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import { isKnownAtComptime, NormalState } from '../../types.ts';
 
-export type TgpuComptime<T extends (...args: never[]) => unknown> =
+export type TgpuComptime<
+  T extends (...args: never[]) => unknown = (...args: never[]) => unknown,
+> =
   & DualFn<T>
   & TgpuNamable
-  & { [$getNameForward]: unknown };
+  & { [$getNameForward]: unknown; [$internal]: { isComptime: true } };
+
+export function isComptimeFn(value: unknown): value is TgpuComptime {
+  return !!(value as TgpuComptime)?.[$internal]?.isComptime;
+}
 
 /**
  * Creates a version of `func` that can called safely in a TypeGPU function to
@@ -76,6 +82,7 @@ export function comptime<T extends (...args: never[]) => unknown>(
   };
   Object.defineProperty(impl, $internal, {
     value: {
+      isComptime: true,
       jsImpl: func,
       gpuImpl,
       argConversionHint: 'keep',
