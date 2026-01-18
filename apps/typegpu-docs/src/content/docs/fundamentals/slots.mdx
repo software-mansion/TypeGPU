@@ -34,13 +34,10 @@ interface Config {
 const configSlot = tgpu.slot<Config>();
 ```
 
-You can access a slot's value using either:
-
-- `.value` property,
-- `.$` shorthand property.
+You can access a slot's value using `.$`:
 
 ```typescript
-const value = mySlot.value; // or mySlot.$
+const value = mySlot.$;
 ```
 
 :::caution
