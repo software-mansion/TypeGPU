@@ -3,7 +3,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { fromTSL } from './typegpu-node.ts';
 
-export const uv = tgpu['~unstable'].comptime((index?: number | undefined) =>
+export const uv = tgpu.comptime((index?: number | undefined) =>
   fromTSL(TSL.uv(index), d.vec2f)
 );
 
