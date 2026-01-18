@@ -17,18 +17,21 @@ import {
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
+  type AccessorIn,
   type Eventual,
   isAccessor,
+  isMutableAccessor,
+  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuMutableAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { dualImpl } from './dualImpl.ts';
@@ -93,7 +96,11 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+    value: AccessorIn<NoInfer<T>>,
+  ): TgpuFn<ImplSchema>;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
 }
 
@@ -225,11 +232,11 @@ function createFn<ImplSchema extends AnyFn>(
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
 
@@ -329,12 +336,12 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
-      return createBoundFunction(fn, [
+      return createBoundFunction(innerFn, [
         ...pairs,
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
   };
