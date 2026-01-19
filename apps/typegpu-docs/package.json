@@ -74,7 +74,7 @@
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@types/three": "catalog:types",
     "@webgpu/types": "catalog:types",
-    "astro-vtbot": "^2.1.6",
+    "astro-vtbot": "^2.1.10",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.11",
     "tailwindcss-motion": "^1.1.1",
