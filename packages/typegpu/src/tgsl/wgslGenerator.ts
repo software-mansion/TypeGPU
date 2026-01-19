@@ -682,10 +682,7 @@ ${this.ctx.pre}}`;
               `Missing property ${key} in object literal for struct ${structType}`,
             );
           }
-          const result = this.typedExpression(
-            val,
-            value as AnyData,
-          );
+          const result = this.typedExpression(val, value);
           return [key, result];
         }),
       );
