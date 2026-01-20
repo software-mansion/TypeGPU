@@ -18,11 +18,11 @@ describe('ternary operator', () => {
       ]),
     )
       .toMatchInlineSnapshot(`
-        "fn falseFn() -> u32 {
+        "fn trueFn() -> u32 {
           return 10u;
         }
 
-        fn falseFn_1() -> u32 {
+        fn falseFn() -> u32 {
           return 20u;
         }"
       `);
@@ -77,19 +77,19 @@ describe('ternary operator', () => {
       ]),
     )
       .toMatchInlineSnapshot(`
-        "fn threeFn() -> u32 {
+        "fn myFn() -> u32 {
           return -1u;
         }
 
-        fn threeFn_1() -> u32 {
+        fn oneFn() -> u32 {
           return 10u;
         }
 
-        fn threeFn_2() -> u32 {
+        fn twoFn() -> u32 {
           return 20u;
         }
 
-        fn threeFn_3() -> u32 {
+        fn threeFn() -> u32 {
           return 30u;
         }"
       `);
