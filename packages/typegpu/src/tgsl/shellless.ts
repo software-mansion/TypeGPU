@@ -65,7 +65,7 @@ export class ShelllessRepository {
         );
       }
 
-      let type = concretize(s.dataType as AnyData);
+      let type = concretize(s.dataType);
 
       if (
         s.origin === 'constant-tgpu-const-ref' ||

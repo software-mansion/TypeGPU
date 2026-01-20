@@ -24,7 +24,7 @@ import type {
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $validStorageSchema } from '../../shared/symbols.ts';
 import type {
   Mutable,
   OmitProps,
@@ -562,10 +562,13 @@ export interface RenderPass {
   ): undefined;
 }
 
-export type ValidateBufferSchema<TData extends AnyData> =
-  IsValidBufferSchema<TData> extends false
-    ? ExtractInvalidSchemaError<TData, '(Error) '>
-    : TData;
+// export type ValidateBufferSchema<TData extends AnyData> =
+//   IsValidBufferSchema<TData> extends false
+//     ? ExtractInvalidSchemaError<TData, '(Error) '>
+//     : TData;
+export type ValidateBufferSchema<TData extends AnyData> = TData & {
+  readonly [$validStorageSchema]: true;
+};
 
 export type ValidateStorageSchema<TData extends AnyData> =
   IsValidStorageSchema<TData> extends false

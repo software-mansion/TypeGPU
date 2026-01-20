@@ -237,7 +237,7 @@ class TgpuFixedBufferImpl<
 }
 
 export class TgpuLaidOutBufferImpl<
-  TData extends BaseData,
+  TData extends AnyWgslData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
@@ -257,21 +257,20 @@ export class TgpuLaidOutBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(dataType).value
+        ctx.resolve(this.dataType).value
       };`,
     );
 
     return snip(
       id,
-      dataType,
-      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+      this.dataType,
+      isNaturallyEphemeral(this.dataType) ? 'runtime' : this.usage,
     );
   }
 
@@ -280,7 +279,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as AnyData;
+    const schema = this.dataType;
     const usage = this.usage;
 
     return new Proxy({

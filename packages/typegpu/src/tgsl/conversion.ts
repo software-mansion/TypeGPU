@@ -76,7 +76,7 @@ function getImplicitConversionRank(
     trueSrc.type === 'ptr' &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
+    getAutoConversionRank(trueSrc.inner, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
@@ -84,7 +84,7 @@ function getImplicitConversionRank(
 
   if (
     trueDst.type === 'ptr' &&
-    getAutoConversionRank(trueSrc, trueDst.inner as AnyData).rank <
+    getAutoConversionRank(trueSrc, trueDst.inner).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 1, action: 'ref' };
@@ -354,17 +354,13 @@ export function convertStructValues(
   structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
-  const propKeys = Object.keys(structType.propTypes);
-
-  return propKeys.map((key) => {
+  return Object.entries(structType.propTypes).map(([key, targetType]) => {
     const val = values[key];
     if (!val) {
       throw new Error(`Missing property ${key}`);
     }
 
-    const targetType = structType.propTypes[key];
     const converted = convertToCommonType([val], [targetType]);
-
     return converted?.[0] ?? val;
   });
 }

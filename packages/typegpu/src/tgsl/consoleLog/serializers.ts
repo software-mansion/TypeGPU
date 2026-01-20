@@ -221,7 +221,7 @@ function getSerializer<T extends AnyWgslData>(
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
-    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const propTypes = Object.values(dataType.propTypes);
     const propsSerializer = createCompoundSerializer(propTypes, dataBuffer);
     return fn([dataType])`(arg) {\n  propsSerializer(${
       props.map((prop) => `arg.${prop}`).join(', ')

@@ -11,7 +11,6 @@ import {
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
-  BaseData,
   U16,
   U32,
   v3u,
@@ -657,7 +656,7 @@ class TgpuRootImpl extends WithBindingImpl
       TgpuVertexLayout,
       {
         buffer:
-          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & VertexFlag)
+          | (TgpuBuffer<WgslArray | Disarray> & VertexFlag)
           | GPUBuffer;
         offset?: number | undefined;
         size?: number | undefined;

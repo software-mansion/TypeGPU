@@ -31,7 +31,7 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // ---
 }
 
-export interface TgpuMutable<TData extends BaseData>
+export interface TgpuMutable<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
@@ -45,7 +45,7 @@ export interface TgpuMutable<TData extends BaseData>
   // ---
 }
 
-export interface TgpuReadonly<TData extends BaseData>
+export interface TgpuReadonly<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
@@ -59,7 +59,7 @@ export interface TgpuReadonly<TData extends BaseData>
   // ---
 }
 
-export interface TgpuUniform<TData extends BaseData>
+export interface TgpuUniform<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;

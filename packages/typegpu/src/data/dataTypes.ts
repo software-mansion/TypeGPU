@@ -38,7 +38,7 @@ import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
+export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   extends wgsl.BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -66,8 +66,8 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
  * via `d.align` function.
  */
 export interface Unstruct<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
-  TProps extends Record<string, wgsl.BaseData> = any,
+  // @ts-expect-error: Override variance, as we want unstructs to behave like objects
+  out TProps extends Record<string, AnyData> = Record<string, AnyData>,
 > extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   (): Prettify<InferRecord<TProps>>;
@@ -93,8 +93,8 @@ export interface Unstruct<
 export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
-  TInner extends wgsl.BaseData = wgsl.BaseData,
-  TAttribs extends unknown[] = unknown[],
+  out TInner extends wgsl.BaseData = wgsl.BaseData,
+  out TAttribs extends unknown[] = unknown[],
 > extends wgsl.BaseData {
   readonly type: 'loose-decorated';
   readonly inner: TInner;

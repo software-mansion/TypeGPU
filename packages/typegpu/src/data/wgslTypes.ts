@@ -1284,7 +1284,7 @@ export interface Mat4x4f extends BaseData {
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its elementType.
  */
-export interface WgslArray<TElement extends BaseData = BaseData>
+export interface WgslArray<out TElement extends BaseData = BaseData>
   extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -1315,8 +1315,8 @@ export interface WgslArray<TElement extends BaseData = BaseData>
  * the `byteAlignment` requirement of its members.
  */
 export interface WgslStruct<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
-  TProps extends Record<string, BaseData> = any,
+  // @ts-expect-error: Override variance, as we want structs to behave like objects
+  out TProps extends Record<string, AnyWgslData> = Record<string, AnyWgslData>,
 > extends BaseData, TgpuNamable {
   readonly [$internal]: {
     isAbstruct: boolean;
@@ -1456,8 +1456,8 @@ export interface Invariant {
 }
 
 export interface Decorated<
-  TInner extends BaseData = BaseData,
-  TAttribs extends unknown[] = unknown[],
+  out TInner extends BaseData = BaseData,
+  out TAttribs extends unknown[] = unknown[],
 > extends BaseData {
   readonly type: 'decorated';
   readonly inner: TInner;

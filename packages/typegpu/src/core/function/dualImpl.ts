@@ -54,7 +54,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
     const converted = argSnippets.map((s, idx) => {
-      const argType = argTypes[idx] as AnyData | undefined;
+      const argType = argTypes[idx];
       if (!argType) {
         throw new Error('Function called with invalid arguments');
       }
