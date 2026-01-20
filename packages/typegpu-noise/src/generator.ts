@@ -21,28 +21,28 @@ export const BPETER: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.value = d.vec2f(value, 0);
+      seed.$ = d.vec2f(value, 0);
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.value = d.vec2f(value);
+      seed.$ = d.vec2f(value);
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.value = add(value.xy, d.vec2f(value.z));
+      seed.$ = add(value.xy, d.vec2f(value.z));
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.value = add(value.xy, value.zw);
+      seed.$ = add(value.xy, value.zw);
     }),
 
     sample: randomGeneratorShell(() => {
       'use gpu';
-      const a = dot(seed.value, d.vec2f(23.14077926, 232.61690225));
-      const b = dot(seed.value, d.vec2f(54.47856553, 345.84153136));
-      seed.value.x = fract(cos(a) * 136.8168);
-      seed.value.y = fract(cos(b) * 534.7645);
-      return seed.value.y;
+      const a = dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = fract(cos(a) * 136.8168);
+      seed.$.y = fract(cos(b) * 534.7645);
+      return seed.$.y;
     }),
   };
 })();

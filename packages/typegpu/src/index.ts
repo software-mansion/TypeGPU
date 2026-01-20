@@ -14,7 +14,7 @@ import { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 import { simulate } from './core/simulate/tgpuSimulate.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 
-import { accessor } from './core/slot/accessor.ts';
+import { accessor, mutableAccessor } from './core/slot/accessor.ts';
 import { derived } from './core/slot/derived.ts';
 import { slot } from './core/slot/slot.ts';
 import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
@@ -24,6 +24,7 @@ import { namespace } from './core/resolve/namespace.ts';
 
 export const tgpu = {
   fn,
+  comptime,
   bindGroupLayout,
   vertexLayout,
   slot,
@@ -46,6 +47,9 @@ export const tgpu = {
     fragmentFn,
     vertexFn,
     computeFn,
+    /**
+     * @deprecated This feature is now stable, use tgpu.comptime.
+     */
     comptime,
     /**
      * @deprecated This feature is now stable, use tgpu.vertexLayout.
@@ -58,6 +62,7 @@ export const tgpu = {
      */
     slot,
     accessor,
+    mutableAccessor,
     /**
      * @deprecated This feature is now stable, use tgpu.privateVar.
      */
@@ -87,7 +92,12 @@ export {
   ResolutionError,
 } from './errors.ts';
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
-export { isDerived, isSlot } from './core/slot/slotTypes.ts';
+export {
+  isAccessor,
+  isDerived,
+  isMutableAccessor,
+  isSlot,
+} from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export {
@@ -141,9 +151,12 @@ export type {
   TgpuUniform,
 } from './core/buffer/bufferShorthand.ts';
 export type {
+  AccessorIn,
   Eventual,
+  MutableAccessorIn,
   TgpuAccessor,
   TgpuDerived,
+  TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
 export type {
