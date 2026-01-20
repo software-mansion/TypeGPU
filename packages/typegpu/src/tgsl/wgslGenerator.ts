@@ -807,7 +807,7 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      const resolved = this.ctx.resolve(this.expression(statement).value).value;
+      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
       return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
     }
 
