@@ -50,29 +50,74 @@ describe('tgpu.unroll', () => {
       "fn f() -> i32 {
         var res = 0;
         {
-          res += 1;
+          res += 1i;
         }
         {
-          res += 2;
+          res += 2i;
         }
         {
-          res += 3;
+          res += 3i;
         }
         return res;
       }"
     `);
   });
 
-  it('unrolls forOf with variable shadowing', () => {
+  it('unrolls forOf with variable override', () => {
+    const f = () => {
+      'use gpu';
+      const foo = d.vec3f(6);
+      for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) { // this foo is in different block layer, it will be found first
+        const boo = foo;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var foo = vec3f(6);
+        {
+          var boo = vec3f(7);
+        }
+        {
+          var boo = vec3f(3);
+        }
+      }"
+    `);
+  });
+
+  it('unrolls forOf with variable from different scope override', () => {
+    const foo = 2;
+
+    const f = () => {
+      'use gpu';
+      for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) { // this foo is in different block layer, it will be found first
+        const boo = foo;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        {
+          var boo = vec3f(7);
+        }
+        {
+          var boo = vec3f(3);
+        }
+      }"
+    `);
+  });
+
+  it('unrolls forOf with variable being overriden', () => {
     const f = () => {
       'use gpu';
       let fooResult = d.f32(0);
       for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) {
         const boo = foo;
-        { // broken indenting
-          const foo = boo.x;
+        {
+          const foo = boo.x; // this foo is in different block layer, it will see the previous foo
           fooResult += foo;
         }
+        const bar = foo;
       }
 
       return fooResult;
@@ -87,6 +132,7 @@ describe('tgpu.unroll', () => {
             let foo2 = boo.x;
             fooResult += foo2;
           }
+          var bar = vec3f(7);
         }
         {
           var boo = vec3f(3);
@@ -94,6 +140,7 @@ describe('tgpu.unroll', () => {
             let foo2 = boo.x;
             fooResult += foo2;
           }
+          var bar = vec3f(3);
         }
         return fooResult;
       }"
@@ -182,7 +229,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it.skip('unrolls forOf of external comptime iterable', () => {
+  it('unrolls forOf of external comptime iterable', () => {
     const arr = [1, 2, 3];
 
     const f = () => {
@@ -195,7 +242,21 @@ describe('tgpu.unroll', () => {
       return result;
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        var result = 0;
+        {
+          result += 1i;
+        }
+        {
+          result += 2i;
+        }
+        {
+          result += 3i;
+        }
+        return result;
+      }"
+    `);
   });
 
   it.skip('throws error when number of iterations is unknown at comptime', () => {

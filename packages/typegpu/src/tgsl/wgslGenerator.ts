@@ -1124,59 +1124,30 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (shouldUnroll && ephemeralIterable) {
         if (iterableSnippet.value instanceof ArrayExpression) {
-          const elementSnippet = forOfHelpers.getElementSnippet(
-            iterableSnippet,
-            'i', // never will use that, can be arbitrary
-          );
-
-          // we need dummy variable to resolve body of the loop
           const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-          const elementType = forOfHelpers.getElementType(elementSnippet);
 
-          const loopVarSnippet = snip(
-            loopVarName,
-            elementType,
-            elementSnippet.origin,
-          );
-          this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
-          const baseIterationStr = `${this.ctx.pre}${
-            this.block(blockifySingleStatement(body))
-          }`;
-
-          const values = Array.isArray(iterableSnippet.value)
-            ? iterableSnippet.value
-            : iterableSnippet.value.elements;
-
-          const re = new RegExp(`\\b${loopVarName}\\b`, 'g');
-          const iterations = values.map((e) =>
-            baseIterationStr.replace(re, stitch`${e}`)
+          const blockified = blockifySingleStatement(body);
+          const iterations = iterableSnippet.value.elements.map((e) =>
+            `${this.ctx.pre}${
+              this.block(blockified, { [`${loopVarName}`]: e })
+            }`
           );
 
           return iterations.join('\n');
         }
 
-        // if (Array.isArray(iterableSnippet.value)) {
-        //   const elementSnippet = forOfHelpers.getElementSnippet(
-        //     iterableSnippet,
-        //     'i', never will use that, can be arbitrary
-        //   );
+        if (Array.isArray(iterableSnippet.value)) {
+          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
 
-        //   console.log({ iterableSnippet, elementSnippet });
+          const blockified = blockifySingleStatement(body);
+          const iterations = iterableSnippet.value.map((e) =>
+            `${this.ctx.pre}${
+              this.block(blockified, { [`${loopVarName}`]: e })
+            }`
+          );
 
-        //   // we need dummy variable to resolve body of the loop
-        //   const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-        //   const elementType = forOfHelpers.getElementType(elementSnippet);
-
-        //   const loopVarSnippet = snip(
-        //     loopVarName,
-        //     elementType,
-        //     elementSnippet.origin,
-        //   );
-        //   this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
-        //   return '';
-        // }
+          return iterations.join('\n');
+        }
 
         throw new WgslTypeError('Cannot unroll. Unsupported iterable.');
       }

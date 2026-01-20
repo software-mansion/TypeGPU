@@ -10,7 +10,7 @@ import {
   snip,
   type Snippet,
 } from '../../../src/data/snippet.ts';
-import type { ResolutionCtx, SelfResolvable } from 'src/types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
