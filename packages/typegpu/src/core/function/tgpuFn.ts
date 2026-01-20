@@ -218,7 +218,7 @@ function createFn<ImplSchema extends AnyFn>(
   } as This;
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined, // the name is forwarded to the core anyway
     noComptime: true,
     signature: { argTypes: shell.argTypes, returnType: shell.returnType },
     normalImpl: (...args) =>
@@ -271,9 +271,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   innerFn: TgpuFn<ImplSchema>,
   pairs: SlotValuePair[],
 ): TgpuFn<ImplSchema> {
-  type This = TgpuFnBase<ImplSchema> & {
-    [$getNameForward]: TgpuFn<ImplSchema>;
-  };
+  type This = TgpuFnBase<ImplSchema>;
 
   const fnBase: This = {
     resourceType: 'function',
@@ -288,7 +286,6 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       return this;
     },
 
-    [$getNameForward]: innerFn,
     $name(label: string): This {
       setName(this, label);
       return this;
@@ -306,7 +303,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined, // setting name here would override autonaming
     noComptime: true,
     signature: {
       argTypes: innerFn.shell.argTypes,
@@ -327,11 +324,16 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = getName(innerFn) ?? '<unnamed>';
+      const fnLabel = getName(this) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
+
+  const innerName = getName(innerFn);
+  if (innerName) {
+    setName(fn, innerName);
+  }
 
   return fn;
 }

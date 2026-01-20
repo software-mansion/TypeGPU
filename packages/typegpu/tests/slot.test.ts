@@ -3,6 +3,7 @@ import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 import * as std from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
+import { getName } from '../src/shared/meta.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -390,5 +391,52 @@ describe('tgpu.slot', () => {
     expect(getSize.toString()).toMatchInlineSnapshot(
       `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
     );
+  });
+
+  it('sets names only for bound functions', () => {
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
+    const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
+
+    expect(getName(getColor)).toBe('colorFn');
+    expect(getName(getRed)).toBe('redFn');
+    expect(getName(getBlue)).toBe('blueFn');
+  });
+
+  it('uses bound name for code generation', () => {
+    const colorSlot = tgpu.slot<d.v3f>(d.vec3f(0, 0, 0));
+
+    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
+    const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
+
+    const main = () => {
+      'use gpu';
+      getColor();
+      getRed();
+      getBlue();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn colorFn() -> vec3f {
+        return vec3f();
+      }
+
+      fn redFn() -> vec3f {
+        return vec3f(1, 0, 0);
+      }
+
+      fn blueFn() -> vec3f {
+        return vec3f(0, 0, 1);
+      }
+
+      fn main() {
+        colorFn();
+        redFn();
+        blueFn();
+      }"
+    `);
   });
 });
