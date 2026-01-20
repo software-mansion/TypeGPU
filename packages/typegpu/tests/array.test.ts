@@ -308,10 +308,8 @@ describe('array', () => {
 
   it('can be immediately-invoked and initialized in TGSL in combination with slots and derived', () => {
     const arraySizeSlot = tgpu.slot(4);
-    const derivedArraySizeSlot = tgpu['~unstable'].derived(() =>
-      arraySizeSlot.$ * 2
-    );
-    const derivedInitializer = tgpu['~unstable'].derived(
+    const derivedArraySizeSlot = tgpu.lazy(() => arraySizeSlot.$ * 2);
+    const derivedInitializer = tgpu.lazy(
       () => [...Array(derivedArraySizeSlot.$).keys()],
     );
 

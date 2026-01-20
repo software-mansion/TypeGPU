@@ -208,6 +208,18 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
+export interface Withable<TSelf> {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuAccessor<T>,
+    value: AccessorIn<NoInfer<T>>,
+  ): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
+  ): TSelf;
+}
+
 export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 

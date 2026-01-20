@@ -1,16 +1,16 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { type TgpuDerived } from '../src/index.ts';
+import tgpu, { type TgpuLazy } from '../src/index.ts';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 
-describe('TgpuDerived', () => {
-  it('memoizes results of transitive "derived"', () => {
+describe('TgpuLazy', () => {
+  it('memoizes results of transitive "lazy" objects', () => {
     const foo = tgpu.slot<number>(1);
     const computeDouble = vi.fn(() => foo.$ * 2);
-    const double = tgpu['~unstable'].derived(computeDouble);
-    const a = tgpu['~unstable'].derived(() => double.$ + 1);
-    const b = tgpu['~unstable'].derived(() => double.$ + 2);
+    const double = tgpu.lazy(computeDouble);
+    const a = tgpu.lazy(() => double.$ + 1);
+    const b = tgpu.lazy(() => double.$ + 2);
 
     const main = () => {
       'use gpu';
@@ -28,7 +28,7 @@ describe('TgpuDerived', () => {
 
   it('memoizes functions using derived values', () => {
     const foo = tgpu.slot<number>();
-    const double = tgpu['~unstable'].derived(() => foo.$ * 2);
+    const double = tgpu.lazy(() => foo.$ * 2);
 
     const getDouble = tgpu.fn([], d.f32)(() => {
       return double.$;
@@ -65,16 +65,16 @@ describe('TgpuDerived', () => {
   it('can use slot values from its surrounding context', () => {
     const gridSizeSlot = tgpu.slot<number>();
 
-    const fill = tgpu['~unstable'].derived(() => {
+    const fill = tgpu.lazy(() => {
       const gridSize = gridSizeSlot.$;
 
-      return tgpu.fn([d.arrayOf(d.f32, gridSize)])(
-        (arr) => {/* do something */},
-      ).$name('fill');
+      return tgpu.fn([d.arrayOf(d.f32, gridSize)])((arr) => {
+        /* do something */
+      }).$name('fill');
     });
 
-    const fillWith2 = fill.with(gridSizeSlot, 2);
-    const fillWith3 = fill.with(gridSizeSlot, 3);
+    const fill2 = fill.with(gridSizeSlot, 2);
+    const fill3 = fill.with(gridSizeSlot, 3);
 
     const oneArray: number[] = [1];
     const twoArray: number[] = [1, 2];
@@ -82,8 +82,8 @@ describe('TgpuDerived', () => {
 
     const main = tgpu.fn([])(() => {
       fill.$(oneArray);
-      fillWith2.$(twoArray);
-      fillWith3.$(threeArray);
+      fill2.$(twoArray);
+      fill3.$(threeArray);
     })
       .with(gridSizeSlot, 1);
 
@@ -110,7 +110,7 @@ describe('TgpuDerived', () => {
 
   it('allows access to value in tgsl functions through the .$ property ', ({ root }) => {
     const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
-    const doubledVectorSlot = tgpu['~unstable'].derived(() => {
+    const doubledVectorSlot = tgpu.lazy(() => {
       const vec = vectorSlot.$;
 
       return mul(2, vec);
@@ -124,10 +124,8 @@ describe('TgpuDerived', () => {
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = buffer.as('uniform');
 
-    const derivedUniformSlot = tgpu['~unstable'].derived(() => uniform);
-    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(() =>
-      derivedUniformSlot
-    );
+    const derivedUniformSlot = tgpu.lazy(() => uniform);
+    const derivedDerivedUniformSlot = tgpu.lazy(() => derivedUniformSlot);
 
     const func = tgpu.fn([])(() => {
       const pos = doubledVectorSlot.$;
@@ -158,59 +156,60 @@ describe('TgpuDerived', () => {
     `);
   });
 
-  // TODO: rethink this behavior of derived returning a function,
-  // in context of whether the function should automatically have
-  // slot values set on derived and how to achieve that
   it('allows slot bindings to pass downstream from derived (#697)', () => {
     const valueSlot = tgpu.slot(1);
 
-    const derivedFn = tgpu['~unstable'].derived(() => {
-      return tgpu.fn([], d.f32)(() => valueSlot.$)
-        .with(valueSlot, valueSlot.$) // currently necessary to work :/
-        .$name('innerFn');
+    const foo = tgpu.lazy(() => {
+      return tgpu.fn([], d.f32)(() => {
+        return valueSlot.$;
+      })
+        // Making the function inherit values bound to this lazy
+        .with(valueSlot, valueSlot.$);
     });
 
-    const derivedFnWith2 = derivedFn.with(valueSlot, 2);
-
+    const foo2 = foo.with(valueSlot, 2);
     const main = tgpu.fn([])(() => {
-      derivedFn.$();
-      derivedFnWith2.$();
+      foo.$();
+      foo2.$();
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn innerFn() -> f32 {
+      "fn item() -> f32 {
         return 1f;
       }
 
-      fn innerFn_1() -> f32 {
+      fn item_1() -> f32 {
         return 2f;
       }
 
       fn main() {
-        innerFn();
-        innerFn_1();
+        item();
+        item_1();
       }"
     `);
   });
 
   it('does not allow defining derived values at resolution', () => {
     const gridSizeSlot = tgpu.slot<number>(2);
-    const absGridSize = tgpu['~unstable'].derived(() =>
+    const absGridSize = tgpu.lazy(() =>
       gridSizeSlot.$ > 0
-        ? tgpu['~unstable'].derived(() => gridSizeSlot.$).$
-        : tgpu['~unstable'].derived(() => -gridSizeSlot.$).$
+        ? tgpu.lazy(() => gridSizeSlot.$).$
+        : tgpu.lazy(() => -gridSizeSlot.$).$
     );
     const fn = tgpu.fn([], d.u32)(() => absGridSize.$);
 
-    expect(() => tgpu.resolve([fn])).toThrow(
-      'Cannot create tgpu.derived objects at the resolution stage.',
-    );
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn
+      - lazy: Cannot create tgpu.lazy objects during shader resolution.]
+    `);
   });
 
   it('can return dynamic schemas, which can be used in function bodies', () => {
     const halfPrecisionSlot = tgpu.slot(false);
 
-    const ResultArray = tgpu['~unstable'].derived(() =>
+    const ResultArray = tgpu.lazy(() =>
       d.arrayOf(halfPrecisionSlot.$ ? d.f16 : d.f32, 4)
     );
 
@@ -227,7 +226,7 @@ describe('TgpuDerived', () => {
     };
 
     expectTypeOf(ResultArray).toEqualTypeOf<
-      TgpuDerived<d.WgslArray<d.F16 | d.F32>>
+      TgpuLazy<d.WgslArray<d.F16 | d.F32>>
     >();
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`

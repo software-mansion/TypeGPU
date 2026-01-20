@@ -17,7 +17,7 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
-  isDerived,
+  isLazy,
   isProviding,
   isSlot,
   type SlotValuePair,
@@ -155,7 +155,7 @@ export interface ItemStateStack {
 }
 
 /**
- * # What are execution modes/states? 🤷‍♂️
+ * # What are execution modes/states? 🤷
  * They're used to control how each TypeGPU resource reacts
  * to actions upon them.
  *
@@ -164,7 +164,7 @@ export interface ItemStateStack {
  * by code either:
  * - Not wrapped inside any of our execution-altering APIs
  * like tgpu.resolve or tgpu.simulate.
- * - Inside tgpu.derived definitions, where we're taking a break
+ * - Inside tgpu.lazy definitions, where we're taking a break
  *   from codegen/simulation to create resources on-demand.
  *
  * ```ts
@@ -273,7 +273,7 @@ export interface ResolutionCtx {
   popMode(expected?: ExecMode | undefined): void;
 
   /**
-   * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
+   * Unwraps all layers of slot/lazy indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
@@ -360,7 +360,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
-    isDerived(value) ||
+    isLazy(value) ||
     isProviding(value)
   );
 }

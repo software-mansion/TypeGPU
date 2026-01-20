@@ -4,10 +4,11 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
+import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
+import type { Withable } from '../root/rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
 import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
-import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
   readonly [$internal]: true;
@@ -29,9 +30,11 @@ export interface TgpuSlot<T> extends TgpuNamable {
   readonly $: GPUValueOf<T>;
 }
 
-export interface TgpuDerived<T> {
-  readonly [$internal]: true;
-  readonly resourceType: 'derived';
+export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
+  readonly [$internal]: {
+    compute(): T;
+  };
+  readonly resourceType: 'lazy';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
   /**
@@ -43,13 +46,6 @@ export interface TgpuDerived<T> {
   // Type-tokens, not available at runtime
   readonly [$providing]?: Providing | undefined;
   // ---
-
-  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
-
-  /**
-   * @internal
-   */
-  '~compute'(): T;
 }
 
 export type AccessorIn<TSchema extends AnyData> = TSchema extends
@@ -112,7 +108,7 @@ export interface TgpuMutableAccessor<T extends AnyData = AnyData>
 /**
  * Represents a value that is available at resolution time.
  */
-export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
+export type Eventual<T> = T | TgpuSlot<T> | TgpuLazy<T>;
 
 export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
@@ -125,10 +121,10 @@ export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';
 }
 
-export function isDerived<T extends TgpuDerived<unknown>>(
+export function isLazy<T extends TgpuLazy<unknown>>(
   value: T | unknown,
 ): value is T {
-  return (value as T)?.resourceType === 'derived';
+  return (value as T)?.resourceType === 'lazy';
 }
 
 export function isProviding(

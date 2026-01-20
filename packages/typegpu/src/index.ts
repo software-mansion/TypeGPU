@@ -15,7 +15,7 @@ import { simulate } from './core/simulate/tgpuSimulate.ts';
 import { init, initFromDevice } from './core/root/init.ts';
 
 import { accessor, mutableAccessor } from './core/slot/accessor.ts';
-import { derived } from './core/slot/derived.ts';
+import { lazy } from './core/slot/lazy.ts';
 import { slot } from './core/slot/slot.ts';
 import { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 import { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
@@ -27,6 +27,7 @@ export const tgpu = {
   comptime,
   bindGroupLayout,
   vertexLayout,
+  lazy,
   slot,
 
   init,
@@ -56,7 +57,10 @@ export const tgpu = {
      */
     vertexLayout,
     namespace,
-    derived,
+    /**
+     * @deprecated This feature is now stable, use tgpu.lazy.
+     */
+    derived: lazy,
     /**
      * @deprecated This feature is now stable, use tgpu.slot.
      */
@@ -94,7 +98,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export {
   isAccessor,
-  isDerived,
+  isLazy,
   isMutableAccessor,
   isSlot,
 } from './core/slot/slotTypes.ts';
@@ -152,7 +156,7 @@ export type {
   Eventual,
   MutableAccessorIn,
   TgpuAccessor,
-  TgpuDerived,
+  TgpuLazy,
   TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
