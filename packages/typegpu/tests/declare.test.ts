@@ -112,7 +112,7 @@ struct Output {
       "@group(0) @binding(0) var<uniform> val: f32;
 
       fn main() -> f32 {
-        ;
+
         return 2f;
       }"
     `);
