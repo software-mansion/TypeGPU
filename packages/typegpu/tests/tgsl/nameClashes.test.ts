@@ -188,3 +188,18 @@ test('should give new names to functions that collide with builtins', () => {
     }"
   `);
 });
+
+test('trying to break things', () => {
+  // trigger build
+  const i = 0;
+  const f = () => {
+    'use gpu';
+    let foo = i;
+    {
+      const i = foo;
+      const boo = i;
+    }
+    foo = i;
+  };
+  console.log(tgpu.resolve([f]));
+});
