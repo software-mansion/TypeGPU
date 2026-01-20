@@ -23,7 +23,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export {
   isAccessor,
-  isDerived,
+  isLazy,
   isMutableAccessor,
   isSlot,
 } from './core/slot/slotTypes.ts';
@@ -81,7 +81,7 @@ export type {
   Eventual,
   MutableAccessorIn,
   TgpuAccessor,
-  TgpuDerived,
+  TgpuLazy,
   TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
