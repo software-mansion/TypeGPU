@@ -89,7 +89,7 @@ export const computeBindGroupLayout = tgpu.bindGroupLayout({
     storage: ModelDataArray,
     access: 'mutable',
   },
-  mouseRay: { uniform: MouseRay },
+  mouseRay: { uniform: Line3 },
   timePassed: { uniform: d.f32 },
   fishBehavior: { uniform: FishBehaviorParams },
 });

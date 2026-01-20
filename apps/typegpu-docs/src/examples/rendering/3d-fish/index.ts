@@ -15,7 +15,6 @@ import {
   ModelData,
   ModelDataArray,
   modelVertexLayout,
-  MouseRay,
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
@@ -150,10 +149,7 @@ const camera = {
 const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
 
 const mouseRayBuffer = root
-  .createBuffer(MouseRay, {
-    activated: 0,
-    line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
-  })
+  .createBuffer(Line3, Line3({ origin: d.vec3f(), dir: d.vec3f() }))
   .$usage('uniform');
 
 const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
@@ -383,13 +379,10 @@ async function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  mouseRayBuffer.write({
-    activated: 1,
-    line: Line3({
-      origin: camera.position.xyz,
-      dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
-    }),
-  });
+  mouseRayBuffer.write(Line3({
+    origin: camera.position.xyz,
+    dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
+  }));
 }
 
 // Prevent the context menu from appearing on right click.
@@ -420,9 +413,6 @@ const mouseUpEventListener = (event: MouseEvent) => {
   }
   if (event.button === 2) {
     isRightPressed = false;
-    mouseRayBuffer.writePartial({
-      activated: 0,
-    });
   }
 };
 window.addEventListener('mouseup', mouseUpEventListener);
@@ -443,9 +433,7 @@ const mouseMoveEventListener = (event: MouseEvent) => {
     updateCameraTarget(dx, dy);
   }
 
-  if (isRightPressed) {
-    updateMouseRay(event.clientX, event.clientY);
-  }
+  updateMouseRay(event.clientX, event.clientY);
 };
 window.addEventListener('mousemove', mouseMoveEventListener);
 
@@ -478,13 +466,6 @@ const touchMoveEventListener = (event: TouchEvent) => {
 };
 window.addEventListener('touchmove', touchMoveEventListener);
 
-const touchEndEventListener = () => {
-  mouseRayBuffer.writePartial({
-    activated: 0,
-  });
-};
-window.addEventListener('touchend', touchEndEventListener);
-
 // observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
@@ -510,7 +491,6 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }
