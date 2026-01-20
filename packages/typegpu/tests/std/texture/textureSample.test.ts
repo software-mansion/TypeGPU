@@ -21,7 +21,6 @@ describe('textureSample', () => {
       const someLayout = bindGroupLayout({
         sampledCube: { 'texture': d.textureCube() },
       });
-      const { sampledCube } = someLayout.bound;
 
       const validFn = fn([], d.vec4f)(() =>
         textureSample(sampledView.$, linSampler.$, d.vec2f(0.5))
@@ -29,10 +28,6 @@ describe('textureSample', () => {
 
       const validFn2 = fn([], d.vec4f)(() =>
         textureSample(someLayout.$.sampledCube, linSampler.$, d.vec3f(0.5))
-      );
-
-      const validFn3 = fn([], d.vec4f)(() =>
-        textureSample(sampledCube.$, linSampler.$, d.vec3f(0.5))
       );
 
       const invalidFn = fn([], d.vec4f)(() =>

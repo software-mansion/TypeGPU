@@ -82,7 +82,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 
 /**
@@ -602,6 +602,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
+  withRenamed<T>(item: object, name: string | undefined, callback: () => T): T {
+    if (!name) {
+      return callback();
+    }
+    const oldName = getName(item);
+    setName(item, name);
+    const result = callback();
+    setName(item, oldName);
+    return result;
+  }
+
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
       return this.withSlots(
@@ -766,9 +777,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (isProviding(item)) {
-      return this.withSlots(
-        item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema),
+      return this.withRenamed(
+        item[$providing].inner,
+        getName(item),
+        () =>
+          this.withSlots(
+            item[$providing].pairs,
+            () => this.resolve(item[$providing].inner, schema),
+          ),
       );
     }
 

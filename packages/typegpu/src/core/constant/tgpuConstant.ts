@@ -28,6 +28,9 @@ export interface TgpuConst<TDataType extends AnyData = AnyData>
   extends TgpuNamable {
   readonly resourceType: 'const';
   readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 
