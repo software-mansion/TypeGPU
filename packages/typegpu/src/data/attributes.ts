@@ -363,7 +363,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
@@ -423,7 +423,7 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
@@ -441,7 +441,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
 class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
   public readonly type = 'loose-decorated';
 
   // Type-tokens, not available at runtime

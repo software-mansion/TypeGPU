@@ -1007,6 +1007,35 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('allows .with to be called at comptime', () => {
+    const multiplierSlot = tgpu.slot(1);
+    const scale = tgpu.fn([d.f32], d.f32)((v) => {
+      'use gpu';
+      return v * multiplierSlot.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      scale(2);
+      scale.with(multiplierSlot, 2)(2);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 1f);
+      }
+
+      fn scale_1(v: f32) -> f32 {
+        return (v * 2f);
+      }
+
+      fn main() {
+        scale(2f);
+        scale_1(2f);
+      }"
+    `);
+  });
+
   it('throws a readable error when assigning to a value defined outside of tgsl', () => {
     let a = 0;
     const f = tgpu.fn([])(() => {
