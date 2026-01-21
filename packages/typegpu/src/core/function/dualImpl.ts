@@ -21,10 +21,13 @@ interface DualImplOptions<T extends AnyFn> {
     args: MapValueToSnippet<Parameters<T>>,
   ) => string;
   readonly signature:
-    | { argTypes: AnyData[]; returnType: AnyData }
+    | {
+      argTypes: (AnyData | AnyData[])[];
+      returnType: AnyData;
+    }
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
-    ) => { argTypes: AnyData[]; returnType: AnyData });
+    ) => { argTypes: (AnyData | AnyData[])[]; returnType: AnyData });
   /**
    * Whether the function should skip trying to execute the "normal" implementation if
    * all arguments are known at compile time.

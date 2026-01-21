@@ -504,6 +504,137 @@ export const textureDimensions = dualImpl({
   },
 });
 
+type Gather2dArgs<T extends texture2d = texture2d> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  offset?: v2i,
+];
+type Gather2dArrayArgs<T extends texture2dArray = texture2dArray> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  offset?: v2i,
+];
+type GatherCubeArgs<T extends textureCube = textureCube> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+];
+type GatherCubeArrayArgs<T extends textureCubeArray = textureCubeArray> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  arrayIndex: number,
+];
+type GatherDepth2dArgs = [
+  texture: textureDepth2d,
+  sampler: sampler,
+  coords: v2f,
+  offset?: v2i,
+];
+type GatherDepth2dArrayArgs = [
+  texture: textureDepth2dArray,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  offset?: v2i,
+];
+type GatherDepthCubeArgs = [
+  texture: textureDepthCube,
+  sampler: sampler,
+  coords: v3f,
+];
+type GatherDepthCubeArrayArgs = [
+  texture: textureDepthCubeArray,
+  sampler: sampler,
+  coords: v3f,
+  arrayIndex: number,
+];
+
+type TextureGatherCpuArgs =
+  | Gather2dArgs
+  | Gather2dArrayArgs
+  | GatherCubeArgs
+  | GatherCubeArrayArgs
+  | GatherDepth2dArgs
+  | GatherDepth2dArrayArgs
+  | GatherDepthCubeArgs
+  | GatherDepthCubeArrayArgs;
+
+type TextureGatherCpuFn = {
+  <T extends texture2d>(
+    ...args: Gather2dArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends texture2dArray>(
+    ...args: Gather2dArrayArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends textureCube>(
+    ...args: GatherCubeArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends textureCubeArray>(
+    ...args: GatherCubeArrayArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  (...args: GatherDepth2dArgs): v4f;
+  (...args: GatherDepth2dArrayArgs): v4f;
+  (...args: GatherDepthCubeArgs): v4f;
+  (...args: GatherDepthCubeArrayArgs): v4f;
+  // (...args: TextureGatherCpuArgs): v4f | v4i | v4u;
+};
+
+export const textureGatherCpu: TextureGatherCpuFn = (
+  ...args: TextureGatherCpuArgs
+): v4f => {
+  throw new Error(
+    'Texture gather relies on GPU resources and cannot be executed outside of a draw call',
+  );
+};
+
+const sampleTypeToVecType = {
+  f32: vec4f,
+  i32: vec4i,
+  u32: vec4u,
+};
+
+export const textureGather = dualImpl({
+  name: 'textureGather',
+  normalImpl: textureGatherCpu,
+  codegenImpl: (...args) => stitch`textureGather(${args})`,
+  signature: (...args) => {
+    if (args[0].type.startsWith('texture')) {
+      const [texture, sampler, coords, _, ...rest] = args;
+
+      const isArrayTexture = texture.type === 'texture_depth_2d_array' ||
+        texture.type === 'texture_depth_cube_array';
+
+      const argTypes = isArrayTexture
+        ? [texture, sampler, coords, [u32, i32], ...rest]
+        : args as AnyData[];
+
+      return { argTypes: argTypes as AnyData[], returnType: vec4f };
+    }
+
+    const [_, texture, sampler, coords, ...rest] = args;
+
+    const isArrayTexture = texture.type === 'texture_2d_array' ||
+      texture.type === 'texture_cube_array';
+
+    const argTypes = isArrayTexture
+      ? [[u32, i32], texture, sampler, coords, [u32, i32], ...rest]
+      : [[u32, i32], texture, sampler, coords, ...rest];
+
+    return {
+      argTypes: argTypes as AnyData[],
+      returnType: sampleTypeToVecType[(texture as WgslTexture).sampleType.type],
+    };
+  },
+});
+
 function textureSampleCompareCpu<T extends textureDepth2d>(
   texture: T,
   sampler: comparisonSampler,

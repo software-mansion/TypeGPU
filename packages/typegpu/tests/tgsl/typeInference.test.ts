@@ -209,7 +209,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'u32' to type 'void']
+      - fn:add: Cannot convert value of type 'u32' to any of the target types: [void]]
     `);
   });
 
@@ -221,7 +221,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'abstractInt' to type 'vec3f']
+      - fn:add: Cannot convert value of type 'abstractInt' to any of the target types: [vec3f]]
     `);
   });
 
@@ -269,7 +269,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'vec2<bool>' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'vec2<bool>' to any of the target types: [bool]]
     `);
   });
 
@@ -284,7 +284,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'mat2x2f' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'mat2x2f' to any of the target types: [bool]]
     `);
   });
 
@@ -301,7 +301,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'abstractInt' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'abstractInt' to any of the target types: [bool]]
     `);
   });
 

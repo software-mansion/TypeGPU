@@ -902,7 +902,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to type 'f32']
+      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 
