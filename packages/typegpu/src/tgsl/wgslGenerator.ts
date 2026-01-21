@@ -160,6 +160,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$internal].gpuImpl,
+  'void': () => snip('', wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -770,6 +771,21 @@ ${this.ctx.pre}}`;
       );
     }
 
+    if (expression[0] === NODE.conditionalExpr) {
+      // ternary operator
+      const [_, test, consequent, alternative] = expression;
+      const testExpression = this.expression(test);
+      if (isKnownAtComptime(testExpression)) {
+        return testExpression.value
+          ? this.expression(consequent)
+          : this.expression(alternative);
+      } else {
+        throw new Error(
+          `Ternary operator is only supported for comptime-known checks (used with '${testExpression.value}'). For runtime checks, please use 'std.select' or if/else statements.`,
+        );
+      }
+    }
+
     if (expression[0] === NODE.stringLiteral) {
       return snip(expression[1], UnknownData, /* origin */ 'constant');
     }
@@ -791,9 +807,8 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      return `${this.ctx.pre}${
-        this.ctx.resolve(this.identifier(statement).value).value
-      };`;
+      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
+      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
     }
 
     if (typeof statement === 'boolean') {
@@ -1066,9 +1081,8 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    return `${this.ctx.pre}${
-      this.ctx.resolve(this.expression(statement).value).value
-    };`;
+    const resolved = this.ctx.resolve(this.expression(statement).value).value;
+    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
   }
 }
 
