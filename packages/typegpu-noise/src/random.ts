@@ -19,7 +19,7 @@ import { randomGeneratorSlot } from './generator.ts';
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-7; // don't ever get any lower than this
 
-const seedNotEmpty = tgpu['~unstable'].comptime(
+const seedNotEmpty = tgpu.comptime(
   (seedFnName: keyof typeof randomGeneratorSlot.$) => {
     if (randomGeneratorSlot.$[seedFnName]) {
       return true;
@@ -34,28 +34,28 @@ export const randSeed = tgpu.fn([d.f32])((seed) => {
     // @ts-expect-error trust me
     randomGeneratorSlot.$.seed(seed);
   }
-}).$name('randSeed');
+});
 
 export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
   if (seedNotEmpty('seed2')) {
     // @ts-expect-error trust me
     randomGeneratorSlot.$.seed2(seed);
   }
-}).$name('randSeed2');
+});
 
 export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
   if (seedNotEmpty('seed3')) {
     // @ts-expect-error trust me
     randomGeneratorSlot.$.seed3(seed);
   }
-}).$name('randSeed3');
+});
 
 export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
   if (seedNotEmpty('seed4')) {
     // @ts-expect-error trust me
     randomGeneratorSlot.$.seed4(seed);
   }
-}).$name('randSeed4');
+});
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => randomGeneratorSlot.$.sample());
