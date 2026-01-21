@@ -317,10 +317,9 @@ export const controls = {
 
 // Variables for interaction
 
-let isLeftPressed = false;
+let isPressed = false;
 let previousMouseX = 0;
 let previousMouseY = 0;
-let isRightPressed = false;
 
 let isPopupDiscarded = false;
 const controlsPopup = document.getElementById('help') as HTMLDivElement;
@@ -385,11 +384,6 @@ async function updateMouseRay(cx: number, cy: number) {
   }));
 }
 
-// Prevent the context menu from appearing on right click.
-canvas.addEventListener('contextmenu', (event) => {
-  event.preventDefault();
-});
-
 // Mouse controls
 
 canvas.addEventListener('mousedown', async (event) => {
@@ -399,20 +393,14 @@ canvas.addEventListener('mousedown', async (event) => {
   isPopupDiscarded = true;
 
   if (event.button === 0) {
-    isLeftPressed = true;
+    isPressed = true;
   }
-  if (event.button === 2) {
-    isRightPressed = true;
-    updateMouseRay(event.clientX, event.clientY);
-  }
+  updateMouseRay(event.clientX, event.clientY);
 });
 
 const mouseUpEventListener = (event: MouseEvent) => {
   if (event.button === 0) {
-    isLeftPressed = false;
-  }
-  if (event.button === 2) {
-    isRightPressed = false;
+    isPressed = false;
   }
 };
 window.addEventListener('mouseup', mouseUpEventListener);
@@ -429,7 +417,7 @@ const mouseMoveEventListener = (event: MouseEvent) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
 
-  if (isLeftPressed) {
+  if (isPressed) {
     updateCameraTarget(dx, dy);
   }
 
@@ -446,9 +434,9 @@ canvas.addEventListener(
     if (event.touches.length === 1) {
       previousMouseX = event.touches[0].clientX;
       previousMouseY = event.touches[0].clientY;
-      updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
-      controlsPopup.style.opacity = '0';
     }
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+    controlsPopup.style.opacity = '0';
   },
   { passive: false },
 );
@@ -461,8 +449,8 @@ const touchMoveEventListener = (event: TouchEvent) => {
     previousMouseY = event.touches[0].clientY;
 
     updateCameraTarget(dx, dy);
-    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
   }
+  updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
 };
 window.addEventListener('touchmove', touchMoveEventListener);
 
