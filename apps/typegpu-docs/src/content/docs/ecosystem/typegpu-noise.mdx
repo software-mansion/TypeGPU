@@ -10,7 +10,7 @@ It also features a [Perlin noise](#perlin-noise) implementation, which is useful
 effects, terrains, and other procedural elements.
 
 :::note
-Threads do not share the generator's `State`. As a result, unless you change the seed or provide thread-dependent variables, each thread will produce the same sequence of sampled values.
+Threads do not share the generator's `State`. As a result, unless you change the seed in each thread to a different value, each of them will produce the same sequence of sampled values.
 :::
 
 ## Use with either TypeGPU or WebGPU
@@ -266,4 +266,55 @@ pipeline
 // Can be called again to reinitialize the cache with
 // a different domain size
 bindGroup = initBindGroup(d.vec3u(5, 5, 1));
+```
+
+## Generator slot
+The package provides convenient way to change PRNG as needed.
+You can easily implement your own PRNG and plug it into the pipeline.
+
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+import { randf } from '@typegpu/noise';
+import * as std from 'typegpu/std';
+
+const root = await tgpu.init();
+
+const b = root.createMutable(d.f32);
+const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+  b.$ = randf.sample();
+});
+// ---cut---
+import {
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
+
+const LCG: StatefulGenerator = (() => {
+  const seed = tgpu.privateVar(d.u32);
+
+  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
+    const mantissa = value >> 9;
+    const bits = 0x3F800000 | mantissa;
+    const f = std.bitcastU32toF32(bits);
+    return f - 1;
+  });
+
+  return {
+    seed2: (value: d.v2f) => {
+      'use gpu';
+      seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
+    },
+    sample: () => {
+      'use gpu';
+      seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
+      return u32To01Float(seed.$);
+    },
+  };
+})();
+
+const pipeline = root['~unstable']
+  .with(randomGeneratorSlot, LCG)
+  .withCompute(f)
+  .createPipeline();
 ```
