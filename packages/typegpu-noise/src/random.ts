@@ -3,7 +3,6 @@ import * as d from 'typegpu/data';
 import {
   cos,
   dot,
-  length,
   log,
   mul,
   normalize,
@@ -20,25 +19,43 @@ import { randomGeneratorSlot } from './generator.ts';
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-7; // don't ever get any lower than this
 
-export const randSeed: TgpuFn<(seed: d.F32) => d.Void> = tgpu
-  .fn([d.f32])((seed) => {
+const seedNotEmpty = tgpu.comptime(
+  (seedFnName: keyof typeof randomGeneratorSlot.$) => {
+    if (randomGeneratorSlot.$[seedFnName]) {
+      return true;
+    }
+    console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
+    return false;
+  },
+);
+
+export const randSeed = tgpu.fn([d.f32])((seed) => {
+  if (seedNotEmpty('seed')) {
+    // @ts-expect-error trust me
     randomGeneratorSlot.$.seed(seed);
-  });
+  }
+});
 
-export const randSeed2: TgpuFn<(seed: d.Vec2f) => d.Void> = tgpu
-  .fn([d.vec2f])((seed) => {
+export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
+  if (seedNotEmpty('seed2')) {
+    // @ts-expect-error trust me
     randomGeneratorSlot.$.seed2(seed);
-  });
+  }
+});
 
-export const randSeed3: TgpuFn<(seed: d.Vec3f) => d.Void> = tgpu
-  .fn([d.vec3f])((seed) => {
+export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
+  if (seedNotEmpty('seed3')) {
+    // @ts-expect-error trust me
     randomGeneratorSlot.$.seed3(seed);
-  });
+  }
+});
 
-export const randSeed4: TgpuFn<(seed: d.Vec4f) => d.Void> = tgpu
-  .fn([d.vec4f])((seed) => {
+export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
+  if (seedNotEmpty('seed4')) {
+    // @ts-expect-error trust me
     randomGeneratorSlot.$.seed4(seed);
-  });
+  }
+});
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
   .fn([], d.f32)(() => randomGeneratorSlot.$.sample());
@@ -77,15 +94,6 @@ export const randOnUnitCircle: TgpuFn<() => d.Vec2f> = tgpu
     const angle = randomGeneratorSlot.$.sample() * TWO_PI;
 
     return d.vec2f(cos(angle), sin(angle));
-  });
-
-const safeNormalize: TgpuFn<(v: d.Vec3f) => d.Vec3f> = tgpu
-  .fn([d.vec3f], d.vec3f)((v) => {
-    let vNonZero = v;
-    if (length(v) === 0) {
-      vNonZero = v.add(EPS);
-    }
-    return normalize(vNonZero);
   });
 
 export const randInUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
