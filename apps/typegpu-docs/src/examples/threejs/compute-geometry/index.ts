@@ -6,8 +6,7 @@ import * as TSL from 'three/tsl';
 import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });

@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;

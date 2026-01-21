@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { add, mul, sub } from 'typegpu/std';
 
 export type Prettify<T> =

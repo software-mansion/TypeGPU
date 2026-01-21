@@ -25,7 +25,6 @@ import {
   isLooseData,
   isLooseDecorated,
   type LooseDecorated,
-  type LooseTypeLiteral,
   type Undecorate,
 } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -50,7 +49,6 @@ import {
   type PerspectiveOrLinearInterpolationType,
   type Size,
   type Vec4f,
-  type WgslTypeLiteral,
 } from './wgslTypes.ts';
 
 // ----------
@@ -113,9 +111,9 @@ export type ExtractAttributes<T> = T extends {
 export type Decorate<
   TData extends BaseData,
   TAttrib extends AnyAttribute,
-> = TData['type'] extends WgslTypeLiteral
+> = TData extends AnyWgslData
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : TData['type'] extends LooseTypeLiteral
+  : TData extends AnyLooseData
     ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : never;
 

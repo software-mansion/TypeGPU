@@ -286,7 +286,7 @@ type FromTSL =
     type: T,
   ) => TSLAccessor<T, TNode>);
 
-export const fromTSL = tgpu['~unstable'].comptime(
+export const fromTSL = tgpu.comptime(
   ((node, type) => {
     const tgpuType = d.isData(type)
       ? type

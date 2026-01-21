@@ -1,0 +1,51 @@
+// NOTE: This is a barrel file, internal files should not import things from this file
+
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.const.
+   */
+  constant as const,
+} from './core/constant/tgpuConstant.ts';
+export { declare } from './core/declare/tgpuDeclare.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.comptime.
+   */
+  comptime,
+} from './core/function/comptime.ts';
+export { computeFn } from './core/function/tgpuComputeFn.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.fn.
+   */
+  fn,
+} from './core/function/tgpuFn.ts';
+export { fragmentFn } from './core/function/tgpuFragmentFn.ts';
+export { vertexFn } from './core/function/tgpuVertexFn.ts';
+export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
+export { namespace } from './core/resolve/namespace.ts';
+export { simulate } from './core/simulate/tgpuSimulate.ts';
+export { accessor, mutableAccessor } from './core/slot/accessor.ts';
+export { derived } from './core/slot/derived.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.slot.
+   */
+  slot,
+} from './core/slot/slot.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.privateVar.
+   */
+  privateVar,
+  /**
+   * @deprecated This feature is now stable, use tgpu.workgroupVar.
+   */
+  workgroupVar,
+} from './core/variable/tgpuVariable.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.vertexLayout.
+   */
+  vertexLayout,
+} from './core/vertexLayout/vertexLayout.ts';

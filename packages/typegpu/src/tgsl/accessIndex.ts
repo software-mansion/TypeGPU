@@ -29,8 +29,12 @@ const indexableTypeToResult = {
 
 export function accessIndex(
   target: Snippet,
-  index: Snippet,
+  indexArg: Snippet | number,
 ): Snippet | undefined {
+  const index = typeof indexArg === 'number'
+    ? coerceToSnippet(indexArg)
+    : indexArg;
+
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType as AnyData;

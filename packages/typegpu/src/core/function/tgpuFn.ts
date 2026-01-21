@@ -17,18 +17,21 @@ import {
 } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import {
   addArgTypesToExternals,
   addReturnTypeToExternals,
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
+  type AccessorIn,
   type Eventual,
   isAccessor,
+  isMutableAccessor,
+  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuMutableAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import { dualImpl } from './dualImpl.ts';
@@ -92,7 +95,11 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: TgpuFn<() => T> | TgpuBufferUsage<T> | Infer<T>,
+    value: AccessorIn<NoInfer<T>>,
+  ): TgpuFn<ImplSchema>;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
 }
 
@@ -184,11 +191,11 @@ function createFn<ImplSchema extends AnyFn>(
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
       return createBoundFunction(fn, [
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
 
@@ -211,7 +218,7 @@ function createFn<ImplSchema extends AnyFn>(
   } as This;
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined, // the name is forwarded to the core anyway
     noComptime: true,
     signature: { argTypes: shell.argTypes, returnType: shell.returnType },
     normalImpl: (...args) =>
@@ -264,9 +271,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   innerFn: TgpuFn<ImplSchema>,
   pairs: SlotValuePair[],
 ): TgpuFn<ImplSchema> {
-  type This = TgpuFnBase<ImplSchema> & {
-    [$getNameForward]: TgpuFn<ImplSchema>;
-  };
+  type This = TgpuFnBase<ImplSchema>;
 
   const fnBase: This = {
     resourceType: 'function',
@@ -281,25 +286,24 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       return this;
     },
 
-    [$getNameForward]: innerFn,
     $name(label: string): This {
       setName(this, label);
       return this;
     },
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuFn<ImplSchema> {
       return createBoundFunction(innerFn, [
         ...pairs,
-        [isAccessor(slot) ? slot.slot : slot, value],
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
       ]);
     },
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
-    name: 'tgpuFnCall',
+    name: undefined, // setting name here would override autonaming
     noComptime: true,
     signature: {
       argTypes: innerFn.shell.argTypes,
@@ -320,11 +324,16 @@ function createBoundFunction<ImplSchema extends AnyFn>(
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      const fnLabel = getName(innerFn) ?? '<unnamed>';
+      const fnLabel = getName(this) ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
+
+  const innerName = getName(innerFn);
+  if (innerName) {
+    setName(fn, innerName);
+  }
 
   return fn;
 }

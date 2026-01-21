@@ -105,8 +105,7 @@ reified references to any struct definition.
 import { Fish } from './shaders/shared.wesl?typegpu';
 // ---cut-start---
 // @filename: ./main.ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 const BoidState = d.struct({
   position: d.vec3f,

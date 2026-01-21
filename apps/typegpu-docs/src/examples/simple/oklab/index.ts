@@ -5,9 +5,7 @@ import {
   oklabToLinearRgb,
   oklabToRgb,
 } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { any, cos, floor, gt, lt, mul, select, sin } from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
@@ -39,30 +37,10 @@ document.addEventListener(
   },
 );
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-
-  return {
-    pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0),
-    uv: pos[input.vertexIndex],
-  };
-});
-
-const Uniforms = d.struct({
-  hue: d.f32,
-  alpha: d.f32,
-});
-
-const layout = tgpu.bindGroupLayout({
-  uniforms: { uniform: Uniforms },
-});
-
-const scaleView = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
+const scaleView = (pos: d.v2f): d.v2f => {
+  'use gpu';
   return d.vec2f(0.3 * pos.x, (pos.y * 1.2 + 1) * 0.5);
-});
+};
 
 // #region Patterns
 
@@ -70,16 +48,20 @@ const patternFn = tgpu.fn([d.vec2f, d.vec3f], d.f32);
 
 const patternCheckers = patternFn((uv) => {
   'use gpu';
-  const suv = floor(mul(20, uv));
-  return suv.x + suv.y - 2 * floor((suv.x + suv.y) * 0.5);
+  const suv = std.floor(uv.mul(20));
+  return suv.x + suv.y - 2 * std.floor((suv.x + suv.y) * 0.5);
 });
 
-const patternL0ProjectionLines =
-  patternFn /* wgsl */`(uv: vec2f, clipLab: vec3f) -> f32 {
-    let thickness = fwidth(clipLab.x);
-    let Lgrid = 0.02 - thickness - abs(clipLab.x % 0.04 - 0.02);
-    return select(clamp(Lgrid / fwidth(Lgrid), 0, 1), 1, thickness < 0.0002);
-  }`;
+const patternL0ProjectionLines = patternFn((_uv, clipLab) => {
+  'use gpu';
+  const thickness = std.fwidth(clipLab.x);
+  const Lgrid = 0.02 - thickness - std.abs((clipLab.x % 0.04) - 0.02);
+  return std.select(
+    std.clamp(Lgrid / std.fwidth(Lgrid), 0, 1),
+    1,
+    thickness < 0.0002,
+  );
+});
 
 const patternSolid = patternFn(() => {
   'use gpu';
@@ -94,23 +76,31 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const hue = layout.$.uniforms.hue;
-  const pos = scaleView(input.uv);
-  const lab = d.vec3f(pos.y, mul(pos.x, d.vec2f(cos(hue), sin(hue))));
+  // remapping to (-1, 1)
+  const uv = input.uv.sub(0.5).mul(d.vec2f(2, -2));
+
+  const hue = uniforms.$.hue;
+  const pos = scaleView(uv);
+  const yzDir = d.vec2f(std.cos(hue), std.sin(hue));
+  const lab = d.vec3f(pos.y, yzDir.mul(pos.x));
   const rgb = oklabToLinearRgb(lab);
-  const outOfGamut = any(lt(rgb, d.vec3f(0))) || any(gt(rgb, d.vec3f(1)));
+  const outOfGamut = std.any(std.lt(rgb, d.vec3f(0))) ||
+    std.any(std.gt(rgb, d.vec3f(1)));
 
   const clipLab = oklabGamutClipSlot.$(lab);
   const color = oklabToRgb(lab);
 
-  const patternScaled = patternSlot.$(input.uv, clipLab) * 0.1 + 0.9;
+  const patternScaled = patternSlot.$(uv, clipLab) * 0.1 + 0.9;
 
-  return d.vec4f(select(color, mul(patternScaled, color), outOfGamut), 1);
+  return d.vec4f(std.select(color, color.mul(patternScaled), outOfGamut), 1);
 });
 
-const alphaFromUniforms = tgpu.fn([], d.f32)(() => layout.$.uniforms.alpha);
-
 const root = await tgpu.init();
+
+const uniforms = root.createUniform(d.struct({
+  hue: d.f32,
+  alpha: d.f32,
+}));
 
 context.configure({
   device: root.device,
@@ -118,18 +108,13 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const uniforms = Uniforms({
+const uniformsValue = {
   hue: 0.7,
   alpha: 0.05,
-});
-
-const uniformsBuffer = root.createBuffer(Uniforms, uniforms).$usage('uniform');
-const bindGroup = root.createBindGroup(layout, {
-  uniforms: uniformsBuffer,
-});
+};
 
 let pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(mainFragment, {
     format: presentationFormat,
   })
@@ -145,8 +130,8 @@ function setPipeline({
   pipeline = root['~unstable']
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
-    .with(oklabGamutClipAlphaAccess, alphaFromUniforms)
-    .withVertex(fullScreenTriangle, {})
+    .with(oklabGamutClipAlphaAccess, () => uniforms.$.alpha)
+    .withVertex(common.fullScreenTriangle, {})
     .withFragment(mainFragment, {
       format: presentationFormat,
     })
@@ -159,21 +144,20 @@ function draw() {
   );
   const lightness = pos.y;
   const chroma = pos.x;
-  const a = chroma * Math.cos(uniforms.hue);
-  const b = chroma * Math.sin(uniforms.hue);
+  const a = chroma * Math.cos(uniformsValue.hue);
+  const b = chroma * Math.sin(uniformsValue.hue);
   cssProbe.style.setProperty('--x', `${cssProbePosition.x * 100}%`);
   cssProbe.style.setProperty('--y', `${cssProbePosition.y * 100}%`);
   canvas.parentElement?.style.setProperty('--l', `${lightness}`);
   canvas.parentElement?.style.setProperty('--a', `${a}`);
   canvas.parentElement?.style.setProperty('--b', `${b}`);
-  canvas.parentElement?.style.setProperty('--hue', `${uniforms.hue}rad`);
+  canvas.parentElement?.style.setProperty('--hue', `${uniformsValue.hue}rad`);
 
   probePositionText.innerText = `
     oklab(${lightness.toFixed(2)} ${a.toFixed(2)} ${b.toFixed(2)})
   `;
 
   pipeline
-    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
@@ -213,8 +197,8 @@ export const controls = {
     max: 2 * Math.PI,
     step: 0.001,
     onSliderChange: (hue: number) => {
-      uniforms.hue = hue;
-      uniformsBuffer.writePartial({ hue });
+      uniformsValue.hue = hue;
+      uniforms.writePartial({ hue });
       draw();
     },
   },
@@ -232,8 +216,8 @@ export const controls = {
     max: 1,
     step: 0.001,
     onSliderChange: (alpha: number) => {
-      uniforms.alpha = alpha;
-      uniformsBuffer.writePartial({ alpha });
+      uniformsValue.alpha = alpha;
+      uniforms.writePartial({ alpha });
       draw();
     },
   },

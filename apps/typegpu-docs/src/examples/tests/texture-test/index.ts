@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -100,7 +98,7 @@ function createPipelineForFormat(format: TestFormat) {
     in: { uv: d.vec2f },
     out: d.vec4f,
   })`{
-    let color = textureSampleBias(texture, sampler, in.uv, bias);
+    let color = textureSampleBias(layout.$.myTexture, sampler, in.uv, bias);
 
     if (channel == 1) { return vec4f(color.rrr, 1.0); }
     if (channel == 2) { return vec4f(color.ggg, 1.0); }
@@ -109,14 +107,14 @@ function createPipelineForFormat(format: TestFormat) {
 
     return color;
   }`.$uses({
-    texture: layout.bound.myTexture,
+    layout,
     sampler,
     bias: biasUniform,
     channel: channelUniform,
   });
 
   const pipeline = root['~unstable']
-    .withVertex(fullScreenTriangle)
+    .withVertex(common.fullScreenTriangle)
     .withFragment(fragmentFunction, { format: presentationFormat })
     .createPipeline();
 

@@ -1,25 +1,21 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
+import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
   blurLayout,
   drawWithMaskLayout,
   filterDim,
-  flipSlot,
+  flipAccess,
   generateMaskLayout,
-  paramsAccessor,
+  paramsAccess,
   prepareModelInputLayout,
 } from './schemas.ts';
-import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 
 export const prepareModelInput = (x: number, y: number) => {
   'use gpu';
-  const modelUV = d.vec2f(d.f32(x), d.f32(y)).div(
-    d.vec2f(MODEL_WIDTH, MODEL_HEIGHT),
-  );
+  const modelUV = d.vec2f(x, y).div(d.vec2f(MODEL_WIDTH, MODEL_HEIGHT));
 
-  const cropBounds = paramsAccessor.$.cropBounds;
+  const cropBounds = paramsAccess.$.cropBounds;
   const uvMin = cropBounds.xy;
   const uvMax = cropBounds.zw;
   const videoUV = std.mix(uvMin, uvMax, modelUV);
@@ -63,7 +59,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       let loadIndex = baseIndex.add(d.vec2i(c, r));
-      if (flipSlot.$) {
+      if (flipAccess.$) {
         loadIndex = loadIndex.yx;
       }
 
@@ -82,7 +78,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       let writeIndex = baseIndex.add(d.vec2i(c, r));
-      if (flipSlot.$) {
+      if (flipAccess.$) {
         writeIndex = writeIndex.yx;
       }
 
@@ -114,7 +110,7 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   );
 
   let blurredColor = d.vec4f();
-  if (paramsAccessor.$.useGaussian === 1) {
+  if (paramsAccess.$.useGaussian === 1) {
     blurredColor = std.textureSampleBaseClampToEdge(
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
@@ -125,11 +121,11 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
       input.uv,
-      paramsAccessor.$.sampleBias,
+      paramsAccess.$.sampleBias,
     );
   }
 
-  const cropBounds = paramsAccessor.$.cropBounds;
+  const cropBounds = paramsAccess.$.cropBounds;
   const uvMin = cropBounds.xy;
   const uvMax = cropBounds.zw;
   const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));

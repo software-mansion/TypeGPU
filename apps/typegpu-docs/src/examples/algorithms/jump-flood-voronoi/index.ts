@@ -1,12 +1,6 @@
-import tgpu, {
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuTexture,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
+import type { SampledFlag, StorageFlag, TgpuTexture } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -222,7 +216,7 @@ const voronoiFrag = tgpu['~unstable'].fragmentFn({
 );
 
 const voronoiPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(voronoiFrag, { format: presentationFormat })
   .createPipeline();
 
