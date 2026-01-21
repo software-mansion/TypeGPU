@@ -10,7 +10,7 @@ It also features a [Perlin noise](#perlin-noise) implementation, which is useful
 effects, terrains, and other procedural elements.
 
 :::note
-Threads do not share the generator's `State`. As a result, unless you change the seed in each thread, each thread will produce the same sequence of sampled values.
+Threads do not share the generator's `State`. As a result, unless you change the seed in each thread to a different value, each of them will produce the same sequence of sampled values.
 :::
 
 ## Use with either TypeGPU or WebGPU
