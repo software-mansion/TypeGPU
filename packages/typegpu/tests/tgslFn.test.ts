@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
-import * as d from '../src/data/index.ts';
-import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
+import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { it } from './utils/extendedIt.ts';
 

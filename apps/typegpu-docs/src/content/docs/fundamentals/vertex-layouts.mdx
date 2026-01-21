@@ -18,8 +18,7 @@ Vertex layouts are much like bind group layouts, in that they define the relatio
 To create a vertex layout, use the `tgpu.vertexLayout` function. It takes an array schema constructor, i.e., partially applied `d.arrayOf` or `d.disarrayOf`. To determine what each element of the array corresponds to, you can pass an optional `stepMode` argument, which can be either `vertex` (default) or `instance`.
 
 ```ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const ParticleGeometry = d.struct({
   tilt: d.f32,

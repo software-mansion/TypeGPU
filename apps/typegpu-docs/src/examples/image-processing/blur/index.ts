@@ -1,10 +1,7 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -163,7 +160,7 @@ const computePipeline = root['~unstable']
   .createPipeline();
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(renderFragment, { format: presentationFormat })
   .createPipeline();
 

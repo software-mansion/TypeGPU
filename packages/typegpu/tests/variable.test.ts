@@ -3,9 +3,7 @@ import type {
   TgpuVar,
   VariableScope,
 } from '../src/core/variable/tgpuVariable.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import * as std from '../src/std/index.ts';
+import tgpu, { d, std } from '../src/index.ts';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {

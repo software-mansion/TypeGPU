@@ -1,5 +1,4 @@
-import tgpu, { type StorageFlag, type TgpuBuffer } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type StorageFlag, type TgpuBuffer } from 'typegpu';
 
 export const ReadonlyFloats = {
   storage: d.arrayOf(d.f32),

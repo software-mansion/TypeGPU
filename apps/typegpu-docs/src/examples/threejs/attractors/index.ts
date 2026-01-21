@@ -11,8 +11,7 @@ import {
 } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 

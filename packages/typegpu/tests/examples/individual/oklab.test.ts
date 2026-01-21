@@ -17,26 +17,28 @@ describe('oklab example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @vertex fn fullScreenTriangle(input: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return fullScreenTriangle_Output(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
-      }
-
-      struct Uniforms {
+      struct item {
         hue: f32,
         alpha: f32,
       }
 
-      @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+      @group(0) @binding(0) var<uniform> uniforms: item;
 
       fn scaleView(pos: vec2f) -> vec2f {
         return vec2f((0.3f * pos.x), (((pos.y * 1.2f) + 1f) * 0.5f));
@@ -217,7 +219,7 @@ describe('oklab example', () => {
         return linearToSrgb(oklabToLinearRgb(gamutClipAdaptiveL05(lab)));
       }
 
-      fn item(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
+      fn item_1(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
         return 1f;
       }
 
@@ -226,15 +228,17 @@ describe('oklab example', () => {
       }
 
       @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
+        var uv = ((input.uv - 0.5) * vec2f(2, -2));
         let hue = uniforms.hue;
-        var pos = scaleView(input.uv);
-        var lab = vec3f(pos.y, (pos.x * vec2f(cos(hue), sin(hue))));
+        var pos = scaleView(uv);
+        var yzDir = vec2f(cos(hue), sin(hue));
+        var lab = vec3f(pos.y, (yzDir * pos.x));
         var rgb = oklabToLinearRgb(lab);
         let outOfGamut = (any((rgb < vec3f())) || any((rgb > vec3f(1))));
         var clipLab = gamutClipAdaptiveL05(lab);
         var color = oklabToRgb(lab);
-        let patternScaled = ((item(input.uv, clipLab) * 0.1f) + 0.9f);
-        return vec4f(select(color, (patternScaled * color), outOfGamut), 1f);
+        let patternScaled = ((item_1(uv, clipLab) * 0.1f) + 0.9f);
+        return vec4f(select(color, (color * patternScaled), outOfGamut), 1f);
       }"
     `);
   });

@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { collisionBehaviors } from './enums.ts';
 import { radiusOf } from './helpers.ts';
 import { CelestialBody, computeLayout, timeAccess } from './schemas.ts';

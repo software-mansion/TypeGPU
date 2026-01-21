@@ -1,8 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: not helpful at all in shaders */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as d from '../../src/data/index.ts';
-import * as std from '../../src/std/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';

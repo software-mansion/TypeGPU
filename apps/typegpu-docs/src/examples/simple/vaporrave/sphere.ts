@@ -1,11 +1,9 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { perlin3d } from '@typegpu/noise';
 import { sdSphere } from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
 
-import { Ray } from './types.ts';
 import * as c from './constants.ts';
+import { Ray } from './types.ts';
 
 /**
  * Returns a transformation matrix that represents an `angle` rotation
