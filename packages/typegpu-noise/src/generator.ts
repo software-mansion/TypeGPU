@@ -1,5 +1,4 @@
-import tgpu, { type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {

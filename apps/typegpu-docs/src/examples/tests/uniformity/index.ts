@@ -1,8 +1,5 @@
-import tgpu, { type TgpuRenderPipeline } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
+import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
@@ -44,7 +41,7 @@ const redraw = () => {
   if (!pipeline) {
     pipeline = root['~unstable']
       .with(randomGeneratorSlot, getPRNG(prng))
-      .withVertex(fullScreenTriangle)
+      .withVertex(common.fullScreenTriangle)
       .withFragment(
         fragmentShader,
         { format: presentationFormat },
@@ -88,7 +85,7 @@ export const controls = {
           tgpu.resolve([
             root['~unstable']
               .with(randomGeneratorSlot, getPRNG(prng))
-              .withVertex(fullScreenTriangle)
+              .withVertex(common.fullScreenTriangle)
               .withFragment(
                 fragmentShader,
                 { format: presentationFormat },

@@ -1,9 +1,9 @@
 import tgpu, {
+  d,
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuBuffer,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,

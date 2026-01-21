@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.ts';
 
 describe('comptime', () => {
   it('should work in JS', () => {

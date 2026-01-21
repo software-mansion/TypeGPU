@@ -1,5 +1,4 @@
-import tgpu, { type TgpuFn } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type TgpuFn } from 'typegpu';
 import {
   cos,
   dot,

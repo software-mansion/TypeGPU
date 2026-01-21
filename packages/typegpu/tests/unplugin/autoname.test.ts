@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import * as d from '../../src/data/index.ts';
 import { struct } from '../../src/data/index.ts';
-import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
+import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 

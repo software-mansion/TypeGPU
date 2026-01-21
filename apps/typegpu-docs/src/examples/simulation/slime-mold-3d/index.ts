@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 const root = await tgpu.init({
@@ -451,7 +448,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 });
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(fragmentShader, { format: presentationFormat })
   .createPipeline();
 
