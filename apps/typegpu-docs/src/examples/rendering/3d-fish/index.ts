@@ -40,9 +40,9 @@ const presets = {
     separationDist: 0.3,
     separationStr: 0.0006,
     alignmentDist: 0.3,
-    alignmentStr: 0.005,
+    alignmentStr: 0.01,
     cohesionDist: 0.5,
-    cohesionStr: 0.0004,
+    cohesionStr: 0.0013,
   },
   init: {
     separationDist: 0.2,
