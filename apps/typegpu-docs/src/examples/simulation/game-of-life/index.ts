@@ -1,5 +1,6 @@
 import { randf } from '@typegpu/noise';
 import tgpu, {
+  type SampledFlag,
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuTexture,
@@ -35,6 +36,10 @@ context.configure({
 let gameSize = 64;
 const gameSizeUniform = root.createUniform(d.u32, gameSize);
 const timeUniform = root.createUniform(d.f32, 0);
+const nearestSampler = root.device.createSampler({
+  magFilter: 'nearest',
+  minFilter: 'nearest',
+});
 
 let dataTextures: (
   & TgpuTexture<{
@@ -42,6 +47,7 @@ let dataTextures: (
     format: 'r32uint';
   }>
   & StorageFlag
+  & SampledFlag
 )[];
 let computeBindGroups: TgpuBindGroup<typeof computeLayout.entries>[];
 let displayBindGroups: TgpuBindGroup<typeof displayLayout.entries>[];
@@ -136,15 +142,17 @@ const recreateResources = (size: number) => {
         size: [size, size],
         format: 'r32uint',
       })
-      .$usage('storage'));
+      .$usage('storage', 'sampled'));
   computeBindGroups = [
     root.createBindGroup(computeLayout, {
       current: dataTextures[0],
       next: dataTextures[1],
+      sampler: nearestSampler,
     }),
     root.createBindGroup(computeLayout, {
       current: dataTextures[1],
       next: dataTextures[0],
+      sampler: nearestSampler,
     }),
   ];
   displayBindGroups = [

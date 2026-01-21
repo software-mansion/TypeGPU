@@ -1,88 +1,64 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import {
-  computeLayout,
-  gameSizeAccessor,
-  loadTexAt,
-  TILE_SIZE,
-} from './common.ts';
-
-const sharedMemory = tgpu.workgroupVar(
-  d.arrayOf(d.arrayOf(d.u32, TILE_SIZE + 2), TILE_SIZE + 2),
-);
-
-const CELLS_PER_THREAD = 2;
-const ACTIVE_THREADS = TILE_SIZE / CELLS_PER_THREAD;
-
-const HALO_SIZE = TILE_SIZE + 2;
-const HALO_TOTAL = HALO_SIZE * HALO_SIZE;
-const THREADS = ACTIVE_THREADS * ACTIVE_THREADS;
+import { computeLayout, gameSizeAccessor, TILE_SIZE } from './common.ts';
 
 export const tiledCompute = tgpu['~unstable'].computeFn({
-  workgroupSize: [ACTIVE_THREADS, ACTIVE_THREADS],
-  in: {
-    lid: d.builtin.localInvocationId,
-    wid: d.builtin.workgroupId,
-  },
-})(({ lid, wid }) => {
-  const gs = d.u32(gameSizeAccessor.$);
-  const vmax = gs - 1;
-  const vmaxI = d.i32(vmax);
+  workgroupSize: [TILE_SIZE, TILE_SIZE],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  const gs = d.f32(gameSizeAccessor.$);
+  const p = gid.xy;
+  const texel = d.vec2f(1 / gs, 1 / gs);
 
-  const tileOrigin = wid.xy.mul(d.u32(TILE_SIZE));
-  const tidFlat = lid.y * d.u32(ACTIVE_THREADS) + lid.x;
+  const uv = d.vec2f(d.f32(p.x), d.f32(p.y)).mul(texel);
 
-  for (let i = tidFlat; i < d.u32(HALO_TOTAL); i += d.u32(THREADS)) {
-    const hx = i % d.u32(HALO_SIZE);
-    const hy = i / d.u32(HALO_SIZE);
+  // g1 at (x,y): NW(.w), N(.z), W(.x), Center(.y)
+  const g1 = std.textureGather(
+    d.i32(0),
+    computeLayout.$.current,
+    computeLayout.$.sampler,
+    uv,
+  );
 
-    const gx = d.i32(tileOrigin.x) + d.i32(hx) - d.i32(1);
-    const gy = d.i32(tileOrigin.y) + d.i32(hy) - d.i32(1);
+  // g2 at (x+1,y+1): Center(.w), E(.z), S(.x), SE(.y)
+  const g2 = std.textureGather(
+    d.i32(0),
+    computeLayout.$.current,
+    computeLayout.$.sampler,
+    uv.add(texel),
+  );
 
-    const cx = std.clamp(gx, d.i32(0), vmaxI);
-    const cy = std.clamp(gy, d.i32(0), vmaxI);
+  // g3 at (x+1,y): N(.w), NE(.z), Center(.x), E(.y)
+  const g3 = std.textureGather(
+    d.i32(0),
+    computeLayout.$.current,
+    computeLayout.$.sampler,
+    uv.add(d.vec2f(texel.x, 0)),
+  );
 
-    const inBounds = gx >= d.i32(0) && gx <= vmaxI && gy >= d.i32(0) &&
-      gy <= vmaxI;
+  // g4 at (x,y+1): W(.w), Center(.z), SW(.x), S(.y)
+  const g4 = std.textureGather(
+    d.i32(0),
+    computeLayout.$.current,
+    computeLayout.$.sampler,
+    uv.add(d.vec2f(0, texel.y)),
+  );
 
-    sharedMemory.$[hx][hy] = loadTexAt(d.vec2u(d.u32(cx), d.u32(cy))) *
-      std.select(d.u32(0), d.u32(1), inBounds);
-  }
+  // g1: need W(.x) + N(.z) + NW(.w) = dot with (1,0,1,1)
+  // g2: need E(.z) + S(.x) + SE(.y) = dot with (1,1,1,0)
+  const sum1 = std.dot(g1, d.vec4u(1, 0, 1, 1));
+  const sum2 = std.dot(g2, d.vec4u(1, 1, 1, 0));
+  const neighbors = d.u32(sum1 + sum2 + g3.z + g4.x);
 
-  std.workgroupBarrier();
+  const self = g1.y;
+  const alive = self !== 0;
+  const outAlive = (alive && (neighbors === 2 || neighbors === 3)) ||
+    (!alive && neighbors === 3);
 
-  const base = lid.xy.mul(d.u32(CELLS_PER_THREAD));
-
-  for (let oy = 0; oy < CELLS_PER_THREAD; oy++) {
-    for (let ox = 0; ox < CELLS_PER_THREAD; ox++) {
-      const lx = base.x + d.u32(ox);
-      const ly = base.y + d.u32(oy);
-
-      const p = tileOrigin.add(d.vec2u(lx, ly));
-      const s = d.vec2u(lx + 1, ly + 1);
-
-      const self = sharedMemory.$[s.x][s.y];
-
-      let neighbors = d.u32(0);
-      for (let ny = 0; ny < 3; ny++) {
-        for (let nx = 0; nx < 3; nx++) {
-          if (nx === 1 && ny === 1) {
-            continue;
-          }
-          neighbors = neighbors + sharedMemory.$[s.x + nx - 1][s.y + ny - 1];
-        }
-      }
-
-      const alive = self !== 0;
-      const outAlive = (alive && (neighbors === 2 || neighbors === 3)) ||
-        (!alive && neighbors === 3);
-
-      std.textureStore(
-        computeLayout.$.next,
-        p,
-        d.vec4u(std.select(d.u32(0), d.u32(1), outAlive), 0, 0, 0),
-      );
-    }
-  }
+  std.textureStore(
+    computeLayout.$.next,
+    p,
+    d.vec4u(std.select(d.u32(0), d.u32(1), outAlive), 0, 0, 0),
+  );
 });
