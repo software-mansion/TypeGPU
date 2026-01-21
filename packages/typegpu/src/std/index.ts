@@ -2,6 +2,8 @@
  * @module typegpu/std
  */
 
+// NOTE: This is a barrel file, internal files should not import things from this file
+
 export { discard } from './discard.ts';
 
 export {

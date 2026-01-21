@@ -5,8 +5,7 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

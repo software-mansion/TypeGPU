@@ -1,9 +1,5 @@
-import tgpu, {
-  type TgpuGuardedComputePipeline,
-  type TgpuRawCodeSnippet,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 
 // Globals and init

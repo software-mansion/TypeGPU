@@ -1,5 +1,4 @@
-import tgpu from '../src/index.ts';
-import * as d from '../src/data/index.ts';
+import tgpu, { d } from '../src/index.ts';
 import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 

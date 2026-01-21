@@ -1,8 +1,5 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -70,7 +67,7 @@ context.configure({
 });
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(fragment, { format: presentationFormat })
   .createPipeline();
 
