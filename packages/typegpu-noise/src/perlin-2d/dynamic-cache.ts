@@ -132,7 +132,7 @@ export function dynamicCacheConfig<Prefix extends string>(
 
   const valuesSlot = tgpu.slot<LayoutValue<Prefix>>();
 
-  const cleanValuesSlot = tgpu['~unstable'].derived(() => {
+  const cleanValuesSlot = tgpu.lazy(() => {
     return {
       get size() {
         return (valuesSlot.$ as Record<`${Prefix}size`, d.v2u>)[

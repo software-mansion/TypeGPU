@@ -18,12 +18,8 @@ import { it } from '../utils/extendedIt.ts';
 const { NodeTypeCatalog: NODE } = tinyest;
 
 const numberSlot = tgpu.slot(44);
-const derivedV4u = tgpu['~unstable'].derived(() =>
-  d.vec4u(1, 2, 3, 4).mul(numberSlot.$)
-);
-const derivedV2f = tgpu['~unstable'].derived(() =>
-  d.vec2f(1, 2).mul(numberSlot.$)
-);
+const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
+const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
 describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
@@ -449,8 +445,8 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct resources for derived values and slots', () => {
-    const testFn = tgpu.fn([], d.vec4u)(() => derivedV4u.$);
+  it('creates correct resources for lazy values and slots', () => {
+    const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec4u {
@@ -467,7 +463,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[7,"derivedV4u","$"]]]]"`,
+      `"[0,[[10,[7,"lazyV4u","$"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -480,7 +476,7 @@ describe('wgslGenerator', () => {
       );
 
       wgslGenerator.initGenerator(ctx);
-      // Check for: return derivedV4u.$;
+      // Check for: return lazyV4u.$;
       //                      ^ this should be a vec4u
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -490,9 +486,9 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it('creates correct resources for indexing into a derived value', () => {
+  it('creates correct resources for indexing into a lazy value', () => {
     const testFn = tgpu.fn([d.u32], d.f32)((idx) => {
-      return derivedV2f.$[idx] as number;
+      return lazyV2f.$[idx] as number;
     });
 
     const astInfo = getMetaData(
@@ -504,7 +500,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"derivedV2f","$"],"idx"]]]]"`,
+      `"[0,[[10,[8,[7,"lazyV2f","$"],"idx"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -516,7 +512,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: return derivedV2f.$[idx];
+      // Check for: return lazyV2f.$[idx];
       //                      ^ this should be a f32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -670,9 +666,9 @@ describe('wgslGenerator', () => {
     expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
   });
 
-  it('generates correct code for array expressions with derived elements', () => {
+  it('generates correct code for array expressions with lazy elements', () => {
     const testFn = tgpu.fn([], d.f32)(() => {
-      const arr = [derivedV2f.$, std.mul(derivedV2f.$, d.vec2f(2, 2))];
+      const arr = [lazyV2f.$, std.mul(lazyV2f.$, d.vec2f(2, 2))];
       return (arr[1] as d.v2f).y;
     });
 
@@ -692,7 +688,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[7,"derivedV2f","$"],[6,[7,"std","mul"],[[7,"derivedV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"lazyV2f","$"],[6,[7,"std","mul"],[[7,"lazyV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
   });
 

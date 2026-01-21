@@ -26,7 +26,7 @@ describe('TgpuLazy', () => {
     expect(computeDouble).toHaveBeenCalledTimes(1);
   });
 
-  it('memoizes functions using derived values', () => {
+  it('memoizes functions using lazy values', () => {
     const foo = tgpu.slot<number>();
     const double = tgpu.lazy(() => foo.$ * 2);
 
@@ -124,17 +124,17 @@ describe('TgpuLazy', () => {
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = buffer.as('uniform');
 
-    const derivedUniformSlot = tgpu.lazy(() => uniform);
-    const derivedDerivedUniformSlot = tgpu.lazy(() => derivedUniformSlot);
+    const lazyUniformSlot = tgpu.lazy(() => uniform);
+    const lazyLazyUniformSlot = tgpu.lazy(() => lazyUniformSlot);
 
     const func = tgpu.fn([])(() => {
       const pos = doubledVectorSlot.$;
       const posX = doubledVectorSlot.$.x;
-      const vel = derivedUniformSlot.$.vel;
-      const velX = derivedUniformSlot.$.vel.x;
+      const vel = lazyUniformSlot.$.vel;
+      const velX = lazyUniformSlot.$.vel.x;
 
-      const vel_ = derivedDerivedUniformSlot.$.vel;
-      const velX_ = derivedDerivedUniformSlot.$.vel.x;
+      const vel_ = lazyLazyUniformSlot.$.vel;
+      const velX_ = lazyLazyUniformSlot.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -156,7 +156,7 @@ describe('TgpuLazy', () => {
     `);
   });
 
-  it('allows slot bindings to pass downstream from derived (#697)', () => {
+  it('allows slot bindings to pass downstream from lazy (#697)', () => {
     const valueSlot = tgpu.slot(1);
 
     const foo = tgpu.lazy(() => {
@@ -189,7 +189,7 @@ describe('TgpuLazy', () => {
     `);
   });
 
-  it('does not allow defining derived values at resolution', () => {
+  it('does not allow defining lazy values at resolution', () => {
     const gridSizeSlot = tgpu.slot<number>(2);
     const absGridSize = tgpu.lazy(() =>
       gridSizeSlot.$ > 0

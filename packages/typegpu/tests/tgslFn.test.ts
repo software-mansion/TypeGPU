@@ -970,7 +970,7 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
-  it('throws when it detects a cyclic dependency (when using derived)', () => {
+  it('throws when it detects a cyclic dependency (when using lazy)', () => {
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);
@@ -978,14 +978,14 @@ describe('tgsl fn when using plugin', () => {
     const mainFn = tgpu.fn([], d.f32)(() => 1000);
     const fallbackFn = tgpu.fn([], d.f32)(() => one());
 
-    const derivedFn = tgpu['~unstable'].derived(() => {
+    const lazyFn = tgpu.lazy(() => {
       if (flagSlot.$) {
         return fnSlot.$;
       }
       return fallbackFn;
     }).with(fnSlot, mainFn);
 
-    one = tgpu.fn([], d.f32)(() => derivedFn.$() + 2);
+    one = tgpu.fn([], d.f32)(() => lazyFn.$() + 2);
 
     expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
