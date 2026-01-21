@@ -30,31 +30,23 @@ const seedNotEmpty = tgpu.comptime(
 );
 
 export const randSeed = tgpu.fn([d.f32])((seed) => {
-  if (seedNotEmpty('seed')) {
-    // @ts-expect-error trust me
-    randomGeneratorSlot.$.seed(seed);
-  }
+  // @ts-expect-error trust me
+  seedNotEmpty('seed') ? randomGeneratorSlot.$.seed(seed) : undefined;
 });
 
 export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
-  if (seedNotEmpty('seed2')) {
-    // @ts-expect-error trust me
-    randomGeneratorSlot.$.seed2(seed);
-  }
+  // @ts-expect-error trust me
+  seedNotEmpty('seed2') ? randomGeneratorSlot.$.seed2(seed) : undefined;
 });
 
 export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
-  if (seedNotEmpty('seed3')) {
-    // @ts-expect-error trust me
-    randomGeneratorSlot.$.seed3(seed);
-  }
+  // @ts-expect-error trust me
+  seedNotEmpty('seed3') ? randomGeneratorSlot.$.seed3(seed) : undefined;
 });
 
 export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
-  if (seedNotEmpty('seed4')) {
-    // @ts-expect-error trust me
-    randomGeneratorSlot.$.seed4(seed);
-  }
+  // @ts-expect-error trust me
+  seedNotEmpty('seed4') ? randomGeneratorSlot.$.seed4(seed) : undefined;
 });
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
