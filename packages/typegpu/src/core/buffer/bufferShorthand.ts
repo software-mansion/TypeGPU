@@ -37,6 +37,9 @@ export interface TgpuMutable<TData extends BaseData>
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
@@ -48,6 +51,9 @@ export interface TgpuReadonly<TData extends BaseData>
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
@@ -59,6 +65,9 @@ export interface TgpuUniform<TData extends BaseData>
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
@@ -99,7 +108,7 @@ export class TgpuBufferShorthandImpl<
   }
 
   $name(label: string): this {
-    setName(this[$getNameForward], label);
+    setName(this, label);
     return this;
   }
 

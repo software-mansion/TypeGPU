@@ -1,9 +1,12 @@
 import type { AnyData } from '../../data/dataTypes.ts';
+import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
+import type { TgpuConst } from '../constant/tgpuConstant.ts';
+import type { TgpuTextureView } from '../texture/texture.ts';
+import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 
 export interface TgpuSlot<T> extends TgpuNamable {
@@ -19,6 +22,9 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 }
@@ -28,6 +34,9 @@ export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
@@ -43,24 +52,61 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
+export type AccessorIn<TSchema extends AnyData> = TSchema extends
+  WgslTexture | WgslStorageTexture ? (
+    | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
+    | Infer<TSchema>
+    | TgpuTextureView<TSchema>
+  )
+  : (
+    | (() => Infer<TSchema>)
+    | TgpuBufferUsage<TSchema>
+    | TgpuBufferShorthand<TSchema>
+    | TgpuVar<VariableScope, TSchema>
+    | TgpuConst<TSchema>
+    | Infer<TSchema>
+  );
+
+export type MutableAccessorIn<TSchema extends AnyData> = TSchema extends
+  WgslTexture | WgslStorageTexture ? (
+    | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
+    | TgpuTextureView<TSchema>
+  )
+  : (
+    | (() => Infer<TSchema>)
+    | TgpuBufferUsage<TSchema>
+    | TgpuBufferShorthand<TSchema>
+    | TgpuVar<VariableScope, TSchema>
+  );
+
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
   readonly schema: T;
-  readonly defaultValue:
-    | TgpuFn<() => T>
-    | TgpuBufferUsage<T>
-    | TgpuBufferShorthand<T>
-    | Infer<T>
-    | undefined;
-  readonly slot: TgpuSlot<
-    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
-  >;
+  readonly defaultValue: AccessorIn<T> | undefined;
+  readonly slot: TgpuSlot<AccessorIn<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
+}
+
+export interface TgpuMutableAccessor<T extends AnyData = AnyData>
+  extends TgpuNamable {
+  readonly [$internal]: true;
+  readonly resourceType: 'mutable-accessor';
+
+  readonly schema: T;
+  readonly defaultValue: MutableAccessorIn<T> | undefined;
+  readonly slot: TgpuSlot<MutableAccessorIn<T>>;
+
+  readonly [$gpuValueOf]: InferGPU<T>;
+  value: InferGPU<T>;
+  $: InferGPU<T>;
 }
 
 /**
@@ -71,7 +117,7 @@ export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
 export type Providing = {
-  inner: unknown;
+  inner: object;
   pairs: SlotValuePair[];
 };
 
@@ -95,4 +141,10 @@ export function isAccessor<T extends AnyData>(
   value: unknown | TgpuAccessor<T>,
 ): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
+}
+
+export function isMutableAccessor<T extends AnyData>(
+  value: unknown | TgpuMutableAccessor<T>,
+): value is TgpuMutableAccessor<T> {
+  return (value as TgpuMutableAccessor<T>)?.resourceType === 'mutable-accessor';
 }
