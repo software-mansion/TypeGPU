@@ -4,7 +4,6 @@ import tgpu, {
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuComputeFn,
-  type TgpuComputePipeline,
   type TgpuTexture,
 } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
@@ -41,6 +40,8 @@ const timeUniform = root.createUniform(d.f32, 0);
 const nearestSampler = root.device.createSampler({
   magFilter: 'nearest',
   minFilter: 'nearest',
+  addressModeU: 'repeat',
+  addressModeV: 'repeat',
 });
 
 let dataTextures: (
