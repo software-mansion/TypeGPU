@@ -6,6 +6,7 @@ ruleTester.run('integerDivision', integerDivision, {
     '1 / 2',
     'd.u32(1) / 2',
     '1 / d.u32(2)',
+    'd.u32(d.u32(1) / d.u32(2))',
   ],
   invalid: [
     {

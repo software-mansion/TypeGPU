@@ -42,6 +42,10 @@ export const integerDivision = createRule({
           return;
         }
 
+        if (node.parent.type === 'CallExpression' && hasIntCasts(node.parent)) {
+          return;
+        }
+
         if (hasIntCasts(node.left) && hasIntCasts(node.right)) {
           context.report({
             node: node,
