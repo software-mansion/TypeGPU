@@ -65,7 +65,8 @@
     ],
     "overrides": {
       "rollup": "4.34.8",
-      "three": "catalog:example"
+      "three": "catalog:example",
+      "vite": "npm:rolldown-vite@latest"
     }
   }
 }

@@ -190,10 +190,9 @@ test('should give new names to functions that collide with builtins', () => {
 });
 
 test('trying to break things', () => {
-  // trigger build
-  const i = 0;
   const f = () => {
     'use gpu';
+    const i = 0;
     let foo = i;
     {
       const i = foo;
