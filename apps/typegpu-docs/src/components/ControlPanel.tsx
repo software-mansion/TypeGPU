@@ -316,8 +316,10 @@ export function ControlPanel() {
         'box-border flex max-h-[50%] flex-col gap-4 overflow-auto rounded-xl bg-grayscale-0 p-6 md:max-h-full',
       )}
     >
+      <FPSCounter
+        className={'flex items-center gap-3 rounded-xl bg-grayscale-20/80 px-4 py-2 font-mono text-grayscale-80 text-xs'}
+      />
       <div className='hidden flex-col gap-4 md:flex'>
-        <FPSCounter />
         <h2 className='font-medium text-xl'>Control panel</h2>
 
         <label
