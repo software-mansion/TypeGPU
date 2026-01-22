@@ -1,5 +1,5 @@
-import type { TSESTree } from "@typescript-eslint/utils";
-import { createRule } from "../ruleCreator.ts";
+import type { TSESTree } from '@typescript-eslint/utils';
+import { createRule } from '../ruleCreator.ts';
 
 /**
  * Checks if a node is a call expression to an integer cast function (i32 or u32).
@@ -10,22 +10,22 @@ import { createRule } from "../ruleCreator.ts";
  * hasIntCasts('f32()'); // false
  */
 function hasIntCasts(node: TSESTree.Expression): boolean {
-  if (node.type !== "CallExpression") {
+  if (node.type !== 'CallExpression') {
     return false;
   }
 
   let callee: TSESTree.Node = node.callee;
-  while (callee.type === "MemberExpression") {
+  while (callee.type === 'MemberExpression') {
     callee = callee.property;
   }
 
-  return callee.type === "Identifier" && ["i32", "u32"].includes(callee.name);
+  return callee.type === 'Identifier' && ['i32', 'u32'].includes(callee.name);
 }
 
 export const integerDivision = createRule({
-  name: "integer-division",
+  name: 'integer-division',
   meta: {
-    type: "suggestion",
+    type: 'suggestion',
     docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
     messages: {
       intDiv:
@@ -38,14 +38,14 @@ export const integerDivision = createRule({
   create(context) {
     return {
       BinaryExpression(node) {
-        if (node.operator !== "/") {
+        if (node.operator !== '/') {
           return;
         }
 
         if (hasIntCasts(node.left) && hasIntCasts(node.right)) {
           context.report({
             node: node,
-            messageId: "intDiv",
+            messageId: 'intDiv',
             data: { node: context.sourceCode.getText(node) },
           });
         }

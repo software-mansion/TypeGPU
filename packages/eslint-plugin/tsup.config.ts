@@ -1,8 +1,8 @@
-import { defineConfig, type Options } from "tsup";
+import { defineConfig, type Options } from 'tsup';
 
 const config: Options = {
-  entry: ["src/index.ts"],
-  format: ["cjs", "esm"],
+  entry: ['src/index.ts'],
+  format: ['cjs', 'esm'],
   dts: true,
   clean: true,
   splitting: true,
