@@ -1,10 +1,15 @@
-import { $cast, $gpuCallable, isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
-import type {
+import {
+  $internal,
+  $cast,
+  $gpuCallable,
   $invalidSchemaReason,
   $repr,
+  $validIndexSchema,
+  $validStorageSchema,
+  $validUniformSchema,
   $validVertexSchema,
+  isMarkedInternal,
 } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
@@ -37,24 +42,31 @@ export interface TgpuVertexFormatData<T extends VertexFormat>
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
   readonly [$validVertexSchema]: true;
-  readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
   implements TgpuVertexFormatData<T> {
   public readonly [$internal] = {};
+  public readonly [$invalidSchemaReason]: string;
+  public readonly [$validStorageSchema]: false;
+  public readonly [$validUniformSchema]: false;
+  public readonly [$validVertexSchema]: true;
+  public readonly [$validIndexSchema]: false;
   [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
-  declare readonly [$validVertexSchema]: true;
-  declare readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
   constructor(public readonly type: T) {
+    this[$invalidSchemaReason] =
+      'Vertex formats are not host-shareable, use concrete types instead';
+    this[$validStorageSchema] = false;
+    this[$validUniformSchema] = false;
+    this[$validVertexSchema] = true;
+    this[$validIndexSchema] = false;
+
     this[$gpuCallable] = {
       call: (ctx, [v]): Snippet => {
         return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);

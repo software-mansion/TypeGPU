@@ -6,7 +6,6 @@ import type {
   InferPartial,
   InferPartialRecord,
   InferRecord,
-  IsValidVertexSchema,
   MemIdentityRecord,
 } from '../shared/repr.ts';
 import type {
@@ -15,6 +14,9 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $validIndexSchema,
+  $validStorageSchema,
+  $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -47,13 +49,17 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: TElement[typeof $validVertexSchema];
+  readonly [$validIndexSchema]: TElement extends
+    wgsl.U32 | wgsl.U16 | wgsl.Decorated<wgsl.U32 | wgsl.U16> ? true : false;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
   readonly [$reprPartial]:
     | { idx: number; value: InferPartial<TElement> }[]
     | undefined;
-  readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
   readonly [$invalidSchemaReason]:
     'Disarrays are not host-shareable, use arrays instead';
   // ---
@@ -78,6 +84,12 @@ export interface Unstruct<
   (): Prettify<InferRecord<TProps>>;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: {
+    [K in keyof TProps]: TProps[K][typeof $validVertexSchema];
+  }[keyof TProps] extends true ? true : false;
+  readonly [$validIndexSchema]: false;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
@@ -86,9 +98,6 @@ export interface Unstruct<
   readonly [$reprPartial]:
     | Prettify<Partial<InferPartialRecord<TProps>>>
     | undefined;
-  readonly [$validVertexSchema]: {
-    [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
-  }[keyof TProps] extends true ? true : false;
   readonly [$invalidSchemaReason]:
     'Unstructs are not host-shareable, use structs instead';
   // ---
@@ -104,12 +113,13 @@ export interface LooseDecorated<
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: TInner[typeof $validVertexSchema];
+  readonly [$validIndexSchema]: false;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
-  readonly [$invalidSchemaReason]:
-    'Loosely decorated schemas are not host-shareable';
-  readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 
