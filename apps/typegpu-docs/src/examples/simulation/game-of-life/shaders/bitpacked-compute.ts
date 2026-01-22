@@ -2,8 +2,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import tgpu from 'typegpu';
 import {
-  bitpackedLayout,
   bitpackedNeighbors,
+  computeLayout,
   gameSizeAccessor,
   gatherNeighborhood,
   golNextStateBitpacked,
@@ -26,8 +26,8 @@ export const bitpackedCompute = tgpu['~unstable'].computeFn({
   const uv = d.vec2f(gid.xy).mul(texelSize);
 
   const neighborhood = gatherNeighborhood(
-    bitpackedLayout.$.current,
-    bitpackedLayout.$.sampler,
+    computeLayout.$.current,
+    computeLayout.$.sampler,
     uv,
     texelSize,
   );
@@ -36,5 +36,5 @@ export const bitpackedCompute = tgpu['~unstable'].computeFn({
   const count = parallelCount8(neighbors);
   const next = golNextStateBitpacked(neighborhood.mc, count);
 
-  std.textureStore(bitpackedLayout.$.next, gid.xy, d.vec4u(next, 0, 0, 0));
+  std.textureStore(computeLayout.$.next, gid.xy, d.vec4u(next, 0, 0, 0));
 });

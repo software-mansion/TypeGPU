@@ -3,14 +3,14 @@ import tgpu, {
   type SampledFlag,
   type StorageFlag,
   type TgpuBindGroup,
+  type TgpuComputeFn,
+  type TgpuComputePipeline,
   type TgpuTexture,
 } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import {
-  bitpackedDisplayLayout,
-  bitpackedLayout,
   computeLayout,
   displayLayout,
   gameSizeAccessor,
@@ -25,10 +25,9 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init({
-  device: {
-    requiredFeatures: ['timestamp-query'],
-  },
+  device: { optionalFeatures: ['timestamp-query'] },
 });
+const hasTimestamp = root.enabledFeatures.has('timestamp-query');
 
 context.configure({
   device: root.device,
@@ -54,20 +53,6 @@ let dataTextures: (
 )[];
 let computeBindGroups: TgpuBindGroup<typeof computeLayout.entries>[];
 let displayBindGroups: TgpuBindGroup<typeof displayLayout.entries>[];
-
-// Bitpacked resources (separate because different texture dimensions)
-let bitpackedTextures: (
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'r32uint';
-  }>
-  & StorageFlag
-  & SampledFlag
-)[];
-let bitpackedComputeBindGroups: TgpuBindGroup<typeof bitpackedLayout.entries>[];
-let bitpackedDisplayBindGroups: TgpuBindGroup<
-  typeof bitpackedDisplayLayout.entries
->[];
 
 let even = 0;
 
@@ -119,7 +104,6 @@ const handleDraw = root['~unstable'].createGuardedComputePipeline((x, y) => {
   }
 });
 
-// Bitpacked draw: each thread handles 32 cells (one packed u32)
 const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
   (px, py) => {
     'use gpu';
@@ -128,7 +112,7 @@ const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
 
     // Read current packed value
     const current = std.textureLoad(
-      bitpackedLayout.$.current,
+      computeLayout.$.current,
       d.vec2u(px, py),
       d.i32(0),
     ).x;
@@ -166,34 +150,29 @@ const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
       (newValues & affectedMask);
 
     std.textureStore(
-      bitpackedLayout.$.next,
+      computeLayout.$.next,
       d.vec2u(px, py),
       d.vec4u(result, 0, 0, 0),
     );
   },
 );
 
+function createPipeline(name: string, compute: TgpuComputeFn) {
+  const base = root['~unstable']
+    .with(gameSizeAccessor, gameSizeUniform)
+    .withCompute(compute)
+    .createPipeline();
+
+  return !hasTimestamp ? base : base
+    .withPerformanceCallback((start, end) => {
+      console.log(`${name}: ${Number(end - start) / 1_000_00}ms`);
+    });
+}
+
 const computePipelines = {
-  tiled: root['~unstable']
-    .with(gameSizeAccessor, gameSizeUniform)
-    .withCompute(tiledCompute)
-    .createPipeline()
-    .withPerformanceCallback((start, end) => {
-      console.log(`Tiled: ${Number(end - start) / 1_000_00}ms`);
-    }),
-  naive: root['~unstable']
-    .with(gameSizeAccessor, gameSizeUniform)
-    .withCompute(naiveCompute)
-    .createPipeline().withPerformanceCallback((start, end) => {
-      console.log(`Naive: ${Number(end - start) / 1_000_00}ms`);
-    }),
-  bitpacked: root['~unstable']
-    .with(gameSizeAccessor, gameSizeUniform)
-    .withCompute(bitpackedCompute)
-    .createPipeline()
-    .withPerformanceCallback((start, end) => {
-      console.log(`Bitpacked: ${Number(end - start) / 1_000_00}ms`);
-    }),
+  tiled: createPipeline('Tiled', tiledCompute),
+  naive: createPipeline('Naive', naiveCompute),
+  bitpacked: createPipeline('Bitpacked', bitpackedCompute),
 };
 
 const displayFragment = tgpu['~unstable'].fragmentFn({
@@ -227,7 +206,7 @@ const bitpackedDisplayFragment = tgpu['~unstable'].fragmentFn({
   const bitIndex = cellX % 32;
 
   const packed = std.textureLoad(
-    bitpackedDisplayLayout.$.source,
+    displayLayout.$.source,
     d.vec2u(packedX, cellY),
   ).x;
 
@@ -255,7 +234,7 @@ const bitpackedRandomInit = root['~unstable'].createGuardedComputePipeline(
         (std.select(d.u32(0), d.u32(1), randf.sample() > 0.5) << d.u32(i));
     }
     std.textureStore(
-      bitpackedLayout.$.next,
+      computeLayout.$.next,
       d.vec2u(x, y),
       d.vec4u(packed, 0, 0, 0),
     );
@@ -268,11 +247,12 @@ const recreateResources = (size: number) => {
   gameSize = size;
   gameSizeUniform.write(size);
 
-  // Standard textures
+  const isBitpacked = chosenPipeline === 'bitpacked';
+
   dataTextures = Array.from({ length: 2 }, () =>
     root['~unstable']
       .createTexture({
-        size: [size, size],
+        size: [isBitpacked ? size / 32 : size, size],
         format: 'r32uint',
       })
       .$usage('storage', 'sampled'));
@@ -289,55 +269,18 @@ const recreateResources = (size: number) => {
     }),
   ];
   displayBindGroups = [
-    root.createBindGroup(displayLayout, {
-      source: dataTextures[0],
-    }),
-    root.createBindGroup(displayLayout, {
-      source: dataTextures[1],
-    }),
-  ];
-
-  // Bitpacked textures (width / 32)
-  const packedWidth = size / 32;
-  bitpackedTextures = Array.from({ length: 2 }, () =>
-    root['~unstable']
-      .createTexture({
-        size: [packedWidth, size],
-        format: 'r32uint',
-      })
-      .$usage('storage', 'sampled'));
-  bitpackedComputeBindGroups = [
-    root.createBindGroup(bitpackedLayout, {
-      current: bitpackedTextures[0],
-      next: bitpackedTextures[1],
-      sampler: nearestSampler,
-    }),
-    root.createBindGroup(bitpackedLayout, {
-      current: bitpackedTextures[1],
-      next: bitpackedTextures[0],
-      sampler: nearestSampler,
-    }),
-  ];
-  bitpackedDisplayBindGroups = [
-    root.createBindGroup(bitpackedDisplayLayout, {
-      source: bitpackedTextures[0],
-    }),
-    root.createBindGroup(bitpackedDisplayLayout, {
-      source: bitpackedTextures[1],
-    }),
+    root.createBindGroup(displayLayout, { source: dataTextures[0] }),
+    root.createBindGroup(displayLayout, { source: dataTextures[1] }),
   ];
 
   even = 0;
   timeUniform.write((performance.now() / 1000) % 100);
 
-  // Initialize based on current pipeline
-  if (chosenPipeline === 'bitpacked') {
-    bitpackedRandomInit
-      .with(bitpackedComputeBindGroups[0])
-      .dispatchThreads(packedWidth, size);
-  } else {
-    randomInit.with(computeBindGroups[0]).dispatchThreads(size, size);
-  }
+  const [initFn, [x, y]] = chosenPipeline === 'bitpacked'
+    ? [bitpackedRandomInit, [size / 32, size]]
+    : [randomInit, [size, size]];
+
+  initFn.with(computeBindGroups[0]).dispatchThreads(x, y);
 };
 
 recreateResources(gameSize);
@@ -380,24 +323,16 @@ const stepOnce = (timestamp: number) => {
   lastStepTime = timestamp;
   even ^= 1;
 
-  if (chosenPipeline === 'bitpacked') {
-    const packedWidth = gameSize / 32;
-    const computeBg = bitpackedComputeBindGroups[even];
-    computePipelines.bitpacked
-      .with(computeBg)
-      .dispatchWorkgroups(
-        Math.ceil(packedWidth / TILE_SIZE),
-        Math.ceil(gameSize / TILE_SIZE),
-      );
-  } else {
-    const computeBg = computeBindGroups[even];
-    computePipelines[chosenPipeline]
-      .with(computeBg)
-      .dispatchWorkgroups(
-        gameSize / TILE_SIZE,
-        gameSize / TILE_SIZE,
-      );
-  }
+  computePipelines[chosenPipeline]
+    .with(computeBindGroups[even])
+    .dispatchWorkgroups(
+      Math.max(
+        1,
+        gameSize /
+          (chosenPipeline === 'bitpacked' ? TILE_SIZE * 32 : TILE_SIZE),
+      ),
+      gameSize,
+    );
 };
 
 function frame(timestamp: number) {
@@ -411,24 +346,20 @@ function frame(timestamp: number) {
       mode: brushMode,
     });
 
-    if (chosenPipeline === 'bitpacked') {
-      const packedWidth = gameSize / 32;
-      handleDrawBitpacked
-        .with(bitpackedComputeBindGroups[0])
-        .dispatchThreads(packedWidth, gameSize);
-      handleDrawBitpacked
-        .with(bitpackedComputeBindGroups[1])
-        .dispatchThreads(packedWidth, gameSize);
-    } else {
-      handleDraw.with(computeBindGroups[0]).dispatchThreads(
-        gameSize,
-        gameSize,
-      );
-      handleDraw.with(computeBindGroups[1]).dispatchThreads(
-        gameSize,
-        gameSize,
-      );
+    const [pipeline, [x, y], swap] = chosenPipeline === 'bitpacked'
+      ? [handleDrawBitpacked, [gameSize / 32, gameSize], true]
+      : [handleDraw, [gameSize, gameSize], false];
+
+    // We need to read the current state in the bitpacked version (not to overwrite unaffected cells)
+    // In the normal version we can write per cell so this is not an issue
+    if (swap) {
+      even ^= 1;
     }
+
+    pipeline
+      .with(computeBindGroups[even])
+      .dispatchThreads(x, y);
+
     lastFramePos = { x: end.x, y: end.y };
   } else {
     lastFramePos = null;
@@ -441,28 +372,18 @@ function frame(timestamp: number) {
     }
   }
 
-  // Use appropriate display pipeline based on mode
-  if (chosenPipeline === 'bitpacked') {
-    const displayBg = bitpackedDisplayBindGroups[1 - even];
-    bitpackedDisplayPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
-      .with(displayBg)
-      .draw(3);
-  } else {
-    const displayBg = displayBindGroups[1 - even];
-    displayPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
-      .with(displayBg)
-      .draw(3);
-  }
+  const chosenDisplayPipeline = chosenPipeline === 'bitpacked'
+    ? bitpackedDisplayPipeline
+    : displayPipeline;
+
+  chosenDisplayPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .with(displayBindGroups[1 - even])
+    .draw(3);
 
   requestAnimationFrame(frame);
 }
@@ -553,13 +474,8 @@ export const controls = {
   },
   Clear: {
     onButtonClick: () => {
-      if (chosenPipeline === 'bitpacked') {
-        bitpackedTextures[0].clear();
-        bitpackedTextures[1].clear();
-      } else {
-        dataTextures[0].clear();
-        dataTextures[1].clear();
-      }
+      dataTextures[0].clear();
+      dataTextures[1].clear();
       even = 0;
     },
   },
