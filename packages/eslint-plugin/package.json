@@ -15,5 +15,8 @@
   },
   "sideEffects": false,
   "license": "MIT",
-  "packageManager": "pnpm@10.15.1"
+  "packageManager": "pnpm@10.15.1",
+  "devDependencies": {
+    "eslint": "^9.39.2"
+  }
 }
