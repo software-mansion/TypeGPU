@@ -1,9 +1,15 @@
 /**
- * FPS Counter utility for examples.
- * Displays FPS and frame time in a small overlay in the top-left corner.
- * Uses monkey patching to automatically detect frames without manual tick() calls.
+ * FPS Counter utility for examples, displays FPS and frame time in a small overlay.
  */
 export class FPSCounter {
+  private static originalRAF:
+    | ((callback: FrameRequestCallback) => number)
+    | null = null;
+  private static patchedRAF:
+    | ((callback: FrameRequestCallback) => number)
+    | null = null;
+  private static instances = new Set<FPSCounter>();
+  private static lastFrameTime: number | null = null;
   #element: HTMLDivElement;
   #frames: number[] = []; // works like np.roll
   #lastTime = performance.now();
@@ -18,16 +24,35 @@ export class FPSCounter {
     this.#element.textContent = 'FPS: --\nFrame: -- ms';
     document.body.appendChild(this.#element);
 
-    this.originalRAF = window.requestAnimationFrame.bind(window);
-    this.patchedRAF = ((callback: FrameRequestCallback) => {
-      const wrappedCallback: FrameRequestCallback = (time: DOMHighResTimeStamp) => {
-        this.tick();
-        return callback(time);
-      };
-      return this.originalRAF(wrappedCallback);
-    });
+    if (!FPSCounter.originalRAF) {
+      FPSCounter.originalRAF = window.requestAnimationFrame.bind(window);
+    }
 
-    // monkey patch requestAnimationFrame
+    if (!FPSCounter.patchedRAF) {
+      FPSCounter.patchedRAF = (callback: FrameRequestCallback) => {
+        const wrappedCallback: FrameRequestCallback = (
+          time: DOMHighResTimeStamp,
+        ) => {
+          if (FPSCounter.lastFrameTime !== time) {
+            FPSCounter.lastFrameTime = time;
+            for (const instance of FPSCounter.instances) {
+              instance.tick();
+            }
+          }
+          return callback(time);
+        };
+        const originalRAF = FPSCounter.originalRAF;
+        if (!originalRAF) {
+          throw new Error('requestAnimationFrame not available.');
+        }
+        return originalRAF(wrappedCallback);
+      };
+    }
+
+    FPSCounter.instances.add(this);
+    this.originalRAF = FPSCounter.originalRAF;
+    this.patchedRAF = FPSCounter.patchedRAF;
+
     window.requestAnimationFrame = this.patchedRAF;
     this.update();
   }
@@ -45,27 +70,36 @@ export class FPSCounter {
 
   private update = (): void => {
     if (this.#frames.length > 0) {
-      const avgFrameTime = this.#frames.reduce((a, b) => a + b, 0) / this.#frames.length;
+      const avgFrameTime = this.#frames.reduce((a, b) => a + b, 0) /
+        this.#frames.length;
       const fps = Math.round(1000 / avgFrameTime);
       const frameTime = avgFrameTime.toFixed(2);
 
-      let color = 'green'; // green for 60+ FPS
+      let color = 'green'; // green for 60+ fps
       if (fps < 30) {
-        color = 'red'; // red for < 30 FPS
+        color = 'red'; // red for < 30 fps
       } else if (fps < 50) {
-        color = 'orange'; // orange for 30-50 FPS
+        color = 'orange'; // orange for 30-50 fps
       }
 
-      this.#element.classList.remove('text-green-400', 'text-orange-400', 'text-red-400');
+      this.#element.classList.remove(
+        'text-green-400',
+        'text-orange-400',
+        'text-red-400',
+      );
       this.#element.classList.add(`text-${color}-400`);
       this.#element.textContent = `FPS: ${fps}\nFrame: ${frameTime} ms`;
     }
     this.#rafId = this.originalRAF(this.update);
   };
 
-
   public dispose(): void {
-    window.requestAnimationFrame = this.originalRAF;
+    FPSCounter.instances.delete(this);
+    if (FPSCounter.instances.size === 0 && FPSCounter.originalRAF) {
+      window.requestAnimationFrame = FPSCounter.originalRAF;
+      FPSCounter.patchedRAF = null;
+      FPSCounter.lastFrameTime = null;
+    }
 
     if (this.#rafId !== null) {
       cancelAnimationFrame(this.#rafId);
@@ -74,7 +108,6 @@ export class FPSCounter {
     this.#element.remove();
   }
 }
-
 
 export function createFPSCounter(): FPSCounter {
   return new FPSCounter();
