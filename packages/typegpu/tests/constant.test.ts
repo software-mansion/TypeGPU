@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { d, tgpu } from '../src/index.ts';
 
 const Boid = d.struct({
   pos: d.vec3f,
@@ -83,7 +82,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant.]
+      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either
@@ -158,7 +157,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant.]
+      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either

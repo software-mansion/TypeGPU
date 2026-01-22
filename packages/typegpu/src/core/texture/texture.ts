@@ -199,10 +199,11 @@ export interface TgpuTextureView<
   TSchema extends WgslStorageTexture | WgslTexture =
     | WgslStorageTexture
     | WgslTexture,
-> {
+> extends TgpuNamable {
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+  readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
@@ -654,6 +655,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     return this.$;
   }
 
+  get size(): number[] {
+    return this.#baseTexture.props.size;
+  }
+
   toString() {
     return `textureView:${getName(this) ?? '<unnamed>'}`;
   }
@@ -738,12 +743,19 @@ export class TgpuLaidOutTextureViewImpl<
     }
 
     throw new Error(
-      'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
+      `Accessed view '${
+        getName(this) ?? '<unnamed>'
+      }' outside of codegen mode. Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead`,
     );
   }
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  $name(label: string): this {
+    setName(this, label);
+    return this;
   }
 }
 

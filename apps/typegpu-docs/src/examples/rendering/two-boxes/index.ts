@@ -1,12 +1,11 @@
-import tgpu, {
-  type RenderFlag,
-  type TgpuBindGroup,
-  type TgpuBuffer,
-  type TgpuTexture,
-  type VertexFlag,
+import type {
+  RenderFlag,
+  TgpuBindGroup,
+  TgpuBuffer,
+  TgpuTexture,
+  VertexFlag,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization

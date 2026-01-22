@@ -1,7 +1,10 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, {
+  d,
+  std,
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+} from 'typegpu';
 
 const MAX_GRID_SIZE = 1024;
 
@@ -454,7 +457,6 @@ function makePipelines(
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
   const initWorldPipeline = root['~unstable']
-    .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline((xu, yu) => {
       'use gpu';

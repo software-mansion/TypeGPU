@@ -2,8 +2,7 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import * as t3 from '@typegpu/three';
 import { perlin3d } from '@typegpu/noise';
-import * as d from 'typegpu/data';
-import { tanh } from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -26,7 +25,7 @@ material.colorNode = t3.toTSL(() => {
   'use gpu';
   const coords = t3.uv().$.mul(2);
   const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
-  return d.vec4f(tanh(pattern * 5), 0.2, 0.4, 1);
+  return d.vec4f(std.tanh(pattern * 5), 0.2, 0.4, 1);
 });
 
 // Undulating vertices

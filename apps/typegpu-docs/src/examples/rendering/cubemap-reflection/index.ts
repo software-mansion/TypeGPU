@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import {
@@ -132,7 +130,6 @@ const textureLayout = tgpu.bindGroupLayout({
   cubemap: { texture: d.textureCube(d.f32) },
   texSampler: { sampler: 'filtering' },
 });
-const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
 
 const textureBindGroup = root.createBindGroup(textureLayout, {
   cubemap,
@@ -175,57 +172,46 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const normalizedNormal = std.normalize(input.normal.xyz);
   const normalizedLightDir = std.normalize(renderLayout.$.light.direction);
 
-  const ambientLight = std.mul(
-    renderLayout.$.material.ambient,
-    std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-  );
+  const ambientLight = renderLayout.$.material.ambient
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity);
 
   const diffuseFactor = std.max(
     std.dot(normalizedNormal, normalizedLightDir),
-    0.0,
+    0,
   );
-  const diffuseLight = std.mul(
-    diffuseFactor,
-    std.mul(
-      renderLayout.$.material.diffuse,
-      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-    ),
-  );
+  const diffuseLight = renderLayout.$.material.diffuse
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity)
+    .mul(diffuseFactor);
 
   const viewDirection = std.normalize(
-    std.sub(renderLayout.$.camera.position.xyz, input.worldPos.xyz),
+    renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz),
   );
   const reflectionDirection = std.reflect(
     std.neg(normalizedLightDir),
     normalizedNormal,
   );
 
-  const specularFactor = std.pow(
-    std.max(std.dot(viewDirection, reflectionDirection), 0.0),
-    renderLayout.$.material.shininess,
-  );
-  const specularLight = std.mul(
-    specularFactor,
-    std.mul(
-      renderLayout.$.material.specular,
-      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-    ),
-  );
+  const specularFactor =
+    std.max(std.dot(viewDirection, reflectionDirection), 0) **
+      renderLayout.$.material.shininess;
+  const specularLight = renderLayout.$.material.specular
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity)
+    .mul(specularFactor);
 
   const reflectionVector = std.reflect(
     std.neg(viewDirection),
     normalizedNormal,
   );
   const environmentColor = std.textureSample(
-    cubemapBinding.$,
-    texSampler.$,
+    textureLayout.$.cubemap,
+    textureLayout.$.texSampler,
     reflectionVector,
   );
 
-  const directLighting = std.add(
-    ambientLight,
-    std.add(diffuseLight, specularLight),
-  );
+  const directLighting = ambientLight.add(diffuseLight.add(specularLight));
 
   const finalColor = std.mix(
     directLighting,
@@ -247,26 +233,21 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
   },
 })((input) => {
   const viewPos =
-    std.mul(renderLayout.$.camera.view, d.vec4f(input.position.xyz, 0)).xyz;
+    renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
 
   return {
-    pos: std.mul(
-      renderLayout.$.camera.projection,
-      d.vec4f(viewPos, 1),
-    ),
+    pos: renderLayout.$.camera.projection.mul(d.vec4f(viewPos, 1)),
     texCoord: input.position.xyz,
   };
 });
 
 const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    texCoord: d.vec3f,
-  },
+  in: { texCoord: d.vec3f },
   out: d.vec4f,
 })((input) => {
   return std.textureSample(
-    cubemapBinding.$,
-    texSampler.$,
+    textureLayout.$.cubemap,
+    textureLayout.$.texSampler,
     std.normalize(input.texCoord),
   );
 });
@@ -276,17 +257,13 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
 const cubePipeline = root['~unstable']
   .withVertex(cubeVertexFn, cubeVertexLayout.attrib)
   .withFragment(cubeFragmentFn, { format: presentationFormat })
-  .withPrimitive({
-    cullMode: 'front',
-  })
+  .withPrimitive({ cullMode: 'front' })
   .createPipeline();
 
 const pipeline = root['~unstable']
   .withVertex(vertexFn, vertexLayout.attrib)
   .withFragment(fragmentFn, { format: presentationFormat })
-  .withPrimitive({
-    cullMode: 'back',
-  })
+  .withPrimitive({ cullMode: 'back' })
   .createPipeline();
 
 // Render Functions

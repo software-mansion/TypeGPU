@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import * as d from '../src/data/index.ts';
 import tgpu, {
+  d,
   MissingBindGroupsError,
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,
@@ -89,17 +89,15 @@ describe('TgpuRenderPipeline', () => {
   });
 
   it('throws an error if bind groups are missing', ({ root }) => {
-    const utgpu = tgpu['~unstable'];
-
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const vertexFn = utgpu
-      .vertexFn({ out: { pos: d.builtin.position } })(
-        '() { layout.bound.alpha; }',
-      )
+    const vertexFn = tgpu['~unstable']
+      .vertexFn({ out: { pos: d.builtin.position } })`{ layout.$.alpha; }`
       .$uses({ layout });
 
-    const fragmentFn = utgpu.fragmentFn({ out: { out: d.vec4f } })('() {}');
+    const fragmentFn = tgpu['~unstable'].fragmentFn({
+      out: { out: d.vec4f },
+    })`{}`;
 
     const pipeline = root
       .withVertex(vertexFn, {})
