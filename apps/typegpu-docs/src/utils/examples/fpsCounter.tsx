@@ -4,11 +4,7 @@ import { ChartNoAxesColumn } from 'lucide-react';
 /**
  * FPS Counter component, displays FPS and frame time in a small overlay.
  */
-export function FPSCounter({
-  className = 'flex items-center gap-3 rounded-xl bg-grayscale-20/80 px-4 py-2 font-mono text-xs text-grayscale-80 shadow-sm',
-}: {
-  className?: string;
-}) {
+export function FPSCounter({ className }: { className?: string }) {
   const fpsRef = useRef<HTMLSpanElement>(null);
   const frameTimeRef = useRef<HTMLSpanElement>(null);
   const metricsRef = useRef({
