@@ -12,13 +12,13 @@ ruleTester.run('integerDivision', integerDivision, {
     {
       code: 'd.u32(1) / d.u32(2)',
       errors: [
-        { messageId: 'intDiv', data: { node: 'd.u32(1) / d.u32(2)' } },
+        { messageId: 'intDiv', data: { snippet: 'd.u32(1) / d.u32(2)' } },
       ],
     },
     {
       code: 'd.i32(1) / d.i32(2)',
       errors: [
-        { messageId: 'intDiv', data: { node: 'd.i32(1) / d.i32(2)' } },
+        { messageId: 'intDiv', data: { snippet: 'd.i32(1) / d.i32(2)' } },
       ],
     },
   ],
