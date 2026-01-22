@@ -5,7 +5,6 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
-import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 
@@ -18,7 +17,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   const proto = object.prototype as {
     [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
   };
-  const opImpl = infixOperators[operator][$internal].jsImpl as (
+  const opImpl = infixOperators[operator] as (
     lhs: Instance,
     rhs: unknown,
   ) => unknown;

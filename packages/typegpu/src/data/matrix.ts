@@ -99,10 +99,11 @@ function createMatSchema<
       argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
       returnType: schema as unknown as AnyData,
     }),
-    codegenImpl: (...args) => stitch`${options.type}(${args})`,
+    codegenImpl: (_ctx, args) => stitch`${options.type}(${args})`,
   });
 
   const schema = Object.assign(construct, {
+    [$internal]: {},
     type: options.type,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
@@ -604,7 +605,7 @@ export const translation4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
 });
 
@@ -626,7 +627,7 @@ export const scaling4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
 });
 
@@ -648,7 +649,7 @@ export const rotationX4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -670,7 +671,7 @@ export const rotationY4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -692,7 +693,7 @@ export const rotationZ4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
 });
 
