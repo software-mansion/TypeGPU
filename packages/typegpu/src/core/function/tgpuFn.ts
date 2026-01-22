@@ -1,7 +1,6 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { Void } from '../../data/wgslTypes.ts';
+import { type BaseData, Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -44,6 +43,7 @@ import type {
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -53,8 +53,8 @@ import { comptime } from './comptime.ts';
  * Describes a function signature (its arguments and return type)
  */
 type TgpuFnShellHeader<
-  Args extends AnyData[],
-  Return extends AnyData,
+  Args extends BaseData[],
+  Return extends BaseData,
 > = {
   readonly [$internal]: true;
   readonly argTypes: Args;
@@ -68,8 +68,8 @@ type TgpuFnShellHeader<
  * and passing the implementation (as WGSL string or JS function) as the argument.
  */
 export type TgpuFnShell<
-  Args extends AnyData[],
-  Return extends AnyData,
+  Args extends BaseData[],
+  Return extends BaseData,
 > =
   & TgpuFnShellHeader<Args, Return>
   & (<T extends (...args: InferArgs<Args>) => Infer<Return>>(
@@ -90,17 +90,17 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
-    Extract<ReturnType<ImplSchema>, AnyData>
+    Extract<ReturnType<ImplSchema>, BaseData>
   >;
   readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
+  with<T extends BaseData>(
     accessor: TgpuAccessor<T>,
     value: AccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
+  with<T extends BaseData>(
     accessor: TgpuMutableAccessor<T>,
     value: MutableAccessorIn<NoInfer<T>>,
   ): TgpuFn<ImplSchema>;
@@ -143,7 +143,7 @@ export function fn<
   return Object.assign(call, shell) as unknown as TgpuFnShell<Args, Return>;
 }
 
-export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
+export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
   value: unknown | TgpuFn<(...args: Args) => Return>,
 ): value is TgpuFn<(...args: Args) => Return> {
   return isMarkedInternal(value) &&
@@ -161,7 +161,7 @@ function stringifyPair([slot, value]: SlotValuePair): string {
 function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
-    Extract<ReturnType<ImplSchema>, AnyData>
+    Extract<ReturnType<ImplSchema>, BaseData>
   >,
   implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
@@ -227,7 +227,7 @@ function createFn<ImplSchema extends AnyFn>(
           }
 
           const castAndCopiedArgs = args.map((arg, index) =>
-            schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
+            schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
           const result = implementation(...castAndCopiedArgs);

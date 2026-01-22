@@ -27,7 +27,7 @@ import {
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData, UnknownData } from './data/dataTypes.ts';
+import { type AnyData, UnknownData } from './data/dataTypes.ts';
 import type {
   MapValueToSnippet,
   ResolvedSnippet,
@@ -83,12 +83,12 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   functionType: 'normal' | TgpuShaderStage;
-  argTypes: AnyData[];
+  argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: BaseData | undefined;
   body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
@@ -109,11 +109,11 @@ export type FunctionScopeLayer = {
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: BaseData | undefined;
   /**
    * All types used in `return` statements.
    */
-  reportedReturnTypes: Set<AnyData>;
+  reportedReturnTypes: Set<BaseData>;
 };
 
 export type SlotBindingLayer = {
@@ -147,7 +147,7 @@ export interface ItemStateStack {
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: AnyData | undefined,
+    returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
   pushBlockScope(): void;
@@ -226,7 +226,7 @@ export class SimulationState {
   readonly type = 'simulate' as const;
 
   constructor(
-    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly buffers: Map<TgpuBuffer<BaseData>, unknown>,
     readonly vars: {
       private: Map<TgpuVar, unknown>;
       workgroup: Map<TgpuVar, unknown>;
@@ -294,14 +294,14 @@ export interface ResolutionCtx {
    */
   resolve(
     item: unknown,
-    schema?: AnyData | UnknownData | undefined,
+    schema?: BaseData | UnknownData | undefined,
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
-    returnType: AnyData;
+    returnType: BaseData;
   };
 
   withVaryingLocations<T>(
@@ -355,7 +355,7 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
     strictSignature?:
-      | { argTypes: AnyData[]; returnType: AnyData }
+      | { argTypes: BaseData[]; returnType: BaseData }
       | undefined;
     call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
   };
@@ -365,7 +365,7 @@ export function isGPUCallable(value: unknown): value is GPUCallable {
   return !!(value as GPUCallable)?.[$gpuCallable];
 }
 
-export type WithCast<T = AnyData> = GPUCallable<[v?: Infer<T>]> & {
+export type WithCast<T = BaseData> = GPUCallable<[v?: Infer<T>]> & {
   readonly [$cast]: (v?: Infer<T> | undefined) => Infer<T>;
 };
 
@@ -378,7 +378,7 @@ export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
 
 export function isKnownAtComptime(snippet: Snippet): boolean {
   return (typeof snippet.value !== 'string' ||
-    snippet.dataType.type === 'unknown') &&
+    snippet.dataType === UnknownData) &&
     getOwnSnippet(snippet.value) === undefined;
 }
 

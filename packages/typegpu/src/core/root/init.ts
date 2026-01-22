@@ -11,6 +11,7 @@ import {
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
+  BaseData,
   U16,
   U32,
   v3u,
@@ -559,7 +560,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -572,7 +573,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuRenderPipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
-      | TgpuBuffer<AnyData>
+      | TgpuBuffer<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout

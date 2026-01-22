@@ -1,6 +1,7 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
@@ -56,7 +57,7 @@ export function mutableAccessor<
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
-    defaultValue,
+    defaultValue as MutableAccessorIn<BaseData>,
   ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
@@ -65,7 +66,7 @@ export function mutableAccessor<
 // --------------
 
 abstract class AccessorBase<
-  T extends AnyData,
+  T extends BaseData,
   TValue extends AccessorIn<T> | MutableAccessorIn<T>,
 > implements SelfResolvable {
   readonly [$internal] = true;
@@ -82,7 +83,7 @@ abstract class AccessorBase<
   ) {
     this.schema = isData(schemaOrConstructor)
       ? schemaOrConstructor
-      : schemaOrConstructor(0);
+      : (schemaOrConstructor as ((count: number) => T))(0);
     this.defaultValue = defaultValue;
 
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
@@ -177,7 +178,7 @@ abstract class AccessorBase<
   }
 }
 
-export class TgpuAccessorImpl<T extends AnyData>
+export class TgpuAccessorImpl<T extends BaseData>
   extends AccessorBase<T, AccessorIn<T>>
   implements TgpuAccessor<T> {
   readonly resourceType = 'accessor';
@@ -200,7 +201,7 @@ export class TgpuAccessorImpl<T extends AnyData>
   }
 }
 
-export class TgpuMutableAccessorImpl<T extends AnyData>
+export class TgpuMutableAccessorImpl<T extends BaseData>
   extends AccessorBase<T, MutableAccessorIn<T>>
   implements TgpuMutableAccessor<T> {
   readonly resourceType = 'mutable-accessor';

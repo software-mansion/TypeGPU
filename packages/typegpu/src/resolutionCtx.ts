@@ -21,15 +21,16 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import {
-  type AnyData,
-  isData,
-  undecorate,
-  UnknownData,
-} from './data/dataTypes.ts';
+import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import { isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import {
+  type BaseData,
+  isPtr,
+  isWgslArray,
+  isWgslStruct,
+  Void,
+} from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -137,7 +138,7 @@ class ItemStateStackImpl implements ItemStateStack {
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
-    returnType: AnyData | undefined,
+    returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
@@ -240,7 +241,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   defineBlockVariable(id: string, snippet: Snippet): void {
-    if (snippet.dataType.type === 'unknown') {
+    if (snippet.dataType === UnknownData) {
       throw Error(`Tried to define variable '${id}' of unknown type`);
     }
 
@@ -345,7 +346,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly enableExtensions: WgslExtension[] | undefined;
-  public expectedType: AnyData | undefined;
+  public expectedType: BaseData | undefined;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
@@ -408,7 +409,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.defineBlockVariable(id, snippet);
   }
 
-  reportReturnType(dataType: AnyData) {
+  reportReturnType(dataType: BaseData) {
     const scope = this._itemStateStack.topFunctionScope;
     invariant(scope, 'Internal error, expected function scope to be present.');
     scope.reportedReturnTypes.add(dataType);
@@ -432,7 +433,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   fnToWgsl(
     options: FnToWgslOptions,
-  ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
+  ): { head: Wgsl; body: Wgsl; returnType: BaseData } {
     let fnScopePushed = false;
 
     try {
@@ -468,7 +469,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           case FuncParameterType.destructuredObject: {
             args.push(snip(`_arg_${i}`, argType, origin));
             argAliases.push(...astParam.props.map(({ name, alias }) => {
-              if (argType.type !== 'struct') {
+              if (!isWgslStruct(argType)) {
                 throw new WgslTypeError('Only structs can be destructured');
               }
               const propType = argType.propTypes[name];
@@ -762,7 +763,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(
     item: unknown,
-    schema?: AnyData | UnknownData | undefined,
+    schema?: BaseData | UnknownData | undefined,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
@@ -811,7 +812,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (typeof item === 'number') {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
       invariant(
-        realSchema.type !== 'unknown',
+        realSchema !== UnknownData,
         'Schema has to be known for resolving numbers',
       );
 
@@ -868,11 +869,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return snip(
         stitch`array<${elementTypeString}, ${schema.elementCount}>(${
           item.map((element) =>
-            snip(
-              element,
-              schema.elementType as AnyData,
-              /* origin */ 'runtime',
-            )
+            snip(element, schema.elementType, /* origin */ 'runtime')
           )
         })`,
         schema,
@@ -906,7 +903,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     throw new WgslTypeError(
       `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
-        schema ? ` to type ${schema.type}` : ''
+        schema ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
   }
@@ -1017,10 +1014,12 @@ export function resolve(
 export function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
-  returnType: AnyData,
+  returnType: BaseData,
 ) {
   const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData).value}`)
+    .map((arg) =>
+      `${arg.value}: ${ctx.resolve(arg.dataType as BaseData).value}`
+    )
     .join(', ');
 
   return returnType.type !== 'void'

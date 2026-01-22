@@ -11,6 +11,7 @@ import type {
 } from '../../data/sampler.ts';
 import type {
   AnyWgslData,
+  BaseData,
   U16,
   U32,
   Vec3u,
@@ -562,17 +563,17 @@ export interface RenderPass {
   ): undefined;
 }
 
-export type ValidateBufferSchema<TData extends AnyData> =
+export type ValidateBufferSchema<TData extends BaseData> =
   IsValidBufferSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
-export type ValidateStorageSchema<TData extends AnyData> =
+export type ValidateStorageSchema<TData extends BaseData> =
   IsValidStorageSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
-export type ValidateUniformSchema<TData extends AnyData> =
+export type ValidateUniformSchema<TData extends BaseData> =
   IsValidUniformSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;

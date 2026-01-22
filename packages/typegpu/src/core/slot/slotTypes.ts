@@ -1,5 +1,5 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
@@ -52,7 +52,7 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
-export type AccessorIn<TSchema extends AnyData> = TSchema extends
+export type AccessorIn<TSchema extends BaseData> = TSchema extends
   WgslTexture | WgslStorageTexture ? (
     | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
     | Infer<TSchema>
@@ -67,7 +67,7 @@ export type AccessorIn<TSchema extends AnyData> = TSchema extends
     | Infer<TSchema>
   );
 
-export type MutableAccessorIn<TSchema extends AnyData> = TSchema extends
+export type MutableAccessorIn<TSchema extends BaseData> = TSchema extends
   WgslTexture | WgslStorageTexture ? (
     | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
     | TgpuTextureView<TSchema>
@@ -79,7 +79,8 @@ export type MutableAccessorIn<TSchema extends AnyData> = TSchema extends
     | TgpuVar<VariableScope, TSchema>
   );
 
-export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
+export interface TgpuAccessor<T extends BaseData = BaseData>
+  extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
@@ -95,7 +96,7 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly $: InferGPU<T>;
 }
 
-export interface TgpuMutableAccessor<T extends AnyData = AnyData>
+export interface TgpuMutableAccessor<T extends BaseData = BaseData>
   extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'mutable-accessor';
@@ -137,13 +138,13 @@ export function isProviding(
   return (value as { [$providing]: Providing })?.[$providing] !== undefined;
 }
 
-export function isAccessor<T extends AnyData>(
+export function isAccessor<T extends BaseData>(
   value: unknown | TgpuAccessor<T>,
 ): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
 
-export function isMutableAccessor<T extends AnyData>(
+export function isMutableAccessor<T extends BaseData>(
   value: unknown | TgpuMutableAccessor<T>,
 ): value is TgpuMutableAccessor<T> {
   return (value as TgpuMutableAccessor<T>)?.resourceType === 'mutable-accessor';

@@ -1,8 +1,8 @@
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type { AnyData, Disarray } from './data/dataTypes.ts';
-import type { WgslArray } from './data/wgslTypes.ts';
+import type { Disarray } from './data/dataTypes.ts';
+import type { BaseData, WgslArray } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
@@ -133,7 +133,7 @@ export class MissingSlotValueError extends Error {
  * @category Errors
  */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<AnyData>) {
+  constructor(value: TgpuBuffer<BaseData>) {
     super(
       `Buffer '${
         getName(value) ?? '<unnamed>'
