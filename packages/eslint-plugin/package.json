@@ -17,6 +17,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.15.1",
   "devDependencies": {
+    "@typescript-eslint/utils": "^8.53.1",
     "eslint": "^9.39.2"
   }
 }
