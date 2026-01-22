@@ -1,7 +1,8 @@
 import { ESLintUtils } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://typegpu.com/rules/${name}`,
+  // TODO: docs for lint rules
+  () => `https://docs.swmansion.com/TypeGPU/getting-started/`,
 );
 
 export const properNames = createRule({
