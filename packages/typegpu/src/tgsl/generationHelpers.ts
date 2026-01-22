@@ -1,9 +1,10 @@
-import { type AnyData, UnknownData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   type F32,
   type I32,
   isMatInstance,
@@ -34,7 +35,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
-export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
+export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -65,10 +66,10 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: BaseData | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: AnyData | undefined;
+  readonly topFunctionReturnType: BaseData | undefined;
 
   indent(): string;
   dedent(): string;
@@ -83,7 +84,7 @@ export type GenerationCtx = ResolutionCtx & {
    * reported using this function, and used to infer
    * the return type of the owning function.
    */
-  reportReturnType(dataType: AnyData): void;
+  reportReturnType(dataType: BaseData): void;
 
   readonly shelllessRepo: ShelllessRepository;
 };

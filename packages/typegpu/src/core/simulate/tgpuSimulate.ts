@@ -1,4 +1,4 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, provideCtx } from '../../execMode.ts';
 import { ResolutionCtxImpl } from '../../resolutionCtx.ts';
 import wgslGenerator from '../../tgsl/wgslGenerator.ts';
@@ -10,9 +10,9 @@ import type { TgpuVar } from '../variable/tgpuVariable.ts';
 interface SimulationResult<T> {
   value: T;
 
-  buffers: Map<TgpuBuffer<AnyData>, unknown>;
-  privateVars: Map<TgpuVar<'private', AnyData>, unknown>[][][];
-  workgroupVars: Map<TgpuVar<'workgroup', AnyData>, unknown>[][][];
+  buffers: Map<TgpuBuffer<BaseData>, unknown>;
+  privateVars: Map<TgpuVar<'private', BaseData>, unknown>[][][];
+  workgroupVars: Map<TgpuVar<'workgroup', BaseData>, unknown>[][][];
 }
 
 /**
@@ -56,7 +56,7 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
     workgroups[2] * workgroupSize[2],
   ] as const;
 
-  const buffers = new Map<TgpuBuffer<AnyData>, unknown>();
+  const buffers = new Map<TgpuBuffer<BaseData>, unknown>();
 
   const workgroupVars = Array.from(
     { length: workgroups[0] },
