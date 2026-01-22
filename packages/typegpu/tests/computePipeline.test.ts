@@ -1,8 +1,9 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import * as d from '../src/data/index.ts';
-import tgpu, {
+import {
+  d,
   MissingBindGroupsError,
+  tgpu,
   type TgpuComputePipeline,
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
@@ -36,7 +37,7 @@ describe('TgpuComputePipeline', () => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
     const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-      layout.bound.alpha; // Using an entry of the layout
+      layout.$.alpha; // Using an entry of the layout
     });
 
     const pipeline = root.withCompute(entryFn).createPipeline();
@@ -334,7 +335,7 @@ describe('TgpuComputePipeline', () => {
 
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {
-          layout.bound.data;
+          layout.$.data;
         })
         .$uses({ layout });
 

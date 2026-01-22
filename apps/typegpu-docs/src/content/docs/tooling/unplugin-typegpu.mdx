@@ -13,8 +13,7 @@ The package includes the following functionalities:
   The parsing of JavaScript happens ahead of time, emitting a highly compact AST format, called [tinyest](https://www.npmjs.com/package/tinyest).
 
   ```ts
-  import tgpu from 'typegpu';
-  import * as d from 'typegpu/data';
+  import tgpu, { d } from 'typegpu';
 
   // Found by the plugin and decorated with 'tinyest' metadata
   const add = (a: number, b: number) => {

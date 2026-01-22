@@ -10,7 +10,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 type MapValueToDataType<T> = { [K in keyof T]: AnyData };
 
 interface DualImplOptions<T extends (...args: never[]) => unknown> {
-  readonly name: string;
+  readonly name: string | undefined;
   readonly normalImpl: T | string;
   readonly codegenImpl: (...args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
@@ -54,7 +54,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
 
     const argSnippets = args as MapValueToSnippet<Parameters<T>>;
     const converted = argSnippets.map((s, idx) => {
-      const argType = argTypes[idx] as AnyData | undefined;
+      const argType = argTypes[idx];
       if (!argType) {
         throw new Error('Function called with invalid arguments');
       }
@@ -105,7 +105,7 @@ export function dualImpl<T extends (...args: never[]) => unknown>(
   }) as T;
 
   setName(impl, options.name);
-  impl.toString = () => options.name;
+  impl.toString = () => options.name ?? '<unknown>';
   Object.defineProperty(impl, $internal, {
     value: {
       jsImpl: options.normalImpl,

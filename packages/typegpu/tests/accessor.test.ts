@@ -1,8 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import { d, std, tgpu } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 const RED = d.vec3f(1, 0, 0);
@@ -149,7 +147,7 @@ describe('tgpu.accessor', () => {
       `);
   });
 
-  it('resolves in tgsl functions, using .value', ({ root }) => {
+  it('resolves in tgsl functions, using .$', ({ root }) => {
     const redUniform = root
       .createBuffer(d.vec3f, RED)
       .$usage('uniform')
@@ -162,13 +160,13 @@ describe('tgpu.accessor', () => {
     const colorAccessorFn = tgpu['~unstable'].accessor(d.vec3f, getColor);
 
     const main = tgpu.fn([])(() => {
-      const color = colorValueAccess.value;
-      const color2 = colorUsageAccess.value;
-      const color3 = colorAccessorFn.value;
+      const color = colorValueAccess.$;
+      const color2 = colorUsageAccess.$;
+      const color3 = colorAccessorFn.$;
 
-      const colorX = colorValueAccess.value.x;
-      const color2X = colorUsageAccess.value.x;
-      const color3X = colorAccessorFn.value.x;
+      const colorX = colorValueAccess.$.x;
+      const color2X = colorUsageAccess.$.x;
+      const color3X = colorAccessorFn.$.x;
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`

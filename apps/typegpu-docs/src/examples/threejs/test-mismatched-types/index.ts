@@ -1,7 +1,7 @@
 import * as t3 from '@typegpu/three';
 import { instancedArray, uniform, uniformArray } from 'three/tsl';
 import * as THREE from 'three/webgpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 // THREE.TSL.struct, array
 

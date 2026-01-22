@@ -2,6 +2,8 @@
  * @module typegpu/data
  */
 
+// NOTE: This is a barrel file, internal files should not import things from this file
+
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
 import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';

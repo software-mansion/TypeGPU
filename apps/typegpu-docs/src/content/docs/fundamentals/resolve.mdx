@@ -15,8 +15,7 @@ The `tgpu.resolve` API takes in TypeGPU resources (and optionally a WGSL templat
 The first `tgpu.resolve` overload takes in an array of items to resolve, and an optional argument with options. Here's a simple example:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const Boid = d.struct({
   size: d.f32,
@@ -58,8 +57,7 @@ As you may note, the resolved WGSL code contains exactly the set of definitions 
 You can also resolve other resources, like consts, buffers, textures, entry point functions or even entire pipelines. Here's an example with a pipeline:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const root = await tgpu.init();
 
@@ -103,7 +101,7 @@ eliminating the need for manual resolve calls.
 :::
 
 :::tip
-To resolve all items from a layout, you can use `tgpu.resolve([...Object.values(layout.bound)])`.
+To resolve all items from a layout, you can use `tgpu.resolve([layout])`.
 :::
 
 
@@ -120,8 +118,7 @@ Use it when you are already provided with existing WGSL code and want to extend 
 Here's an example:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -161,8 +158,7 @@ As you may note, in this case `tgpu.resolve` uses the structure of the `external
 Here is another example. Assume, that the bind group index `0` is already taken by some existing code:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const LightSource = d.struct({
   ambientColor: d.vec3f,
@@ -275,8 +271,7 @@ For these cases, you can use `tgpu.resolveWithContext`, which has the same input
 An example, where the "catchall" bind group is created:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -300,8 +295,7 @@ console.log(catchall?.[1]); // the catchall bind group
 An example, where a bind group layout is automatically included via a TGSL function:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---

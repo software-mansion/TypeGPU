@@ -3,8 +3,7 @@ import * as TSL from 'three/tsl';
 import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 export const dirLight = (() => {
   const dirLight = new THREE.DirectionalLight(0xf9ff9b, 9);
