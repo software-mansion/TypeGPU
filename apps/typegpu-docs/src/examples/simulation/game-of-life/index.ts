@@ -332,7 +332,7 @@ const stepOnce = (timestamp: number) => {
         gameSize /
           (chosenPipeline === 'bitpacked' ? TILE_SIZE * 32 : TILE_SIZE),
       ),
-      gameSize,
+      gameSize / TILE_SIZE,
     );
 };
 

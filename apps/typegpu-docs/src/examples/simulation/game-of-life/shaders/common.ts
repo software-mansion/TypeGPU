@@ -76,15 +76,11 @@ export const extractNeighbors = (
   n: d.Infer<typeof Neighborhood3x3>,
 ): d.Infer<typeof Neighbors8> => {
   'use gpu';
+  // deno-fmt-ignore
   return Neighbors8({
-    nw: n.tl,
-    n: n.tc,
-    ne: n.tr,
-    w: n.ml,
-    e: n.mr,
-    sw: n.bl,
-    s: n.bc,
-    se: n.br,
+    nw: n.tl, n: n.tc, ne: n.tr,
+    w:  n.ml,           e: n.mr,
+    sw: n.bl, s: n.bc, se: n.br,
   });
 };
 
