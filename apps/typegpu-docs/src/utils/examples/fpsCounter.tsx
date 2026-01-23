@@ -12,7 +12,8 @@ export function FPSCounter({ className }: { className?: string }) {
     lastTime: 0,
     lastUpdate: 0,
   });
-  const avgFrameWindow = 100;
+  const AVG_FRAME_WINDOW = 100;
+  const POOLING_LENGTH = 60;
 
   useEffect(() => {
     let rafId: number;
@@ -29,12 +30,13 @@ export function FPSCounter({ className }: { className?: string }) {
       metrics.frames.push(time - metrics.lastTime);
       metrics.lastTime = time;
 
-      if (metrics.frames.length > 60) {
+      if (metrics.frames.length > POOLING_LENGTH) {
         metrics.frames.shift();
       }
 
       if (
-        time - metrics.lastUpdate >= avgFrameWindow && metrics.frames.length > 0
+        time - metrics.lastUpdate >= AVG_FRAME_WINDOW &&
+        metrics.frames.length > 0
       ) {
         const avg = metrics.frames.reduce((a, b) => a + b, 0) /
           metrics.frames.length;
