@@ -614,6 +614,10 @@ describe('TgpuBuffer', () => {
       return buffer;
     }
 
+    const hello = root.createBuffer(d.bool);
+
+    hello.$;
+
     // Invalid
     // @ts-expect-error: Cannot create buffers with bools in them
     (() => createMyBuffer(d.bool, ['']));

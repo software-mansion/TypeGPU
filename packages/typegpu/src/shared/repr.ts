@@ -3,7 +3,10 @@ import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
-  $invalidSchemaReason,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
+  $invalidVertexSchema,
   $memIdent,
   $repr,
   $reprPartial,
@@ -167,7 +170,28 @@ export type ValidateTextureViewSchema<
     ? SelfOrErrors<TSchema, ValidSampledUsage<TTexture, TSchema>>
   : never;
 
-export type ExtractInvalidSchemaError<T, TPrefix extends string = ''> =
-  [T] extends [{ readonly [$invalidSchemaReason]: string }]
-    ? `${TPrefix}${T[typeof $invalidSchemaReason]}`
+export type ExtractInvalidStorageError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidStorageSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidStorageSchema]}`
     : never;
+
+export type ExtractInvalidUniformError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidUniformSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidUniformSchema]}`
+    : never;
+
+export type ExtractInvalidVertexError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidVertexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidVertexSchema]}`
+    : never;
+
+export type ExtractInvalidIndexError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidIndexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidIndexSchema]}`
+    : never;
+
+export type ExtractInvalidSchemaError<T, TPrefix extends string = ''> =
+  | ExtractInvalidStorageError<T, TPrefix>
+  | ExtractInvalidUniformError<T, TPrefix>
+  | ExtractInvalidVertexError<T, TPrefix>
+  | ExtractInvalidIndexError<T, TPrefix>;

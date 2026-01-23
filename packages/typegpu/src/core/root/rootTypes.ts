@@ -17,7 +17,7 @@ import type {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { ExtractInvalidSchemaError, Infer } from '../../shared/repr.ts';
 import {
   $internal,
   $invalidIndexSchema,
@@ -78,6 +78,7 @@ import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts'
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
+import { Illegal } from '../../errors.ts';
 
 // ----------
 // Public API
@@ -596,7 +597,7 @@ export interface TgpuRoot extends Unwrapper {
     typeSchema: TData,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>> | undefined,
-  ): undefined;
+  ): Illegal<ExtractInvalidSchemaError<TData>>;
 
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
