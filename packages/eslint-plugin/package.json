@@ -22,12 +22,10 @@
     "@typescript-eslint/utils": "^8.53.0"
   },
   "peerDependencies": {
-    "eslint": "^9.0.0",
-    "@typescript-eslint/parser": "^8.53.0"
+    "eslint": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
-    "@typescript-eslint/parser": "^8.53.1",
     "@typescript-eslint/rule-tester": "^8.53.1",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
