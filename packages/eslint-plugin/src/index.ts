@@ -1,10 +1,6 @@
-import fs from 'node:fs';
+import pkg from '../package.json' with { type: 'json' };
 import type { TSESLint } from '@typescript-eslint/utils';
 import { allRules, recommendedRules, rules } from './configs.ts';
-
-const pkg = JSON.parse(
-  fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
-);
 
 const pluginBase: TSESLint.FlatConfig.Plugin = {
   meta: {
@@ -26,10 +22,12 @@ const all: TSESLint.FlatConfig.Config = {
   rules: allRules,
 };
 
-export const plugin: TSESLint.FlatConfig.Plugin = {
+const plugin: TSESLint.FlatConfig.Plugin = {
   ...pluginBase,
   configs: {
     recommended,
     all,
   },
 };
+
+export default plugin;
