@@ -145,4 +145,55 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       }"
     `);
   });
+
+  it('generates one fucntion even when .with is called multiple times with the same arguments', () => {
+    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+
+    const getValue = () => {
+      'use gpu';
+      return valueAccess.$;
+    };
+
+    const getValueGeneric = tgpu.fn(getValue).with(valueAccess, 2);
+    const getValueGenericAgain = getValueGeneric.with(valueAccess, 2);
+
+    const main = () => {
+      'use gpu';
+      return getValueGeneric() + getValueGenericAgain();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn getValue() -> f32 {
+        return 2f;
+      }
+
+      fn main() -> f32 {
+        return (getValue() + getValue());
+      }"
+    `);
+  });
+
+  it('allows for shellless inline usage', () => {
+    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+
+    const getValueGeneric = tgpu.fn(() => {
+      'use gpu';
+      return valueAccess.$;
+    }).with(valueAccess, 2);
+
+    const main = () => {
+      'use gpu';
+      return getValueGeneric();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn item() -> f32 {
+        return 2f;
+      }
+
+      fn main() -> f32 {
+        return item();
+      }"
+    `);
+  });
 });
