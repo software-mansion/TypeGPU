@@ -1,6 +1,7 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../ruleCreator.ts';
 
+// TODO: detect `std.div(d.u32(1), d.u32(2))`
 export const integerDivision = createRule({
   name: 'integer-division',
   meta: {
@@ -21,11 +22,11 @@ export const integerDivision = createRule({
           return;
         }
 
-        if (node.parent?.type === 'CallExpression' && isIntCasts(node.parent)) {
+        if (node.parent?.type === 'CallExpression' && isIntCast(node.parent)) {
           return;
         }
 
-        if (isIntCasts(node.left) && isIntCasts(node.right)) {
+        if (isIntCast(node.left) && isIntCast(node.right)) {
           context.report({
             node,
             messageId: 'intDiv',
@@ -46,7 +47,7 @@ export const integerDivision = createRule({
  * isIntCasts('i32()'); // true
  * isIntCasts('f32()'); // false
  */
-function isIntCasts(node: TSESTree.Expression): boolean {
+function isIntCast(node: TSESTree.Expression): boolean {
   if (node.type !== 'CallExpression') {
     return false;
   }

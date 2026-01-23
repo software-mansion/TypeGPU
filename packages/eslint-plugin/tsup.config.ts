@@ -2,7 +2,7 @@ import { defineConfig, type Options } from 'tsup';
 
 const config: Options = {
   entry: ['src/index.ts'],
-  format: ['esm'],
+  format: ['cjs', 'esm'],
   dts: true,
   clean: true,
   splitting: true,
