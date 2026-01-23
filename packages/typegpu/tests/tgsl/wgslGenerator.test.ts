@@ -873,8 +873,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn
-      - fn:internalTestFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
+      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
     `);
   });
 

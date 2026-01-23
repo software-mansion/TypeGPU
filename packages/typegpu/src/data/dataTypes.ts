@@ -29,6 +29,7 @@ import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -254,7 +255,10 @@ export class InfixDispatch {
   constructor(
     readonly name: string,
     readonly lhs: Snippet,
-    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+    readonly operator: (
+      ctx: ResolutionCtx,
+      args: [lhs: Snippet, rhs: Snippet],
+    ) => Snippet,
   ) {}
 }
 

@@ -13,7 +13,6 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import {
   isEphemeralOrigin,
   isEphemeralSnippet,
-  isSnippet,
   type Origin,
   snip,
   type Snippet,
@@ -21,12 +20,16 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $providing,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
-import { $internal, $providing } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
+import { isGPUCallable, isKnownAtComptime } from '../types.ts';
 import {
   convertStructValues,
   convertToCommonType,
@@ -40,7 +43,6 @@ import {
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import type { DualFn } from '../data/dualFn.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
@@ -161,18 +163,18 @@ function operatorToType<
 }
 
 const unaryOpCodeToCodegen = {
-  '-': neg[$internal].gpuImpl,
+  '-': neg[$gpuCallable].call,
   'void': () => snip('', wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
 
 const binaryOpCodeToCodegen = {
-  '+': add[$internal].gpuImpl,
-  '-': sub[$internal].gpuImpl,
-  '*': mul[$internal].gpuImpl,
-  '/': div[$internal].gpuImpl,
-  '**': pow[$internal].gpuImpl,
+  '+': add[$gpuCallable].call,
+  '-': sub[$gpuCallable].call,
+  '*': mul[$gpuCallable].call,
+  '/': div[$gpuCallable].call,
+  '**': pow[$gpuCallable].call,
 } satisfies Partial<
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
@@ -290,7 +292,7 @@ ${this.ctx.pre}}`;
 
     try {
       const result = this.expression(expression);
-      return tryConvertSnippet(result, expectedType);
+      return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
     }
@@ -346,7 +348,7 @@ ${this.ctx.pre}}`;
       const codegen =
         binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
       if (codegen) {
-        return codegen(lhsExpr, rhsExpr);
+        return codegen(this.ctx, [lhsExpr, rhsExpr]);
       }
 
       const forcedType = exprType === NODE.assignmentExpr
@@ -354,7 +356,7 @@ ${this.ctx.pre}}`;
         : undefined;
 
       const [convLhs, convRhs] =
-        convertToCommonType([lhsExpr, rhsExpr], forcedType) ??
+        convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ??
           [lhsExpr, rhsExpr];
 
       const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
@@ -426,7 +428,7 @@ ${this.ctx.pre}}`;
       const codegen =
         unaryOpCodeToCodegen[op as keyof typeof unaryOpCodeToCodegen];
       if (codegen) {
-        return codegen(argExpr);
+        return codegen(this.ctx, [argExpr]);
       }
 
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
@@ -466,6 +468,7 @@ ${this.ctx.pre}}`;
       const target = this.expression(targetNode);
       const inProperty = this.expression(propertyNode);
       const property = convertToCommonType(
+        this.ctx,
         [inProperty],
         [u32, i32],
         /* verbose */ false,
@@ -549,7 +552,50 @@ ${this.ctx.pre}}`;
           );
         }
         const rhs = this.expression(argNodes[0]);
-        return callee.value.operator(callee.value.lhs, rhs);
+        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+      }
+
+      if (callee.value instanceof ConsoleLog) {
+        return this.ctx.generateLog(
+          callee.value.op,
+          argNodes.map((arg) => this.expression(arg)),
+        );
+      }
+
+      if (isGPUCallable(callee.value)) {
+        const callable = callee.value[$gpuCallable];
+        const strictSignature = callable.strictSignature;
+
+        let convertedArguments: Snippet[];
+        if (strictSignature) {
+          // The function's signature does not depend on the context, so it can be used to
+          // give a hint to the argument expressions that a specific type is expected.
+          convertedArguments = argNodes.map((arg, i) => {
+            const argType = strictSignature.argTypes[i];
+            if (!argType) {
+              throw new WgslTypeError(
+                `Function '${
+                  getName(callee.value)
+                }' was called with too many arguments`,
+              );
+            }
+            return this.typedExpression(arg, argType);
+          });
+        } else {
+          convertedArguments = argNodes.map((arg) => this.expression(arg));
+        }
+
+        try {
+          return callable.call(this.ctx, convertedArguments);
+        } catch (err) {
+          if (err instanceof ResolutionError) {
+            throw err;
+          }
+
+          throw new ResolutionError(err, [{
+            toString: () => `fn:${getName(callee.value)}`,
+          }]);
+        }
       }
 
       if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
@@ -574,7 +620,12 @@ ${this.ctx.pre}}`;
 
             const converted = args.map((s, idx) => {
               const argType = shellless.argTypes[idx] as AnyData;
-              return tryConvertSnippet(s, argType, /* verbose */ false);
+              return tryConvertSnippet(
+                this.ctx,
+                s,
+                argType,
+                /* verbose */ false,
+              );
             });
 
             return this.ctx.withResetIndentLevel(() => {
@@ -591,94 +642,13 @@ ${this.ctx.pre}}`;
         if (shelllessCall) {
           return shelllessCall;
         }
-
-        throw new Error(
-          `Function '${
-            getName(callee.value) ?? String(callee.value)
-          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
-        );
       }
 
-      // Other, including tgsl functions, std and vector/matrix schema calls.
-
-      const argConversionHint =
-        (callee.value[$internal] as Record<string, unknown>)
-          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
-      const strictSignature = (callee.value as DualFn)[$internal]
-        ?.strictSignature;
-
-      try {
-        let convertedArguments: Snippet[];
-
-        if (strictSignature) {
-          // The function's signature does not depend on the context, so it can be used to
-          // give a hint to the argument expressions that a specific type is expected.
-          convertedArguments = argNodes.map((arg, i) => {
-            const argType = strictSignature.argTypes[i];
-            if (!argType) {
-              throw new WgslTypeError(
-                `Function '${
-                  getName(callee.value)
-                }' was called with too many arguments`,
-              );
-            }
-            return this.typedExpression(arg, argType);
-          });
-        } else if (Array.isArray(argConversionHint)) {
-          // The hint is an array of schemas.
-          convertedArguments = argNodes.map((arg, i) => {
-            const argType = argConversionHint[i];
-            if (!argType) {
-              throw new WgslTypeError(
-                `Function '${
-                  getName(callee.value)
-                }' was called with too many arguments`,
-              );
-            }
-            return this.typedExpression(arg, argType);
-          });
-        } else {
-          const snippets = argNodes.map((arg) => this.expression(arg));
-
-          if (argConversionHint === 'keep') {
-            // The hint tells us to do nothing.
-            convertedArguments = snippets;
-          } else if (argConversionHint === 'unify') {
-            // The hint tells us to unify the types.
-            convertedArguments = convertToCommonType(snippets) ?? snippets;
-          } else {
-            // The hint is a function that converts the arguments.
-            convertedArguments = argConversionHint(...snippets)
-              .map((type, i) => [type, snippets[i] as Snippet] as const)
-              .map(([type, sn]) => tryConvertSnippet(sn, type));
-          }
-        }
-
-        if (callee.value instanceof ConsoleLog) {
-          return this.ctx.generateLog(callee.value.op, convertedArguments);
-        }
-
-        // Assuming that `callee` is callable
-        const fnRes =
-          (callee.value as unknown as (...args: unknown[]) => unknown)(
-            ...convertedArguments,
-          );
-
-        if (!isSnippet(fnRes)) {
-          throw new Error(
-            'Functions running in codegen mode must return snippets',
-          );
-        }
-        return fnRes;
-      } catch (err) {
-        if (err instanceof ResolutionError) {
-          throw err;
-        }
-
-        throw new ResolutionError(err, [{
-          toString: () => `fn:${getName(callee.value)}`,
-        }]);
-      }
+      throw new Error(
+        `Function '${
+          getName(callee.value) ?? String(callee.value)
+        }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
+      );
     }
 
     if (expression[0] === NODE.objectExpr) {
@@ -708,7 +678,11 @@ ${this.ctx.pre}}`;
         }),
       );
 
-      const convertedSnippets = convertStructValues(structType, entries);
+      const convertedSnippets = convertStructValues(
+        this.ctx,
+        structType,
+        entries,
+      );
 
       return snip(
         stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
@@ -763,7 +737,7 @@ ${this.ctx.pre}}`;
           );
         }
 
-        const converted = convertToCommonType(valuesSnippets);
+        const converted = convertToCommonType(this.ctx, valuesSnippets);
         if (!converted) {
           throw new WgslTypeError(
             'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
@@ -780,10 +754,7 @@ ${this.ctx.pre}}`;
 
       return snip(
         stitch`${arrayType}(${values})`,
-        arrayOf[$internal].jsImpl(
-          elemType as wgsl.AnyWgslData,
-          values.length,
-        ) as wgsl.AnyWgslData,
+        arrayOf(elemType as wgsl.AnyWgslData, values.length),
         /* origin */ 'runtime',
       );
     }
@@ -892,6 +863,7 @@ Try 'return ${typeStr}(${str});' instead.
         }
 
         returnSnippet = tryConvertSnippet(
+          this.ctx,
           returnSnippet,
           unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
           false,
@@ -972,6 +944,7 @@ ${this.ctx.pre}else ${alternate}`;
         );
         return stitch`${this.ctx.pre}var ${varName} = ${
           tryConvertSnippet(
+            this.ctx,
             refSnippet,
             refSnippet.dataType as wgsl.AnyWgslData,
             false,
@@ -1056,8 +1029,9 @@ ${this.ctx.pre}else ${alternate}`;
         concretize(dataType),
         eq.origin,
       );
-      return stitch`${this.ctx.pre}${varType} ${snippet
-        .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
+      return stitch`${this.ctx.pre}${varType} ${snippet.value as string} = ${
+        tryConvertSnippet(this.ctx, eq, dataType, false)
+      };`;
     }
 
     if (statement[0] === NODE.block) {

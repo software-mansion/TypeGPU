@@ -118,7 +118,7 @@ function sampleCpu(
 export const textureSample = dualImpl({
   name: 'textureSample',
   normalImpl: sampleCpu,
-  codegenImpl: (...args) => stitch`textureSample(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSample(${args})`,
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
@@ -179,7 +179,7 @@ function sampleBiasCpu(
 export const textureSampleBias = dualImpl({
   name: 'textureSampleBias',
   normalImpl: sampleBiasCpu,
-  codegenImpl: (...args) => stitch`textureSampleBias(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleBias(${args})`,
   signature: (...args) => ({
     argTypes: args as AnyData[],
     returnType: vec4f,
@@ -297,7 +297,7 @@ function sampleLevelCpu(
 export const textureSampleLevel = dualImpl({
   name: 'textureSampleLevel',
   normalImpl: sampleLevelCpu,
-  codegenImpl: (...args) => stitch`textureSampleLevel(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleLevel(${args})`,
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
@@ -372,7 +372,7 @@ function textureLoadCpu(
 export const textureLoad = dualImpl({
   name: 'textureLoad',
   normalImpl: textureLoadCpu,
-  codegenImpl: (...args) => stitch`textureLoad(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureLoad(${args})`,
   signature: (...args) => {
     const texture = args[0] as WgslTexture | WgslStorageTexture;
     if (isWgslTexture(texture)) {
@@ -433,7 +433,7 @@ function textureStoreCpu(
 export const textureStore = dualImpl({
   name: 'textureStore',
   normalImpl: textureStoreCpu,
-  codegenImpl: (...args) => stitch`textureStore(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
   signature: (...args) => ({ argTypes: args, returnType: Void }),
 });
 
@@ -480,7 +480,7 @@ function textureDimensionsCpu(
 export const textureDimensions = dualImpl({
   name: 'textureDimensions',
   normalImpl: textureDimensionsCpu,
-  codegenImpl: (...args) => stitch`textureDimensions(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureDimensions(${args})`,
   signature: (...args) => {
     const dim = (
       args[0] as WgslTexture | WgslStorageTexture | WgslExternalTexture
@@ -561,7 +561,7 @@ function textureSampleCompareCpu(
 export const textureSampleCompare = dualImpl({
   name: 'textureSampleCompare',
   normalImpl: textureSampleCompareCpu,
-  codegenImpl: (...args) => stitch`textureSampleCompare(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleCompare(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: f32,
@@ -625,7 +625,7 @@ function textureSampleCompareLevelCpu(
 export const textureSampleCompareLevel = dualImpl({
   name: 'textureSampleCompareLevel',
   normalImpl: textureSampleCompareLevelCpu,
-  codegenImpl: (...args) => stitch`textureSampleCompareLevel(${args})`,
+  codegenImpl: (ctx, args) => stitch`textureSampleCompareLevel(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: f32,
@@ -643,7 +643,7 @@ function textureSampleBaseClampToEdgeCpu<
 export const textureSampleBaseClampToEdge = dualImpl({
   name: 'textureSampleBaseClampToEdge',
   normalImpl: textureSampleBaseClampToEdgeCpu,
-  codegenImpl: (...args) => stitch`textureSampleBaseClampToEdge(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleBaseClampToEdge(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: vec4f,

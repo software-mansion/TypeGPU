@@ -5,11 +5,7 @@ import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import type { VecKind } from './wgslTypes.ts';
 
-type VecSchema<S> = AnyData & {
-  [$internal]: {
-    jsImpl: (v?: S) => S;
-  };
-};
+type VecSchema<S> = AnyData & ((v?: S) => S);
 
 // deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
@@ -35,7 +31,7 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   ) => Vec4<S>;
 
   castElement(): (v?: S) => S {
-    return this[$internal].elementSchema[$internal].jsImpl;
+    return this[$internal].elementSchema;
   }
 
   [$resolve](): ResolvedSnippet {
