@@ -46,14 +46,16 @@ export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   return type;
 }
 
-export function concretizeSnippets(args: Snippet[]): Snippet[] {
-  return args.map((snippet) =>
-    snip(
-      snippet.value,
-      concretize(snippet.dataType as AnyWgslData),
-      /* origin */ snippet.origin,
-    )
+export function concretizeSnippet(snippet: Snippet): Snippet {
+  return snip(
+    snippet.value,
+    concretize(snippet.dataType as AnyWgslData),
+    snippet.origin,
   );
+}
+
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map(concretizeSnippet);
 }
 
 export type GenerationCtx = ResolutionCtx & {

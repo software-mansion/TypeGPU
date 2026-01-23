@@ -1,5 +1,4 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
   AbstractFloat,
@@ -11,6 +10,7 @@ import type {
   U16,
   U32,
 } from './wgslTypes.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 
 export const abstractInt = {
   [$internal]: {},
@@ -28,7 +28,7 @@ export const abstractFloat = {
   },
 } as AbstractFloat;
 
-const boolCast = dualImpl({
+const boolCast = callableSchema({
   name: 'bool',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
   normalImpl(v?: number | boolean) {
@@ -66,7 +66,7 @@ export const bool: Bool = Object.assign(boolCast, {
   type: 'bool',
 }) as unknown as Bool;
 
-const u32Cast = dualImpl({
+const u32Cast = callableSchema({
   name: 'u32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: u32 }),
   normalImpl(v?: number | boolean) {
@@ -106,7 +106,7 @@ export const u32: U32 = Object.assign(u32Cast, {
   type: 'u32',
 }) as unknown as U32;
 
-const i32Cast = dualImpl({
+const i32Cast = callableSchema({
   name: 'i32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: i32 }),
   normalImpl(v?: number | boolean) {
@@ -149,9 +149,9 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
-const f32Cast = dualImpl({
+const f32Cast = callableSchema({
   name: 'f32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
+  signature: (arg) => ({ argTypes: [arg ? [arg] : []], returnType: f32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -275,7 +275,7 @@ function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 
-const f16Cast = dualImpl({
+const f16Cast = callableSchema({
   name: 'f16',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
   normalImpl(v?: number | boolean) {

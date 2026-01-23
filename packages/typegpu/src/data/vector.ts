@@ -1,4 +1,4 @@
-import { dualImpl } from '../core/function/dualImpl.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -307,14 +307,13 @@ function makeVecSchema<TValue, S extends number | boolean>(
     );
   };
 
-  const construct = dualImpl({
+  const construct = callableSchema({
     name: type,
     signature: (...args) => ({
       argTypes: args.map((arg) => isVec(arg) ? arg : primitive),
       returnType: schema as AnyData,
     }),
     normalImpl: cpuConstruct,
-    ignoreImplicitCastWarning: true,
     codegenImpl: (_ctx, args) => {
       if (args.length === 1 && args[0]?.dataType === schema) {
         // Already typed as the schema
