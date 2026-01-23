@@ -178,7 +178,7 @@ class PrefixScanComputer {
  *   - inputBuffer: A storage buffer with the input values to scan
  *   - outputBuffer: A storage buffer where the scanned values will be written
  *   - operation: The binary operation to use for the scan (e.g., std.add)
- *   - identity: The identity element for the operation (e.g., 0 for addition)
+ *   - identityElement: The identity element for the operation (e.g., 0 for addition)
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
  *                              GPU dispatch has been submitted; useful for measuring execution time.
  * @returns The `outputBuffer` instance which contains the scanned values.
@@ -200,7 +200,7 @@ class PrefixScanComputer {
  *     inputBuffer,
  *     outputBuffer,
  *     operation: std.add,
- *     identity: 0,
+ *     identityElement: 0,
  *   },
  * );
  *
@@ -213,7 +213,7 @@ class PrefixScanComputer {
  *     inputBuffer,
  *     outputBuffer,
  *     operation: multiply,
- *     identity: 1,
+ *     identityElement: 1,
  *   },
  * );
  * ```
@@ -239,9 +239,8 @@ export function prefixScan(
  * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
  * @param options - Configuration object containing:
  *   - inputBuffer: A storage buffer with the input values to reduce
- *   - outputBuffer: A storage buffer where the reduction result will be written
  *   - operation: The binary operation to use for the reduction (e.g., std.add)
- *   - identity: The identity element for the operation (e.g., 0 for addition)
+ *   - identityElement: The identity element for the operation (e.g., 0 for addition)
  * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
  *                              GPU dispatch has been submitted; useful for measuring execution time.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
@@ -252,18 +251,14 @@ export function prefixScan(
  * const inputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
  *   .$usage('storage');
- * const outputBuffer = root
- *   .createBuffer(d.arrayOf(d.f32, 1))
- *   .$usage('storage');
  *
  * // using an std function
  * const result = scan(
  *   root,
  *   {
  *     inputBuffer,
- *     outputBuffer,
  *     operation: std.add,
- *     identity: 0,
+ *     identityElement: 0,
  *   },
  * );
  *
@@ -274,9 +269,8 @@ export function prefixScan(
  *   root,
  *   {
  *     inputBuffer,
- *     outputBuffer,
  *     operation: multiply,
- *     identity: 1,
+ *     identityElement: 1,
  *   },
  * );
  * ```
@@ -285,7 +279,6 @@ export function scan(
   root: TgpuRoot,
   options: {
     inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
   },
@@ -298,7 +291,7 @@ function runScan(
   root: TgpuRoot,
   options: {
     inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
   },
@@ -319,11 +312,16 @@ function runScan(
     (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
   }
 
-  if (options.inputBuffer !== options.outputBuffer) {
-    options.outputBuffer.copyFrom(options.inputBuffer);
-    return computer.compute(options.outputBuffer);
+  if (onlyGreatestElement) {
+    return computer.compute(options.inputBuffer);
   }
-  return computer.compute(options.inputBuffer);
+
+  const outputBuffer = options.outputBuffer ?? options.inputBuffer;
+  if (options.inputBuffer !== outputBuffer) {
+    outputBuffer.copyFrom(options.inputBuffer);
+  }
+
+  return computer.compute(outputBuffer);
 }
 
 /**

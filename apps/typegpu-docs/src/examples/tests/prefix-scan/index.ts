@@ -23,7 +23,6 @@ async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const output = scanOnly
     ? scan(root, {
       inputBuffer: input,
-      outputBuffer: input,
       operation: op.operation,
       identityElement: op.identityElement,
     })
@@ -99,7 +98,6 @@ async function testDoesNotDestroyBuffer(): Promise<boolean> {
 
   scan(root, {
     inputBuffer: input,
-    outputBuffer: input,
     operation: addFn,
     identityElement: 0,
   });
@@ -116,7 +114,6 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const output1 = scan(root, {
     inputBuffer: input1,
-    outputBuffer: input1,
     operation: op.operation,
     identityElement: op.identityElement,
   });
@@ -127,7 +124,6 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const output2 = scan(root, {
     inputBuffer: input2,
-    outputBuffer: input2,
     operation: op.operation,
     identityElement: op.identityElement,
   });
