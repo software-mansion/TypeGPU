@@ -188,14 +188,13 @@ async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
   const input = root
     .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
     .$usage('storage');
-
+  const output = root.createBuffer(d.arrayOf(d.f32, 8)).$usage('storage');
   prefixScan(root, {
     inputBuffer: input,
-    outputBuffer: input,
+    outputBuffer: output,
     operation: addFn,
     identityElement: 0,
   });
-
   return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
