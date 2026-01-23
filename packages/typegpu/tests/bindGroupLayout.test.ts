@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, {
+import {
+  d,
+  tgpu,
   type TgpuBindGroupLayout,
   type TgpuBuffer,
   type TgpuTextureView,

@@ -35,7 +35,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
@@ -115,7 +115,7 @@ export function accessProp(
       new InfixDispatch(
         propName,
         target,
-        infixOperators[propName as InfixOperator][$internal].gpuImpl,
+        infixOperators[propName as InfixOperator][$gpuCallable].call,
       ),
       UnknownData,
       /* origin */ target.origin,

@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { add, cos, dot, normalize, sin } from 'typegpu/std';
 import type { Line3 } from './schemas.ts';
 

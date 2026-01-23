@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -116,7 +114,7 @@ function createPipelineForFormat(format: TestFormat) {
   });
 
   const pipeline = root['~unstable']
-    .withVertex(fullScreenTriangle)
+    .withVertex(common.fullScreenTriangle)
     .withFragment(fragmentFunction, { format: presentationFormat })
     .createPipeline();
 

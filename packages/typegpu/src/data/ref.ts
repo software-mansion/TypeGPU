@@ -1,11 +1,14 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { WgslTypeError } from '../errors.ts';
-import { inCodegenMode } from '../execMode.ts';
 import { setName } from '../shared/meta.ts';
-import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../types.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../shared/symbols.ts';
+import type { DualFn, ResolutionCtx, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
-import type { DualFn } from './dualFn.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
 import {
@@ -44,64 +47,50 @@ export interface ref<T> {
   $: T;
 }
 
-// biome has issues with this type being inline
-type RefFn = <T>(value: T) => ref<T>;
+type RefFn = DualFn<(<T>(value: T) => ref<T>)> & { [$internal]: true };
 
 export const ref = (() => {
-  const gpuImpl = (value: Snippet) => {
-    if (value.origin === 'argument') {
-      throw new WgslTypeError(
-        stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
-      );
-    }
-
-    if (value.dataType.type === 'ptr') {
-      // This can happen if we take a reference of an *implicit* pointer, one
-      // made by assigning a reference to a `const`.
-      return snip(value.value, explicitFrom(value.dataType), value.origin);
-    }
-
-    /**
-     * Pointer type only exists if the ref was created from a reference (buttery-butter).
-     *
-     * @example
-     * ```ts
-     * const life = ref(42); // created from a value
-     * const boid = ref(layout.$.boids[0]); // created from a reference
-     * ```
-     */
-    const ptrType = createPtrFromOrigin(
-      value.origin,
-      value.dataType as StorableData,
-    );
-    return snip(
-      new RefOperator(value, ptrType),
-      ptrType ?? UnknownData,
-      /* origin */ 'runtime',
-    );
-  };
-
-  const jsImpl = <T>(value: T) => new refImpl(value);
-
-  const impl = <T>(value: T) => {
-    if (inCodegenMode()) {
-      return gpuImpl(value as Snippet);
-    }
-    return jsImpl(value);
-  };
+  const impl = (<T>(value: T) => new refImpl(value)) as unknown as RefFn;
 
   setName(impl, 'ref');
   impl.toString = () => 'ref';
-  Object.defineProperty(impl, $internal, {
-    value: {
-      jsImpl,
-      gpuImpl,
-      strictSignature: undefined,
-      argConversionHint: 'keep',
-    },
-  });
+  impl[$internal] = true;
+  impl[$gpuCallable] = {
+    call(_ctx, [value]) {
+      if (value.origin === 'argument') {
+        throw new WgslTypeError(
+          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
+        );
+      }
 
-  return impl as unknown as DualFn<RefFn>;
+      if (value.dataType.type === 'ptr') {
+        // This can happen if we take a reference of an *implicit* pointer, one
+        // made by assigning a reference to a `const`.
+        return snip(value.value, explicitFrom(value.dataType), value.origin);
+      }
+
+      /**
+       * Pointer type only exists if the ref was created from a reference (buttery-butter).
+       *
+       * @example
+       * ```ts
+       * const life = ref(42); // created from a value
+       * const boid = ref(layout.$.boids[0]); // created from a reference
+       * ```
+       */
+      const ptrType = createPtrFromOrigin(
+        value.origin,
+        value.dataType as StorableData,
+      );
+      return snip(
+        new RefOperator(value, ptrType),
+        ptrType ?? UnknownData,
+        /* origin */ 'runtime',
+      );
+    },
+  };
+
+  return impl;
 })();
 
 export function isRef<T>(value: unknown | ref<T>): value is ref<T> {

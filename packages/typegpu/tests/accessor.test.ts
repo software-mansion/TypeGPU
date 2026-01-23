@@ -1,8 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import { d, std, tgpu } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 const RED = d.vec3f(1, 0, 0);

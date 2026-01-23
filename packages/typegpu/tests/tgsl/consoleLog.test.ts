@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -599,8 +598,7 @@ describe('wgslGenerator with console.log', () => {
       - <root>
       - computePipeline:pipeline
       - computePipelineCore
-      - computeFn:fn
-      - fn:consoleLog: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
+      - computeFn:fn: Logged data needs to fit in 252 bytes (one of the logs requires 256 bytes). Consider increasing the limit by passing appropriate options to tgpu.init().]
     `);
   });
 

@@ -28,15 +28,20 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
-import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
+import type {
+  MapValueToSnippet,
+  ResolvedSnippet,
+  Snippet,
+} from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
-  type AnyWgslData,
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
 import {
+  $cast,
+  $gpuCallable,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -47,6 +52,7 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import type { Infer } from './shared/repr.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -346,6 +352,30 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
+export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
+  [$gpuCallable]: {
+    strictSignature?:
+      | { argTypes: AnyData[]; returnType: AnyData }
+      | undefined;
+    call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
+  };
+}
+
+export function isGPUCallable(value: unknown): value is GPUCallable {
+  return !!(value as GPUCallable)?.[$gpuCallable];
+}
+
+export type WithCast<T = AnyData> = GPUCallable<[v?: Infer<T>]> & {
+  readonly [$cast]: (v?: Infer<T> | undefined) => Infer<T>;
+};
+
+export function hasCast(value: unknown): value is WithCast {
+  return !!(value as WithCast)?.[$cast];
+}
+
+type AnyFn = (...args: never[]) => unknown;
+export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
+
 export function isKnownAtComptime(snippet: Snippet): boolean {
   return (typeof snippet.value !== 'string' ||
     snippet.dataType.type === 'unknown') &&
@@ -367,21 +397,6 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type ConversionStrategy =
-  | 'keep'
-  | 'unify';
-
-/**
- * Optional hints for converting function argument types during resolution.
- * In case of tgpu functions, this is just the array of argument schemas.
- * In case of raw dualImpls (e.g. in std), this is either a function that converts the snippets appropriately,
- * or a string defining a conversion strategy.
- * The strategy 'keep' is the default.
- */
-export type FnArgsConversionHint =
-  | AnyData[]
-  | ((...args: Snippet[]) => AnyWgslData[])
-  | ConversionStrategy;
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (

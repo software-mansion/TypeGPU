@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { distSampleLayout, paramsAccess } from './types.ts';
 
 const outsideGradient = tgpu.const(d.arrayOf(d.vec3f, 5), [
