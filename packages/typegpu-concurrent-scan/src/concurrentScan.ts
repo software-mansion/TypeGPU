@@ -228,25 +228,7 @@ export function prefixScan(
   },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  const binaryOp: BinaryOp = {
-    operation: options.operation,
-    identityElement: options.identityElement,
-  };
-
-  let computer = cache.get(root)?.get(binaryOp);
-  if (!computer) {
-    computer = initCache(root, binaryOp, false);
-  }
-
-  if (timeCallback) {
-    (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
-  }
-
-  if (options.inputBuffer !== options.outputBuffer) {
-    options.outputBuffer.copyFrom(options.inputBuffer);
-    return computer.compute(options.outputBuffer);
-  }
-  return computer.compute(options.inputBuffer);
+  return runScan(root, options, false, timeCallback);
 }
 
 /**
@@ -309,6 +291,20 @@ export function scan(
   },
   timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  return runScan(root, options, true, timeCallback);
+}
+
+function runScan(
+  root: TgpuRoot,
+  options: {
+    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    operation: BinaryOp['operation'];
+    identityElement: BinaryOp['identityElement'];
+  },
+  onlyGreatestElement: boolean,
+  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
   const binaryOp: BinaryOp = {
     operation: options.operation,
     identityElement: options.identityElement,
@@ -316,7 +312,7 @@ export function scan(
 
   let computer = cache.get(root)?.get(binaryOp);
   if (!computer) {
-    computer = initCache(root, binaryOp, true);
+    computer = initCache(root, binaryOp, onlyGreatestElement);
   }
 
   if (timeCallback) {
