@@ -20,7 +20,12 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { $gpuCallable, isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $providing,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
@@ -41,6 +46,8 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { isGenericFn } from '../core/function/tgpuFn.ts';
+import type { SlotValuePair } from '../core/slot/slotTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -591,31 +598,49 @@ ${this.ctx.pre}}`;
         }
       }
 
-      if (!isMarkedInternal(callee.value)) {
-        const args = argNodes.map((arg) => this.expression(arg));
-        const shellless = this.ctx.shelllessRepo.get(
-          callee.value as (...args: never[]) => unknown,
-          args,
-        );
-        if (shellless) {
-          const converted = args.map((s, idx) => {
-            const argType = shellless.argTypes[idx] as AnyData;
-            return tryConvertSnippet(
-              this.ctx,
-              s,
-              argType,
-              /* verbose */ false,
-            );
-          });
+      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
+        const slotPairs: SlotValuePair[] = isGenericFn(callee.value)
+          ? (callee.value[$providing]?.pairs ?? [])
+          : [];
+        const callback = isGenericFn(callee.value)
+          ? callee.value[$internal].inner
+          : (callee.value as (...args: never[]) => unknown);
 
-          return this.ctx.withResetIndentLevel(() => {
-            const snippet = this.ctx.resolve(shellless);
-            return snip(
-              stitch`${snippet.value}(${converted})`,
-              snippet.dataType,
-              /* origin */ 'runtime',
+        const shelllessCall = this.ctx.withSlots(
+          slotPairs,
+          (): Snippet | undefined => {
+            const args = argNodes.map((arg) => this.expression(arg));
+            const shellless = this.ctx.shelllessRepo.get(
+              callback,
+              args,
             );
-          });
+            if (!shellless) {
+              return undefined;
+            }
+
+            const converted = args.map((s, idx) => {
+              const argType = shellless.argTypes[idx] as AnyData;
+              return tryConvertSnippet(
+                this.ctx,
+                s,
+                argType,
+                /* verbose */ false,
+              );
+            });
+
+            return this.ctx.withResetIndentLevel(() => {
+              const snippet = this.ctx.resolve(shellless);
+              return snip(
+                stitch`${snippet.value}(${converted})`,
+                snippet.dataType,
+                /* origin */ 'runtime',
+              );
+            });
+          },
+        );
+
+        if (shelllessCall) {
+          return shelllessCall;
         }
       }
 
