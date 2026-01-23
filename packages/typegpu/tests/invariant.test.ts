@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.ts';
 
 describe('invariant', () => {
   it('adds @invariant attribute to position builtin', () => {
@@ -8,12 +7,7 @@ describe('invariant', () => {
       position: d.invariant(d.builtin.position),
     });
 
-    const resolved = tgpu.resolve({
-      externals: { s1 },
-      names: 'strict',
-    });
-
-    expect(resolved).toContain(
+    expect(tgpu.resolve([s1])).toContain(
       '@invariant @builtin(position) position: vec4f',
     );
   });
@@ -42,10 +36,7 @@ describe('invariant', () => {
       color: d.vec4f,
     });
 
-    const resolved = tgpu.resolve({
-      externals: { VertexOutput },
-      names: 'strict',
-    });
+    const resolved = tgpu.resolve([VertexOutput]);
 
     expect(resolved).toContain('@invariant @builtin(position) pos: vec4f');
     expect(resolved).toContain('color: vec4f');

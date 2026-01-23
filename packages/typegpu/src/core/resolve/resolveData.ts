@@ -16,7 +16,6 @@ import {
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
-  BaseData,
   Bool,
   F16,
   F32,
@@ -43,7 +42,6 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { isValidIdentifier } from '../../nameRegistry.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -120,15 +118,10 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
  */
 function resolveStructProperty(
   ctx: ResolutionCtx,
-  [key, property]: [string, BaseData],
+  [key, property]: [string, AnyData],
 ) {
-  if (!isValidIdentifier(key)) {
-    throw new Error(
-      `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-    );
-  }
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData).value
+    ctx.resolve(property).value
   },\n`;
 }
 
@@ -148,7 +141,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(struct.propTypes as Record<string, BaseData>)
+    Object.entries(struct.propTypes)
       .map((prop) => resolveStructProperty(ctx, prop))
       .join('')
   }\
@@ -178,7 +171,7 @@ function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(unstruct.propTypes as Record<string, BaseData>)
+    Object.entries(unstruct.propTypes)
       .map((prop) =>
         isAttribute(prop[1])
           ? resolveStructProperty(ctx, [

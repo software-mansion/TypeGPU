@@ -1,7 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { $repr } from '../shared/symbols.ts';
-import { type AnyData, undecorate } from './dataTypes.ts';
+import { $internal, $repr } from '../shared/symbols.ts';
+import type { AnyData } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -310,24 +310,33 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const construct = dualImpl({
     name: type,
     signature: (...args) => ({
-      argTypes: args.map((arg) => {
-        const argType = undecorate(arg);
-        return isVec(argType) ? argType : primitive;
-      }),
+      argTypes: args.map((arg) => isVec(arg) ? arg : primitive),
       returnType: schema as AnyData,
     }),
     normalImpl: cpuConstruct,
     ignoreImplicitCastWarning: true,
-    codegenImpl: (...args) => stitch`${type}(${args})`,
+    codegenImpl: (_ctx, args) => {
+      if (args.length === 1 && args[0]?.dataType === schema) {
+        // Already typed as the schema
+        return stitch`${args[0]}`;
+      }
+      return stitch`${type}(${args})`;
+    },
   });
 
   const schema:
     & VecSchemaBase<TValue>
     & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+      [$internal]: {},
       type,
       primitive,
       [$repr]: undefined as TValue,
     });
+
+  // TODO: Remove workaround
+  // it's a workaround for circular dependencies caused by us using schemas in the shader generator
+  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  (VecImpl.prototype as any).schema = schema;
 
   return schema;
 }

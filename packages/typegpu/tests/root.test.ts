@@ -1,7 +1,6 @@
 import { describe, expect, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
@@ -193,7 +192,7 @@ describe('TgpuRoot', () => {
     const mainVertexUsing = tgpu['~unstable'].vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
-      layout.bound.foo.value;
+      layout.$.foo;
       return {
         pos: d.vec4f(),
       };

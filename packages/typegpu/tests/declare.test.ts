@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { asWgsl } from './utils/parseResolved.ts';
+import { d, tgpu } from '../src/index.ts';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
@@ -12,7 +10,7 @@ describe('tgpu.declare', () => {
     const empty = tgpu.fn([])`() { /* do nothing */ }`
       .$uses({ declaration });
 
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
 
       fn empty() { /* do nothing */ }"
@@ -27,7 +25,7 @@ describe('tgpu.declare', () => {
     const empty = tgpu.fn([])`() { declaration }`
       .$uses({ declaration });
 
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
 
       fn empty() {  }"
@@ -46,7 +44,7 @@ struct Output {
     const empty = tgpu.fn([])`() { /* do nothing */ }`
       .$uses({ decl1, decl2 });
 
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
 
       struct Output {
@@ -67,7 +65,7 @@ struct Output {
     const empty = tgpu.fn([])`() { /* do nothing */ }`
       .$uses({ declaration });
 
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output { x: u32 }
 
       @group(0) @binding(0) var<uniform> val: f32;
@@ -88,7 +86,7 @@ struct Output {
     const empty = tgpu.fn([])`() { /* do nothing */ }`
       .$uses({ declaration });
 
-    expect(asWgsl(empty)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output {
         x: u32,
       }
@@ -109,11 +107,11 @@ struct Output {
       return 2;
     });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
 
       fn main() -> f32 {
-        ;
+
         return 2f;
       }"
     `);

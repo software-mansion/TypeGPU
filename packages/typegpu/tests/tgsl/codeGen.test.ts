@@ -1,10 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import { asWgsl } from '../utils/parseResolved.ts';
 
-// Library entrypoints
-import { tgpu } from '../../src/index.ts';
-import * as d from '../../src/data/index.ts';
+import tgpu, { d } from '../../src/index.ts';
 
 describe('codeGen', () => {
   describe('vectors', () => {
@@ -14,7 +11,7 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
           return 6f;
         }"
@@ -27,12 +24,31 @@ describe('codeGen', () => {
         return size.x * size.y * size.z;
       });
 
-      expect(asWgsl(main)).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
           var size = vec3f(1, 2, 3);
           return ((size.x * size.y) * size.z);
         }"
       `);
     });
+  });
+
+  it('should properly resolve the "this" keyword', ({ root }) => {
+    class MyController {
+      myBuffer = root.createUniform(d.u32);
+      myFn = tgpu.fn([], d.u32)(() => {
+        return this.myBuffer.$;
+      });
+    }
+
+    const myController = new MyController();
+
+    expect(tgpu.resolve([myController.myFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> myBuffer: u32;
+
+      fn myFn() -> u32 {
+        return myBuffer;
+      }"
+    `);
   });
 });

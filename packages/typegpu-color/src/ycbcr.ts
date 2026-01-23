@@ -27,5 +27,5 @@ export const rgbToYcbcrMatrix = tgpu.const(
 );
 
 export const rgbToYcbcr = tgpu.fn([vec3f], vec3f)((rgb) =>
-  mul(rgb, rgbToYcbcrMatrix.value)
+  mul(rgb, rgbToYcbcrMatrix.$)
 );

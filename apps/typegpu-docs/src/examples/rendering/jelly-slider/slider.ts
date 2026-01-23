@@ -8,8 +8,7 @@ import type {
   TgpuTexture,
   TgpuUniform,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const BEZIER_TEXTURE_SIZE = [256, 128] as const;
 
@@ -398,7 +397,6 @@ export class Slider {
   }
 
   #computeControlPoints() {
-    const eps = 1e-6;
     for (let i = 0; i < this.n - 1; i++) {
       const A = this.#pos[i];
       const B = this.#pos[i + 1];

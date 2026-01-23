@@ -1,9 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 
-import { tgpu } from '../../src/index.ts';
-import * as d from '../../src/data/index.ts';
-import * as std from '../../src/std/index.ts';
+import tgpu, { d, std } from '../../src/index.ts';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {
@@ -15,25 +13,19 @@ describe('extension based pruning', () => {
       }
     });
 
-    expect(tgpu.resolve({
-      externals: { someFn },
-      enableExtensions: ['f16'],
-    })).toMatchInlineSnapshot(`
-      "enable f16;
+    expect(tgpu.resolve([someFn], { enableExtensions: ['f16'] }))
+      .toMatchInlineSnapshot(`
+        "enable f16;
 
-      fn someFn_0() -> f32 {
-        {
-          return 6.599609375f;
-        }
-      }"
-    `);
+        fn someFn() -> f32 {
+          {
+            return 6.599609375f;
+          }
+        }"
+      `);
 
-    expect(
-      tgpu.resolve({
-        externals: { someFn },
-      }),
-    ).toMatchInlineSnapshot(`
-      "fn someFn_0() -> f32 {
+    expect(tgpu.resolve([someFn])).toMatchInlineSnapshot(`
+      "fn someFn() -> f32 {
         {
           return 16.5f;
         }

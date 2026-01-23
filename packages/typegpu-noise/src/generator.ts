@@ -1,13 +1,12 @@
-import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
-  seed: TgpuFn<(seed: d.F32) => d.Void>;
-  seed2: TgpuFn<(seed: d.Vec2f) => d.Void>;
-  seed3: TgpuFn<(seed: d.Vec3f) => d.Void>;
-  seed4: TgpuFn<(seed: d.Vec4f) => d.Void>;
-  sample: TgpuFn<() => d.F32>;
+  seed?: (seed: number) => void;
+  seed2?: (seed: d.v2f) => void;
+  seed3?: (seed: d.v3f) => void;
+  seed4?: (seed: d.v4f) => void;
+  sample: () => number;
 }
 
 export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
@@ -21,29 +20,29 @@ export const BPETER: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.value = d.vec2f(value, 0);
+      seed.$ = d.vec2f(value, 0);
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.value = value;
+      seed.$ = d.vec2f(value);
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.value = add(value.xy, d.vec2f(value.z));
+      seed.$ = add(value.xy, d.vec2f(value.z));
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.value = add(value.xy, value.zw);
+      seed.$ = add(value.xy, value.zw);
     }),
 
     sample: randomGeneratorShell(() => {
       'use gpu';
-      const a = dot(seed.value, d.vec2f(23.14077926, 232.61690225));
-      const b = dot(seed.value, d.vec2f(54.47856553, 345.84153136));
-      seed.value.x = fract(cos(a) * 136.8168);
-      seed.value.y = fract(cos(b) * 534.7645);
-      return seed.value.y;
-    }),
+      const a = dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = fract(cos(a) * 136.8168);
+      seed.$.y = fract(cos(b) * 534.7645);
+      return seed.$.y;
+    }).$name('sample'),
   };
 })();
 

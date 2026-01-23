@@ -1,7 +1,6 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
-import type { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, type TgpuRoot } from 'typegpu';
 import { modelVertexLayout } from './schemas.ts';
 
 export async function loadModel(
@@ -50,11 +49,7 @@ export async function loadModel(
     .$usage('sampled', 'render')
     .$name(`texture from ${texturePath}`);
 
-  root.device.queue.copyExternalImageToTexture(
-    { source: imageBitmap },
-    { texture: root.unwrap(texture) },
-    [imageBitmap.width, imageBitmap.height],
-  );
+  texture.write(imageBitmap);
 
   return {
     vertexBuffer,

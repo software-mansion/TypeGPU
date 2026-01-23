@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import {
   ioLayout,
   type LayerData,
@@ -425,12 +423,7 @@ export const controls = {
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () =>
       [defaultCompute, subgroupCompute]
-        .map((fn) =>
-          tgpu.resolve({
-            externals: { fn },
-            enableExtensions: ['subgroups'],
-          })
-        )
+        .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
 };

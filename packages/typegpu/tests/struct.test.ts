@@ -19,8 +19,8 @@ import {
   vec3u,
 } from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
+import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { frexp } from '../src/std/numeric.ts';
 
 describe('struct', () => {
@@ -309,7 +309,7 @@ describe('struct', () => {
       const defaultValue = Outer();
     });
 
-    expect(asWgsl(testFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFunction])).toMatchInlineSnapshot(`
       "struct Nested {
         prop1: vec2f,
         prop2: u32,
@@ -337,7 +337,7 @@ describe('struct', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct TestStruct {
         x: u32,
         y: f32,
@@ -363,7 +363,7 @@ describe('struct', () => {
       return;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct TestStruct {
         x: u32,
         y: f32,
@@ -371,10 +371,70 @@ describe('struct', () => {
 
       fn testFn() {
         var myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
-        var myClone = myStructs[0];
+        var myClone = myStructs[0i];
         return;
       }"
     `);
+  });
+
+  it('throws when struct prop has whitespace in name', () => {
+    expect(() => struct({ 'my prop': f32 }))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
+      );
+  });
+
+  it('throws when struct prop uses a reserved word', () => {
+    expect(() => struct({ struct: f32 }))
+      .toThrowErrorMatchingInlineSnapshot(
+        `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
+      );
+  });
+
+  it('allows builtin names as struct props', () => {
+    const myStruct = struct({
+      min: u32,
+      fract: f32,
+      subgroupAdd: i32,
+    });
+    expect(tgpu.resolve([myStruct])).toMatchInlineSnapshot(`
+      "struct myStruct {
+        min: u32,
+        fract: f32,
+        subgroupAdd: i32,
+      }"
+    `);
+  });
+});
+
+describe('WgslStruct', () => {
+  it('default struct has sane properties (not any or never)', () => {
+    const foo = d.struct({}) as d.WgslStruct;
+
+    expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
+    expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.AnyWgslData>>();
+  });
+
+  it('accepts every struct by default', () => {
+    const foo = (_aStruct: d.WgslStruct) => {
+      // Does something with the struct...
+    };
+
+    foo(d.struct({}));
+    foo(d.struct({ a: d.f32 }));
+  });
+
+  it('accepts structs with more properties', () => {
+    const foo = (_aStruct: d.WgslStruct<{ a: d.F32 }>) => {
+      // Does something with the struct...
+    };
+
+    // @ts-expect-error: It doesn't have the 'a' property
+    (() => foo(d.struct({})));
+    // Exact match
+    foo(d.struct({ a: d.f32 }));
+    // Extra properties
+    foo(d.struct({ a: d.f32, b: d.u32 }));
   });
 });
 
@@ -386,7 +446,7 @@ describe('abstruct', () => {
       return result.exp;
     });
 
-    expect(asWgsl(testFn)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(x: f32) -> f32 {
         var result = frexp(x);
         return f32(result.exp);

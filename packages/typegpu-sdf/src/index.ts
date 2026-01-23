@@ -1,5 +1,3 @@
-export * from './operators.ts';
-
 export {
   sdBezier,
   sdBezierApprox,
@@ -9,6 +7,7 @@ export {
   sdPie,
   sdRoundedBox2d,
 } from './2d.ts';
+
 export {
   sdBox3d,
   sdBoxFrame3d,
@@ -18,3 +17,12 @@ export {
   sdRoundedBox3d,
   sdSphere,
 } from './3d.ts';
+
+export {
+  opExtrudeX,
+  opExtrudeY,
+  opExtrudeZ,
+  opSmoothDifference,
+  opSmoothUnion,
+  opUnion,
+} from './operators.ts';

@@ -17,68 +17,51 @@ describe('chroma keying example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var sampling_0: sampler;
+      "struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
 
-      @group(0) @binding(1) var<uniform> color_1: vec3f;
-
-      @group(0) @binding(2) var<uniform> threshold_2: f32;
-
-      @group(0) @binding(3) var<uniform> uvTransform_3: mat2x2f;
-
-      @group(1) @binding(0) var inputTexture_4: texture_external;
-
-      struct VertexOutput_5 {
-        @builtin(position) position: vec4f,
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      const rgbToYcbcrMatrix_6: mat3x3f = mat3x3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464, -0.16873599588871002, -0.3312639892101288, 0.5, 0.5, -0.41868799924850464, -0.08131200075149536);
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-      @vertex
-      fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput_5 {
-        const pos = array(
-          vec2( 1.0,  1.0),
-          vec2( 1.0, -1.0),
-          vec2(-1.0, -1.0),
-          vec2( 1.0,  1.0),
-          vec2(-1.0, -1.0),
-          vec2(-1.0,  1.0),
-        );
-
-        const uv = array(
-          vec2(1.0, 0.0),
-          vec2(1.0, 1.0),
-          vec2(0.0, 1.0),
-          vec2(1.0, 0.0),
-          vec2(0.0, 1.0),
-          vec2(0.0, 0.0),
-        );
-
-        var output: VertexOutput_5;
-        output.position = vec4(pos[idx], 0.0, 1.0);
-        output.uv = uv[idx];
-        return output;
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @fragment
-      fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-        let uv2 = uvTransform_3 * (uv - vec2f(0.5)) + vec2f(0.5);
-        var col = textureSampleBaseClampToEdge(inputTexture_4, sampling_0, uv2);
-        let ycbcr = col.rgb * rgbToYcbcrMatrix_6;
-        let colycbcr = color_1 * rgbToYcbcrMatrix_6;
+      @group(0) @binding(0) var<uniform> uvTransform: mat2x2f;
 
-        let crDiff = abs(ycbcr.g - colycbcr.g);
-        let cbDiff = abs(ycbcr.b - colycbcr.b);
-        let distance = length(vec2f(crDiff, cbDiff));
+      @group(1) @binding(0) var inputTexture: texture_external;
 
-        if (distance < pow(threshold_2, 2)) {
-          col = vec4f();
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      const rgbToYcbcrMatrix: mat3x3f = mat3x3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464, -0.16873599588871002, -0.3312639892101288, 0.5, 0.5, -0.41868799924850464, -0.08131200075149536);
+
+      @group(0) @binding(2) var<uniform> color: vec3f;
+
+      @group(0) @binding(3) var<uniform> threshold: f32;
+
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        var uv2 = ((uvTransform * (_arg_0.uv - 0.5)) + 0.5);
+        var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
+        var ycbcr = (col.xyz * rgbToYcbcrMatrix);
+        var colycbcr = (color * rgbToYcbcrMatrix);
+        let crDiff = abs((ycbcr.y - colycbcr.y));
+        let cbDiff = abs((ycbcr.z - colycbcr.z));
+        let distance_1 = length(vec2f(crDiff, cbDiff));
+        if ((distance_1 < pow(threshold, 2f))) {
+          return vec4f();
         }
-
         return col;
-      }
-
-      "
+      }"
     `);
   });
 });

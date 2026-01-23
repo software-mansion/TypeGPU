@@ -1,13 +1,13 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import * as d from '../src/data/index.ts';
-import tgpu, {
+import {
+  d,
   MissingBindGroupsError,
+  tgpu,
   type TgpuComputePipeline,
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
-import { asWgsl } from './utils/parseResolved.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
@@ -37,7 +37,7 @@ describe('TgpuComputePipeline', () => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
     const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
-      layout.bound.alpha; // Using an entry of the layout
+      layout.$.alpha; // Using an entry of the layout
     });
 
     const pipeline = root.withCompute(entryFn).createPipeline();
@@ -62,7 +62,7 @@ describe('TgpuComputePipeline', () => {
       .withCompute(main)
       .createPipeline();
 
-    expect(asWgsl(computePipeline)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(32) fn main() {
 
       }"
@@ -335,7 +335,7 @@ describe('TgpuComputePipeline', () => {
 
       const entryFn = tgpu['~unstable']
         .computeFn({ workgroupSize: [1] })(() => {
-          layout.bound.data;
+          layout.$.data;
         })
         .$uses({ layout });
 
@@ -496,11 +496,11 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f32, 3>();
       }"
     `);
@@ -541,17 +541,17 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input_1 {
+      struct fn_Input {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn fn_0(_arg_0: fn_Input_1) {
+      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
         var a = array<f16, 3>();
         {
-          a[0] = f16(_arg_0.gid.x);
+          a[0i] = f16(_arg_0.gid.x);
         }
         {
-          a[1] = 1h;
+          a[1i] = 1h;
         }
 
       }"

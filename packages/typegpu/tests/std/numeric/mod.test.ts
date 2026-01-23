@@ -28,9 +28,7 @@ import type {
   v4u,
 } from '../../../src/data/wgslTypes.ts';
 import { isCloseTo, mod } from '../../../src/std/index.ts';
-import tgpu from '../../../src/index.ts';
-import * as d from '../../../src/data/index.ts';
-import { asWgsl } from '../../utils/parseResolved.ts';
+import tgpu, { d } from '../../../src/index.ts';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {
@@ -331,7 +329,7 @@ describe('mod parseResolved test', () => {
       return mod(a, b);
     });
 
-    expect(asWgsl(modFunction)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([modFunction])).toMatchInlineSnapshot(`
       "fn modFunction(a: vec2f, b: vec2f) -> vec2f {
         return (a % b);
       }"
@@ -342,7 +340,7 @@ describe('mod parseResolved test', () => {
     const modScalarVec = tgpu.fn([d.f32, d.vec3f], d.vec3f)((scalar, vec) => {
       return mod(scalar, vec);
     });
-    expect(asWgsl(modScalarVec)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([modScalarVec])).toMatchInlineSnapshot(`
       "fn modScalarVec(scalar: f32, vec: vec3f) -> vec3f {
         return (scalar % vec);
       }"

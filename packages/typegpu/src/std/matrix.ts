@@ -1,6 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { snip } from '../data/snippet.ts';
 import {
+  mat4x4f,
   rotationX4,
   rotationY4,
   rotationZ4,
@@ -8,26 +8,17 @@ import {
   translation4,
 } from '../data/matrix.ts';
 import type { m4x4f, v3f } from '../data/wgslTypes.ts';
-import { createDualImpl } from '../core/function/dualImpl.ts';
+import { dualImpl } from '../core/function/dualImpl.ts';
 import { mul } from './operators.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
+import { vec3f } from '../data/vector.ts';
+import { f32 } from '../data/numeric.ts';
 
-const cpuMul = mul[$internal].jsImpl;
-
-const cpuTranslation4 = translation4[$internal].jsImpl;
-const gpuTranslation4 = translation4[$internal].gpuImpl;
-
-const cpuScaling4 = scaling4[$internal].jsImpl;
-const gpuScaling4 = scaling4[$internal].gpuImpl;
-
-const cpuRotationX4 = rotationX4[$internal].jsImpl;
-const gpuRotationX4 = rotationX4[$internal].gpuImpl;
-
-const cpuRotationY4 = rotationY4[$internal].jsImpl;
-const gpuRotationY4 = rotationY4[$internal].gpuImpl;
-
-const cpuRotationZ4 = rotationZ4[$internal].jsImpl;
-const gpuRotationZ4 = rotationZ4[$internal].gpuImpl;
+const gpuTranslation4 = translation4[$gpuCallable].call;
+const gpuScaling4 = scaling4[$gpuCallable].call;
+const gpuRotationX4 = rotationX4[$gpuCallable].call;
+const gpuRotationY4 = rotationY4[$gpuCallable].call;
+const gpuRotationZ4 = rotationZ4[$gpuCallable].call;
 
 /**
  * Translates the given 4-by-4 matrix by the given vector.
@@ -35,14 +26,13 @@ const gpuRotationZ4 = rotationZ4[$internal].gpuImpl;
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} The translated matrix.
  */
-export const translate4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, vector: v3f) => cpuMul(cpuTranslation4(vector), matrix),
-  // GPU implementation
-  (matrix, vector) =>
-    snip(stitch`(${gpuTranslation4(vector)} * ${matrix})`, matrix.dataType),
-  'translate4',
-);
+export const translate4 = dualImpl({
+  name: 'translate4',
+  normalImpl: (matrix: m4x4f, vector: v3f) => mul(translation4(vector), matrix),
+  signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
+  codegenImpl: (ctx, [matrix, vector]) =>
+    stitch`(${gpuTranslation4(ctx, [vector])} * ${matrix})`,
+});
 
 /**
  * Scales the given 4-by-4 matrix in each dimension by an amount given by the corresponding entry in the given vector.
@@ -50,14 +40,15 @@ export const translate4 = createDualImpl(
  * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
  * @returns {m4x4f} The scaled matrix.
  */
-export const scale4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, vector: v3f) => cpuMul(cpuScaling4(vector), matrix),
-  // GPU implementation
-  (matrix, vector) =>
-    snip(stitch`(${(gpuScaling4(vector))} * ${matrix})`, matrix.dataType),
-  'scale4',
-);
+export const scale4 = dualImpl({
+  name: 'scale4',
+  normalImpl: (matrix: m4x4f, vector: v3f) => mul(scaling4(vector), matrix),
+  signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
+  codegenImpl: (ctx, [matrix, vector]) =>
+    stitch`(${(gpuScaling4(ctx, [vector]))} * ${matrix})`,
+});
+
+const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
 
 /**
  * Rotates the given 4-by-4 matrix around the x-axis by the given angle.
@@ -65,14 +56,13 @@ export const scale4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateX4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationX4(angle), matrix),
-  // GPU implementation
-  (matrix, angle) =>
-    snip(stitch`(${(gpuRotationX4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateX4',
-);
+export const rotateX4 = dualImpl({
+  name: 'rotateX4',
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationX4(angle), matrix),
+  signature: rotateSignature,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationX4(ctx, [angle]))} * ${matrix})`,
+});
 
 /**
  * Rotates the given 4-by-4 matrix around the y-axis by the given angle.
@@ -80,14 +70,13 @@ export const rotateX4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateY4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationY4(angle), matrix),
-  // GPU implementation
-  (matrix, angle) =>
-    snip(stitch`(${(gpuRotationY4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateY4',
-);
+export const rotateY4 = dualImpl({
+  name: 'rotateY4',
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationY4(angle), matrix),
+  signature: rotateSignature,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationY4(ctx, [angle]))} * ${matrix})`,
+});
 
 /**
  * Rotates the given 4-by-4 matrix around the z-axis by the given angle.
@@ -95,11 +84,10 @@ export const rotateY4 = createDualImpl(
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateZ4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, angle: number) => cpuMul(cpuRotationZ4(angle), matrix),
-  // GPU implementation
-  (matrix, angle) =>
-    snip(stitch`(${(gpuRotationZ4(angle))} * ${matrix})`, matrix.dataType),
-  'rotateZ4',
-);
+export const rotateZ4 = dualImpl({
+  name: 'rotateZ4',
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationZ4(angle), matrix),
+  signature: rotateSignature,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationZ4(ctx, [angle]))} * ${matrix})`,
+});

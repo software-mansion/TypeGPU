@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {
@@ -304,7 +302,7 @@ function render() {
     {
       colorAttachments: [],
       depthStencilAttachment: {
-        view: root.unwrap(shadowTextures.shadowMap).createView(),
+        view: root.unwrap(shadowTextures.shadowMap),
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
         depthClearValue: 1.0,
@@ -325,15 +323,15 @@ function render() {
     {
       colorAttachments: [
         {
-          view: root.unwrap(canvasTextures.msaa).createView(),
-          resolveTarget: context.getCurrentTexture().createView(),
+          view: root.unwrap(canvasTextures.msaa),
+          resolveTarget: context.getCurrentTexture(),
           loadOp: 'clear',
           storeOp: 'store',
           clearValue: [0, 0, 0, 0],
         },
       ],
       depthStencilAttachment: {
-        view: root.unwrap(canvasTextures.depth).createView(),
+        view: root.unwrap(canvasTextures.depth),
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
         depthClearValue: 1,

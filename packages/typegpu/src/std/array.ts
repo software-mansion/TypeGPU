@@ -2,6 +2,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
+import { isRef, type ref } from '../data/ref.ts';
 import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 
 const sizeOfPointedToArray = (dataType: unknown) =>
@@ -18,8 +19,9 @@ export const arrayLength = dualImpl({
       returnType: sizeOfPointedToArray(ptrArg) > 0 ? abstractInt : u32,
     });
   },
-  normalImpl: (a: unknown[]) => a.length,
-  codegenImpl(a) {
+  normalImpl: (a: unknown[] | ref<unknown[]>) =>
+    isRef(a) ? a.$.length : a.length,
+  codegenImpl(_ctx, [a]) {
     const length = sizeOfPointedToArray(a.dataType);
     return length > 0 ? String(length) : stitch`arrayLength(${a})`;
   },

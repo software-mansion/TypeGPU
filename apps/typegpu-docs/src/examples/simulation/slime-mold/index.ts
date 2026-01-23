@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
+import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -60,7 +58,7 @@ root['~unstable'].createGuardedComputePipeline((x) => {
 const params = root.createUniform(Params, defaultParams);
 const deltaTime = root.createUniform(d.f32, 0.016);
 
-const textures = [0, 1].map((i) =>
+const textures = [0, 1].map(() =>
   root['~unstable']
     .createTexture({
       size: [resolution.x, resolution.y],

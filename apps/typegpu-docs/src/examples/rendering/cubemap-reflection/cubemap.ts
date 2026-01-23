@@ -1,5 +1,4 @@
-import type { TgpuTexture } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, type TgpuTexture } from 'typegpu';
 import { CubeVertex } from './dataTypes.ts';
 
 function vert(position: [number, number, number], uv: [number, number]) {
@@ -74,7 +73,7 @@ export async function loadCubemap(
   chosenCubemap: CubemapNames,
 ) {
   const images = await Promise.all(
-    getCubemapUrls(chosenCubemap).map(async (url, i) => {
+    getCubemapUrls(chosenCubemap).map(async (url) => {
       const response = await fetch(url);
       const blob = await response.blob();
       return await createImageBitmap(blob);

@@ -1,7 +1,6 @@
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import type { TgpuFn } from '../core/function/tgpuFn.ts';
 import type { TgpuNamable } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   ExtractInvalidSchemaError,
   Infer,
@@ -26,21 +25,21 @@ import type {
   $validUniformSchema,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
-import type { DualFn } from './dualFn.ts';
 import type {
   WgslExternalTexture,
   WgslStorageTexture,
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { ref } from './ref.ts';
+import type { DualFn } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface BaseData {
-  // biome-ignore lint/suspicious/noExplicitAny: we sometimes house functions on the internal object, so the type needs to be wider
-  readonly [$internal]: true | Record<string, any>;
+  readonly [$internal]: Record<string, unknown>;
   readonly type: string;
   readonly [$repr]: unknown;
 }
@@ -121,7 +120,7 @@ export interface Void extends BaseData {
   // ---
 }
 export const Void = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'void',
   toString() {
     return 'void';
@@ -785,7 +784,8 @@ export type TgpuCallable<
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, DualFn<(v?: number | boolean) => boolean> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -798,7 +798,8 @@ export interface Bool extends DualFn<(v?: number | boolean) => boolean> {
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export interface F32 extends DualFn<(v?: number | boolean) => number> {
+export interface F32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
@@ -812,7 +813,8 @@ export interface F32 extends DualFn<(v?: number | boolean) => number> {
 /**
  * 16-bit float schema representing a single WGSL f16 value.
  */
-export interface F16 extends DualFn<(v?: number | boolean) => number> {
+export interface F16
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f16';
 
   // Type-tokens, not available at runtime
@@ -826,7 +828,8 @@ export interface F16 extends DualFn<(v?: number | boolean) => number> {
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export interface I32 extends DualFn<(v?: number | boolean) => number> {
+export interface I32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'i32';
 
   // Type-tokens, not available at runtime
@@ -841,7 +844,8 @@ export interface I32 extends DualFn<(v?: number | boolean) => number> {
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export interface U32 extends DualFn<(v?: number | boolean) => number> {
+export interface U32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'u32';
 
   // Type-tokens, not available at runtime
@@ -870,6 +874,7 @@ export interface U16 extends BaseData {
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
 export interface Vec2f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2f)
     & ((xy: number) => v2f)
@@ -891,6 +896,7 @@ export interface Vec2f extends
  * Type of the `d.vec2h` object/function: vector data type schema/constructor
  */
 export interface Vec2h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2h)
     & ((xy: number) => v2h)
@@ -912,6 +918,7 @@ export interface Vec2h extends
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
 export interface Vec2i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2i)
     & ((xy: number) => v2i)
@@ -933,6 +940,7 @@ export interface Vec2i extends
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
 export interface Vec2u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2u)
     & ((xy: number) => v2u)
@@ -955,6 +963,7 @@ export interface Vec2u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec2b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean) => v2b)
     & ((xy: boolean) => v2b)
@@ -975,6 +984,7 @@ export interface Vec2b extends
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
 export interface Vec3f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3f)
     & ((xyz: number) => v3f)
@@ -998,6 +1008,7 @@ export interface Vec3f extends
  * Type of the `d.vec3h` object/function: vector data type schema/constructor
  */
 export interface Vec3h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3h)
     & ((xyz: number) => v3h)
@@ -1021,6 +1032,7 @@ export interface Vec3h extends
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
 export interface Vec3i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3i)
     & ((xyz: number) => v3i)
@@ -1044,6 +1056,7 @@ export interface Vec3i extends
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
 export interface Vec3u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3u)
     & ((xyz: number) => v3u)
@@ -1068,6 +1081,7 @@ export interface Vec3u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec3b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean, z: boolean) => v3b)
     & ((xyz: boolean) => v3b)
@@ -1090,6 +1104,7 @@ export interface Vec3b extends
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
 export interface Vec4f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4f)
     & ((xyzw: number) => v4f)
@@ -1117,6 +1132,7 @@ export interface Vec4f extends
  * Type of the `d.vec4h` object/function: vector data type schema/constructor
  */
 export interface Vec4h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4h)
     & ((xyzw: number) => v4h)
@@ -1144,6 +1160,7 @@ export interface Vec4h extends
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
 export interface Vec4i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4i)
     & ((xyzw: number) => v4i)
@@ -1171,6 +1188,7 @@ export interface Vec4i extends
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
 export interface Vec4u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4u)
     & ((xyzw: number) => v4u)
@@ -1199,6 +1217,7 @@ export interface Vec4u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec4b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean, z: boolean, w: boolean) => v4b)
     & ((xyzw: boolean) => v4b)
@@ -1289,7 +1308,7 @@ export interface Mat4x4f extends BaseData {
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its elementType.
  */
-export interface WgslArray<TElement extends BaseData = BaseData>
+export interface WgslArray<out TElement extends BaseData = BaseData>
   extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -1320,8 +1339,8 @@ export interface WgslArray<TElement extends BaseData = BaseData>
  * the `byteAlignment` requirement of its members.
  */
 export interface WgslStruct<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
-  TProps extends Record<string, BaseData> = any,
+  // @ts-expect-error: Override variance, as we want structs to behave like objects
+  out TProps extends Record<string, AnyWgslData> = Record<string, AnyWgslData>,
 > extends BaseData, TgpuNamable {
   readonly [$internal]: {
     isAbstruct: boolean;
@@ -1381,9 +1400,10 @@ export interface Ptr<
   readonly inner: TInner;
   readonly addressSpace: TAddr;
   readonly access: TAccess;
+  readonly implicit: boolean;
 
   // Type-tokens, not available at runtime
-  readonly [$repr]: Infer<TInner>;
+  readonly [$repr]: ref<Infer<TInner>>;
   readonly [$invalidSchemaReason]: 'Pointers are not host-shareable';
   // ---
 }
@@ -1460,8 +1480,8 @@ export interface Invariant {
 }
 
 export interface Decorated<
-  TInner extends BaseData = BaseData,
-  TAttribs extends unknown[] = unknown[],
+  out TInner extends BaseData = BaseData,
+  out TAttribs extends unknown[] = unknown[],
 > extends BaseData {
   readonly type: 'decorated';
   readonly inner: TInner;
@@ -1606,7 +1626,8 @@ export type StorableData =
   | ScalarData
   | VecData
   | MatData
-  | Atomic
+  | Atomic<I32>
+  | Atomic<U32>
   | WgslArray
   | WgslStruct;
 
@@ -1907,4 +1928,36 @@ export function isHalfPrecisionSchema(
       type === 'vec3h' ||
       type === 'vec4h')
   );
+}
+
+const ephemeralTypes = [
+  'abstractInt',
+  'abstractFloat',
+  'f32',
+  'f16',
+  'i32',
+  'u32',
+  'bool',
+];
+
+/**
+ * Returns true for schemas that are not naturally referential in JS (primitives).
+ * @param schema
+ * @returns
+ */
+export function isNaturallyEphemeral(schema: unknown): boolean {
+  return (
+    !isMarkedInternal(schema) ||
+    ephemeralTypes.includes((schema as BaseData)?.type)
+  );
+}
+
+export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
+  vec: T,
+): VecData | MatData {
+  // TODO: Remove workaround
+  // it's a workaround for circular dependencies caused by us using schemas in the shader generator
+  // these schema properties are assigned on the prototype of vector and matrix instances
+  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  return (vec as any).schema;
 }

@@ -10,8 +10,7 @@
  * ```
  */
 
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
 import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
 

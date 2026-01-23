@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -36,9 +34,6 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
 });
-
-const { colorPalette } = renderBindGroupLayout.bound;
-const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const paramsBuffer = root
   .createBuffer(Params)
@@ -76,10 +71,11 @@ const mainVert = tgpu['~unstable'].vertexFn({
     1.0,
   );
 
+  const colorPalette = renderBindGroupLayout.$.colorPalette;
   const color = d.vec4f(
-    std.sin(angle + colorPalette.value.x) * 0.45 + 0.45,
-    std.sin(angle + colorPalette.value.y) * 0.45 + 0.45,
-    std.sin(angle + colorPalette.value.z) * 0.45 + 0.45,
+    std.sin(angle + colorPalette.x) * 0.45 + 0.45,
+    std.sin(angle + colorPalette.y) * 0.45 + 0.45,
+    std.sin(angle + colorPalette.z) * 0.45 + 0.45,
     1.0,
   );
 
@@ -98,30 +94,31 @@ const mainCompute = tgpu['~unstable'].computeFn({
   workgroupSize: [1],
 })((input) => {
   const index = input.gid.x;
-  const instanceInfo = currentTrianglePos.value[index];
+  const currentTrianglePos = computeBindGroupLayout.$.currentTrianglePos;
+  const instanceInfo = currentTrianglePos[index];
   let separation = d.vec2f();
   let alignment = d.vec2f();
   let cohesion = d.vec2f();
   let alignmentCount = 0;
   let cohesionCount = 0;
 
-  for (let i = d.u32(0); i < currentTrianglePos.value.length; i++) {
+  for (let i = d.u32(0); i < currentTrianglePos.length; i++) {
     if (i === index) {
       continue;
     }
-    const other = currentTrianglePos.value[i];
+    const other = currentTrianglePos[i];
     const dist = std.distance(instanceInfo.position, other.position);
-    if (dist < params.value.separationDistance) {
+    if (dist < params.$.separationDistance) {
       separation = std.add(
         separation,
         std.sub(instanceInfo.position, other.position),
       );
     }
-    if (dist < params.value.alignmentDistance) {
+    if (dist < params.$.alignmentDistance) {
       alignment = std.add(alignment, other.velocity);
       alignmentCount++;
     }
-    if (dist < params.value.cohesionDistance) {
+    if (dist < params.$.cohesionDistance) {
       cohesion = std.add(cohesion, other.position);
       cohesionCount++;
     }
@@ -134,14 +131,14 @@ const mainCompute = tgpu['~unstable'].computeFn({
     cohesion = std.sub(cohesion, instanceInfo.position);
   }
 
-  let velocity = std.mul(params.value.separationStrength, separation);
+  let velocity = std.mul(params.$.separationStrength, separation);
   velocity = std.add(
     velocity,
-    std.mul(params.value.alignmentStrength, alignment),
+    std.mul(params.$.alignmentStrength, alignment),
   );
   velocity = std.add(
     velocity,
-    std.mul(params.value.cohesionStrength, cohesion),
+    std.mul(params.$.cohesionStrength, cohesion),
   );
 
   instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
@@ -165,13 +162,11 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
   instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-  nextTrianglePos.value[index] = instanceInfo;
+  computeBindGroupLayout.$.nextTrianglePos[index] = TriangleData(instanceInfo);
 }).$name('compute shader');
 
 // WGSL resolution
-const resolved = tgpu.resolve({
-  externals: { mainVert, mainFrag, mainCompute },
-});
+const resolved = tgpu.resolve([mainVert, mainFrag, mainCompute]);
 
 (document.querySelector('.wgsl') as HTMLDivElement).innerText = resolved;
 

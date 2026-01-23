@@ -10,7 +10,11 @@ import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example } from '../utils/examples/types.ts';
+import type {
+  Example,
+  ExampleCommonFile,
+  ExampleSrcFile,
+} from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
@@ -20,6 +24,7 @@ import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 type Props = {
   example: Example;
+  common: ExampleCommonFile[];
   isPlayground?: boolean;
 };
 
@@ -66,8 +71,8 @@ function useExample(
   }, [setSnackbarText, setExampleControlParams]);
 }
 
-export function ExampleView({ example }: Props) {
-  const { tsFiles, tsImport, htmlFile } = example;
+export function ExampleView({ example, common }: Props) {
+  const { tsFiles: srcFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
@@ -76,6 +81,7 @@ export function ExampleView({ example }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  const tsFiles = filterRelevantTsFiles(srcFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
@@ -171,9 +177,7 @@ export function ExampleView({ example }: Props) {
                 </div>
 
                 <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button
-                    onClick={() => openInStackBlitz(example)}
-                  >
+                  <Button onClick={() => openInStackBlitz(example, common)}>
                     <span className='font-bold'>Edit on</span>
                     <img
                       src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
@@ -256,15 +260,32 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
 
       canvas.parentElement?.replaceChild(container, canvas);
 
-      const onResize = () => {
-        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
-        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      const onResize: ResizeObserverCallback = ([entry]) => {
+        if (!entry) {
+          return;
+        }
+
+        // Despite what the types say this property does not exist in Safari (hence the optional chaining).
+        const dpcb = entry.devicePixelContentBoxSize?.[0] as
+          | ResizeObserverSize
+          | undefined;
+
+        const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
+        const box = dpcb ??
+          (Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize);
+
+        if (!box) {
+          return;
+        }
+
+        newCanvas.width = Math.round(box.inlineSize * dpr);
+        newCanvas.height = Math.round(box.blockSize * dpr);
       };
 
-      onResize();
-
       const observer = new ResizeObserver(onResize);
-      observer.observe(container);
+      observer.observe(newCanvas);
       observers.push(observer);
     }
 
@@ -274,4 +295,28 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
     };
   }, [exampleHtmlRef]);
+}
+
+/**
+ * NOTE: this function only filters common files used in src files.
+ * Common files used in other common files will not be included.
+ */
+function filterRelevantTsFiles(
+  srcFiles: ExampleSrcFile[],
+  commonFiles: ExampleCommonFile[],
+) {
+  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
+    ...srcFiles,
+  ];
+
+  for (const common of commonFiles) {
+    for (const src of srcFiles) {
+      if (src.content.includes(`common/${common.path}`)) {
+        tsFiles.push(common);
+        break;
+      }
+    }
+  }
+
+  return tsFiles;
 }

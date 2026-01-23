@@ -178,7 +178,7 @@ export interface WgslTextureDepthMultisampled2d extends
     multisampled: true;
   }> {
   readonly type: 'texture_depth_multisampled_2d';
-  readonly [$repr]: textureMultisampled2d<F32>;
+  readonly [$repr]: textureDepthMultisampled2d;
 }
 
 export interface WgslTextureDepth2dArray extends
@@ -188,7 +188,7 @@ export interface WgslTextureDepth2dArray extends
     multisampled: false;
   }> {
   readonly type: 'texture_depth_2d_array';
-  readonly [$repr]: texture2dArray<F32>;
+  readonly [$repr]: textureDepth2dArray;
 }
 
 export interface WgslTextureDepthCube extends
@@ -198,7 +198,7 @@ export interface WgslTextureDepthCube extends
     multisampled: false;
   }> {
   readonly type: 'texture_depth_cube';
-  readonly [$repr]: textureCube<F32>;
+  readonly [$repr]: textureDepthCube;
 }
 
 export interface WgslTextureDepthCubeArray extends
@@ -208,7 +208,7 @@ export interface WgslTextureDepthCubeArray extends
     multisampled: false;
   }> {
   readonly type: 'texture_depth_cube_array';
-  readonly [$repr]: textureCubeArray<F32>;
+  readonly [$repr]: textureDepthCubeArray;
 }
 
 // Storage textures
@@ -388,7 +388,7 @@ function createTexture<TProps extends WgslTextureProps>(
     : ['float', 'unfilterable-float'];
 
   return {
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as WgslTexture<TProps>,
     type,
     bindingSampleType: sampleTypes,
@@ -401,7 +401,7 @@ function createStorageTexture<TProps extends WgslStorageTextureProps>(
   props: TProps,
 ): WgslStorageTexture<TProps> {
   return {
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as WgslStorageTexture<TProps>,
     type,
     ...props,
@@ -801,7 +801,7 @@ export interface textureExternal {
 export function textureExternal() {
   const key = 'texture_external';
   return getOrCreate(key, () => ({
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as textureExternal,
     type: 'texture_external',
     dimension: '2d',

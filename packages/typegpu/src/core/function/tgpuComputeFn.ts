@@ -54,22 +54,7 @@ export type TgpuComputeFnShell<
   & ((
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuComputeFn<ComputeIn>)
-  & {
-    /**
-     * @deprecated Invoke the shell as a function instead.
-     */
-    does:
-      & ((
-        implementation: (input: InferIO<ComputeIn>) => undefined,
-      ) => TgpuComputeFn<ComputeIn>)
-      & /**
-       * @param implementation
-       *   Raw WGSL function implementation with header and body
-       *   without `fn` keyword and function name
-       *   e.g. `"(x: f32) -> f32 { return x; }"`;
-       */ ((implementation: string) => TgpuComputeFn<ComputeIn>);
-  };
+  ) => TgpuComputeFn<ComputeIn>);
 
 export interface TgpuComputeFn<
   // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
@@ -135,9 +120,7 @@ export function computeFn<
       stripTemplate(arg, ...values),
     );
 
-  return Object.assign(Object.assign(call, shell), {
-    does: call,
-  }) as TgpuComputeFnShell<ComputeIn>;
+  return Object.assign(call, shell);
 }
 
 // --------------
@@ -171,7 +154,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     [$internal]: true,
     [$getNameForward]: core,
     $name(newLabel: string): This {
-      setName(core, newLabel);
+      setName(this, newLabel);
       if (isNamable(inputType)) {
         inputType.$name(`${newLabel}_Input`);
       }

@@ -1,8 +1,8 @@
-import type { AnyData } from '../data/dataTypes.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import type { Snippet } from '../data/snippet.ts';
 import { getGPUValue } from '../getGPUValue.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import { getTypeForPropAccess } from '../tgsl/generationHelpers.ts';
+import { accessIndex } from '../tgsl/accessIndex.ts';
+import { accessProp } from '../tgsl/accessProp.ts';
 import {
   getOwnSnippet,
   type SelfResolvable,
@@ -30,20 +30,33 @@ export const valueProxyHandler: ProxyHandler<
     }
 
     const targetSnippet = getOwnSnippet(target) as Snippet;
-    const targetDataType = targetSnippet.dataType as AnyData;
-    const propType = getTypeForPropAccess(targetDataType, String(prop));
-    if (propType.type === 'unknown') {
+
+    const index = Number(prop);
+    if (!Number.isNaN(index)) {
+      const accessed = accessIndex(targetSnippet, index);
+      if (!accessed) {
+        // Prop was not found, must be missing from this object
+        return undefined;
+      }
+
+      return new Proxy({
+        [$internal]: true,
+        [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+        [$ownSnippet]: accessed,
+        toString: () => `${String(target)}[${prop}]`,
+      }, valueProxyHandler);
+    }
+
+    const accessed = accessProp(targetSnippet, String(prop));
+    if (!accessed) {
       // Prop was not found, must be missing from this object
       return undefined;
     }
 
     return new Proxy({
       [$internal]: true,
-      [$resolve]: (ctx) =>
-        snip(`${ctx.resolve(target).value}.${String(prop)}`, propType),
-      get [$ownSnippet]() {
-        return snip(this, propType);
-      },
+      [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+      [$ownSnippet]: accessed,
       toString: () => `${String(target)}.${prop}`,
     }, valueProxyHandler);
   },

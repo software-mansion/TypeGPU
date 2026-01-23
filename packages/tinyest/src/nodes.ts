@@ -30,6 +30,7 @@ export const NodeTypeCatalog = {
   postUpdate: 102,
   stringLiteral: 103,
   objectExpr: 104,
+  conditionalExpr: 105,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -118,12 +119,15 @@ export type Statement =
 export type BinaryOperator =
   | '=='
   | '!='
+  | '==='
+  | '!=='
   | '<'
   | '<='
   | '>'
   | '>='
   | '<<'
   | '>>'
+  | '>>>'
   | '+'
   | '-'
   | '*'
@@ -132,6 +136,8 @@ export type BinaryOperator =
   | '|'
   | '^'
   | '&'
+  | 'in'
+  | 'instanceof'
   | '**';
 
 export type BinaryExpression = readonly [
@@ -155,7 +161,9 @@ export type AssignmentOperator =
   | '&='
   | '**='
   | '||='
-  | '&&=';
+  | '&&='
+  | '>>>='
+  | '??=';
 
 export type AssignmentExpression = readonly [
   type: NodeTypeCatalog['assignmentExpr'],
@@ -164,7 +172,7 @@ export type AssignmentExpression = readonly [
   rhs: Expression,
 ];
 
-export type LogicalOperator = '&&' | '||';
+export type LogicalOperator = '&&' | '||' | '??';
 
 export type LogicalExpression = readonly [
   type: NodeTypeCatalog['logicalExpr'],
@@ -196,6 +204,13 @@ export type ObjectExpression = readonly [
 export type ArrayExpression = readonly [
   type: NodeTypeCatalog['arrayExpr'],
   values: Expression[],
+];
+
+export type ConditionalExpression = readonly [
+  type: NodeTypeCatalog['conditionalExpr'],
+  test: Expression,
+  consequent: Expression,
+  alternative: Expression,
 ];
 
 export type MemberAccess = readonly [
@@ -247,6 +262,7 @@ export type Expression =
   | MemberAccess
   | IndexAccess
   | ArrayExpression
+  | ConditionalExpression
   | PreUpdate
   | PostUpdate
   | Call

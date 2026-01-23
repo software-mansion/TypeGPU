@@ -1,8 +1,7 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
+import { getIndex } from './computeShared.ts';
 import { WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';
-import { getIndex } from './computeShared.ts';
 
 export const computeSimple = tgpu['~unstable'].computeFn({
   workgroupSize: WORKGROUP_SIZE,

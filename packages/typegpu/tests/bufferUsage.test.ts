@@ -1,9 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { asWgsl } from './utils/parseResolved.ts';
 
-import tgpu from '../src/index.ts';
-
-import * as d from '../src/data/index.ts';
+import { d, tgpu } from '../src/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -22,7 +19,7 @@ describe('TgpuBufferUniform', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: uniform });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
 
       fn main() { let y = param; }"
@@ -34,14 +31,14 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const x = uniform.value;
+      const x = uniform.$;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -56,11 +53,11 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const pos = uniform.value.pos;
-      const velX = uniform.value.vel.x;
+      const pos = uniform.$.pos;
+      const velX = uniform.$.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -69,10 +66,25 @@ describe('TgpuBufferUniform', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
+  });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('storage')
+        // @ts-expect-error
+        .as('uniform')
+    ).toThrow();
   });
 });
 
@@ -91,7 +103,7 @@ describe('TgpuBufferMutable', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: mutable });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
 
       fn main() { let y = param; }"
@@ -103,14 +115,14 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const x = mutable.value;
+      const x = mutable.$;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
 
       fn func() {
-        var x = param;
+        let x = param;
       }"
     `);
   });
@@ -127,11 +139,11 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const pos = mutable.value.pos;
-      const velX = mutable.value.vel.x;
+      const pos = mutable.$.pos;
+      const velX = mutable.$.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -140,8 +152,8 @@ describe('TgpuBufferMutable', () => {
       @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
@@ -164,6 +176,21 @@ describe('TgpuBufferMutable', () => {
       expect(result.value).toBe(3);
     });
   });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('mutable')
+    ).toThrow();
+  });
 });
 
 describe('TgpuBufferReadonly', () => {
@@ -181,7 +208,7 @@ describe('TgpuBufferReadonly', () => {
     const main = tgpu.fn([])`() { let y = hello; }`
       .$uses({ hello: readonly });
 
-    expect(asWgsl(main)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> param: f32;
 
       fn main() { let y = param; }"
@@ -193,14 +220,14 @@ describe('TgpuBufferReadonly', () => {
     const paramReadonly = paramBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const x = paramReadonly.value;
+      const x = paramReadonly.$;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> paramBuffer: f32;
 
       fn func() {
-        var x = paramBuffer;
+        let x = paramBuffer;
       }"
     `);
   });
@@ -216,11 +243,11 @@ describe('TgpuBufferReadonly', () => {
     const boidReadonly = boidBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const pos = boidReadonly.value.pos;
-      const velX = boidReadonly.value.vel.x;
+      const pos = boidReadonly.$.pos;
+      const velX = boidReadonly.$.vel.x;
     });
 
-    expect(asWgsl(func)).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct Boid {
         pos: vec3f,
         vel: vec3u,
@@ -229,25 +256,22 @@ describe('TgpuBufferReadonly', () => {
       @group(0) @binding(0) var<storage, read> boid: Boid;
 
       fn func() {
-        var pos = boid.pos;
-        var velX = boid.vel.x;
+        let pos = (&boid.pos);
+        let velX = boid.vel.x;
       }"
     `);
   });
 
-  it('cannot be accessed via .$ or .value top-level', ({ root }) => {
+  it('cannot be accessed via .$ top-level', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
-    );
-    expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
+      `[Error: .$ is inaccessible during normal JS execution. Try \`.read()\`]`,
     );
   });
 
-  it('cannot be accessed via .$ or .value in a function called top-level', ({ root }) => {
+  it('cannot be accessed via .$ in a function called top-level', ({ root }) => {
     const fooBuffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = fooBuffer.as('readonly');
 
@@ -273,5 +297,20 @@ describe('TgpuBufferReadonly', () => {
       const result = tgpu['~unstable'].simulate(foo);
       expect(result.value).toBe(123);
     });
+  });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('readonly')
+    ).toThrow();
   });
 });

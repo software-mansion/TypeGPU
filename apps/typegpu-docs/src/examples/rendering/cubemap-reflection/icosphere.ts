@@ -1,12 +1,11 @@
-import tgpu, {
-  type TgpuBuffer,
-  type TgpuComputePipeline,
-  type TgpuRoot,
-  type UniformFlag,
-  type VertexFlag,
+import type {
+  TgpuBuffer,
+  TgpuComputePipeline,
+  TgpuRoot,
+  UniformFlag,
+  VertexFlag,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { ComputeVertex, Vertex } from './dataTypes.ts';
 import {
   calculateMidpoint,
@@ -126,14 +125,17 @@ export class IcosphereGenerator {
     private root: TgpuRoot,
     private maxBufferSize?: number,
   ) {
-    const { prevVertices, nextVertices, smoothFlag } = generatorLayout.bound;
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
     const computeFn = tgpu['~unstable'].computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
-      const triangleCount = d.u32(std.arrayLength(prevVertices.value) / 3);
+      const prevVertices = generatorLayout.$.prevVertices;
+      const nextVertices = generatorLayout.$.nextVertices;
+      const smoothFlag = generatorLayout.$.smoothFlag;
+
+      const triangleCount = d.u32(prevVertices.length / 3);
       const triangleIndex = input.gid.x + input.gid.y * MAX_DISPATCH;
       if (triangleIndex >= triangleCount) {
         return;
@@ -141,30 +143,15 @@ export class IcosphereGenerator {
 
       const baseIndexPrev = triangleIndex * 3;
 
-      const v1 = unpackVec2u(
-        prevVertices.value[baseIndexPrev].position,
-      );
-      const v2 = unpackVec2u(
-        prevVertices.value[baseIndexPrev + 1].position,
-      );
-      const v3 = unpackVec2u(
-        prevVertices.value[baseIndexPrev + 2].position,
-      );
+      const v1 = unpackVec2u(prevVertices[baseIndexPrev].position);
+      const v2 = unpackVec2u(prevVertices[baseIndexPrev + 1].position);
+      const v3 = unpackVec2u(prevVertices[baseIndexPrev + 2].position);
 
-      const v12 = d.vec4f(
-        std.normalize(calculateMidpoint(v1, v2).xyz),
-        1,
-      );
-      const v23 = d.vec4f(
-        std.normalize(calculateMidpoint(v2, v3).xyz),
-        1,
-      );
-      const v31 = d.vec4f(
-        std.normalize(calculateMidpoint(v3, v1).xyz),
-        1,
-      );
+      const v12 = d.vec4f(std.normalize(calculateMidpoint(v1, v2).xyz), 1);
+      const v23 = d.vec4f(std.normalize(calculateMidpoint(v2, v3).xyz), 1);
+      const v31 = d.vec4f(std.normalize(calculateMidpoint(v3, v1).xyz), 1);
 
-      const newVertices = [
+      const newVertices = d.arrayOf(d.vec4f, 12)([
         // Triangle A: [v1, v12, v31]
         v1,
         v12,
@@ -181,15 +168,15 @@ export class IcosphereGenerator {
         v12,
         v23,
         v31,
-      ];
+      ]);
 
       const baseIndexNext = triangleIndex * 12;
       for (let i = d.u32(0); i < 12; i++) {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);
-        let normal = reprojectedVertex;
-        if (smoothFlag.value === 0) {
+        let normal = d.vec4f(reprojectedVertex);
+        if (smoothFlag === 0) {
           normal = getAverageNormal(
             newVertices[triBase],
             newVertices[triBase + 1],
@@ -198,12 +185,9 @@ export class IcosphereGenerator {
         }
 
         const outIndex = baseIndexNext + i;
-        const nextVertex = nextVertices.value[outIndex];
-
+        const nextVertex = nextVertices[outIndex];
         nextVertex.position = packVec2u(reprojectedVertex);
         nextVertex.normal = packVec2u(normal);
-
-        nextVertices.value[outIndex] = nextVertex;
       }
     });
 
@@ -216,8 +200,7 @@ export class IcosphereGenerator {
     if (this.maxBufferSize) {
       let safeSize = subdivisions;
       while (
-        getVertexAmount(safeSize) * d.sizeOf(Vertex) >
-          this.maxBufferSize
+        getVertexAmount(safeSize) * d.sizeOf(Vertex) > this.maxBufferSize
       ) {
         safeSize--;
       }
