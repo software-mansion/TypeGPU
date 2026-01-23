@@ -66,9 +66,7 @@ class PrefixScanComputer {
   private getScratchBuffer(
     size: number,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    return this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage') as
-      & TgpuBuffer<d.WgslArray<d.F32>>
-      & StorageFlag;
+    return this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
   }
 
   private recursiveScan(

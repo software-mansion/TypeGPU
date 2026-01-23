@@ -258,7 +258,7 @@ async function runTests(): Promise<boolean> {
   result = await testPrefixLength1() && result;
   result = await testPrefixLength65537() && result;
   result = await testPrefixLength16777217() && result;
-  // result = await testPrefixDoesNotDestroyBuffer() && result; // fails
+  result = await testPrefixDoesNotDestroyBuffer() && result;
   result = await testPrefixDoesNotCacheBuffers() && result;
 
   return result;

@@ -31,16 +31,7 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   // 8 elements per thread
   const baseIdx = globalIdx * 8;
 
-  const partialSums = [
-    d.f32(),
-    identitySlot.$,
-    identitySlot.$,
-    identitySlot.$,
-    identitySlot.$,
-    identitySlot.$,
-    identitySlot.$,
-    identitySlot.$,
-  ];
+  const partialSums = d.arrayOf(d.f32, 8)();
   for (let i = d.u32(); i < 8; i++) {
     if (baseIdx + i < arrayLength) {
       partialSums[i] = scanLayout.$.input[baseIdx + i] as number;

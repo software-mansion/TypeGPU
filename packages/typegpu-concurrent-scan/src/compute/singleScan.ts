@@ -40,10 +40,6 @@ export const scanGreatestBlock = tgpu['~unstable'].computeFn({
     d.f32(identitySlot.$),
     d.f32(identitySlot.$),
     d.f32(identitySlot.$),
-    d.f32(identitySlot.$),
-    d.f32(identitySlot.$),
-    d.f32(identitySlot.$),
-    d.f32(identitySlot.$),
   ];
   let lastIdx = d.u32(0);
   for (let i = d.u32(); i < 8; i++) {

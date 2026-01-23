@@ -4,8 +4,7 @@
 
 </div>
 
-A concurrent scan module. For use in WebGPU/TypeGPU apps.
-Example usage:
+A concurrent scan module. For use in WebGPU/TypeGPU apps. Example usage:
 
 ```ts
 const calcResult = scan(
