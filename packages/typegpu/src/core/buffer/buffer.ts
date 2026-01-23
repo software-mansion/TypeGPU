@@ -9,16 +9,14 @@ import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type {
-  Infer,
-  InferPartial,
-  IsValidIndexSchema,
-  IsValidStorageSchema,
-  IsValidUniformSchema,
-  IsValidVertexSchema,
-  MemIdentity,
-} from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { Infer, InferPartial, MemIdentity } from '../../shared/repr.ts';
+import {
+  $internal,
+  type $invalidIndexSchema,
+  type $invalidStorageSchema,
+  type $invalidUniformSchema,
+  type $invalidVertexSchema,
+} from '../../shared/symbols.ts';
 import type {
   Prettify,
   UnionToIntersection,
@@ -84,15 +82,17 @@ const usageToUsageConstructor = { uniform, mutable, readonly };
 /**
  * Done as an object to later Prettify it
  */
-type InnerValidUsagesFor<T> = {
+type InnerValidUsagesFor<T extends BaseData> = {
   usage:
-    | (IsValidStorageSchema<T> extends true ? 'storage' : never)
-    | (IsValidUniformSchema<T> extends true ? 'uniform' : never)
-    | (IsValidVertexSchema<T> extends true ? 'vertex' : never)
-    | (IsValidIndexSchema<T> extends true ? 'index' : never);
+    | (T[typeof $invalidStorageSchema] extends string ? never : 'storage')
+    | (T[typeof $invalidUniformSchema] extends string ? never : 'uniform')
+    | (T[typeof $invalidVertexSchema] extends string ? never : 'vertex')
+    | (T[typeof $invalidIndexSchema] extends string ? never : 'index');
 };
 
-export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];
+export type ValidUsagesFor<T extends BaseData> = InnerValidUsagesFor<
+  T
+>['usage'];
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;

@@ -6,6 +6,7 @@ import type { BaseData, WgslArray } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import { $internal } from './shared/symbols.ts';
 
 const prefix = 'Invariant failed';
 
@@ -209,4 +210,8 @@ export class WgslTypeError extends Error {
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, WgslTypeError.prototype);
   }
+}
+
+export interface Illegal<TError extends string> {
+  readonly [$internal]: unknown;
 }

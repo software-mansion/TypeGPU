@@ -2,18 +2,16 @@ import type {
   Infer,
   InferGPU,
   InferPartial,
-  IsValidStorageSchema,
-  IsValidUniformSchema,
-  IsValidVertexSchema,
   MemIdentity,
 } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import {
   $gpuRepr,
+  $internal,
   $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $validIndexSchema,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -360,6 +358,11 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   public readonly [$internal] = {};
+  public readonly [$validStorageSchema]: boolean;
+  public readonly [$validUniformSchema]: boolean;
+  public readonly [$validVertexSchema]: boolean;
+  public readonly [$validIndexSchema]: boolean;
+  public [$invalidSchemaReason]?: string | undefined;
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
@@ -371,6 +374,12 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
     public readonly inner: TInner,
     public readonly attribs: TAttribs,
   ) {
+    this[$validStorageSchema] = inner[$validStorageSchema];
+    this[$validUniformSchema] = inner[$validUniformSchema];
+    this[$validVertexSchema] = inner[$validVertexSchema];
+    this[$validIndexSchema] = inner[$validIndexSchema];
+    this[$invalidSchemaReason] = inner[$invalidSchemaReason];
+
     const alignAttrib = attribs.find(isAlignAttrib)?.params[0];
     const sizeAttrib = attribs.find(isSizeAttrib)?.params[0];
 
@@ -421,16 +430,15 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements Decorated<TInner, TAttribs> {
   public readonly [$internal] = {};
   public readonly type = 'decorated';
+  declare readonly [$validStorageSchema]: TInner[typeof $validStorageSchema];
+  declare readonly [$validUniformSchema]: TInner[typeof $validUniformSchema];
+  declare readonly [$validVertexSchema]: TInner[typeof $validVertexSchema];
+  declare readonly [$validIndexSchema]: false;
 
   // Type-tokens, not available at runtime
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
-  declare readonly [$invalidSchemaReason]:
-    Decorated[typeof $invalidSchemaReason];
-  declare readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
-  declare readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
-  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }
 
@@ -439,10 +447,17 @@ class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements LooseDecorated<TInner, TAttribs> {
   public readonly [$internal] = {};
   public readonly type = 'loose-decorated';
+  declare readonly [$validStorageSchema]: false;
+  declare readonly [$validUniformSchema]: false;
+  declare readonly [$validVertexSchema]: TInner[typeof $validVertexSchema];
+  declare readonly [$validIndexSchema]: false;
 
-  // Type-tokens, not available at runtime
-  declare readonly [$invalidSchemaReason]:
-    LooseDecorated[typeof $invalidSchemaReason];
-  declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
-  // ---
+  constructor(
+    public readonly inner: TInner,
+    public readonly attribs: TAttribs,
+  ) {
+    super(inner, attribs);
+    this[$invalidSchemaReason] =
+      'Loosely decorated schemas are not host-shareable';
+  }
 }

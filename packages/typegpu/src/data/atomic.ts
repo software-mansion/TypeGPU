@@ -1,5 +1,5 @@
 import type { Infer, MemIdentity } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $validIndexSchema } from '../shared/symbols.ts';
 import {
   $gpuRepr,
   $memIdent,
@@ -36,15 +36,21 @@ export function atomic<TSchema extends U32 | I32>(
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly [$internal] = {};
   public readonly type = 'atomic';
+  public readonly [$validStorageSchema]: true;
+  public readonly [$validUniformSchema]: true;
+  public readonly [$validVertexSchema]: true;
+  public readonly [$validIndexSchema]: false;
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TSchema>;
   declare readonly [$memIdent]: MemIdentity<TSchema>;
   declare readonly [$gpuRepr]: TSchema extends U32 ? atomicU32 : atomicI32;
-  declare readonly [$validStorageSchema]: true;
-  declare readonly [$validUniformSchema]: true;
-  declare readonly [$validVertexSchema]: true;
   // ---
 
-  constructor(public readonly inner: TSchema) {}
+  constructor(public readonly inner: TSchema) {
+    this[$validStorageSchema] = true;
+    this[$validUniformSchema] = true;
+    this[$validVertexSchema] = true;
+    this[$validIndexSchema] = false;
+  }
 }
