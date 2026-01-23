@@ -355,7 +355,7 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
     strictSignature?:
-      | { argTypes: AnyData[]; returnType: AnyData }
+      | { argTypes: (AnyData | AnyData[])[]; returnType: AnyData }
       | undefined;
     call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
   };

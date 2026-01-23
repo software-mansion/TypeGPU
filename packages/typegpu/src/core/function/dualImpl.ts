@@ -3,6 +3,7 @@ import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
+import { concretize } from '../../tgsl/generationHelpers.ts';
 import {
   type DualFn,
   isKnownAtComptime,
@@ -115,7 +116,7 @@ export function dualImpl<T extends AnyFn>(
 
       return snip(
         options.codegenImpl(ctx, converted),
-        returnType,
+        concretize(returnType),
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
       );

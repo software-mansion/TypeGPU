@@ -7,7 +7,7 @@ import {
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
-import { f32, u32 } from '../data/numeric.ts';
+import { f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
   type v2f,
@@ -604,7 +604,7 @@ const sampleTypeToVecType = {
 export const textureGather = dualImpl({
   name: 'textureGather',
   normalImpl: textureGatherCpu,
-  codegenImpl: (...args) => stitch`textureGather(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureGather(${args})`,
   signature: (...args) => {
     if (args[0].type.startsWith('texture')) {
       const [texture, sampler, coords, _, ...rest] = args;

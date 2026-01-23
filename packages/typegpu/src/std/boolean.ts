@@ -19,7 +19,6 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
-import { concretize } from '../tgsl/generationHelpers.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: AnyData) {

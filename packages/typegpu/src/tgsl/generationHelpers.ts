@@ -65,7 +65,7 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: (AnyData | AnyData[]) | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: AnyData | undefined;

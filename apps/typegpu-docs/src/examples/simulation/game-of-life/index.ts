@@ -560,6 +560,14 @@ export const controls = {
       even = 0;
     },
   },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick() {
+      // bitpacked is done by default
+      [computePipelines.naive, computePipelines.tiled]
+        .map((pipeline) => tgpu.resolve([pipeline]))
+        .map((code) => root.device.createShaderModule({ code }));
+    },
+  },
 };
 
 export function onCleanup() {

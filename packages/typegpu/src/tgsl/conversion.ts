@@ -348,7 +348,7 @@ export function tryConvertSnippet(
     }
   }
 
-  const converted = convertToCommonType([snippet], targets, verbose);
+  const converted = convertToCommonType(ctx, [snippet], targets, verbose);
   if (converted) {
     return converted[0] as Snippet;
   }
