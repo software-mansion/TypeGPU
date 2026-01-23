@@ -208,6 +208,18 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
+export interface Withable<TSelf> {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuAccessor<T>,
+    value: AccessorIn<NoInfer<T>>,
+  ): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: MutableAccessorIn<NoInfer<T>>,
+  ): TSelf;
+}
+
 export interface Configurable {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
@@ -224,7 +236,7 @@ export interface Configurable {
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding {
+export interface WithBinding extends Withable<WithBinding> {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -285,16 +297,6 @@ export interface WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }

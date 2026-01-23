@@ -30,7 +30,7 @@ describe('ternary operator', () => {
     const condition = true;
     const comptime = tgpu['~unstable'].comptime(() => true);
     const slot = tgpu.slot(true);
-    const derived = tgpu['~unstable'].derived(() => slot.$);
+    const lazy = tgpu.lazy(() => slot.$);
 
     const myFn = tgpu.fn([])(() => {
       // biome-ignore lint/correctness/noConstantCondition: it's a test
@@ -39,7 +39,7 @@ describe('ternary operator', () => {
       const c = condition ? 1 : 0;
       const dd = comptime() ? 1 : 0;
       const e = slot.$ ? 1 : 0;
-      const f = derived.$ ? 1 : 0;
+      const f = lazy.$ ? 1 : 0;
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
