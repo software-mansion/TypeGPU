@@ -18,7 +18,8 @@ import {
 import { tiledCompute } from './shaders/tiled-compute.ts';
 import { naiveCompute } from './shaders/naive-compute.ts';
 import { bitpackedCompute } from './shaders/bitpacked-compute.ts';
-import { sdLine } from '@typegpu/sdf';
+import { sdLine, sdRoundedBox2d } from '@typegpu/sdf';
+import { setupInput } from './input.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -42,6 +43,19 @@ const nearestSampler = root.device.createSampler({
   minFilter: 'nearest',
   addressModeU: 'repeat',
   addressModeV: 'repeat',
+});
+
+const ZoomParams = d.struct({
+  enabled: d.u32,
+  level: d.f32,
+  centerX: d.f32,
+  centerY: d.f32,
+});
+const zoomUniform = root.createUniform(ZoomParams, {
+  enabled: 0,
+  level: 1,
+  centerX: 0.5,
+  centerY: 0.5,
 });
 
 let dataTextures: (
@@ -75,8 +89,7 @@ const BrushStroke = d.struct({
 });
 let brushRadius = 0.05;
 let brushMode: 0 | 1 | 2 = 2;
-let latestPointerPos: { x: number; y: number } | null = null;
-let lastFramePos: { x: number; y: number } | null = null;
+const input = setupInput(canvas);
 const brushStrokeUniform = root.createUniform(BrushStroke, {
   start: d.vec2f(0.5),
   end: d.vec2f(0.5),
@@ -131,7 +144,6 @@ const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
         const bit = d.u32(1) << d.u32(i);
         affectedMask = affectedMask | bit;
 
-        // Determine new value based on mode
         if (stroke.mode === d.u32(0)) {
           // Add mode: set bit
           newValues = newValues | bit;
@@ -158,6 +170,8 @@ const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
   },
 );
 
+const perf = { sum: 0, count: 0, window: 120 };
+
 function createPipeline(name: string, compute: TgpuComputeFn) {
   const base = root['~unstable']
     .with(gameSizeAccessor, gameSizeUniform)
@@ -166,7 +180,17 @@ function createPipeline(name: string, compute: TgpuComputeFn) {
 
   return !hasTimestamp ? base : base
     .withPerformanceCallback((start, end) => {
-      console.log(`${name}: ${Number(end - start) / 1_000_00}ms`);
+      perf.sum += Number(end - start) / 1_000_00;
+      perf.count++;
+      if (perf.count >= perf.window) {
+        console.log(
+          `${name}: ${
+            (perf.sum / perf.count).toFixed(3)
+          }ms average over ${perf.window} frames`,
+        );
+        perf.sum = 0;
+        perf.count = 0;
+      }
     });
 }
 
@@ -176,51 +200,124 @@ const computePipelines = {
   bitpacked: createPipeline('Bitpacked', bitpackedCompute),
 };
 
-const displayFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  const value = std.textureLoad(
+const sampleRegular = (sampleUv: d.v2f, gs: number): number => {
+  'use gpu';
+  return std.textureLoad(
     displayLayout.$.source,
-    d.vec2u(uv.mul(d.f32(gameSizeUniform.$))),
+    d.vec2u(sampleUv.mul(gs)),
   ).x;
-  return std.select(d.vec4f(0), d.vec4f(0, uv, 1), value === 1);
-});
+};
 
-const displayPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
-  .withFragment(displayFragment, { format: presentationFormat })
-  .createPipeline();
-
-// Bitpacked display: unpack bits from packed texture
-const bitpackedDisplayFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  const gs = d.f32(gameSizeUniform.$);
-  const pixelCoord = uv.mul(gs);
+const sampleBitpacked = (sampleUv: d.v2f, gs: number): number => {
+  'use gpu';
+  const pixelCoord = sampleUv.mul(gs);
   const cellX = d.u32(pixelCoord.x);
   const cellY = d.u32(pixelCoord.y);
-
-  // Which u32 contains this cell, and which bit within it
   const packedX = cellX / 32;
   const bitIndex = cellX % 32;
-
   const packed = std.textureLoad(
     displayLayout.$.source,
     d.vec2u(packedX, cellY),
   ).x;
+  return (packed >> bitIndex) & d.u32(1);
+};
 
-  const value = (packed >> bitIndex) & d.u32(1);
-  return std.select(d.vec4f(0), d.vec4f(0, uv, 1), value === 1);
+const cellSamplerSlot = tgpu.slot<(uv: d.v2f, gs: number) => number>(
+  sampleRegular,
+);
+
+const viewModeUniform = root.createUniform(d.u32, 0); // 0 = colorful, 1 = classic
+
+const displayFragment = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const zoom = zoomUniform.$;
+  const gs = d.f32(gameSizeUniform.$);
+
+  const halfView = 0.5 / zoom.level;
+  const clampedCenter = std.clamp(
+    d.vec2f(zoom.centerX, zoom.centerY),
+    d.vec2f(halfView),
+    d.vec2f(1 - halfView),
+  );
+
+  const minimapMin = d.vec2f(0.78, 0.78);
+  const minimapMax = d.vec2f(0.98, 0.98);
+  const minimapSize = 0.2;
+
+  const inMinimap = zoom.enabled === 1 &&
+    uv.x >= minimapMin.x && uv.x <= minimapMax.x &&
+    uv.y >= minimapMin.y && uv.y <= minimapMax.y;
+
+  if (inMinimap) {
+    const localUv = uv.sub(minimapMin).div(minimapSize);
+
+    // Outer border
+    const edgeDist = sdRoundedBox2d(localUv.sub(0.5), d.vec2f(0.5), 0.02);
+    if (edgeDist > -0.02) {
+      const alpha = 1.0 - std.smoothstep(0.0, 0.02, edgeDist);
+      return d.vec4f(0.5, 0.5, 0.5, alpha);
+    }
+
+    // View rectangle highlight
+    const viewSize = 1 / zoom.level;
+    const dist = sdRoundedBox2d(
+      localUv.sub(clampedCenter),
+      d.vec2f(viewSize / 2),
+      0.01,
+    );
+
+    const borderWidth = 0.015;
+    if (dist > -borderWidth && dist < borderWidth) {
+      const borderColor = std.mix(
+        d.vec4f(0.769, 0.392, 1.0, 1.0),
+        d.vec4f(0.114, 0.447, 0.941, 1.0),
+        localUv.x,
+      );
+      const a = 1.0 - std.smoothstep(0.0, borderWidth, std.abs(dist));
+      return d.vec4f(borderColor.x, borderColor.y, borderColor.z, a);
+    }
+
+    const value = cellSamplerSlot.$(localUv, gs);
+    const alive = std.select(
+      d.vec4f(localUv.x / 2.5, localUv.y / 2.5, (1 - localUv.x) / 2.5, 0.8),
+      d.vec4f(0.6, 0.6, 0.6, 0.8),
+      viewModeUniform.$ === 1,
+    );
+    return std.select(d.vec4f(0, 0, 0, 0.8), alive, value === 1);
+  }
+
+  let sampleUv = d.vec2f(uv);
+  if (zoom.enabled === 1) {
+    sampleUv = uv.sub(0.5).div(zoom.level).add(clampedCenter);
+  }
+
+  const value = cellSamplerSlot.$(sampleUv, gs);
+  const isClassic = viewModeUniform.$ === 1;
+  const alive = std.select(
+    std.normalize(
+      d.vec4f(sampleUv.x / 1.5, sampleUv.y / 1.5, 1 - sampleUv.x / 1.5, 1),
+    ),
+    d.vec4f(1),
+    isClassic,
+  );
+  const dead = std.select(d.vec4f(0), d.vec4f(0, 0, 0, 1), isClassic);
+
+  return std.select(dead, alive, value === 1);
 });
 
-const bitpackedDisplayPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
-  .withFragment(bitpackedDisplayFragment, { format: presentationFormat })
-  .createPipeline();
+const [displayPipeline, bitpackedDisplayPipeline] = [
+  sampleRegular,
+  sampleBitpacked,
+].map((fn) =>
+  root['~unstable']
+    .with(cellSamplerSlot, fn)
+    .withVertex(fullScreenTriangle)
+    .withFragment(displayFragment, { format: presentationFormat })
+    .createPipeline()
+);
 
-// Bitpacked random init: each thread sets one u32 (32 cells)
 const bitpackedRandomInit = root['~unstable'].createGuardedComputePipeline(
   (x, y) => {
     'use gpu';
@@ -286,38 +383,10 @@ const recreateResources = (size: number) => {
 
 recreateResources(gameSize);
 
-let isDrawing = false;
 let paused = false;
 let minTimestepMs = 0;
 let lastStepTime = 0;
 let stepsPerTimestep = 1;
-
-const updatePointer = (x: number, y: number) => {
-  latestPointerPos = { x, y };
-};
-
-const drawAt = (clientX: number, clientY: number) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-  const y = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
-  updatePointer(x, y);
-};
-
-canvas.addEventListener('pointerdown', (event) => {
-  isDrawing = true;
-  drawAt(event.clientX, event.clientY);
-});
-canvas.addEventListener('pointermove', (event) => {
-  if (!isDrawing) return;
-  drawAt(event.clientX, event.clientY);
-});
-const stopDrawing = () => {
-  isDrawing = false;
-  lastFramePos = null;
-};
-canvas.addEventListener('pointerup', stopDrawing);
-canvas.addEventListener('pointerleave', stopDrawing);
-canvas.addEventListener('pointercancel', stopDrawing);
 
 const stepOnce = (timestamp: number) => {
   timeUniform.write((timestamp / 1000) % 100);
@@ -337,9 +406,17 @@ const stepOnce = (timestamp: number) => {
 };
 
 function frame(timestamp: number) {
-  if (isDrawing && latestPointerPos) {
-    const start = lastFramePos ?? latestPointerPos;
-    const end = latestPointerPos;
+  const isZoomed = input.zoomLevel > 1;
+  zoomUniform.write({
+    enabled: isZoomed ? 1 : 0,
+    level: input.zoomLevel,
+    centerX: input.zoomCenter.x,
+    centerY: input.zoomCenter.y,
+  });
+
+  if (input.drawPos) {
+    const start = input.lastDrawPos ?? input.drawPos;
+    const end = input.drawPos;
     brushStrokeUniform.write({
       start: d.vec2f(start.x, start.y),
       end: d.vec2f(end.x, end.y),
@@ -351,8 +428,7 @@ function frame(timestamp: number) {
       ? [handleDrawBitpacked, [gameSize / 32, gameSize], true]
       : [handleDraw, [gameSize, gameSize], false];
 
-    // We need to read the current state in the bitpacked version (not to overwrite unaffected cells)
-    // In the normal version we can write per cell so this is not an issue
+    // Bitpacked version reads current state to avoid overwriting unaffected cells
     if (swap) {
       even ^= 1;
     }
@@ -361,9 +437,9 @@ function frame(timestamp: number) {
       .with(computeBindGroups[even])
       .dispatchThreads(x, y);
 
-    lastFramePos = { x: end.x, y: end.y };
+    input.lastDrawPos = { x: end.x, y: end.y };
   } else {
-    lastFramePos = null;
+    input.lastDrawPos = null;
   }
 
   const shouldStep = !paused && (timestamp - lastStepTime >= minTimestepMs);
@@ -403,31 +479,33 @@ export const controls = {
     },
   },
   pipeline: {
-    initial: 'tiled',
+    initial: 'bitpacked',
     options: ['tiled', 'naive', 'bitpacked'],
     onSelectChange: (value: 'tiled' | 'naive' | 'bitpacked') => {
       const wasBitpacked = chosenPipeline === 'bitpacked';
       const isBitpacked = value === 'bitpacked';
       chosenPipeline = value;
+      perf.sum = 0;
+      perf.count = 0;
       if (wasBitpacked !== isBitpacked) {
         recreateResources(gameSize);
       }
     },
   },
+  view: {
+    initial: 'colorful',
+    options: ['colorful', 'classic'],
+    onSelectChange: (value: string) => {
+      viewModeUniform.write(value === 'classic' ? 1 : 0);
+    },
+  },
   'brush radius': {
     initial: 0.05,
-    min: 0.005,
+    min: 0.001,
     max: 0.2,
-    step: 0.005,
+    step: 0.001,
     onSliderChange: (value: number) => {
       brushRadius = value;
-      const p = latestPointerPos ?? lastFramePos ?? { x: 0.5, y: 0.5 };
-      brushStrokeUniform.write({
-        start: d.vec2f(p.x, p.y),
-        end: d.vec2f(p.x, p.y),
-        radius: brushRadius,
-        mode: brushMode,
-      });
     },
   },
   'brush mode': {
@@ -435,13 +513,6 @@ export const controls = {
     options: ['add', 'delete', 'random'],
     onSelectChange: (value: 'add' | 'delete' | 'random') => {
       brushMode = value === 'add' ? 0 : value === 'delete' ? 1 : 2;
-      const p = latestPointerPos ?? lastFramePos ?? { x: 0.5, y: 0.5 };
-      brushStrokeUniform.write({
-        start: d.vec2f(p.x, p.y),
-        end: d.vec2f(p.x, p.y),
-        radius: brushRadius,
-        mode: brushMode,
-      });
     },
   },
   'min timestep (ms)': {
@@ -466,6 +537,15 @@ export const controls = {
     initial: false,
     onToggleChange: (value: boolean) => {
       paused = value;
+    },
+  },
+  'zoom sensitivity': {
+    initial: 0.3,
+    min: 0.1,
+    max: 2,
+    step: 0.1,
+    onSliderChange: (value: number) => {
+      input.zoomSensitivity = value;
     },
   },
   Step: {
