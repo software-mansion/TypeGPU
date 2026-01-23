@@ -12,8 +12,7 @@ The **non-contagious** nature of TypeGPU means that ejecting out, in case raw We
 Some of the following code snippets assume that TypeGPU is already initialized.
 
 ```ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ...or pass in an existing WebGPU device
@@ -289,7 +288,8 @@ const rawShader = /* wgsl */ `
 -
   @fragment
   fn main() -> @location(0) vec4f {
-    return vec4f(ambientColor * intensity, 1.);
+-   return vec4f(ambientColor * intensity, 1.);
++   return vec4f(layout.$.ambientColor * layout.$.intensity, 1.);
   }
 `;
 
@@ -297,15 +297,10 @@ const module = device.createShaderModule({
 -  code: rawShader,
 +  code: tgpu.resolve({
 +    template: rawShader,
-+    // Matching up shader variables with layout entries:
-+    //   'nameInShader': layout.bound.nameInLayout,
-+    //
 +    externals: {
-+      ambientColor: layout.bound.ambientColor,
-+      intensity: layout.bound.intensity,
++      // Giving the shader access to the layout
++      layout,
 +    },
-+    // or just:
-+    // externals: { ...layout.bound },
 +  }),
 });
 ```

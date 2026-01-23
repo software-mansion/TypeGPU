@@ -1,7 +1,4 @@
-import tgpu, { type TgpuBindGroup } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std, type TgpuBindGroup } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -165,7 +162,7 @@ context.configure({
 });
 
 const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(fragmentFn, { format: presentationFormat })
   .createPipeline();
 

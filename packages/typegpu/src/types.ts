@@ -28,15 +28,20 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import type { AnyData, UnknownData } from './data/dataTypes.ts';
-import type { ResolvedSnippet, Snippet } from './data/snippet.ts';
+import type {
+  MapValueToSnippet,
+  ResolvedSnippet,
+  Snippet,
+} from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
-  type AnyWgslData,
   type BaseData,
   isWgslData,
 } from './data/wgslTypes.ts';
 import {
+  $cast,
+  $gpuCallable,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -47,12 +52,14 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
+import type { Infer } from './shared/repr.ts';
 
 export type ResolvableObject =
   | SelfResolvable
   | TgpuBufferUsage
   | TgpuConst
   | TgpuDeclare
+  | TgpuBindGroupLayout
   | TgpuFn
   | TgpuComputeFn
   | TgpuFragmentFn
@@ -109,15 +116,29 @@ export type FunctionScopeLayer = {
   reportedReturnTypes: Set<AnyData>;
 };
 
+export type SlotBindingLayer = {
+  type: 'slotBinding';
+  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+};
+
+export type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, Snippet>;
+};
+
+export type StackLayer =
+  | ItemLayer
+  | SlotBindingLayer
+  | FunctionScopeLayer
+  | BlockScopeLayer;
+
 export interface ItemStateStack {
   readonly itemDepth: number;
   readonly topItem: ItemLayer;
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  popItem(): void;
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
-  popSlotBindings(): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -129,10 +150,11 @@ export interface ItemStateStack {
     returnType: AnyData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
-  popFunctionScope(): void;
   pushBlockScope(): void;
-  popBlockScope(): void;
-  pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
+
+  pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
+  pop(): StackLayer | undefined;
+
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;
@@ -289,6 +311,16 @@ export interface ResolutionCtx {
 
   get varyingLocations(): Record<string, number> | undefined;
 
+  /**
+   * Temporarily renames the item.
+   * Useful for resolutions with slots,
+   * since functions with different slots should have different names,
+   * and all hold the same inner function that is being resolved multiple times.
+   * @param item the item to rename
+   * @param name the temporary name to assign to the item (if missing, just returns `callback()`)
+   */
+  withRenamed<T>(item: object, name: string | undefined, callback: () => T): T;
+
   getUniqueName(resource: object): string;
   makeNameValid(name: string): string;
 }
@@ -320,6 +352,30 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
+export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
+  [$gpuCallable]: {
+    strictSignature?:
+      | { argTypes: AnyData[]; returnType: AnyData }
+      | undefined;
+    call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
+  };
+}
+
+export function isGPUCallable(value: unknown): value is GPUCallable {
+  return !!(value as GPUCallable)?.[$gpuCallable];
+}
+
+export type WithCast<T = AnyData> = GPUCallable<[v?: Infer<T>]> & {
+  readonly [$cast]: (v?: Infer<T> | undefined) => Infer<T>;
+};
+
+export function hasCast(value: unknown): value is WithCast {
+  return !!(value as WithCast)?.[$cast];
+}
+
+type AnyFn = (...args: never[]) => unknown;
+export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
+
 export function isKnownAtComptime(snippet: Snippet): boolean {
   return (typeof snippet.value !== 'string' ||
     snippet.dataType.type === 'unknown') &&
@@ -341,21 +397,6 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type ConversionStrategy =
-  | 'keep'
-  | 'unify';
-
-/**
- * Optional hints for converting function argument types during resolution.
- * In case of tgpu functions, this is just the array of argument schemas.
- * In case of raw dualImpls (e.g. in std), this is either a function that converts the snippets appropriately,
- * or a string defining a conversion strategy.
- * The strategy 'keep' is the default.
- */
-export type FnArgsConversionHint =
-  | AnyData[]
-  | ((...args: Snippet[]) => AnyWgslData[])
-  | ConversionStrategy;
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (

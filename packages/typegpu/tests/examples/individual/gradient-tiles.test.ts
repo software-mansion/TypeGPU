@@ -17,42 +17,33 @@ describe('gradient tiles example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct Span {
-        x: u32,
-        y: u32,
+      "struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @group(0) @binding(0) var<uniform> span: Span;
-          struct VertexOutput {
-            @builtin(position) pos: vec4f,
-            @location(0) uv: vec2f,
-          }
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
 
-          @vertex
-          fn main_vertex(
-            @builtin(vertex_index) vertexIndex: u32,
-          ) -> VertexOutput {
-            var pos = array<vec2f, 4>(
-              vec2(1, 1), // top-right
-              vec2(-1, 1), // top-left
-              vec2(1, -1), // bottom-right
-              vec2(-1, -1) // bottom-left
-            );
-            var out: VertexOutput;
-            out.pos = vec4f(pos[vertexIndex], 0.0, 1.0);
-            out.uv = (pos[vertexIndex] + 1) * 0.5;
-            return out;
-          }
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-          @fragment
-          fn main_fragment(
-            @location(0) uv: vec2f,
-          ) -> @location(0) vec4f {
-            let red = floor(uv.x * f32(span.x)) / f32(span.x);
-            let green = floor(uv.y * f32(span.y)) / f32(span.y);
-            return vec4(red, green, 0.5, 1.0);
-          }
-        "
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+      }
+
+      @group(0) @binding(0) var<uniform> spanUniform: vec2f;
+
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        let red = (floor((_arg_0.uv.x * spanUniform.x)) / spanUniform.x);
+        let green = (floor((_arg_0.uv.y * spanUniform.y)) / spanUniform.y);
+        return vec4f(red, green, 0.5f, 1f);
+      }"
     `);
   });
 });

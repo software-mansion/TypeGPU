@@ -1,6 +1,6 @@
 import { instancedArray as instancedArrayImpl } from 'three/tsl';
 import type { StorageBufferNode, TypedArray } from 'three/webgpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { wgslTypeToGlslType } from './common.ts';
 import { fromTSL, type TSLAccessor } from './typegpu-node.ts';
 

@@ -2,6 +2,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
+import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -17,6 +18,7 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -76,7 +78,7 @@ function getImplicitConversionRank(
     trueSrc.type === 'ptr' &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner as AnyData, trueDst).rank <
+    getAutoConversionRank(trueSrc.inner, trueDst).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
@@ -84,7 +86,7 @@ function getImplicitConversionRank(
 
   if (
     trueDst.type === 'ptr' &&
-    getAutoConversionRank(trueSrc, trueDst.inner as AnyData).rank <
+    getAutoConversionRank(trueSrc, trueDst.inner).rank <
       Number.POSITIVE_INFINITY
   ) {
     return { rank: 1, action: 'ref' };
@@ -227,6 +229,7 @@ export function getBestConversion(
 }
 
 function applyActionToSnippet(
+  ctx: ResolutionCtx,
   snippet: Snippet,
   action: ConversionResultAction,
   targetType: AnyData,
@@ -251,7 +254,7 @@ function applyActionToSnippet(
       return derefSnippet(snippet);
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
-      return (targetType as unknown as (val: Snippet) => Snippet)(snippet);
+      return schemaCallWrapperGPU(ctx, targetType, snippet);
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
@@ -278,6 +281,7 @@ export function unify<T extends (AnyData | UnknownData)[]>(
 }
 
 export function convertToCommonType<T extends Snippet[]>(
+  ctx: ResolutionCtx,
   values: T,
   restrictTo?: AnyData[] | undefined,
   verbose = true,
@@ -315,11 +319,12 @@ Consider using explicit conversions instead.`,
   return values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
-    return applyActionToSnippet(value, action, conversion.targetType);
+    return applyActionToSnippet(ctx, value, action, conversion.targetType);
   }) as T;
 }
 
 export function tryConvertSnippet(
+  ctx: ResolutionCtx,
   snippet: Snippet,
   targetDataType: AnyData,
   verbose = true,
@@ -337,7 +342,12 @@ export function tryConvertSnippet(
     );
   }
 
-  const converted = convertToCommonType([snippet], [targetDataType], verbose);
+  const converted = convertToCommonType(
+    ctx,
+    [snippet],
+    [targetDataType],
+    verbose,
+  );
 
   if (!converted) {
     throw new WgslTypeError(
@@ -351,20 +361,17 @@ export function tryConvertSnippet(
 }
 
 export function convertStructValues(
+  ctx: ResolutionCtx,
   structType: WgslStruct,
   values: Record<string, Snippet>,
 ): Snippet[] {
-  const propKeys = Object.keys(structType.propTypes);
-
-  return propKeys.map((key) => {
+  return Object.entries(structType.propTypes).map(([key, targetType]) => {
     const val = values[key];
     if (!val) {
       throw new Error(`Missing property ${key}`);
     }
 
-    const targetType = structType.propTypes[key];
-    const converted = convertToCommonType([val], [targetType]);
-
+    const converted = convertToCommonType(ctx, [val], [targetType]);
     return converted?.[0] ?? val;
   });
 }

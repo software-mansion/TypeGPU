@@ -2,8 +2,7 @@ import { attest } from '@ark/attest';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { d, tgpu } from '../src/index.ts';
 import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
@@ -258,14 +257,12 @@ describe('array', () => {
     `);
   });
 
-  it('generates correct code when array is partially called', () => {
+  it('generates correct code when array is partially called in a layout', () => {
     const testLayout = tgpu.bindGroupLayout({
       testArray: { storage: d.arrayOf(d.u32) },
     });
 
-    expect(
-      tgpu.resolve([...Object.values(testLayout.bound)]),
-    ).toMatchInlineSnapshot(
+    expect(tgpu.resolve([testLayout])).toMatchInlineSnapshot(
       `"@group(0) @binding(0) var<storage, read> testArray: array<u32>;"`,
     );
   });
@@ -387,8 +384,8 @@ describe('array.length', () => {
 
     const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
-      for (let i = d.u32(0); i < layout.bound.values.value.length; i++) {
-        layout.bound.values.value[i] = acc;
+      for (let i = d.u32(0); i < layout.$.values.length; i++) {
+        layout.$.values[i] = acc;
         acc *= 2;
       }
     });
@@ -416,8 +413,8 @@ describe('array.length', () => {
 
     const foo = tgpu.fn([])(() => {
       let acc = d.f32(1);
-      for (let i = 0; i < layout.bound.values.value.length; i++) {
-        layout.bound.values.value[i] = acc;
+      for (let i = 0; i < layout.$.values.length; i++) {
+        layout.$.values[i] = acc;
         acc *= 2;
       }
     });
@@ -466,7 +463,7 @@ describe('array.length', () => {
       });
 
       const testFn = tgpu.fn([], d.u32)(() => {
-        return arrayLength(layout.bound.values.value);
+        return arrayLength(layout.$.values);
       });
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`

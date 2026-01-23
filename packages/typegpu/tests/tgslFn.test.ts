@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
-import * as d from '../src/data/index.ts';
-import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
+import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -1005,6 +1004,48 @@ describe('tgsl fn when using plugin', () => {
       fn one() -> f32 {
         return (mainFn() + 2f);
       }"
+    `);
+  });
+
+  it('allows .with to be called at comptime', () => {
+    const multiplierSlot = tgpu.slot(1);
+    const scale = tgpu.fn([d.f32], d.f32)((v) => {
+      'use gpu';
+      return v * multiplierSlot.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      scale(2);
+      scale.with(multiplierSlot, 2)(2);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 1f);
+      }
+
+      fn scale_1(v: f32) -> f32 {
+        return (v * 2f);
+      }
+
+      fn main() {
+        scale(2f);
+        scale_1(2f);
+      }"
+    `);
+  });
+
+  it('throws a readable error when assigning to a value defined outside of tgsl', () => {
+    let a = 0;
+    const f = tgpu.fn([])(() => {
+      a = 2;
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
     `);
   });
 });

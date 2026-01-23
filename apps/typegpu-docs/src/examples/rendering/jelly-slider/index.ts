@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import * as sdf from '@typegpu/sdf';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 
 import { randf } from '@typegpu/noise';
 import { Slider } from './slider.ts';
@@ -843,12 +840,12 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 });
 
 const rayMarchPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
   .createPipeline();
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
