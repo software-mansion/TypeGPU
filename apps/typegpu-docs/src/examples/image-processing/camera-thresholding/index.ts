@@ -1,8 +1,5 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 
 const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
@@ -71,7 +68,7 @@ const sampler = root['~unstable'].createSampler({
 });
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(mainFrag, { format: presentationFormat })
   .createPipeline();
 

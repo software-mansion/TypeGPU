@@ -29,13 +29,7 @@ import {
 } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import {
-  isPtr,
-  isWgslArray,
-  isWgslStruct,
-  Void,
-  type WgslStruct,
-} from './data/wgslTypes.ts';
+import { isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import {
   invariant,
   MissingSlotValueError,
@@ -82,7 +76,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
-import { hasTinyestMetadata } from './shared/meta.ts';
+import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 
 /**
@@ -474,14 +468,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           case FuncParameterType.destructuredObject: {
             args.push(snip(`_arg_${i}`, argType, origin));
             argAliases.push(...astParam.props.map(({ name, alias }) => {
-              // Undecorating, as the struct type can contain builtins
-              const destrType = undecorate(
-                (options.argTypes[i] as WgslStruct).propTypes[name],
-              );
+              if (argType.type !== 'struct') {
+                throw new WgslTypeError('Only structs can be destructured');
+              }
+              const propType = argType.propTypes[name];
+              if (!propType) {
+                throw new WgslTypeError(
+                  `Missing prop '${name}' on '${safeStringify(argType)}'`,
+                );
+              }
 
               return [
                 alias,
-                snip(`_arg_${i}.${name}`, destrType, 'argument'),
+                // Undecorating, as the struct type can contain builtins
+                snip(`_arg_${i}.${name}`, undecorate(propType), 'argument'),
               ] as [string, Snippet];
             }));
             break;
@@ -600,6 +600,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     } finally {
       this._varyingLocations = undefined;
     }
+  }
+
+  withRenamed<T>(item: object, name: string | undefined, callback: () => T): T {
+    if (!name) {
+      return callback();
+    }
+    const oldName = getName(item);
+    setName(item, name);
+    const result = callback();
+    setName(item, oldName);
+    return result;
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
@@ -766,9 +777,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (isProviding(item)) {
-      return this.withSlots(
-        item[$providing].pairs,
-        () => this.resolve(item[$providing].inner, schema),
+      return this.withRenamed(
+        item[$providing].inner,
+        getName(item),
+        () =>
+          this.withSlots(
+            item[$providing].pairs,
+            () => this.resolve(item[$providing].inner, schema),
+          ),
       );
     }
 
@@ -878,7 +894,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           Object.entries(schema.propTypes).map(([key, propType]) =>
             snip(
               (item as Infer<typeof schema>)[key],
-              propType as AnyData,
+              propType,
               /* origin */ 'runtime',
             )
           )

@@ -1,9 +1,9 @@
+import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
-import { getName, setName } from '../../shared/meta.ts';
-import type { Infer, InferGPU } from '../../shared/repr.ts';
+import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
   $gpuValueOf,
@@ -11,59 +11,80 @@ import {
   $ownSnippet,
   $resolve,
 } from '../../shared/symbols.ts';
+import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
+import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import {
   getOwnSnippet,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
-import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
-import { isTgpuFn, type TgpuFn } from '../function/tgpuFn.ts';
+import { isComptimeFn } from '../function/comptime.ts';
+import { isTgpuFn } from '../function/tgpuFn.ts';
 import {
   getGpuValueRecursively,
   valueProxyHandler,
 } from '../valueProxyUtils.ts';
 import { slot as slotConstructor } from './slot.ts';
-import type { TgpuAccessor, TgpuSlot } from './slotTypes.ts';
+import type {
+  AccessorIn,
+  MutableAccessorIn,
+  TgpuAccessor,
+  TgpuMutableAccessor,
+  TgpuSlot,
+} from './slotTypes.ts';
 
 // ----------
 // Public API
 // ----------
 
-export function accessor<T extends AnyWgslData>(
-  schema: T,
-  defaultValue?:
-    | TgpuFn<() => T>
-    | TgpuBufferUsage<T>
-    | TgpuBufferShorthand<T>
-    | Infer<T>,
-): TgpuAccessor<T> {
-  return new TgpuAccessorImpl(schema, defaultValue);
+export function accessor<T extends AnyData | ((count: number) => AnyData)>(
+  schemaOrConstructor: T,
+  defaultValue?: AccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
+  return new TgpuAccessorImpl(
+    schemaOrConstructor,
+    defaultValue,
+  ) as unknown as TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+}
+
+export function mutableAccessor<
+  T extends AnyData | ((count: number) => AnyData),
+>(
+  schemaOrConstructor: T,
+  defaultValue?: MutableAccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
+  return new TgpuMutableAccessorImpl(
+    schemaOrConstructor,
+    defaultValue,
+  ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
 // --------------
 // Implementation
 // --------------
 
-export class TgpuAccessorImpl<T extends AnyWgslData>
-  implements TgpuAccessor<T>, SelfResolvable {
+abstract class AccessorBase<
+  T extends AnyData,
+  TValue extends AccessorIn<T> | MutableAccessorIn<T>,
+> implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
-  readonly resourceType = 'accessor';
-  readonly slot: TgpuSlot<
-    TgpuFn<() => T> | TgpuBufferUsage<T> | TgpuBufferShorthand<T> | Infer<T>
-  >;
+  readonly slot: TgpuSlot<TValue>;
+  readonly schema: T;
+  readonly defaultValue: TValue | undefined;
+
+  abstract readonly resourceType: string;
 
   constructor(
-    public readonly schema: T,
-    public readonly defaultValue:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>
-      | undefined = undefined,
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: TValue | undefined = undefined,
   ) {
+    this.schema = isData(schemaOrConstructor)
+      ? schemaOrConstructor
+      : schemaOrConstructor(0);
+    this.defaultValue = defaultValue;
+
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
     this.slot = slotConstructor(defaultValue);
     this[$getNameForward] = this.slot;
@@ -74,7 +95,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       [$internal]: true,
       [$ownSnippet]: this.#createSnippet(),
       [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `accessor:${getName(this) ?? '<unnamed>'}.$`,
+      toString: () => `${this.resourceType}:${getName(this) ?? '<unnamed>'}.$`,
     }, valueProxyHandler) as InferGPU<T>;
   }
 
@@ -84,10 +105,16 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   #createSnippet() {
     // biome-ignore lint/style/noNonNullAssertion: it's there
     const ctx = getResolutionCtx()!;
-    const value = getGpuValueRecursively(ctx.unwrap(this.slot));
+    let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
-    if (isTgpuFn(value)) {
-      return value[$internal].gpuImpl();
+    if (isTgpuFn(value) || hasTinyestMetadata(value)) {
+      return ctx.withResetIndentLevel(() =>
+        snip(
+          `${ctx.resolve(value).value}()`,
+          this.schema,
+          /* origin */ 'runtime',
+        )
+      );
     }
 
     const ownSnippet = getOwnSnippet(value);
@@ -95,13 +122,21 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       return ownSnippet;
     }
 
+    if (typeof value === 'function' && !isComptimeFn(value)) {
+      // Not a comptime or GPU function, so has to be a resource accessor
+      // Running the function in codegen mode
+      return coerceToSnippet(value());
+    }
+
     ctx.pushMode(new NormalState());
     try {
+      if (typeof value === 'function') {
+        // Has to be comptime
+        value = value();
+      }
+
       // Doing a deep copy each time so that we don't have to deal with refs
-      const cloned = schemaCallWrapper(
-        this.schema,
-        value,
-      );
+      const cloned = schemaCallWrapper(this.schema, value);
       return snip(cloned, this.schema, 'constant');
     } finally {
       ctx.popMode('normal');
@@ -110,25 +145,26 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
 
   $name(label: string) {
     setName(this, label);
+
+    // Passing the name down to the default callback, if it has no name yet
+    if (
+      this.defaultValue && typeof this.defaultValue === 'function' &&
+      !getName(this.defaultValue)
+    ) {
+      setName(this.defaultValue as object, label);
+    }
+
     return this;
   }
 
   toString(): string {
-    return `accessor:${getName(this) ?? '<unnamed>'}`;
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
+
+  abstract readonly $: InferGPU<T>;
 
   get value(): InferGPU<T> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
-    );
-  }
-
-  get $(): InferGPU<T> {
-    return this.value;
+    return this.$;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -137,6 +173,52 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       ctx.resolve(snippet.value, snippet.dataType).value,
       snippet.dataType as T,
       snippet.origin,
+    );
+  }
+}
+
+export class TgpuAccessorImpl<T extends AnyData>
+  extends AccessorBase<T, AccessorIn<T>>
+  implements TgpuAccessor<T> {
+  readonly resourceType = 'accessor';
+
+  constructor(
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: AccessorIn<T> | undefined = undefined,
+  ) {
+    super(schemaOrConstructor, defaultValue);
+  }
+
+  get $(): InferGPU<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+    );
+  }
+}
+
+export class TgpuMutableAccessorImpl<T extends AnyData>
+  extends AccessorBase<T, MutableAccessorIn<T>>
+  implements TgpuMutableAccessor<T> {
+  readonly resourceType = 'mutable-accessor';
+
+  constructor(
+    schemaOrConstructor: T | ((count: number) => T),
+    defaultValue: MutableAccessorIn<T> | undefined = undefined,
+  ) {
+    super(schemaOrConstructor, defaultValue);
+  }
+
+  get $(): InferGPU<T> {
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+
+    throw new Error(
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
     );
   }
 }

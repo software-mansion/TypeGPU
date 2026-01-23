@@ -148,11 +148,11 @@ export function dynamicCacheConfig<Prefix extends string>(
   });
 
   const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
-    const size = d.vec2i(cleanValuesSlot.value.size);
+    const size = d.vec2i(cleanValuesSlot.$.size);
     const x = (pos.x % size.x + size.x) % size.x;
     const y = (pos.y % size.y + size.y) % size.y;
 
-    return cleanValuesSlot.value.memory[x + y * size.x] as d.v2f;
+    return cleanValuesSlot.$.memory[x + y * size.x] as d.v2f;
   });
 
   const computeLayout = tgpu.bindGroupLayout({

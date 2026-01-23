@@ -20,10 +20,10 @@ const { NodeTypeCatalog: NODE } = tinyest;
 
 const numberSlot = tgpu.slot(44);
 const derivedV4u = tgpu['~unstable'].derived(() =>
-  std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
+  d.vec4u(1, 2, 3, 4).mul(numberSlot.$)
 );
 const derivedV2f = tgpu['~unstable'].derived(() =>
-  std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
+  d.vec2f(1, 2).mul(numberSlot.$)
 );
 
 describe('wgslGenerator', () => {
@@ -159,7 +159,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu.fn([], d.u32)(() => {
-      return testUsage.value.a + testUsage.value.b.x;
+      return testUsage.$.a + testUsage.$.b.x;
     });
 
     const astInfo = getMetaData(
@@ -170,7 +170,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
+      `"[0,[[10,[1,[7,[7,"testUsage","$"],"a"],"+",[7,[7,[7,"testUsage","$"],"b"],"x"]]]]]"`,
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       'normal',
@@ -181,7 +181,7 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                   ^ this should be a u32
       const res1 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
@@ -194,7 +194,7 @@ describe('wgslGenerator', () => {
 
       expect(res1.dataType).toStrictEqual(d.u32);
 
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                                       ^ this should be a u32
       const res2 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
@@ -206,7 +206,7 @@ describe('wgslGenerator', () => {
       );
       expect(res2.dataType).toStrictEqual(d.u32);
 
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //            ^ this should be a u32
       const sum = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -223,7 +223,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('uniform');
 
     const testFn = tgpu.fn([], d.u32)(() => {
-      return testUsage.value[3] as number;
+      return testUsage.$[3] as number;
     });
 
     const astInfo = getMetaData(
@@ -235,7 +235,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
+      `"[0,[[10,[8,[7,"testUsage","$"],[5,"3"]]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -247,7 +247,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: return testUsage.value[3];
+      // Check for: return testUsage.$[3];
       //                   ^ this should be a u32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -282,10 +282,10 @@ describe('wgslGenerator', () => {
 
     const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
       // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-      const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
+      const vec = std.mix(d.vec4f(), testUsage.$.a, value);
       // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       return vec;
     });
 
@@ -298,7 +298,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
+      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","$"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","$"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","$"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
     if (
@@ -324,7 +324,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+      // Check for: const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
       //                           ^ this part should be a i32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2],
@@ -332,7 +332,7 @@ describe('wgslGenerator', () => {
 
       expect(res.dataType).toStrictEqual(d.i32);
 
-      // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      // Check for: const vec = std.mix(d.vec4f(), testUsage.$.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
       wgslGenerator.blockVariable('var', 'value', d.i32, 'runtime');
@@ -343,7 +343,7 @@ describe('wgslGenerator', () => {
 
       expect(res2.dataType).toStrictEqual(d.vec4f);
 
-      // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      // Check for: std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
@@ -451,9 +451,7 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for derived values and slots', () => {
-    const testFn = tgpu.fn([], d.vec4u)(() => {
-      return derivedV4u.value;
-    });
+    const testFn = tgpu.fn([], d.vec4u)(() => derivedV4u.$);
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec4u {
@@ -470,7 +468,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[7,"derivedV4u","value"]]]]"`,
+      `"[0,[[10,[7,"derivedV4u","$"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -483,7 +481,7 @@ describe('wgslGenerator', () => {
       );
 
       wgslGenerator.initGenerator(ctx);
-      // Check for: return derivedV4u.value;
+      // Check for: return derivedV4u.$;
       //                      ^ this should be a vec4u
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -495,7 +493,7 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for indexing into a derived value', () => {
     const testFn = tgpu.fn([d.u32], d.f32)((idx) => {
-      return derivedV2f.value[idx] as number;
+      return derivedV2f.$[idx] as number;
     });
 
     const astInfo = getMetaData(
@@ -507,7 +505,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"derivedV2f","value"],"idx"]]]]"`,
+      `"[0,[[10,[8,[7,"derivedV2f","$"],"idx"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -519,7 +517,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: return derivedV2f.value[idx];
+      // Check for: return derivedV2f.$[idx];
       //                      ^ this should be a f32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -853,53 +851,6 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it('properly handles .value struct properties in slots', ({ root }) => {
-    const UnfortunateStruct = d.struct({
-      value: d.vec3f,
-    });
-
-    const testBuffer = root.createBuffer(UnfortunateStruct).$usage('storage');
-
-    const testUsage = testBuffer.as('mutable');
-    const testSlot = tgpu.slot(testUsage);
-    const testFn = tgpu.fn([], d.f32)(() => {
-      const value = testSlot.value.value;
-      return value.x + value.y + value.z;
-    });
-
-    const astInfo = getMetaData(
-      testFn[$internal].implementation as (...args: unknown[]) => unknown,
-    );
-
-    if (!astInfo) {
-      throw new Error('Expected prebuilt AST to be present');
-    }
-
-    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
-    );
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        [],
-        {},
-        d.f32,
-        (astInfo.externals as () => Record<string, unknown>)() ?? {},
-      );
-
-      // Check for: const value = testSlot.value.value;
-      //                  ^ this should be a vec3f
-      const res = wgslGenerator.expression(
-        (
-          astInfo.ast?.body[1][0] as tinyest.Const
-        )[2] as unknown as tinyest.Expression,
-      );
-
-      expect(res.dataType).toEqual(d.vec3f);
-    });
-  });
-
   it('generates correct code for conditional with single statement', () => {
     const main0 = tgpu.fn([d.bool], d.u32)((cond) => {
       if (cond) return 0;
@@ -1016,8 +967,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn
-      - fn:internalTestFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
+      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
     `);
   });
 

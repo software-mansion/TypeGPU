@@ -4,7 +4,7 @@ import type {
   TgpuRenderPipeline,
   TgpuRoot,
 } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
 import type { Scene } from './scene.ts';

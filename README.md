@@ -138,7 +138,7 @@ API:
 
 ```ts
 import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 // We can define schemas, or functions that return schemas...
 const HeightMap = (width: number, height: number) =>

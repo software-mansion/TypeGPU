@@ -21,7 +21,7 @@ export const arrayLength = dualImpl({
   },
   normalImpl: (a: unknown[] | ref<unknown[]>) =>
     isRef(a) ? a.$.length : a.length,
-  codegenImpl(a) {
+  codegenImpl(_ctx, [a]) {
     const length = sizeOfPointedToArray(a.dataType);
     return length > 0 ? String(length) : stitch`arrayLength(${a})`;
   },

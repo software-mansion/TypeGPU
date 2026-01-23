@@ -42,7 +42,7 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const hello = tgpu['~unstable'].comptime(() => 1 + 2);
+      const hello = tgpu.comptime(() => 1 + 2);
 
       console.log(accessor, shell, fn, cst);
     `;
@@ -53,7 +53,7 @@ describe('[BABEL] auto naming', () => {
         import * as d from 'typegpu/data';
         let nothing,
           accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor");
-        const hello = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].comptime(() => 1 + 2), "hello");
+        const hello = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.comptime(() => 1 + 2), "hello");
         console.log(accessor, shell, fn, cst);"
       `);
   });
