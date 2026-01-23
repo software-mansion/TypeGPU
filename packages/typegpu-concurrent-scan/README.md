@@ -4,7 +4,7 @@
 
 </div>
 
-A concurrent scan module. For use in WebGPU/TypeGPU apps.\
+A concurrent scan module. For use in WebGPU/TypeGPU apps.
 Example usage:
 
 ```ts
