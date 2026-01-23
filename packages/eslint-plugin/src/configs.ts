@@ -15,5 +15,5 @@ export const recommendedRules: Rules = {
 };
 
 export const allRules: Rules = {
-  'typegpu/integer-division': 'warn',
+  'typegpu/integer-division': 'error',
 };
