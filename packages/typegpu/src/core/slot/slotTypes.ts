@@ -3,6 +3,7 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
+import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
@@ -48,40 +49,13 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   // ---
 }
 
-export type AccessorIn<TSchema extends AnyData> = TSchema extends
-  WgslTexture | WgslStorageTexture ? (
-    | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
-    | Infer<TSchema>
-    | TgpuTextureView<TSchema>
-  )
-  : (
-    | (() => Infer<TSchema>)
-    | TgpuBufferUsage<TSchema>
-    | TgpuBufferShorthand<TSchema>
-    | TgpuVar<VariableScope, TSchema>
-    | TgpuConst<TSchema>
-    | Infer<TSchema>
-  );
-
-export type MutableAccessorIn<TSchema extends AnyData> = TSchema extends
-  WgslTexture | WgslStorageTexture ? (
-    | (() => Infer<TSchema> | TgpuTextureView<TSchema>)
-    | TgpuTextureView<TSchema>
-  )
-  : (
-    | (() => Infer<TSchema>)
-    | TgpuBufferUsage<TSchema>
-    | TgpuBufferShorthand<TSchema>
-    | TgpuVar<VariableScope, TSchema>
-  );
-
 export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
   readonly schema: T;
-  readonly defaultValue: AccessorIn<T> | undefined;
-  readonly slot: TgpuSlot<AccessorIn<T>>;
+  readonly defaultValue: TgpuAccessor.In<T> | undefined;
+  readonly slot: TgpuSlot<TgpuAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
   /**
@@ -91,18 +65,55 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly $: InferGPU<T>;
 }
 
+type DataAccessorIn<T extends AnyData> =
+  | (() => DataAccessorIn<T>)
+  | TgpuBufferUsage<T>
+  | TgpuBufferShorthand<T>
+  | TgpuVar<VariableScope, T>
+  | TgpuConst<T>
+  | Infer<T>;
+
+type TextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =
+  | (() => TextureAccessorIn<T>)
+  | Infer<T>
+  | TgpuTextureView<T>;
+
+export declare namespace TgpuAccessor {
+  type In<T extends AnyData | ((count: number) => AnyData)> =
+    UnwrapRuntimeConstructor<T> extends WgslTexture | WgslStorageTexture
+      ? TextureAccessorIn<UnwrapRuntimeConstructor<T>>
+      : DataAccessorIn<UnwrapRuntimeConstructor<T>>;
+}
+
 export interface TgpuMutableAccessor<T extends AnyData = AnyData>
   extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'mutable-accessor';
 
   readonly schema: T;
-  readonly defaultValue: MutableAccessorIn<T> | undefined;
-  readonly slot: TgpuSlot<MutableAccessorIn<T>>;
+  readonly defaultValue: TgpuMutableAccessor.In<T> | undefined;
+  readonly slot: TgpuSlot<TgpuMutableAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
   value: InferGPU<T>;
   $: InferGPU<T>;
+}
+
+type MutableDataAccessorIn<T extends AnyData> =
+  | (() => Infer<T> | MutableDataAccessorIn<T>)
+  | TgpuBufferUsage<T>
+  | TgpuBufferShorthand<T>
+  | TgpuVar<VariableScope, T>;
+
+type MutableTextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =
+  | (() => Infer<T> | TgpuTextureView<T> | MutableTextureAccessorIn<T>)
+  | TgpuTextureView<T>;
+
+export declare namespace TgpuMutableAccessor {
+  type In<T extends AnyData | ((count: number) => AnyData)> =
+    UnwrapRuntimeConstructor<T> extends WgslTexture | WgslStorageTexture
+      ? MutableTextureAccessorIn<UnwrapRuntimeConstructor<T>>
+      : MutableDataAccessorIn<UnwrapRuntimeConstructor<T>>;
 }
 
 /**

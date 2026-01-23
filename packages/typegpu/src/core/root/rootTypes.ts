@@ -66,9 +66,7 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -212,26 +210,16 @@ export interface Withable<TSelf> {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
+    value: TgpuAccessor.In<NoInfer<T>>,
   ): TSelf;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
   ): TSelf;
 }
 
-export interface Configurable {
+export interface Configurable extends Withable<Configurable> {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): Configurable;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): Configurable;
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
