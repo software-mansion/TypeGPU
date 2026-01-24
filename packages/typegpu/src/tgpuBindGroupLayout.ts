@@ -66,7 +66,7 @@ import type {
   NullableToOptional,
   Prettify,
 } from './shared/utilityTypes.ts';
-import type { TgpuShaderStage } from './types.ts';
+import type { ShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 
@@ -90,7 +90,7 @@ export type TgpuLayoutEntryBase = {
    * @default ['compute','fragment'] for mutable resources
    * @default ['compute','vertex','fragment'] for everything else
    */
-  visibility?: TgpuShaderStage[];
+  visibility?: ShaderStage[];
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
@@ -500,8 +500,8 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute', 'fragment'];
-const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
+const DEFAULT_MUTABLE_VISIBILITY: ShaderStage[] = ['compute', 'fragment'];
+const DEFAULT_READONLY_VISIBILITY: ShaderStage[] = [
   'compute',
   'vertex',
   'fragment',

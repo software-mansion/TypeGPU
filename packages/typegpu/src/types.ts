@@ -53,6 +53,7 @@ import type {
 } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
+import { FunctionDefinitionExtra } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -79,17 +80,16 @@ export type ResolvableObject =
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
-export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
+export type ShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
-  functionType: 'normal' | TgpuShaderStage;
+export interface FnToShaderCodeOptions extends FunctionDefinitionExtra {
+  id: string;
   argTypes: AnyData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
   returnType: AnyData | undefined;
-  body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
 }
@@ -140,7 +140,7 @@ export interface ItemStateStack {
   pushItem(): void;
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     /**
@@ -298,11 +298,9 @@ export interface ResolutionCtx {
     exact?: boolean | undefined,
   ): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
-    head: Wgsl;
-    body: Wgsl;
-    returnType: AnyData;
-  };
+  fnToShaderCode(
+    options: FnToShaderCodeOptions,
+  ): { code: string; returnType: AnyData };
 
   withVaryingLocations<T>(
     locations: Record<string, number>,

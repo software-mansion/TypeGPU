@@ -20,7 +20,6 @@ import {
   type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
-import { getAttributesString } from './data/attributes.ts';
 import {
   type AnyData,
   isData,
@@ -70,8 +69,8 @@ import type {
   ItemLayer,
   ItemStateStack,
   ResolutionCtx,
+  ShaderStage,
   StackLayer,
-  TgpuShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
@@ -134,7 +133,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     args: Snippet[],
     argAliases: Record<string, Snippet>,
     returnType: AnyData | undefined,
@@ -430,9 +429,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(
-    options: FnToWgslOptions,
-  ): { head: Wgsl; body: Wgsl; returnType: AnyData } {
+  fnToShaderCode(
+    options: FnToShaderCodeOptions,
+  ): { code: string; returnType: AnyData } {
     let fnScopePushed = false;
 
     try {
@@ -492,7 +491,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       const scope = this._itemStateStack.pushFunctionScope(
-        options.functionType,
+        options.type,
         args,
         Object.fromEntries(argAliases),
         options.returnType,
@@ -501,7 +500,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       fnScopePushed = true;
 
       this.#shaderGenerator.initGenerator(this);
-      const body = this.#shaderGenerator.functionDefinition(options.body);
+      const body = this.#shaderGenerator.functionBody(options.body);
 
       let returnType = options.returnType;
       if (!returnType) {
@@ -525,6 +524,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         returnType = concretize(returnType);
       }
+
+      const header = this.#shaderGenerator.functionHeader({
+        id: options.id,
+        type: options.type,
+        workgroupSize: options.workgroupSize,
+        returnType,
+        args,
+      });
 
       return {
         head: resolveFunctionHeader(this, args, returnType),
@@ -1012,20 +1019,4 @@ export function resolve(
     catchall,
     logResources: ctx.logResources,
   };
-}
-
-export function resolveFunctionHeader(
-  ctx: ResolutionCtx,
-  args: Snippet[],
-  returnType: AnyData,
-) {
-  const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyData).value}`)
-    .join(', ');
-
-  return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)}${
-      ctx.resolve(returnType).value
-    } `
-    : `(${argList}) `;
 }
