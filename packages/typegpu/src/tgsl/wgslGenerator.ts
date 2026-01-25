@@ -157,7 +157,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call,
-  'void': () => snip('', wgsl.Void, 'constant'),
+  'void': () => snip(undefined, wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -195,6 +195,7 @@ class WgslGenerator implements ShaderGenerator {
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))
+        .filter((statement) => statement.length > 0)
         .join('\n');
       this.ctx.dedent();
       return `{
@@ -263,6 +264,10 @@ ${this.ctx.pre}}`;
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
+    if (id === 'undefined') {
+      return snip(undefined, wgsl.Void, 'constant');
+    }
+
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -770,8 +775,9 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
-      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+      const id = this.identifier(statement);
+      const resolved = id.value && this.ctx.resolve(id.value).value;
+      return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
     if (typeof statement === 'boolean') {
@@ -1047,8 +1053,9 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    const resolved = this.ctx.resolve(this.expression(statement).value).value;
-    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+    const expr = this.expression(statement);
+    const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }
 

@@ -18,34 +18,34 @@ import { randomGeneratorSlot } from './generator.ts';
 const TWO_PI = Math.PI * 2;
 const EPS = 1e-7; // don't ever get any lower than this
 
-const seedNotEmpty = tgpu.comptime(
+const warnIfNotProvided = tgpu.comptime(
   (seedFnName: keyof typeof randomGeneratorSlot.$) => {
-    if (randomGeneratorSlot.$[seedFnName]) {
-      return true;
+    if (!randomGeneratorSlot.$[seedFnName]) {
+      console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
     }
-    console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
-    return false;
+
+    return undefined;
   },
 );
 
 export const randSeed = tgpu.fn([d.f32])((seed) => {
-  // @ts-expect-error trust me
-  seedNotEmpty('seed') ? randomGeneratorSlot.$.seed(seed) : undefined;
+  warnIfNotProvided('seed');
+  randomGeneratorSlot.$.seed ? randomGeneratorSlot.$.seed(seed) : undefined;
 });
 
 export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
-  // @ts-expect-error trust me
-  seedNotEmpty('seed2') ? randomGeneratorSlot.$.seed2(seed) : undefined;
+  warnIfNotProvided('seed2');
+  randomGeneratorSlot.$.seed2 ? randomGeneratorSlot.$.seed2(seed) : undefined;
 });
 
 export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
-  // @ts-expect-error trust me
-  seedNotEmpty('seed3') ? randomGeneratorSlot.$.seed3(seed) : undefined;
+  warnIfNotProvided('seed3');
+  randomGeneratorSlot.$.seed3 ? randomGeneratorSlot.$.seed3(seed) : undefined;
 });
 
 export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
-  // @ts-expect-error trust me
-  seedNotEmpty('seed4') ? randomGeneratorSlot.$.seed4(seed) : undefined;
+  warnIfNotProvided('seed4');
+  randomGeneratorSlot.$.seed4 ? randomGeneratorSlot.$.seed4(seed) : undefined;
 });
 
 export const randFloat01: TgpuFn<() => d.F32> = tgpu
