@@ -394,18 +394,16 @@ describe('array', () => {
     `);
   });
 
-  it('can be immediately-invoked and initialized in TGSL in combination with slots and derived', () => {
+  it('can be immediately-invoked and initialized in TGSL in combination with slots and lazy', () => {
     const arraySizeSlot = tgpu.slot(4);
-    const derivedArraySizeSlot = tgpu['~unstable'].derived(() =>
-      arraySizeSlot.$ * 2
-    );
-    const derivedInitializer = tgpu['~unstable'].derived(
-      () => [...Array(derivedArraySizeSlot.$).keys()],
+    const lazyArraySizeSlot = tgpu.lazy(() => arraySizeSlot.$ * 2);
+    const lazyInitializer = tgpu.lazy(
+      () => [...Array(lazyArraySizeSlot.$).keys()],
     );
 
     const foo = tgpu.fn([])(() => {
-      const result = d.arrayOf(d.f32, derivedArraySizeSlot.$)(
-        derivedInitializer.$,
+      const result = d.arrayOf(d.f32, lazyArraySizeSlot.$)(
+        lazyInitializer.$,
       );
     });
 
