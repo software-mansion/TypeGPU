@@ -556,8 +556,6 @@ describe('wgslGenerator', () => {
 
       expect(res.value instanceof ArrayExpression).toBe(true);
       expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-      expect((res.value as unknown as ArrayExpression).elementType)
-        .toBe((res.dataType as unknown as WgslArray).elementType);
     });
   });
 

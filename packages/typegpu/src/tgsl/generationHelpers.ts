@@ -16,6 +16,7 @@ import {
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
+  type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import {
@@ -139,13 +140,16 @@ export function coerceToSnippet(value: unknown): Snippet {
   return snip(value, UnknownData, /* origin */ 'constant');
 }
 
-// defers the resolution of array expressions
+/**
+ * Intermediate representation for WGSL array expressions.
+ * Defers resolution. Stores array elements as snippets so the
+ * generator can access them when needed.
+ */
 export class ArrayExpression implements SelfResolvable {
   readonly [$internal] = true;
 
   constructor(
-    public readonly elementType: AnyWgslData,
-    public readonly type: AnyWgslData,
+    public readonly type: WgslArray<AnyWgslData>,
     public readonly elements: Snippet[],
   ) {
   }
@@ -172,7 +176,7 @@ export class ArrayExpression implements SelfResolvable {
     }
 
     const arrayType = `array<${
-      ctx.resolve(this.elementType).value
+      ctx.resolve(this.type.elementType).value
     }, ${this.elements.length}>`;
 
     return snip(

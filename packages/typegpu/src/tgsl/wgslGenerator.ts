@@ -762,7 +762,6 @@ ${this.ctx.pre}}`;
 
       return snip(
         new ArrayExpression(
-          elemType as wgsl.AnyWgslData,
           arrayType,
           values,
         ),
