@@ -1,10 +1,8 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
-  type AccessorIn,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type TgpuAccessor,
   type TgpuMutableAccessor,
   type TgpuSlot,
@@ -16,7 +14,7 @@ export class ConfigurableImpl implements Configurable {
 
   with<T extends AnyData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
-    value: AccessorIn<T> | MutableAccessorIn<T> | Infer<T>,
+    value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T> | Infer<T>,
   ): Configurable {
     return new ConfigurableImpl([
       ...this.bindings,

@@ -13,11 +13,11 @@ import type {
 } from './core/root/rootTypes.ts';
 import {
   type Eventual,
-  isDerived,
+  isLazy,
   isProviding,
   isSlot,
   type SlotValuePair,
-  type TgpuDerived,
+  type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
@@ -623,7 +623,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     while (true) {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
-      } else if (isDerived(maybeEventual)) {
+      } else if (isLazy(maybeEventual)) {
         maybeEventual = this._getOrCompute(maybeEventual);
       } else {
         break;
@@ -633,9 +633,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeEventual;
   }
 
-  _getOrCompute<T>(derived: TgpuDerived<T>): T {
-    // All memoized versions of `derived`
-    const instances = this.#namespaceInternal.memoizedDerived.get(derived) ??
+  _getOrCompute<T>(lazy: TgpuLazy<T>): T {
+    // All memoized versions of `lazy`
+    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ??
       [];
 
     this._itemStateStack.pushItem();
@@ -659,7 +659,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let result: T;
       try {
-        result = derived['~compute']();
+        result = lazy[$internal].compute();
       } finally {
         this.popMode('normal');
       }
@@ -671,14 +671,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespaceInternal.memoizedDerived.set(derived, instances);
+      this.#namespaceInternal.memoizedLazy.set(lazy, instances);
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
-        throw err.appendToTrace(derived);
+        throw err.appendToTrace(lazy);
       }
 
-      throw new ResolutionError(err, [derived]);
+      throw new ResolutionError(err, [lazy]);
     } finally {
       this._itemStateStack.pop('item');
     }
@@ -711,7 +711,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
         result = snip(resolveData(this, item), Void, /* origin */ 'runtime');
-      } else if (isDerived(item) || isSlot(item)) {
+      } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
