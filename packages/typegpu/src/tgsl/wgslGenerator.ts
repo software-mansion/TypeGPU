@@ -1026,7 +1026,9 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       return stitch`${this.ctx.pre}${varType} ${snippet
-        .value as string} = ${tryConvertSnippet(this.ctx, eq, dataType, false)};`;
+        .value as string} = ${
+        tryConvertSnippet(this.ctx, eq, dataType, false)
+      };`;
     }
 
     if (statement[0] === NODE.block) {
