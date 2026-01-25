@@ -54,7 +54,7 @@ export function INTERNAL_createPtr<
   implicit: boolean = false,
 ): Ptr<TAddressSpace, TInner, TAccess> {
   return {
-    [$internal]: true,
+    [$internal]: {},
     type: 'ptr',
     addressSpace,
     inner,

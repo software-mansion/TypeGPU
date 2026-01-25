@@ -39,7 +39,7 @@ interface SimulationResult<T> {
  */
 export function simulate<T>(callback: () => T): SimulationResult<T> {
   // We could already be inside a resolution context, for example
-  // during derived computation, where users would like to precompute
+  // during lazy computation, where users would like to precompute
   // something that happens to require simulation.
   const ctx = getResolutionCtx() ?? new ResolutionCtxImpl({
     // Not relevant
