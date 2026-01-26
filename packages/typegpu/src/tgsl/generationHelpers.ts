@@ -46,14 +46,16 @@ export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   return type;
 }
 
-export function concretizeSnippets(args: Snippet[]): Snippet[] {
-  return args.map((snippet) =>
-    snip(
-      snippet.value,
-      concretize(snippet.dataType as AnyWgslData),
-      /* origin */ snippet.origin,
-    )
+export function concretizeSnippet(snippet: Snippet): Snippet {
+  return snip(
+    snippet.value,
+    concretize(snippet.dataType as AnyWgslData),
+    snippet.origin,
   );
+}
+
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map(concretizeSnippet);
 }
 
 export type GenerationCtx = ResolutionCtx & {
@@ -65,7 +67,7 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: (AnyData | AnyData[]) | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: AnyData | undefined;

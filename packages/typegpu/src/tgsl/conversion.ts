@@ -326,38 +326,40 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
-  targetDataType: AnyData,
+  targetDataTypes: AnyData | AnyData[],
   verbose = true,
 ): Snippet {
-  if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType, snippet.origin);
+  const targets = Array.isArray(targetDataTypes)
+    ? targetDataTypes
+    : [targetDataTypes];
+
+  const { value, dataType, origin } = snippet;
+
+  if (targets.length === 1) {
+    const target = targets[0] as AnyWgslData;
+
+    if (target === dataType) {
+      return snip(value, target, origin);
+    }
+
+    if (dataType.type === 'unknown') {
+      // Commit unknown to the expected type.
+      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+    }
   }
 
-  if (snippet.dataType.type === 'unknown') {
-    // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(
-      stitch`${snip(snippet.value, targetDataType, snippet.origin)}`,
-      targetDataType,
-      snippet.origin,
-    );
+  const converted = convertToCommonType(ctx, [snippet], targets, verbose);
+  if (converted) {
+    return converted[0] as Snippet;
   }
 
-  const converted = convertToCommonType(
-    ctx,
-    [snippet],
-    [targetDataType],
-    verbose,
+  throw new WgslTypeError(
+    `Cannot convert value of type '${
+      String(
+        dataType,
+      )
+    }' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );
-
-  if (!converted) {
-    throw new WgslTypeError(
-      `Cannot convert value of type '${
-        String(snippet.dataType)
-      }' to type '${targetDataType.type}'`,
-    );
-  }
-
-  return converted[0] as Snippet;
 }
 
 export function convertStructValues(

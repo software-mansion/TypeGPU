@@ -3,6 +3,7 @@ import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
+import { concretize } from '../../tgsl/generationHelpers.ts';
 import {
   type DualFn,
   isKnownAtComptime,
@@ -21,10 +22,13 @@ interface DualImplOptions<T extends AnyFn> {
     args: MapValueToSnippet<Parameters<T>>,
   ) => string;
   readonly signature:
-    | { argTypes: AnyData[]; returnType: AnyData }
+    | {
+      argTypes: (AnyData | AnyData[])[];
+      returnType: AnyData;
+    }
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
-    ) => { argTypes: AnyData[]; returnType: AnyData });
+    ) => { argTypes: (AnyData | AnyData[])[]; returnType: AnyData });
   /**
    * Whether the function should skip trying to execute the "normal" implementation if
    * all arguments are known at compile time.
@@ -112,7 +116,7 @@ export function dualImpl<T extends AnyFn>(
 
       return snip(
         options.codegenImpl(ctx, converted),
-        returnType,
+        concretize(returnType),
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
       );
