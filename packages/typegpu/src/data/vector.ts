@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { $repr } from '../shared/symbols.ts';
+import { $internal, $repr } from '../shared/symbols.ts';
 import type { AnyData } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
@@ -315,7 +315,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
     }),
     normalImpl: cpuConstruct,
     ignoreImplicitCastWarning: true,
-    codegenImpl: (...args) => {
+    codegenImpl: (_ctx, args) => {
       if (args.length === 1 && args[0]?.dataType === schema) {
         // Already typed as the schema
         return stitch`${args[0]}`;
@@ -327,6 +327,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const schema:
     & VecSchemaBase<TValue>
     & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+      [$internal]: {},
       type,
       primitive,
       [$repr]: undefined as TValue,

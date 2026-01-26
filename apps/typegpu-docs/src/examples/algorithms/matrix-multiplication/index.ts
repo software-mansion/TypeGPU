@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;

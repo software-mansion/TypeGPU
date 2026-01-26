@@ -25,7 +25,6 @@ import {
   isLooseData,
   isLooseDecorated,
   type LooseDecorated,
-  type LooseTypeLiteral,
   type Undecorate,
 } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -50,7 +49,6 @@ import {
   type PerspectiveOrLinearInterpolationType,
   type Size,
   type Vec4f,
-  type WgslTypeLiteral,
 } from './wgslTypes.ts';
 
 // ----------
@@ -60,10 +58,11 @@ import {
 export const builtinNames = [
   'vertex_index',
   'instance_index',
-  'position',
   'clip_distances',
+  'position',
   'front_facing',
   'frag_depth',
+  'primitive_index',
   'sample_index',
   'sample_mask',
   'fragment',
@@ -74,6 +73,8 @@ export const builtinNames = [
   'num_workgroups',
   'subgroup_invocation_id',
   'subgroup_size',
+  'subgroup_id',
+  'num_subgroups',
 ] as const;
 
 export type BuiltinName = (typeof builtinNames)[number];
@@ -110,9 +111,9 @@ export type ExtractAttributes<T> = T extends {
 export type Decorate<
   TData extends BaseData,
   TAttrib extends AnyAttribute,
-> = TData['type'] extends WgslTypeLiteral
+> = TData extends AnyWgslData
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : TData['type'] extends LooseTypeLiteral
+  : TData extends AnyLooseData
     ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : never;
 
@@ -362,7 +363,7 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
@@ -422,7 +423,7 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
@@ -440,7 +441,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
 class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
   public readonly type = 'loose-decorated';
 
   // Type-tokens, not available at runtime

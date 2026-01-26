@@ -1,4 +1,4 @@
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $cast, $gpuCallable, isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
@@ -20,11 +20,18 @@ import {
   vec4u,
 } from './vector.ts';
 import type { BaseData } from './wgslTypes.ts';
+import type { WithCast } from '../types.ts';
+import {
+  schemaCallWrapper,
+  schemaCallWrapperGPU,
+} from './schemaCallWrapper.ts';
+import type { Snippet } from './snippet.ts';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
+export interface TgpuVertexFormatData<T extends VertexFormat>
+  extends BaseData, WithCast<FormatToWGSLType<T>> {
   readonly type: T;
 
   // Type-tokens, not available at runtime
@@ -37,7 +44,8 @@ export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
   implements TgpuVertexFormatData<T> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
+  [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
@@ -46,7 +54,19 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
     'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
-  constructor(public readonly type: T) {}
+  constructor(public readonly type: T) {
+    this[$gpuCallable] = {
+      call: (ctx, [v]): Snippet => {
+        return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
+      },
+    };
+  }
+
+  [$cast](
+    v?: Infer<FormatToWGSLType<T>> | undefined,
+  ): Infer<FormatToWGSLType<T>> {
+    return schemaCallWrapper(formatToWGSLType[this.type], v);
+  }
 }
 
 export const formatToWGSLType = {

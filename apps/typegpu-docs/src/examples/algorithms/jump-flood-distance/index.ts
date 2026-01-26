@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 import { distanceFrag } from './visualization.ts';
 import {
   BrushParams,
@@ -13,7 +10,7 @@ import {
   initLayout,
   maskLayout,
   type MaskTexture,
-  paramsAccessor,
+  paramsAccess,
   pingPongLayout,
   SampleResult,
   VisualizationParams,
@@ -284,8 +281,8 @@ const createDistanceField = root['~unstable'].createGuardedComputePipeline(
 );
 
 const distancePipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
-  .withVertex(fullScreenTriangle)
+  .with(paramsAccess, paramsUniform)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(distanceFrag, { format: presentationFormat })
   .createPipeline();
 

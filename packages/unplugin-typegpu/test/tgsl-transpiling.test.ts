@@ -14,10 +14,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
         const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
-                const tmp = counter.value.x;
-                counter.value.x = counter.value.y;
-                counter.value.y += tmp;
-                counter.value.z += d.f32(input.num.x);
+                const tmp = counter.$.x;
+                counter.$.x = counter.$.y;
+                counter.$.y += tmp;
+                counter.$.z += d.f32(input.num.x);
             });
     `;
 
@@ -32,14 +32,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         },
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
-        const tmp = counter.value.x;
-        counter.value.x = counter.value.y;
-        counter.value.y += tmp;
-        counter.value.z += d.f32(input.num.x);
+        const tmp = counter.$.x;
+        counter.$.x = counter.$.y;
+        counter.$.y += tmp;
+        counter.$.z += d.f32(input.num.x);
       }, {
         v: 1,
         name: void 0,
-        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+        ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
         externals: () => {
           return {
             counter,
@@ -236,10 +236,10 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
         const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
-            const tmp = counter.value.x;
-            counter.value.x = counter.value.y;
-            counter.value.y += tmp;
-            counter.value.z += d.f32(input.num.x);
+            const tmp = counter.$.x;
+            counter.$.x = counter.$.y;
+            counter.$.y += tmp;
+            counter.$.z += d.f32(input.num.x);
             });
     `;
 
@@ -254,14 +254,14 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
               tgpu
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
-                  const tmp = counter.value.x;
-                  counter.value.x = counter.value.y;
-                  counter.value.y += tmp;
-                  counter.value.z += d.f32(input.num.x);
+                  const tmp = counter.$.x;
+                  counter.$.x = counter.$.y;
+                  counter.$.y += tmp;
+                  counter.$.z += d.f32(input.num.x);
                   }), {
                     v: 1,
                     name: undefined,
-                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","value"],"x"]],[2,[7,[7,"counter","value"],"x"],"=",[7,[7,"counter","value"],"y"]],[2,[7,[7,"counter","value"],"y"],"+=","tmp"],[2,[7,[7,"counter","value"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+                    ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
                     externals: () => ({counter, d}),
                   }) && $.f)({})));
       "

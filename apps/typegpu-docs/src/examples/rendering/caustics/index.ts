@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { perlin3d } from '@typegpu/noise';
+import tgpu, { d, std } from 'typegpu';
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },

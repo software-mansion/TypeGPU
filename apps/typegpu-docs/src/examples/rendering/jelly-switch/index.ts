@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
-import { fullScreenTriangle } from 'typegpu/common';
 
 import { randf } from '@typegpu/noise';
 import { SwitchBehavior } from './switch.ts';
@@ -556,12 +553,12 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 });
 
 const rayMarchPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(raymarchFn, { format: 'rgba8unorm' })
   .createPipeline();
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(fragmentMain, { format: presentationFormat })
   .createPipeline();
 
@@ -584,6 +581,7 @@ function createBindGroups() {
 
 let bindGroups = createBindGroups();
 
+let animationFrameHandle: number;
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
@@ -621,7 +619,7 @@ function render(timestamp: number) {
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
-  requestAnimationFrame(render);
+  animationFrameHandle = requestAnimationFrame(render);
 }
 
 function handleResize() {
@@ -643,7 +641,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-requestAnimationFrame(render);
+animationFrameHandle = requestAnimationFrame(render);
 
 // #region Example controls and cleanup
 
@@ -785,6 +783,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrameHandle);
   resizeObserver.disconnect();
   root.destroy();
 }

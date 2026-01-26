@@ -1,7 +1,6 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.ts';
 
 describe('rawCodeSnippet', () => {
   it('should throw a descriptive error when called in JS', () => {
@@ -113,6 +112,24 @@ describe('rawCodeSnippet', () => {
 
       fn myFn() -> u32 {
         return (myBuffer + myBuffer);
+      }"
+    `);
+  });
+
+  it('should be accessed transitively through a slot', () => {
+    const exprSlot = tgpu.slot(
+      tgpu['~unstable'].rawCodeSnippet('0.5 + 0.2', d.f32, 'constant'),
+    );
+
+    const foo = () => {
+      'use gpu';
+      return exprSlot.$;
+    };
+
+    expectTypeOf<typeof exprSlot.$>().toEqualTypeOf<number>();
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 0.5 + 0.2;
       }"
     `);
   });

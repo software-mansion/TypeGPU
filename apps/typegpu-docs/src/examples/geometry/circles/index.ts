@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as s from 'typegpu/std';
-
 import { circle, circleVertexCount } from '@typegpu/geometry';
+import tgpu, { d, std as s } from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');

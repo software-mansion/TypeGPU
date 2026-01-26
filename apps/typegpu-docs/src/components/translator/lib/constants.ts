@@ -21,8 +21,7 @@ fn fs_main() -> @location(0) vec4<f32> {
   return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }`;
 
-export const DEFAULT_TGSL = `import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+export const DEFAULT_TGSL = `import tgpu, { d } from 'typegpu';
 
 const Particle = d.struct({
   position: d.vec3f,
@@ -51,13 +50,11 @@ export const updateParicle = tgpu.fn([Particle, d.vec3f, d.f32], Particle)(
   },
 );
 
-export const main = tgpu.fn([])(() => {
-  for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-    const particle = layout.$.systemData.particles[i];
-    layout.$.systemData.particles[i] = updateParicle(
-      particle,
-      layout.$.systemData.gravity,
-      layout.$.systemData.deltaTime,
-    );
+export function main() {
+  'use gpu';
+  const data = layout.$.systemData;
+  for (let i = 0; i < data.particles.length; i++) {
+    const particle = data.particles[i];
+    data.particles[i] = updateParicle(particle, data.gravity, data.deltaTime);
   }
-});`;
+}`;

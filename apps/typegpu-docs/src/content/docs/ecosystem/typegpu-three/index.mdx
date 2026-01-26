@@ -1,0 +1,255 @@
+---
+title: "@typegpu/three"
+---
+
+import { Image } from 'astro:assets';
+import banner from './banner.webp';
+
+<Image src={banner} alt="A banner image showcasing a snippet of code using @typegpu/three" />
+
+[TSL (Three.js Shading Language)](https://github.com/mrdoob/three.js/wiki/Three.js-Shading-Language#function) is a node-based shader composition system for Three.js. Shader logic and control flow is built up by composing special functions,
+with a focus on composability, intuitive sharing of logic across modules and customizability. TypeGPU fits naturally into this system thanks to the `@typegpu/three` package. You can choose to write your TSL building blocks in TypeGPU, which has a few benefits:
+- Control-flow like `if` statements and `for` loops makes use of familiar JavaScript syntax instead of special functions.
+- The code you write is semantically valid JavaScript, with types flowing through each expression.
+- Unit-testability, since you can call these functions on the CPU
+
+You can see a [direct comparison between TSL and TypeGPU here](#differences-between-tsl-and-typegpu).
+
+:::caution
+If your end user's device doesn't support WebGPU, Three.js enables a WebGL fallback. Currently, using @typegpu/three
+makes your app only work on WebGPU-enabled devices. If you need WebGL support, [bombard this issue with reactions
+and state your use case in the comments.](https://github.com/software-mansion/TypeGPU/issues/1637)
+:::
+
+## Setup
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Refer to [TypeGPU's installation guide](/TypeGPU/getting-started/) for setting up TypeGPU if you haven't already.
+After that, install Three.js and @typegpu/three using the package manager of your choice.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install three @typegpu/three
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add three @typegpu/three
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add three @typegpu/three
+    ```
+  </TabItem>
+</Tabs>
+
+
+## Using TypeGPU with TSL
+
+import cube1 from './cube1.png';
+import cube2 from './cube2.png';
+import cube3 from './cube3.png';
+import cube4 from './cube4.png';
+
+Calling `t3.toTSL` with a TypeGPU function will return a TSL node, which can then be plugged into material properties, or used by other nodes.
+
+<div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between overflow-hidden">
+<div class="flex-1 w-auto min-w-[0]">
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+import * as THREE from 'three/webgpu';
+import * as t3 from '@typegpu/three';
+
+const material = new THREE.MeshBasicNodeMaterial();
+
+material.colorNode = t3.toTSL(() => {
+  'use gpu';
+  return d.vec4f(1, 0, 0, 1); // just red
+});
+```
+
+</div>
+<div class="flex-none">
+  <Image src={cube1} alt="A red cube" class="mb-4 max-w-[16rem]" />
+</div>
+</div>
+
+We can use other TSL nodes within TypeGPU functions with `t3.fromTSL`:
+
+<div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between overflow-hidden">
+<div class="flex-1 w-auto min-w-[0]">
+
+```diff lang="ts"
+import * as THREE from 'three/webgpu';
++import * as TSL from 'three/tsl';
+import * as t3 from '@typegpu/three';
+
+const material = new THREE.MeshBasicNodeMaterial();
+
++const albedo = TSL.color('magenta').mul(0.5);
++const albedoAccess = t3.fromTSL(albedo, d.vec3f);
+
+material.colorNode = t3.toTSL(() => {
+  'use gpu';
++  return d.vec4f(albedoAccess.$, 1);
+});
+```
+
+</div>
+<div class="flex-none">
+  <Image src={cube2} alt="A magenta cube" class="mb-4 max-w-[16rem]" />
+</div>
+</div>
+
+There are a handful of builtin TSL node accessors in the `t3` namespace:
+
+<div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between overflow-hidden">
+<div class="flex-1 w-auto min-w-[0]">
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+import * as THREE from 'three/webgpu';
+import * as t3 from '@typegpu/three';
+
+const material = new THREE.MeshBasicNodeMaterial();
+
+material.colorNode = t3.toTSL(() => {
+  'use gpu';
+  const uv = t3.uv().$;
+  return d.vec4f(uv, 0, 1);
+});
+```
+
+</div>
+<div class="flex-none">
+  <Image src={cube3} alt="A UV cube" class="mb-4 max-w-[16rem]" />
+</div>
+</div>
+
+Other TypeGPU functions (user-defined or from libraries) can be called to achieve more complex effects.
+
+<div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between overflow-hidden">
+<div class="flex-1 w-auto min-w-[0]">
+
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+// ---cut---
+import { perlin3d } from '@typegpu/noise';
+import * as THREE from 'three/webgpu';
+import * as t3 from '@typegpu/three';
+
+const material = new THREE.MeshBasicNodeMaterial();
+
+material.colorNode = t3.toTSL(() => {
+  'use gpu';
+  const coords = t3.uv().$.mul(2);
+  const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
+  return d.vec4f(std.tanh(pattern * 5), 0.2, 0.4, 1);
+});
+```
+
+</div>
+<div class="flex-none">
+  <Image src={cube4} alt="A funky cube" class="mb-4 max-w-[16rem]" />
+</div>
+</div>
+
+The code and interactive preview of this example [can be found here](/TypeGPU/examples#example=threejs--simple).
+
+## Differences between TSL and TypeGPU
+
+Below are a select few cases comparing TSL and TypeGPU:
+
+### Node definition
+
+TSL:
+```ts
+const simulate = Fn(() => {
+  //
+  // ... TSL code ...
+  //
+});
+```
+
+TypeGPU:
+```ts twoslash
+import * as t3 from '@typegpu/three';
+// ---cut---
+const simulate = t3.toTSL(() => {
+  'use gpu';
+  //
+  // ... TypeGPU code ...
+  // 
+});
+```
+
+### Function definition
+
+TSL:
+```ts
+const oscSine = Fn(([t = time]) => {
+  return t.add(0.75).mul(Math.PI * 2).sin().mul(0.5).add(0.5);
+});
+```
+
+TypeGPU:
+```ts twoslash
+import * as std from 'typegpu/std';
+// ---cut---
+const oscSine = (t: number) => {
+  'use gpu';
+  return std.sin((t + 0.75) * Math.PI * 2) * 0.5 + 0.5;
+};
+```
+
+### If statements
+
+TSL:
+```ts
+If(instanceIndex.greaterThanEqual(uint(vertexCount)), () => {
+  Return();
+});
+```
+
+TypeGPU:
+```ts twoslash
+import * as t3 from '@typegpu/three';
+declare const vertexCount: number;
+const some = () => {
+// ---cut-before---
+if (t3.instanceIndex.$ >= vertexCount) {
+  return;
+}
+// ---cut-after---
+};
+```
+
+### For loops
+
+TSL:
+```ts
+Loop({ start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' }, ({ i }) => {
+	const springId = springListBuffer.element( i ).toVar( 'springId' );
+	const springForce = springForceBuffer.element( springId );
+	const springVertexIds = springVertexIdBuffer.element( springId );
+	const factor = select( springVertexIds.x.equal( instanceIndex ), 1.0, - 1.0 );
+	force.addAssign( springForce.mul( factor ) );
+});
+```
+
+TypeGPU:
+```ts
+for (let i = ptrStart; i < ptrEnd; i++) {
+  const springId = springListBuffer.$[i];
+  const springForce = springForceBuffer.$[springId];
+  const springVertexIds = springVertexIdBuffer.$[springId];
+  const factor = std.select(-1, 1, springVertexIds.x === idx);
+  force = force.add(springForce.mul(d.f32(factor)));
+}
+```

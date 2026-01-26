@@ -22,7 +22,7 @@ describe('dualImpl', () => {
     const dual = dualImpl({
       normalImpl: (a: number) => a + 3,
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
-      codegenImpl: (snippet) => `(${snippet.value} + 3)`,
+      codegenImpl: (_ctx, [snippet]) => `(${snippet.value} + 3)`,
       name: 'myDualImpl',
     });
 
@@ -41,7 +41,7 @@ describe('dualImpl', () => {
     const dual = dualImpl<(a: number) => number>({
       normalImpl: 'Not implemented yet.',
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
-      codegenImpl: (snippet) => `fallback(${snippet.value})`,
+      codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
     });
 
@@ -58,7 +58,7 @@ describe('dualImpl', () => {
     const dual = dualImpl<typeof f>({
       normalImpl: 'Not implemented yet.',
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
-      codegenImpl: (snippet) => `fallback(${snippet.value})`,
+      codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
     });
 
@@ -79,7 +79,7 @@ describe('dualImpl', () => {
         throw new MissingCpuImplError('Not implemented yet.');
       },
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
-      codegenImpl: (snippet) => `fallback(${snippet.value})`,
+      codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
     });
 
@@ -101,7 +101,7 @@ describe('dualImpl', () => {
         return 1 / a;
       },
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
-      codegenImpl: (snippet) => `(1 / ${snippet.value})`,
+      codegenImpl: (_ctx, [snippet]) => `(1 / ${snippet.value})`,
       name: 'myDualImpl',
     });
 

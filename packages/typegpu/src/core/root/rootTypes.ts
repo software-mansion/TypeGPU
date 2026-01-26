@@ -41,7 +41,6 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type {
-  TgpuBufferShorthand,
   TgpuMutable,
   TgpuReadonly,
   TgpuUniform,
@@ -50,9 +49,7 @@ import type {
   TgpuFixedComparisonSampler,
   TgpuFixedSampler,
 } from '../sampler/sampler.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IORecord } from '../function/fnTypes.ts';
-import type { TgpuFn } from '../function/tgpuFn.ts';
 import type {
   FragmentInConstrained,
   FragmentOutConstrained,
@@ -68,18 +65,24 @@ import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
-import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes.ts';
-import type { TgpuTexture, TgpuTextureView } from '../texture/texture.ts';
+import type {
+  Eventual,
+  TgpuAccessor,
+  TgpuMutableAccessor,
+  TgpuSlot,
+} from '../slot/slotTypes.ts';
+import type { TgpuTexture } from '../texture/texture.ts';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
 
 // ----------
 // Public API
 // ----------
 
-export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> {
+export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]>
+  extends TgpuNamable {
   /**
    * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
@@ -203,27 +206,25 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface Configurable {
-  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
+export interface Withable<TSelf> {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuAccessor.In<NoInfer<T>>,
+  ): TSelf;
+  with<T extends AnyData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
+  ): TSelf;
+}
 
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
-  with<T extends WgslTexture | WgslStorageTexture>(
-    accessor: TgpuAccessor<T>,
-    value: TgpuTextureView<T> | Infer<T>,
-  ): Configurable;
-  with<T extends AnyWgslData>(
-    accessor: TgpuAccessor<T>,
-    value:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
-  ): Configurable;
+export interface Configurable extends Withable<Configurable> {
+  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding {
+export interface WithBinding extends Withable<WithBinding> {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -284,20 +285,6 @@ export interface WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends WgslTexture | WgslStorageTexture>(
-    accessor: TgpuAccessor<T>,
-    value: TgpuTextureView<T> | Infer<T>,
-  ): WithBinding;
-  with<T extends AnyWgslData>(
-    accessor: TgpuAccessor<T>,
-    value:
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
-  ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }

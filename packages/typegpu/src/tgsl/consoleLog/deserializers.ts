@@ -114,7 +114,7 @@ function deserialize(
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
-    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const propTypes = Object.values(dataType.propTypes);
     const decodedProps = deserializeCompound(data, propTypes);
     return Object.fromEntries(
       props.map((key, index) => [key, decodedProps[index]]),
