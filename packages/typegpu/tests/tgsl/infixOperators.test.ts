@@ -145,7 +145,7 @@ describe('wgslGenerator', () => {
       @group(0) @binding(1) var<uniform> barUniform: vec3f;
 
       fn testFn() {
-        var v1 = (fooUniform + 2);
+        var v1 = (fooUniform + 2f);
         var v2 = (vec3f(1, 2, 3) + barUniform);
         var v3 = (fooUniform + barUniform);
       }"
