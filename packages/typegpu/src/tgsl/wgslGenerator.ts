@@ -9,7 +9,7 @@ import {
   UnknownData,
   unptr,
 } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { bool, f32, i32, u32 } from '../data/numeric.ts';
 import {
   isEphemeralOrigin,
   isEphemeralSnippet,
@@ -41,6 +41,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { Void } from '../data/wgslTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -544,8 +545,28 @@ ${this.ctx.pre}}`;
             `An infix operator '${callee.value.name}' was called without any arguments`,
           );
         }
-        const rhs = this.expression(argNodes[0]);
-        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+
+        const lhs = callee.value.lhs;
+        let rhs = this.expression(argNodes[0]);
+        const rhsDataType = rhs.dataType;
+
+        if (
+          wgsl.isNumericSchema(rhsDataType) && !wgsl.isAbstract(rhsDataType)
+        ) {
+          const lhsDataType = lhs.dataType;
+          const targetDataType = wgsl.isMat(lhsDataType)
+            ? f32 // we only support matNxNf
+            : wgsl.isVec(lhsDataType)
+            ? lhsDataType.primitive
+            : Void; // unreachable;
+          rhs = tryConvertSnippet(
+            this.ctx,
+            rhs,
+            targetDataType,
+            false,
+          );
+        }
+        return callee.value.operator(this.ctx, [lhs, rhs]);
       }
 
       if (callee.value instanceof ConsoleLog) {

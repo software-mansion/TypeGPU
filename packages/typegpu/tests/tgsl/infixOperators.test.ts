@@ -165,4 +165,50 @@ describe('wgslGenerator', () => {
       }"
     `);
   });
+
+  it('casts scalars to vector/matrix type', () => {
+    const constant = tgpu.const(d.u32, 7);
+
+    const testFn = () => {
+      'use gpu';
+      const a = d.vec2f(6, 7).div(constant.$);
+      const b = d.mat2x2f().mul(constant.$);
+      const c = d.vec2f(6, 7).add(constant.$);
+      const e = d.vec2f(6, 7).sub(constant.$);
+    };
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "const constant: u32 = 7u;
+
+      fn testFn() {
+        var a = (vec2f(6, 7) / f32(constant));
+        var b = (mat2x2f(0, 0, 0, 0) * f32(constant));
+        var c = (vec2f(6, 7) + f32(constant));
+        var e = (vec2f(6, 7) - f32(constant));
+      }"
+    `);
+  });
+
+  it('does not cast rhs vector/matrix to vector/matrix type', () => {
+    const constant = tgpu.const(d.vec2f, d.vec2f(7, 7));
+
+    const testFn = () => {
+      'use gpu';
+      const a = d.vec2f(6, 7).div(constant.$);
+      const b = d.mat2x2f().mul(constant.$);
+      const c = d.vec2f(6, 7).add(constant.$);
+      const e = d.vec2f(6, 7).sub(constant.$);
+    };
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "const constant: vec2f = vec2f(7);
+
+      fn testFn() {
+        var a = (vec2f(6, 7) / constant);
+        var b = (mat2x2f(0, 0, 0, 0) * constant);
+        var c = (vec2f(6, 7) + constant);
+        var e = (vec2f(6, 7) - constant);
+      }"
+    `);
+  });
 });
