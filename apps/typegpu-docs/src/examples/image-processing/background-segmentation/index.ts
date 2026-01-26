@@ -1,21 +1,21 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuBindGroup,
+  TgpuTexture,
 } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
+import tgpu, { common, d } from 'typegpu';
+
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
   drawWithMaskLayout,
-  flipSlot,
+  flipAccess,
   generateMaskLayout,
   Params,
-  paramsAccessor,
+  paramsAccess,
   prepareModelInputLayout,
 } from './schemas.ts';
 import {
@@ -126,7 +126,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
+  .with(paramsAccess, paramsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -161,14 +161,14 @@ const generateMaskFromOutputPipeline = root['~unstable']
 
 const blurPipelines = [false, true].map((flip) =>
   root['~unstable']
-    .with(flipSlot, flip)
+    .with(flipAccess, flip)
     .withCompute(computeFn)
     .createPipeline()
 );
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
-  .withVertex(fullScreenTriangle, {})
+  .with(paramsAccess, paramsUniform)
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(drawWithMaskFragment, { format: presentationFormat })
   .createPipeline();
 

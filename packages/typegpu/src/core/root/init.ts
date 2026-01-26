@@ -11,7 +11,6 @@ import {
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
-  BaseData,
   U16,
   U32,
   v3u,
@@ -26,7 +25,7 @@ import {
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import type {
   ExtractBindGroupInputFromLayout,
@@ -48,16 +47,14 @@ import {
   type VertexFlag,
 } from '../buffer/buffer.ts';
 import {
-  type TgpuBufferShorthand,
   TgpuBufferShorthandImpl,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
 } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { IOLayout } from '../function/fnTypes.ts';
 import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
-import { fn, type TgpuFn } from '../function/tgpuFn.ts';
+import { fn } from '../function/tgpuFn.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
@@ -86,8 +83,12 @@ import type {
   WgslSamplerProps,
 } from '../../data/sampler.ts';
 import {
+  type AccessorIn,
   isAccessor,
+  isMutableAccessor,
+  type MutableAccessorIn,
   type TgpuAccessor,
+  type TgpuMutableAccessor,
   type TgpuSlot,
 } from '../slot/slotTypes.ts';
 import {
@@ -120,6 +121,7 @@ import { vec3f, vec3u } from '../../data/vector.ts';
 import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
+import { setName } from '../../shared/meta.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -194,6 +196,15 @@ export class TgpuGuardedComputePipelineImpl<TArgs extends number[]>
   get sizeUniform() {
     return this.#sizeUniform;
   }
+
+  [$internal] = true;
+  get [$getNameForward]() {
+    return this.#pipeline;
+  }
+  $name(label: string): this {
+    setName(this, label);
+    return this;
+  }
 }
 
 class WithBindingImpl implements WithBinding {
@@ -202,18 +213,13 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T extends AnyWgslData>(
-    slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value:
-      | T
-      | TgpuFn<() => T>
-      | TgpuBufferUsage<T>
-      | TgpuBufferShorthand<T>
-      | Infer<T>,
+  with<T extends AnyData>(
+    slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
+    value: AccessorIn<T> | MutableAccessorIn<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
-      [isAccessor(slot) ? slot.slot : slot, value],
+      [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
     ]);
   }
 
@@ -253,9 +259,11 @@ class WithBindingImpl implements WithBinding {
   wrappedCallback(in.id.x, in.id.y, in.id.z);
 }`.$uses({ sizeUniform, wrappedCallback });
 
-    const pipeline = this
-      .withCompute(mainCompute)
-      .createPipeline();
+    // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
+    const pipeline = (() =>
+      this
+        .withCompute(mainCompute)
+        .createPipeline())();
 
     return new TgpuGuardedComputePipelineImpl(
       root,
@@ -648,7 +656,7 @@ class TgpuRootImpl extends WithBindingImpl
       TgpuVertexLayout,
       {
         buffer:
-          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & VertexFlag)
+          | (TgpuBuffer<WgslArray | Disarray> & VertexFlag)
           | GPUBuffer;
         offset?: number | undefined;
         size?: number | undefined;

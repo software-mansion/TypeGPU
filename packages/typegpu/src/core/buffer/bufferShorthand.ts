@@ -31,34 +31,43 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // ---
 }
 
-export interface TgpuMutable<TData extends BaseData>
+export interface TgpuMutable<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
 }
 
-export interface TgpuReadonly<TData extends BaseData>
+export interface TgpuReadonly<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
 }
 
-export interface TgpuUniform<TData extends BaseData>
+export interface TgpuUniform<out TData extends BaseData>
   extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
   // Accessible on the GPU
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
@@ -99,7 +108,7 @@ export class TgpuBufferShorthandImpl<
   }
 
   $name(label: string): this {
-    setName(this[$getNameForward], label);
+    setName(this, label);
     return this;
   }
 

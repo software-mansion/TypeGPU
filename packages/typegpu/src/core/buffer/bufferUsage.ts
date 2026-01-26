@@ -43,6 +43,9 @@ export interface TgpuBufferUsage<
   readonly [$repr]: Infer<TData>;
 
   readonly [$gpuValueOf]: InferGPU<TData>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
@@ -53,12 +56,18 @@ export interface TgpuBufferUsage<
 
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
@@ -109,7 +118,7 @@ class TgpuFixedBufferImpl<
   }
 
   $name(label: string) {
-    this.buffer.$name(label);
+    setName(this, label);
     return this;
   }
 
@@ -169,7 +178,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.read()`',
+          : '.$ is inaccessible during normal JS execution. Try `.read()`',
       );
     }
 
@@ -204,7 +213,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.write()`',
+          : '.$ is inaccessible during normal JS execution. Try `.write()`',
       );
     }
 
@@ -228,7 +237,7 @@ class TgpuFixedBufferImpl<
 }
 
 export class TgpuLaidOutBufferImpl<
-  TData extends BaseData,
+  TData extends AnyWgslData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
@@ -248,21 +257,20 @@ export class TgpuLaidOutBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(dataType).value
+        ctx.resolve(this.dataType).value
       };`,
     );
 
     return snip(
       id,
-      dataType,
-      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+      this.dataType,
+      isNaturallyEphemeral(this.dataType) ? 'runtime' : this.usage,
     );
   }
 
@@ -271,7 +279,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as AnyData;
+    const schema = this.dataType;
     const usage = this.usage;
 
     return new Proxy({

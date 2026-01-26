@@ -160,6 +160,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$internal].gpuImpl,
+  'void': () => snip('', wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -365,7 +366,7 @@ ${this.ctx.pre}}`;
           convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
+            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.`,
           );
         }
 
@@ -682,10 +683,7 @@ ${this.ctx.pre}}`;
               `Missing property ${key} in object literal for struct ${structType}`,
             );
           }
-          const result = this.typedExpression(
-            val,
-            value as AnyData,
-          );
+          const result = this.typedExpression(val, value);
           return [key, result];
         }),
       );
@@ -770,6 +768,21 @@ ${this.ctx.pre}}`;
       );
     }
 
+    if (expression[0] === NODE.conditionalExpr) {
+      // ternary operator
+      const [_, test, consequent, alternative] = expression;
+      const testExpression = this.expression(test);
+      if (isKnownAtComptime(testExpression)) {
+        return testExpression.value
+          ? this.expression(consequent)
+          : this.expression(alternative);
+      } else {
+        throw new Error(
+          `Ternary operator is only supported for comptime-known checks (used with '${testExpression.value}'). For runtime checks, please use 'std.select' or if/else statements.`,
+        );
+      }
+    }
+
     if (expression[0] === NODE.stringLiteral) {
       return snip(expression[1], UnknownData, /* origin */ 'constant');
     }
@@ -791,9 +804,8 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      return `${this.ctx.pre}${
-        this.ctx.resolve(this.identifier(statement).value).value
-      };`;
+      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
+      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
     }
 
     if (typeof statement === 'boolean') {
@@ -1029,7 +1041,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.block) {
-      return this.block(statement);
+      return `${this.ctx.pre}${this.block(statement)}`;
     }
 
     if (statement[0] === NODE.for) {
@@ -1066,9 +1078,8 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    return `${this.ctx.pre}${
-      this.ctx.resolve(this.expression(statement).value).value
-    };`;
+    const resolved = this.ctx.resolve(this.expression(statement).value).value;
+    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
   }
 }
 

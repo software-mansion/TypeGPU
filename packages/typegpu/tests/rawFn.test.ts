@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
@@ -95,11 +94,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     });
 
     const vs = tgpu.fn([])`() {
-      out.highlighted = highlighted.index;
+      out.highlighted = layout.$.highlightedCircle.index;
 
-      let h = highlighted;
+      let h = layout.$.highlightedCircle;
       let x = a.b.c.highlighted.d;
-    }`.$uses({ highlighted: uniformBindGroupLayout.bound.highlightedCircle });
+    }`.$uses({ layout: uniformBindGroupLayout });
 
     expect(tgpu.resolve([vs])).toMatchInlineSnapshot(`
       "struct HighlightedCircle {
