@@ -153,7 +153,8 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
 
       const index = Number(prop);
       if (
-        !Number.isInteger(index) || index < 0 || index >= array.elementCount
+        !Number.isInteger(index) ||
+        index < 0 || index >= array.elementCount
       ) {
         return undefined;
       }
