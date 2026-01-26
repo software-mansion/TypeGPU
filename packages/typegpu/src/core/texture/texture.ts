@@ -577,7 +577,6 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: TextureViewInternals;
   readonly resourceType = 'texture-view' as const;
-  readonly size: number[];
 
   #baseTexture: TgpuTexture;
   #view: GPUTextureView | undefined;
@@ -595,7 +594,6 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   ) {
     this.#baseTexture = baseTexture;
     this.#descriptor = descriptor;
-    this.size = baseTexture.props.size;
 
     this[$internal] = {
       unwrap: () => {
