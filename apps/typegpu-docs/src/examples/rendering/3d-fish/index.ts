@@ -147,13 +147,8 @@ const camera = {
 };
 
 const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
-
-const mouseRayBuffer = root
-  .createBuffer(Line3, Line3({ origin: d.vec3f(), dir: d.vec3f() }))
-  .$usage('uniform');
-
+const mouseRayBuffer = root.createBuffer(Line3).$usage('uniform');
 const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
-
 const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
 
 const fishBehaviorBuffer = root
