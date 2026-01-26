@@ -66,9 +66,7 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -208,23 +206,25 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface Configurable {
-  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
+export interface Withable<TSelf> {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
   with<T extends AnyData>(
     accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): Configurable;
+    value: TgpuAccessor.In<NoInfer<T>>,
+  ): TSelf;
   with<T extends AnyData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): Configurable;
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
+  ): TSelf;
+}
+
+export interface Configurable extends Withable<Configurable> {
+  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding {
+export interface WithBinding extends Withable<WithBinding> {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -285,16 +285,6 @@ export interface WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }

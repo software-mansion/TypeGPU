@@ -22,11 +22,8 @@ import {
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
-  type AccessorIn,
-  type Eventual,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
@@ -44,6 +41,7 @@ import type {
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
+import type { Withable } from '../root/rootTypes.ts';
 
 // ----------
 // Public API
@@ -83,7 +81,8 @@ export type TgpuFnShell<
     ...values: unknown[]
   ) => TgpuFn<(...args: Args) => Return>);
 
-interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
+interface TgpuFnBase<ImplSchema extends AnyFn>
+  extends TgpuNamable, Withable<TgpuFn<ImplSchema>> {
   [$internal]: {
     implementation: Implementation<ImplSchema>;
   };
@@ -95,15 +94,6 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
   readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): TgpuFn<ImplSchema>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
