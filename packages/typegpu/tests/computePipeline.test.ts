@@ -5,10 +5,12 @@ import {
   MissingBindGroupsError,
   tgpu,
   type TgpuComputePipeline,
+  type ValidateBufferSchema,
 } from '../src/index.ts';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
+import type { AnyWgslData } from '../src/data/wgslTypes.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -556,5 +558,139 @@ describe('TgpuComputePipeline', () => {
 
       }"
     `);
+  });
+
+  describe('dispatchWorkgroupsIndirect', () => {
+    // offset calculator for this struct: https://shorturl.at/NQggS
+    const DeepStruct = d.struct({
+      someData: d.arrayOf(d.f32, 13),
+      nested: d.struct({
+        randomData: d.f32,
+        x: d.atomic(d.u32),
+        y: d.u32,
+        innerNested: d.arrayOf(
+          d.struct({
+            xx: d.atomic(d.u32),
+            yy: d.u32,
+            zz: d.u32,
+            myVec: d.vec4u,
+          }),
+          3,
+        ),
+        z: d.u32,
+        additionalData: d.arrayOf(d.u32, 32),
+      }),
+    });
+
+    it('computes correct offsets for various buffer types and accessors', ({ root, commandEncoder }) => {
+      const entryFn = tgpu['~unstable']
+        .computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.withCompute(entryFn).createPipeline();
+      const passEncoder = commandEncoder.beginComputePass();
+
+      function testOffset<T extends AnyWgslData>(
+        schema: ValidateBufferSchema<T>,
+        accessor: ((start: d.Infer<T>) => number) | undefined,
+        expectedOffset: number,
+      ) {
+        const buffer = root.createBuffer(schema).$usage('indirect');
+        pipeline.dispatchWorkgroupsIndirect(buffer, accessor);
+        expect(passEncoder.dispatchWorkgroupsIndirect).toHaveBeenLastCalledWith(
+          buffer.buffer,
+          expectedOffset,
+        );
+      }
+
+      testOffset(d.vec3u, undefined, 0);
+      testOffset(d.vec4u, (v) => v.y, 4);
+
+      testOffset(d.arrayOf(d.u32, 6), (a) => a[0] as number, 0);
+      testOffset(d.arrayOf(d.u32, 6), (a) => a[3] as number, 12);
+
+      const StructA = d.struct({ random: d.u32, dispatch: d.vec3u });
+      testOffset(StructA, (s) => s.dispatch.x, 16);
+
+      const StructB = d.struct({
+        header: d.u32,
+        dispatches: d.arrayOf(d.u32, 6),
+      });
+      testOffset(StructB, (s) => s.dispatches[0] as number, 4);
+      testOffset(StructB, (s) => s.dispatches[3] as number, 16);
+
+      const Inner = d.struct({ dispatch: d.vec3u });
+      const Outer = d.struct({ header: d.u32, inner: Inner });
+      testOffset(Outer, (s) => s.inner.dispatch.x, 16);
+
+      testOffset(d.arrayOf(d.vec3u, 3), (a) => a[0]?.x as number, 0);
+      testOffset(d.arrayOf(d.vec3u, 3), (a) => a[1]?.x as number, 16);
+
+      testOffset(
+        DeepStruct,
+        (s) => s.nested.innerNested[1]?.myVec.x as number,
+        128,
+      );
+      testOffset(
+        DeepStruct,
+        (s) => s.nested.additionalData[1] as number,
+        184,
+      );
+    });
+
+    it('warns when dispatch would read across padding', ({ root, commandEncoder }) => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu['~unstable']
+        .computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.withCompute(entryFn).createPipeline();
+
+      const PaddedStruct = d.struct({ a: d.u32, b: d.vec3u });
+      const buffer = root.createBuffer(PaddedStruct).$usage('indirect');
+
+      pipeline.dispatchWorkgroupsIndirect(buffer, (s) => s.a);
+
+      // biome-ignore lint/style/noNonNullAssertion: <it's fine>
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes of data are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        (s) => s.someData[11] as number,
+      );
+
+      // biome-ignore lint/style/noNonNullAssertion: <it's fine>
+      expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes of data are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        (s) => s.nested.innerNested[0]?.yy as number,
+      );
+
+      // biome-ignore lint/style/noNonNullAssertion: <it's fine>
+      expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes of data are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('does not warn when dispatch has sufficient contiguous data', ({ root, commandEncoder }) => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu['~unstable']
+        .computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.withCompute(entryFn).createPipeline();
+
+      // vec3u has exactly 12 contiguous bytes - no warning needed
+      const buffer = root.createBuffer(d.vec3u).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
   });
 });

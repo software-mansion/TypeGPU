@@ -48,6 +48,7 @@ const mockCommandEncoder = {
 
 const mockComputePassEncoder = {
   dispatchWorkgroups: vi.fn(),
+  dispatchWorkgroupsIndirect: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
