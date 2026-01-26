@@ -41,7 +41,6 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { Void } from '../data/wgslTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -554,11 +553,9 @@ ${this.ctx.pre}}`;
           wgsl.isNumericSchema(rhsDataType) && !wgsl.isAbstract(rhsDataType)
         ) {
           const lhsDataType = lhs.dataType;
-          const targetDataType = wgsl.isMat(lhsDataType)
-            ? f32 // we only support matNxNf
-            : wgsl.isVec(lhsDataType)
+          const targetDataType = wgsl.isVec(lhsDataType)
             ? lhsDataType.primitive
-            : Void; // unreachable;
+            : f32; // we only support matNxNf
           rhs = tryConvertSnippet(
             this.ctx,
             rhs,
