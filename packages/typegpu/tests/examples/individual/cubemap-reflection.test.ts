@@ -45,7 +45,7 @@ describe('cubemap reflection example', () => {
       }
 
       fn calculateMidpoint(v1: vec4f, v2: vec4f) -> vec4f {
-        return vec4f((0.5 * (v1.xyz + v2.xyz)), 1f);
+        return vec4f((0.5f * (v1.xyz + v2.xyz)), 1f);
       }
 
       fn getAverageNormal(v1: vec4f, v2: vec4f, v3: vec4f) -> vec4f {

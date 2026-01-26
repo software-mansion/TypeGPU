@@ -1240,6 +1240,7 @@ export interface Vec4b extends
  */
 export interface Mat2x2f extends BaseData {
   readonly type: 'mat2x2f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
@@ -1258,6 +1259,7 @@ export interface Mat2x2f extends BaseData {
  */
 export interface Mat3x3f extends BaseData {
   readonly type: 'mat3x3f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
@@ -1277,6 +1279,7 @@ export interface Mat3x3f extends BaseData {
  */
 export interface Mat4x4f extends BaseData {
   readonly type: 'mat4x4f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;

@@ -52,8 +52,8 @@ describe('stable-fluid example', () => {
         var velocity = textureLoad(src, pixelPos, 0);
         let timeStep = simParams.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity.xy));
-        var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - 0.5));
-        var normalizedPos = ((clampedPos + 0.5) / vec2f(texSize.xy));
+        var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - 0.5f));
+        var normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
         var prevVelocity = textureSampleLevel(src, linSampler, normalizedPos, 0);
         textureStore(dst, pixelPos, prevVelocity);
       }
