@@ -444,9 +444,9 @@ class TgpuRootImpl extends WithBindingImpl
       );
     }
     context.configure({
-      device: this.device,
-      format: navigator.gpu.getPreferredCanvasFormat(),
       ...options,
+      device: this.device,
+      format: options.format ?? navigator.gpu.getPreferredCanvasFormat(),
     });
     return context;
   }

@@ -578,27 +578,7 @@ export type ConfigureContextOptions = {
    * Defaults to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
    */
   format?: GPUTextureFormat;
-  /**
-   * Passed to `context.configure()`.
-   */
-  usage?: GPUTextureUsageFlags;
-  /**
-   * Passed to `context.configure()`.
-   */
-  viewFormats?: Iterable<GPUTextureFormat>;
-  /**
-   * Passed to `context.configure()`.
-   */
-  colorSpace?: PredefinedColorSpace;
-  /**
-   * Passed to `context.configure()`.
-   */
-  toneMapping?: GPUCanvasToneMapping;
-  /**
-   * Passed to `context.configure()`.
-   */
-  alphaMode?: GPUCanvasAlphaMode;
-};
+} & Omit<GPUCanvasConfiguration, 'device' | 'format'>;
 
 export interface TgpuRoot extends Unwrapper {
   [$internal]: {
