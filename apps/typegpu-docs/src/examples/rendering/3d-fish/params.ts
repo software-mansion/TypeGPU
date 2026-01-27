@@ -5,8 +5,8 @@ export const fishModelScale = 0.07;
 
 export const fishWallRepulsionDistance = 0.1;
 export const fishWallRepulsionStrength = 0.0001;
-export const fishMouseRayRepulsionDistance = 0.9;
-export const fishMouseRayRepulsionStrength = 0.0005;
+export const fishMouseRayRepulsionDistance = 1.2;
+export const fishMouseRayRepulsionStrength = 0.0015;
 
 export const aquariumSize = d.vec3f(10, 4, 10);
 

@@ -14,7 +14,7 @@ import type {
   WgslTextureDepthMultisampled2d,
 } from '../../data/texture.ts';
 import {
-  type AnyWgslData,
+  type BaseData,
   type Decorated,
   isWgslData,
   type U16,
@@ -132,7 +132,7 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   ): this;
 
   withIndexBuffer(
-    buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
+    buffer: TgpuBuffer<BaseData> & IndexFlag,
     offsetElements?: number,
     sizeElements?: number,
   ): this & HasIndexBuffer;
@@ -329,7 +329,7 @@ export function INTERNAL_createRenderPipeline(
 
 type TgpuRenderPipelinePriors = {
   readonly vertexLayoutMap?:
-    | Map<TgpuVertexLayout, TgpuBuffer<AnyWgslData> & VertexFlag>
+    | Map<TgpuVertexLayout, TgpuBuffer<BaseData> & VertexFlag>
     | undefined;
   readonly bindGroupLayoutMap?:
     | Map<TgpuBindGroupLayout, TgpuBindGroup>
@@ -339,7 +339,7 @@ type TgpuRenderPipelinePriors = {
   readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
-      buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer;
+      buffer: TgpuBuffer<BaseData> & IndexFlag | GPUBuffer;
       indexFormat: GPUIndexFormat;
       offsetBytes?: number | undefined;
       sizeBytes?: number | undefined;
@@ -382,7 +382,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return this;
   }
 
-  with<TData extends WgslArray<AnyWgslData>>(
+  with<TData extends WgslArray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
   ): this;
@@ -396,7 +396,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       | TgpuVertexLayout
       | TgpuBindGroupLayout
       | TgpuBindGroup,
-    resource?: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
+    resource?: (TgpuBuffer<BaseData> & VertexFlag) | TgpuBindGroup,
   ): this {
     const internals = this[$internal];
 
@@ -427,7 +427,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           ...(internals.priors.vertexLayoutMap ?? []),
           [
             layoutOrBindGroup,
-            resource as TgpuBuffer<AnyWgslData> & VertexFlag,
+            resource as TgpuBuffer<BaseData> & VertexFlag,
           ],
         ]),
       }) as this;
@@ -496,7 +496,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   withIndexBuffer(
-    buffer: TgpuBuffer<AnyWgslData> & IndexFlag,
+    buffer: TgpuBuffer<BaseData> & IndexFlag,
     offsetElements?: number,
     sizeElements?: number,
   ): this & HasIndexBuffer;
@@ -507,7 +507,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     sizeBytes?: number,
   ): this & HasIndexBuffer;
   withIndexBuffer(
-    buffer: TgpuBuffer<AnyWgslData> & IndexFlag | GPUBuffer,
+    buffer: TgpuBuffer<BaseData> & IndexFlag | GPUBuffer,
     indexFormatOrOffset?: GPUIndexFormat | number,
     offsetElementsOrSizeBytes?: number,
     sizeElementsOrUndefined?: number,

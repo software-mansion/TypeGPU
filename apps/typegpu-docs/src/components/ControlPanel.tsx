@@ -1,14 +1,15 @@
 import cs from 'classnames';
-import { useAtom, useAtomValue } from 'jotai';
-import { useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import { menuShownAtom } from '../utils/examples/menuShownAtom.ts';
+import {
+  codeEditorShownAtom,
+  menuShownAtom,
+} from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -344,16 +345,14 @@ export function ControlPanel() {
         <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
       </div>
 
-      {isGPUSupported
-        ? (
-          <>
-            <h2 className='m-0 font-medium text-xl'>Example controls</h2>
-            <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
-              {exampleControlParams.map((param) => paramToControlRow(param))}
-            </div>
-          </>
-        )
-        : null}
+      {isGPUSupported && (
+        <>
+          <h2 className='m-0 font-medium text-xl'>Example controls</h2>
+          <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
+            {exampleControlParams.map(paramToControlRow)}
+          </div>
+        </>
+      )}
     </div>
   );
 }
