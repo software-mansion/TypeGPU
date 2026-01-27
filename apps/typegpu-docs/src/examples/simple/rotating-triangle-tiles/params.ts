@@ -7,7 +7,7 @@ const INITIAL_STEP_ROTATION = 60;
 const INITIAL_MIDDLE_SQUARE_SCALE = 2;
 const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
-let cubicBezierControlPoints: [number, number, number, number] = [
+const cubicBezierControlPoints: [number, number, number, number] = [
   0.18,
   0.7,
   0.68,
@@ -31,7 +31,7 @@ function parseControlPoints(value: string) {
 
 function parseOneControlPoint(value: string, index: number) {
   const parsedNumber = Number(value);
-  if (isNaN(parsedNumber)) {
+  if (Number.isNaN(parsedNumber)) {
     throw Error('Cubic Bezier control point must be a number');
   }
   if ((index % 2 === 0) && (parsedNumber < 0 || parsedNumber > 1)) {

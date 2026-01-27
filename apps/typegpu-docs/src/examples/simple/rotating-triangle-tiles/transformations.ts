@@ -1,4 +1,4 @@
-import tgpu, { type TgpuAccessor, type TgpuUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
