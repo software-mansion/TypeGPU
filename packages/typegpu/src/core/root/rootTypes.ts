@@ -570,53 +570,32 @@ export type ValidateUniformSchema<TData extends BaseData> =
 
 export type ConfigureContextOptions = {
   /**
-   * TODO: docs for this type
+   * The canvas for which a context will be created and configured.
    */
   canvas: HTMLCanvasElement | OffscreenCanvas;
   /**
-   * The format that textures returned by {@link GPUCanvasContext#getCurrentTexture} will have.
-   * Must be one of the Supported context formats.
-   * Defaults to `navigator.gpu.getPreferredCanvasFormat()`.
+   * Passed to `context.configure()`.
+   * Defaults to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
    */
   format?: GPUTextureFormat;
   /**
-   * The usage that textures returned by {@link GPUCanvasContext#getCurrentTexture} will have.
-   * {@link GPUTextureUsage#RENDER_ATTACHMENT} is the default, but is not automatically included
-   * if the usage is explicitly set. Be sure to include {@link GPUTextureUsage#RENDER_ATTACHMENT}
-   * when setting a custom usage if you wish to use textures returned by
-   * {@link GPUCanvasContext#getCurrentTexture} as color targets for a render pass.
+   * Passed to `context.configure()`.
    */
   usage?: GPUTextureUsageFlags;
   /**
-   * The formats that views created from textures returned by
-   * {@link GPUCanvasContext#getCurrentTexture} may use.
+   * Passed to `context.configure()`.
    */
   viewFormats?: Iterable<GPUTextureFormat>;
   /**
-   * The color space that values written into textures returned by
-   * {@link GPUCanvasContext#getCurrentTexture} should be displayed with.
+   * Passed to `context.configure()`.
    */
   colorSpace?: PredefinedColorSpace;
   /**
-   * The tone mapping determines how the content of textures returned by
-   * {@link GPUCanvasContext#getCurrentTexture} are to be displayed.
-   * <div class=note heading>
-   * This is a required feature, but user agents might not yet implement it,
-   * effectively supporting only the default {@link GPUCanvasToneMapping}.
-   * In such implementations, this member **should not** exist in its implementation of
-   * {@link GPUCanvasConfiguration}, to make feature detection possible using
-   * {@link GPUCanvasContext#getConfiguration}.
-   * This is especially important in implementations which otherwise have HDR capabilities
-   * (where a <l>'@media/dynamic-range'</l> of <l>''@media/dynamic-range/high''</l> would be
-   * exposed).
-   * If an implementation exposes this member and a `high` dynamic range, it **should** render the
-   * canvas as an HDR element, not clamp values to the SDR range of the HDR display.
-   * </div>
+   * Passed to `context.configure()`.
    */
   toneMapping?: GPUCanvasToneMapping;
   /**
-   * Determines the effect that alpha values will have on the content of textures returned by
-   * {@link GPUCanvasContext#getCurrentTexture} when read, displayed, or used as an image source.
+   * Passed to `context.configure()`.
    */
   alphaMode?: GPUCanvasAlphaMode;
 };
@@ -632,9 +611,8 @@ export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
 
   /**
-   * TODO: jsdoc
-   * TODO: update examples
-   * TODO: update docs
+   * Creates and configures context for the provided canvas.
+   * Automatically sets the format to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
    */
   configureContext(options: ConfigureContextOptions): GPUCanvasContext;
 
