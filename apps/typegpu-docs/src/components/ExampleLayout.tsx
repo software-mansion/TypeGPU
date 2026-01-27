@@ -13,6 +13,7 @@ import {
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
+import { useHydrated } from '../utils/useHydrated.ts';
 
 interface ExampleLayoutProps {
   children?: ReactNode | undefined;
@@ -21,6 +22,7 @@ interface ExampleLayoutProps {
 export function ExampleLayout(props: ExampleLayoutProps) {
   const [menuShown, setMenuShown] = useAtom(menuShownAtom);
   const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
+  const hydrated = useHydrated();
 
   return (
     <>
@@ -32,7 +34,8 @@ export function ExampleLayout(props: ExampleLayoutProps) {
         )}
 
         <Button onClick={() => setCodeShown((prev) => !prev)}>
-          {codeShown ? 'Preview' : 'Code'}
+          {/* Applying the actual label only after the component has been hydrated */}
+          {codeShown && hydrated ? 'Preview' : 'Code'}
         </Button>
       </div>
 

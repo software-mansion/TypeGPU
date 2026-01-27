@@ -1,11 +1,11 @@
 ---
-import { ExampleLayout } from "../../components/ExampleLayout";
-import ExamplePage from "../../components/ExamplePage";
-import PageLayout from "../../layouts/PageLayout.astro";
+import { ExampleLayout } from '../../components/ExampleLayout';
+import ExamplePage from '../../components/ExamplePage';
+import PageLayout from '../../layouts/PageLayout.astro';
 ---
 
 <PageLayout title="Examples | TypeGPU">
-    <ExampleLayout client:only="react">
-        <ExamplePage client:only="react" />
-    </ExampleLayout>
+  <ExampleLayout client:load>
+    <ExamplePage client:only="react" />
+  </ExampleLayout>
 </PageLayout>
