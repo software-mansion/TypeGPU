@@ -63,7 +63,7 @@ export const ref = (() => {
         );
       }
 
-      if (value.dataType.type === 'ptr') {
+      if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
         return snip(value.value, explicitFrom(value.dataType), value.origin);

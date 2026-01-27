@@ -115,18 +115,13 @@ describe('3d fish example', () => {
         dir: vec3f,
       }
 
-      struct MouseRay {
-        activated: u32,
-        line: Line3,
-      }
-
-      @group(1) @binding(2) var<uniform> mouseRay: MouseRay;
-
       fn projectPointOnLine(point: vec3f, line: Line3) -> vec3f {
         var pointVector = (point - line.origin);
         let projection = dot(pointVector, line.dir);
         return (line.origin + (line.dir * projection));
       }
+
+      @group(1) @binding(2) var<uniform> mouseRay: Line3;
 
       @group(1) @binding(3) var<uniform> timePassed: f32;
 
@@ -172,27 +167,25 @@ describe('3d fish example', () => {
           let axisPosition = (*fishData).position[i];
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str));
+            let str2 = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str2));
           }
           if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str));
+            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str2));
           }
         }
-        if ((mouseRay.activated == 1u)) {
-          var proj = projectPointOnLine((*fishData).position, mouseRay.line);
-          var diff = ((*fishData).position - proj);
-          const limit = 0.9;
-          let str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
-          rayRepulsion = (normalize(diff) * str);
-        }
+        var proj = projectPointOnLine((*fishData).position, mouseRay);
+        var diff = ((*fishData).position - proj);
+        const limit = 1.2;
+        let str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
+        rayRepulsion = (normalize(diff) * str);
         var direction = (*fishData).direction;
         direction = (direction + (separation * fishBehavior.separationStr));
         direction = (direction + (alignment * fishBehavior.alignmentStr));
         direction = (direction + (cohesion * fishBehavior.cohesionStr));
         direction = (direction + (wallRepulsion * 1e-4));
-        direction = (direction + (rayRepulsion * 5e-4));
+        direction = (direction + (rayRepulsion * 0.0015));
         direction = (normalize(direction) * clamp(length((*fishData).direction), 0f, 0.01f));
         var translation = (direction * (min(999f, timePassed) / 8f));
         let nextFishData_1 = (&nextFishData[fishIndex]);
