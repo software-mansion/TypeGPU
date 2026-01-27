@@ -1,8 +1,7 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuAccessor, type TgpuUniform } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
-import { aspectRatioBuffer, scaleBuffer } from './buffers.ts';
 import { BASE_TRIANGLE_HALF_SIDE } from './geometry.ts';
 
 const interpolate = tgpu.fn(
@@ -59,33 +58,38 @@ function rotate(coordinate: d.v2f, angleInDegrees: number) {
 function instanceTransform(
   position: d.v2f,
   instanceInfo: d.Infer<typeof InstanceInfo>,
+  scaleValue: number,
+  aspectRatioValue: number,
 ) {
   'use gpu';
   const transformedPoint = std.add(
     // rotate accordingly
     rotate(
-      std.mul(position, scaleBuffer.$),
+      std.mul(position, scaleValue),
       instanceInfo.rotationAngle,
     ),
     // add instance offsets with top left corner offset
     std.add(
       instanceInfo.offset,
-      getZeroOffset(),
+      getZeroOffset(scaleValue, aspectRatioValue),
     ),
   );
 
   // squish/stretch triangles horizontally
-  return d.mat2x2f(1 / aspectRatioBuffer.$, 0, 0, 1).mul(transformedPoint);
+  return d.mat2x2f(1 / aspectRatioValue, 0, 0, 1).mul(transformedPoint);
 }
 
 // common offset so that the first triangle's
 // top vertex lies on top of canvas's top left corner
-function getZeroOffset() {
+function getZeroOffset(
+  scaleValue: number,
+  aspectRatioValue: number,
+) {
   'use gpu';
-  const zeroXOffset = BASE_TRIANGLE_HALF_SIDE * scaleBuffer.$ -
-    1 * aspectRatioBuffer.$;
+  const zeroXOffset = BASE_TRIANGLE_HALF_SIDE * scaleValue -
+    1 * aspectRatioValue;
   // make the top of the very first triangle touch the border
-  const zeroYOffset = 1 - scaleBuffer.$;
+  const zeroYOffset = 1 - scaleValue;
 
   return d.vec2f(zeroXOffset, zeroYOffset);
 }

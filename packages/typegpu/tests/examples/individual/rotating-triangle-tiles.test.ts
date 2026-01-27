@@ -74,20 +74,20 @@ describe('rotating-triangle-tiles example', () => {
         return vec2f(((x * cos(angle)) - (y * sin(angle))), ((x * sin(angle)) + (y * cos(angle))));
       }
 
-      @group(0) @binding(3) var<uniform> scaleBuffer: f32;
-
-      @group(0) @binding(4) var<uniform> aspectRatioBuffer: f32;
-
-      fn getZeroOffset() -> vec2f {
-        let zeroXOffset = ((0.8660254037844386f * scaleBuffer) - (1f * aspectRatioBuffer));
-        let zeroYOffset = (1f - scaleBuffer);
+      fn getZeroOffset(scaleValue: f32, aspectRatioValue: f32) -> vec2f {
+        let zeroXOffset = ((0.8660254037844386f * scaleValue) - (1f * aspectRatioValue));
+        let zeroYOffset = (1f - scaleValue);
         return vec2f(zeroXOffset, zeroYOffset);
       }
 
-      fn instanceTransform(position: vec2f, instanceInfo_1: InstanceInfo) -> vec2f {
-        var transformedPoint = (rotate((position * scaleBuffer), instanceInfo_1.rotationAngle) + (instanceInfo_1.offset + getZeroOffset()));
-        return (mat2x2f((1f / aspectRatioBuffer), 0f, 0f, 1f) * transformedPoint);
+      fn instanceTransform(position: vec2f, instanceInfo_1: InstanceInfo, scaleValue: f32, aspectRatioValue: f32) -> vec2f {
+        var transformedPoint = (rotate((position * scaleValue), instanceInfo_1.rotationAngle) + (instanceInfo_1.offset + getZeroOffset(scaleValue, aspectRatioValue)));
+        return (mat2x2f((1f / aspectRatioValue), 0f, 0f, 1f) * transformedPoint);
       }
+
+      @group(0) @binding(3) var<uniform> scaleBuffer: f32;
+
+      @group(0) @binding(4) var<uniform> aspectRatioBuffer: f32;
 
       struct midgroundVertex_Output {
         @builtin(position) outPos: vec4f,
@@ -110,10 +110,10 @@ describe('rotating-triangle-tiles example', () => {
         let scaleFactor = interpolateBezier(animationProgressUniform, 0.5f, middleSquareScaleBuffer);
         var calculatedPosition = rotate(vertexPosition, angle);
         calculatedPosition = (calculatedPosition * scaleFactor);
-        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1));
-        var maskP0 = instanceTransform(originalVertices[0i], (*instanceInfo_1));
-        var maskP1 = instanceTransform(originalVertices[1i], (*instanceInfo_1));
-        var maskP2 = instanceTransform(originalVertices[2i], (*instanceInfo_1));
+        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
+        var maskP0 = instanceTransform(originalVertices[0i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
+        var maskP1 = instanceTransform(originalVertices[1i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
+        var maskP2 = instanceTransform(originalVertices[2i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
         return midgroundVertex_Output(vec4f(finalPosition, 0f, 1f), maskP0, maskP1, maskP2, finalPosition);
       }
 
@@ -177,20 +177,20 @@ describe('rotating-triangle-tiles example', () => {
         return vec2f(((x * cos(angle)) - (y * sin(angle))), ((x * sin(angle)) + (y * cos(angle))));
       }
 
-      @group(0) @binding(2) var<uniform> scaleBuffer: f32;
-
-      @group(0) @binding(3) var<uniform> aspectRatioBuffer: f32;
-
-      fn getZeroOffset() -> vec2f {
-        let zeroXOffset = ((0.8660254037844386f * scaleBuffer) - (1f * aspectRatioBuffer));
-        let zeroYOffset = (1f - scaleBuffer);
+      fn getZeroOffset(scaleValue: f32, aspectRatioValue: f32) -> vec2f {
+        let zeroXOffset = ((0.8660254037844386f * scaleValue) - (1f * aspectRatioValue));
+        let zeroYOffset = (1f - scaleValue);
         return vec2f(zeroXOffset, zeroYOffset);
       }
 
-      fn instanceTransform(position: vec2f, instanceInfo_1: InstanceInfo) -> vec2f {
-        var transformedPoint = (rotate((position * scaleBuffer), instanceInfo_1.rotationAngle) + (instanceInfo_1.offset + getZeroOffset()));
-        return (mat2x2f((1f / aspectRatioBuffer), 0f, 0f, 1f) * transformedPoint);
+      fn instanceTransform(position: vec2f, instanceInfo_1: InstanceInfo, scaleValue: f32, aspectRatioValue: f32) -> vec2f {
+        var transformedPoint = (rotate((position * scaleValue), instanceInfo_1.rotationAngle) + (instanceInfo_1.offset + getZeroOffset(scaleValue, aspectRatioValue)));
+        return (mat2x2f((1f / aspectRatioValue), 0f, 0f, 1f) * transformedPoint);
       }
+
+      @group(0) @binding(2) var<uniform> scaleBuffer: f32;
+
+      @group(0) @binding(3) var<uniform> aspectRatioBuffer: f32;
 
       struct foregroundVertex_Output {
         @builtin(position) outPos: vec4f,
@@ -209,7 +209,7 @@ describe('rotating-triangle-tiles example', () => {
         let scaleFactor = animationProgressUniform;
         calculatedPosition = rotate(calculatedPosition, angle);
         calculatedPosition = (calculatedPosition * scaleFactor);
-        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1));
+        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
         return foregroundVertex_Output(vec4f(finalPosition, 0f, 1f));
       }
 
