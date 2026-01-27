@@ -1,12 +1,6 @@
 import * as d from 'typegpu/data';
-import {
-  aspectRatioBuffer,
-  middleSquareScaleBuffer,
-  scaleBuffer,
-  stepRotationBuffer,
-  updateInstanceInfoBufferAndBindGroup,
-} from './buffers.ts';
 import { MAGIC_NUMBER } from './geometry.ts';
+import type { TgpuUniform } from 'typegpu';
 
 const INIT_TILE_DENSITY = 0.1;
 const INITIAL_STEP_ROTATION = 60;
@@ -37,7 +31,6 @@ function parseControlPoints(value: string) {
 
 function parseOneControlPoint(value: string, index: number) {
   const parsedNumber = Number(value);
-  console.log(parsedNumber);
   if (isNaN(parsedNumber)) {
     throw Error('Cubic Bezier control point must be a number');
   }
@@ -50,7 +43,11 @@ function parseOneControlPoint(value: string, index: number) {
 
 let aspectRatio = 1;
 
-function updateAspectRatio(width: number, height: number) {
+function updateAspectRatio(
+  width: number,
+  height: number,
+  aspectRatioBuffer: TgpuUniform<d.F32>,
+) {
   aspectRatio = width / height;
   aspectRatioBuffer.write(aspectRatio);
 }
@@ -72,7 +69,11 @@ const ROTATION_OPTIONS = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.flatMap(
   (element) => element[0],
 );
 
-function updateStepRotation(newValue: number) {
+function updateStepRotation(
+  newValue: number,
+  stepRotationBuffer: TgpuUniform<d.F32>,
+  middleSquareScaleBuffer: TgpuUniform<d.F32>,
+) {
   stepRotationBuffer.write(newValue);
 
   // update middle triangle scale so that it doesn't
@@ -100,7 +101,11 @@ function getGridParams() {
   return gridParams;
 }
 
-function updateGridParams(newValue?: number) {
+function updateGridParams(
+  scaleBuffer: TgpuUniform<d.F32>,
+  updateInstanceInfoBufferAndBindGroup: () => void,
+  newValue?: number,
+) {
   const value = newValue ?? gridParams.tileDensity;
   gridParams = createGridParams(value);
   scaleBuffer.write(gridParams.tileDensity);

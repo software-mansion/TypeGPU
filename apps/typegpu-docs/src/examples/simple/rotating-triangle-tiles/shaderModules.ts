@@ -6,15 +6,17 @@ import {
   interpolateBezier,
   rotate,
 } from './transformations.ts';
-import {
-  animationProgressUniform,
-  drawOverNeighborsBuffer,
-  instanceInfoLayout,
-  middleSquareScaleBuffer,
-  shiftedColorsBuffer,
-  stepRotationBuffer,
-} from './buffers.ts';
 import { originalVertices } from './geometry.ts';
+import {
+  animationProgressAccess,
+  aspectRatioAccess,
+  drawOverNeighborsAccess,
+  instanceInfoLayout,
+  middleSquareScaleAccess,
+  scaleAccess,
+  shiftedColorsAccess,
+  stepRotationAccess,
+} from './buffers.ts';
 
 //clear background color
 const backgroundVertex = tgpu['~unstable'].vertexFn({
@@ -40,7 +42,7 @@ const backgroundVertex = tgpu['~unstable'].vertexFn({
 const backgroundFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(() => {
-  const color = d.vec4f(shiftedColorsBuffer.$[0]);
+  const color = d.vec4f(shiftedColorsAccess.$[0]);
 
   return color;
 });
@@ -67,35 +69,46 @@ const midgroundVertex = tgpu['~unstable'].vertexFn({
   const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
 
   const angle = interpolateBezier(
-    animationProgressUniform.$,
-    stepRotationBuffer.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
-    stepRotationBuffer.$ +
-      stepRotationBuffer.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
+    animationProgressAccess.$,
+    stepRotationAccess.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
+    stepRotationAccess.$ +
+      stepRotationAccess.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
   );
 
   const scaleFactor = interpolateBezier(
-    animationProgressUniform.$,
+    animationProgressAccess.$,
     0.5,
-    middleSquareScaleBuffer.$,
+    middleSquareScaleAccess.$,
   );
 
   let calculatedPosition = rotate(vertexPosition, angle);
   calculatedPosition = std.mul(calculatedPosition, scaleFactor);
 
-  const finalPosition = instanceTransform(calculatedPosition, instanceInfo);
+  const finalPosition = instanceTransform(
+    calculatedPosition,
+    instanceInfo,
+    scaleAccess.$,
+    aspectRatioAccess.$,
+  );
 
   // mask transform
   const maskP0 = instanceTransform(
     d.vec2f(originalVertices.$[0]),
     instanceInfo,
+    scaleAccess.$,
+    aspectRatioAccess.$,
   );
   const maskP1 = instanceTransform(
     d.vec2f(originalVertices.$[1]),
     instanceInfo,
+    scaleAccess.$,
+    aspectRatioAccess.$,
   );
   const maskP2 = instanceTransform(
     d.vec2f(originalVertices.$[2]),
     instanceInfo,
+    scaleAccess.$,
+    aspectRatioAccess.$,
   );
 
   return {
@@ -120,11 +133,11 @@ const midgroundFragment = tgpu['~unstable'].fragmentFn({
   const e1 = edgeFunction(maskP1, maskP2, vertexClipPos);
   const e2 = edgeFunction(maskP2, maskP0, vertexClipPos);
 
-  if ((e0 > 0 || e1 > 0 || e2 > 0) && drawOverNeighborsBuffer.$ === 0) {
+  if ((e0 > 0 || e1 > 0 || e2 > 0) && drawOverNeighborsAccess.$ === 0) {
     std.discard();
   }
 
-  const color = d.vec4f(shiftedColorsBuffer.$[1]);
+  const color = d.vec4f(shiftedColorsAccess.$[1]);
 
   return color;
 });
@@ -145,16 +158,21 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
   const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
 
   const angle = interpolateBezier(
-    animationProgressUniform.$,
+    animationProgressAccess.$,
     0,
-    stepRotationBuffer.$,
+    stepRotationAccess.$,
   );
 
-  const scaleFactor = animationProgressUniform.$;
+  const scaleFactor = animationProgressAccess.$;
   calculatedPosition = rotate(calculatedPosition, angle);
   calculatedPosition = std.mul(calculatedPosition, scaleFactor);
 
-  const finalPosition = instanceTransform(calculatedPosition, instanceInfo);
+  const finalPosition = instanceTransform(
+    calculatedPosition,
+    instanceInfo,
+    scaleAccess.$,
+    aspectRatioAccess.$,
+  );
 
   return {
     outPos: d.vec4f(finalPosition, 0, 1),
@@ -164,13 +182,10 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
 const foregroundFragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })(() => {
-  const color = d.vec4f(shiftedColorsBuffer.$[2]);
+  const color = d.vec4f(shiftedColorsAccess.$[2]);
 
   return color;
 });
-
-console.log('mainVertex:\n', tgpu.resolve([midgroundVertex]));
-console.log('mainFragment:\n', tgpu.resolve([midgroundFragment]));
 
 export {
   backgroundFragment,
