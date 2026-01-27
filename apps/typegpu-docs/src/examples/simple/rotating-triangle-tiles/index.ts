@@ -1,6 +1,5 @@
 import { colors } from './geometry.ts';
 import { createBezier } from './bezier.ts';
-import { root } from './root.ts';
 import {
   backgroundFragment,
   backgroundVertex,
@@ -33,12 +32,15 @@ import {
   shiftedColorsAccess,
   stepRotationAccess,
 } from './buffers.ts';
+import tgpu from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 let ease = createBezier(getCubicBezierControlPoints());
+
+export const root = await tgpu.init();
 
 const {
   aspectRatioBuffer,
