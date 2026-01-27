@@ -84,9 +84,6 @@ export default defineConfig({
         './src/fonts/font-face.css',
         './src/mathjax.css',
       ],
-      expressiveCode: {
-        themes: ['github-dark'],
-      },
       plugins: stripFalsy([
         starlightBlog({
           navigation: 'none',
