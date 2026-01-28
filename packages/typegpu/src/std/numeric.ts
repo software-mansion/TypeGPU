@@ -1,6 +1,5 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
   abstractFloat,
@@ -32,6 +31,7 @@ import {
   type AnyNumericVecInstance,
   type AnySignedVecInstance,
   type AnyWgslData,
+  type BaseData,
   isHalfPrecisionSchema,
   isNumericSchema,
   isVecInstance,
@@ -55,18 +55,18 @@ type NumVec = AnyNumericVecInstance;
 
 // helpers
 
-const unaryIdentitySignature = (arg: AnyData) => {
+const unaryIdentitySignature = (arg: BaseData) => {
   return {
     argTypes: [arg],
     returnType: arg,
   };
 };
 
-const variadicUnifySignature = (...args: AnyData[]) => {
+const variadicUnifySignature = (...args: BaseData[]) => {
   const uargs = unify(args) ?? args;
   return ({
     argTypes: uargs,
-    returnType: uargs[0] as AnyData,
+    returnType: uargs[0] as BaseData,
   });
 };
 

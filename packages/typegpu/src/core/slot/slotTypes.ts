@@ -1,5 +1,5 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
@@ -49,7 +49,8 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   // ---
 }
 
-export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
+export interface TgpuAccessor<T extends BaseData = BaseData>
+  extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
@@ -65,7 +66,7 @@ export interface TgpuAccessor<T extends AnyData = AnyData> extends TgpuNamable {
   readonly $: InferGPU<T>;
 }
 
-type DataAccessorIn<T extends AnyData> =
+type DataAccessorIn<T extends BaseData> =
   | (() => DataAccessorIn<T>)
   | TgpuBufferUsage<T>
   | TgpuBufferShorthand<T>
@@ -79,13 +80,13 @@ type TextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =
   | TgpuTextureView<T>;
 
 export declare namespace TgpuAccessor {
-  type In<T extends AnyData | ((count: number) => AnyData)> =
+  type In<T extends BaseData | ((count: number) => BaseData)> =
     UnwrapRuntimeConstructor<T> extends WgslTexture | WgslStorageTexture
       ? TextureAccessorIn<UnwrapRuntimeConstructor<T>>
       : DataAccessorIn<UnwrapRuntimeConstructor<T>>;
 }
 
-export interface TgpuMutableAccessor<T extends AnyData = AnyData>
+export interface TgpuMutableAccessor<T extends BaseData = BaseData>
   extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'mutable-accessor';
@@ -99,7 +100,7 @@ export interface TgpuMutableAccessor<T extends AnyData = AnyData>
   $: InferGPU<T>;
 }
 
-type MutableDataAccessorIn<T extends AnyData> =
+type MutableDataAccessorIn<T extends BaseData> =
   | (() => Infer<T> | MutableDataAccessorIn<T>)
   | TgpuBufferUsage<T>
   | TgpuBufferShorthand<T>
@@ -110,7 +111,7 @@ type MutableTextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =
   | TgpuTextureView<T>;
 
 export declare namespace TgpuMutableAccessor {
-  type In<T extends AnyData | ((count: number) => AnyData)> =
+  type In<T extends BaseData | ((count: number) => BaseData)> =
     UnwrapRuntimeConstructor<T> extends WgslTexture | WgslStorageTexture
       ? MutableTextureAccessorIn<UnwrapRuntimeConstructor<T>>
       : MutableDataAccessorIn<UnwrapRuntimeConstructor<T>>;
@@ -144,13 +145,13 @@ export function isProviding(
   return (value as { [$providing]: Providing })?.[$providing] !== undefined;
 }
 
-export function isAccessor<T extends AnyData>(
+export function isAccessor<T extends BaseData>(
   value: unknown | TgpuAccessor<T>,
 ): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
 
-export function isMutableAccessor<T extends AnyData>(
+export function isMutableAccessor<T extends BaseData>(
   value: unknown | TgpuMutableAccessor<T>,
 ): value is TgpuMutableAccessor<T> {
   return (value as TgpuMutableAccessor<T>)?.resourceType === 'mutable-accessor';
