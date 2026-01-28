@@ -8,7 +8,7 @@ import {
   UnknownData,
   unptr,
 } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { bool, f32, i32, u32 } from '../data/numeric.ts';
 import {
   isEphemeralOrigin,
   isEphemeralSnippet,
@@ -543,8 +543,26 @@ ${this.ctx.pre}}`;
             `An infix operator '${callee.value.name}' was called without any arguments`,
           );
         }
-        const rhs = this.expression(argNodes[0]);
-        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+
+        const lhs = callee.value.lhs;
+        let rhs = this.expression(argNodes[0]);
+        const rhsDataType = rhs.dataType;
+
+        if (
+          wgsl.isNumericSchema(rhsDataType) && !wgsl.isAbstract(rhsDataType)
+        ) {
+          const lhsDataType = lhs.dataType;
+          const targetDataType = wgsl.isVec(lhsDataType)
+            ? lhsDataType.primitive
+            : f32; // we only support matNxNf
+          rhs = tryConvertSnippet(
+            this.ctx,
+            rhs,
+            targetDataType,
+            false,
+          );
+        }
+        return callee.value.operator(this.ctx, [lhs, rhs]);
       }
 
       if (callee.value instanceof ConsoleLog) {
