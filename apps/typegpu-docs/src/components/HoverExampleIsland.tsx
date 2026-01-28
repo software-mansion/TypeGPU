@@ -11,9 +11,12 @@ import type { Example } from '../utils/examples/types.ts';
 
 type Props = {
   exampleKey: string;
+  examplesConfig: Record<string, { html: string; tsPath: string }>;
 };
 
-export default function HoverExampleIsland({ exampleKey }: Props) {
+export default function HoverExampleIsland(
+  { exampleKey, examplesConfig }: Props,
+) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
@@ -119,7 +122,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
           throw new Error('WebGPU is not enabled/supported in this browser.');
         }
 
-        const example = await loadExample(exampleKey);
+        const example = await loadExample(exampleKey, examplesConfig);
         if (cancelled) {
           return;
         }
@@ -159,7 +162,7 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
       cancelled = true;
       reset();
     };
-  }, [exampleKey, isHovered, reset]);
+  }, [exampleKey, isHovered, reset, examplesConfig]);
 
   return (
     <div
@@ -192,16 +195,29 @@ export default function HoverExampleIsland({ exampleKey }: Props) {
   );
 }
 
-async function loadExample(exampleKey: string): Promise<Example> {
-  const exampleContent = await import('../examples/exampleContent.ts');
-  const examples = exampleContent.examples as Record<string, Example>;
-
-  const example = examples[exampleKey] as Example | undefined;
-  if (!example) {
+async function loadExample(
+  exampleKey: string,
+  examplesConfig: Record<string, { html: string; tsPath: string }>,
+): Promise<Example> {
+  const config = examplesConfig[exampleKey];
+  if (!config) {
     throw new Error(`Example "${exampleKey}" not found.`);
   }
 
-  return example;
+  const tsImport = () => import(`${config.tsPath}?t=${Date.now()}`); // trick to prevent caching
+
+  return {
+    key: exampleKey,
+    metadata: { title: exampleKey, category: 'landing', tags: [] },
+    tsFiles: [],
+    tsImport,
+    htmlFile: {
+      exampleKey,
+      path: 'index.html',
+      content: config.html,
+    },
+    thumbnails: { small: '', large: '' },
+  } satisfies Example;
 }
 
 function resizeCanvases(container: HTMLElement) {

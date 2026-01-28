@@ -9,39 +9,60 @@ import ReflectionGif from "../assets/hero/reflection_bg.jpg";
 import vaporRaveGif from "../assets/hero/rave_bg.webp";
 
 import HoverExampleIsland from "./HoverExampleIsland";
+import fishHtml from "../pages/landing-examples/3d-fish/index.html?raw";
+import causticsHtml from "../pages/landing-examples/caustics/index.html?raw";
+import reflectionHtml from "../pages/landing-examples/cubemap-reflection/index.html?raw";
+import jellyHtml from "../pages/landing-examples/jelly-slider/index.html?raw";
+import rayMarchingHtml from "../pages/landing-examples/ray-marching/index.html?raw";
+import vaporRaveHtml from "../pages/landing-examples/vaporrave/index.html?raw";
+
+const examplesBasePath = "../pages/landing-examples";
 
 const galleryItems = [
 	{
 		asset: ReflectionGif,
 		title: "Reflection",
-		exampleKey: "rendering--cubemap-reflection",
+		exampleKey: "cubemap-reflection",
+		html: reflectionHtml,
 	},
 	{
 		asset: JellySliderGif,
 		title: "Jelly Slider",
-		exampleKey: "rendering--jelly-slider",
+		exampleKey: "jelly-slider",
+		html: jellyHtml,
 	},
 	{
 		asset: vaporRaveGif,
 		title: "VaporRave",
-		exampleKey: "simple--vaporrave",
+		exampleKey: "vaporrave",
+		html: vaporRaveHtml,
 	},
 	{
 		asset: RayMarchingGif,
 		title: "Ray Marching",
-		exampleKey: "rendering--ray-marching",
+		exampleKey: "ray-marching",
+		html: rayMarchingHtml,
 	},
 	{
 		asset: FishGif,
 		title: "3D Fish",
-		exampleKey: "rendering--3d-fish",
+		exampleKey: "3d-fish",
+		html: fishHtml,
 	},
 	{
 		asset: CausticsGif,
 		title: "Caustics",
-		exampleKey: "rendering--caustics",
+		exampleKey: "caustics",
+		html: causticsHtml,
 	},
 ];
+
+const examplesConfig = Object.fromEntries(
+	galleryItems.map(item => [
+		item.exampleKey,
+		{ html: item.html, tsPath: `${examplesBasePath}/${item.exampleKey}/index.ts` },
+	])
+);
 ---
 
 {/* Interactive gallery */}
@@ -86,6 +107,7 @@ const galleryItems = [
 						<HoverExampleIsland
 							client:visible
 							exampleKey={item.exampleKey}
+							examplesConfig={examplesConfig}
 						/>
 					</div>
 				</div>
