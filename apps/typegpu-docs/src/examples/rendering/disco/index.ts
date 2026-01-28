@@ -11,17 +11,10 @@ import {
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-const device = root.device;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);

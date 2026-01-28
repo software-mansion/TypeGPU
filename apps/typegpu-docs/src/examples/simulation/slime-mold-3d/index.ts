@@ -9,14 +9,8 @@ const canFilter = root.enabledFeatures.has('float32-filterable');
 const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const VOLUME_SIZE = 256;
 const NUM_AGENTS = 800_000;

@@ -35,13 +35,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(0.769, 0.392, 1.0, 1);
 });
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // #region Example controls and cleanup
 
@@ -213,11 +207,8 @@ export const controls = {
   },
   'Render pipeline': {
     onButtonClick: () => {
-      const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-      context.configure({
-        device: root.device,
-        format: presentationFormat,
+      const context = root.configureContext({
+        canvas,
         alphaMode: 'premultiplied',
       });
 

@@ -16,14 +16,8 @@ const COLOR_PALETTE: d.v4f[] = [
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // data types
 

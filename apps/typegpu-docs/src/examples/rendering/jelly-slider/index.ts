@@ -43,21 +43,17 @@ import {
 } from './constants.ts';
 import { NumberProvider } from './numbers.ts';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 const root = await tgpu.init({
   device: {
     optionalFeatures: ['timestamp-query'],
   },
 });
+
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const NUM_POINTS = 17;
 

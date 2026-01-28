@@ -21,13 +21,7 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 function draw(spanXValue: number, spanYValue: number) {
   spanUniform.write(d.vec2f(spanXValue, spanYValue));

@@ -10,16 +10,10 @@ import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
 // setup
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // model (https://j5boom.itch.io/utah-teapot-obj)
 const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');

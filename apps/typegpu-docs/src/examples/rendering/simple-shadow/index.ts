@@ -14,16 +14,9 @@ import {
 
 // WebGPU setup
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Utility functions
 function makeLightViewProj(

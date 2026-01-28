@@ -19,13 +19,8 @@ import {
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 let brushSize = 1;
 let isDrawing = false;

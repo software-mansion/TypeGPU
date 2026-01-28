@@ -41,15 +41,10 @@ import {
 } from './schemas.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
+const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const root = await tgpu.init();
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // static resources (created on the example load)
 

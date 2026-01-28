@@ -150,16 +150,10 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 canvas.parentElement?.appendChild(video);
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const pipeline = root['~unstable']
   .withVertex(common.fullScreenTriangle, {})

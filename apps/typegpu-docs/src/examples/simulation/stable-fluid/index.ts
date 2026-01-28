@@ -25,14 +25,8 @@ const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const format = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format,
-  alphaMode: 'premultiplied',
-});
 
 // Helpers
 function createField(name: string) {

@@ -129,13 +129,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root['~unstable']
   .withVertex(mainVertex, {})
