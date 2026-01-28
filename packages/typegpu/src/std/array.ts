@@ -2,7 +2,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { abstractInt, u32 } from '../data/numeric.ts';
 import { ptrFn } from '../data/ptr.ts';
-import { isRef, type ref } from '../data/ref.ts';
+import { type _ref as ref, isRef } from '../data/ref.ts';
 import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 
 const sizeOfPointedToArray = (dataType: unknown) =>

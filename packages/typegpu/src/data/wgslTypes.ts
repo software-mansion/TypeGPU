@@ -31,7 +31,7 @@ import type {
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
-import type { ref } from './ref.ts';
+import type { _ref as ref } from './ref.ts';
 import type { DualFn } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
