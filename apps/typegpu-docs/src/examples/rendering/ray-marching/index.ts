@@ -241,10 +241,11 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: vertexMain,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 let animationFrame: number;
 function run(timestamp: number) {
