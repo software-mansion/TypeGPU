@@ -593,6 +593,7 @@ export interface TgpuRoot extends Unwrapper {
   /**
    * Creates and configures context for the provided canvas.
    * Automatically sets the format to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
+   * @throws An error if no context could be obtained
    */
   configureContext(options: ConfigureContextOptions): GPUCanvasContext;
 
