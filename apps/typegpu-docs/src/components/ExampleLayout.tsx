@@ -1,4 +1,4 @@
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import type { ReactNode } from 'react';
 import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
@@ -13,16 +13,15 @@ import {
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
-import { useHydrated } from '../utils/useHydrated.ts';
+import { useHydratedAtom } from '../utils/useHydrated.ts';
 
 interface ExampleLayoutProps {
   children?: ReactNode | undefined;
 }
 
 export function ExampleLayout(props: ExampleLayoutProps) {
-  const [menuShown, setMenuShown] = useAtom(menuShownAtom);
-  const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
-  const hydrated = useHydrated();
+  const [menuShown, setMenuShown] = useHydratedAtom(menuShownAtom, false);
+  const [codeShown, setCodeShown] = useHydratedAtom(codeEditorShownAtom, false);
 
   return (
     <>
@@ -35,7 +34,7 @@ export function ExampleLayout(props: ExampleLayoutProps) {
 
         <Button onClick={() => setCodeShown((prev) => !prev)}>
           {/* Applying the actual label only after the component has been hydrated */}
-          {codeShown && hydrated ? 'Preview' : 'Code'}
+          {codeShown ? 'Preview' : 'Code'}
         </Button>
       </div>
 
@@ -49,8 +48,9 @@ export function ExampleLayout(props: ExampleLayoutProps) {
 
 function SideMenu() {
   const setMenuShown = useSetAtom(menuShownAtom);
-  const [experimentalShowing, setExperimentalShowing] = useAtom(
+  const [experimentalShowing, setExperimentalShowing] = useHydratedAtom(
     experimentalExamplesShownAtom,
+    true,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
