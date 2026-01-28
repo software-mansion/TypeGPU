@@ -38,7 +38,6 @@ import {
   NotSampledError,
   type SampledFlag,
 } from './core/texture/usageExtension.ts';
-import type { AnyData } from './data/dataTypes.ts';
 import { f32, i32, u32 } from './data/numeric.ts';
 import {
   type StorageTextureDimension,
@@ -94,11 +93,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData;
+  uniform: BaseData;
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  storage: BaseData | ((arrayLength: number) => BaseData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -287,7 +286,7 @@ type UnwrapRuntimeConstructorInner<
 > = T extends (_: number) => BaseData ? ReturnType<T> : T;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyData | ((_: number) => AnyData),
+  T extends BaseData | ((_: number) => BaseData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 interface BindGroupLayoutInternals<

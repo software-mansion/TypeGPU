@@ -153,10 +153,7 @@ const renderBackgroundPipeline = root['~unstable']
   .createPipeline();
 
 let msTexture = device.createTexture({
-  size: [
-    canvas.clientWidth * window.devicePixelRatio,
-    canvas.clientHeight * window.devicePixelRatio,
-  ],
+  size: [canvas.width, canvas.height],
   sampleCount: 4,
   format: presentationFormat,
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -429,10 +426,7 @@ const resizeObserver = new ResizeObserver(() => {
 
   msTexture.destroy();
   msTexture = device.createTexture({
-    size: [
-      canvas.clientWidth * window.devicePixelRatio,
-      canvas.clientHeight * window.devicePixelRatio,
-    ],
+    size: [canvas.width, canvas.height],
     sampleCount: 4,
     format: presentationFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
