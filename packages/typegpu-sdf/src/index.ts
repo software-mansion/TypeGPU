@@ -26,3 +26,11 @@ export {
   opSmoothUnion,
   opUnion,
 } from './operators.ts';
+
+export {
+  classifySlot,
+  createJumpFlood,
+  defaultGetDistance as defaultDistanceWrite,
+  distanceWriteSlot,
+} from './jumpFlood.ts';
+export type { DistanceTexture, JumpFloodExecutor } from './jumpFlood.ts';
