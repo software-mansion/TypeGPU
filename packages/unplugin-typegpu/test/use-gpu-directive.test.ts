@@ -213,7 +213,7 @@ describe('[BABEL] "use gpu" directive', () => {
           return a % b;
         }, {
           v: 1,
-          name: void 0,
+          name: "mod",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
           externals: () => {
             return {};
@@ -525,7 +525,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
                   return a % b;
                 }), {
                     v: 1,
-                    name: undefined,
+                    name: "mod",
                     ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
                     externals: () => ({}),
                   }) && $.f)({}))
