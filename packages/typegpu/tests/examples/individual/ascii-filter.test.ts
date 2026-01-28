@@ -46,7 +46,7 @@ describe('ascii filter example', () => {
       @group(0) @binding(4) var<uniform> charsetExtended: u32;
 
       fn characterFn(n: u32, p: vec2f) -> f32 {
-        var pos = floor(((p * vec2f(-4, 4)) + 2.5));
+        var pos = floor(((p * vec2f(-4, 4)) + 2.5f));
         if (((((pos.x < 0f) || (pos.x > 4f)) || (pos.y < 0f)) || (pos.y > 4f))) {
           return 0f;
         }
@@ -61,7 +61,7 @@ describe('ascii filter example', () => {
       }
 
       @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransformBuffer * (input.uv - 0.5)) + 0.5);
+        var uv2 = ((uvTransformBuffer * (input.uv - 0.5f)) + 0.5f);
         var textureSize = vec2f(textureDimensions(externalTexture));
         var pix = (uv2 * textureSize);
         let cellSize = f32(glyphSize);

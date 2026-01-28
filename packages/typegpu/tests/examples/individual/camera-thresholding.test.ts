@@ -50,7 +50,7 @@ describe('camera thresholding example', () => {
       }
 
       @fragment fn mainFrag(input: mainFrag_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransformUniform * (input.uv - 0.5)) + 0.5);
+        var uv2 = ((uvTransformUniform * (input.uv - 0.5f)) + 0.5f);
         var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
         var ycbcr = (col.xyz * rgbToYcbcrMatrix);
         var colycbcr = (colorUniform * rgbToYcbcrMatrix);

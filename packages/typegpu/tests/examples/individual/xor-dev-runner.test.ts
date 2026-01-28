@@ -58,7 +58,7 @@ describe('xor dev runner example', () => {
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        var icolor = (color * 4);
+        var icolor = (color * 4f);
         var ratio = vec2f(aspectRatio, 1f);
         var dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
         var acc = vec3f();

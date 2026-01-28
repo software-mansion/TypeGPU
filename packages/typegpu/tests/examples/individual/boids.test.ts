@@ -130,7 +130,7 @@ describe('boids example', () => {
         let angle = getRotationFromVelocity(input.velocity);
         var rotated = rotate(input.v, angle);
         var pos = vec4f((rotated + input.center), 0f, 1f);
-        var color = vec4f(((sin((colorPalette + angle)) * 0.45) + 0.45), 1f);
+        var color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
         return mainVert_Output(pos, color);
       }
 

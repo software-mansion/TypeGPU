@@ -192,7 +192,7 @@ describe('function visualizer example', () => {
         let next = (&(*lineVertices)[u32((index + 1f))]);
         var n1 = orthonormalForLine((*previous), (*current));
         var n2 = orthonormalForLine((*current), (*next));
-        var avg = ((n1 + n2) / 2);
+        var avg = ((n1 + n2) / 2f);
         return normalize(avg);
       }
 
