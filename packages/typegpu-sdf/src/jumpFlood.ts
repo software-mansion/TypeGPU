@@ -12,16 +12,16 @@ const INVALID_COORD = 0xffffffff;
 
 const pingPongLayout = tgpu.bindGroupLayout({
   readView: {
-    storageTexture: d.textureStorage2d('rgba32uint', 'read-only'),
+    storageTexture: d.textureStorage2d('rgba16uint', 'read-only'),
   },
   writeView: {
-    storageTexture: d.textureStorage2d('rgba32uint', 'write-only'),
+    storageTexture: d.textureStorage2d('rgba16uint', 'write-only'),
   },
 });
 
 const initLayout = tgpu.bindGroupLayout({
   writeView: {
-    storageTexture: d.textureStorage2d('rgba32uint', 'write-only'),
+    storageTexture: d.textureStorage2d('rgba16uint', 'write-only'),
   },
 });
 
@@ -35,9 +35,6 @@ const distWriteLayout = tgpu.bindGroupLayout({
  * Slot for the classify function that determines which pixels are "inside" for the SDF.
  * The function receives the pixel coordinate and texture size, and returns whether
  * the pixel is inside (true) or outside (false).
- *
- * Users should provide their own implementation that reads from their textures
- * to determine inside/outside classification.
  */
 export const classifySlot = tgpu.slot<(coord: d.v2u, size: d.v2u) => boolean>();
 
@@ -50,24 +47,27 @@ export const classifySlot = tgpu.slot<(coord: d.v2u, size: d.v2u) => boolean>();
  * @param insidePx - Pixel coordinates of the nearest inside seed
  * @param outsidePx - Pixel coordinates of the nearest outside seed
  */
-export const defaultDistanceWrite = (
+export const defaultGetDistance = (
   coord: d.v2u,
+  texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
   signedDist: number,
-  _insidePx: d.v2u,
-  _outsidePx: d.v2u,
+  insidePx: d.v2u,
+  outsidePx: d.v2u,
 ) => {
   'use gpu';
-  std.textureStore(
-    distWriteLayout.$.distTexture,
-    d.vec2i(coord),
-    d.vec4f(signedDist, 0, 0, 0),
-  );
+  return d.vec4f(0, 0, 0, signedDist);
 };
 
 /** Slot for custom distance writing */
 export const distanceWriteSlot = tgpu.slot<
-  (coord: d.v2u, signedDist: number, insidePx: d.v2u, outsidePx: d.v2u) => void
->(defaultDistanceWrite);
+  (
+    coord: d.v2u,
+    texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
+    signedDist: number,
+    insidePx: d.v2u,
+    outsidePx: d.v2u,
+  ) => d.v4f
+>(defaultGetDistance);
 
 const SampleResult = d.struct({
   inside: d.vec2u,
@@ -75,7 +75,7 @@ const SampleResult = d.struct({
 });
 
 const sampleWithOffset = (
-  tex: d.textureStorage2d<'rgba32uint', 'read-only'>,
+  tex: d.textureStorage2d<'rgba16uint', 'read-only'>,
   pos: d.v2i,
   offset: d.v2i,
 ) => {
@@ -215,14 +215,25 @@ const createDistanceFieldCompute = tgpu['~unstable'].computeFn({
   // Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside)
   const signedDist = insideDist - outsideDist;
 
-  // Use distance write slot for customizable output
-  distanceWriteSlot.$(gid.xy, signedDist, insideCoord, outsideCoord);
+  const res = distanceWriteSlot.$(
+    gid.xy,
+    pingPongLayout.$.readView,
+    signedDist,
+    insideCoord,
+    outsideCoord,
+  );
+
+  std.textureStore(
+    distWriteLayout.$.distTexture,
+    d.vec2i(gid.xy),
+    res,
+  );
 });
 
 type FloodTexture =
   & TgpuTexture<{
     size: [number, number];
-    format: 'rgba32uint';
+    format: 'rgba16uint';
   }>
   & StorageFlag;
 
@@ -234,82 +245,90 @@ export type DistanceTexture =
   & StorageFlag
   & SampledFlag;
 
-export type JumpFloodExecutor<OwnsOutput extends boolean = boolean> =
-  & {
-    /**
-     * Run the jump flood algorithm.
-     * The classify function determines which pixels are inside/outside.
-     */
-    run(): void;
+export type JumpFloodExecutor = {
+  /**
+   * Run the jump flood algorithm.
+   * The classify function determines which pixels are inside/outside.
+   */
+  run(): void;
+  /**
+   * Returns a new executor with the additional bind group attached.
+   * Use this to pass resources needed by custom classify or distance write functions.
+   */
+  with(bindGroup: TgpuBindGroup): JumpFloodExecutor;
+  /**
+   * The output distance field texture.
+   * Contains signed distance values in pixels after run() completes.
+   * Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside).
+   * If output was provided in options, this property contains that texture.
+   */
+  readonly output: DistanceTexture;
+  /**
+   * Clean up GPU resources created by this executor.
+   */
+  destroy(): void;
+};
 
-    /**
-     * Returns a new executor with the additional bind group attached.
-     * Use this to pass resources needed by custom classify or distance write functions.
-     */
-    with(bindGroup: TgpuBindGroup): JumpFloodExecutor<OwnsOutput>;
-
-    /**
-     * Clean up GPU resources created by this executor.
-     */
-    destroy(): void;
-  }
-  & (OwnsOutput extends true ? {
-      /**
-       * The output distance field texture.
-       * Contains signed distance values in pixels after run() completes.
-       * Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside).
-       */
-      readonly output: DistanceTexture;
-    }
-    : object);
-
-type JumpFloodOptionsBase = {
+type JumpFloodOptions = {
   root: TgpuRoot;
   size: { width: number; height: number };
   /**
    * Classify function that determines which pixels are "inside" for the SDF.
    * Returns true if the pixel is inside, false if outside.
+   * In other words, this tells the algorithm which texture pixels contain information to propagate.
    */
   classify: (coord: d.v2u, size: d.v2u) => boolean;
-  /** Optional custom distance write function. Defaults to writing signed distance to output texture. */
-  distanceWrite?: typeof defaultDistanceWrite;
-};
-
-type JumpFloodOptionsWithOutput = JumpFloodOptionsBase & {
-  output: DistanceTexture;
-};
-
-type JumpFloodOptionsWithoutOutput = JumpFloodOptionsBase & {
-  output?: undefined;
+  /**
+   * Optional custom distance function for writing to the output texture.
+   * This callback is invoked for each pixel after the jump flood algorithm completes,
+   * allowing you to compute custom output values based on the distance field results.
+   *
+   * Defaults to writing signed distance as d.vec4f(0, 0, 0, signedDist).
+   */
+  getDistance?: (
+    /**
+     * The pixel coordinate being written
+     */
+    coord: d.v2u,
+    /**
+     * The flood texture containing nearest inside/outside seed coordinates
+     * The format is d.vec4u(insideX, insideY, outsideX, outsideY)
+     */
+    texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
+    /**
+     * Signed distance in pixels (positive = outside, negative = inside)
+     */
+    signedDist: number,
+    /**
+     * Pixel coordinates of the nearest inside seed (pixel for which classify() returned true)
+     */
+    insidePx: d.v2u,
+    /**
+     * Pixel coordinates of the nearest outside seed (pixel for which classify() returned false)
+     */
+    outsidePx: d.v2u,
+  ) => d.v4f;
+  /**
+   * The output texture. The result of
+   */
+  output?: DistanceTexture | undefined;
 };
 
 /**
  * Create a Jump Flood Algorithm executor that creates its own output texture.
  */
 export function createJumpFlood(
-  options: JumpFloodOptionsWithoutOutput,
-): JumpFloodExecutor<true>;
-
-/**
- * Create a Jump Flood Algorithm executor with a provided output texture.
- */
-export function createJumpFlood(
-  options: JumpFloodOptionsWithOutput,
-): JumpFloodExecutor<false>;
-
-export function createJumpFlood(
-  options: JumpFloodOptionsWithOutput | JumpFloodOptionsWithoutOutput,
-): JumpFloodExecutor<boolean> {
+  options: JumpFloodOptions,
+): JumpFloodExecutor {
   const {
     root,
     size,
     classify,
     output: providedOutput,
-    distanceWrite,
+    getDistance,
   } = options;
   const { width, height } = size;
 
-  // Create or use provided output texture
   const ownsOutput = !providedOutput;
 
   const distanceTexture: DistanceTexture = providedOutput ??
@@ -324,21 +343,19 @@ export function createJumpFlood(
   const floodTextureA = root['~unstable']
     .createTexture({
       size: [width, height],
-      format: 'rgba32uint',
+      format: 'rgba16uint',
     })
     .$usage('storage') as FloodTexture;
 
   const floodTextureB = root['~unstable']
     .createTexture({
       size: [width, height],
-      format: 'rgba32uint',
+      format: 'rgba16uint',
     })
     .$usage('storage') as FloodTexture;
 
-  // Create uniform for offset
   const offsetUniform = root.createUniform(d.i32);
 
-  // Create pipelines with slot bindings
   const initFromSeedPipeline = root['~unstable']
     .with(classifySlot, classify)
     .withCompute(initFromSeedCompute)
@@ -350,32 +367,32 @@ export function createJumpFlood(
     .createPipeline();
 
   const createDistancePipeline = root['~unstable']
-    .with(distanceWriteSlot, distanceWrite ?? defaultDistanceWrite)
+    .with(distanceWriteSlot, getDistance ?? defaultGetDistance)
     .withCompute(createDistanceFieldCompute)
     .createPipeline();
 
   // Create bind groups
   const initBG = root.createBindGroup(initLayout, {
     writeView: floodTextureA.createView(
-      d.textureStorage2d('rgba32uint', 'write-only'),
+      d.textureStorage2d('rgba16uint', 'write-only'),
     ),
   });
 
   const pingPongBGs = [
     root.createBindGroup(pingPongLayout, {
       readView: floodTextureA.createView(
-        d.textureStorage2d('rgba32uint', 'read-only'),
+        d.textureStorage2d('rgba16uint', 'read-only'),
       ),
       writeView: floodTextureB.createView(
-        d.textureStorage2d('rgba32uint', 'write-only'),
+        d.textureStorage2d('rgba16uint', 'write-only'),
       ),
     }),
     root.createBindGroup(pingPongLayout, {
       readView: floodTextureB.createView(
-        d.textureStorage2d('rgba32uint', 'read-only'),
+        d.textureStorage2d('rgba16uint', 'read-only'),
       ),
       writeView: floodTextureA.createView(
-        d.textureStorage2d('rgba32uint', 'write-only'),
+        d.textureStorage2d('rgba16uint', 'write-only'),
       ),
     }),
   ];
@@ -386,10 +403,8 @@ export function createJumpFlood(
     ),
   });
 
-  // Precompute workgroup counts
   const workgroupsX = Math.ceil(width / 8);
   const workgroupsY = Math.ceil(height / 8);
-  // Use power-of-two offset for proper JFA coverage
   const maxDim = Math.max(width, height);
   const maxRange = 1 << Math.floor(Math.log2(maxDim));
 
@@ -401,10 +416,9 @@ export function createJumpFlood(
     }
   }
 
-  // Create executor factory that supports .with(bindGroup) pattern
   function createExecutor(
     additionalBindGroups: TgpuBindGroup[] = [],
-  ): JumpFloodExecutor<boolean> {
+  ): JumpFloodExecutor {
     function run() {
       // Initialize from seed function
       let initPipeline = initFromSeedPipeline.with(initBG);
@@ -450,19 +464,11 @@ export function createJumpFlood(
       return createExecutor([...additionalBindGroups, bindGroup]);
     }
 
-    if (ownsOutput) {
-      return {
-        run,
-        with: withBindGroup,
-        destroy,
-        output: distanceTexture,
-      };
-    }
-
     return {
       run,
       with: withBindGroup,
       destroy,
+      output: distanceTexture,
     };
   }
 

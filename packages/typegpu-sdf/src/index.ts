@@ -30,7 +30,7 @@ export {
 export {
   classifySlot,
   createJumpFlood,
-  defaultDistanceWrite,
+  defaultGetDistance as defaultDistanceWrite,
   distanceWriteSlot,
 } from './jumpFlood.ts';
 export type { DistanceTexture, JumpFloodExecutor } from './jumpFlood.ts';

@@ -19,7 +19,6 @@ import {
   defaultRayMarch,
   getCascadeDim,
   rayMarchSlot,
-  type SceneData,
   sceneSlot,
 } from './cascades.ts';
 
@@ -35,7 +34,7 @@ type OutputTexture =
 
 type CascadesOptionsBase = {
   root: TgpuRoot;
-  scene: (uv: d.v2f) => d.Infer<typeof SceneData>;
+  scene: (uv: d.v2f) => d.v4f;
   /** Optional custom ray march function. Defaults to the built-in ray marcher that uses the scene slot. */
   rayMarch?: typeof defaultRayMarch;
   /**
@@ -173,7 +172,6 @@ export function createRadianceCascades(
   const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(
     outputWidth,
     outputHeight,
-    quality,
   );
 
   const cascadeProbesX = cascadeDimX / 2;
@@ -234,6 +232,7 @@ export function createRadianceCascades(
 
   // Create build radiance field pipeline
   const buildRadianceFieldPipeline = root['~unstable']
+    .with(sceneSlot, scene)
     .withCompute(buildRadianceFieldCompute)
     .createPipeline();
 

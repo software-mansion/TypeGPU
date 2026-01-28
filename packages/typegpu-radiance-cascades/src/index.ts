@@ -5,8 +5,8 @@ export type {
 } from './runner.ts';
 export {
   defaultRayMarch,
+  getCascadeDim,
   RayMarchResult,
   rayMarchSlot,
-  SceneData,
   sceneSlot,
 } from './cascades.ts';

@@ -2,15 +2,16 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import tgpu from 'typegpu';
 
-export function getCascadeDim(width: number, height: number, quality = 0.3) {
+const ERODE_BIAS = 2.0;
+
+export function getCascadeDim(width: number, height: number) {
   const aspect = width / height;
   const diagonal = Math.sqrt(width ** 2 + height ** 2);
-  const base = diagonal * quality;
-  // Ensure minimum probe count for low resolutions (at least 16 probes on smallest axis)
+
   const minPow2 = 16;
   const closestPowerOfTwo = Math.max(
     minPow2,
-    2 ** Math.round(Math.log2(base)),
+    2 ** Math.round(Math.log2(diagonal)),
   );
 
   let cascadeWidth: number;
@@ -27,10 +28,9 @@ export function getCascadeDim(width: number, height: number, quality = 0.3) {
   const cascadeDimY = cascadeHeight * 2;
 
   const interval = 1 / closestPowerOfTwo;
-  const maxIntervalStart = 1.5;
+  const maxIntervalStart = 2.0;
 
-  // Ensure minimum cascade count for proper light propagation
-  const minCascades = 4;
+  const minCascades = 5;
   const cascadeAmount = Math.max(
     minCascades,
     Math.ceil(Math.log2((maxIntervalStart * 3) / interval + 1) / 2),
@@ -39,24 +39,17 @@ export function getCascadeDim(width: number, height: number, quality = 0.3) {
   return [cascadeDimX, cascadeDimY, cascadeAmount] as const;
 }
 
-export const SceneData = d.struct({
-  color: d.vec4f, // doing vec3f is asking for trouble (unforunately)
-  dist: d.f32,
-});
-
-export const sceneSlot = tgpu.slot<(uv: d.v2f) => d.Infer<typeof SceneData>>();
+export const sceneSlot = tgpu.slot<(uv: d.v2f) => d.v4f>();
 
 // Result type for ray march function
 export const RayMarchResult = d.struct({
   color: d.vec3f,
   transmittance: d.f32, // 1.0 = no hit, 0.0 = fully opaque hit
 });
-
-// Default ray march implementation using sceneSlot
 export const defaultRayMarch = tgpu.fn(
-  [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32],
+  [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
-)((probePos, rayDir, startT, endT, eps, minStep) => {
+)((probePos, rayDir, startT, endT, eps, minStep, bias) => {
   'use gpu';
   let rgb = d.vec3f();
   let T = d.f32(1);
@@ -66,19 +59,26 @@ export const defaultRayMarch = tgpu.fn(
     if (t > endT) {
       break;
     }
-    const hit = sceneSlot.$(probePos.add(rayDir.mul(t)));
-    if (hit.dist <= eps) {
-      rgb = d.vec3f(hit.color.xyz);
-      T = d.f32(0);
+    const pos = probePos.add(rayDir.mul(t));
+    if (
+      std.any(std.lt(pos, d.vec2f(0))) ||
+      std.any(std.gt(pos, d.vec2f(1)))
+    ) {
       break;
     }
-    t += std.max(hit.dist, minStep);
+    const hit = sceneSlot.$(pos);
+    const dist = std.max(hit.w + bias, 0);
+    if (dist <= eps) {
+      rgb = d.vec3f(hit.xyz);
+      T = 0;
+      break;
+    }
+    t += std.max(dist, minStep);
   }
 
   return RayMarchResult({ color: rgb, transmittance: T });
 });
 
-// Slot for custom ray marching with default implementation
 export const rayMarchSlot = tgpu.slot(defaultRayMarch);
 
 export const CascadeParams = d.struct({
@@ -113,8 +113,8 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
   const dirStored = gid.xy.div(probes);
   const probe = std.mod(gid.xy, probes);
   const raysDimStored = d.u32(2) << params.layer;
-  const raysDimActual = raysDimStored * d.u32(2);
-  const rayCountActual = raysDimActual * raysDimActual;
+  const raysDimActual = raysDimStored * 2;
+  const rayCountActual = d.f32(raysDimActual) ** 2;
 
   if (dirStored.x >= raysDimStored || dirStored.y >= raysDimStored) {
     std.textureStore(cascadePassBGL.$.dst, gid.xy, d.vec4f(0, 0, 0, 1));
@@ -122,6 +122,7 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
   }
 
   const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
+  const aspect = d.f32(params.baseProbes.x) / d.f32(params.baseProbes.y);
   const cascadeProbesMinVal = d.f32(
     std.min(params.baseProbes.x, params.baseProbes.y),
   );
@@ -129,11 +130,10 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
   const pow4 = d.f32(d.u32(1) << (params.layer * d.u32(2)));
   const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
   const endUv = startUv + interval0 * pow4;
-  // Use conservative epsilon values that don't scale too aggressively with resolution
-  // This ensures proper hit detection even at low resolution
-  const baseEps = d.f32(0.001); // ~0.1% of scene size minimum
+  const baseEps = d.f32(0.001);
   const eps = std.max(baseEps, 0.25 / cascadeProbesMinVal);
   const minStep = std.max(baseEps * 0.5, 0.125 / cascadeProbesMinVal);
+  const biasUv = d.f32(ERODE_BIAS) / cascadeProbesMinVal;
 
   let accum = d.vec4f();
 
@@ -143,9 +143,15 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
       .add(d.vec2u(d.u32(i) & d.u32(1), d.u32(i) >> d.u32(1)));
     const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
     const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
-    const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
+    const cosA = std.cos(angle);
+    const sinA = -std.sin(angle);
+    let rayDir = d.vec2f(cosA, sinA);
+    if (aspect >= d.f32(1)) {
+      rayDir = d.vec2f(cosA / aspect, sinA);
+    } else {
+      rayDir = d.vec2f(cosA, sinA * aspect);
+    }
 
-    // Use ray march slot for customizable ray marching
     const marchResult = rayMarchSlot.$(
       probePos,
       rayDir,
@@ -153,6 +159,7 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
       endUv,
       eps,
       minStep,
+      biasUv,
     );
     let rgb = d.vec3f(marchResult.color);
     let T = d.f32(marchResult.transmittance);
@@ -221,23 +228,29 @@ export const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
 
   const uvStride = d.vec2f(params.cascadeProbes).mul(invCascadeDim);
   const baseSampleUV = probePixel.mul(invCascadeDim);
+  const outputMinDim = d.f32(
+    std.min(params.outputProbes.x, params.outputProbes.y),
+  );
+  const scene = sceneSlot.$(uv);
 
   let sum = d.vec3f();
   for (let i = d.u32(0); i < 4; i++) {
     const offset = d.vec2f(d.f32(i & 1), d.f32(i >> 1)).mul(uvStride);
-    sum = sum.add(
-      std.textureSampleLevel(
-        buildRadianceFieldBGL.$.src,
-        buildRadianceFieldBGL.$.srcSampler,
-        baseSampleUV.add(offset),
-        0,
-      ).xyz,
+    const sample = std.textureSampleLevel(
+      buildRadianceFieldBGL.$.src,
+      buildRadianceFieldBGL.$.srcSampler,
+      baseSampleUV.add(offset),
+      0,
     );
+    sum = sum.add(sample.xyz);
   }
+
+  const avg = sum.mul(0.25);
+  const res = d.vec3f(avg);
 
   std.textureStore(
     buildRadianceFieldBGL.$.dst,
     gid.xy,
-    d.vec4f(sum.mul(0.25), 1),
+    d.vec4f(res, 1),
   );
 });
