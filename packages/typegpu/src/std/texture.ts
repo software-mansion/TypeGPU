@@ -10,6 +10,7 @@ import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { f32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
+  type BaseData,
   type v2f,
   type v2i,
   type v2u,
@@ -46,7 +47,6 @@ import type {
   textureStorage3d,
 } from '../data/texture.ts';
 
-import type { AnyData } from '../data/dataTypes.ts';
 import type { comparisonSampler, sampler } from '../data/sampler.ts';
 
 function sampleCpu<T extends texture1d>(
@@ -122,7 +122,7 @@ export const textureSample = dualImpl({
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
-      argTypes: args as AnyData[],
+      argTypes: args as BaseData[],
       returnType: isDepth ? f32 : vec4f,
     };
   },
@@ -181,7 +181,7 @@ export const textureSampleBias = dualImpl({
   normalImpl: sampleBiasCpu,
   codegenImpl: (_ctx, args) => stitch`textureSampleBias(${args})`,
   signature: (...args) => ({
-    argTypes: args as AnyData[],
+    argTypes: args as BaseData[],
     returnType: vec4f,
   }),
 });

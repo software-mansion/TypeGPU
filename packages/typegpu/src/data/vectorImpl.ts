@@ -1,11 +1,10 @@
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
-import type { VecKind } from './wgslTypes.ts';
+import type { BaseData, VecKind } from './wgslTypes.ts';
 
-type VecSchema<S> = AnyData & ((v?: S) => S);
+type VecSchema<S> = BaseData & ((v?: S) => S);
 
 // deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {

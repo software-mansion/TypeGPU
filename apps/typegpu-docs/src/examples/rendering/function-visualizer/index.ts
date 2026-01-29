@@ -7,14 +7,8 @@ import { mat4 } from 'wgpu-matrix';
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const initialFunctions: Array<{ name: string; color: d.v4f; code: string }> = [
   {
@@ -153,10 +147,7 @@ const renderBackgroundPipeline = root['~unstable']
   .createPipeline();
 
 let msTexture = device.createTexture({
-  size: [
-    canvas.clientWidth * window.devicePixelRatio,
-    canvas.clientHeight * window.devicePixelRatio,
-  ],
+  size: [canvas.width, canvas.height],
   sampleCount: 4,
   format: presentationFormat,
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -429,10 +420,7 @@ const resizeObserver = new ResizeObserver(() => {
 
   msTexture.destroy();
   msTexture = device.createTexture({
-    size: [
-      canvas.clientWidth * window.devicePixelRatio,
-      canvas.clientHeight * window.devicePixelRatio,
-    ],
+    size: [canvas.width, canvas.height],
     sampleCount: 4,
     format: presentationFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
