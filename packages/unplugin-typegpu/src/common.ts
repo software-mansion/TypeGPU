@@ -143,8 +143,10 @@ function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
     node.id.type === 'Identifier' &&
     node.init
   ) {
+    // let id = init;
     return [node.id.name, node.init as ExpressionFor<T>];
   } else if (node.type === 'AssignmentExpression') {
+    // left = right;
     const maybeName = tryFindIdentifier(node.left);
     if (maybeName) {
       return [maybeName, node.right as ExpressionFor<T>];
@@ -153,12 +155,16 @@ function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
     (node.type === 'Property' || node.type === 'ObjectProperty') &&
     node.key.type === 'Identifier'
   ) {
+    // const a = { key: value }
     return [node.key.name, node.value as ExpressionFor<T>];
   } else if (
     (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
     node.value &&
     node.key.type === 'Identifier'
   ) {
+    // class Class {
+    //	 key = value;
+    // }
     return [node.key.name, node.value as ExpressionFor<T>];
   }
 }
