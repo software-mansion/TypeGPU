@@ -7,14 +7,8 @@ import tgpu, { builtin } from 'typegpu/experimental';
 const root = await tgpu.init();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const renderPipeline = root.makeRenderPipeline({
   vertex: {
