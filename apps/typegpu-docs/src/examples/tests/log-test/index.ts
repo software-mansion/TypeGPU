@@ -35,13 +35,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(0.769, 0.392, 1.0, 1);
 });
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // #region Example controls and cleanup
 
@@ -213,52 +207,9 @@ export const controls = {
   },
   'Render pipeline': {
     onButtonClick: () => {
-      const pipeline = root['~unstable']
-        .withVertex(mainVertex)
-        .withFragment(mainFragment, { format: presentationFormat })
-        .createPipeline();
-
-      pipeline
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        })
-        .draw(3);
-    },
-  },
-  'Render pipeline helper': {
-    onButtonClick: () => {
-      const helper = tgpu.fn([])(() => {
-        'use gpu';
-        console.log('A log made from a helper used during both stages.');
-      });
-
-      const mainVertex = tgpu['~unstable'].vertexFn({
-        in: { vertexIndex: d.builtin.vertexIndex },
-        out: { pos: d.builtin.position },
-      })((input) => {
-        console.log('A log made from vertex stage.');
-        helper();
-
-        const positions = [
-          d.vec2f(0, 0.5),
-          d.vec2f(-0.5, -0.5),
-          d.vec2f(0.5, -0.5),
-        ];
-
-        return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
-      });
-
-      const mainFragment = tgpu['~unstable'].fragmentFn({
-        in: { pos: d.builtin.position },
-        out: d.vec4f,
-      })(() => {
-        console.log('A log made from fragment stage.');
-        helper();
-
-        return d.vec4f(0.769, 0.392, 1.0, 1);
+      const context = root.configureContext({
+        canvas,
+        alphaMode: 'premultiplied',
       });
 
       const pipeline = root['~unstable']
