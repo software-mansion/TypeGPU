@@ -1,36 +1,25 @@
 import { vec2f } from 'typegpu/data';
-import type { v2f } from 'typegpu/data';
-import { addMul, rot90ccw, rot90cw } from '../../utils.ts';
-import { capShell } from './common.ts';
+import { add, mul, neg, normalize, sign } from 'typegpu/std';
+import { addMul, cross2d, rot90ccw } from '../../utils.ts';
+import type { JoinInput } from '../types.ts';
 
-export const arrowCap = capShell(
-  (
-    vertexIndex,
-    joinPath,
-    V,
-    vu,
-    vd,
-    _right,
-    dir,
-    _left,
-  ) => {
-    'use gpu';
-    const dirRight = rot90cw(dir);
-    const dirLeft = rot90ccw(dir);
-
-    const v0 = addMul(vu, dir, -7.5 * V.radius);
-    const v1 = addMul(V.position, addMul(dirRight, dir, -3), 3 * V.radius);
-    const v2 = addMul(V.position, vec2f(0, 0), 2 * V.radius);
-    const v3 = addMul(V.position, addMul(dirLeft, dir, -3), 3 * V.radius);
-    const v4 = addMul(vd, dir, -7.5 * V.radius);
-    const points = [v0, v1, v2, v3, v4];
-
-    if (joinPath.depth >= 0) {
-      const remove = [v0, v4];
-      const dm = remove[joinPath.joinIndex & 0x1] as v2f;
-      return dm;
-    }
-
-    return points[vertexIndex % 5] as v2f;
-  },
-);
+export function arrow(
+  join: JoinInput,
+  joinIndex: number,
+  _maxJoinCount: number,
+) {
+  'use gpu';
+  const bw = neg(normalize(join.fw));
+  const vert = rot90ccw(bw);
+  const sgn = sign(cross2d(bw, join.d));
+  const svert = mul(vert, sgn);
+  const v0 = add(svert, mul(bw, 7.5));
+  const v1 = addMul(v0, add(bw, svert), 1.5);
+  if (joinIndex === 0) {
+    return addMul(join.C.position, v0, join.C.radius);
+  }
+  if (joinIndex === 1) {
+    return addMul(join.C.position, v1, join.C.radius);
+  }
+  return vec2f(join.C.position);
+}
