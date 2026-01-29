@@ -2,6 +2,7 @@ import {
   createShelllessImpl,
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
+import { isAccessor, isSlot } from '../core/slot/slotTypes.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
@@ -68,7 +69,13 @@ export class ShelllessRepository {
 
       if (s.dataType === UnknownData) {
         throw new Error(
-          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)`,
+          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)\n` +
+            `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.\n` +
+            (isAccessor(s.value)
+              ? `Try dereferencing the accessor with '.$'.`
+              : isSlot(s.value)
+              ? `Try dereferencing the slot with '.$'.`
+              : ``),
         );
       }
 
