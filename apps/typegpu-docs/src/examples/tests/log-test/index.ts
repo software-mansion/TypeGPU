@@ -213,7 +213,7 @@ export const controls = {
       });
 
       const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
+        .withVertex(mainVertex)
         .withFragment(mainFragment, { format: presentationFormat })
         .createPipeline();
 

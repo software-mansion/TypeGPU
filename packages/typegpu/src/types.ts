@@ -239,6 +239,12 @@ export type ExecState =
   | CodegenState
   | SimulationState;
 
+export type ShaderStage =
+  | 'vertex'
+  | 'fragment'
+  | 'compute'
+  | undefined;
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
