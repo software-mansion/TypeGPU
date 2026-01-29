@@ -13,7 +13,6 @@ import {
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -61,7 +60,7 @@ export const add = dualImpl({
     };
   },
   normalImpl: cpuAdd,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} + ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} + ${rhs})`,
 });
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -91,7 +90,7 @@ export const sub = dualImpl({
     };
   },
   normalImpl: cpuSub,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} - ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} - ${rhs})`,
 });
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -157,7 +156,7 @@ export const mul = dualImpl({
     return ({ argTypes: uargs, returnType });
   },
   normalImpl: cpuMul,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} * ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} * ${rhs})`,
 });
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
@@ -169,11 +168,11 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
     return lhs / rhs;
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = vecTypeToConstructor[rhs.kind][$internal].jsImpl;
+    const schema = vecTypeToConstructor[rhs.kind];
     return VectorOps.div[rhs.kind](schema(lhs), rhs);
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = vecTypeToConstructor[lhs.kind][$internal].jsImpl;
+    const schema = vecTypeToConstructor[lhs.kind];
     return VectorOps.div[lhs.kind](lhs, schema(rhs));
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
@@ -192,7 +191,7 @@ export const div = dualImpl({
     });
   },
   normalImpl: cpuDiv,
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} / ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} / ${rhs})`,
   ignoreImplicitCastWarning: true,
 });
 
@@ -239,7 +238,7 @@ export const mod: ModOverload = dualImpl({
       'Mod called with invalid arguments, expected types: number or vector.',
     );
   },
-  codegenImpl: (lhs, rhs) => stitch`(${lhs} % ${rhs})`,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
 });
 
 function cpuNeg(value: number): number;
@@ -258,5 +257,5 @@ export const neg = dualImpl({
     returnType: arg,
   }),
   normalImpl: cpuNeg,
-  codegenImpl: (arg) => stitch`-(${arg})`,
+  codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
 });

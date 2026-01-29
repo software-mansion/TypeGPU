@@ -1,7 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu from '../../src/index.ts';
-import * as d from '../../src/data/index.ts';
-import * as std from '../../src/std/index.ts';
+import tgpu, { d, std } from '../../src/index.ts';
 import { it } from '../utils/extendedIt.ts';
 
 describe('shellless', () => {

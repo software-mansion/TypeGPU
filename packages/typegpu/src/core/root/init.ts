@@ -84,10 +84,8 @@ import type {
   WgslSamplerProps,
 } from '../../data/sampler.ts';
 import {
-  type AccessorIn,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type TgpuAccessor,
   type TgpuMutableAccessor,
   type TgpuSlot,
@@ -214,9 +212,9 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T extends AnyData>(
+  with<T extends BaseData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
-    value: AccessorIn<T> | MutableAccessorIn<T>,
+    value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
@@ -560,7 +558,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -573,7 +571,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuRenderPipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
-      | TgpuBuffer<AnyData>
+      | TgpuBuffer<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout
@@ -657,7 +655,7 @@ class TgpuRootImpl extends WithBindingImpl
       TgpuVertexLayout,
       {
         buffer:
-          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & VertexFlag)
+          | (TgpuBuffer<WgslArray | Disarray> & VertexFlag)
           | GPUBuffer;
         offset?: number | undefined;
         size?: number | undefined;

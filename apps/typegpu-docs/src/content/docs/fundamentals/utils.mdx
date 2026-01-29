@@ -10,8 +10,7 @@ Under the hood, it creates a compute pipeline that calls the provided callback o
 Since the pipeline is reused, there’s no additional overhead for subsequent calls.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -40,8 +39,7 @@ Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import { randf } from '@typegpu/noise';
 
@@ -66,9 +64,7 @@ console.log(await waterLevelMutable.read());
 The result of `createGuardedComputePipeline` can have bind groups bound using the `with` method.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const layout = tgpu.bindGroupLayout({
@@ -134,8 +130,7 @@ tgpu.resolve([innerPipeline]);
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 // ---cut---
 const color = tgpu.comptime((int: number) => {
@@ -171,8 +166,7 @@ Comptime-known conditions include:
 - values returned by `comptime` functions.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const counterEnabledSlot = tgpu.slot<boolean>(false);
@@ -203,8 +197,7 @@ since we treat `tgpu.const` as a way to opt-out of inlining.
 Branch pruning also works for ternary operators.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 const counterEnabledSlot = tgpu.slot<boolean>(false);
 const counter = root.createMutable(d.u32);
@@ -225,8 +218,7 @@ When working on top of some existing shader code, sometimes you may know for cer
 In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 // ---cut---
 // `EXISTING_GLOBAL` is an identifier that we know will be in the
@@ -269,8 +261,7 @@ Yes, you read that correctly, TypeGPU implements logging to the console on the G
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -297,8 +288,7 @@ The buffer is of fixed size, which may limit the total amount of information tha
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const presentationFormat = undefined as any;
 const canvas = undefined as any;

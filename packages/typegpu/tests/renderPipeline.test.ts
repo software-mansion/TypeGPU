@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import * as d from '../src/data/index.ts';
 import tgpu, {
+  d,
   MissingBindGroupsError,
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,

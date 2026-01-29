@@ -1,6 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import {
-  type AnyData,
   InfixDispatch,
   isUnstruct,
   MatrixColumnsAccess,
@@ -28,6 +27,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import {
+  type BaseData,
   isMat,
   isNaturallyEphemeral,
   isPtr,
@@ -35,7 +35,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
 import { add, div, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
@@ -72,7 +72,7 @@ type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
   SwizzleableType,
-  Record<SwizzleLength, AnyData>
+  Record<SwizzleLength, BaseData>
 > = {
   f: {
     1: f32,
@@ -110,12 +110,15 @@ export function accessProp(
   target: Snippet,
   propName: string,
 ): Snippet | undefined {
-  if (infixKinds.includes(target.dataType.type) && propName in infixOperators) {
+  if (
+    infixKinds.includes((target.dataType as BaseData).type) &&
+    propName in infixOperators
+  ) {
     return snip(
       new InfixDispatch(
         propName,
         target,
-        infixOperators[propName as InfixOperator][$internal].gpuImpl,
+        infixOperators[propName as InfixOperator][$gpuCallable].call,
       ),
       UnknownData,
       /* origin */ target.origin,
@@ -211,7 +214,7 @@ export function accessProp(
     );
   }
 
-  if (isKnownAtComptime(target) || target.dataType.type === 'unknown') {
+  if (isKnownAtComptime(target) || target.dataType === UnknownData) {
     // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
     return coerceToSnippet((target.value as any)[propName]);
   }

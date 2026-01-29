@@ -2,8 +2,9 @@
  * @module typegpu/data
  */
 
+// NOTE: This is a barrel file, internal files should not import things from this file
+
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
-import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 
@@ -16,7 +17,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   const proto = object.prototype as {
     [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
   };
-  const opImpl = infixOperators[operator][$internal].jsImpl as (
+  const opImpl = infixOperators[operator] as (
     lhs: Instance,
     rhs: unknown,
   ) => unknown;
@@ -190,7 +191,7 @@ export { unstruct } from './unstruct.ts';
 export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
-export { ref } from './ref.ts';
+export { _ref as ref } from './ref.ts';
 export {
   align,
   type AnyAttribute,

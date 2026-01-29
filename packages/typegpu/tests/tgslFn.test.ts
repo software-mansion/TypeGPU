@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
-import * as d from '../src/data/index.ts';
-import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
+import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.ts';
 import { getName } from '../src/shared/meta.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -970,7 +969,7 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
-  it('throws when it detects a cyclic dependency (when using derived)', () => {
+  it('throws when it detects a cyclic dependency (when using lazy)', () => {
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);
@@ -978,14 +977,14 @@ describe('tgsl fn when using plugin', () => {
     const mainFn = tgpu.fn([], d.f32)(() => 1000);
     const fallbackFn = tgpu.fn([], d.f32)(() => one());
 
-    const derivedFn = tgpu['~unstable'].derived(() => {
+    const lazyFn = tgpu.lazy(() => {
       if (flagSlot.$) {
         return fnSlot.$;
       }
       return fallbackFn;
     }).with(fnSlot, mainFn);
 
-    one = tgpu.fn([], d.f32)(() => derivedFn.$() + 2);
+    one = tgpu.fn([], d.f32)(() => lazyFn.$() + 2);
 
     expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -1004,6 +1003,35 @@ describe('tgsl fn when using plugin', () => {
 
       fn one() -> f32 {
         return (mainFn() + 2f);
+      }"
+    `);
+  });
+
+  it('allows .with to be called at comptime', () => {
+    const multiplierSlot = tgpu.slot(1);
+    const scale = tgpu.fn([d.f32], d.f32)((v) => {
+      'use gpu';
+      return v * multiplierSlot.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      scale(2);
+      scale.with(multiplierSlot, 2)(2);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 1f);
+      }
+
+      fn scale_1(v: f32) -> f32 {
+        return (v * 2f);
+      }
+
+      fn main() {
+        scale(2f);
+        scale_1(2f);
       }"
     `);
   });

@@ -1,13 +1,12 @@
-import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import { add, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
-  seed: TgpuFn<(seed: d.F32) => d.Void>;
-  seed2: TgpuFn<(seed: d.Vec2f) => d.Void>;
-  seed3: TgpuFn<(seed: d.Vec3f) => d.Void>;
-  seed4: TgpuFn<(seed: d.Vec4f) => d.Void>;
-  sample: TgpuFn<() => d.F32>;
+  seed?: (seed: number) => void;
+  seed2?: (seed: d.v2f) => void;
+  seed3?: (seed: d.v3f) => void;
+  seed4?: (seed: d.v4f) => void;
+  sample: () => number;
 }
 
 export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
@@ -43,7 +42,7 @@ export const BPETER: StatefulGenerator = (() => {
       seed.$.x = fract(cos(a) * 136.8168);
       seed.$.y = fract(cos(b) * 534.7645);
       return seed.$.y;
-    }),
+    }).$name('sample'),
   };
 })();
 

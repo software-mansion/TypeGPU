@@ -1,6 +1,5 @@
 import * as TSL from 'three/tsl';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { fromTSL } from './typegpu-node.ts';
 
 export const uv = tgpu.comptime((index?: number | undefined) =>

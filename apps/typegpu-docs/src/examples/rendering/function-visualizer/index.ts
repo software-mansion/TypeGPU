@@ -1,9 +1,5 @@
-import tgpu, {
-  type TgpuGuardedComputePipeline,
-  type TgpuRawCodeSnippet,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 
 // Globals and init
@@ -157,10 +153,7 @@ const renderBackgroundPipeline = root['~unstable']
   .createPipeline();
 
 let msTexture = device.createTexture({
-  size: [
-    canvas.clientWidth * window.devicePixelRatio,
-    canvas.clientHeight * window.devicePixelRatio,
-  ],
+  size: [canvas.width, canvas.height],
   sampleCount: 4,
   format: presentationFormat,
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -433,10 +426,7 @@ const resizeObserver = new ResizeObserver(() => {
 
   msTexture.destroy();
   msTexture = device.createTexture({
-    size: [
-      canvas.clientWidth * window.devicePixelRatio,
-      canvas.clientHeight * window.devicePixelRatio,
-    ],
+    size: [canvas.width, canvas.height],
     sampleCount: 4,
     format: presentationFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT,

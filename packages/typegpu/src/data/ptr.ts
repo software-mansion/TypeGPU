@@ -4,7 +4,13 @@ import {
   type OriginToPtrParams,
   originToPtrParams,
 } from './snippet.ts';
-import type { Access, AddressSpace, Ptr, StorableData } from './wgslTypes.ts';
+import type {
+  Access,
+  AddressSpace,
+  BaseData,
+  Ptr,
+  StorableData,
+} from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(
   inner: T,
@@ -45,7 +51,7 @@ export function ptrHandle<T extends StorableData>(
 
 export function INTERNAL_createPtr<
   TAddressSpace extends AddressSpace,
-  TInner extends StorableData,
+  TInner extends BaseData,
   TAccess extends Access,
 >(
   addressSpace: TAddressSpace,
@@ -54,7 +60,7 @@ export function INTERNAL_createPtr<
   implicit: boolean = false,
 ): Ptr<TAddressSpace, TInner, TAccess> {
   return {
-    [$internal]: true,
+    [$internal]: {},
     type: 'ptr',
     addressSpace,
     inner,

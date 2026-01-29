@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 export const MAX_STEPS = 1000;
 export const MAX_DIST = 19;

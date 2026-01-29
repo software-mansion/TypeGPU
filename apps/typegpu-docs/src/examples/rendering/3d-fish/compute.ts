@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
@@ -62,16 +61,14 @@ export const simulate = (fishIndex: number) => {
     }
   }
 
-  if (layout.$.mouseRay.activated === 1) {
-    const proj = projectPointOnLine(
-      fishData.position,
-      layout.$.mouseRay.line,
-    );
-    const diff = fishData.position.sub(proj);
-    const limit = p.fishMouseRayRepulsionDistance;
-    const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
-    rayRepulsion = std.normalize(diff).mul(str);
-  }
+  const proj = projectPointOnLine(
+    fishData.position,
+    layout.$.mouseRay,
+  );
+  const diff = fishData.position.sub(proj);
+  const limit = p.fishMouseRayRepulsionDistance;
+  const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
+  rayRepulsion = std.normalize(diff).mul(str);
 
   let direction = d.vec3f(fishData.direction);
 
