@@ -3,7 +3,9 @@ import tgpu, {
   d,
   std,
   type TgpuAccessor,
+  TgpuFixedSampler,
   type TgpuSlot,
+  TgpuTextureView,
   type TgpuUniform,
 } from '../../src/index.ts';
 import { it } from '../utils/extendedIt.ts';
@@ -293,6 +295,58 @@ describe('shellless', () => {
     `);
   });
 
+  it('allows passing samplers in arguments', ({ root }) => {
+    const mySampler = root.createSampler({});
+    const fn = (sampler: d.sampler) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(mySampler.$);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn fn_1(sampler_1: sampler) -> i32 {
+        return 0;
+      }
+
+      @group(0) @binding(0) var mySampler: sampler;
+
+      fn main() {
+        fn_1(mySampler);
+      }"
+    `);
+  });
+
+  it('allows passing texture views in arguments', ({ root }) => {
+    const myTexture = root.createTexture({
+      format: 'rgba8unorm',
+      size: [16, 16],
+    }).$usage('sampled');
+    const myView = myTexture.createView();
+    const fn = (view: d.texture2d<d.F32>) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(myView.$);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn fn_1(view: texture_2d<f32>) -> i32 {
+        return 0;
+      }
+
+      @group(0) @binding(0) var myView: texture_2d<f32>;
+
+      fn main() {
+        fn_1(myView);
+      }"
+    `);
+  });
+
   it('throws a descriptive error when an invalid argument is used', ({ root }) => {
     const myUniform = root.createUniform(d.u32);
     const fn = (uniform: TgpuUniform<d.U32>) => {
@@ -313,7 +367,30 @@ describe('shellless', () => {
     `);
   });
 
-  it('throws a descriptive error when a slot argument is used', () => {
+  it('throws a descriptive error when a texture argument is used', ({ root }) => {
+    const myTexture = root.createTexture({
+      format: 'rgba8unorm',
+      size: [16, 16],
+    }).$usage('sampled');
+    const fn = (texture: typeof myTexture) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(myTexture);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value [object Object] as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      ]
+    `);
+  });
+
+  it('throws a descriptive error when a slot argument is not dereferenced', () => {
     const mySlot = tgpu.slot<number>();
     const fn = (slot: TgpuSlot<number>) => {
       'use gpu';
@@ -333,7 +410,51 @@ describe('shellless', () => {
     `);
   });
 
-  it('throws a descriptive error when an accessor argument is used', () => {
+  it('throws a descriptive error when a sampler argument is not dereferenced', ({ root }) => {
+    const mySampler = root.createSampler({});
+    const fn = (sampler: TgpuFixedSampler) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(mySampler);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value sampler:mySampler as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      ]
+    `);
+  });
+
+  it('throws a descriptive error when a texture view argument is not dereferenced', ({ root }) => {
+    const myTexture = root.createTexture({
+      format: 'rgba8unorm',
+      size: [16, 16],
+    }).$usage('sampled');
+    const myView = myTexture.createView();
+    const fn = (view: TgpuTextureView<d.WgslTexture2d<d.F32>>) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(myView);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value textureView:myView as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      ]
+    `);
+  });
+
+  it('throws a descriptive error when an accessor argument is not dereferenced', () => {
     const myAccess = tgpu['~unstable'].accessor(d.f32);
     const fn = (access: TgpuAccessor<d.F32>) => {
       'use gpu';
