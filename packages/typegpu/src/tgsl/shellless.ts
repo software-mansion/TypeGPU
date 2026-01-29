@@ -70,12 +70,8 @@ export class ShelllessRepository {
       if (s.dataType === UnknownData) {
         throw new Error(
           `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)\n` +
-            `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.\n` +
-            (isAccessor(s.value)
-              ? `Try dereferencing the accessor with '.$'.`
-              : isSlot(s.value)
-              ? `Try dereferencing the slot with '.$'.`
-              : ``),
+            `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.\n` +
+            `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,
         );
       }
 

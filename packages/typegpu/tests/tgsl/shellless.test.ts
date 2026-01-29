@@ -362,8 +362,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value uniformBufferShorthand:myUniform as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      ]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
@@ -385,8 +385,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value [object Object] as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      ]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
@@ -405,8 +405,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value slot:mySlot as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      Try dereferencing the slot with '.$'.]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
@@ -425,8 +425,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value sampler:mySampler as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      ]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
@@ -449,8 +449,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value textureView:myView as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      ]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
@@ -469,8 +469,8 @@ describe('shellless', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:main: Passed illegal value accessor:myAccess as the #0 argument to fn(...)
-      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
-      Try dereferencing the accessor with '.$'.]
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 });
