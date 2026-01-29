@@ -216,10 +216,6 @@ ${this.ctx.pre}}`;
       'function',
     );
 
-    if (snippet.dataType.type === 'unknown') {
-      throw Error(`Tried to define variable '${id}' of unknown type.`);
-    }
-
     this.ctx.defineVariable(id, snippet);
     return varName;
   }
@@ -1003,25 +999,27 @@ ${this.ctx.pre}else ${alternate}`;
           }
         }
       }
-
-      const snippet = this.blockVariable(
-        varType,
-        rawId,
-        concretize(dataType),
-        eq.origin,
-      );
-
-      const id = snippet.value;
-      if (snippet.dataType.type === 'unknown') {
+      let snippet: Snippet;
+      try {
+        snippet = this.blockVariable(
+          varType,
+          rawId,
+          concretize(dataType),
+          eq.origin,
+        );
+      } catch (e) {
         const schema = Array.isArray(eq.value)
-          ? `d.arrayOf(...)(${id})`
-          : `YourStructSchema(${id})`;
-
-        throw Error(
-          `Tried to define variable '${id}' of unknown type.
+          ? `d.arrayOf(...)(${rawId})`
+          : `YourStructSchema(${rawId})`;
+        throw new Error(
+          `${(e as Error).message}${
+            ((dataType as wgsl.BaseData | typeof UnknownData) === UnknownData)
+              ? `
 -----
 - Try to wrap right-hand side with a schema \`${schema}\`.
------`,
+-----`
+              : ''
+          }`,
         );
       }
 
