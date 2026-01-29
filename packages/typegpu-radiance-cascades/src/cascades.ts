@@ -2,7 +2,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import tgpu from 'typegpu';
 
-const ERODE_BIAS = 2.0;
+const ERODE_BIAS = 2;
 
 export function getCascadeDim(width: number, height: number) {
   const aspect = width / height;
@@ -39,13 +39,17 @@ export function getCascadeDim(width: number, height: number) {
   return [cascadeDimX, cascadeDimY, cascadeAmount] as const;
 }
 
-export const sceneSlot = tgpu.slot<(uv: d.v2f) => d.v4f>();
+export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
+export const colorSlot = tgpu.slot<(uv: d.v2f) => d.v3f>();
 
-// Result type for ray march function
+// Slot for SDF resolution to calculate proper texel-based eps/minStep (so we don't do reduntant sub-texel steps)
+export const sdfResolutionSlot = tgpu.slot<d.v2u>();
+
 export const RayMarchResult = d.struct({
   color: d.vec3f,
   transmittance: d.f32, // 1.0 = no hit, 0.0 = fully opaque hit
 });
+
 export const defaultRayMarch = tgpu.fn(
   [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
@@ -54,6 +58,8 @@ export const defaultRayMarch = tgpu.fn(
   let rgb = d.vec3f();
   let T = d.f32(1);
   let t = startT;
+  let hitPos = d.vec2f();
+  let didHit = false;
 
   for (let step = 0; step < 64; step++) {
     if (t > endT) {
@@ -66,14 +72,19 @@ export const defaultRayMarch = tgpu.fn(
     ) {
       break;
     }
-    const hit = sceneSlot.$(pos);
-    const dist = std.max(hit.w + bias, 0);
+
+    const dist = std.max(sdfSlot.$(pos) + bias, 0);
     if (dist <= eps) {
-      rgb = d.vec3f(hit.xyz);
+      hitPos = d.vec2f(pos);
+      didHit = true;
       T = 0;
       break;
     }
     t += std.max(dist, minStep);
+  }
+
+  if (didHit) {
+    rgb = colorSlot.$(hitPos);
   }
 
   return RayMarchResult({ color: rgb, transmittance: T });
@@ -130,9 +141,13 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
   const pow4 = d.f32(d.u32(1) << (params.layer * d.u32(2)));
   const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
   const endUv = startUv + interval0 * pow4;
-  const baseEps = d.f32(0.001);
-  const eps = std.max(baseEps, 0.25 / cascadeProbesMinVal);
-  const minStep = std.max(baseEps * 0.5, 0.125 / cascadeProbesMinVal);
+
+  const sdfDim = sdfResolutionSlot.$;
+  const texelSizeMin = 1.0 /
+    d.f32(std.max(std.min(sdfDim.x, sdfDim.y), d.u32(1)));
+  // Use texel size as minimum threshold to avoid sub-texel stepping
+  const eps = std.max(texelSizeMin, 0.25 / cascadeProbesMinVal);
+  const minStep = std.max(texelSizeMin * 0.5, 0.125 / cascadeProbesMinVal);
   const biasUv = d.f32(ERODE_BIAS) / cascadeProbesMinVal;
 
   let accum = d.vec4f();
@@ -228,10 +243,6 @@ export const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
 
   const uvStride = d.vec2f(params.cascadeProbes).mul(invCascadeDim);
   const baseSampleUV = probePixel.mul(invCascadeDim);
-  const outputMinDim = d.f32(
-    std.min(params.outputProbes.x, params.outputProbes.y),
-  );
-  const scene = sceneSlot.$(uv);
 
   let sum = d.vec3f();
   for (let i = d.u32(0); i < 4; i++) {

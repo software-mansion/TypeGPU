@@ -16,108 +16,59 @@ import {
   CascadeParams,
   cascadePassBGL,
   cascadePassCompute,
+  colorSlot,
   defaultRayMarch,
   getCascadeDim,
+  type RayMarchResult,
   rayMarchSlot,
-  sceneSlot,
+  sdfResolutionSlot,
+  sdfSlot,
 } from './cascades.ts';
 
 type OutputTexture =
-  | (
-    & TgpuTexture<{
-      size: [number, number];
-      format: 'rgba16float';
-    }>
-    & StorageFlag
-  )
+  | (TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+      StorageFlag)
   | TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
 
-type CascadesOptionsBase = {
+type CascadesOptions = {
   root: TgpuRoot;
-  scene: (uv: d.v2f) => d.v4f;
-  /** Optional custom ray march function. Defaults to the built-in ray marcher that uses the scene slot. */
-  rayMarch?: typeof defaultRayMarch;
-  /**
-   * Quality factor for cascade generation (0.1 to 1.0, default 0.3).
-   * Higher values create more probes and cascades, improving quality at the cost of performance.
-   * At low output resolutions, consider using higher quality values (0.5-1.0) for better results.
-   */
-  quality?: number;
-};
-
-type CascadesOptionsWithOutput = CascadesOptionsBase & {
-  output: OutputTexture;
+  sdf: (uv: d.v2f) => number;
+  color: (uv: d.v2f) => d.v3f;
+  sdfResolution: { width: number; height: number };
+  rayMarch?: (
+    probePos: d.v2f,
+    rayDir: d.v2f,
+    startT: number,
+    endT: number,
+    eps: number,
+    minStep: number,
+    bias: number,
+  ) => d.Infer<typeof RayMarchResult>;
+  output?: OutputTexture;
   size?: { width: number; height: number };
 };
 
-type CascadesOptionsWithoutOutput = CascadesOptionsBase & {
-  output?: undefined;
-  size: { width: number; height: number };
-};
+type OutputTextureProp = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
 
-type OutputTextureProp =
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba16float';
-  }>
-  & StorageFlag
-  & SampledFlag;
-
-/** Base executor type without output property (used when output is provided externally) */
-export type RadianceCascadesExecutorBase = {
-  /**
-   * Run the radiance cascades algorithm, filling the output texture.
-   */
+export type RadianceCascadesExecutor = {
   run(): void;
-
-  /**
-   * Returns a new executor with the additional bind group attached.
-   * Use this to pass custom resources to custom ray march implementations.
-   * If the pipeline doesn't use this layout, it's safely ignored.
-   */
-  with(bindGroup: TgpuBindGroup): RadianceCascadesExecutorBase;
-
-  /**
-   * Clean up all GPU resources created by this executor.
-   */
-  destroy(): void;
-};
-
-/** Executor type with owned output texture */
-export type RadianceCascadesExecutor = RadianceCascadesExecutorBase & {
-  /**
-   * Returns a new executor with the additional bind group attached.
-   */
   with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor;
-
-  /**
-   * The output texture containing the radiance field.
-   * Use this for sampling in your render pass.
-   */
+  destroy(): void;
   readonly output: OutputTextureProp;
 };
 
-/**
- * Create a radiance cascades executor that renders to the provided output texture.
- */
 export function createRadianceCascades(
-  options: CascadesOptionsWithOutput,
-): RadianceCascadesExecutorBase;
+  options: CascadesOptions,
+): RadianceCascadesExecutor {
+  const { root, sdf, color, sdfResolution, output, size, rayMarch } = options;
 
-/**
- * Create a radiance cascades executor that creates and owns its own output texture.
- */
-export function createRadianceCascades(
-  options: CascadesOptionsWithoutOutput,
-): RadianceCascadesExecutor;
-
-export function createRadianceCascades(
-  options: CascadesOptionsWithOutput | CascadesOptionsWithoutOutput,
-): RadianceCascadesExecutor | RadianceCascadesExecutorBase {
-  const { root, scene, output, size, rayMarch, quality = 0.3 } = options;
-
-  const hasOutputProvided = !!output &&
-    (isTexture(output) || isTextureView(output));
+  const hasOutputProvided =
+    !!output && (isTexture(output) || isTextureView(output));
 
   // Determine output dimensions
   let outputWidth: number;
@@ -143,32 +94,18 @@ export function createRadianceCascades(
     outputHeight = size.height;
   }
 
-  // Create output texture type
-  type OwnedOutputTexture =
-    & TgpuTexture<{
-      size: [number, number];
-      format: 'rgba16float';
-    }>
-    & StorageFlag
-    & SampledFlag;
-
   // Create or use provided output texture
-  let ownedOutput: OwnedOutputTexture | null = null;
-  let dst: OutputTexture | OwnedOutputTexture;
+  const dst = hasOutputProvided
+    ? output
+    : root['~unstable']
+        .createTexture({
+          size: [outputWidth, outputHeight],
+          format: 'rgba16float',
+        })
+        .$usage('storage', 'sampled');
 
-  if (hasOutputProvided) {
-    dst = output;
-  } else {
-    ownedOutput = root['~unstable']
-      .createTexture({
-        size: [outputWidth, outputHeight],
-        format: 'rgba16float',
-      })
-      .$usage('storage', 'sampled');
-    dst = ownedOutput;
-  }
+  const ownsOutput = !hasOutputProvided;
 
-  // Compute cascade dimensions with quality factor
   const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(
     outputWidth,
     outputHeight,
@@ -177,19 +114,20 @@ export function createRadianceCascades(
   const cascadeProbesX = cascadeDimX / 2;
   const cascadeProbesY = cascadeDimY / 2;
 
-  // Create double-buffered cascade textures
-  const createCascadeTexture = () =>
-    root['~unstable']
-      .createTexture({
-        size: [cascadeDimX, cascadeDimY, cascadeAmount],
-        format: 'rgba16float',
-      })
-      .$usage('storage', 'sampled');
+  const cascadeTextureA = root['~unstable']
+    .createTexture({
+      size: [cascadeDimX, cascadeDimY, cascadeAmount],
+      format: 'rgba16float',
+    })
+    .$usage('storage', 'sampled');
 
-  const cascadeTextureA = createCascadeTexture();
-  const cascadeTextureB = createCascadeTexture();
+  const cascadeTextureB = root['~unstable']
+    .createTexture({
+      size: [cascadeDimX, cascadeDimY, cascadeAmount],
+      format: 'rgba16float',
+    })
+    .$usage('storage', 'sampled');
 
-  // Create sampler for cascade textures
   const cascadeSampler = root['~unstable'].createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
@@ -197,17 +135,16 @@ export function createRadianceCascades(
     addressModeV: 'clamp-to-edge',
   });
 
-  // Create buffer for cascade parameters
   const paramsBuffer = root.createBuffer(CascadeParams).$usage('uniform');
 
-  // Create cascade pass pipeline with scene and ray march slots bound
   const cascadePassPipeline = root['~unstable']
-    .with(sceneSlot, scene)
+    .with(sdfResolutionSlot, d.vec2u(sdfResolution.width, sdfResolution.height))
+    .with(sdfSlot, sdf)
+    .with(colorSlot, color)
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
     .withCompute(cascadePassCompute)
     .createPipeline();
 
-  // Create bind groups for all cascade passes
   const cascadePassBindGroups = Array.from(
     { length: cascadeAmount },
     (_, layer) => {
@@ -230,13 +167,10 @@ export function createRadianceCascades(
     },
   );
 
-  // Create build radiance field pipeline
   const buildRadianceFieldPipeline = root['~unstable']
-    .with(sceneSlot, scene)
     .withCompute(buildRadianceFieldCompute)
     .createPipeline();
 
-  // Create buffer for radiance field params
   const radianceFieldParamsBuffer = root
     .createBuffer(BuildRadianceFieldParams, {
       outputProbes: d.vec2u(outputWidth, outputHeight),
@@ -245,23 +179,16 @@ export function createRadianceCascades(
     })
     .$usage('uniform');
 
-  // Determine which cascade texture has cascade 0
   const cascade0InA = (cascadeAmount - 1) % 2 === 0;
   const srcCascadeTexture = cascade0InA ? cascadeTextureA : cascadeTextureB;
 
-  // Get the output storage view
-  type StorageTextureView = TgpuTextureView<
-    d.WgslStorageTexture2d<'rgba16float', 'write-only'>
-  >;
-  const dstView: StorageTextureView = isTexture(dst)
+  const dstView = isTexture(dst)
     ? (
-      dst as
-        & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-        & StorageFlag
-    ).createView(d.textureStorage2d('rgba16float', 'write-only'))
+        dst as TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+          StorageFlag
+      ).createView(d.textureStorage2d('rgba16float', 'write-only'))
     : dst;
 
-  // Create bind group for building radiance field
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
     params: radianceFieldParamsBuffer,
     src: srcCascadeTexture.createView(d.texture2d(d.f32), {
@@ -272,7 +199,6 @@ export function createRadianceCascades(
     dst: dstView,
   });
 
-  // Precompute workgroup counts
   const cascadeWorkgroupsX = Math.ceil(cascadeDimX / 8);
   const cascadeWorkgroupsY = Math.ceil(cascadeDimY / 8);
   const outputWorkgroupsX = Math.ceil(outputWidth / 8);
@@ -281,15 +207,15 @@ export function createRadianceCascades(
   function destroy() {
     cascadeTextureA.destroy();
     cascadeTextureB.destroy();
-    ownedOutput?.destroy();
+    if (ownsOutput && isTexture(dst)) {
+      dst.destroy();
+    }
   }
 
-  // Create executor factory that supports .with(bindGroup) pattern
-  function createExecutorBase(
+  function createExecutor(
     additionalBindGroups: TgpuBindGroup[] = [],
-  ): RadianceCascadesExecutorBase {
+  ): RadianceCascadesExecutor {
     function run() {
-      // Run cascade passes top-down
       for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
         paramsBuffer.write({
           layer,
@@ -308,7 +234,6 @@ export function createRadianceCascades(
         }
       }
 
-      // Build the final radiance field
       let radiancePipeline = buildRadianceFieldPipeline.with(
         buildRadianceFieldBG,
       );
@@ -318,34 +243,13 @@ export function createRadianceCascades(
       radiancePipeline.dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
     }
 
-    function withBindGroup(
-      bindGroup: TgpuBindGroup,
-    ): RadianceCascadesExecutorBase {
-      return createExecutorBase([...additionalBindGroups, bindGroup]);
-    }
-
-    return { run, with: withBindGroup, destroy };
-  }
-
-  function createExecutorWithOutput(
-    additionalBindGroups: TgpuBindGroup[] = [],
-  ): RadianceCascadesExecutor {
-    const base = createExecutorBase(additionalBindGroups);
-
-    function withBindGroup(bindGroup: TgpuBindGroup): RadianceCascadesExecutor {
-      return createExecutorWithOutput([...additionalBindGroups, bindGroup]);
-    }
-
     return {
-      ...base,
-      with: withBindGroup,
-      output: ownedOutput as OwnedOutputTexture,
+      run,
+      with: (bg) => createExecutor([...additionalBindGroups, bg]),
+      destroy,
+      output: dst as OutputTextureProp,
     };
   }
 
-  if (hasOutputProvided) {
-    return createExecutorBase();
-  }
-
-  return createExecutorWithOutput();
+  return createExecutor();
 }

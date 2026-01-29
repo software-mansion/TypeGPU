@@ -27,10 +27,9 @@ export {
   opUnion,
 } from './operators.ts';
 
-export {
-  classifySlot,
-  createJumpFlood,
-  defaultGetDistance as defaultDistanceWrite,
-  distanceWriteSlot,
+export { classifySlot, createJumpFlood } from './jumpFlood.ts';
+export type {
+  ColorTexture,
+  JumpFloodExecutor,
+  SdfTexture,
 } from './jumpFlood.ts';
-export type { DistanceTexture, JumpFloodExecutor } from './jumpFlood.ts';

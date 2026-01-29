@@ -5,7 +5,11 @@ import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const root = await tgpu.init();
+const root = await tgpu.init({
+  device: { optionalFeatures: ['float32-filterable'] },
+});
+const canFilterFloat32 = root.device.features.has('float32-filterable');
+
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -97,30 +101,11 @@ const drawCompute = root['~unstable'].createGuardedComputePipeline((x, y) => {
   std.textureStore(sceneWriteView.$, d.vec2u(x, y), out);
 });
 
-const customDistanceWrite = (
-  _coord: d.v2u,
-  texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
-  signedDist: number,
-  insidePx: d.v2u,
-) => {
-  'use gpu';
-  const size = std.textureDimensions(texture);
-  const uv = d.vec2f(insidePx).add(0.5).div(d.vec2f(size));
-
-  const seedData = std.textureSampleLevel(
-    sceneDataLayout.$.sceneRead,
-    nearestSampler.$,
-    uv,
-    0,
-  );
-
-  return d.vec4f(seedData.xyz, signedDist);
-};
-
+const floodSize = { width: canvas.width, height: canvas.height };
 const floodRunner = sdf
   .createJumpFlood({
     root,
-    size: { width: width, height: height },
+    size: floodSize,
     classify: (coord: d.v2u, size: d.v2u) => {
       'use gpu';
       const sceneData = std.textureSampleLevel(
@@ -131,37 +116,49 @@ const floodRunner = sdf
       );
       return sceneData.w > 0;
     },
-    getDistance: customDistanceWrite,
+    getSdf: (_coord, size, signedDist) => {
+      'use gpu';
+      const minDim = std.min(size.x, size.y);
+      return signedDist / d.f32(minDim);
+    },
+    getColor: (_coord, size, _signedDist, insidePx) => {
+      'use gpu';
+      const uv = d.vec2f(insidePx).add(0.5).div(d.vec2f(size));
+      const seedData = std.textureSampleLevel(
+        sceneDataLayout.$.sceneRead,
+        nearestSampler.$,
+        uv,
+        0,
+      );
+      return d.vec4f(seedData.xyz, 1);
+    },
   })
   .with(sceneDataBG);
 
-const res = floodRunner.output.createView(d.texture2d());
+const floodSdfView = floodRunner.sdfOutput.createView(d.texture2d(), {
+  sampleType: canFilterFloat32 ? 'float' : 'unfilterable-float',
+});
+const floodColorView = floodRunner.colorOutput.createView();
 
-const radianceSceneFn = (uv: d.v2f) => {
-  'use gpu';
-  if (std.any(std.lt(uv, d.vec2f(0))) || std.any(std.gt(uv, d.vec2f(1)))) {
-    return d.vec4f(0, 0, 0, 1);
-  }
-  const dims = std.textureDimensions(res.$);
-  const minDim = std.min(dims.x, dims.y);
-  // .xyz = propagated light color (0 if wall/empty), .w = signed distance in pixels
-  const sample = std.textureSampleLevel(res.$, linSampler.$, uv, 0);
-  const lightColor = sample.xyz;
-  const sdfDistPx = sample.w;
-
-  // Convert pixel distance to UV distance (0-1 range) for radiance cascades
-  const sdfDistUv = sdfDistPx / d.f32(minDim);
-
-  // Light emitters have non-zero color, walls/empty have zero color
-  // The color is already propagated from the nearest seed
-  // vec4f: xyz = color, w = distance
-  return d.vec4f(lightColor, sdfDistUv);
-};
+const filterIfPossible = tgpu.comptime(() => {
+  return canFilterFloat32 ? linSampler.$ : nearestSampler.$;
+});
 
 const radianceRunner = rc.createRadianceCascades({
   root,
-  scene: radianceSceneFn,
-  size: { width: width / 16, height: height / 16 },
+  size: { width: width / 4, height: height / 4 },
+  sdfResolution: floodSize,
+  sdf: (uv) => {
+    'use gpu';
+    if (std.any(std.lt(uv, d.vec2f(0))) || std.any(std.gt(uv, d.vec2f(1)))) {
+      return d.f32(1);
+    }
+    return std.textureSampleLevel(floodSdfView.$, filterIfPossible(), uv, 0).x;
+  },
+  color: (uv) => {
+    'use gpu';
+    return std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0).xyz;
+  },
 });
 const radianceRes = radianceRunner.output.createView(d.texture2d());
 
@@ -175,16 +172,21 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
   let result = d.vec4f(0);
   if (displayModeUniform.$ === 0) {
     // sample sdf
-    const sdfSample = std.textureSampleLevel(
-      res.$,
-      linSampler.$,
+    const sdfDist = std.textureSampleLevel(
+      floodSdfView.$,
+      filterIfPossible(),
       uv,
       0,
-    );
-    const sdfDist = sdfSample.w;
+    ).x;
     if (sdfDist < 0) {
       // on surface, show seed color
-      result = d.vec4f(sdfSample.xyz, 1.0);
+      const seedColor = std.textureSampleLevel(
+        floodColorView.$,
+        linSampler.$,
+        uv,
+        0,
+      );
+      result = d.vec4f(seedColor.xyz, 1.0);
     } else {
       // sample radiance
       result = std.textureSampleLevel(
@@ -196,12 +198,11 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
     }
   } else {
     const dims = std.textureDimensions(radianceRes.$);
-    const distSample = std.textureSample(
-      res.$,
-      linSampler.$,
+    const signedDist = std.textureSample(
+      floodSdfView.$,
+      filterIfPossible(),
       uv,
-    );
-    const signedDist = distSample.w;
+    ).x;
     const absDist = std.abs(signedDist);
     const maxDim = d.f32(std.max(dims.x, dims.y));
 

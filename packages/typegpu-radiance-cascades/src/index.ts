@@ -1,12 +1,11 @@
 export { createRadianceCascades } from './runner.ts';
-export type {
-  RadianceCascadesExecutor,
-  RadianceCascadesExecutorBase,
-} from './runner.ts';
+export type { RadianceCascadesExecutor } from './runner.ts';
 export {
+  colorSlot,
   defaultRayMarch,
   getCascadeDim,
   RayMarchResult,
   rayMarchSlot,
-  sceneSlot,
+  sdfResolutionSlot,
+  sdfSlot,
 } from './cascades.ts';

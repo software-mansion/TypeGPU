@@ -26,8 +26,11 @@ const initLayout = tgpu.bindGroupLayout({
 });
 
 const distWriteLayout = tgpu.bindGroupLayout({
-  distTexture: {
-    storageTexture: d.textureStorage2d('rgba16float', 'write-only'),
+  sdfTexture: {
+    storageTexture: d.textureStorage2d('r32float', 'write-only'),
+  },
+  colorTexture: {
+    storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
   },
 });
 
@@ -38,41 +41,27 @@ const distWriteLayout = tgpu.bindGroupLayout({
  */
 export const classifySlot = tgpu.slot<(coord: d.v2u, size: d.v2u) => boolean>();
 
-/**
- * Default distance write - writes signed distance to rgba16float texture.
- * Users can provide a custom implementation to write additional data.
- *
- * @param coord - The pixel coordinate being written
- * @param signedDist - Signed distance in pixels (positive = outside, negative = inside)
- * @param insidePx - Pixel coordinates of the nearest inside seed
- * @param outsidePx - Pixel coordinates of the nearest outside seed
- */
-export const defaultGetDistance = (
-  coord: d.v2u,
-  texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
-  signedDist: number,
-  insidePx: d.v2u,
-  outsidePx: d.v2u,
-) => {
-  'use gpu';
-  return d.vec4f(0, 0, 0, signedDist);
-};
-
-/** Slot for custom distance writing */
-export const distanceWriteSlot = tgpu.slot<
+/** Slot for SDF getter - returns the signed distance value to store. */
+const sdfSlot = tgpu.slot<
   (
     coord: d.v2u,
-    texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
+    size: d.v2u,
+    signedDist: number,
+    insidePx: d.v2u,
+    outsidePx: d.v2u,
+  ) => number
+>();
+
+/** Slot for color getter - returns the color value to store. */
+const colorSlot = tgpu.slot<
+  (
+    coord: d.v2u,
+    size: d.v2u,
     signedDist: number,
     insidePx: d.v2u,
     outsidePx: d.v2u,
   ) => d.v4f
->(defaultGetDistance);
-
-const SampleResult = d.struct({
-  inside: d.vec2u,
-  outside: d.vec2u,
-});
+>();
 
 const sampleWithOffset = (
   tex: d.textureStorage2d<'rgba16uint', 'read-only'>,
@@ -95,10 +84,10 @@ const sampleWithOffset = (
   const outside = loaded.zw;
 
   const invalid = d.vec2u(INVALID_COORD);
-  return SampleResult({
-    inside: std.select(inside, invalid, outOfBounds),
-    outside: std.select(outside, invalid, outOfBounds),
-  });
+  return d.vec4u(
+    std.select(inside, invalid, outOfBounds),
+    std.select(outside, invalid, outOfBounds),
+  );
 };
 
 const offsetAccessor = tgpu['~unstable'].accessor(d.i32);
@@ -156,22 +145,22 @@ const jumpFloodCompute = tgpu['~unstable'].computeFn({
       );
 
       // Check inside candidate (valid if not INVALID_COORD)
-      if (sample.inside.x !== INVALID_COORD) {
-        const deltaIn = pos.sub(d.vec2f(sample.inside));
+      if (sample.x !== INVALID_COORD) {
+        const deltaIn = pos.sub(d.vec2f(sample.xy));
         const dist2 = std.dot(deltaIn, deltaIn);
         if (dist2 < bestInsideDist2) {
           bestInsideDist2 = dist2;
-          bestInsideCoord = d.vec2u(sample.inside);
+          bestInsideCoord = d.vec2u(sample.xy);
         }
       }
 
       // Check outside candidate (valid if not INVALID_COORD)
-      if (sample.outside.x !== INVALID_COORD) {
-        const deltaOut = pos.sub(d.vec2f(sample.outside));
+      if (sample.z !== INVALID_COORD) {
+        const deltaOut = pos.sub(d.vec2f(sample.zw));
         const dist2 = std.dot(deltaOut, deltaOut);
         if (dist2 < bestOutsideDist2) {
           bestOutsideDist2 = dist2;
-          bestOutsideCoord = d.vec2u(sample.outside);
+          bestOutsideCoord = d.vec2u(sample.zw);
         }
       }
     }
@@ -215,18 +204,33 @@ const createDistanceFieldCompute = tgpu['~unstable'].computeFn({
   // Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside)
   const signedDist = insideDist - outsideDist;
 
-  const res = distanceWriteSlot.$(
+  // Get SDF and color values from slots
+  const sdfValue = sdfSlot.$(
     gid.xy,
-    pingPongLayout.$.readView,
+    size,
+    signedDist,
+    insideCoord,
+    outsideCoord,
+  );
+
+  const colorValue = colorSlot.$(
+    gid.xy,
+    size,
     signedDist,
     insideCoord,
     outsideCoord,
   );
 
   std.textureStore(
-    distWriteLayout.$.distTexture,
+    distWriteLayout.$.sdfTexture,
     d.vec2i(gid.xy),
-    res,
+    d.vec4f(sdfValue, 0, 0, 0),
+  );
+
+  std.textureStore(
+    distWriteLayout.$.colorTexture,
+    d.vec2i(gid.xy),
+    colorValue,
   );
 });
 
@@ -237,35 +241,36 @@ type FloodTexture =
   }>
   & StorageFlag;
 
-export type DistanceTexture =
+export type SdfTexture =
   & TgpuTexture<{
     size: [number, number];
-    format: 'rgba16float';
+    format: 'r32float';
+  }>
+  & StorageFlag
+  & SampledFlag;
+
+export type ColorTexture =
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'rgba8unorm';
   }>
   & StorageFlag
   & SampledFlag;
 
 export type JumpFloodExecutor = {
-  /**
-   * Run the jump flood algorithm.
-   * The classify function determines which pixels are inside/outside.
-   */
+  /** Run the jump flood algorithm. */
   run(): void;
+  /** The SDF output texture (r32float). */
+  readonly sdfOutput: SdfTexture;
+  /** The color output texture (rgba8unorm). */
+  readonly colorOutput: ColorTexture;
+  /** Clean up GPU resources created by this executor. */
   /**
    * Returns a new executor with the additional bind group attached.
-   * Use this to pass resources needed by custom classify or distance write functions.
+   * Use this to pass resources needed by custom classify or getter functions.
    */
   with(bindGroup: TgpuBindGroup): JumpFloodExecutor;
-  /**
-   * The output distance field texture.
-   * Contains signed distance values in pixels after run() completes.
-   * Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside).
-   * If output was provided in options, this property contains that texture.
-   */
-  readonly output: DistanceTexture;
-  /**
-   * Clean up GPU resources created by this executor.
-   */
+  /** Clean up GPU resources created by this executor. */
   destroy(): void;
 };
 
@@ -275,71 +280,53 @@ type JumpFloodOptions = {
   /**
    * Classify function that determines which pixels are "inside" for the SDF.
    * Returns true if the pixel is inside, false if outside.
-   * In other words, this tells the algorithm which texture pixels contain information to propagate.
    */
   classify: (coord: d.v2u, size: d.v2u) => boolean;
   /**
-   * Optional custom distance function for writing to the output texture.
-   * This callback is invoked for each pixel after the jump flood algorithm completes,
-   * allowing you to compute custom output values based on the distance field results.
-   *
-   * Defaults to writing signed distance as d.vec4f(0, 0, 0, signedDist).
+   * Get the SDF value to store. Receives signed distance in pixels.
    */
-  getDistance?: (
-    /**
-     * The pixel coordinate being written
-     */
+  getSdf: (
     coord: d.v2u,
-    /**
-     * The flood texture containing nearest inside/outside seed coordinates
-     * The format is d.vec4u(insideX, insideY, outsideX, outsideY)
-     */
-    texture: d.textureStorage2d<'rgba16uint', 'read-only'>,
-    /**
-     * Signed distance in pixels (positive = outside, negative = inside)
-     */
+    size: d.v2u,
     signedDist: number,
-    /**
-     * Pixel coordinates of the nearest inside seed (pixel for which classify() returned true)
-     */
     insidePx: d.v2u,
-    /**
-     * Pixel coordinates of the nearest outside seed (pixel for which classify() returned false)
-     */
+    outsidePx: d.v2u,
+  ) => number;
+  /**
+   * Get the color value to store.
+   */
+  getColor: (
+    coord: d.v2u,
+    size: d.v2u,
+    signedDist: number,
+    insidePx: d.v2u,
     outsidePx: d.v2u,
   ) => d.v4f;
-  /**
-   * The output texture. The result of
-   */
-  output?: DistanceTexture | undefined;
 };
 
 /**
- * Create a Jump Flood Algorithm executor that creates its own output texture.
+ * Create a Jump Flood Algorithm executor with separate SDF and color output textures.
  */
-export function createJumpFlood(
-  options: JumpFloodOptions,
-): JumpFloodExecutor {
-  const {
-    root,
-    size,
-    classify,
-    output: providedOutput,
-    getDistance,
-  } = options;
+export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
+  const { root, size, classify, getSdf, getColor } = options;
   const { width, height } = size;
 
-  const ownsOutput = !providedOutput;
+  // Create output textures
+  const sdfTexture = root['~unstable']
+    .createTexture({
+      size: [width, height],
+      format: 'r32float',
+    })
+    .$usage('storage', 'sampled') as SdfTexture;
 
-  const distanceTexture: DistanceTexture = providedOutput ??
-    (root['~unstable']
-      .createTexture({
-        size: [width, height],
-        format: 'rgba16float',
-      })
-      .$usage('storage', 'sampled') as DistanceTexture);
+  const colorTexture = root['~unstable']
+    .createTexture({
+      size: [width, height],
+      format: 'rgba8unorm',
+    })
+    .$usage('storage', 'sampled') as ColorTexture;
 
-  // Create flood textures (always owned by executor)
+  // Create flood textures
   const floodTextureA = root['~unstable']
     .createTexture({
       size: [width, height],
@@ -367,7 +354,8 @@ export function createJumpFlood(
     .createPipeline();
 
   const createDistancePipeline = root['~unstable']
-    .with(distanceWriteSlot, getDistance ?? defaultGetDistance)
+    .with(sdfSlot, getSdf)
+    .with(colorSlot, getColor)
     .withCompute(createDistanceFieldCompute)
     .createPipeline();
 
@@ -398,8 +386,11 @@ export function createJumpFlood(
   ];
 
   const distWriteBG = root.createBindGroup(distWriteLayout, {
-    distTexture: distanceTexture.createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
+    sdfTexture: sdfTexture.createView(
+      d.textureStorage2d('r32float', 'write-only'),
+    ),
+    colorTexture: colorTexture.createView(
+      d.textureStorage2d('rgba8unorm', 'write-only'),
     ),
   });
 
@@ -411,9 +402,8 @@ export function createJumpFlood(
   function destroy() {
     floodTextureA.destroy();
     floodTextureB.destroy();
-    if (ownsOutput) {
-      distanceTexture.destroy();
-    }
+    sdfTexture.destroy();
+    colorTexture.destroy();
   }
 
   function createExecutor(
@@ -468,7 +458,8 @@ export function createJumpFlood(
       run,
       with: withBindGroup,
       destroy,
-      output: distanceTexture,
+      sdfOutput: sdfTexture,
+      colorOutput: colorTexture,
     };
   }
 

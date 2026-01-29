@@ -182,7 +182,7 @@ export function accessProp(
 
   // Example: d.vec3f().kind === 'vec3f'
   // We are not a struct here so it's okey
-  if (propName === 'kind') {
+  if (propName === 'kind' && target.dataType !== UnknownData) {
     return snip(target.dataType.type, UnknownData, 'constant');
   }
 
