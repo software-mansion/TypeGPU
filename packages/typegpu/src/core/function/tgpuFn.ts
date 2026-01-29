@@ -380,9 +380,9 @@ function createGenericFn<T extends AnyFn>(
     },
   };
 
-  const call = ((...args: Parameters<T>): ReturnType<T> => {
+  const call = (...args: Parameters<T>): ReturnType<T> => {
     return inner(...args) as ReturnType<T>;
-  }) as T;
+  };
 
   const genericFn = Object.assign(call, fnBase) as unknown as This;
 

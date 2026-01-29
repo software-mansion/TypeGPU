@@ -47,7 +47,7 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
-import type { SlotValuePair } from '../core/slot/slotTypes.ts';
+import type { AnyFn } from '../core/function/fnTypes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -598,13 +598,14 @@ ${this.ctx.pre}}`;
         }
       }
 
-      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
-        const slotPairs: SlotValuePair[] = isGenericFn(callee.value)
+      const isGeneric = isGenericFn(callee.value);
+      if (!isMarkedInternal(callee.value) || isGeneric) {
+        const slotPairs = isGeneric
           ? (callee.value[$providing]?.pairs ?? [])
           : [];
-        const callback = isGenericFn(callee.value)
+        const callback = isGeneric
           ? callee.value[$internal].inner
-          : (callee.value as (...args: never[]) => unknown);
+          : (callee.value as AnyFn);
 
         const shelllessCall = this.ctx.withSlots(
           slotPairs,

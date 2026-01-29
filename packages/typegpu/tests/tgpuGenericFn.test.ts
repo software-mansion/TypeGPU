@@ -4,6 +4,17 @@ import tgpu from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
+  it('can be called in js', () => {
+    const getValue = () => {
+      'use gpu';
+      return 2;
+    };
+
+    const getValueGeneric = tgpu.fn(getValue);
+
+    expect(getValueGeneric()).toBe(2);
+  });
+
   it('generates only one definition when both original and wrapped function are used', () => {
     const countAccess = tgpu['~unstable'].accessor(d.f32, 2);
 
@@ -49,7 +60,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return getDouble4();
     };
 
-    const wgsl = tgpu.resolve([main]);
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
         return 0f;
@@ -146,7 +156,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     `);
   });
 
-  it('generates one fucntion even when .with is called multiple times with the same arguments', () => {
+  it('generates one function even when .with is called multiple times with the same arguments', () => {
     const valueAccess = tgpu['~unstable'].accessor(d.f32);
 
     const getValue = () => {
