@@ -1,8 +1,8 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import {
-  type AnyData,
   isDisarray,
   MatrixColumnsAccess,
+  UnknownData,
 } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import {
+  type BaseData,
   isNaturallyEphemeral,
   isPtr,
   isVec,
@@ -37,7 +38,7 @@ export function accessIndex(
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
-    const elementType = target.dataType.elementType as AnyData;
+    const elementType = target.dataType.elementType;
     const isElementNatEph = isNaturallyEphemeral(elementType);
     const isTargetEphemeral = isEphemeralSnippet(target);
     const isIndexConstant = index.origin === 'constant';
@@ -99,7 +100,8 @@ export function accessIndex(
   // matrix.columns
   if (target.value instanceof MatrixColumnsAccess) {
     const propType = indexableTypeToResult[
-      target.value.matrix.dataType.type as keyof typeof indexableTypeToResult
+      (target.value.matrix.dataType as BaseData)
+        .type as keyof typeof indexableTypeToResult
     ];
 
     return snip(
@@ -110,7 +112,7 @@ export function accessIndex(
   }
 
   // matrix
-  if (target.dataType.type in indexableTypeToResult) {
+  if ((target.dataType as BaseData).type in indexableTypeToResult) {
     throw new Error(
       "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
     );
@@ -118,7 +120,7 @@ export function accessIndex(
 
   if (
     (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
-    target.dataType.type === 'unknown'
+    target.dataType === UnknownData
   ) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(

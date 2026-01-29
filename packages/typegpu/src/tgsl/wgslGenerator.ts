@@ -2,7 +2,6 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
-  type AnyData,
   ConsoleLog,
   InfixDispatch,
   isLooseData,
@@ -134,8 +133,8 @@ type Operator =
   | tinyest.UnaryOperator;
 
 function operatorToType<
-  TL extends AnyData | UnknownData,
-  TR extends AnyData | UnknownData,
+  TL extends wgsl.BaseData | UnknownData,
+  TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
@@ -224,7 +223,7 @@ ${this.ctx.pre}}`;
   public blockVariable(
     varType: 'var' | 'let' | 'const',
     id: string,
-    dataType: wgsl.AnyWgslData | UnknownData,
+    dataType: wgsl.BaseData | UnknownData,
     origin: Origin,
   ): Snippet {
     const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
@@ -279,7 +278,7 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: AnyData,
+    expectedType: wgsl.BaseData,
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
@@ -329,11 +328,11 @@ ${this.ctx.pre}}`;
         return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
       }
 
-      if (lhsExpr.dataType.type === 'unknown') {
+      if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
-      if (rhsExpr.dataType.type === 'unknown') {
+      if (rhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(
           `Right-hand side of '${op}' is of unknown type`,
         );
@@ -646,7 +645,7 @@ ${this.ctx.pre}}`;
         );
         if (shellless) {
           const converted = args.map((s, idx) => {
-            const argType = shellless.argTypes[idx] as AnyData;
+            const argType = shellless.argTypes[idx] as wgsl.BaseData;
             return tryConvertSnippet(
               this.ctx,
               s,
@@ -717,11 +716,11 @@ ${this.ctx.pre}}`;
       const [_, valueNodes] = expression;
       // Array Expression
       const arrType = this.ctx.expectedType;
-      let elemType: AnyData;
+      let elemType: wgsl.BaseData;
       let values: Snippet[];
 
       if (wgsl.isWgslArray(arrType)) {
-        elemType = arrType.elementType as AnyData;
+        elemType = arrType.elementType;
         // The array is typed, so its elements should be as well.
         values = valueNodes.map((value) =>
           this.typedExpression(value, elemType)
@@ -881,7 +880,7 @@ Try 'return ${typeStr}(${str});' instead.
         );
 
         invariant(
-          returnSnippet.dataType.type !== 'unknown',
+          returnSnippet.dataType !== UnknownData,
           'Return type should be known',
         );
 
@@ -932,7 +931,7 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       const ephemeral = isEphemeralSnippet(eq);
-      let dataType = eq.dataType as wgsl.AnyWgslData;
+      let dataType = eq.dataType as wgsl.BaseData;
       const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
 
       if (isLooseData(eq.dataType)) {
@@ -943,7 +942,7 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (eq.value instanceof RefOperator) {
         // We're assigning a newly created `d.ref()`
-        if (eq.dataType.type !== 'unknown') {
+        if (eq.dataType !== UnknownData) {
           throw new WgslTypeError(
             `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
           );
@@ -951,7 +950,7 @@ ${this.ctx.pre}else ${alternate}`;
         const refSnippet = eq.value.snippet;
         const varName = this.refVariable(
           rawId,
-          concretize(refSnippet.dataType as AnyData) as wgsl.StorableData,
+          concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
         );
         return stitch`${this.ctx.pre}var ${varName} = ${
           tryConvertSnippet(
@@ -1001,7 +1000,7 @@ ${this.ctx.pre}else ${alternate}`;
           if (!(eq.value instanceof RefOperator)) {
             // If what we're assigning is something preceded by `&`, then it's a value
             // created using `d.ref()`. Otherwise, it's an implicit pointer
-            dataType = implicitFrom(dataType);
+            dataType = implicitFrom(dataType as wgsl.Ptr);
           }
         }
       } else {

@@ -1,5 +1,4 @@
-import { $internal, $resolve } from '../../src/shared/symbols.ts';
-import { type AnyData, UnknownData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
@@ -11,6 +10,7 @@ import {
 } from '../data/snippet.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   type F32,
   type I32,
   isMatInstance,
@@ -28,6 +28,7 @@ import {
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
 import { WgslTypeError } from '../../src/errors.ts';
+import { $internal, $resolve } from '../../src/shared/symbols.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -46,7 +47,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
-export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
+export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -77,10 +78,10 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: BaseData | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: AnyData | undefined;
+  readonly topFunctionReturnType: BaseData | undefined;
 
   indent(): string;
   dedent(): string;
@@ -95,7 +96,7 @@ export type GenerationCtx = ResolutionCtx & {
    * reported using this function, and used to infer
    * the return type of the owning function.
    */
-  reportReturnType(dataType: AnyData): void;
+  reportReturnType(dataType: BaseData): void;
 
   readonly shelllessRepo: ShelllessRepository;
 };
@@ -168,7 +169,7 @@ export class ArrayExpression implements SelfResolvable {
       ) {
         const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
         const snippetType =
-          ctx.resolve(concretize(elem.dataType as AnyData)).value;
+          ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
         );

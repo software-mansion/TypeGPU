@@ -435,7 +435,7 @@ describe('WgslStruct', () => {
     const foo = d.struct({}) as d.WgslStruct;
 
     expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
-    expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.AnyWgslData>>();
+    expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.BaseData>>();
   });
 
   it('accepts every struct by default', () => {
