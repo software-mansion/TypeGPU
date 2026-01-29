@@ -1,5 +1,11 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, {
+  d,
+  std,
+  type TgpuAccessor,
+  type TgpuSlot,
+  type TgpuUniform,
+} from '../../src/index.ts';
 import { it } from '../utils/extendedIt.ts';
 
 describe('shellless', () => {
@@ -284,6 +290,66 @@ describe('shellless', () => {
       "fn bar() -> f32 {
         return (4.2f * foo());
       }"
+    `);
+  });
+
+  it('throws a descriptive error when an invalid argument is used', ({ root }) => {
+    const myUniform = root.createUniform(d.u32);
+    const fn = (uniform: TgpuUniform<d.U32>) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(myUniform);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value [object Object] as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      ]
+    `);
+  });
+
+  it('throws a descriptive error when a slot argument is used', () => {
+    const mySlot = tgpu.slot<number>();
+    const fn = (slot: TgpuSlot<number>) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(mySlot);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value slot:mySlot as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      Try dereferencing the slot with '.$'.]
+    `);
+  });
+
+  it('throws a descriptive error when an accessor argument is used', () => {
+    const myAccess = tgpu['~unstable'].accessor(d.f32);
+    const fn = (access: TgpuAccessor<d.F32>) => {
+      'use gpu';
+      return 0;
+    };
+
+    const main = tgpu.fn([])(() => {
+      fn(myAccess);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Passed illegal value accessor:myAccess as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, textures or samplers.
+      Try dereferencing the accessor with '.$'.]
     `);
   });
 });
