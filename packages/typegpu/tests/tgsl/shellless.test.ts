@@ -3,9 +3,9 @@ import tgpu, {
   d,
   std,
   type TgpuAccessor,
-  TgpuFixedSampler,
+  type TgpuFixedSampler,
   type TgpuSlot,
-  TgpuTextureView,
+  type TgpuTextureView,
   type TgpuUniform,
 } from '../../src/index.ts';
 import { it } from '../utils/extendedIt.ts';
@@ -384,7 +384,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value [object Object] as the #0 argument to fn(...)
+      - fn:main: Passed illegal value texture:myTexture as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, pointers, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);

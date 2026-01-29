@@ -2,7 +2,6 @@ import {
   createShelllessImpl,
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
-import { isAccessor, isSlot } from '../core/slot/slotTypes.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
