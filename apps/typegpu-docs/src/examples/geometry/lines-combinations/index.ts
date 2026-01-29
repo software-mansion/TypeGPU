@@ -32,7 +32,7 @@ import {
 import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
-import * as testCases from './testCases.ts';
+import { testCases } from './testCases.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -146,7 +146,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-console.log(tgpu.resolve({ externals: { lineSegmentVariableWidth } }));
+// console.log(tgpu.resolve([lineSegmentVariableWidth]));
 
 const mainFragment = tgpu['~unstable'].fragmentFn({
   in: {
@@ -192,13 +192,13 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
       vec3f(0.25, 0.25, 0.75), // 8
     ];
     if (fillType === 2) {
-      color = colors[instanceIndex % colors.length];
+      color = vec3f(colors[instanceIndex % colors.length]);
     }
     if (fillType === 3) {
-      color = colors[vertexIndex % colors.length];
+      color = vec3f(colors[vertexIndex % colors.length]);
     }
     if (fillType === 4) {
-      color = colors[situationIndex % colors.length];
+      color = vec3f(colors[situationIndex % colors.length]);
     }
     if (fillType === 5) {
       color = vec3f(uv.x, cos(uv.y * 100), 0);
@@ -304,11 +304,16 @@ function createPipelines() {
       format: presentationFormat,
       blend: alphaBlend,
     })
-    .withPrimitive({
-      // cullMode: 'back',
-    })
+    // .withPrimitive({
+    //   cullMode: 'back',
+    // })
     .createPipeline()
-    .withIndexBuffer(indexBuffer);
+    .withIndexBuffer(indexBuffer)
+    .withPerformanceCallback((start, end) => {
+      if (frameId % 20 === 0) {
+        console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
+      }
+    });
 
   const outline = root['~unstable']
     .with(joinSlot, join)
@@ -383,11 +388,6 @@ const draw = (timeMs: number) => {
   pipelines.fill
     .with(uniformsBindGroup)
     .withColorAttachment({ ...colorAttachment, loadOp: 'clear' })
-    .withPerformanceCallback((start, end) => {
-      if (frameId % 20 === 0) {
-        console.log(`${(Number(end - start) * 1e-6).toFixed(2)} ms`);
-      }
-    })
     .drawIndexed(subdiv.fillCount, fillType === 0 ? 0 : TEST_SEGMENT_COUNT);
 
   if (wireframe) {
@@ -449,12 +449,12 @@ const subdivs = [
   },
 ];
 
+// #region Example controls & Cleanup
 export const controls = {
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
-    onSelectChange: async (selected: keyof typeof testCases) => {
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: no other way
+    onSelectChange: (selected: keyof typeof testCases) => {
       testCase = testCases[selected];
       pipelines = createPipelines();
     },
@@ -462,7 +462,7 @@ export const controls = {
   'Start Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
+    onSelectChange: (selected: keyof typeof lineCaps) => {
       startCap = lineCaps[selected];
       pipelines = createPipelines();
     },
@@ -470,7 +470,7 @@ export const controls = {
   'End Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
+    onSelectChange: (selected: keyof typeof lineCaps) => {
       endCap = lineCaps[selected];
       pipelines = createPipelines();
     },
@@ -478,7 +478,7 @@ export const controls = {
   Join: {
     initial: 'round',
     options: Object.keys(lineJoins),
-    onSelectChange: async (selected: keyof typeof lineJoins) => {
+    onSelectChange: (selected: keyof typeof lineJoins) => {
       join = lineJoins[selected];
       pipelines = createPipelines();
     },
@@ -486,7 +486,7 @@ export const controls = {
   Fill: {
     initial: 'solid',
     options: Object.keys(fillOptions),
-    onSelectChange: async (selected: keyof typeof fillOptions) => {
+    onSelectChange: (selected: keyof typeof fillOptions) => {
       fillType = fillOptions[selected];
       uniformsBuffer.writePartial({ fillType });
     },
@@ -527,9 +527,56 @@ export const controls = {
       reverse = value;
     },
   },
+  'Test Resolution': import.meta.env.DEV && {
+    onButtonClick: () => {
+      const prevShowRadii = showRadii;
+      const prevStartCap = startCap;
+      const prevEndCap = endCap;
+      const prevJoin = join;
+      const prevTestCase = testCase;
+
+      showRadii = true;
+
+      const capsOptions = Object.keys(lineCaps);
+      const joinOptions = Object.keys(lineJoins);
+
+      const { animateWidth, bending, segmentAlternate } = testCases;
+      const testCasesReduced = { animateWidth, bending, segmentAlternate }; // semi-random subset
+
+      Object.entries(testCasesReduced).map(([_, t], i) => {
+        testCase = t;
+        startCap = lineCaps[
+          capsOptions[i % capsOptions.length] as keyof typeof lineCaps
+        ];
+        endCap = lineCaps[
+          capsOptions[
+            (i + 3) % capsOptions.length // greater coverage
+          ] as keyof typeof lineCaps
+        ];
+        join = lineJoins[
+          joinOptions[i % joinOptions.length] as keyof typeof lineJoins
+        ];
+        const namespace = tgpu['~unstable'].namespace();
+        return Object.entries(createPipelines()).map(([_, pipeline]) =>
+          root.device.createShaderModule({
+            code: tgpu.resolve([pipeline], {
+              names: namespace,
+            }),
+          })
+        );
+      });
+
+      testCase = prevTestCase;
+      startCap = prevStartCap;
+      endCap = prevEndCap;
+      join = prevJoin;
+      showRadii = prevShowRadii;
+    },
+  },
 };
 
 export function onCleanup() {
   root.destroy();
   cancelAnimationFrame(frameId);
 }
+// #endregion

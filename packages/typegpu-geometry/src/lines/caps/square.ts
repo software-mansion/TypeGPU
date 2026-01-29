@@ -1,4 +1,4 @@
-import type { v2f } from 'typegpu/data';
+import { type v2f, vec2f } from 'typegpu/data';
 import { add, dot, select } from 'typegpu/std';
 import { addMul, rot90ccw, rot90cw } from '../../utils.ts';
 import { miterPointNoCheck } from '../utils.ts';
@@ -24,7 +24,7 @@ export const squareCap = capShell(
       add(dir, dirRight),
       shouldJoin,
     );
-    const c = dir;
+    const c = vec2f(dir);
     const d = select(
       miterPointNoCheck(dir, left),
       add(dir, dirLeft),
@@ -52,6 +52,6 @@ export const squareCap = capShell(
     const v2 = addMul(V.position, c, V.radius);
     const v3 = addMul(V.position, d, V.radius);
     const points = [vu, v1, v2, v3, vd];
-    return points[vertexIndex % 5] as v2f;
+    return vec2f(points[vertexIndex % 5] as v2f);
   },
 );

@@ -28,7 +28,7 @@ export const arrowCap = capShell(
     if (joinPath.depth >= 0) {
       const remove = [v0, v4];
       const dm = remove[joinPath.joinIndex & 0x1] as v2f;
-      return dm;
+      return vec2f(dm);
     }
 
     return points[vertexIndex % 5] as v2f;

@@ -19,10 +19,11 @@ const testCaseShell = tgpu.fn([u32, f32], LineSegmentVertex);
 
 const segmentSide = tgpu.const(arrayOf(f32, 4), [-1, -1, 1, 1]);
 
-export const segmentAlternate = testCaseShell(
+const segmentAlternate = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     const r = sin(time + select(0, Math.PI / 2, side === -1));
     const radius = 0.4 * r * r;
     return LineSegmentVertex({
@@ -32,10 +33,11 @@ export const segmentAlternate = testCaseShell(
   },
 );
 
-export const segmentStretch = testCaseShell(
+const segmentStretch = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     const distance = 0.5 * clamp(0.55 * sin(1.5 * time) + 0.5, 0, 1);
     return LineSegmentVertex({
       position: vec2f(distance * side * cos(time), distance * side * sin(time)),
@@ -44,10 +46,11 @@ export const segmentStretch = testCaseShell(
   },
 );
 
-export const segmentContainsAnotherEnd = testCaseShell(
+const segmentContainsAnotherEnd = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
-    const side = segmentSide.$[vertexIndex];
+    // biome-ignore lint/style/useConst: cannot be const, right side has runtime origin
+    let side = segmentSide.$[vertexIndex];
     return LineSegmentVertex({
       position: vec2f(side * 0.25 * (1 + clamp(sin(time), -0.8, 1)), 0),
       radius: 0.25 + side * 0.125,
@@ -55,7 +58,7 @@ export const segmentContainsAnotherEnd = testCaseShell(
   },
 );
 
-export const caseVShapeSmall = testCaseShell(
+const caseVShapeSmall = testCaseShell(
   (vertexIndex, t) => {
     'use gpu';
     const side = clamp(f32(vertexIndex) - 2, -1, 1);
@@ -67,7 +70,7 @@ export const caseVShapeSmall = testCaseShell(
   },
 );
 
-export const caseVShapeBig = testCaseShell(
+const caseVShapeBig = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const side = clamp(f32(vertexIndex) - 2, -1, 1);
@@ -79,7 +82,7 @@ export const caseVShapeBig = testCaseShell(
   },
 );
 
-export const halfCircle = testCaseShell(
+const halfCircle = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const angle = Math.PI * clamp(f32(vertexIndex) - 1, 0, 50) / 50;
@@ -91,7 +94,7 @@ export const halfCircle = testCaseShell(
   },
 );
 
-export const halfCircleThin = testCaseShell(
+const halfCircleThin = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const result = halfCircle(vertexIndex, time);
@@ -100,7 +103,7 @@ export const halfCircleThin = testCaseShell(
   },
 );
 
-export const bending = testCaseShell(
+const bending = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const i = clamp(f32(vertexIndex) - 1, 0, 48) / 48;
@@ -115,7 +118,7 @@ export const bending = testCaseShell(
   },
 );
 
-export const animateWidth = testCaseShell(
+const animateWidth = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const i = (f32(vertexIndex) % TEST_SEGMENT_COUNT) / TEST_SEGMENT_COUNT;
@@ -128,7 +131,7 @@ export const animateWidth = testCaseShell(
   },
 );
 
-export const perlinTraces = testCaseShell(
+const perlinTraces = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const perLine = u32(200);
@@ -153,7 +156,7 @@ export const perlinTraces = testCaseShell(
   },
 );
 
-export const bars = testCaseShell(
+const bars = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const VERTS_PER_LINE = u32(5);
@@ -172,7 +175,7 @@ export const bars = testCaseShell(
   },
 );
 
-export const arms = testCaseShell(
+const arms = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const s = sin(time);
@@ -192,7 +195,7 @@ export const arms = testCaseShell(
   },
 );
 
-export const armsSmall = testCaseShell(
+const armsSmall = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const result = arms(vertexIndex, time);
@@ -203,7 +206,7 @@ export const armsSmall = testCaseShell(
   },
 );
 
-export const armsBig = testCaseShell(
+const armsBig = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const result = arms(vertexIndex, time);
@@ -214,7 +217,7 @@ export const armsBig = testCaseShell(
   },
 );
 
-export const armsRotating = testCaseShell(
+const armsRotating = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const s = sin(time);
@@ -234,7 +237,7 @@ export const armsRotating = testCaseShell(
   },
 );
 
-export const flyingSquares = testCaseShell(
+const flyingSquares = testCaseShell(
   (vertexIndex, time) => {
     'use gpu';
     const squareIndex = u32(vertexIndex / 8);
@@ -265,3 +268,22 @@ export const flyingSquares = testCaseShell(
     });
   },
 );
+
+export const testCases = {
+  animateWidth,
+  arms,
+  armsBig,
+  armsRotating,
+  armsSmall,
+  bars,
+  bending,
+  caseVShapeBig,
+  caseVShapeSmall,
+  flyingSquares,
+  halfCircle,
+  halfCircleThin,
+  perlinTraces,
+  segmentAlternate,
+  segmentContainsAnotherEnd,
+  segmentStretch,
+};
