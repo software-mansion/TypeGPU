@@ -79,13 +79,6 @@ untyped value of a typed resource, use the `root.unwrap` function.
 To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attributes with the appropriate location using `d.location(...)`.
 :::
 
-
-## Best practices
-
-Treat roots as their own separate universes, meaning resources created from the same root can interact with each other, while
-resources created by seperate roots can have a hard time interacting. This usually means creating just one root at the start
-of the program is the safest bet, but there are exceptions.
-
 ### Destroying resources
 
 Calling `root.destroy()` will call `device.destroy()` to let the browser know that it can free up all the resources. 
@@ -95,6 +88,12 @@ If the root was created via `tgpu.initFromDevice()`, this method does nothing.
 ```ts
 root.destroy(); // <- frees up all the resources
 ```
+
+## Best practices
+
+Treat roots as their own separate universes, meaning resources created from the same root can interact with each other, while
+resources created by seperate roots can have a hard time interacting. This usually means creating just one root at the start
+of the program is the safest bet, but there are exceptions.
 
 ### If you do not own the GPU device
 
