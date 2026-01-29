@@ -3,8 +3,10 @@ import type {
   AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
+  BaseData,
   Decorated,
   Interpolate,
   Location,
@@ -43,6 +45,10 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
+export type FragmentInFromVertexOut<T> =
+  & OmitBuiltins<{ [K in keyof T]: InstanceToSchema<T[K]> }>
+  & Record<string, AnyFragmentInputBuiltin>;
+
 type FragmentColorValue = Vec4f | Vec4i | Vec4u;
 
 export type FragmentOutConstrained = IOLayout<
@@ -55,8 +61,8 @@ export type FragmentOutConstrained = IOLayout<
  * Describes a fragment entry function signature (its arguments, return type and targets)
  */
 type TgpuFragmentFnShellHeader<
-  FragmentIn extends FragmentInConstrained,
-  FragmentOut extends FragmentOutConstrained,
+  FragmentIn extends TgpuFragmentFn.In = TgpuFragmentFn.In,
+  FragmentOut extends TgpuFragmentFn.Out = TgpuFragmentFn.Out,
 > = {
   readonly in: FragmentIn | undefined;
   readonly out: FragmentOut;
@@ -69,41 +75,55 @@ type TgpuFragmentFnShellHeader<
  * Allows creating tgpu fragment functions by calling this shell
  * and passing the implementation (as WGSL string or JS function) as the argument.
  */
-export type TgpuFragmentFnShell<
-  FragmentIn extends FragmentInConstrained,
-  FragmentOut extends FragmentOutConstrained,
-> =
-  & TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> /**
+export interface TgpuFragmentFnShell<
+  // We force the variance to be covariant, since shells are just containers of
+  // schemas that conincidentally can be called to create a fragment function.
+  // @ts-expect-error: We override the variance
+  out TIn extends TgpuFragmentFn.In = TgpuFragmentFn.In,
+  // @ts-expect-error: We override the variance
+  out TOut extends TgpuFragmentFn.Out = TgpuFragmentFn.Out,
+> extends TgpuFragmentFnShellHeader<TIn, TOut> {
+  /**
    * Creates a type-safe implementation of this signature
    */
-  & ((
+  (
     implementation: (
-      input: InferIO<FragmentIn>,
-      out: FragmentOut extends IORecord ? WgslStruct<FragmentOut> : FragmentOut,
-    ) => InferIO<FragmentOut>,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
-  & /**
+      input: InferIO<TIn>,
+      out: TOut extends IORecord ? WgslStruct<TOut> : TOut,
+    ) => InferIO<TOut>,
+  ): TgpuFragmentFn<OmitBuiltins<TIn>, TOut>;
+  /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
-   */ ((
+   */
+  (
     implementation: string,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>)
-  & ((
+  ): TgpuFragmentFn<OmitBuiltins<TIn>, TOut>;
+  (
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, FragmentOut>);
+  ): TgpuFragmentFn<OmitBuiltins<TIn>, TOut>;
+}
 
 export interface TgpuFragmentFn<
-  Varying extends FragmentInConstrained = FragmentInConstrained,
-  Output extends FragmentOutConstrained = FragmentOutConstrained,
+  // @ts-expect-error: We override the variance
+  in Varying extends TgpuFragmentFn.In = Record<string, never>,
+  out Output extends TgpuFragmentFn.Out = TgpuFragmentFn.Out,
 > extends TgpuNamable {
   readonly [$internal]: true;
   readonly shell: TgpuFragmentFnShellHeader<Varying, Output>;
   readonly outputType: IOLayoutToSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
+}
+
+export declare namespace TgpuFragmentFn {
+  // Not allowing single-value input, as using objects here is more
+  // readable, and refactoring to use a builtin argument is too much hassle.
+  type In = Record<string, BaseData>;
+  type Out = Record<string, BaseData> | BaseData;
 }
 
 export function fragmentFn<
@@ -133,10 +153,8 @@ export function fragmentFn<
  *  A `vec4f`, signaling this function outputs a color for one target, or a record containing colors for multiple targets.
  */
 export function fragmentFn<
-  // Not allowing single-value input, as using objects here is more
-  // readable, and refactoring to use a builtin argument is too much hassle.
-  FragmentIn extends FragmentInConstrained,
-  FragmentOut extends FragmentOutConstrained,
+  FragmentIn extends TgpuFragmentFn.In,
+  FragmentOut extends TgpuFragmentFn.Out,
 >(options: {
   in?: FragmentIn;
   out: FragmentOut;
@@ -153,7 +171,7 @@ export function fragmentFn<
     ...values: unknown[]
   ) => createFragmentFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(call, shell) as TgpuFragmentFnShell<
+  return Object.assign(call, shell) as unknown as TgpuFragmentFnShell<
     FragmentIn,
     FragmentOut
   >;
@@ -164,16 +182,16 @@ export function fragmentFn<
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShellHeader<
-    FragmentInConstrained,
-    FragmentOutConstrained
-  >,
+  shell: TgpuFragmentFnShellHeader,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn & SelfResolvable & {
-    [$internal]: true;
-    [$getNameForward]: FnCore;
-  };
+  type This =
+    & TgpuFragmentFn<TgpuFragmentFn.In, TgpuFragmentFn.Out>
+    & SelfResolvable
+    & {
+      [$internal]: true;
+      [$getNameForward]: FnCore;
+    };
 
   const core = createFnCore(implementation, '@fragment ');
   const outputType = shell.returnType;
@@ -207,10 +225,10 @@ function createFragmentFn(
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       const inputWithLocation = shell.in
         ? createIoSchema(shell.in, ctx.varyingLocations)
-          .$name(`${getName(this) ?? ''}_Input`)
         : undefined;
 
       if (inputWithLocation) {
+        setName(inputWithLocation, `${getName(this) ?? ''}_Input`);
         core.applyExternals({ In: inputWithLocation });
       }
       core.applyExternals({ Out: outputType });
