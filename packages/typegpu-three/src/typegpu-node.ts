@@ -209,6 +209,17 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
+  #findVarNode(node: THREE.TSL.NodeObject<TNode>): boolean {
+    let varNodePresent = false;
+    node.traverse((child) => {
+      // @ts-expect-error: if it isn't present then it will be false
+      if (child.isVarNode) {
+        varNodePresent = true;
+      }
+    });
+    return varNodePresent;
+  }
+
   constructor(
     node: THREE.TSL.NodeObject<TNode>,
     dataType: T,
@@ -216,10 +227,14 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.node = node;
     this.#dataType = dataType;
 
-    // node.isTextureNode - temporary workaround for textures
     if (
-      // @ts-expect-error: The properties exist on the node
-      (!node.isStorageBufferNode && !node.isUniformNode) || node.isTextureNode
+      (
+        // @ts-expect-error: they are assigned at runtime
+        !node.isStorageBufferNode && !node.isUniformNode &&
+        // @ts-expect-error: it is assigned at runtime
+        (!node.isVaryingNode || !this.#findVarNode(node))
+        // @ts-expect-error: it is assigned at runtime
+      ) || node.isTextureNode
     ) {
       this.var = tgpu.privateVar(dataType);
     }
