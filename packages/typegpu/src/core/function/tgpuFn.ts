@@ -132,6 +132,14 @@ export interface TgpuGenericFn<T extends AnyFn> {
       | TgpuBufferShorthand<S>
       | Infer<S>,
   ): TgpuGenericFn<T>;
+  with<S extends AnyData>(
+    accessor: TgpuMutableAccessor<S>,
+    value:
+      | TgpuFn<() => S>
+      | TgpuBufferUsage<S>
+      | TgpuBufferShorthand<S>
+      | Infer<S>,
+  ): TgpuGenericFn<T>;
 
   (...args: Parameters<T>): ReturnType<T>;
 }
@@ -370,13 +378,11 @@ function createGenericFn<T extends AnyFn>(
     [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
 
     with(
-      slot: TgpuSlot<unknown> | TgpuAccessor,
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
       value: unknown,
     ): TgpuGenericFn<T> {
-      return createGenericFn(inner, [
-        ...pairs,
-        [isAccessor(slot) ? slot.slot : slot, value],
-      ]);
+      const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
+      return createGenericFn(inner, [...pairs, [s, value]]);
     },
   };
 
