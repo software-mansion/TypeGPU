@@ -18,7 +18,7 @@ import { Slider } from './design/Slider.tsx';
 import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
-import { FPSCounter } from './fpsCounter.tsx';
+import { FPSCounter } from './FpsCounter.tsx';
 
 function ToggleRow({
   label,
