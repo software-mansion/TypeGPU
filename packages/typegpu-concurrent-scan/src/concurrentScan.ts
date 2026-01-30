@@ -33,7 +33,7 @@ class PrefixScanComputer {
     private root: TgpuRoot,
     private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
-  ) {}
+  ) { }
 
   updateTimeCallback(
     timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
@@ -83,22 +83,17 @@ class PrefixScanComputer {
         input: buffer,
         sums: finalSums,
       });
+      let pipeline = this.scanPipeline.with(bg);
       if (this.#timeCallback) {
-        this.scanPipeline
-          .with(bg)
-          .withTimestampWrites({
-            querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-            beginningOfPassWriteIndex: this.#first
-              ? 0
-              : (undefined as unknown as number),
-            endOfPassWriteIndex: 1,
-          })
-          .dispatchWorkgroups(1);
-      } else {
-        this.scanPipeline
-          .with(bg)
-          .dispatchWorkgroups(1);
+        pipeline = pipeline.withTimestampWrites({
+          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+          beginningOfPassWriteIndex: this.#first
+            ? 0
+            : (undefined as unknown as number),
+          endOfPassWriteIndex: 1,
+        });
       }
+      pipeline.dispatchWorkgroups(1);
 
       if (this.onlyGreatestElement) {
         return finalSums;
@@ -113,20 +108,15 @@ class PrefixScanComputer {
       input: buffer,
       sums: sumsBuffer,
     });
+    let scanPipeline = this.scanPipeline.with(scanBg);
     if (this.#timeCallback && this.#first) {
-      this.scanPipeline
-        .with(scanBg)
-        .withTimestampWrites({
-          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-          beginningOfPassWriteIndex: 0,
-        })
-        .dispatchWorkgroups(numWorkgroups);
+      scanPipeline = scanPipeline.withTimestampWrites({
+        querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+        beginningOfPassWriteIndex: 0,
+      });
       this.#first = false;
-    } else {
-      this.scanPipeline
-        .with(scanBg)
-        .dispatchWorkgroups(numWorkgroups);
     }
+    scanPipeline.dispatchWorkgroups(numWorkgroups);
 
     // Recursively scan the sums
     sumsBuffer = this.recursiveScan(sumsBuffer, numWorkgroups, level + 1);
@@ -139,19 +129,14 @@ class PrefixScanComputer {
       input: buffer,
       sums: sumsBuffer,
     });
+    let addPipeline = this.addPipeline.with(addBg);
     if (this.#timeCallback) {
-      this.addPipeline
-        .with(addBg)
-        .withTimestampWrites({
-          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-          endOfPassWriteIndex: 1,
-        })
-        .dispatchWorkgroups(numWorkgroups);
-    } else {
-      this.addPipeline
-        .with(addBg)
-        .dispatchWorkgroups(numWorkgroups);
+      addPipeline = addPipeline.withTimestampWrites({
+        querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+        endOfPassWriteIndex: 1,
+      });
     }
+    addPipeline.dispatchWorkgroups(numWorkgroups);
     return buffer;
   }
 
