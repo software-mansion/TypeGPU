@@ -57,14 +57,8 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const renderPipeline = root['~unstable']
   .withVertex(common.fullScreenTriangle)

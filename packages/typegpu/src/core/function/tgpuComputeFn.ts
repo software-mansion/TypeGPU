@@ -9,6 +9,7 @@ import {
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
@@ -27,7 +28,7 @@ type TgpuComputeFnShellHeader<
   readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
   readonly returnType: Void;
   readonly workgroupSize: [number, number, number];
-  readonly isEntry: true;
+  readonly entryPoint: 'compute';
 };
 
 /**
@@ -107,7 +108,7 @@ export function computeFn<
       options.workgroupSize[1] ?? 1,
       options.workgroupSize[2] ?? 1,
     ],
-    isEntry: true,
+    entryPoint: 'compute',
   };
 
   const call = (
@@ -121,6 +122,12 @@ export function computeFn<
     );
 
   return Object.assign(call, shell);
+}
+
+export function isTgpuComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+  value: unknown | TgpuComputeFn<ComputeIn>,
+): value is TgpuComputeFn<ComputeIn> {
+  return (value as TgpuComputeFn<ComputeIn>)?.shell?.entryPoint === 'compute';
 }
 
 // --------------
@@ -162,11 +169,12 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      return core.resolve(
-        ctx,
-        shell.argTypes,
-        shell.returnType,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'compute']], () =>
+        core.resolve(
+          ctx,
+          shell.argTypes,
+          shell.returnType,
+        ));
     },
 
     toString() {

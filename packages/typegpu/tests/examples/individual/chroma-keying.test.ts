@@ -50,7 +50,7 @@ describe('chroma keying example', () => {
       }
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransform * (_arg_0.uv - 0.5)) + 0.5);
+        var uv2 = ((uvTransform * (_arg_0.uv - 0.5f)) + 0.5f);
         var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
         var ycbcr = (col.xyz * rgbToYcbcrMatrix);
         var colycbcr = (color * rgbToYcbcrMatrix);

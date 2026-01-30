@@ -9,6 +9,7 @@ import tgpu, { common, d, std } from 'typegpu';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
+const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const cssProbe = document.querySelector('#css-probe') as HTMLDivElement;
@@ -20,7 +21,7 @@ if (canvas.parentElement) {
   canvas.parentElement.appendChild(cssProbe);
   canvas.parentElement.appendChild(probePositionText);
 }
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cleanupController = new AbortController();
 
@@ -95,18 +96,10 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(std.select(color, color.mul(patternScaled), outOfGamut), 1);
 });
 
-const root = await tgpu.init();
-
 const uniforms = root.createUniform(d.struct({
   hue: d.f32,
   alpha: d.f32,
 }));
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const uniformsValue = {
   hue: 0.7,
