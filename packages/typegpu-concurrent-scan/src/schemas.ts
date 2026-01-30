@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 
 export const workgroupSize = 256;
 export interface BinaryOp {
-  operation: d.TgpuCallable<(a: d.F32, b: d.F32) => d.F32>;
+  operation: TgpuFn<(a: d.F32, b: d.F32) => d.F32>;
   identityElement: number;
 }
 

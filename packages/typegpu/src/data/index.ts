@@ -75,7 +75,6 @@ export type {
   Ptr,
   Size,
   StorableData,
-  TgpuCallable,
   U16,
   U32,
   v2b,

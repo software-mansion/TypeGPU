@@ -2,6 +2,7 @@ import type {
   StorageFlag,
   TgpuBuffer,
   TgpuComputePipeline,
+  TgpuFn,
   TgpuQuerySet,
   TgpuRoot,
 } from 'typegpu';
@@ -33,7 +34,7 @@ class PrefixScanComputer {
     private root: TgpuRoot,
     private binaryOp: BinaryOp,
     private onlyGreatestElement: boolean,
-  ) { }
+  ) {}
 
   updateTimeCallback(
     timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
@@ -45,7 +46,7 @@ class PrefixScanComputer {
   private get scanPipeline(): TgpuComputePipeline {
     if (!this.#scanPipeline) {
       this.#scanPipeline = this.root['~unstable']
-        .with(operatorSlot, this.binaryOp.operation as d.TgpuCallable)
+        .with(operatorSlot, this.binaryOp.operation as TgpuFn)
         .with(identitySlot, this.binaryOp.identityElement)
         .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
         .createPipeline();
@@ -56,7 +57,7 @@ class PrefixScanComputer {
   private get addPipeline(): TgpuComputePipeline {
     if (!this.#addPipeline) {
       this.#addPipeline = this.root['~unstable']
-        .with(operatorSlot, this.binaryOp.operation as d.TgpuCallable)
+        .with(operatorSlot, this.binaryOp.operation as TgpuFn)
         .withCompute(uniformAdd)
         .createPipeline();
     }
