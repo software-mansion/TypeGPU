@@ -85,7 +85,7 @@ class PrefixScanComputer {
       });
       if (this.#timeCallback) {
         this.scanPipeline
-          .with(scanLayout, bg)
+          .with(bg)
           .withTimestampWrites({
             querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
             beginningOfPassWriteIndex: this.#first
@@ -96,7 +96,7 @@ class PrefixScanComputer {
           .dispatchWorkgroups(1);
       } else {
         this.scanPipeline
-          .with(scanLayout, bg)
+          .with(bg)
           .dispatchWorkgroups(1);
       }
 
@@ -115,7 +115,7 @@ class PrefixScanComputer {
     });
     if (this.#timeCallback && this.#first) {
       this.scanPipeline
-        .with(scanLayout, scanBg)
+        .with(scanBg)
         .withTimestampWrites({
           querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
           beginningOfPassWriteIndex: 0,
@@ -124,7 +124,7 @@ class PrefixScanComputer {
       this.#first = false;
     } else {
       this.scanPipeline
-        .with(scanLayout, scanBg)
+        .with(scanBg)
         .dispatchWorkgroups(numWorkgroups);
     }
 
@@ -141,7 +141,7 @@ class PrefixScanComputer {
     });
     if (this.#timeCallback) {
       this.addPipeline
-        .with(uniformAddLayout, addBg)
+        .with(addBg)
         .withTimestampWrites({
           querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
           endOfPassWriteIndex: 1,
@@ -149,7 +149,7 @@ class PrefixScanComputer {
         .dispatchWorkgroups(numWorkgroups);
     } else {
       this.addPipeline
-        .with(uniformAddLayout, addBg)
+        .with(addBg)
         .dispatchWorkgroups(numWorkgroups);
     }
     return buffer;
