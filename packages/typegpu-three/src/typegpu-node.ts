@@ -209,6 +209,17 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
+  #findVarNode(node: THREE.TSL.NodeObject<TNode>): boolean {
+    let varNodePresent = false;
+    node.traverse((child) => {
+      // @ts-expect-error: if it isn't present then it will be false
+      if (child.isVarNode) {
+        varNodePresent = true;
+      }
+    });
+    return varNodePresent;
+  }
+
   constructor(
     node: THREE.TSL.NodeObject<TNode>,
     dataType: T,
@@ -216,10 +227,15 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.node = node;
     this.#dataType = dataType;
 
-    // node.isTextureNode - temporary workaround for textures
     if (
-      // @ts-expect-error: The properties exist on the node
-      (!node.isStorageBufferNode && !node.isUniformNode) || node.isTextureNode
+      (
+        // @ts-expect-error: they are assigned at runtime
+        !node.isStorageBufferNode && !node.isUniformNode &&
+        // @ts-expect-error: they are assigned at runtime
+        (!node.isVaryingNode || node.name === 'positionLocal')
+      ) ||
+      // @ts-expect-error: they are assigned at runtime
+      node.isTextureNode
     ) {
       this.var = tgpu.privateVar(dataType);
     }
@@ -300,7 +316,13 @@ export const fromTSL = tgpu.comptime(
     if (!sharedBuilder) {
       sharedBuilder = new WGSLNodeBuilder();
     }
-    const nodeType = node.getNodeType(sharedBuilder);
+
+    let nodeType;
+    try { // sometimes it needs information (overrideNodes) from compilation context which is not present
+      nodeType = node.getNodeType(sharedBuilder);
+    } catch (e) {
+      console.log(e);
+    }
 
     if (nodeType) {
       const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
