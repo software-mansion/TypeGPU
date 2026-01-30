@@ -21,6 +21,7 @@ import {
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
+  type Eventual,
   isAccessor,
   isMutableAccessor,
   type Providing,
@@ -41,6 +42,7 @@ import type {
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
 import type { Withable } from '../root/rootTypes.ts';
+import type { AnyData } from '../../data/index.ts';
 
 // ----------
 // Public API
@@ -99,6 +101,30 @@ export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & DualFn<InferImplSchema<ImplSchema>>
   & TgpuFnBase<ImplSchema>;
 
+/**
+ * A function wrapper that allows providing slot and accessor overrides for shellless functions
+ */
+export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable {
+  readonly [$internal]: {
+    inner: T;
+  };
+  readonly [$getNameForward]: T;
+  readonly [$providing]?: Providing | undefined;
+  readonly resourceType: 'generic-function';
+
+  with<S>(slot: TgpuSlot<S>, value: Eventual<S>): TgpuGenericFn<T>;
+  with<S extends AnyData>(
+    accessor: TgpuAccessor<S>,
+    value: TgpuAccessor.In<S>,
+  ): TgpuGenericFn<T>;
+  with<S extends AnyData>(
+    accessor: TgpuMutableAccessor<S>,
+    value: TgpuMutableAccessor.In<S>,
+  ): TgpuGenericFn<T>;
+
+  (...args: Parameters<T>): ReturnType<T>;
+}
+
 export function fn<
   Args extends BaseData[] | [],
 >(argTypes: Args, returnType?: undefined): TgpuFnShell<Args, Void>;
@@ -108,10 +134,20 @@ export function fn<
   Return extends BaseData,
 >(argTypes: Args, returnType: Return): TgpuFnShell<Args, Return>;
 
+export function fn<T extends AnyFn>(inner: T): TgpuGenericFn<T>;
+
 export function fn<
   Args extends BaseData[] | [],
   Return extends BaseData = Void,
->(argTypes: Args, returnType?: Return | undefined): TgpuFnShell<Args, Return> {
+>(
+  argTypesOrCallback: Args | AnyFn,
+  returnType?: Return | undefined,
+): TgpuFnShell<Args, Return> | TgpuGenericFn<AnyFn> {
+  if (typeof argTypesOrCallback === 'function') {
+    return createGenericFn(argTypesOrCallback, []);
+  }
+
+  const argTypes = argTypesOrCallback;
   const shell: TgpuFnShellHeader<Args, Return> = {
     [$internal]: true,
     argTypes,
@@ -135,6 +171,13 @@ export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
 ): value is TgpuFn<(...args: Args) => Return> {
   return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
+}
+
+export function isGenericFn<Callback extends AnyFn>(
+  value: unknown | TgpuGenericFn<Callback>,
+): value is TgpuGenericFn<Callback> {
+  return isMarkedInternal(value) &&
+    (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function';
 }
 
 // --------------
@@ -301,4 +344,53 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   }
 
   return fn;
+}
+
+function createGenericFn<T extends AnyFn>(
+  inner: T,
+  pairs: SlotValuePair[],
+): TgpuGenericFn<T> {
+  type This = TgpuGenericFn<T>;
+
+  const fnBase = {
+    [$internal]: { inner },
+    [$getNameForward]: inner,
+    resourceType: 'generic-function' as const,
+    [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
+
+    $name(label: string): TgpuGenericFn<T> {
+      setName(this, label);
+      return this as TgpuGenericFn<T>;
+    },
+
+    with(
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
+      value: unknown,
+    ): TgpuGenericFn<T> {
+      const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
+      const result = createGenericFn(inner, [...pairs, [s, value]]);
+      const currentName = getName(this);
+      if (currentName) {
+        setName(result, currentName);
+      }
+      return result;
+    },
+  };
+
+  const call = (...args: Parameters<T>): ReturnType<T> => {
+    return inner(...args) as ReturnType<T>;
+  };
+
+  const genericFn = Object.assign(call, fnBase) as unknown as This;
+
+  Object.defineProperty(genericFn, 'toString', {
+    value() {
+      const fnLabel = getName(inner) ?? '<unnamed>';
+      if (pairs.length > 0) {
+        return `fn*:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
+      }
+      return `fn*:${fnLabel}`;
+    },
+  });
+  return genericFn;
 }
