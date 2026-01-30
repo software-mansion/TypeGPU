@@ -11,6 +11,7 @@ import type {
 } from '../../data/sampler.ts';
 import type {
   AnyWgslData,
+  BaseData,
   U16,
   U32,
   Vec3u,
@@ -66,9 +67,7 @@ import type {
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -208,23 +207,25 @@ export interface WithFragment<
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
-export interface Configurable {
-  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): Configurable;
-  with<T extends AnyData>(
+export interface Withable<TSelf> {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  with<T extends BaseData>(
     accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): Configurable;
-  with<T extends AnyData>(
+    value: TgpuAccessor.In<NoInfer<T>>,
+  ): TSelf;
+  with<T extends BaseData>(
     accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): Configurable;
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
+  ): TSelf;
+}
+
+export interface Configurable extends Withable<Configurable> {
+  readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable;
 }
 
-export interface WithBinding {
+export interface WithBinding extends Withable<WithBinding> {
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -285,16 +286,6 @@ export interface WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
   ): WithVertex<VertexOut>;
-
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): WithBinding;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): WithBinding;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
@@ -562,17 +553,17 @@ export interface RenderPass {
   ): undefined;
 }
 
-export type ValidateBufferSchema<TData extends AnyData> =
+export type ValidateBufferSchema<TData extends BaseData> =
   IsValidBufferSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
-export type ValidateStorageSchema<TData extends AnyData> =
+export type ValidateStorageSchema<TData extends BaseData> =
   IsValidStorageSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
-export type ValidateUniformSchema<TData extends AnyData> =
+export type ValidateUniformSchema<TData extends BaseData> =
   IsValidUniformSchema<TData> extends false
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;

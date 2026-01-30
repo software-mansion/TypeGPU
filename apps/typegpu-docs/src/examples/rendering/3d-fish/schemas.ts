@@ -49,11 +49,6 @@ export const ModelVertexOutput = {
   applySeaDesaturation: d.interpolate('flat', d.u32), // bool
 } as const;
 
-export const MouseRay = d.struct({
-  activated: d.u32,
-  line: Line3,
-});
-
 export const FishBehaviorParams = d.struct({
   separationDist: d.f32,
   separationStr: d.f32,
@@ -88,7 +83,7 @@ export const computeBindGroupLayout = tgpu.bindGroupLayout({
     storage: ModelDataArray,
     access: 'mutable',
   },
-  mouseRay: { uniform: MouseRay },
+  mouseRay: { uniform: Line3 },
   timePassed: { uniform: d.f32 },
   fishBehavior: { uniform: FishBehaviorParams },
 });
