@@ -57,13 +57,8 @@ const device = root.device;
 const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const gridSize = root.createUniform(d.f32);
 const time = root.createUniform(d.f32, 0);
