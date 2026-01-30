@@ -16,7 +16,7 @@ import {
   workgroupSize,
 } from './schemas.ts';
 import { scanBlock } from './compute/scan.ts';
-import { uniformAdd } from './compute/applySums.ts';
+import { uniformOp } from './compute/applySums.ts';
 import { scanGreatestBlock } from './compute/singleScan.ts';
 
 const cache = new WeakMap<TgpuRoot, WeakMap<BinaryOp, PrefixScanComputer>>();
@@ -58,7 +58,7 @@ class PrefixScanComputer {
     if (!this.#addPipeline) {
       this.#addPipeline = this.root['~unstable']
         .with(operatorSlot, this.binaryOp.operation as TgpuFn)
-        .withCompute(uniformAdd)
+        .withCompute(uniformOp)
         .createPipeline();
     }
     return this.#addPipeline;
