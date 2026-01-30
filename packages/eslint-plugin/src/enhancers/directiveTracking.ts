@@ -2,13 +2,17 @@ import type {
   RuleContext,
   RuleListener,
 } from '@typescript-eslint/utils/ts-eslint';
-import type { RuleEnhancer } from '../ruleEnhancer.ts';
+import type { RuleEnhancer } from '../enhanceRule.ts';
 
-export type FunctionDirectiveList = {
+export type DirectiveList = {
   current: () => string[];
 };
 
-export const directiveTracking: RuleEnhancer<FunctionDirectiveList> = (
+/**
+ * A RuleEnhancer that exposes the list of directives of the currently parsed function scope.
+ * TODO (when needed): switch to a map from function node to a list of directives, and implement top level directive tracking
+ */
+export const directiveTracking: RuleEnhancer<DirectiveList> = (
   context: RuleContext<string, unknown[]>,
 ) => {
   const stack: string[][] = [];
