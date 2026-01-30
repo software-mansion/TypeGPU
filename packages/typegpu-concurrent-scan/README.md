@@ -7,7 +7,7 @@
 A concurrent scan module. For use in WebGPU/TypeGPU apps. Example usage:
 
 ```ts
-const calcResult = scan(
+const calcResult = prefixScan(
   root,
   {
     inputBuffer,
