@@ -176,8 +176,8 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2(astro@5.15.9(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.1)(rollup@4.34.8)(terser@5.44.1)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.1))(tailwindcss@4.1.11)
       '@babel/standalone':
-        specifier: ^7.27.0
-        version: 7.27.0
+        specifier: ^7.28.6
+        version: 7.28.6
       '@loaders.gl/core':
         specifier: ^4.3.4
         version: 4.3.4
@@ -650,8 +650,8 @@ importers:
   packages/unplugin-typegpu:
     dependencies:
       '@babel/standalone':
-        specifier: ^7.27.0
-        version: 7.27.0
+        specifier: ^7.28.6
+        version: 7.28.6
       defu:
         specifier: ^6.1.4
         version: 6.1.4
@@ -982,6 +982,10 @@ packages:
 
   '@babel/standalone@7.27.0':
     resolution: {integrity: sha512-UxFDpi+BuSz6Q1X73P3ZSM1CB7Nbbqys+7COi/tdouRuaqRsJ6GAzUyxTswbqItHSItVY3frQdd+paBHHGEk9g==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/standalone@7.28.6':
+    resolution: {integrity: sha512-l/vUUfIKWdKHbHLqISTekuOaMuxNrnk7qlxFmhAKCayRXhkbBMB6zaJW+9oo0eLFgZLQEpG43LH4sxcEuy1M5g==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.27.2':
@@ -7833,6 +7837,8 @@ snapshots:
       regenerator-runtime: 0.14.1
 
   '@babel/standalone@7.27.0': {}
+
+  '@babel/standalone@7.28.6': {}
 
   '@babel/template@7.27.2':
     dependencies:
