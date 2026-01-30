@@ -83,7 +83,7 @@ function drawCharts() {
   for (let i = 0; i < bars.length / 3; i++) {
     const value = lengthMap[keys[i]];
     speedupLabels[i].textContent = `${
-      (Number(value.jsTime) / Number(value.gpuShaderTime)).toFixed(1)
+      (value.jsTime / value.gpuShaderTime).toFixed(1)
     }x`;
     xAxisLabels[i].textContent = keys[i];
 
@@ -95,7 +95,7 @@ function drawCharts() {
     );
     bars[3 * i].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i].textContent = `JS time: ${
-      Number(value.jsTime).toFixed(2)
+      value.jsTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
 
     // GPU
@@ -106,7 +106,7 @@ function drawCharts() {
     );
     bars[3 * i + 1].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i + 1].textContent = `Total GPU time: ${
-      Number(value.gpuTime).toFixed(2)
+      value.gpuTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
 
     // GPU shader
@@ -119,7 +119,7 @@ function drawCharts() {
     );
     bars[3 * i + 2].style.setProperty('--highlight-opacity', '1');
     tooltips[3 * i + 2].textContent = `GPU shader time: ${
-      Number(value.gpuShaderTime).toFixed(2)
+      value.gpuShaderTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
   }
 }
