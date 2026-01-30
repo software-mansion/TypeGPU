@@ -40,9 +40,7 @@ import type {
   InheritArgNames,
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
-import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
 import { comptime } from './comptime.ts';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { Withable } from '../root/rootTypes.ts';
 import type { AnyData } from '../../data/index.ts';
 
@@ -117,19 +115,11 @@ export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable {
   with<S>(slot: TgpuSlot<S>, value: Eventual<S>): TgpuGenericFn<T>;
   with<S extends AnyData>(
     accessor: TgpuAccessor<S>,
-    value:
-      | TgpuFn<() => S>
-      | TgpuBufferUsage<S>
-      | TgpuBufferShorthand<S>
-      | Infer<S>,
+    value: TgpuAccessor.In<S>,
   ): TgpuGenericFn<T>;
   with<S extends AnyData>(
     accessor: TgpuMutableAccessor<S>,
-    value:
-      | TgpuFn<() => S>
-      | TgpuBufferUsage<S>
-      | TgpuBufferShorthand<S>
-      | Infer<S>,
+    value: TgpuMutableAccessor.In<S>,
   ): TgpuGenericFn<T>;
 
   (...args: Parameters<T>): ReturnType<T>;
