@@ -231,10 +231,11 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       (
         // @ts-expect-error: they are assigned at runtime
         !node.isStorageBufferNode && !node.isUniformNode &&
-        // @ts-expect-error: it is assigned at runtime
-        (!node.isVaryingNode || !this.#findVarNode(node))
-        // @ts-expect-error: it is assigned at runtime
-      ) || node.isTextureNode
+        // @ts-expect-error: they are assigned at runtime
+        (!node.isVaryingNode || node.name === 'positionLocal')
+      ) ||
+      // @ts-expect-error: they are assigned at runtime
+      node.isTextureNode
     ) {
       this.var = tgpu.privateVar(dataType);
     }
@@ -315,7 +316,13 @@ export const fromTSL = tgpu.comptime(
     if (!sharedBuilder) {
       sharedBuilder = new WGSLNodeBuilder();
     }
-    const nodeType = node.getNodeType(sharedBuilder);
+
+    let nodeType;
+    try { // sometimes it needs information (overrideNodes) from compilation context which is not present
+      nodeType = node.getNodeType(sharedBuilder);
+    } catch (e) {
+      console.log(e);
+    }
 
     if (nodeType) {
       const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
