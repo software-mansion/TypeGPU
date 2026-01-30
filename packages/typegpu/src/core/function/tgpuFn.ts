@@ -120,6 +120,7 @@ export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
     inner: T;
   };
+  readonly [$getNameForward]: T;
   readonly [$providing]?: Providing | undefined;
   readonly resourceType: 'generic-function';
 
@@ -374,6 +375,7 @@ function createGenericFn<T extends AnyFn>(
 
   const fnBase = {
     [$internal]: { inner },
+    [$getNameForward]: inner,
     resourceType: 'generic-function' as const,
     [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
 
@@ -387,7 +389,12 @@ function createGenericFn<T extends AnyFn>(
       value: unknown,
     ): TgpuGenericFn<T> {
       const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
-      return createGenericFn(inner, [...pairs, [s, value]]);
+      const result = createGenericFn(inner, [...pairs, [s, value]]);
+      const currentName = getName(this);
+      if (currentName) {
+        setName(result, currentName);
+      }
+      return result;
     },
   };
 
@@ -406,6 +413,5 @@ function createGenericFn<T extends AnyFn>(
       return `fn*:${fnLabel}`;
     },
   });
-
   return genericFn;
 }

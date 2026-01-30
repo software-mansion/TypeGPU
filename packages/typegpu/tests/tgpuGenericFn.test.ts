@@ -197,12 +197,12 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn item() -> f32 {
+      "fn getValueGeneric() -> f32 {
         return 2f;
       }
 
       fn main() -> f32 {
-        return item();
+        return getValueGeneric();
       }"
     `);
   });
@@ -235,7 +235,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn item() -> f32 {
+      "fn getValue() -> f32 {
         return 20f;
       }
 
@@ -244,7 +244,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       }
 
       fn main() -> f32 {
-        return (item() + getValueShelled());
+        return (getValue() + getValueShelled());
       }"
     `);
   });
