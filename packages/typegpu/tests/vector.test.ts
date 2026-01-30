@@ -36,7 +36,7 @@ describe('setters', () => {
     vec[0] = 1.1;
     vec[1] = -1.1;
     vec.z = 2.2;
-    expect(vec).toStrictEqual(d.vec3u(1, 4294967295, 2));
+    expect(vec).toStrictEqual(d.vec3u(1, 0, 2));
   });
 });
 

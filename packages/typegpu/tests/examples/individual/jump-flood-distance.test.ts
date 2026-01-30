@@ -205,7 +205,7 @@ describe('jump flood (distance) example', () => {
           baseColor = insideBase;
         }
         let contourFreq = (maxDist / 12f);
-        let contour = smoothstep(0, 0.15, abs((fract((unsigned / contourFreq)) - 0.5f)));
+        let contour = smoothstep(0f, 0.15f, abs((fract((unsigned / contourFreq)) - 0.5f)));
         var color = (baseColor * (0.7f + (0.3f * contour)));
         return vec4f(color, 1f);
       }"
