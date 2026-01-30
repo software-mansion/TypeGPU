@@ -77,6 +77,16 @@ describe('unwrappedPojos', () => {
           },
         ],
       },
+      {
+        code:
+          "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
+        errors: [
+          {
+            messageId: 'unwrappedPojo',
+            data: { snippet: '{ a: 1 }' },
+          },
+        ],
+      },
     ],
   });
 });

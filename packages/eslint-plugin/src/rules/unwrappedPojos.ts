@@ -1,6 +1,6 @@
-import { createRule } from '../ruleCreator.ts';
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
+import { createRule } from '../ruleCreator.ts';
 
 export const unwrappedPojos = createRule({
   name: 'AAA',
