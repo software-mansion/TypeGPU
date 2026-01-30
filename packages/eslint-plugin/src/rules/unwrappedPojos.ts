@@ -21,13 +21,17 @@ export const unwrappedPojos = createRule({
 
     return {
       ObjectExpression(node) {
-        if (directives.insideUseGpu()) {
-          context.report({
-            node,
-            messageId: 'unwrappedPojo',
-            data: { snippet: context.sourceCode.getText(node) },
-          });
+        if (!directives.insideUseGpu()) {
+          return;
         }
+        if (node.parent.type === 'CallExpression') {
+          return;
+        }
+        context.report({
+          node,
+          messageId: 'unwrappedPojo',
+          data: { snippet: context.sourceCode.getText(node) },
+        });
       },
     };
   }),
