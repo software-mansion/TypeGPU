@@ -3,14 +3,15 @@ import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
 
 export const unwrappedPojos = createRule({
-  name: 'AAA',
+  name: 'unwrapped-pojo',
   meta: {
     type: 'problem',
     docs: {
-      description: `Always wrap plain old javascript objects with schemas.`,
+      description: `Always wrap Plain Old JavaScript Objects with schemas.`,
     },
     messages: {
-      unwrappedPojo: '{{snippet}}',
+      unwrappedPojo:
+        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call.',
     },
     schema: [],
   },
