@@ -21,7 +21,7 @@ export const unwrappedPojos = createRule({
 
     return {
       ObjectExpression(node) {
-        if (directives.current().includes('use gpu')) {
+        if (directives.insideUseGpu()) {
           context.report({
             node,
             messageId: 'unwrappedPojo',

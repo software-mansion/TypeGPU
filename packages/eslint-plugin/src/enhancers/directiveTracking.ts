@@ -4,15 +4,20 @@ import type {
 } from '@typescript-eslint/utils/ts-eslint';
 import type { RuleEnhancer } from '../enhanceRule.ts';
 
-export type DirectiveList = {
-  current: () => string[];
+export type DirectiveData = {
+  insideUseGpu: () => boolean;
 };
 
 /**
- * A RuleEnhancer that exposes the list of directives of the currently parsed function scope.
- * TODO (when needed): switch to a map from function node to a list of directives, and implement top level directive tracking
+ * A RuleEnhancer that tracks whether the current node is inside a 'use gpu' function.
+ *
+ * @privateRemarks
+ * Should the need arise, the API could be updated to expose:
+ * - a list of directives of the current function,
+ * - directives of other visited functions,
+ * - top level directives.
  */
-export const directiveTracking: RuleEnhancer<DirectiveList> = (
+export const directiveTracking: RuleEnhancer<DirectiveData> = (
   context: RuleContext<string, unknown[]>,
 ) => {
   const stack: string[][] = [];
@@ -44,6 +49,6 @@ export const directiveTracking: RuleEnhancer<DirectiveList> = (
 
   return {
     visitors,
-    state: { current: () => stack.at(-1) ?? [] },
+    state: { insideUseGpu: () => (stack.at(-1) ?? []).includes('use gpu') },
   };
 };
