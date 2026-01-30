@@ -116,7 +116,7 @@ export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
 /**
  * A function wrapper that allows providing slot and accessor overrides for shellless functions
  */
-export interface TgpuGenericFn<T extends AnyFn> {
+export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable {
   readonly [$internal]: {
     inner: T;
   };
@@ -376,6 +376,11 @@ function createGenericFn<T extends AnyFn>(
     [$internal]: { inner },
     resourceType: 'generic-function' as const,
     [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
+
+    $name(label: string): TgpuGenericFn<T> {
+      setName(this, label);
+      return this as TgpuGenericFn<T>;
+    },
 
     with(
       slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
