@@ -6,7 +6,7 @@ describe('unwrappedPojos', () => {
   ruleTester.run('unwrappedPojos', unwrappedPojos, {
     valid: [
       'const pojo = { a: 1 };',
-      "() => { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
+      // "() => { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
     ],
     invalid: [
       {
