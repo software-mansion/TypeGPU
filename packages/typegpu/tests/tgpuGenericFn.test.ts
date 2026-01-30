@@ -206,4 +206,46 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       }"
     `);
   });
+
+  it('shellfull vs shellless', () => {
+    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+    const slot = tgpu.slot<number>();
+
+    const getValue = tgpu.fn(() => {
+      'use gpu';
+      return valueAccess.$ * slot.$;
+    })
+      .with(valueAccess, 2)
+      .with(valueAccess, 4)
+      .with(slot, 7)
+      .with(slot, 5);
+
+    const getValueShelled = tgpu.fn([], d.f32)(() => {
+      'use gpu';
+      return valueAccess.$ * slot.$;
+    })
+      .with(valueAccess, 2)
+      .with(valueAccess, 4)
+      .with(slot, 7)
+      .with(slot, 5);
+
+    const main = () => {
+      'use gpu';
+      return getValue() + getValueShelled();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn item() -> f32 {
+        return 20f;
+      }
+
+      fn getValueShelled() -> f32 {
+        return 20f;
+      }
+
+      fn main() -> f32 {
+        return (item() + getValueShelled());
+      }"
+    `);
+  });
 });
