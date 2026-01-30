@@ -4,11 +4,11 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
 import { f32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
+  type BaseData,
   isVec,
   type m2x2f,
   type m3x3f,
@@ -97,7 +97,7 @@ function createMatSchema<
     ignoreImplicitCastWarning: true,
     signature: (...args) => ({
       argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
-      returnType: schema as unknown as AnyData,
+      returnType: schema as unknown as BaseData,
     }),
     codegenImpl: (_ctx, args) => stitch`${options.type}(${args})`,
   });
@@ -105,6 +105,7 @@ function createMatSchema<
   const schema = Object.assign(construct, {
     [$internal]: {},
     type: options.type,
+    primitive: f32,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,

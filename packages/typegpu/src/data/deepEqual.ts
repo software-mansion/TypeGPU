@@ -55,8 +55,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       const keyB = bKeys[i];
       if (
         keyA !== keyB || !keyA || !keyB ||
-        // biome-ignore lint/style/noNonNullAssertion: they exist
-        !deepEqual(aProps[keyA]!, bProps[keyB]!)
+        !deepEqual(aProps[keyA] as AnyData, bProps[keyB] as AnyData)
       ) {
         return false;
       }
@@ -75,7 +74,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     return (
       a.addressSpace === b.addressSpace &&
       a.access === b.access &&
-      deepEqual(a.inner, b.inner)
+      deepEqual(a.inner as AnyData, b.inner as AnyData)
     );
   }
 

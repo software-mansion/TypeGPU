@@ -13,7 +13,6 @@ import {
   ModelData,
   ModelDataArray,
   modelVertexLayout,
-  MouseRay,
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
@@ -21,16 +20,10 @@ import {
 // setup
 let speedMultiplier = 1;
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // models and textures
 
@@ -39,9 +32,9 @@ const presets = {
     separationDist: 0.3,
     separationStr: 0.0006,
     alignmentDist: 0.3,
-    alignmentStr: 0.005,
+    alignmentStr: 0.01,
     cohesionDist: 0.5,
-    cohesionStr: 0.0004,
+    cohesionStr: 0.0013,
   },
   init: {
     separationDist: 0.2,
@@ -146,16 +139,8 @@ const camera = {
 };
 
 const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
-
-const mouseRayBuffer = root
-  .createBuffer(MouseRay, {
-    activated: 0,
-    line: Line3({ origin: d.vec3f(), dir: d.vec3f() }),
-  })
-  .$usage('uniform');
-
+const mouseRayBuffer = root.createBuffer(Line3).$usage('uniform');
 const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
-
 const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
 
 const fishBehaviorBuffer = root
@@ -319,10 +304,9 @@ export const controls = {
 
 // Variables for interaction
 
-let isLeftPressed = false;
+let isPressed = false;
 let previousMouseX = 0;
 let previousMouseY = 0;
-let isRightPressed = false;
 
 let isPopupDiscarded = false;
 const controlsPopup = document.getElementById('help') as HTMLDivElement;
@@ -381,19 +365,11 @@ async function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  mouseRayBuffer.write({
-    activated: 1,
-    line: Line3({
-      origin: camera.position.xyz,
-      dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
-    }),
-  });
+  mouseRayBuffer.write(Line3({
+    origin: camera.position.xyz,
+    dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
+  }));
 }
-
-// Prevent the context menu from appearing on right click.
-canvas.addEventListener('contextmenu', (event) => {
-  event.preventDefault();
-});
 
 // Mouse controls
 
@@ -404,23 +380,14 @@ canvas.addEventListener('mousedown', async (event) => {
   isPopupDiscarded = true;
 
   if (event.button === 0) {
-    isLeftPressed = true;
+    isPressed = true;
   }
-  if (event.button === 2) {
-    isRightPressed = true;
-    updateMouseRay(event.clientX, event.clientY);
-  }
+  updateMouseRay(event.clientX, event.clientY);
 });
 
 const mouseUpEventListener = (event: MouseEvent) => {
   if (event.button === 0) {
-    isLeftPressed = false;
-  }
-  if (event.button === 2) {
-    isRightPressed = false;
-    mouseRayBuffer.writePartial({
-      activated: 0,
-    });
+    isPressed = false;
   }
 };
 window.addEventListener('mouseup', mouseUpEventListener);
@@ -437,13 +404,11 @@ const mouseMoveEventListener = (event: MouseEvent) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
 
-  if (isLeftPressed) {
+  if (isPressed) {
     updateCameraTarget(dx, dy);
   }
 
-  if (isRightPressed) {
-    updateMouseRay(event.clientX, event.clientY);
-  }
+  updateMouseRay(event.clientX, event.clientY);
 };
 window.addEventListener('mousemove', mouseMoveEventListener);
 
@@ -456,9 +421,9 @@ canvas.addEventListener(
     if (event.touches.length === 1) {
       previousMouseX = event.touches[0].clientX;
       previousMouseY = event.touches[0].clientY;
-      updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
-      controlsPopup.style.opacity = '0';
     }
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+    controlsPopup.style.opacity = '0';
   },
   { passive: false },
 );
@@ -471,17 +436,10 @@ const touchMoveEventListener = (event: TouchEvent) => {
     previousMouseY = event.touches[0].clientY;
 
     updateCameraTarget(dx, dy);
-    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
   }
+  updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
 };
 window.addEventListener('touchmove', touchMoveEventListener);
-
-const touchEndEventListener = () => {
-  mouseRayBuffer.writePartial({
-    activated: 0,
-  });
-};
-window.addEventListener('touchend', touchEndEventListener);
 
 // observer and cleanup
 
@@ -508,7 +466,6 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
   root.destroy();
 }

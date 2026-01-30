@@ -23,7 +23,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export {
   isAccessor,
-  isDerived,
+  isLazy,
   isMutableAccessor,
   isSlot,
 } from './core/slot/slotTypes.ts';
@@ -37,6 +37,9 @@ export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
+export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
 
 // types
@@ -77,11 +80,9 @@ export type {
   TgpuUniform,
 } from './core/buffer/bufferShorthand.ts';
 export type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
-  TgpuDerived,
+  TgpuLazy,
   TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';

@@ -14,10 +14,8 @@ import {
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({ device, format: presentationFormat });
 
 const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(5, 5, -5);

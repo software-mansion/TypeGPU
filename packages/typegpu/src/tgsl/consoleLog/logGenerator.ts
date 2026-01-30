@@ -1,6 +1,7 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
+import { shaderStageSlot } from '../../core/slot/internalSlots.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
@@ -89,8 +90,13 @@ export class LogGeneratorImpl implements LogGenerator {
     op: string,
     args: Snippet[],
   ): Snippet {
+    if (shaderStageSlot.$ === 'vertex') {
+      console.warn(`'console.${op}' is not supported in vertex shaders.`);
+      return fallbackSnippet;
+    }
+
     if (!supportedLogOps.includes(op as SupportedLogOps)) {
-      console.warn(`Unsupported log method '${op}' was used in TGSL.`);
+      console.warn(`Unsupported log method '${op}'.`);
       return fallbackSnippet;
     }
 

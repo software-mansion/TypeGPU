@@ -26,7 +26,12 @@ export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';
 export { accessor, mutableAccessor } from './core/slot/accessor.ts';
-export { derived } from './core/slot/derived.ts';
+export {
+  /**
+   * @deprecated This feature is now stable, use tgpu.lazy.
+   */
+  lazy as derived,
+} from './core/slot/lazy.ts';
 export {
   /**
    * @deprecated This feature is now stable, use tgpu.slot.

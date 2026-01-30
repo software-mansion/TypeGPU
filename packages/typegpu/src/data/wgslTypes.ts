@@ -31,7 +31,7 @@ import type {
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
-import type { ref } from './ref.ts';
+import type { _ref as ref } from './ref.ts';
 import type { DualFn } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
@@ -1240,6 +1240,7 @@ export interface Vec4b extends
  */
 export interface Mat2x2f extends BaseData {
   readonly type: 'mat2x2f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
@@ -1258,6 +1259,7 @@ export interface Mat2x2f extends BaseData {
  */
 export interface Mat3x3f extends BaseData {
   readonly type: 'mat3x3f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
@@ -1277,6 +1279,7 @@ export interface Mat3x3f extends BaseData {
  */
 export interface Mat4x4f extends BaseData {
   readonly type: 'mat4x4f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
@@ -1303,6 +1306,9 @@ export interface Mat4x4f extends BaseData {
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its elementType.
  */
+// We restrict the element type to being BaseData, which is the widest type
+// we can use internally to work with generic arrays. The default type of
+// `AnyWgslData` is the best choice for end-users.
 export interface WgslArray<out TElement extends BaseData = BaseData>
   extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
@@ -1334,8 +1340,10 @@ export interface WgslArray<out TElement extends BaseData = BaseData>
  * the `byteAlignment` requirement of its members.
  */
 export interface WgslStruct<
+  // We restrict the type to being Record<string, BaseData>, which is the widest type
+  // we can use internally to work with generic structs.
   // @ts-expect-error: Override variance, as we want structs to behave like objects
-  out TProps extends Record<string, AnyWgslData> = Record<string, AnyWgslData>,
+  out TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends BaseData, TgpuNamable {
   readonly [$internal]: {
     isAbstruct: boolean;
@@ -1388,7 +1396,7 @@ export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
-  TInner extends StorableData = StorableData,
+  TInner extends BaseData = BaseData,
   TAccess extends Access = Access,
 > extends BaseData {
   readonly type: 'ptr';
@@ -1551,6 +1559,8 @@ export const wgslTypeLiterals = [
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
+export type IsWgslData<T> = T extends { readonly type: WgslTypeLiteral } ? true
+  : false;
 
 export type PerspectiveOrLinearInterpolatableBaseType =
   | F32
