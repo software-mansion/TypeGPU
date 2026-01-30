@@ -26,3 +26,10 @@ export {
   opSmoothUnion,
   opUnion,
 } from './operators.ts';
+
+export { classifySlot, createJumpFlood } from './jumpFlood.ts';
+export type {
+  ColorTexture,
+  JumpFloodExecutor,
+  SdfTexture,
+} from './jumpFlood.ts';
