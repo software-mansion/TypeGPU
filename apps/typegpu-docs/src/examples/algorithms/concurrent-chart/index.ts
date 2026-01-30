@@ -1,12 +1,22 @@
 import tgpu from 'typegpu';
 import { performCalculationsWithTime } from './calculator.ts';
 
-const bars = Array.from(document.querySelectorAll<HTMLDivElement>('.bar'));
+const barElements = document.querySelectorAll<HTMLDivElement>('.bar');
+const bars = Array.from({ length: 5 }, (_, i) => ({
+  jsBar: barElements[i * 3 + 0],
+  gpuTotalBar: barElements[i * 3 + 1],
+  gpuBar: barElements[i * 3 + 2],
+}));
+const tooltipElements = document.querySelectorAll<HTMLDivElement>(
+  '.bar-tooltip',
+);
+const tooltips = Array.from({ length: 5 }, (_, i) => ({
+  jsTooltip: tooltipElements[i * 3 + 0],
+  gpuTotalTooltip: tooltipElements[i * 3 + 1],
+  gpuTooltip: tooltipElements[i * 3 + 2],
+}));
 const speedupLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.speedup-label'),
-);
-const tooltips = Array.from(
-  document.querySelectorAll<HTMLDivElement>('.bar-tooltip'),
 );
 const xAxisLabels = Array.from(
   document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
@@ -80,8 +90,10 @@ function drawCharts() {
   }
 
   const keys = Object.keys(lengthMap);
-  for (let i = 0; i < bars.length / 3; i++) {
+  for (let i = 0; i < bars.length; i++) {
     const value = lengthMap[keys[i]];
+    const bar = bars[i];
+    const tooltip = tooltips[i];
     speedupLabels[i].textContent = `${
       (value.jsTime / value.gpuShaderTime).toFixed(1)
     }x`;
@@ -89,23 +101,17 @@ function drawCharts() {
 
     // CPU
     const normalizedJsHeight = maxJsTime > 0 ? value.jsTime / overallMax : 0;
-    bars[3 * i].style.setProperty(
-      '--bar-height',
-      `${normalizedJsHeight}`,
-    );
-    bars[3 * i].style.setProperty('--highlight-opacity', '1');
-    tooltips[3 * i].textContent = `JS time: ${
+    bar.jsBar.style.setProperty('--bar-height', `${normalizedJsHeight}`);
+    bar.jsBar.style.setProperty('--highlight-opacity', '1');
+    tooltip.jsTooltip.textContent = `JS time: ${
       value.jsTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
 
-    // GPU
+    // GPU Total
     const normalizedGpuHeight = maxGpuTime > 0 ? value.gpuTime / overallMax : 0;
-    bars[3 * i + 1].style.setProperty(
-      '--bar-height',
-      `${normalizedGpuHeight}`,
-    );
-    bars[3 * i + 1].style.setProperty('--highlight-opacity', '1');
-    tooltips[3 * i + 1].textContent = `Total GPU time: ${
+    bar.gpuTotalBar.style.setProperty('--bar-height', `${normalizedGpuHeight}`);
+    bar.gpuTotalBar.style.setProperty('--highlight-opacity', '1');
+    tooltip.gpuTotalTooltip.textContent = `Total GPU time: ${
       value.gpuTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
 
@@ -113,12 +119,12 @@ function drawCharts() {
     const normalizedGpuShaderHeight = maxGpuShaderTime > 0
       ? value.gpuShaderTime / overallMax
       : 0;
-    bars[3 * i + 2].style.setProperty(
+    bar.gpuBar.style.setProperty(
       '--bar-height',
       `${normalizedGpuShaderHeight}`,
     );
-    bars[3 * i + 2].style.setProperty('--highlight-opacity', '1');
-    tooltips[3 * i + 2].textContent = `GPU shader time: ${
+    bar.gpuBar.style.setProperty('--highlight-opacity', '1');
+    tooltip.gpuTooltip.textContent = `GPU shader time: ${
       value.gpuShaderTime.toFixed(2)
     }ms  |  Array size: ${keys[i]}`;
   }
