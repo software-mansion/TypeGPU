@@ -1,4 +1,6 @@
 import { createRule } from '../ruleCreator.ts';
+import { enhanceRule } from '../ruleEnhancer.ts';
+import { directiveTracking } from '../enhancers/directiveTracking.ts';
 
 export const unwrappedPojos = createRule({
   name: 'AAA',
@@ -14,7 +16,17 @@ export const unwrappedPojos = createRule({
   },
   defaultOptions: [],
 
-  create(context) {
-    return {};
-  },
+  create: enhanceRule({ tracking: directiveTracking }, (context, state) => {
+    return {
+      ObjectExpression(node) {
+        if (state.tracking.current().includes('use gpu')) {
+          context.report({
+            node,
+            messageId: 'unwrappedPojo',
+            data: { snippet: context.sourceCode.getText(node) },
+          });
+        }
+      },
+    };
+  }),
 });
