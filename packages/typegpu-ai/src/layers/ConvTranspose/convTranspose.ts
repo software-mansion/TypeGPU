@@ -9,8 +9,7 @@ import { NNLayer } from '../gpuLayer';
 import { PipelineCache } from '../../pipelineCache.ts';
 import { convTransposeCompute } from './compute.ts';
 import { convWeightsLayout, ioLayout, workgroupSize } from '../../schemas.ts';
-import type { Activation } from '../../pipelineCache.ts';
-import { identity, relu } from '../activations/activationFunctions.ts';
+import { identity } from '../activations/activationFunctions.ts';
 
 export interface ConvTransposeDimensions {
     inputChannels: number;
@@ -32,7 +31,7 @@ export interface ConvTransposeDimensions {
 export class LConvTranspose implements NNLayer {
     public readonly inSize: number;
     public readonly outSize: number;
-    public readonly activation: string | undefined;
+    public readonly activation = undefined;
 
     private readonly paramsBindGroup: TgpuBindGroup;
 
@@ -42,9 +41,7 @@ export class LConvTranspose implements NNLayer {
         kernelWeights: Float32Array,
         biasVector: Float32Array,
         dims: ConvTransposeDimensions,
-        activation?: string,
     ) {
-        this.activation = activation ?? 'identity';
 
         const expectedWeights = dims.inputChannels * dims.outputChannels *
             dims.kernelHeight * dims.kernelWidth;
@@ -112,13 +109,12 @@ export class LConvTranspose implements NNLayer {
             outLength: this.root.createBuffer(d.u32, this.outSize).$usage('uniform'),
         });
 
-        const activationFn = this.activation === 'relu' ? relu : identity;
         const pipeline = this.pipelineCache.get({
             kind: 'ConvTranspose',
             compute: convTransposeCompute,
         }, {
-            kind: (this.activation ?? 'identity') as Activation['kind'],
-            fn: activationFn,
+            kind: 'identity',
+            fn: identity,
         });
 
         pipeline

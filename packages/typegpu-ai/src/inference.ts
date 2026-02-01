@@ -11,6 +11,9 @@ import { LFlatten } from './layers/Flatten/flatten.ts';
 import { LShape } from './layers/Shape/shape.ts';
 import { LConvTranspose } from './layers/ConvTranspose/convTranspose.ts';
 import { LClip } from './layers/Clip/clip.ts';
+import { LRelu } from './layers/Relu/relu.ts';
+import { LSigmoid } from './layers/Sigmoid/sigmoid.ts';
+import { LTanh } from './layers/Tanh/tanh.ts';
 
 export class Inference {
   private layers: NNLayer[] = [];
@@ -135,7 +138,6 @@ export class Inference {
               outputHeight,
               outputWidth,
             },
-            'relu', // TODO: parse activation from fused operator or subsequent node?
           );
 
           currentShape = {
@@ -243,7 +245,6 @@ export class Inference {
               outputHeight,
               outputWidth,
             },
-            'relu', // TODO: parse activation
           );
 
           currentShape = {
@@ -301,6 +302,39 @@ export class Inference {
             width: outputWidth,
           };
 
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'Relu': {
+          const size = currentShape.channels * currentShape.height * currentShape.width;
+          const layer = new LRelu(
+            this.root,
+            this.pipelineCache,
+            size,
+          );
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'Sigmoid': {
+          const size = currentShape.channels * currentShape.height * currentShape.width;
+          const layer = new LSigmoid(
+            this.root,
+            this.pipelineCache,
+            size,
+          );
+          this.layers.push(layer);
+          maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
+          break;
+        }
+        case 'Tanh': {
+          const size = currentShape.channels * currentShape.height * currentShape.width;
+          const layer = new LTanh(
+            this.root,
+            this.pipelineCache,
+            size,
+          );
           this.layers.push(layer);
           maxBufferSize = Math.max(maxBufferSize, layer.inSize, layer.outSize);
           break;

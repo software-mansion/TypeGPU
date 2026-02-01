@@ -1,9 +1,5 @@
-import { TgpuComputePipeline } from '../../typegpu/src/core/pipeline/computePipeline';
-import { TgpuRoot } from '../../typegpu/src/core/root/rootTypes';
-import type { TgpuComputeFn, TgpuFn } from 'typegpu';
-import { GemmCompute } from './layers/Gemm/compute';
+import type { TgpuComputeFn, TgpuComputePipeline, TgpuFn, TgpuRoot } from 'typegpu';
 import { activationFunctionSlot } from './schemas';
-import { relu } from './layers/activations/activationFunctions';
 
 export type Layer =
   | { kind: 'Gemm'; compute: TgpuComputeFn }
@@ -15,7 +11,10 @@ export type Layer =
   | { kind: 'Add'; compute: TgpuComputeFn }
   | { kind: 'Clip'; compute: TgpuComputeFn }
   | { kind: 'Shape'; compute: TgpuComputeFn }
-  | { kind: 'ConvTranspose'; compute: TgpuComputeFn };
+  | { kind: 'ConvTranspose'; compute: TgpuComputeFn }
+  | { kind: 'Relu'; compute: TgpuComputeFn }
+  | { kind: 'Sigmoid'; compute: TgpuComputeFn }
+  | { kind: 'Tanh'; compute: TgpuComputeFn };
 export type Activation =
   | { kind: 'relu'; fn: TgpuFn }
   | { kind: 'identity'; fn: TgpuFn }

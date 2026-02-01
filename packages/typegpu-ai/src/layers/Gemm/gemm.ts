@@ -18,16 +18,13 @@ import {
 import { GemmCompute } from './compute';
 import {
   identity,
-  relu,
-  sigmoid,
-  tanh,
 } from '../activations/activationFunctions';
 import { ioLayout, weightsBiasesLayout, workgroupSize } from '../../schemas';
 
 export class LGemm implements NNLayer {
   public readonly inSize: number;
   public readonly outSize: number;
-  public readonly activation: string | undefined;
+  public readonly activation = undefined;
   private readonly paramsBindGroup: TgpuBindGroup;
 
   constructor(
@@ -35,7 +32,6 @@ export class LGemm implements NNLayer {
     weightTensor: Tensor,
     biasTensor: Tensor,
     private readonly pipelineCache: PipelineCache,
-    activation?: TgpuFn,
   ) {
     if (
       !weightTensor ||
@@ -84,7 +80,7 @@ export class LGemm implements NNLayer {
 
     const pipeline = this.pipelineCache.get(
       { kind: 'Gemm', compute: GemmCompute },
-      { kind: 'relu', fn: relu },
+      { kind: 'identity', fn: identity },
     );
     pipeline
       .with(ioBindGroup)
