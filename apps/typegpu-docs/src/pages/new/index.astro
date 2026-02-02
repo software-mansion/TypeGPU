@@ -10,10 +10,10 @@ import Backlog from "../../components/Backlog.astro";
 import CodeShowcase from "../../components/CodeShowcase.astro";
 import GetStartedButton from "../../components/GetStartedButton.astro";
 import GradientTitle from "../../components/GradientTitle.astro";
-import TgpuExamples from "../../components/TgpuExamples.astro";
 import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
 import Videos from "../../components/Videos.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
+import TgpuExamples from "../../components/TgpuExamples";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -161,7 +161,7 @@ import PageLayout from "../../layouts/PageLayout.astro";
           TypeGPU gives you the tools to build anything WebGPU can do.
         </p>
       </div>
-      <TgpuExamples />
+      <TgpuExamples client:visible />
     </section>
 
     <!-- Videos -->
@@ -208,7 +208,9 @@ import PageLayout from "../../layouts/PageLayout.astro";
       <h2
         class="font-bold text-blue-950 dark:text-gray-100 text-3xl lg:text-5xl text-center leading-tight"
       >
-        Ready to try out <span class="whitespace-nowrap"><GradientTitle title="TypeGPU" />?</span>
+        Ready to try out <span class="whitespace-nowrap"
+          ><GradientTitle title="TypeGPU" />?</span
+        >
       </h2>
       <GetStartedButton />
     </section>
