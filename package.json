@@ -45,7 +45,7 @@
     "@webgpu/types": "catalog:types",
     "dpdm": "^3.14.0",
     "jiti": "catalog:build",
-    "pkg-pr-new": "^0.0.41",
+    "pkg-pr-new": "^0.0.62",
     "tsup": "catalog:build",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",

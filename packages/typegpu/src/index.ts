@@ -51,6 +51,7 @@ export type {
   ValidateBufferSchema,
   ValidateStorageSchema,
   ValidateUniformSchema,
+  Withable,
   WithBinding,
   WithCompute,
   WithFragment,
