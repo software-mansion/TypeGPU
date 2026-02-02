@@ -261,11 +261,9 @@ renderPipeline
   })
   .draw(3);
 
-// Assuming computePipeline is created with createComputePipeline
 computePipeline.dispatchWorkgroups(16);
 
-// Assuming computePipeline2 is created with createGuardedComputePipeline
-computePipeline2.dispatchThreads(4);
+guardedComputePipeline.dispatchThreads(4);
 ```
 
 ### Attachments

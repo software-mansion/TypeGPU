@@ -61,7 +61,7 @@ describe('ascii filter example', () => {
       }
 
       @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5)) + 0.5);
+        var uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5f)) + 0.5f);
         var textureSize = vec2f(textureDimensions(externalTexture));
         var pix = (uv2 * textureSize);
         let cellSize = f32(glyphSize);

@@ -86,7 +86,7 @@ type CleanIO<T> = T extends Record<string, BaseData>
  */
 export interface TgpuFragmentFnShell<
   // We force the variance to be covariant, since shells are just containers of
-  // schemas that conincidentally can be called to create a fragment function.
+  // schemas that coincidentally can be called to create a fragment function.
   // @ts-expect-error: We override the variance
   out TIn extends TgpuFragmentFn.In = TgpuFragmentFn.In,
   // @ts-expect-error: We override the variance
@@ -248,7 +248,7 @@ function createFragmentFn(
         : undefined;
 
       if (inputWithLocation) {
-        setName(inputWithLocation, `${getName(this) ?? ''}_Input`);
+        inputWithLocation.$name(`${getName(this) ?? ''}_Input`);
         core.applyExternals({ In: inputWithLocation });
       }
       core.applyExternals({ Out: outputType });

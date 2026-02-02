@@ -13,24 +13,24 @@ const getGradientColor = (ratio: number) => {
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+const pos = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.0, 0.5),
+  d.vec2f(-0.5, -0.5),
+  d.vec2f(0.5, -0.5),
+]);
+
+const uv = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.5, 1.0),
+  d.vec2f(0.0, 0.0),
+  d.vec2f(1.0, 0.0),
+]);
+
 const pipeline = root['~unstable'].createRenderPipeline({
   vertex: ({ $vertexIndex }) => {
     'use gpu';
-    const pos = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const uv = [
-      d.vec2f(0.5, 1.0),
-      d.vec2f(0.0, 0.0),
-      d.vec2f(1.0, 0.0),
-    ];
-
     return {
-      $position: d.vec4f(pos[$vertexIndex], 0, 1),
-      uv: uv[$vertexIndex],
+      $position: d.vec4f(pos.$[$vertexIndex], 0, 1),
+      uv: uv.$[$vertexIndex],
     };
   },
   fragment: ({ uv }) => {
