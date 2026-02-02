@@ -7,24 +7,23 @@ import { useAtom } from 'jotai';
 import { activeExampleAtom } from '../utils/examples/activeExampleAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import type { Example } from '../utils/examples/types.ts';
 
 type Props = {
   exampleKey: string;
-  examplesConfig: Record<string, { html: string; tsPath: string }>;
+  html: string;
 };
 
-export default function HoverExampleIsland(
-  { exampleKey, examplesConfig }: Props,
-) {
+export default function HoverExampleIsland({ exampleKey, html }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
   const twoFingerActiveRef = useRef(false);
+
   const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
-  const isHovered = activeExample === exampleKey;
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>();
+  const [error, setError] = useState<string>();
+
+  const isActive = activeExample === exampleKey;
 
   const reset = useCallback(() => {
     cleanupRef.current?.();
@@ -34,111 +33,90 @@ export default function HoverExampleIsland(
     }
   }, []);
 
-  const handlePointerEnter = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'touch') {
-      setActiveExample(exampleKey);
-    }
-  };
+  const activate = () => setActiveExample(exampleKey);
+  const deactivate = () =>
+    setActiveExample((prev) => (prev === exampleKey ? null : prev));
 
-  const handlePointerLeave = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'touch') {
-      setActiveExample((prev) => (prev === exampleKey ? null : prev));
-    }
-  };
-
-  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
-    if (event.touches.length >= 2) {
-      event.preventDefault();
+  // pointer events
+  const handlePointerEnter = (e: ReactPointerEvent) =>
+    e.pointerType !== 'touch' && activate();
+  const handlePointerLeave = (e: ReactPointerEvent) =>
+    e.pointerType !== 'touch' && deactivate();
+  const handleTouchStart = (e: ReactTouchEvent) => {
+    if (e.touches.length >= 2) {
+      e.preventDefault();
       twoFingerActiveRef.current = true;
     }
   };
-
-  const handleTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
-    if (twoFingerActiveRef.current) {
-      event.preventDefault();
-    }
+  const handleTouchMove = (e: ReactTouchEvent) => {
+    if (twoFingerActiveRef.current) e.preventDefault();
   };
-
-  const handleTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
-    if (event.touches.length === 0) {
-      if (!twoFingerActiveRef.current) {
-        return;
-      }
-
+  const handleTouchEnd = (e: ReactTouchEvent) => {
+    if (e.touches.length === 0 && twoFingerActiveRef.current) {
       twoFingerActiveRef.current = false;
       setActiveExample((prev) => (prev === exampleKey ? null : exampleKey));
     }
   };
-
   const handleTouchCancel = () => {
     twoFingerActiveRef.current = false;
   };
 
-  useEffect(() => { // intersection observer
+  // intersection observer
+  useEffect(() => {
     const element = rootRef.current;
-    if (!element) {
-      return;
-    }
+    if (!element) return;
 
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) {
         twoFingerActiveRef.current = false;
-        setActiveExample((prev) => (prev === exampleKey ? null : prev));
+        deactivate();
       }
     });
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [exampleKey, setActiveExample]);
+  });
 
-  useEffect(() => { // data hover overlay
-    const overlay = containerRef.current?.closest('[data-hover-overlay]');
-    if (!overlay) {
-      return;
-    }
-
-    if (isHovered) {
-      overlay.setAttribute('data-active', 'true');
-    } else {
-      overlay.removeAttribute('data-active');
-    }
-
-    return () => overlay.removeAttribute('data-active');
-  }, [isHovered]);
-
+  // Sync data-active attribute on overlay
   useEffect(() => {
-    if (!isHovered) {
+    const overlay = containerRef.current?.closest('[data-hover-overlay]');
+    if (!overlay) return;
+
+    overlay.toggleAttribute('data-active', isActive);
+    return () => overlay.removeAttribute('data-active');
+  }, [isActive]);
+
+  // examples runner
+  useEffect(() => {
+    if (!isActive) {
       reset();
       setIsLoading(false);
       return;
     }
 
     let cancelled = false;
+
     (async () => {
       try {
         setIsLoading(true);
         setError(undefined);
+
         if (!isGPUSupported) {
           throw new Error('WebGPU is not enabled/supported in this browser.');
         }
 
-        const example = await loadExample(exampleKey, examplesConfig);
-        if (cancelled) {
-          return;
-        }
-        if (!containerRef.current) {
-          return;
-        }
+        if (!containerRef.current) return;
 
-        containerRef.current.innerHTML = example.htmlFile.content;
-        // hide controls pop-up
-        const helpElement = containerRef.current.querySelector('#help');
-        if (helpElement instanceof HTMLElement) {
-          helpElement.style.display = 'none';
-        }
+        containerRef.current.innerHTML = html;
+        hideHelpElement(containerRef.current);
         resizeCanvases(containerRef.current);
 
-        const { dispose } = await executeExample(example.tsImport);
+        const tsPath = `../pages/landing-examples/${exampleKey}/index.ts`;
+        const tsImport = () =>
+          import(/* @vite-ignore */ `${tsPath}?t=${Date.now()}`);
+
+        const { dispose } = await executeExample(tsImport);
+
         if (cancelled) {
           dispose();
           return;
@@ -152,9 +130,7 @@ export default function HoverExampleIsland(
         );
         reset();
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     })();
 
@@ -162,7 +138,7 @@ export default function HoverExampleIsland(
       cancelled = true;
       reset();
     };
-  }, [exampleKey, isHovered, reset, examplesConfig]);
+  }, [exampleKey, html, isActive, reset]);
 
   return (
     <div
@@ -173,14 +149,10 @@ export default function HoverExampleIsland(
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className='order h-full w-full overflow-hidden'
+      className='h-full w-full overflow-hidden'
     >
       {error
-        ? (
-          <p className='text-center font-medium text-sm text-white'>
-            {error}
-          </p>
-        )
+        ? <p className='text-center font-medium text-sm text-white'>{error}</p>
         : (
           <div className='flex h-full w-full items-center justify-center'>
             {isLoading && (
@@ -195,34 +167,15 @@ export default function HoverExampleIsland(
   );
 }
 
-async function loadExample(
-  exampleKey: string,
-  examplesConfig: Record<string, { html: string; tsPath: string }>,
-): Promise<Example> {
-  const config = examplesConfig[exampleKey];
-  if (!config) {
-    throw new Error(`Example "${exampleKey}" not found.`);
-  }
-
-  const tsImport = () => import(`${config.tsPath}?t=${Date.now()}`); // trick to prevent caching
-
-  return {
-    key: exampleKey,
-    metadata: { title: exampleKey, category: 'landing', tags: [] },
-    tsFiles: [],
-    tsImport,
-    htmlFile: {
-      exampleKey,
-      path: 'index.html',
-      content: config.html,
-    },
-    thumbnails: { small: '', large: '' },
-  } satisfies Example;
+function hideHelpElement(container: HTMLElement) {
+  const help = container.querySelector<HTMLElement>('#help');
+  if (help) help.style.display = 'none';
 }
 
 function resizeCanvases(container: HTMLElement) {
+  const dpr = window.devicePixelRatio || 1;
+
   for (const canvas of container.querySelectorAll('canvas')) {
-    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr * 2;
