@@ -209,17 +209,6 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
-  #findVarNode(node: THREE.TSL.NodeObject<TNode>): boolean {
-    let varNodePresent = false;
-    node.traverse((child) => {
-      // @ts-expect-error: if it isn't present then it will be false
-      if (child.isVarNode) {
-        varNodePresent = true;
-      }
-    });
-    return varNodePresent;
-  }
-
   constructor(
     node: THREE.TSL.NodeObject<TNode>,
     dataType: T,
@@ -317,11 +306,10 @@ export const fromTSL = tgpu.comptime(
       sharedBuilder = new WGSLNodeBuilder();
     }
 
-    let nodeType;
+    let nodeType: string | null = null;
     try { // sometimes it needs information (overrideNodes) from compilation context which is not present
       nodeType = node.getNodeType(sharedBuilder);
-    } catch (e) {
-      console.log(e);
+    } catch {
     }
 
     if (nodeType) {
