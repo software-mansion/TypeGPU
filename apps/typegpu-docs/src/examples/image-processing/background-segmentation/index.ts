@@ -5,7 +5,7 @@ import type {
   TgpuBindGroup,
   TgpuTexture,
 } from 'typegpu';
-import tgpu, { common, d, std } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
@@ -20,6 +20,7 @@ import {
 } from './schemas.ts';
 import {
   computeFn,
+  fragmentFn,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
@@ -163,49 +164,7 @@ const drawWithMaskPipeline = root['~unstable']
   .with(paramsAccess, paramsUniform)
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
-    fragment: ({ uv }) => {
-      'use gpu';
-      const originalColor = std.textureSampleBaseClampToEdge(
-        drawWithMaskLayout.$.inputTexture,
-        drawWithMaskLayout.$.sampler,
-        uv,
-      );
-
-      let blurredColor = d.vec4f();
-      if (paramsAccess.$.useGaussian === 1) {
-        blurredColor = std.textureSampleBaseClampToEdge(
-          drawWithMaskLayout.$.inputBlurredTexture,
-          drawWithMaskLayout.$.sampler,
-          uv,
-        );
-      } else {
-        blurredColor = std.textureSampleBias(
-          drawWithMaskLayout.$.inputBlurredTexture,
-          drawWithMaskLayout.$.sampler,
-          uv,
-          paramsAccess.$.sampleBias,
-        );
-      }
-
-      const cropBounds = paramsAccess.$.cropBounds;
-      const uvMin = cropBounds.xy;
-      const uvMax = cropBounds.zw;
-      const maskUV = d.vec2f(uv).sub(uvMin).div(uvMax.sub(uvMin));
-      const sampledMask = std.textureSampleBaseClampToEdge(
-        drawWithMaskLayout.$.maskTexture,
-        drawWithMaskLayout.$.sampler,
-        maskUV,
-      ).x;
-
-      const inCropRegion = uv.x >= uvMin.x &&
-        uv.x <= uvMax.x &&
-        uv.y >= uvMin.y &&
-        uv.y <= uvMax.y;
-      // use mask only inside the crop region
-      const mask = std.select(0, sampledMask, inCropRegion);
-
-      return std.mix(blurredColor, originalColor, mask);
-    },
+    fragment: fragmentFn,
     targets: { format: presentationFormat },
   });
 

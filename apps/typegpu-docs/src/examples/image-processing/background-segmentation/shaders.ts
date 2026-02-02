@@ -3,6 +3,7 @@ import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
   blurLayout,
+  drawWithMaskLayout,
   filterDim,
   flipAccess,
   generateMaskLayout,
@@ -97,3 +98,48 @@ export const computeFn = tgpu['~unstable'].computeFn({
     }
   }
 });
+
+export const fragmentFn = (input: { uv: d.v2f }) => {
+  'use gpu';
+  const uv = input.uv;
+  const originalColor = std.textureSampleBaseClampToEdge(
+    drawWithMaskLayout.$.inputTexture,
+    drawWithMaskLayout.$.sampler,
+    uv,
+  );
+
+  let blurredColor = d.vec4f();
+  if (paramsAccess.$.useGaussian === 1) {
+    blurredColor = std.textureSampleBaseClampToEdge(
+      drawWithMaskLayout.$.inputBlurredTexture,
+      drawWithMaskLayout.$.sampler,
+      uv,
+    );
+  } else {
+    blurredColor = std.textureSampleBias(
+      drawWithMaskLayout.$.inputBlurredTexture,
+      drawWithMaskLayout.$.sampler,
+      uv,
+      paramsAccess.$.sampleBias,
+    );
+  }
+
+  const cropBounds = paramsAccess.$.cropBounds;
+  const uvMin = cropBounds.xy;
+  const uvMax = cropBounds.zw;
+  const maskUV = d.vec2f(uv).sub(uvMin).div(uvMax.sub(uvMin));
+  const sampledMask = std.textureSampleBaseClampToEdge(
+    drawWithMaskLayout.$.maskTexture,
+    drawWithMaskLayout.$.sampler,
+    maskUV,
+  ).x;
+
+  const inCropRegion = uv.x >= uvMin.x &&
+    uv.x <= uvMax.x &&
+    uv.y >= uvMin.y &&
+    uv.y <= uvMax.y;
+  // use mask only inside the crop region
+  const mask = std.select(0, sampledMask, inCropRegion);
+
+  return std.mix(blurredColor, originalColor, mask);
+};
