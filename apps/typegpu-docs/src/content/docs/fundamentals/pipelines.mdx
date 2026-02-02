@@ -178,9 +178,9 @@ The underlying WebGPU resources for TypeGPU pipelines are created lazily, just b
 
 ### *createGuardedComputePipeline*
 
-The `createGuardedComputePipeline` method streamlines running simple computations on the GPU.
-Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range, and returns an object with a `dispatchThreads` method that executes the pipeline.
-Since the pipeline is reused, there’s no additional overhead for subsequent calls.
+The `createGuardedComputePipeline` method streamlines running simple computations on the GPU. 
+Instead of dispatching workgroups, the guarded pipeline allows calling an exact number of GPU threads. Think of it as a parallelized `for` loop.
+Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -196,14 +196,20 @@ const doubleUpPipeline = root['~unstable']
 
 doubleUpPipeline.dispatchThreads(8);
 doubleUpPipeline.dispatchThreads(8);
-doubleUpPipeline.dispatchThreads(4);
+doubleUpPipeline.dispatchThreads(5);
 
 // the command encoder will queue the read after `doubleUpPipeline`
-console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
+console.log(await data.read()); // [0, 8, 16, 24, 32, 20, 24, 28]
 ```
 
-:::note
-Remember to mark the callback with the `'use gpu'` directive to let TypeGPU know that this function is TGSL.
+:::tip
+When using guarded compute pipelines, it is impossible to change workgroup sizes, or use builtins.
+The default workgroup sizes are:
+
+- `[1, 1, 1]` for 0D dispatches,
+- `[256, 1, 1]` for 1D dispatches,
+- `[16, 16, 1]` for 2D dispatches,
+- `[8, 8, 4]` for 3D dispatches.
 :::
 
 The callback can have up to three arguments (dimensions).
@@ -234,60 +240,7 @@ root['~unstable'].createGuardedComputePipeline((x, y) => {
 console.log(await waterLevelMutable.read());
 ```
 
-The result of `createGuardedComputePipeline` can have bind groups bound using the `with` method.
-
-```ts twoslash
-import tgpu, { d, std } from 'typegpu';
-const root = await tgpu.init();
-// ---cut---
-const layout = tgpu.bindGroupLayout({
-  values: { storage: d.arrayOf(d.u32), access: 'mutable' },
-});
-const buffer1 = root
-  .createBuffer(d.arrayOf(d.u32, 3), [1, 2, 3]).$usage('storage');
-const buffer2 = root
-  .createBuffer(d.arrayOf(d.u32, 4), [2, 4, 8, 16]).$usage('storage');
-const bindGroup1 = root.createBindGroup(layout, {
-  values: buffer1,
-});
-const bindGroup2 = root.createBindGroup(layout, {
-  values: buffer2,
-});
-
-const doubleUpPipeline = root['~unstable'].createGuardedComputePipeline((x) => {
-  'use gpu';
-  layout.$.values[x] *= 2;
-});
-
-doubleUpPipeline.with(bindGroup1).dispatchThreads(3);
-doubleUpPipeline.with(bindGroup2).dispatchThreads(4);
-
-console.log(await buffer1.read()); // [2, 4, 6];
-console.log(await buffer2.read()); // [4, 8, 16, 32];
-```
-
-It is recommended NOT to use guarded compute pipelines for:
-
-- More complex compute shaders.
-When using guarded compute pipelines, it is impossible to change workgroup sizes, or effectively utilize workgroup shared memory.
-For such cases, a manually created pipeline would be more suitable.
-
-- Small calls.
-Usually, for small data the shader creation and dispatch is more costly than serialization.
-Small buffers can be more efficiently initialized with the `buffer.write()` method.
-
 :::note
-The default workgroup sizes are:
-
-- `[1, 1, 1]` for 0D dispatches,
-- `[256, 1, 1]` for 1D dispatches,
-- `[16, 16, 1]` for 2D dispatches,
-- `[8, 8, 4]` for 3D dispatches.
-
-The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
-:::
-
-:::tip
 `TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
 Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pipeline directly.
 
