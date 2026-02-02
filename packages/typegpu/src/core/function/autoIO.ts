@@ -14,10 +14,7 @@ import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData } from './fnTypes.ts';
 
-export type AnyAutoCustoms = Record<
-  string,
-  number | InferGPU<BaseIOData> | number[]
->;
+export type AnyAutoCustoms = Record<string, InferGPU<BaseIOData>>;
 
 const builtinVertexIn = {
   $vertexIndex: builtin.vertexIndex,
@@ -72,7 +69,6 @@ export class AutoFragmentFn implements SelfResolvable {
   declare [$internal]: true;
   declare resourceType: 'auto-fragment-fn';
 
-  impl: AutoFragmentFnImpl;
   #core: FnCore;
   #autoIn: AutoStruct;
   #autoOut: AutoStruct;
@@ -82,7 +78,6 @@ export class AutoFragmentFn implements SelfResolvable {
     varyings: Record<string, BaseData>,
     locations?: Record<string, number> | undefined,
   ) {
-    this.impl = impl;
     // If the implementation is not named, we can fallback to "fragmentFn"
     if (!getName(impl)) {
       setName(impl, 'fragmentFn');
@@ -118,7 +113,6 @@ export class AutoVertexFn implements SelfResolvable {
   declare [$internal]: true;
   declare resourceType: 'auto-vertex-fn';
 
-  impl: AutoVertexFnImpl;
   #core: FnCore;
   #autoIn: AutoStruct;
   #autoOut: AutoStruct;
@@ -128,7 +122,6 @@ export class AutoVertexFn implements SelfResolvable {
     attribs: Record<string, BaseData>,
     locations?: Record<string, number> | undefined,
   ) {
-    this.impl = impl;
     // If the implementation is not named, we can fallback to "vertexFn"
     if (!getName(impl)) {
       setName(impl, 'vertexFn');
