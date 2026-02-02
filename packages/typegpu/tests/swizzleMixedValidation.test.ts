@@ -1,0 +1,147 @@
+import { describe, expect, it } from 'vitest';
+import tgpu, { d } from '../src/index.ts';
+
+describe('Mixed swizzle validation', () => {
+  describe('JS validation', () => {
+    it('should allow pure xyzw swizzles', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      expect(vec.xyzw).toBeDefined();
+      expect(vec.xy).toBeDefined();
+      expect(vec.zw).toBeDefined();
+      expect(vec.xyz).toBeDefined();
+    });
+
+    it('should allow pure rgba swizzles', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      expect(vec.rgba).toBeDefined();
+      expect(vec.rg).toBeDefined();
+      expect(vec.ba).toBeDefined();
+      expect(vec.rgb).toBeDefined();
+    });
+
+    it('should NOT create properties for mixed xyzw and rgba swizzles', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      // These mixed swizzle properties should not exist
+      expect((vec as any).xrgy).toBeUndefined();
+      expect((vec as any).rgba).toBeDefined(); // This should exist (all rgba)
+      expect((vec as any).xyzw).toBeDefined(); // This should exist (all xyzw)
+      expect((vec as any).xr).toBeUndefined();
+      expect((vec as any).yg).toBeUndefined();
+      expect((vec as any).zb).toBeUndefined();
+      expect((vec as any).wa).toBeUndefined();
+    });
+  });
+
+  describe('GPU code validation', () => {
+    it('should resolve pure xyzw swizzles in GPU code', () => {
+      const main = tgpu.fn([], d.vec3f)(() => {
+        const vec = d.vec4f(1, 2, 3, 4);
+        return vec.xyz;
+      });
+
+      expect(() => tgpu.resolve([main])).not.toThrow();
+      expect(tgpu.resolve([main])).toContain('vec.xyz');
+    });
+
+    it('should resolve pure rgba swizzles in GPU code', () => {
+      const main = tgpu.fn([], d.vec3f)(() => {
+        const vec = d.vec4f(1, 2, 3, 4);
+        return vec.rgb;
+      });
+
+      expect(() => tgpu.resolve([main])).not.toThrow();
+      expect(tgpu.resolve([main])).toContain('vec.rgb');
+    });
+
+    it('should NOT resolve mixed xyzw and rgba swizzles in GPU code', () => {
+      const main = () => {
+        'use gpu';
+        const vec = d.vec4f(1, 2, 3, 4);
+        // Accessing a mixed swizzle should return undefined from accessProp
+        // This will cause resolution to fail
+        const mixed = (vec as any).xrgy;
+        return mixed;
+      };
+
+      // The resolution should fail because accessProp returns undefined for mixed swizzles
+      expect(() => tgpu.resolve([main])).toThrow();
+    });
+
+    it('should NOT resolve another mixed pattern', () => {
+      const main = () => {
+        'use gpu';
+        const vec = d.vec4f(1, 2, 3, 4);
+        const mixed = (vec as any).rgxw;
+        return mixed;
+      };
+
+      expect(() => tgpu.resolve([main])).toThrow();
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle single component access for both xyzw and rgba', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      
+      // Single xyzw components should work
+      expect(vec.x).toBe(1);
+      expect(vec.y).toBe(2);
+      expect(vec.z).toBe(3);
+      expect(vec.w).toBe(4);
+      
+      // Single rgba components should also work
+      expect(vec.r).toBe(1);
+      expect(vec.g).toBe(2);
+      expect(vec.b).toBe(3);
+      expect(vec.a).toBe(4);
+    });
+
+    it('should not allow invalid characters in swizzles', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      
+      // Invalid characters should result in undefined
+      expect((vec as any).xyz1).toBeUndefined();
+      expect((vec as any).rgba5).toBeUndefined();
+      expect((vec as any).abcd).toBeUndefined();
+      expect((vec as any).stuv).toBeUndefined();
+    });
+
+    it('should not allow swizzles longer than 4 components', () => {
+      const vec = d.vec4f(1, 2, 3, 4);
+      
+      // Swizzles longer than 4 should not exist
+      expect((vec as any).xyzwx).toBeUndefined();
+      expect((vec as any).rgbaa).toBeUndefined();
+    });
+  });
+
+  describe('All vector types', () => {
+    it('should work with vec2 rgba swizzles', () => {
+      const vec = d.vec2f(1, 2);
+      expect(vec.rg).toBeDefined();
+      expect(vec.gr).toBeDefined();
+      expect((vec as any).xr).toBeUndefined();
+    });
+
+    it('should work with vec3 rgba swizzles', () => {
+      const vec = d.vec3f(1, 2, 3);
+      expect(vec.rgb).toBeDefined();
+      expect(vec.bgr).toBeDefined();
+      expect((vec as any).xrg).toBeUndefined();
+    });
+
+    it('should work with integer vectors', () => {
+      const vec = d.vec4i(1, 2, 3, 4);
+      expect(vec.rgba).toBeDefined();
+      expect(vec.bgra).toBeDefined();
+      expect((vec as any).xgba).toBeUndefined();
+    });
+
+    it('should work with boolean vectors', () => {
+      const vec = d.vec4b(true, false, true, false);
+      expect(vec.rgba).toBeDefined();
+      expect(vec.abgr).toBeDefined();
+      expect((vec as any).xrba).toBeUndefined();
+    });
+  });
+});
