@@ -63,14 +63,8 @@ const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = tgpu.initFromDevice({ device });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // resources
 

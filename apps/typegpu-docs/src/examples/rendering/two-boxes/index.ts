@@ -11,17 +11,10 @@ import * as m from 'wgpu-matrix';
 // Initialization
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const helpInfo = document.getElementById('help') as HTMLDivElement;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Data Structures
 

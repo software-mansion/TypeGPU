@@ -46,7 +46,7 @@ describe('ascii filter example', () => {
       @group(0) @binding(4) var<uniform> charsetExtended: u32;
 
       fn characterFn(n: u32, p: vec2f) -> f32 {
-        var pos = floor(((p * vec2f(-4, 4)) + 2.5));
+        var pos = floor(((p * vec2f(-4, 4)) + 2.5f));
         if (((((pos.x < 0f) || (pos.x > 4f)) || (pos.y < 0f)) || (pos.y > 4f))) {
           return 0f;
         }

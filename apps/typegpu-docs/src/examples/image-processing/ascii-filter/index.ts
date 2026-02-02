@@ -46,16 +46,9 @@ const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
 const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 canvas.parentElement?.appendChild(video);
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const pipeline = root['~unstable'].createRenderPipeline({
   vertex: common.fullScreenTriangle,

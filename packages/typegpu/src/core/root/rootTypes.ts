@@ -766,6 +766,18 @@ export type ValidateUniformSchema<TData extends BaseData> =
     ? ExtractInvalidSchemaError<TData, '(Error) '>
     : TData;
 
+export type ConfigureContextOptions = {
+  /**
+   * The canvas for which a context will be created and configured.
+   */
+  canvas: HTMLCanvasElement | OffscreenCanvas;
+  /**
+   * Passed to `context.configure()`.
+   * Defaults to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
+   */
+  format?: GPUTextureFormat;
+} & Omit<GPUCanvasConfiguration, 'device' | 'format'>;
+
 export interface TgpuRoot extends Unwrapper {
   [$internal]: {
     logOptions: LogGeneratorOptions;
@@ -775,6 +787,13 @@ export interface TgpuRoot extends Unwrapper {
    * The GPU device associated with this root.
    */
   readonly device: GPUDevice;
+
+  /**
+   * Creates and configures context for the provided canvas.
+   * Automatically sets the format to `navigator.gpu.getPreferredCanvasFormat()` if not provided.
+   * @throws An error if no context could be obtained
+   */
+  configureContext(options: ConfigureContextOptions): GPUCanvasContext;
 
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.

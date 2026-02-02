@@ -105,6 +105,7 @@ import {
 import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
+  ConfigureContextOptions,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -485,6 +486,21 @@ class TgpuRootImpl extends WithBindingImpl
     this[$internal] = {
       logOptions,
     };
+  }
+
+  configureContext(options: ConfigureContextOptions): GPUCanvasContext {
+    const context = options.canvas.getContext('webgpu');
+    if (!context) {
+      throw new Error(
+        "Unable to initialize 'webgpu' context on the provided canvas.",
+      );
+    }
+    context.configure({
+      ...options,
+      device: this.device,
+      format: options.format ?? navigator.gpu.getPreferredCanvasFormat(),
+    });
+    return context;
   }
 
   get enabledFeatures() {

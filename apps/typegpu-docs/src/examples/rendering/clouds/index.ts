@@ -13,17 +13,10 @@ import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const paramsUniform = root.createUniform(CloudsParams, {
   time: 0,

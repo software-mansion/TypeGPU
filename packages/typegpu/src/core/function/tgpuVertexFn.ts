@@ -20,6 +20,7 @@ import {
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -54,7 +55,7 @@ type TgpuVertexFnShellHeader<
   readonly in: VertexIn | undefined;
   readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly isEntry: true;
+  readonly entryPoint: 'vertex';
 };
 
 type CleanIO<T> = T extends Record<string, BaseData>
@@ -152,7 +153,7 @@ export function vertexFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
-    isEntry: true,
+    entryPoint: 'vertex',
   };
 
   const call = (
@@ -164,6 +165,16 @@ export function vertexFn<
     VertexIn,
     VertexOut
   >;
+}
+
+export function isTgpuVertexFn<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+>(
+  value: unknown | TgpuVertexFn<VertexIn, VertexOut>,
+): value is TgpuVertexFn<VertexIn, VertexOut> {
+  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
+    'vertex';
 }
 
 // --------------
@@ -216,11 +227,12 @@ function createVertexFn(
         core.applyExternals({ Out: outputWithLocation });
       }
 
-      return core.resolve(
-        ctx,
-        shell.argTypes,
-        outputWithLocation,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+        core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+        ));
     },
 
     toString() {
