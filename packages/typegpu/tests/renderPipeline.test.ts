@@ -1202,7 +1202,7 @@ describe('root.createRenderPipeline', () => {
       targets: { format: 'rgba8unorm' },
       vertex: () => {
         'use gpu';
-        return { prop: 0 };
+        return { $position: d.vec4f(), prop: 0 };
       },
       fragment: ({ prop }) => {
         'use gpu';
@@ -1212,11 +1212,12 @@ describe('root.createRenderPipeline', () => {
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
+        @builtin(position) position: vec4f,
         @location(0) prop: i32,
       }
 
       @vertex fn vertexFn() -> VertexOut {
-        return VertexOut(0i);
+        return VertexOut(vec4f(), 0i);
       }
 
       struct FragmentIn {
@@ -1226,6 +1227,73 @@ describe('root.createRenderPipeline', () => {
       @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
         return vec4f(f32(_arg_0.prop), 1f, 2f, 3f);
       }"
+    `);
+  });
+
+  it('throws when using a prop that was not provided', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      targets: { format: 'rgba8unorm' },
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f() };
+      },
+      fragment: ({ prop }) => {
+        'use gpu';
+        const a = prop;
+        return d.vec4f(0);
+      },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - [object Object]: Identifier prop not found]
+    `);
+  });
+
+  it('disallows illegal names', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      targets: { format: 'rgba8unorm' },
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(), __myProp: 0 };
+      },
+      fragment: ({ __myProp }) => {
+        'use gpu';
+        return d.vec4f(__myProp, 1, 2, 3);
+      },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - [object Object]: Invalid identifier '__myProp'. Choose an identifier without whitespaces or leading underscores.]
+    `);
+  });
+
+  it('disallows illegal names', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      targets: { format: 'rgba8unorm' },
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(), loop: 0 };
+      },
+      fragment: ({ loop }) => {
+        'use gpu';
+        return d.vec4f(loop, 1, 2, 3);
+      },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - [object Object]: Property key 'loop' is a reserved WGSL word. Choose a different name.]
     `);
   });
 

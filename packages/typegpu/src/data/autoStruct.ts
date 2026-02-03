@@ -1,4 +1,5 @@
 import { createIoSchema } from '../core/function/ioSchema.ts';
+import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal, $repr, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
@@ -62,25 +63,21 @@ export class AutoStruct implements BaseData, SelfResolvable {
   ): { prop: string; type: BaseData } {
     let alloc = this.#allocated[key];
     if (!alloc) {
-      let wgslKey = key;
-      // Builtins always start with '$'
-      if (wgslKey.includes('$')) {
-        // Finding a unique key
-        wgslKey = key.replace('$', ''); // Starting with the original key without '$' (identity for non-builtins)
-        let idx = 1;
-        while (wgslKey in this.#validProps && this.#usedWgslKeys.has(wgslKey)) {
-          wgslKey = `${key}_${++idx}`;
-        }
-      } else {
-        // Finding a unique key
-        let idx = 1;
-        while (this.#usedWgslKeys.has(wgslKey)) {
-          wgslKey = `${key}_${++idx}`;
-        }
+      let wgslKey = key.replaceAll('$', '');
+      let idx = 1;
+      while (wgslKey in this.#validProps && this.#usedWgslKeys.has(wgslKey)) {
+        wgslKey = `${key}_${++idx}`;
       }
+
       this.#usedWgslKeys.add(wgslKey);
       alloc = { prop: wgslKey, type: dataType };
       this.#allocated[key] = alloc;
+    }
+
+    if (!isValidProp(alloc.prop)) {
+      throw new Error(
+        `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
+      );
     }
 
     return alloc;
