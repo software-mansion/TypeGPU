@@ -60,7 +60,7 @@ describe('ascii filter example', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         var uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5f)) + 0.5f);
         var textureSize = vec2f(textureDimensions(externalTexture));
         var pix = (uv2 * textureSize);

@@ -30,7 +30,7 @@ describe('triangle example', () => {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn vertexFn(_arg_0: VertexIn) -> VertexOut {
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), uv[_arg_0.vertexIndex]);
       }
 
@@ -42,7 +42,7 @@ describe('triangle example', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         return getGradientColor(((_arg_0.uv.x + _arg_0.uv.y) / 2f));
       }"
     `);

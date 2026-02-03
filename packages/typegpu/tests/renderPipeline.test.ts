@@ -1188,7 +1188,7 @@ describe('root.createRenderPipeline', () => {
         @builtin(front_facing) frontFacing: bool,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         if (_arg_0.frontFacing) {
           return vec4f(1, 0, 0, 1);
         }
@@ -1216,7 +1216,7 @@ describe('root.createRenderPipeline', () => {
         @location(0) prop: i32,
       }
 
-      @vertex fn vertexFn() -> VertexOut {
+      @vertex fn vertex() -> VertexOut {
         return VertexOut(vec4f(), 0i);
       }
 
@@ -1224,7 +1224,7 @@ describe('root.createRenderPipeline', () => {
         @location(0) prop: i32,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         return vec4f(f32(_arg_0.prop), 1f, 2f, 3f);
       }"
     `);
@@ -1325,7 +1325,7 @@ describe('root.createRenderPipeline', () => {
         @location(1) b: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         if (_arg_0.frontFacing) {
           return vec4f(_arg_0.b, 0f, 1f);
         }
@@ -1364,7 +1364,7 @@ describe('root.createRenderPipeline', () => {
         @builtin(frag_depth) fragDepth: f32,
       }
 
-      @fragment fn fragmentFn() -> FragmentOut {
+      @fragment fn fragment() -> FragmentOut {
         return FragmentOut(vec4f(0, 1, 0, 1), 0f);
       }"
     `);
@@ -1407,7 +1407,7 @@ describe('root.createRenderPipeline', () => {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn vertexFn(_arg_0: VertexIn) -> VertexOut {
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
       }
@@ -1421,7 +1421,7 @@ describe('root.createRenderPipeline', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> FragmentOut {
+      @fragment fn fragment(_arg_0: FragmentIn) -> FragmentOut {
         return FragmentOut(vec4f(_arg_0.uv, 0f, 1f), 0f);
       }"
     `);
@@ -1461,7 +1461,7 @@ describe('root.createRenderPipeline', () => {
         @location(0) localPos: vec3f,
       }
 
-      @vertex fn vertexFn(_arg_0: VertexIn) -> VertexOut {
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         var uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
         return VertexOut(vec4f(_arg_0.localPos, 1f), uv[_arg_0.vertexIndex]);
       }
@@ -1470,7 +1470,7 @@ describe('root.createRenderPipeline', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         return vec4f(_arg_0.uv, 0f, 1f);
       }"
     `);
