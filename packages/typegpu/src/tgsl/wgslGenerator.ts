@@ -136,7 +136,7 @@ function operatorToType<
   TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
-    if (op === '!' || op === '~') {
+    if (op === '!') {
       return bool;
     }
 
@@ -277,7 +277,7 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: wgsl.BaseData,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;

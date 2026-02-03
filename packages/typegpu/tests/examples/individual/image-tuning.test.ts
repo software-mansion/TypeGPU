@@ -87,7 +87,7 @@ describe('image tuning example', () => {
         let highlightShift = (adjustments.highlights - 1f);
         let highlightBiased = select((highlightShift * 0.25f), highlightShift, (adjustments.highlights >= 1f));
         let highlightFactor = (1f + ((highlightBiased * 0.5f) * contrastColorLuminance));
-        let highlightWeight = smoothstep(0.5, 1, contrastColorLuminance);
+        let highlightWeight = smoothstep(0.5f, 1f, contrastColorLuminance);
         let highlightLuminanceAdjust = (contrastLuminance * highlightFactor);
         let highlightLuminance = mix(contrastLuminance, saturate(highlightLuminanceAdjust), highlightWeight);
         var highlightColor = mix(contrastColor, saturate((contrastColor * highlightFactor)), highlightWeight);
