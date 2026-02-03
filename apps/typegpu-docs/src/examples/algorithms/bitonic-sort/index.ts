@@ -24,7 +24,6 @@ const state = {
   inputArray: [] as number[],
 };
 
-// Bind group layout for visualization
 const renderLayout = tgpu.bindGroupLayout({
   data: {
     storage: d.arrayOf(d.u32),
