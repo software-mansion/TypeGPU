@@ -353,7 +353,7 @@ export function tryConvertSnippet(
       return snip(value, target, origin);
     }
 
-    if (typeof dataType === 'symbol') {
+    if (dataType === UnknownData) {
       // Commit unknown to the expected type.
       return snip(stitch`${snip(value, target, origin)}`, target, origin);
     }

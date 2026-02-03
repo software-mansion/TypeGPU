@@ -67,18 +67,6 @@ const unaryIdentitySignature = (arg: BaseData) => {
   };
 };
 
-const unaryIdentityRestrictedSignature =
-  (restrict: BaseData[]) => (arg: BaseData) => {
-    const argRestricted = unify([arg], restrict);
-    if (!argRestricted) {
-      throw new SignatureNotSupportedError([arg], restrict);
-    }
-    return {
-      argTypes: argRestricted,
-      returnType: argRestricted[0] as BaseData,
-    };
-  };
-
 const variadicUnifySignature = (...args: BaseData[]) => {
   const uargs = unify(args) ?? args;
   return ({
@@ -87,7 +75,7 @@ const variadicUnifySignature = (...args: BaseData[]) => {
   });
 };
 
-const variadicUnifyRestrictedSignature = (restrict: BaseData[]) =>
+const unifyRestrictedSignature = (restrict: BaseData[]) =>
 (
   ...args: BaseData[]
 ) => {
@@ -170,7 +158,7 @@ function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const acos = dualImpl({
   name: 'acos',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAcos,
   codegenImpl: (_ctx, [value]) => stitch`acos(${value})`,
 });
@@ -186,7 +174,7 @@ function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const acosh = dualImpl({
   name: 'acosh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAcosh,
   codegenImpl: (_ctx, [value]) => stitch`acosh(${value})`,
 });
@@ -202,7 +190,7 @@ function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const asin = dualImpl({
   name: 'asin',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAsin,
   codegenImpl: (_ctx, [value]) => stitch`asin(${value})`,
 });
@@ -218,7 +206,7 @@ function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const asinh = dualImpl({
   name: 'asinh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAsinh,
   codegenImpl: (_ctx, [value]) => stitch`asinh(${value})`,
 });
@@ -234,7 +222,7 @@ function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const atan = dualImpl({
   name: 'atan',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAtan,
   codegenImpl: (_ctx, [value]) => stitch`atan(${value})`,
 });
@@ -250,7 +238,7 @@ function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const atanh = dualImpl({
   name: 'atanh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAtanh,
   codegenImpl: (_ctx, [value]) => stitch`atanh(${value})`,
 });
@@ -269,7 +257,7 @@ function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
 
 export const atan2 = dualImpl({
   name: 'atan2',
-  signature: variadicUnifyRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuAtan2,
   codegenImpl: (_ctx, [y, x]) => stitch`atan2(${y}, ${x})`,
 });
@@ -285,7 +273,7 @@ function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const ceil = dualImpl({
   name: 'ceil',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuCeil,
   codegenImpl: (_ctx, [value]) => stitch`ceil(${value})`,
 });
@@ -322,7 +310,7 @@ function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const cos = dualImpl({
   name: 'cos',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuCos,
   codegenImpl: (_ctx, [value]) => stitch`cos(${value})`,
 });
@@ -338,7 +326,7 @@ function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const cosh = dualImpl({
   name: 'cosh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuCosh,
   codegenImpl: (_ctx, [value]) => stitch`cosh(${value})`,
 });
@@ -353,7 +341,7 @@ function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(
 
 export const countLeadingZeros = dualImpl<typeof cpuCountLeadingZeros>({
   name: 'countLeadingZeros',
-  signature: unaryIdentityRestrictedSignature(anyConcreteInteger),
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for countLeadingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`countLeadingZeros(${value})`,
@@ -369,7 +357,7 @@ function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(
 
 export const countOneBits = dualImpl<typeof cpuCountOneBits>({
   name: 'countOneBits',
-  signature: unaryIdentityRestrictedSignature(anyConcreteInteger),
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for countOneBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`countOneBits(${value})`,
@@ -385,7 +373,7 @@ function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(
 
 export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
   name: 'countTrailingZeros',
-  signature: unaryIdentityRestrictedSignature(anyConcreteInteger),
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for countTrailingZeros not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`countTrailingZeros(${value})`,
@@ -393,7 +381,7 @@ export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
 
 export const cross = dualImpl({
   name: 'cross',
-  signature: variadicUnifyRestrictedSignature([vec3f, vec3h]),
+  signature: unifyRestrictedSignature([vec3f, vec3h]),
   normalImpl: <T extends v3f | v3h>(a: T, b: T): T =>
     VectorOps.cross[a.kind](a, b),
   codegenImpl: (_ctx, [a, b]) => stitch`cross(${a}, ${b})`,
@@ -412,7 +400,7 @@ function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const degrees = dualImpl<typeof cpuDegrees>({
   name: 'degrees',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuDegrees,
   codegenImpl: (_ctx, [value]) => stitch`degrees(${value})`,
 });
@@ -501,7 +489,7 @@ function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const exp = dualImpl({
   name: 'exp',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuExp,
   codegenImpl: (_ctx, [value]) => stitch`exp(${value})`,
 });
@@ -517,7 +505,7 @@ function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const exp2 = dualImpl({
   name: 'exp2',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuExp2,
   codegenImpl: (_ctx, [value]) => stitch`exp2(${value})`,
 });
@@ -558,7 +546,7 @@ export const faceForward = dualImpl<
   <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T) => T
 >({
   name: 'faceForward',
-  signature: variadicUnifyRestrictedSignature(anyFloatVec),
+  signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl:
     'CPU implementation for faceForward not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [e1, e2, e3]) => stitch`faceForward(${e1}, ${e2}, ${e3})`,
@@ -590,7 +578,7 @@ function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(
 
 export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
   name: 'firstTrailingBit',
-  signature: unaryIdentityRestrictedSignature(anyConcreteInteger),
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for firstTrailingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`firstTrailingBit(${value})`,
@@ -607,7 +595,7 @@ function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const floor = dualImpl({
   name: 'floor',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuFloor,
   codegenImpl: (_ctx, [arg]) => stitch`floor(${arg})`,
 });
@@ -629,7 +617,7 @@ function cpuFma<T extends AnyFloatVecInstance | number>(
 
 export const fma = dualImpl({
   name: 'fma',
-  signature: variadicUnifyRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuFma,
   codegenImpl: (_ctx, [e1, e2, e3]) => stitch`fma(${e1}, ${e2}, ${e3})`,
 });
@@ -645,7 +633,7 @@ function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const fract = dualImpl({
   name: 'fract',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuFract,
   codegenImpl: (_ctx, [a]) => stitch`fract(${a})`,
 });
@@ -737,7 +725,7 @@ function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const inverseSqrt = dualImpl({
   name: 'inverseSqrt',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuInverseSqrt,
   codegenImpl: (_ctx, [value]) => stitch`inverseSqrt(${value})`,
 });
@@ -818,7 +806,7 @@ function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const log = dualImpl({
   name: 'log',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuLog,
   codegenImpl: (_ctx, [value]) => stitch`log(${value})`,
 });
@@ -834,7 +822,7 @@ function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const log2 = dualImpl({
   name: 'log2',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuLog2,
   codegenImpl: (_ctx, [value]) => stitch`log2(${value})`,
 });
@@ -902,7 +890,7 @@ function cpuMix<T extends AnyFloatVecInstance | number>(
 
 export const mix = dualImpl({
   name: 'mix',
-  signature: (...[e1, e2, e3]) => {
+  signature: (e1, e2, e3) => {
     if (e1.type.startsWith('vec') && !e3.type.startsWith('vec')) {
       const uarg = unify([e3], [(e1 as unknown as Vec2f).primitive]);
       if (!uarg) {
@@ -970,7 +958,7 @@ export const modf: ModfOverload = dualImpl<typeof cpuModf>({
 
 export const normalize = dualImpl({
   name: 'normalize',
-  signature: unaryIdentityRestrictedSignature(anyFloatVec),
+  signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T =>
     VectorOps.normalize[v.kind](v),
   codegenImpl: (_ctx, [value]) => stitch`normalize(${value})`,
@@ -996,7 +984,7 @@ function powCpu<T extends AnyFloatVecInstance | number>(
 
 export const pow = dualImpl({
   name: 'pow',
-  signature: variadicUnifyRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: powCpu,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`pow(${lhs}, ${rhs})`,
 });
@@ -1036,7 +1024,7 @@ function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const radians = dualImpl({
   name: 'radians',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuRadians,
   codegenImpl: (_ctx, [value]) => stitch`radians(${value})`,
 });
@@ -1082,7 +1070,7 @@ function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): T {
 
 export const reverseBits = dualImpl<typeof cpuReverseBits>({
   name: 'reverseBits',
-  signature: unaryIdentityRestrictedSignature(anyConcreteInteger),
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`reverseBits(${value})`,
@@ -1101,7 +1089,7 @@ function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const round = dualImpl({
   name: 'round',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuRound,
   codegenImpl: (_ctx, [value]) => stitch`round(${value})`,
 });
@@ -1119,7 +1107,7 @@ function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const saturate = dualImpl({
   name: 'saturate',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSaturate,
   codegenImpl: (_ctx, [value]) => stitch`saturate(${value})`,
 });
@@ -1158,7 +1146,7 @@ function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const sin = dualImpl({
   name: 'sin',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSin,
   codegenImpl: (_ctx, [value]) => stitch`sin(${value})`,
 });
@@ -1176,7 +1164,7 @@ function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const sinh = dualImpl({
   name: 'sinh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSinh,
   codegenImpl: (_ctx, [value]) => stitch`sinh(${value})`,
 });
@@ -1208,7 +1196,7 @@ function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
 
 export const smoothstep = dualImpl({
   name: 'smoothstep',
-  signature: variadicUnifyRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSmoothstep,
   codegenImpl: (_ctx, [edge0, edge1, x]) =>
     stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
@@ -1225,7 +1213,7 @@ function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const sqrt = dualImpl({
   name: 'sqrt',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSqrt,
   codegenImpl: (_ctx, [value]) => stitch`sqrt(${value})`,
 });
@@ -1243,7 +1231,7 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
 
 export const step = dualImpl({
   name: 'step',
-  signature: variadicUnifyRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuStep,
   codegenImpl: (_ctx, [edge, x]) => stitch`step(${edge}, ${x})`,
 });
@@ -1261,7 +1249,7 @@ function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const tan = dualImpl({
   name: 'tan',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuTan,
   codegenImpl: (_ctx, [value]) => stitch`tan(${value})`,
 });
@@ -1277,7 +1265,7 @@ function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const tanh = dualImpl({
   name: 'tanh',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuTanh,
   codegenImpl: (_ctx, [value]) => stitch`tanh(${value})`,
 });
@@ -1298,7 +1286,7 @@ function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): T {
 
 export const trunc = dualImpl<typeof cpuTrunc>({
   name: 'trunc',
-  signature: unaryIdentityRestrictedSignature(anyFloat),
+  signature: unifyRestrictedSignature(anyFloat),
   normalImpl:
     'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`trunc(${value})`,
