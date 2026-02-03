@@ -9,7 +9,7 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-root.configureContext({ canvas });
+const context = root.configureContext({ canvas });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -184,8 +184,6 @@ export const controls = {
 export function onCleanup() {
   ascendingSorter.destroy();
   descendingSorter.destroy();
-  buffer.destroy();
-  querySet?.destroy();
   root.destroy();
 }
 
