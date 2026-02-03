@@ -9,13 +9,8 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-canvas.width = canvas.clientWidth * devicePixelRatio;
-canvas.height = canvas.clientHeight * devicePixelRatio;
+root.configureContext({ canvas });
 
-const context = root.configureContext({
-  canvas,
-  alphaMode: 'premultiplied',
-});
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const state = {
