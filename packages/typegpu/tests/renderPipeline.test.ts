@@ -1197,6 +1197,38 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
+  it('concretizes data types', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      targets: { format: 'rgba8unorm' },
+      vertex: () => {
+        'use gpu';
+        return { prop: 0 };
+      },
+      fragment: ({ prop }) => {
+        'use gpu';
+        return d.vec4f(prop, 1, 2, 3);
+      },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @location(0) prop: i32,
+      }
+
+      @vertex fn vertexFn() -> VertexOut {
+        return VertexOut(0i);
+      }
+
+      struct FragmentIn {
+        @location(0) prop: i32,
+      }
+
+      @fragment fn fragmentFn(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return vec4f(f32(_arg_0.prop), 1f, 2f, 3f);
+      }"
+    `);
+  });
+
   it('generates a struct that matches the access pattern for shell-less fragments', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       vertex: vertex,

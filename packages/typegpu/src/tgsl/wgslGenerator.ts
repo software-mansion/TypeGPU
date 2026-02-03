@@ -653,7 +653,7 @@ ${this.ctx.pre}}`;
                   stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
                 );
               }
-              accessed = structType.provideProp(key, expr.dataType);
+              accessed = structType.provideProp(key, concretize(expr.dataType));
             }
 
             return [accessed.prop, expr];
