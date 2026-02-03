@@ -1275,7 +1275,7 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
-  it('disallows illegal names', ({ root }) => {
+  it('disallows reserved names', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       targets: { format: 'rgba8unorm' },
       vertex: () => {
