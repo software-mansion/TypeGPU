@@ -11,6 +11,7 @@ import {
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type {
   AnyWgslData,
+  BaseData,
   U16,
   U32,
   v3u,
@@ -104,6 +105,7 @@ import {
 import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
   Configurable,
+  ConfigureContextOptions,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
@@ -211,7 +213,7 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T extends AnyData>(
+  with<T extends BaseData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
     value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
   ): WithBinding {
@@ -434,6 +436,21 @@ class TgpuRootImpl extends WithBindingImpl
     };
   }
 
+  configureContext(options: ConfigureContextOptions): GPUCanvasContext {
+    const context = options.canvas.getContext('webgpu');
+    if (!context) {
+      throw new Error(
+        "Unable to initialize 'webgpu' context on the provided canvas.",
+      );
+    }
+    context.configure({
+      ...options,
+      device: this.device,
+      format: options.format ?? navigator.gpu.getPreferredCanvasFormat(),
+    });
+    return context;
+  }
+
   get enabledFeatures() {
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
   }
@@ -557,7 +574,7 @@ class TgpuRootImpl extends WithBindingImpl
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -570,7 +587,7 @@ class TgpuRootImpl extends WithBindingImpl
       | TgpuRenderPipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
-      | TgpuBuffer<AnyData>
+      | TgpuBuffer<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout

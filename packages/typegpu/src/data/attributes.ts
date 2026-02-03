@@ -22,6 +22,7 @@ import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
   type AnyLooseData,
+  type IsLooseData,
   isLooseData,
   isLooseDecorated,
   type LooseDecorated,
@@ -43,6 +44,7 @@ import {
   isBuiltinAttrib,
   isDecorated,
   isSizeAttrib,
+  type IsWgslData,
   isWgslData,
   type Location,
   type PerspectiveOrLinearInterpolatableData,
@@ -111,9 +113,9 @@ export type ExtractAttributes<T> = T extends {
 export type Decorate<
   TData extends BaseData,
   TAttrib extends AnyAttribute,
-> = TData extends AnyWgslData
+> = IsWgslData<TData> extends true
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : TData extends AnyLooseData
+  : IsLooseData<TData> extends true
     ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : never;
 
@@ -126,22 +128,16 @@ export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
   : ExtractAttributes<T>[number] extends Location ? true
   : false;
 
-export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
-  data: TData,
-  attrib: TAttrib,
+export function attribute(
+  data: BaseData,
+  attrib: AnyAttribute,
 ): Decorated | LooseDecorated {
   if (isDecorated(data)) {
-    return new DecoratedImpl(data.inner, [
-      attrib,
-      ...data.attribs,
-    ]) as Decorated;
+    return new DecoratedImpl(data.inner, [attrib, ...data.attribs]);
   }
 
   if (isLooseDecorated(data)) {
-    return new LooseDecoratedImpl(data.inner, [
-      attrib,
-      ...data.attribs,
-    ]) as LooseDecorated;
+    return new LooseDecoratedImpl(data.inner, [attrib, ...data.attribs]);
   }
 
   if (isLooseData(data)) {

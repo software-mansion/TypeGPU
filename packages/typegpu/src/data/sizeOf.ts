@@ -81,8 +81,7 @@ const knownSizesMap: Record<string, number> = {
 
 function sizeOfStruct(struct: WgslStruct) {
   let size = 0;
-  const propTypes = struct.propTypes as Record<string, BaseData>;
-  for (const property of Object.values(propTypes)) {
+  for (const property of Object.values(struct.propTypes)) {
     if (Number.isNaN(size)) {
       throw new Error('Only the last property of a struct can be unbounded');
     }
@@ -101,8 +100,7 @@ function sizeOfStruct(struct: WgslStruct) {
 function sizeOfUnstruct(data: Unstruct) {
   let size = 0;
 
-  const propTypes = data.propTypes as Record<string, BaseData>;
-  for (const property of Object.values(propTypes)) {
+  for (const property of Object.values(data.propTypes)) {
     const alignment = customAlignmentOf(property);
     size = roundUp(size, alignment);
     size += sizeOf(property);
@@ -111,8 +109,8 @@ function sizeOfUnstruct(data: Unstruct) {
   return size;
 }
 
-function computeSize(data: object): number {
-  const knownSize = knownSizesMap[(data as BaseData)?.type];
+function computeSize(data: BaseData): number {
+  const knownSize = knownSizesMap[data.type];
 
   if (knownSize !== undefined) {
     return knownSize;

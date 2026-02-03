@@ -191,7 +191,7 @@ export { unstruct } from './unstruct.ts';
 export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
-export { ref } from './ref.ts';
+export { _ref as ref } from './ref.ts';
 export {
   align,
   type AnyAttribute,

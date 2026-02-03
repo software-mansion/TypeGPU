@@ -207,10 +207,10 @@ describe('generationHelpers', () => {
 
     it('coerces arrays to unknown', () => {
       const resInt = coerceToSnippet([1, 2, 3]);
-      expect(resInt.dataType.type).toBe('unknown');
+      expect(resInt.dataType).toBe(UnknownData);
 
       const resFloat = coerceToSnippet([1.0, 2.5, -0.5]);
-      expect(resFloat.dataType.type).toBe('unknown');
+      expect(resFloat.dataType).toBe(UnknownData);
     });
 
     it('returns UnknownData for arrays of incompatible types', () => {
