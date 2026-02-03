@@ -1,10 +1,13 @@
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
+
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import {
   isBindGroup,
@@ -19,10 +22,15 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
+import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import {
+  getOffsetInfoAt,
+  type PrimitiveOffsetInfo,
+} from '../../data/offsetUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -62,6 +70,19 @@ export interface TgpuComputePipeline
     y?: number | undefined,
     z?: number | undefined,
   ): void;
+
+  /**
+   * Dispatches compute workgroups using parameters read from a buffer.
+   * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
+   * To get the correct offset within complex data structures, use `getOffsetInfoAt(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
+   * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `getOffsetInfoAt(...)`.
+   */
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    start?: PrimitiveOffsetInfo | number,
+  ): void;
 }
 
 export function INTERNAL_createComputePipeline(
@@ -89,6 +110,27 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
 };
+
+function validateIndirectBufferSize(
+  bufferSize: number,
+  offset: number,
+  requiredBytes: number,
+  operation: string,
+): void {
+  if (offset + requiredBytes > bufferSize) {
+    throw new Error(
+      `Buffer too small for ${operation}. ` +
+        `Required: ${requiredBytes} bytes at offset ${offset}, ` +
+        `but buffer is only ${bufferSize} bytes.`,
+    );
+  }
+
+  if (offset % 4 !== 0) {
+    throw new Error(
+      `Indirect buffer offset must be a multiple of 4. Got: ${offset}`,
+    );
+  }
+}
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
@@ -182,16 +224,63 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     y?: number | undefined,
     z?: number | undefined,
   ): void {
+    this._executeComputePass((pass) => pass.dispatchWorkgroups(x, y, z));
+  }
+
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    start?: PrimitiveOffsetInfo | number,
+  ): void {
+    const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
+
+    let offsetInfo = start ?? getOffsetInfoAt(indirectBuffer.dataType);
+
+    if (typeof offsetInfo === 'number') {
+      if (offsetInfo === 0) {
+        offsetInfo = getOffsetInfoAt(indirectBuffer.dataType);
+      } else {
+        console.warn(
+          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use getOffsetInfoAt(...) to include contiguous padding info for safer validation.`,
+        );
+        // When only an offset is provided, assume we have at least 12 bytes contiguous.
+        offsetInfo = {
+          offset: offsetInfo,
+          contiguous: DISPATCH_SIZE,
+        };
+      }
+    }
+
+    const { offset, contiguous } = offsetInfo;
+
+    validateIndirectBufferSize(
+      sizeOf(indirectBuffer.dataType),
+      offset,
+      DISPATCH_SIZE,
+      'dispatchWorkgroupsIndirect',
+    );
+
+    if (contiguous < DISPATCH_SIZE) {
+      console.warn(
+        `dispatchWorkgroupsIndirect: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. Dispatch requires ${DISPATCH_SIZE} bytes (3 x u32). Reading across padding may result in undefined behavior.`,
+      );
+    }
+
+    this._executeComputePass((pass) =>
+      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset)
+    );
+  }
+
+  private _executeComputePass(
+    dispatch: (pass: GPUComputePassEncoder) => void,
+  ): void {
     const memo = this._core.unwrap();
     const { branch } = this._core;
 
-    const passDescriptor: GPUComputePassDescriptor = {
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = commandEncoder.beginComputePass({
       label: getName(this._core) ?? '<unnamed>',
       ...setupTimestampWrites(this._priors, branch),
-    };
-
-    const commandEncoder = branch.device.createCommandEncoder();
-    const pass = commandEncoder.beginComputePass(passDescriptor);
+    });
 
     pass.setPipeline(memo.pipeline);
 
@@ -199,7 +288,6 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
-        // Catch-all
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
@@ -215,7 +303,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       throw new MissingBindGroupsError(missingBindGroups);
     }
 
-    pass.dispatchWorkgroups(x, y, z);
+    dispatch(pass);
     pass.end();
     branch.device.queue.submit([commandEncoder.finish()]);
 
@@ -224,10 +312,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     if (this._priors.performanceCallback) {
-      triggerPerformanceCallback({
-        root: branch,
-        priors: this._priors,
-      });
+      triggerPerformanceCallback({ root: branch, priors: this._priors });
     }
   }
 

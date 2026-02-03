@@ -544,7 +544,7 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      ['index', ...'index'[]]
+      ['index' | 'indirect', ...('index' | 'indirect')[]]
     >();
   });
 
@@ -554,8 +554,8 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
       [
-        'index' | 'storage' | 'uniform' | 'vertex',
-        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+        'index' | 'storage' | 'uniform' | 'vertex' | 'indirect',
+        ...('index' | 'storage' | 'uniform' | 'vertex' | 'indirect')[],
       ]
     >();
   });
@@ -567,8 +567,8 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
       [
-        'index' | 'storage' | 'uniform' | 'vertex',
-        ...('index' | 'storage' | 'uniform' | 'vertex')[],
+        'index' | 'storage' | 'uniform' | 'vertex' | 'indirect',
+        ...('index' | 'storage' | 'uniform' | 'vertex' | 'indirect')[],
       ]
     >();
   });
