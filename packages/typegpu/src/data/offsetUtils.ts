@@ -1,25 +1,26 @@
-import { roundUp } from '../../mathUtils.ts';
-import { alignmentOf } from '../../data/alignmentOf.ts';
+import { roundUp } from '../mathUtils.ts';
+import { alignmentOf } from './alignmentOf.ts';
 import {
   type OffsetInfo as PropOffsetInfo,
   offsetsForProps,
-} from '../../data/offsets.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
+} from './offsets.ts';
+import { sizeOf } from './sizeOf.ts';
 import type {
   AnyWgslData,
   BaseData,
   VecData,
   WgslArray,
   WgslStruct,
-} from '../../data/wgslTypes.ts';
+} from './wgslTypes.ts';
 import {
   isVec2,
   isVec3,
   isVec4,
   isWgslArray,
   isWgslStruct,
-} from '../../data/wgslTypes.ts';
-import { undecorate } from '../../data/dataTypes.ts';
+} from './wgslTypes.ts';
+import { undecorate } from './dataTypes.ts';
+import type { Infer } from '../shared/repr.ts';
 
 const OFFSET_MARKER = Symbol('indirectOffset');
 const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
@@ -252,21 +253,86 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
   });
 }
 
-export interface IndirectOffsetInfo {
+function getRootContiguous(schema: AnyWgslData): number {
+  const unwrapped = undecorate(schema);
+
+  if (isWgslStruct(unwrapped)) {
+    const offsets = offsetsForProps(unwrapped);
+    const propTypes = unwrapped.propTypes as Record<string, AnyWgslData>;
+    const propNames = Object.keys(propTypes);
+
+    for (let i = 0; i < propNames.length; i++) {
+      const name = propNames[i];
+      if (!name) {
+        continue;
+      }
+      const info = offsets[name] as PropOffsetInfo;
+      const padding = info.padding ?? 0;
+
+      const runEnd = info.offset + info.size;
+      const isRunEnd = i === propNames.length - 1 || padding > 0;
+      if (isRunEnd) {
+        return runEnd;
+      }
+    }
+
+    return 0;
+  }
+
+  if (isWgslArray(unwrapped)) {
+    const elementType = unwrapped.elementType as AnyWgslData;
+    const elementSize = sizeOf(elementType);
+    const stride = roundUp(elementSize, alignmentOf(elementType));
+    const totalSize = sizeOf(schema);
+    if (!Number.isFinite(totalSize)) {
+      return elementSize;
+    }
+    return stride > elementSize ? elementSize : totalSize;
+  }
+
+  return sizeOf(schema);
+}
+
+/**
+ * Interface containing information about the offset and the available contiguous after a selected primitive.
+ */
+export interface PrimitiveOffsetInfo {
+  /** The byte offset of the primitive within the buffer. */
   offset: number;
+  /** The number of contiguous bytes available from the offset. */
   contiguous: number;
 }
 
-export function extractOffsetInfo<T extends BaseData>(
+/**
+ * A function that retrieves offset information for a specific primitive within a data schema.
+ * Example usage:
+ * ```ts
+ * const Boid = d.struct({
+ *  position: d.vec3f,
+ *  velocity: d.vec3f,
+ * });
+ * const offsetInfo = getOffsetInfoAt(Boid, (b) => b.velocity.y);
+ * console.log(offsetInfo.offset); // Byte offset of velocity.y within Boid (here 20 bytes)
+ * console.log(offsetInfo.contiguous); // Contiguous bytes available from that offset (here 8 bytes)
+ * ```
+ *
+ * @param schema - The data schema to analyze.
+ * @param accessor - Optional function that accesses a specific primitive within the schema. If omitted, uses the root offset (0).
+ * @returns An object containing the offset and contiguous byte information.
+ */
+export function getOffsetInfoAt<T extends BaseData>(
   schema: T,
-  accessor?: (proxy: unknown) => unknown,
-): IndirectOffsetInfo {
+  accessor?: (proxy: Infer<T>) => number,
+): PrimitiveOffsetInfo {
   if (!accessor) {
-    return { offset: 0, contiguous: sizeOf(schema) };
+    return {
+      offset: 0,
+      contiguous: getRootContiguous(schema as AnyWgslData),
+    };
   }
 
   const proxy = createOffsetProxy(schema);
-  const result = accessor(proxy);
+  const result = accessor(proxy as Infer<T>);
 
   if (isOffsetProxy(result)) {
     return {
@@ -278,25 +344,4 @@ export function extractOffsetInfo<T extends BaseData>(
   throw new Error(
     'Invalid accessor result. Expected an offset proxy with markers.',
   );
-}
-
-export function validateIndirectBufferSize(
-  bufferSize: number,
-  offset: number,
-  requiredBytes: number,
-  operation: string,
-): void {
-  if (offset + requiredBytes > bufferSize) {
-    throw new Error(
-      `Buffer too small for ${operation}. ` +
-        `Required: ${requiredBytes} bytes at offset ${offset}, ` +
-        `but buffer is only ${bufferSize} bytes.`,
-    );
-  }
-
-  if (offset % 4 !== 0) {
-    throw new Error(
-      `Indirect buffer offset must be a multiple of 4. Got: ${offset}`,
-    );
-  }
 }
