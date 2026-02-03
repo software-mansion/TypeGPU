@@ -1,5 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import { bitonicSort } from '@typegpu/sort';
+import { type BitonicSorter, createBitonicSorter } from '@typegpu/sort';
 import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init({
@@ -66,27 +66,39 @@ let buffer = root
   .createBuffer(d.arrayOf(d.u32, state.arraySize))
   .$usage('storage');
 
-const paramsBuffer = root
-  .createBuffer(
-    d.struct({
-      arrayLength: d.u32,
-      maxValue: d.u32,
-    }),
-  )
-  .$usage('uniform');
-
 let bindGroup = root.createBindGroup(renderLayout, {
   data: buffer,
 });
 
+let ascendingSorter: BitonicSorter = createBitonicSorter(root, buffer);
+let descendingSorter: BitonicSorter = createBitonicSorter(root, buffer, {
+  compare: (a, b) => {
+    'use gpu';
+    return a > b;
+  },
+  paddingValue: 0,
+});
+
 function recreateBuffer() {
+  ascendingSorter.destroy();
+  descendingSorter.destroy();
   buffer.destroy();
+
   buffer = root
     .createBuffer(d.arrayOf(d.u32, state.arraySize))
     .$usage('storage');
 
   bindGroup = root.createBindGroup(renderLayout, {
     data: buffer,
+  });
+
+  ascendingSorter = createBitonicSorter(root, buffer);
+  descendingSorter = createBitonicSorter(root, buffer, {
+    compare: (a, b) => {
+      'use gpu';
+      return a > b;
+    },
+    paddingValue: 0,
   });
 }
 
@@ -112,16 +124,9 @@ function render() {
 
 async function sort() {
   const isDescending = state.sortOrder === 'descending';
-  const result = bitonicSort(root, buffer, {
-    compare: isDescending
-      ? (a, b) => {
-        'use gpu';
-        return a > b;
-      }
-      : undefined,
-    paddingValue: isDescending ? 0 : 0xffffffff,
-    querySet: querySet ?? undefined,
-  });
+  const sorter = isDescending ? descendingSorter : ascendingSorter;
+
+  sorter.run({ querySet: querySet ?? undefined });
 
   let gpuTimeMs: number | null = null;
   if (querySet?.available) {
@@ -132,12 +137,12 @@ async function sort() {
 
   render();
 
-  const paddedInfo = result.wasPadded
-    ? ` (padded to ${result.paddedSize})`
+  const paddedInfo = sorter.wasPadded
+    ? ` (padded to ${sorter.paddedSize})`
     : '';
   const timeInfo = gpuTimeMs !== null ? `${gpuTimeMs.toFixed(3)}ms` : 'N/A';
   console.log(
-    `Sorted ${result.originalSize} elements${paddedInfo} - GPU time: ${timeInfo}`,
+    `Sorted ${sorter.originalSize} elements${paddedInfo} - GPU time: ${timeInfo}`,
   );
 
   const sorted = await buffer.read();
@@ -183,8 +188,9 @@ export const controls = {
 };
 
 export function onCleanup() {
+  ascendingSorter.destroy();
+  descendingSorter.destroy();
   buffer.destroy();
-  paramsBuffer.destroy();
   querySet?.destroy();
   root.destroy();
 }

@@ -2,15 +2,32 @@ import tgpu, {
   d,
   std,
   type StorageFlag,
+  type TgpuBindGroup,
   type TgpuBuffer,
-  type TgpuQuerySet,
   type TgpuRoot,
+  type UniformFlag,
 } from 'typegpu';
 import { compareSlot, defaultCompare } from './slots.ts';
-import type { BitonicSortOptions, BitonicSortResult } from './types.ts';
+import type {
+  BitonicSorter,
+  BitonicSorterOptions,
+  BitonicSorterRunOptions,
+} from './types.ts';
 import { nextPowerOf2 } from './utils.ts';
 
 const WORKGROUP_SIZE = 256;
+
+const copyParamsType = d.struct({
+  srcLength: d.u32,
+  dstLength: d.u32,
+  paddingValue: d.u32,
+});
+
+const sortUniformsType = d.struct({
+  k: d.u32,
+  j: d.u32,
+  jShift: d.u32,
+});
 
 const sortLayout = tgpu.bindGroupLayout({
   data: {
@@ -18,11 +35,7 @@ const sortLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   uniforms: {
-    uniform: d.struct({
-      k: d.u32,
-      j: d.u32,
-      jShift: d.u32, // log2(j), used for optimized index calculation
-    }),
+    uniform: sortUniformsType,
   },
 });
 
@@ -36,11 +49,7 @@ const copyLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   params: {
-    uniform: d.struct({
-      srcLength: d.u32,
-      dstLength: d.u32,
-      paddingValue: d.u32,
-    }),
+    uniform: copyParamsType,
   },
 });
 
@@ -83,9 +92,6 @@ const bitonicStepKernel = tgpu['~unstable'].computeFn({
   const shift = sortLayout.$.uniforms.jShift;
   const dataLength = d.u32(sortLayout.$.data.length);
 
-  // We are processing N/2 threads.
-  // Calculate index 'i' by inserting a 0 bit at position 'shift'.
-  // This ensures 'i' and 'ixj' (with bit at 'shift' set to 1) form a valid pair.
   const maskBelow = (1 << shift) - 1;
   const below = tid & maskBelow;
   const above = (tid >> shift) << (shift + 1);
@@ -110,76 +116,104 @@ const bitonicStepKernel = tgpu['~unstable'].computeFn({
   }
 });
 
-export function bitonicSort(
+type CopyParamsBuffer = TgpuBuffer<typeof copyParamsType> & UniformFlag;
+type SortUniformsBuffer = TgpuBuffer<typeof sortUniformsType> & UniformFlag;
+type CopyBindGroup = TgpuBindGroup<(typeof copyLayout)['entries']>;
+type SortBindGroup = TgpuBindGroup<(typeof sortLayout)['entries']>;
+
+interface PaddingResources {
+  workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
+  copyPadParams: CopyParamsBuffer;
+  copyBackParams: CopyParamsBuffer;
+  copyPadBindGroup: CopyBindGroup;
+  copyBackBindGroup: CopyBindGroup;
+}
+
+export function createBitonicSorter(
   root: TgpuRoot,
   data: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
-  options?: BitonicSortOptions,
-): BitonicSortResult {
+  options?: BitonicSorterOptions,
+): BitonicSorter {
   const originalSize = data.dataType.elementCount;
   const paddedSize = nextPowerOf2(originalSize);
   const wasPadded = paddedSize !== originalSize;
 
   const paddingValue = options?.paddingValue ?? 0xffffffff;
   const compareFunc = options?.compare ?? defaultCompare;
-  const querySet = options?.querySet;
 
+  // Resources for padding (only created if needed)
+  let paddingResources: PaddingResources | null = null;
   let workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
 
   if (wasPadded) {
-    workBuffer = root
+    const paddedWorkBuffer = root
       .createBuffer(d.arrayOf(d.u32, paddedSize))
       .$usage('storage');
 
-    const copyParams = root.createBuffer(
-      d.struct({ srcLength: d.u32, dstLength: d.u32, paddingValue: d.u32 }),
-      { srcLength: originalSize, dstLength: paddedSize, paddingValue },
-    ).$usage('uniform');
+    const copyPadParams = root
+      .createBuffer(copyParamsType, {
+        srcLength: originalSize,
+        dstLength: paddedSize,
+        paddingValue,
+      })
+      .$usage('uniform');
 
-    let copyPadPipeline = root['~unstable']
-      .withCompute(copyPadKernel)
-      .createPipeline();
+    const copyBackParams = root
+      .createBuffer(copyParamsType, {
+        srcLength: originalSize,
+        dstLength: originalSize,
+        paddingValue: 0,
+      })
+      .$usage('uniform');
 
-    if (querySet) {
-      copyPadPipeline = copyPadPipeline.withTimestampWrites({
-        querySet,
-        beginningOfPassWriteIndex: 0,
-      });
-    }
+    paddingResources = {
+      workBuffer: paddedWorkBuffer,
+      copyPadParams,
+      copyBackParams,
+      copyPadBindGroup: root.createBindGroup(copyLayout, {
+        src: data,
+        dst: paddedWorkBuffer,
+        params: copyPadParams,
+      }),
+      copyBackBindGroup: root.createBindGroup(copyLayout, {
+        src: paddedWorkBuffer,
+        dst: data,
+        params: copyBackParams,
+      }),
+    };
 
-    copyPadPipeline
-      .with(
-        root.createBindGroup(copyLayout, {
-          src: data,
-          dst: workBuffer,
-          params: copyParams,
-        }),
-      )
-      .dispatchWorkgroups(Math.ceil(paddedSize / WORKGROUP_SIZE));
-
-    copyParams.destroy();
+    workBuffer = paddedWorkBuffer;
   } else {
     workBuffer = data;
   }
 
-  const uniformBuffer = root
-    .createBuffer(d.struct({ k: d.u32, j: d.u32, jShift: d.u32 }))
+  const uniformBuffer: SortUniformsBuffer = root
+    .createBuffer(sortUniformsType)
     .$usage('uniform');
 
-  const bindGroup = root.createBindGroup(sortLayout, {
+  const sortBindGroup: SortBindGroup = root.createBindGroup(sortLayout, {
     data: workBuffer,
     uniforms: uniformBuffer,
   });
 
-  const pipeline = root['~unstable']
+  const sortPipeline = root['~unstable']
     .with(compareSlot, compareFunc)
     .withCompute(bitonicStepKernel)
     .createPipeline();
 
-  // We dispatch N/2 threads because each thread processes 2 elements
-  const halfSize = paddedSize / 2;
-  const workgroups = Math.ceil(halfSize / WORKGROUP_SIZE);
+  const copyPadPipeline = root['~unstable']
+    .withCompute(copyPadKernel)
+    .createPipeline();
 
-  // Count total steps for timestamp tracking (only for non-padded case)
+  const copyBackPipeline = root['~unstable']
+    .withCompute(copyBackKernel)
+    .createPipeline();
+
+  const halfSize = paddedSize / 2;
+  const sortWorkgroups = Math.ceil(halfSize / WORKGROUP_SIZE);
+  const padWorkgroups = Math.ceil(paddedSize / WORKGROUP_SIZE);
+  const copyBackWorkgroups = Math.ceil(originalSize / WORKGROUP_SIZE);
+
   let totalSteps = 0;
   for (let k = 2; k <= paddedSize; k <<= 1) {
     for (let j = k >> 1; j > 0; j >>= 1) {
@@ -187,73 +221,81 @@ export function bitonicSort(
     }
   }
 
-  let stepIndex = 0;
+  function run(runOptions?: BitonicSorterRunOptions): void {
+    const querySet = runOptions?.querySet;
 
-  for (let k = 2; k <= paddedSize; k <<= 1) {
-    for (let j = k >> 1; j > 0; j >>= 1) {
-      // Calculate jShift = log2(j). Since j is power of 2, use clz32.
-      const jShift = 31 - Math.clz32(j);
-      uniformBuffer.write({ k, j, jShift });
-
-      const isFirstStep = stepIndex === 0;
-      const isLastStep = stepIndex === totalSteps - 1;
-
-      let boundPipeline = pipeline.with(bindGroup);
-
-      // For non-padded case, attach timestamps to first/last sort steps
-      if (querySet && !wasPadded && (isFirstStep || isLastStep)) {
-        const descriptor: {
-          querySet: TgpuQuerySet<'timestamp'>;
-          beginningOfPassWriteIndex?: number;
-          endOfPassWriteIndex?: number;
-        } = { querySet };
-        if (isFirstStep) {
-          descriptor.beginningOfPassWriteIndex = 0;
-        }
-        if (isLastStep) {
-          descriptor.endOfPassWriteIndex = 1;
-        }
-        boundPipeline = boundPipeline.withTimestampWrites(descriptor);
+    if (paddingResources) {
+      let pipeline = copyPadPipeline.with(paddingResources.copyPadBindGroup);
+      if (querySet) {
+        pipeline = pipeline.withTimestampWrites({
+          querySet,
+          beginningOfPassWriteIndex: 0,
+        });
       }
+      pipeline.dispatchWorkgroups(padWorkgroups);
+    }
 
-      boundPipeline.dispatchWorkgroups(workgroups);
-      stepIndex++;
+    let stepIndex = 0;
+    for (let k = 2; k <= paddedSize; k <<= 1) {
+      for (let j = k >> 1; j > 0; j >>= 1) {
+        const jShift = 31 - Math.clz32(j);
+        uniformBuffer.write({ k, j, jShift });
+
+        let pipeline = sortPipeline.with(sortBindGroup);
+
+        if (querySet && !paddingResources) {
+          const isFirstStep = stepIndex === 0;
+          const isLastStep = stepIndex === totalSteps - 1;
+          if (isFirstStep && isLastStep) {
+            pipeline = pipeline.withTimestampWrites({
+              querySet,
+              beginningOfPassWriteIndex: 0,
+              endOfPassWriteIndex: 1,
+            });
+          } else if (isFirstStep) {
+            pipeline = pipeline.withTimestampWrites({
+              querySet,
+              beginningOfPassWriteIndex: 0,
+            });
+          } else if (isLastStep) {
+            pipeline = pipeline.withTimestampWrites({
+              querySet,
+              endOfPassWriteIndex: 1,
+            });
+          }
+        }
+
+        pipeline.dispatchWorkgroups(sortWorkgroups);
+        stepIndex++;
+      }
+    }
+
+    if (paddingResources) {
+      let pipeline = copyBackPipeline.with(paddingResources.copyBackBindGroup);
+      if (querySet) {
+        pipeline = pipeline.withTimestampWrites({
+          querySet,
+          endOfPassWriteIndex: 1,
+        });
+      }
+      pipeline.dispatchWorkgroups(copyBackWorkgroups);
     }
   }
 
-  if (wasPadded) {
-    const copyParams = root
-      .createBuffer(
-        d.struct({ srcLength: d.u32, dstLength: d.u32, paddingValue: d.u32 }),
-        { srcLength: originalSize, dstLength: originalSize, paddingValue: 0 },
-      ).$usage('uniform');
-
-    let copyBackPipeline = root['~unstable']
-      .withCompute(copyBackKernel)
-      .createPipeline();
-
-    if (querySet) {
-      copyBackPipeline = copyBackPipeline.withTimestampWrites({
-        querySet,
-        endOfPassWriteIndex: 1,
-      });
+  function destroy(): void {
+    uniformBuffer.destroy();
+    if (paddingResources) {
+      paddingResources.workBuffer.destroy();
+      paddingResources.copyPadParams.destroy();
+      paddingResources.copyBackParams.destroy();
     }
-
-    copyBackPipeline
-      .with(
-        root.createBindGroup(copyLayout, {
-          src: workBuffer,
-          dst: data,
-          params: copyParams,
-        }),
-      )
-      .dispatchWorkgroups(Math.ceil(originalSize / WORKGROUP_SIZE));
-
-    copyParams.destroy();
-    workBuffer.destroy();
   }
 
-  uniformBuffer.destroy();
-
-  return { originalSize, paddedSize, wasPadded };
+  return {
+    originalSize,
+    paddedSize,
+    wasPadded,
+    run,
+    destroy,
+  };
 }
