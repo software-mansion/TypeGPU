@@ -22,13 +22,16 @@ describe('Mixed swizzle validation', () => {
     it('should NOT create properties for mixed xyzw and rgba swizzles', () => {
       const vec = d.vec4f(1, 2, 3, 4);
       // These mixed swizzle properties should not exist
-      expect((vec as any).xrgy).toBeUndefined();
-      expect((vec as any).rgba).toBeDefined(); // This should exist (all rgba)
-      expect((vec as any).xyzw).toBeDefined(); // This should exist (all xyzw)
-      expect((vec as any).xr).toBeUndefined();
-      expect((vec as any).yg).toBeUndefined();
-      expect((vec as any).zb).toBeUndefined();
-      expect((vec as any).wa).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xrgy).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xr).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.yg).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.zb).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.wa).toBeUndefined();
     });
   });
 
