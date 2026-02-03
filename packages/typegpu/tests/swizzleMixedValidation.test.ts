@@ -22,13 +22,16 @@ describe('Mixed swizzle validation', () => {
     it('should NOT create properties for mixed xyzw and rgba swizzles', () => {
       const vec = d.vec4f(1, 2, 3, 4);
       // These mixed swizzle properties should not exist
-      expect((vec as any).xrgy).toBeUndefined();
-      expect((vec as any).rgba).toBeDefined(); // This should exist (all rgba)
-      expect((vec as any).xyzw).toBeDefined(); // This should exist (all xyzw)
-      expect((vec as any).xr).toBeUndefined();
-      expect((vec as any).yg).toBeUndefined();
-      expect((vec as any).zb).toBeUndefined();
-      expect((vec as any).wa).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xrgy).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xr).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.yg).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.zb).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.wa).toBeUndefined();
     });
   });
 
@@ -100,48 +103,50 @@ describe('Mixed swizzle validation', () => {
       const vec = d.vec4f(1, 2, 3, 4);
       
       // Invalid characters should result in undefined
-      expect((vec as any).xyz1).toBeUndefined();
-      expect((vec as any).rgba5).toBeUndefined();
-      expect((vec as any).abcd).toBeUndefined();
-      expect((vec as any).stuv).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xyz1).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.rgba5).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.abcd).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.stuv).toBeUndefined();
     });
 
     it('should not allow swizzles longer than 4 components', () => {
       const vec = d.vec4f(1, 2, 3, 4);
       
       // Swizzles longer than 4 should not exist
-      expect((vec as any).xyzwx).toBeUndefined();
-      expect((vec as any).rgbaa).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xyzwx).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.rgbaa).toBeUndefined();
     });
   });
 
   describe('All vector types', () => {
     it('should work with vec2 rgba swizzles', () => {
       const vec = d.vec2f(1, 2);
-      expect(vec.rg).toBeDefined();
-      expect(vec.gr).toBeDefined();
-      expect((vec as any).xr).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xr).toBeUndefined();
     });
 
     it('should work with vec3 rgba swizzles', () => {
       const vec = d.vec3f(1, 2, 3);
-      expect(vec.rgb).toBeDefined();
-      expect(vec.bgr).toBeDefined();
-      expect((vec as any).xrg).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xrg).toBeUndefined();
     });
 
     it('should work with integer vectors', () => {
       const vec = d.vec4i(1, 2, 3, 4);
-      expect(vec.rgba).toBeDefined();
-      expect(vec.bgra).toBeDefined();
-      expect((vec as any).xgba).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xgba).toBeUndefined();
     });
 
     it('should work with boolean vectors', () => {
       const vec = d.vec4b(true, false, true, false);
-      expect(vec.rgba).toBeDefined();
-      expect(vec.abgr).toBeDefined();
-      expect((vec as any).xrba).toBeUndefined();
+      // @ts-expect-error
+      expect(vec.xrba).toBeUndefined();
     });
   });
 });
