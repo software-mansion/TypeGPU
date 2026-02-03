@@ -93,6 +93,10 @@ export class AutoFragmentFn implements SelfResolvable {
     setName(this.#autoOut, 'FragmentOut');
   }
 
+  toString(): string {
+    return 'autoFragmentFn';
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
   }
@@ -135,6 +139,10 @@ export class AutoVertexFn implements SelfResolvable {
     setName(this.#autoIn, 'VertexIn');
     this.#autoOut = new AutoStruct(builtinVertexOut, undefined);
     setName(this.#autoOut, 'VertexOut');
+  }
+
+  toString(): string {
+    return 'autoVertexFn';
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {

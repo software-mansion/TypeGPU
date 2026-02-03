@@ -1249,7 +1249,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - [object Object]: Identifier prop not found]
+      - autoFragmentFn: Identifier prop not found]
     `);
   });
 
@@ -1271,7 +1271,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - [object Object]: Invalid identifier '__myProp'. Choose an identifier without whitespaces or leading underscores.]
+      - autoVertexFn: Invalid identifier '__myProp'. Choose an identifier without whitespaces or leading underscores.]
     `);
   });
 
@@ -1293,7 +1293,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - [object Object]: Property key 'loop' is a reserved WGSL word. Choose a different name.]
+      - autoVertexFn: Property key 'loop' is a reserved WGSL word. Choose a different name.]
     `);
   });
 
