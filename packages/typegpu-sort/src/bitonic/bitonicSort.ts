@@ -21,6 +21,7 @@ const sortLayout = tgpu.bindGroupLayout({
     uniform: d.struct({
       k: d.u32,
       j: d.u32,
+      jShift: d.u32, // log2(j), used for optimized index calculation
     }),
   },
 });
@@ -43,7 +44,6 @@ const copyLayout = tgpu.bindGroupLayout({
   },
 });
 
-// Copy source to destination with padding for elements beyond srcLength
 const copyPadKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: { gid: d.builtin.globalInvocationId },
@@ -63,7 +63,6 @@ const copyPadKernel = tgpu['~unstable'].computeFn({
   );
 });
 
-// Copy first srcLength elements back to destination
 const copyBackKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: { gid: d.builtin.globalInvocationId },
@@ -74,24 +73,27 @@ const copyBackKernel = tgpu['~unstable'].computeFn({
   }
 });
 
-// XOR-based bitonic sort step
 const bitonicStepKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
-  const i = input.gid.x;
+  const tid = input.gid.x;
+
   const k = sortLayout.$.uniforms.k;
-  const j = sortLayout.$.uniforms.j;
+  const shift = sortLayout.$.uniforms.jShift;
   const dataLength = d.u32(sortLayout.$.data.length);
 
-  if (i >= dataLength) {
-    return;
-  }
+  // We are processing N/2 threads.
+  // Calculate index 'i' by inserting a 0 bit at position 'shift'.
+  // This ensures 'i' and 'ixj' (with bit at 'shift' set to 1) form a valid pair.
+  const maskBelow = (1 << shift) - 1;
+  const below = tid & maskBelow;
+  const above = (tid >> shift) << (shift + 1);
 
-  const ixj = i ^ j;
+  const i = above | below;
+  const ixj = i | (1 << shift);
 
-  // Only process if i < ixj (avoid double processing) and ixj in bounds
-  if (ixj <= i || ixj >= dataLength) {
+  if (ixj >= dataLength) {
     return;
   }
 
@@ -108,10 +110,6 @@ const bitonicStepKernel = tgpu['~unstable'].computeFn({
   }
 });
 
-/**
- * Sorts a buffer of unsigned 32-bit integers in place using bitonic sort.
- * Uses XOR-based network with GPU-side buffer padding for non-power-of-2 sizes.
- */
 export function bitonicSort(
   root: TgpuRoot,
   data: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
@@ -132,22 +130,15 @@ export function bitonicSort(
       .createBuffer(d.arrayOf(d.u32, paddedSize))
       .$usage('storage');
 
-    const copyParams = root
-      .createBuffer(
-        d.struct({ srcLength: d.u32, dstLength: d.u32, paddingValue: d.u32 }),
-      )
-      .$usage('uniform');
-    copyParams.write({
-      srcLength: originalSize,
-      dstLength: paddedSize,
-      paddingValue,
-    });
+    const copyParams = root.createBuffer(
+      d.struct({ srcLength: d.u32, dstLength: d.u32, paddingValue: d.u32 }),
+      { srcLength: originalSize, dstLength: paddedSize, paddingValue },
+    ).$usage('uniform');
 
     let copyPadPipeline = root['~unstable']
       .withCompute(copyPadKernel)
       .createPipeline();
 
-    // Attach timestamp for start of sort
     if (querySet) {
       copyPadPipeline = copyPadPipeline.withTimestampWrites({
         querySet,
@@ -171,7 +162,7 @@ export function bitonicSort(
   }
 
   const uniformBuffer = root
-    .createBuffer(d.struct({ k: d.u32, j: d.u32 }))
+    .createBuffer(d.struct({ k: d.u32, j: d.u32, jShift: d.u32 }))
     .$usage('uniform');
 
   const bindGroup = root.createBindGroup(sortLayout, {
@@ -184,7 +175,9 @@ export function bitonicSort(
     .withCompute(bitonicStepKernel)
     .createPipeline();
 
-  const workgroups = Math.ceil(paddedSize / WORKGROUP_SIZE);
+  // We dispatch N/2 threads because each thread processes 2 elements
+  const halfSize = paddedSize / 2;
+  const workgroups = Math.ceil(halfSize / WORKGROUP_SIZE);
 
   // Count total steps for timestamp tracking (only for non-padded case)
   let totalSteps = 0;
@@ -198,7 +191,9 @@ export function bitonicSort(
 
   for (let k = 2; k <= paddedSize; k <<= 1) {
     for (let j = k >> 1; j > 0; j >>= 1) {
-      uniformBuffer.write({ k, j });
+      // Calculate jShift = log2(j). Since j is power of 2, use clz32.
+      const jShift = 31 - Math.clz32(j);
+      uniformBuffer.write({ k, j, jShift });
 
       const isFirstStep = stepIndex === 0;
       const isLastStep = stepIndex === totalSteps - 1;
@@ -230,19 +225,13 @@ export function bitonicSort(
     const copyParams = root
       .createBuffer(
         d.struct({ srcLength: d.u32, dstLength: d.u32, paddingValue: d.u32 }),
-      )
-      .$usage('uniform');
-    copyParams.write({
-      srcLength: originalSize,
-      dstLength: originalSize,
-      paddingValue: 0,
-    });
+        { srcLength: originalSize, dstLength: originalSize, paddingValue: 0 },
+      ).$usage('uniform');
 
     let copyBackPipeline = root['~unstable']
       .withCompute(copyBackKernel)
       .createPipeline();
 
-    // Attach timestamp for end of sort
     if (querySet) {
       copyBackPipeline = copyBackPipeline.withTimestampWrites({
         querySet,

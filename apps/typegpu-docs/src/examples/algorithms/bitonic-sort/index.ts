@@ -1,35 +1,9 @@
 import tgpu, { d, std } from 'typegpu';
 import { bitonicSort } from '@typegpu/sort';
-
-const ARRAY_SIZES = {
-  '63': 63,
-  '64': 64,
-  '65': 65,
-  '100': 100,
-  '256': 256,
-  '1000': 1000,
-  '1024': 1024,
-  '4096': 4096,
-  '16384': 16384,
-  '65536': 65536,
-} as const;
-
-type ArraySizeKey = keyof typeof ARRAY_SIZES;
-
-const SORT_ORDERS = {
-  Ascending: 'ascending',
-  Descending: 'descending',
-} as const;
-
-type SortOrderKey = keyof typeof SORT_ORDERS;
-
-// Descending comparison function (a > b means a comes before b)
-const descendingCompare = tgpu.fn([d.u32, d.u32], d.bool)((a, b) => a > b);
+import { fullScreenTriangle } from 'typegpu/common';
 
 const root = await tgpu.init({
-  device: {
-    optionalFeatures: ['timestamp-query'],
-  },
+  device: { optionalFeatures: ['timestamp-query'] },
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
@@ -53,74 +27,41 @@ const state = {
 // Bind group layout for visualization
 const renderLayout = tgpu.bindGroupLayout({
   data: {
-    storage: (n: number) => d.arrayOf(d.u32, n),
+    storage: d.arrayOf(d.u32),
     access: 'readonly',
   },
-  params: {
-    uniform: d.struct({
-      arrayLength: d.u32,
-      maxValue: d.u32,
-    }),
-  },
 });
 
-// Fullscreen triangle vertex shader
-const vertexFn = tgpu['~unstable'].vertexFn({
-  in: { idx: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})((input) => {
-  // Fullscreen triangle that covers [-1, 1] in NDC
-  const x = std.select(-1, 3, input.idx === 1);
-  const y = std.select(-1, 3, input.idx === 2);
-
-  // UV coords: [0,1] range
-  const u = d.f32(x + 1) / 2;
-  const v = d.f32(1 - y) / 2; // Flip Y so top is 0
-
-  return {
-    pos: d.vec4f(d.f32(x), d.f32(y), 0, 1),
-    uv: d.vec2f(u, v),
-  };
-});
-
-// Fragment shader - render array as grayscale grid
 const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const arrayLength = renderLayout.$.params.arrayLength;
-  const maxValue = renderLayout.$.params.maxValue;
+  const arrayLength = renderLayout.$.data.length;
+  const maxValue = d.u32(255);
 
-  // Calculate grid dimensions (try to make it roughly square)
   const cols = d.u32(std.ceil(std.sqrt(d.f32(arrayLength))));
-  const rows = d.u32(std.ceil(d.f32(arrayLength) / d.f32(cols)));
+  const rows = d.u32(std.ceil(arrayLength / cols));
 
-  // Calculate which cell we're in
   const col = d.u32(std.floor(input.uv.x * d.f32(cols)));
   const row = d.u32(std.floor(input.uv.y * d.f32(rows)));
   const idx = row * cols + col;
 
-  // Out of bounds check
   if (idx >= arrayLength) {
     return d.vec4f(0.1, 0.1, 0.1, 1);
   }
 
-  // Get value and normalize to [0, 1]
   const value = renderLayout.$.data[idx];
-  const normalized = d.f32(value) / d.f32(maxValue);
+  const normalized = value / maxValue;
 
-  // Render as grayscale
   return d.vec4f(normalized, normalized, normalized, 1);
 });
 
-// Create render pipeline
 const renderPipeline = root['~unstable']
-  .withVertex(vertexFn, {})
+  .withVertex(fullScreenTriangle)
   .withFragment(fragmentFn, { format: presentationFormat })
   .withPrimitive({ topology: 'triangle-strip' })
   .createPipeline();
 
-// Create buffers
 let buffer = root
   .createBuffer(d.arrayOf(d.u32, state.arraySize))
   .$usage('storage');
@@ -136,7 +77,6 @@ const paramsBuffer = root
 
 let bindGroup = root.createBindGroup(renderLayout, {
   data: buffer,
-  params: paramsBuffer,
 });
 
 function recreateBuffer() {
@@ -147,20 +87,15 @@ function recreateBuffer() {
 
   bindGroup = root.createBindGroup(renderLayout, {
     data: buffer,
-    params: paramsBuffer,
   });
 }
 
 function generateRandomArray() {
   state.inputArray = Array.from(
     { length: state.arraySize },
-    () => Math.floor(Math.random() * 1000),
+    () => Math.floor(Math.random() * 255),
   );
   buffer.write(state.inputArray);
-  paramsBuffer.write({
-    arrayLength: state.arraySize,
-    maxValue: 1000,
-  });
   render();
 }
 
@@ -176,15 +111,18 @@ function render() {
 }
 
 async function sort() {
-  // Configure sort options based on state
   const isDescending = state.sortOrder === 'descending';
   const result = bitonicSort(root, buffer, {
-    compare: isDescending ? descendingCompare : undefined,
+    compare: isDescending
+      ? (a, b) => {
+        'use gpu';
+        return a > b;
+      }
+      : undefined,
     paddingValue: isDescending ? 0 : 0xffffffff,
     querySet: querySet ?? undefined,
   });
 
-  // Get GPU timing if available
   let gpuTimeMs: number | null = null;
   if (querySet?.available) {
     querySet.resolve();
@@ -202,10 +140,11 @@ async function sort() {
     `Sorted ${result.originalSize} elements${paddedInfo} - GPU time: ${timeInfo}`,
   );
 
-  // Verify sort is correct
   const sorted = await buffer.read();
   const isSorted = sorted.every((val, i, arr) => {
-    if (i === 0) return true;
+    if (i === 0) {
+      return true;
+    }
     return isDescending ? arr[i - 1] >= val : arr[i - 1] <= val;
   });
   if (!isSorted) {
@@ -214,26 +153,29 @@ async function sort() {
   }
 }
 
-// Initialize
 generateRandomArray();
 
 // #region Example controls & Cleanup
 
+type SortOrderKey = 'ascending' | 'descending';
+
 export const controls = {
   'Array Size': {
-    initial: '1000',
-    options: Object.keys(ARRAY_SIZES),
-    onSelectChange: (value: ArraySizeKey) => {
-      state.arraySize = ARRAY_SIZES[value];
+    initial: 64,
+    min: 4,
+    max: 2 ** 20,
+    step: 1,
+    onSliderChange: (value: number) => {
+      state.arraySize = value;
       recreateBuffer();
       generateRandomArray();
     },
   },
   'Sort Order': {
-    initial: 'Ascending',
-    options: Object.keys(SORT_ORDERS),
+    initial: 'ascending',
+    options: ['ascending', 'descending'] as const,
     onSelectChange: (value: SortOrderKey) => {
-      state.sortOrder = SORT_ORDERS[value];
+      state.sortOrder = value;
     },
   },
   Reshuffle: { onButtonClick: () => generateRandomArray() },
