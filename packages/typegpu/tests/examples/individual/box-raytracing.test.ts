@@ -124,7 +124,7 @@ describe('box raytracing example', () => {
       @group(0) @binding(1) var<storage, read> boxMatrix: array<array<array<BoxStruct, 7>, 7>, 7>;
 
       fn linearToSrgb(linear: vec3f) -> vec3f {
-        return select((12.92 * linear), ((1.055 * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
+        return select((12.92f * linear), ((1.055f * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
       }
 
       struct fragmentFunction_Input {
@@ -134,12 +134,12 @@ describe('box raytracing example', () => {
 
       @fragment fn fragmentFunction(input: fragmentFunction_Input) -> @location(0) vec4f {
         var boxSize3 = vec3f(uniforms.boxSize);
-        var halfBoxSize3 = (0.5 * boxSize3);
-        var halfCanvasDims = (0.5 * uniforms.canvasDims);
+        var halfBoxSize3 = (0.5f * boxSize3);
+        var halfCanvasDims = (0.5f * uniforms.canvasDims);
         let minDim = min(uniforms.canvasDims.x, uniforms.canvasDims.y);
         var viewCoords = ((input.position.xy - halfCanvasDims) / minDim);
         var ray = Ray(input.rayWorldOrigin, (uniforms.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
-        var bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1 * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
+        var bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1f * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
         if (!bigBoxIntersection.intersects) {
           discard;;
           return vec4f();
