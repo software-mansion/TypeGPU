@@ -2,7 +2,6 @@ import tgpu, { common, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const device = root.device;
 
 const spanUniform = root.createUniform(d.vec2f);
 

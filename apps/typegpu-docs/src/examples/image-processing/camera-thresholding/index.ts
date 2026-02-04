@@ -128,12 +128,9 @@ function processVideoFrame(
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      textureLayout,
-      root.createBindGroup(textureLayout, {
-        inputTexture: device.importExternalTexture({ source: video }),
-      }),
-    )
+    .with(root.createBindGroup(textureLayout, {
+      inputTexture: device.importExternalTexture({ source: video }),
+    }))
     .draw(3);
 
   spinner.style.display = 'none';

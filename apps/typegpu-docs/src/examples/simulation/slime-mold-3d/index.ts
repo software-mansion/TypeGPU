@@ -6,7 +6,6 @@ const root = await tgpu.init({
   device: { optionalFeatures: ['float32-filterable'] },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
-const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });

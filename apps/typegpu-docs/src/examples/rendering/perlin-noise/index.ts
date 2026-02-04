@@ -51,7 +51,6 @@ const perlinCacheConfig = perlin3d.dynamicCacheConfig();
 const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
-const device = root.device;
 
 // Instantiating the cache with an initial size.
 const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
