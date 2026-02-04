@@ -26,7 +26,7 @@ export const integerDivision = createRule({
           return;
         }
 
-        if (isIntCast(node.left) && isIntCast(node.right)) {
+        if (isIntCast(node.left) || isIntCast(node.right)) {
           context.report({
             node,
             messageId: 'intDiv',
