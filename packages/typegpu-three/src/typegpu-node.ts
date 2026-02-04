@@ -170,13 +170,13 @@ class TgpuFnNode<T> extends THREE.Node {
 
   analyze(builder: THREE.NodeBuilder, output?: THREE.Node | null): void {
     /**
-     * Replicating Three.js `analyze` traversal,
-     * setting `needsInterpolation` flag to true in varying nodes
+     * Replicating Three.js `analyze` traversal.
+     * Setting `needsInterpolation` flag to true in varying nodes
      */
 
     // @ts-expect-error: since 0.9.0 `externals` field is callable
-    const externals = getMetaData(this.#impl)?.externals();
-    for (const [_, e] of Object.entries(externals)) {
+    const externals = getMetaData(this.#impl)?.externals() || {};
+    for (const e of Object.values(externals)) {
       if (e instanceof TSLAccessor) {
         e.node.traverse((node: THREE.Node) => {
           node.analyze(builder, output);
@@ -214,7 +214,7 @@ class TgpuFnNode<T> extends THREE.Node {
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
 
-    return (output === 'property')
+    return output === 'property'
       ? nodeData.custom.functionId
       : `${nodeData.custom.functionId}()`;
   }
@@ -259,11 +259,13 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     // biome-ignore lint/suspicious/noExplicitAny: smh
     ctx.dependencies.push(this as any);
 
-    // @ts-expect-error: it is assigned at runtime
-    const realVaryingNode = this.node.isVaryingNode &&
-      (this.node.build(ctx.builder) as string).includes('varyings.');
+    const builtNode = this.node.build(ctx.builder) as string;
 
-    if (realVaryingNode) {
+    // @ts-expect-error: it is assigned at runtime
+    const trueVaryingNode = this.node.isVaryingNode &&
+      builtNode.includes('varyings.');
+
+    if (trueVaryingNode) {
       this.var = undefined; // cannot be checked earlier, ThreeJS is lazy
     }
 
