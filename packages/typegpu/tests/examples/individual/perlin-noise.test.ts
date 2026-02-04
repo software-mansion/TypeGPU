@@ -53,7 +53,7 @@ describe('perlin noise example', () => {
       }
 
       fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3 * vec3f(pos)));
+        randSeed3((1e-3f * vec3f(pos)));
         return randOnUnitSphere();
       }
 
@@ -113,7 +113,7 @@ describe('perlin noise example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
+        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {

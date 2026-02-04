@@ -1,7 +1,8 @@
 /**
  * Prints the swizzling getters to be manually added to the VecBase abstract class.
  */
-printSwizzlingFor('xyzw');
+printSwizzlingFor({ x: 0, y: 1, z: 2, w: 3 });
+printSwizzlingFor({ r: 0, g: 1, b: 2, a: 3 });
 
 /**
  * Yields combinations of letters from `components` of given `length`.
@@ -24,17 +25,21 @@ function* vectorComponentCombinations(
   }
 }
 
-function printSwizzlingFor(components: string) {
-  const componentIndex: Record<string, number> = { x: 0, y: 1, z: 2, w: 3 };
+function printSwizzlingFor(components: Record<string, number>) {
   for (const count of [2, 3, 4] as const) {
     const vecClassName = `_Vec${count}`;
-    for (const swizzle of vectorComponentCombinations(components, count)) {
+    for (
+      const swizzle of vectorComponentCombinations(
+        Object.keys(components).join(''),
+        count,
+      )
+    ) {
       const implementation =
         `  get ${swizzle}() { return new this.${vecClassName}(${
           [
             ...swizzle,
           ]
-            .map((s) => `this[${componentIndex[s]}]`)
+            .map((s) => `this[${components[s]}]`)
             .join(', ')
         }); }`;
       console.log(implementation);

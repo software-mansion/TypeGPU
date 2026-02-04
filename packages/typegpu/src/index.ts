@@ -37,6 +37,9 @@ export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
+export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
 
 // types
@@ -48,6 +51,7 @@ export type {
   ValidateBufferSchema,
   ValidateStorageSchema,
   ValidateUniformSchema,
+  Withable,
   WithBinding,
   WithCompute,
   WithFragment,

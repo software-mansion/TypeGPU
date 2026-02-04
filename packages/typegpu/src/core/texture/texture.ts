@@ -558,6 +558,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
     this.#branch.device.queue.submit([commandEncoder.finish()]);
   }
 
+  toString(): string {
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get destroyed() {
     return this.#destroyed;
   }

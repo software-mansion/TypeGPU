@@ -115,7 +115,7 @@ describe('slime mold 3d example', () => {
         if ((((_arg_0.gid.x >= dims.x) || (_arg_0.gid.y >= dims.y)) || (_arg_0.gid.z >= dims.z))) {
           return;
         }
-        var uv = ((vec3f(_arg_0.gid) + 0.5) / vec3f(dims));
+        var uv = ((vec3f(_arg_0.gid) + 0.5f) / vec3f(dims));
         var sum = 0f;
         sum += getSummand(uv, (vec3f(-1, 0, 0) / vec3f(dims)));
         sum += getSummand(uv, (vec3f(1, 0, 0) / vec3f(dims)));
@@ -269,7 +269,7 @@ describe('slime mold 3d example', () => {
         var targetDirection = select(randOnUnitHemisphere(direction), normalize(senseResult.weightedDir), (senseResult.totalWeight > 0.01f));
         direction = normalize((direction + (targetDirection * (params.turnSpeed * params.deltaTime))));
         var newPos = ((*agent).position + (direction * (params.moveSpeed * params.deltaTime)));
-        var center = (dimsf / 2);
+        var center = (dimsf / 2f);
         if (((newPos.x < 0f) || (newPos.x >= dimsf.x))) {
           newPos.x = clamp(newPos.x, 0f, (dimsf.x - 1f));
           var normal = vec3f(1, 0, 0);
@@ -278,7 +278,7 @@ describe('slime mold 3d example', () => {
           }
           var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
-          direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
+          direction = normalize(((randomDir * 0.3f) + (toCenter * 0.7f)));
         }
         if (((newPos.y < 0f) || (newPos.y >= dimsf.y))) {
           newPos.y = clamp(newPos.y, 0f, (dimsf.y - 1f));
@@ -288,7 +288,7 @@ describe('slime mold 3d example', () => {
           }
           var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
-          direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
+          direction = normalize(((randomDir * 0.3f) + (toCenter * 0.7f)));
         }
         if (((newPos.z < 0f) || (newPos.z >= dimsf.z))) {
           newPos.z = clamp(newPos.z, 0f, (dimsf.z - 1f));
@@ -298,7 +298,7 @@ describe('slime mold 3d example', () => {
           }
           var randomDir = randInUnitHemisphere(normal);
           var toCenter = normalize((center - newPos));
-          direction = normalize(((randomDir * 0.3) + (toCenter * 0.7)));
+          direction = normalize(((randomDir * 0.3f) + (toCenter * 0.7f)));
         }
         newAgents[_arg_0.gid.x] = Agent(newPos, direction);
         let oldState_1 = textureLoad(oldState, vec3u(newPos)).x;

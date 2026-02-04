@@ -63,7 +63,7 @@ describe('jump flood (distance) example', () => {
         var dims = textureDimensions(tex);
         var samplePos = (pos + offset);
         let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
-        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1)));
+        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
         var loaded = textureLoad(tex, safePos);
         var inside = loaded.xy;
         var outside = loaded.zw;

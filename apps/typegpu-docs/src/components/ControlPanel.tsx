@@ -18,6 +18,7 @@ import { Slider } from './design/Slider.tsx';
 import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
+import { FPSCounter } from './FpsCounter.tsx';
 
 function ToggleRow({
   label,
@@ -316,6 +317,7 @@ export function ControlPanel() {
         'box-border flex max-h-[50%] flex-col gap-4 overflow-auto rounded-xl bg-grayscale-0 p-6 md:max-h-full',
       )}
     >
+      <FPSCounter />
       <div className='hidden flex-col gap-4 md:flex'>
         <h2 className='font-medium text-xl'>Control panel</h2>
 
