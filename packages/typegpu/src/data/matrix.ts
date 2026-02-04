@@ -105,6 +105,7 @@ function createMatSchema<
   const schema = Object.assign(construct, {
     [$internal]: {},
     type: options.type,
+    primitive: f32,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,

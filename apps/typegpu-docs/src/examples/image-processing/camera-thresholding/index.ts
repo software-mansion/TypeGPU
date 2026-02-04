@@ -49,14 +49,8 @@ if (navigator.mediaDevices.getUserMedia) {
 const root = await tgpu.init();
 const device = root.device;
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const thresholdBuffer = root.createUniform(d.f32, 0.5);
 const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
