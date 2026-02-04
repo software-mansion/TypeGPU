@@ -272,14 +272,18 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
     return undefined;
   }
 
-  const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
+  const primitiveTypes = inTypes.map((type) =>
+    isVec(type) || isMat(type) ? type.primitive : type as BaseData
+  );
+
+  const conversion = getBestConversion(primitiveTypes, restrictTo);
   if (!conversion) {
     return undefined;
   }
 
-  return inTypes.map(() => conversion.targetType) as {
-    [K in keyof T]: BaseData;
-  };
+  return inTypes.map((type) =>
+    isVec(type) || isMat(type) ? type : conversion.targetType
+  ) as { [K in keyof T]: BaseData };
 }
 
 export function convertToCommonType<T extends Snippet[]>(

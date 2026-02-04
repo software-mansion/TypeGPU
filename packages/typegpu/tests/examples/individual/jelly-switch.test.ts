@@ -210,7 +210,7 @@ describe('jelly switch example', () => {
         var specular = (lightUniform.color * (specularFactor * 0.6f));
         var baseColor = vec3f(0.8999999761581421);
         var directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
-        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6);
+        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
         var finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
       }
@@ -366,11 +366,11 @@ describe('jelly switch example', () => {
             var refractedColor = vec3f();
             if ((k > 0f)) {
               var refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
-              var p = (hitPosition + (refrDir * 2e-3));
-              var exitPos = (p + (refrDir * 2e-3));
+              var p = (hitPosition + (refrDir * 2e-3f));
+              var exitPos = (p + (refrDir * 2e-3f));
               var env = rayMarchNoJelly(exitPos, refrDir);
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).xyz * 1.5);
+              var scatterTint = ((*jellyColor).xyz * 1.5f);
               const density = 20f;
               var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
               let state = (&stateUniform);

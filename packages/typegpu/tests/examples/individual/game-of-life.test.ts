@@ -85,7 +85,7 @@ describe('game of life example', () => {
         if ((_arg_0.cell == 0u)) {
           discard;;
         }
-        var u = (_arg_0.uv / 1.5);
+        var u = (_arg_0.uv / 1.5f);
         return vec4f(u.x, u.y, (1f - u.x), 0.8f);
       }"
     `);

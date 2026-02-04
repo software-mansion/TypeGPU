@@ -2,17 +2,9 @@ import { randf } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
-const device = root.device;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const resolution = d.vec2f(canvas.width, canvas.height);
 
