@@ -1,7 +1,12 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
+import tgpu, {
+  getMetaData,
+  isVariable,
+  type Namespace,
+  type TgpuVar,
+} from 'typegpu';
 import * as d from 'typegpu/data';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
@@ -163,6 +168,24 @@ class TgpuFnNode<T> extends THREE.Node {
     return nodeData.custom.nodeFunction;
   }
 
+  analyze(builder: THREE.NodeBuilder, output?: THREE.Node | null): void {
+    /**
+     * Replicating Three.js `analyze` traversal,
+     * setting `needsInterpolation` flag to true in varying nodes
+     */
+
+    // @ts-expect-error: since 0.9.0 `externals` field is callable
+    const externals = getMetaData(this.#impl)?.externals();
+    for (const [_, e] of Object.entries(externals)) {
+      if (e instanceof TSLAccessor) {
+        e.node.traverse((node: THREE.Node) => {
+          node.analyze(builder, output);
+        });
+      }
+    }
+    super.analyze(builder, output);
+  }
+
   generate(
     builder: THREE.NodeBuilder,
     output: string | null | undefined,
@@ -174,12 +197,13 @@ class TgpuFnNode<T> extends THREE.Node {
     const stageData = builderData.getStageData(builder.shaderStage);
 
     // Building dependencies
-    for (const dep of nodeData.custom.dependencies) {
+    const uniqueDeps = [...new Set(nodeData.custom.dependencies)];
+    for (const dep of uniqueDeps) {
       dep.node.build(builder);
     }
     nodeData.custom.priorCode.build(builder);
 
-    for (const dep of nodeData.custom.dependencies) {
+    for (const dep of uniqueDeps) {
       if (!dep.var) {
         continue;
       }
@@ -190,10 +214,9 @@ class TgpuFnNode<T> extends THREE.Node {
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
 
-    if (output === 'property') {
-      return nodeData.custom.functionId;
-    }
-    return `${nodeData.custom.functionId}()`;
+    return (output === 'property')
+      ? nodeData.custom.functionId
+      : `${nodeData.custom.functionId}()`;
   }
 }
 
@@ -206,7 +229,7 @@ export function toTSL(
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
-  readonly var: TgpuVar<'private', T> | undefined;
+  var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(
@@ -217,13 +240,9 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     this.#dataType = dataType;
 
     if (
-      (
-        // @ts-expect-error: they are assigned at runtime
-        !node.isStorageBufferNode && !node.isUniformNode &&
-        // @ts-expect-error: they are assigned at runtime
-        (!node.isVaryingNode || node.name === 'positionLocal')
-      ) ||
       // @ts-expect-error: they are assigned at runtime
+      (!node.isStorageBufferNode && !node.isUniformNode) ||
+      // @ts-expect-error: it is assigned at runtime
       node.isTextureNode
     ) {
       this.var = tgpu.privateVar(dataType);
@@ -239,6 +258,14 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
 
     // biome-ignore lint/suspicious/noExplicitAny: smh
     ctx.dependencies.push(this as any);
+
+    // @ts-expect-error: it is assigned at runtime
+    const realVaryingNode = this.node.isVaryingNode &&
+      (this.node.build(ctx.builder) as string).includes('varyings.');
+
+    if (realVaryingNode) {
+      this.var = undefined; // cannot be checked earlier, ThreeJS is lazy
+    }
 
     if (this.var) {
       return this.var.$;

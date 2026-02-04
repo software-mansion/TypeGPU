@@ -1,1 +1,1 @@
-import './three.ts';
+import './typegpu.ts';
