@@ -215,6 +215,7 @@ ${this.ctx.pre}}`;
       ptrType,
       'function',
     );
+
     this.ctx.defineVariable(id, snippet);
     return varName;
   }
@@ -254,6 +255,7 @@ ${this.ctx.pre}}`;
       dataType,
       /* origin */ varOrigin,
     );
+
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
@@ -997,14 +999,32 @@ ${this.ctx.pre}else ${alternate}`;
           }
         }
       }
+      let snippet: Snippet;
+      try {
+        snippet = this.blockVariable(
+          varType,
+          rawId,
+          concretize(dataType),
+          eq.origin,
+        );
+      } catch (e) {
+        const schema = Array.isArray(eq.value)
+          ? `d.arrayOf(...)(${rawId})`
+          : `YourStructSchema(${rawId})`;
+        throw new Error(
+          `${(e as Error).message}${
+            ((dataType as wgsl.BaseData | typeof UnknownData) === UnknownData)
+              ? `
+-----
+- Try to wrap right-hand side with a schema \`${schema}\`.
+-----`
+              : ''
+          }`,
+        );
+      }
 
-      const snippet = this.blockVariable(
-        varType,
-        rawId,
-        concretize(dataType),
-        eq.origin,
-      );
-      return stitch`${this.ctx.pre}${varType} ${snippet.value as string} = ${
+      return stitch`${this.ctx.pre}${varType} ${snippet
+        .value as string} = ${
         tryConvertSnippet(this.ctx, eq, dataType, false)
       };`;
     }
