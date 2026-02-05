@@ -12,7 +12,7 @@ import {
   sub,
 } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // init canvas and values
 

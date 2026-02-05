@@ -6,7 +6,7 @@ import {
   oklabToRgb,
 } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 

@@ -8,7 +8,7 @@ import {
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 const root = await tgpu.init();

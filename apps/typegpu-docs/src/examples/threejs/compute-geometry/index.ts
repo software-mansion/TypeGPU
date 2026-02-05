@@ -7,7 +7,7 @@ import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as t3 from '@typegpu/three';
 import { d, std } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });

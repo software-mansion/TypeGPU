@@ -7,7 +7,7 @@ import { circles, grid } from './floor.ts';
 import { rayUnion } from './helpers.ts';
 import { getSphere } from './sphere.ts';
 import { LightRay, Ray } from './types.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // == INIT ==
 const root = await tgpu.init();

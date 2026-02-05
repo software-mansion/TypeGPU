@@ -15,7 +15,7 @@ import {
   SampleResult,
   VisualizationParams,
 } from './types.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 

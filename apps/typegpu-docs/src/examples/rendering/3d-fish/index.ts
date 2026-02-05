@@ -16,7 +16,7 @@ import {
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 let speedMultiplier = 1;

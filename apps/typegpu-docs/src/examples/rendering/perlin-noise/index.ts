@@ -1,7 +1,7 @@
 import tgpu, { common, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;

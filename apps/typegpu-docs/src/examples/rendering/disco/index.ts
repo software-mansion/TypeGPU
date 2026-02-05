@@ -10,7 +10,7 @@ import {
   mainFragment7,
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

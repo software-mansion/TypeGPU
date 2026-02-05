@@ -11,7 +11,7 @@ import {
   VertexInfo,
   VisParams,
 } from './schema.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // WebGPU setup
 const root = await tgpu.init();

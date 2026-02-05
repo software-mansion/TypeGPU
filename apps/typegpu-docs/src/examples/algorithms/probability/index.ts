@@ -5,7 +5,7 @@ import { Executor } from './executor.ts';
 import type { Distribution } from './types.ts';
 import * as c from './constants.ts';
 import { getCameraPosition, getPRNG } from './helpers.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 

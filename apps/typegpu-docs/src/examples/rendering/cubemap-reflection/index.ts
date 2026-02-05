@@ -9,7 +9,7 @@ import {
   Vertex,
 } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialization
 

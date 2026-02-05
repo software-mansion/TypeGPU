@@ -1,7 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import { fragmentFn } from './shaders/fragment.ts';
 import { sizeSlot, vertexFn } from './shaders/vertex.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 let gameSize = 64;
 let timestep = 15;

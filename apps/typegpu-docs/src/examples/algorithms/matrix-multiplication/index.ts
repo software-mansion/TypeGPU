@@ -1,5 +1,5 @@
 import tgpu, { d } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;

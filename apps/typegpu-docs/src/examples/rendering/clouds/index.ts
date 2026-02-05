@@ -12,7 +12,7 @@ import {
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

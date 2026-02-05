@@ -14,7 +14,7 @@ import {
 } from './render.ts';
 import * as c from './simulation.ts';
 import type { BrushState } from './types.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
 const adapter = await navigator.gpu.requestAdapter();

@@ -13,7 +13,7 @@
 import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
 import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.

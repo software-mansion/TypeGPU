@@ -42,7 +42,7 @@ import {
   SURF_DIST,
 } from './constants.ts';
 import { NumberProvider } from './numbers.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: {

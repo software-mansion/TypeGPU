@@ -24,7 +24,7 @@ import {
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Background segmentation uses the u2netp model (https://github.com/xuebinqin/U-2-Net)
 // by Xuebin Qin et al., licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)

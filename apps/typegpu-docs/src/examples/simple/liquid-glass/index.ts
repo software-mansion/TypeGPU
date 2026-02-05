@@ -1,6 +1,6 @@
 import { sdRoundedBox2d } from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

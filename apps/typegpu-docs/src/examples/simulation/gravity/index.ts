@@ -40,7 +40,7 @@ import {
   timeAccess,
 } from './schemas.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

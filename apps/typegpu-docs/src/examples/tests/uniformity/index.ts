@@ -3,7 +3,7 @@ import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 

@@ -15,7 +15,7 @@
 import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
 import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh } from 'typegpu/std';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.

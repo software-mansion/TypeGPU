@@ -9,7 +9,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import { d, std } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 

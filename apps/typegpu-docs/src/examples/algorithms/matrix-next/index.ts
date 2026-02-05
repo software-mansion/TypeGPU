@@ -9,7 +9,7 @@ import {
 import { computeSharedMemory } from './computeShared.ts';
 import { computeSimple } from './computeSimple.ts';
 import { multiplyMatricesCPU } from './computeCpu.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const state = {
   dimensions: { firstRowCount: 3, firstColumnCount: 4, secondColumnCount: 2 },

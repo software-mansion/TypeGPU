@@ -33,7 +33,7 @@ import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');

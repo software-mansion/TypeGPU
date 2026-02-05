@@ -1,7 +1,7 @@
 import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Globals and init
 

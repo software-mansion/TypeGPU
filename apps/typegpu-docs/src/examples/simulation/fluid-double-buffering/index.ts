@@ -5,7 +5,7 @@ import tgpu, {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
 } from 'typegpu';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
 

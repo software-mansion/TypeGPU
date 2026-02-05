@@ -15,7 +15,7 @@ import {
   clothNumSegmentsY,
   VerletSimulation,
 } from './verlet.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);

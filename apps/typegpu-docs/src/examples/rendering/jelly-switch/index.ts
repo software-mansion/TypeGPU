@@ -40,7 +40,7 @@ import {
   SURF_DIST,
   SWITCH_RAIL_LENGTH,
 } from './constants.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: {

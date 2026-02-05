@@ -4,7 +4,7 @@ import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
 import { pointersTest } from './pointers.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);

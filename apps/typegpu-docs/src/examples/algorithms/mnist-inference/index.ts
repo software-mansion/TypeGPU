@@ -6,7 +6,7 @@ import {
   weightsBiasesLayout,
 } from './data.ts';
 import { downloadLayers } from './helpers.ts';
-import { defineControls } from '../../common/types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
 
