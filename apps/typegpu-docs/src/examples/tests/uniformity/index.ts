@@ -3,6 +3,7 @@ import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 
@@ -55,11 +56,11 @@ const redraw = () => {
 };
 
 // #region Example controls & Cleanup
-export const controls = {
+export const controls = defineControls({
   'PRNG': {
     initial: c.initialPRNG,
     options: c.prngs,
-    onSelectChange: (value: PRNG) => {
+    onSelectChange: (value) => {
       prng = value;
       redraw();
     },
@@ -67,7 +68,7 @@ export const controls = {
   'Grid Size': {
     initial: c.initialGridSize,
     options: c.gridSizes,
-    onSelectChange: (value: number) => {
+    onSelectChange: (value) => {
       gridSizeUniform.write(value);
       redraw();
     },
@@ -91,7 +92,7 @@ export const controls = {
         .map((r) => root.device.createShaderModule({ code: r }));
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   canvasRatioUniform.write(canvas.width / canvas.height);

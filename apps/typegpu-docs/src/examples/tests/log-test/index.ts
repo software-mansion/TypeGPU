@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init({
   unstable_logOptions: {
@@ -39,7 +40,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'One argument': {
     onButtonClick: () =>
       root['~unstable'].createGuardedComputePipeline(() => {
@@ -257,7 +258,7 @@ export const controls = {
         console.log('Log 3 from thread', x);
       }).dispatchThreads(16),
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

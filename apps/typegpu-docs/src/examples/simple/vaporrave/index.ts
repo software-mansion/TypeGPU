@@ -7,6 +7,7 @@ import { circles, grid } from './floor.ts';
 import { rayUnion } from './helpers.ts';
 import { getSphere } from './sphere.ts';
 import { LightRay, Ray } from './types.ts';
+import { defineControls } from '../../common/types.ts';
 
 // == INIT ==
 const root = await tgpu.init();
@@ -182,13 +183,13 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   'glow intensity': {
     initial: c.INITIAL_GLOW_INTENSITY,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       glowIntensityUniform.write(value);
     },
   },
@@ -197,7 +198,7 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       floorSpeed = value;
     },
   },
@@ -206,20 +207,20 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       sphereSpeed = value;
     },
   },
   'sphere color': {
     initial: [...c.initialSphereColor] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
+    onColorChange: (value) => {
       sphereColorUniform.write(d.vec3f(...value));
     },
   },
   'floor pattern': {
     initial: 'circles',
     options: ['grid', 'circles'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       renderPipeline = root['~unstable']
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
         .pipe(perlinCache.inject())
@@ -228,6 +229,6 @@ export const controls = {
         .createPipeline();
     },
   },
-};
+});
 
 // #endregion

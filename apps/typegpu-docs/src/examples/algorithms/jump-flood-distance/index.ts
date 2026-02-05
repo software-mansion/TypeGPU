@@ -15,6 +15,7 @@ import {
   SampleResult,
   VisualizationParams,
 } from './types.ts';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 
@@ -468,7 +469,7 @@ function updateBrushSize() {
   });
 }
 
-export const controls = {
+export const controls = defineControls({
   Clear: {
     onButtonClick: clearCanvas,
   },
@@ -505,7 +506,7 @@ export const controls = {
       updateBrushSize();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

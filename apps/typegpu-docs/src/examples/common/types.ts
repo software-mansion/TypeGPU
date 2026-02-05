@@ -18,10 +18,10 @@ type SliderControlParam = {
 };
 
 type VectorSliderControlParam = {
-  initial?: readonly number[];
-  min: readonly number[];
-  max: readonly number[];
-  step: readonly number[];
+  initial?: number[];
+  min: number[];
+  max: number[];
+  step: number[];
   onVectorSliderChange: (newValue: number[]) => void;
 };
 
@@ -39,9 +39,12 @@ type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
 };
 
-export function defineControls<T extends Record<string, unknown>>(
+export function defineControls<
+  T extends Record<string, unknown>,
+>(
   controls: {
     [Key in keyof T]:
+      | false // short-circuit controls
       | SelectControlParam<T[Key]>
       | ToggleControlParam
       | SliderControlParam

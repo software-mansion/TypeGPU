@@ -4,6 +4,7 @@ import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
 import { pointersTest } from './pointers.ts';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
@@ -43,13 +44,13 @@ runTests().then((result) => {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Log resolved pipeline': {
     async onButtonClick() {
       console.log(tgpu.resolve([pipeline]));
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

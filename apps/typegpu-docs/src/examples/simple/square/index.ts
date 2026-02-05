@@ -1,4 +1,5 @@
 import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -92,28 +93,24 @@ function updateColor(
   render();
 }
 
-export const controls = {
+export const controls = defineControls({
   topLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topLeft'),
+    onColorChange: (value) => updateColor(value, 'topLeft'),
     initial: [...colors.topLeft.xyz],
   },
   topRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topRight'),
+    onColorChange: (value) => updateColor(value, 'topRight'),
     initial: [...colors.topRight.xyz],
   },
   bottomLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomLeft'),
+    onColorChange: (value) => updateColor(value, 'bottomLeft'),
     initial: [...colors.bottomLeft.xyz],
   },
   bottomRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomRight'),
+    onColorChange: (value) => updateColor(value, 'bottomRight'),
     initial: [...colors.bottomRight.xyz],
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

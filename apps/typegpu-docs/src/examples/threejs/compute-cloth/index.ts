@@ -15,6 +15,7 @@ import {
   clothNumSegmentsY,
   VerletSimulation,
 } from './verlet.ts';
+import { defineControls } from '../../common/types.ts';
 
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
@@ -320,7 +321,7 @@ async function render() {
 }
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   Stiffness: {
     initial: 0.2,
     min: 0.1,
@@ -331,14 +332,14 @@ export const controls = {
     },
   },
   'Pattern Color 1': {
-    initial: [204 / 255, 144 / 255, 250 / 255] as [number, number, number],
-    onColorChange: (value: [number, number, number]) => {
+    initial: [204 / 255, 144 / 255, 250 / 255],
+    onColorChange: (value) => {
       patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
     },
   },
   'Pattern Color 2': {
-    initial: [100 / 255, 125 / 255, 228 / 255] as [number, number, number],
-    onColorChange: (value: [number, number, number]) => {
+    initial: [100 / 255, 125 / 255, 228 / 255],
+    onColorChange: (value) => {
       patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
     },
   },
@@ -347,7 +348,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.roughness = value;
     },
   },
@@ -356,7 +357,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.sheen = value;
     },
   },
@@ -365,13 +366,13 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.sheenRoughness = value;
     },
   },
   'Sheen Color': {
     initial: new THREE.Color(API.sheenColor).toArray(),
-    onColorChange: (value: [number, number, number]) => {
+    onColorChange: (value) => {
       const color = new THREE.Color().fromArray(value);
       API.sheenColor = color.getHex();
       clothMaterial.sheenColor = color;
@@ -382,11 +383,11 @@ export const controls = {
     min: 0,
     max: 5,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       params.wind = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   observer.disconnect();

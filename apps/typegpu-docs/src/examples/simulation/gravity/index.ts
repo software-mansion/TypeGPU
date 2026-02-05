@@ -40,6 +40,7 @@ import {
   timeAccess,
 } from './schemas.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -257,7 +258,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 // #region Camera controls
 
-export const controls = {
+export const controls = defineControls({
   preset: {
     initial: initialPreset,
     options: presets,
@@ -277,7 +278,7 @@ export const controls = {
       time.writePartial({ multiplier: 2 ** newValue });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

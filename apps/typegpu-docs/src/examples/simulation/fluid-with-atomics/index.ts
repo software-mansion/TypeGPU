@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 
@@ -581,12 +582,12 @@ function run(timestamp: number) {
 }
 animationFrame = requestAnimationFrame(run);
 
-export const controls = {
+export const controls = defineControls({
   size: {
-    initial: '32',
-    options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      options.size = Number.parseInt(value);
+    initial: 32,
+    options: [16, 32, 64, 128, 256, 512, 1024],
+    onSelectChange: (value) => {
+      options.size = value;
       resetGameData();
     },
   },
@@ -596,7 +597,7 @@ export const controls = {
     min: 15,
     max: 100,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.timestep = value;
     },
   },
@@ -606,16 +607,16 @@ export const controls = {
     min: 1,
     max: 50,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.stepsPerTimestep = value;
     },
   },
 
   'workgroup size': {
-    initial: '1',
-    options: [1, 2, 4, 8, 16].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      options.workgroupSize = Number.parseInt(value);
+    initial: 1,
+    options: [1, 2, 4, 8, 16],
+    onSelectChange: (value) => {
+      options.workgroupSize = value;
       resetGameData();
     },
   },
@@ -625,7 +626,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.viscosity = 1000 - value * 990;
       viscosity.write(options.viscosity);
     },
@@ -636,7 +637,7 @@ export const controls = {
     min: 1,
     max: 10,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.brushSize = value - 1;
     },
   },
@@ -644,18 +645,18 @@ export const controls = {
   'brush type': {
     initial: 'water',
     options: BrushTypes,
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       options.brushType = value;
     },
   },
 
   pause: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       paused = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);

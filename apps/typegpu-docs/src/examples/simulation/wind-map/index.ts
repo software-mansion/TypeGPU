@@ -20,6 +20,7 @@ import {
 } from 'typegpu/data';
 import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init({
   adapter: {
@@ -279,14 +280,14 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-export const controls = {
+export const controls = defineControls({
   'Play': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       play = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

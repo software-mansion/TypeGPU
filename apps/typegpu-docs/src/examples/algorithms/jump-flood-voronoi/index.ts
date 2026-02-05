@@ -1,6 +1,7 @@
 import { randf } from '@typegpu/noise';
 import tgpu, { common, d, std } from 'typegpu';
 import type { SampledFlag, StorageFlag, TgpuTexture } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 
@@ -296,7 +297,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
@@ -311,7 +312,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       const density = 10 ** (-5 + 4 * value);
       seedThreshold = 1 - density;
       seedThresholdUniform.write(seedThreshold);
@@ -323,19 +324,19 @@ export const controls = {
     min: 0,
     max: 1000,
     step: 50,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       stepDelayMs = value;
     },
   },
   Range: {
-    initial: '100%',
-    options: ['100%', '50%', '20%', '10%', '1%'],
-    onSelectChange(value: string) {
+    initial: '100%' as const,
+    options: ['100%', '50%', '20%', '10%', '1%'] as const,
+    onSelectChange(value) {
       startingRangePercent = Number.parseFloat(value) / 100;
       reset();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

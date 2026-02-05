@@ -10,6 +10,7 @@ import {
   mainFragment7,
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -72,7 +73,7 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   Pattern: {
     initial: 'pattern1',
     options: [
@@ -84,7 +85,7 @@ export const controls = {
       'pattern6',
       'pattern7',
     ],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       const patternIndex = {
         pattern1: 0,
         pattern2: 1,
@@ -109,4 +110,4 @@ export const controls = {
       );
     },
   },
-};
+});

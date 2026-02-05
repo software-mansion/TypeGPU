@@ -9,6 +9,7 @@ import {
 import { computeSharedMemory } from './computeShared.ts';
 import { computeSimple } from './computeSimple.ts';
 import { multiplyMatricesCPU } from './computeCpu.ts';
+import { defineControls } from '../../common/types.ts';
 
 const state = {
   dimensions: { firstRowCount: 3, firstColumnCount: 4, secondColumnCount: 2 },
@@ -297,20 +298,20 @@ function printMatrixToHtml(
 
 const paramSettings = { min: 1, max: 512, step: 1 };
 
-export const controls = {
+export const controls = defineControls({
   Reshuffle: { onButtonClick: () => generateMatrices() },
   Compute: { onButtonClick: () => compute() },
   strategy: {
-    initial: 'gpu-optimized',
-    options: ['gpu-optimized', 'gpu-simple', 'cpu'],
-    onSelectChange: (value: CalculationStrategy) => {
+    initial: 'gpu-optimized' as const,
+    options: ['gpu-optimized', 'gpu-simple', 'cpu'] as const,
+    onSelectChange: (value) => {
       state.strategy = value;
     },
   },
   '#1 rows': {
     initial: state.dimensions.firstRowCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.firstRowCount = value;
       generateMatrices();
     },
@@ -318,7 +319,7 @@ export const controls = {
   '#1 columns': {
     initial: state.dimensions.firstColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.firstColumnCount = value;
       generateMatrices();
     },
@@ -326,12 +327,12 @@ export const controls = {
   '#2 columns': {
     initial: state.dimensions.secondColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.secondColumnCount = value;
       generateMatrices();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

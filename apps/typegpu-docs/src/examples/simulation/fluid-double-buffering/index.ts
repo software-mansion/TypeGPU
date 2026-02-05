@@ -5,6 +5,7 @@ import tgpu, {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
 } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const MAX_GRID_SIZE = 1024;
 
@@ -586,13 +587,13 @@ onFrame((deltaTime) => {
   }
 });
 
-export const controls = {
+export const controls = defineControls({
   'source intensity': {
     initial: sourceIntensity,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceIntensity = value;
     },
   },
@@ -602,7 +603,7 @@ export const controls = {
     min: 0.01,
     max: 0.1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceRadius = value;
     },
   },
@@ -612,7 +613,7 @@ export const controls = {
     min: 0.2,
     max: 0.8,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxX = value;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -624,7 +625,7 @@ export const controls = {
     min: 0.2,
     max: 0.85,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxY = value;
       obstaclesCpu[OBSTACLE_BOX].y = boxY;
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -636,14 +637,14 @@ export const controls = {
     min: 0,
     max: 0.6,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       leftWallX = value;
       obstaclesCpu[OBSTACLE_LEFT_WALL].x = leftWallX;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

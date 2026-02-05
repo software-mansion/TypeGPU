@@ -16,6 +16,7 @@ import {
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
+import { defineControls } from '../../common/types.ts';
 
 // setup
 let speedMultiplier = 1;
@@ -296,11 +297,11 @@ requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Randomize positions': {
-    onButtonClick: () => randomizeFishPositions(),
+    onButtonClick: randomizeFishPositions,
   },
-};
+});
 
 // Variables for interaction
 

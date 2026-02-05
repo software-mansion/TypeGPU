@@ -13,7 +13,8 @@ import {
   renderLayout,
 } from './render.ts';
 import * as c from './simulation.ts';
-import type { BrushState, DisplayMode } from './types.ts';
+import type { BrushState } from './types.ts';
+import { defineControls } from '../../common/types.ts';
 
 // Initialize
 const adapter = await navigator.gpu.requestAdapter();
@@ -468,13 +469,13 @@ for (const eventName of ['click', 'touchstart']) {
   canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
-export const controls = {
+export const controls = defineControls({
   'timestep (dt)': {
     initial: p.params.dt,
     min: 0.05,
     max: 2.0,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.dt = value;
       simParamBuffer.writePartial({
         dt: p.params.dt,
@@ -486,7 +487,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.000001,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.viscosity = value;
       simParamBuffer.writePartial({
         viscosity: p.params.viscosity,
@@ -498,24 +499,24 @@ export const controls = {
     min: 2,
     max: 50,
     step: 2,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.jacobiIter = value;
     },
   },
   visualization: {
-    initial: 'image',
-    options: ['image', 'velocity', 'ink'],
-    onSelectChange: (value: DisplayMode) => {
+    initial: 'image' as const,
+    options: ['image', 'velocity', 'ink'] as const,
+    onSelectChange: (value) => {
       p.params.displayMode = value;
     },
   },
   pause: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       p.params.paused = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);

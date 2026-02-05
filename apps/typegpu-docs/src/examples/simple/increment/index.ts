@@ -1,4 +1,5 @@
 import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 // Allocating memory for the counter
@@ -19,13 +20,13 @@ async function increment() {
 // #region Example controls & Cleanup
 
 const table = document.querySelector('.counter') as HTMLDivElement;
-export const controls = {
+export const controls = defineControls({
   Increment: {
     onButtonClick: async () => {
       table.innerText = `${await increment()}`;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

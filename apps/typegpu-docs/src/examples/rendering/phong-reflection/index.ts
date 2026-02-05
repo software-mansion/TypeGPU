@@ -8,6 +8,7 @@ import {
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/types.ts';
 
 // setup
 const root = await tgpu.init();
@@ -140,10 +141,10 @@ function frame() {
 frameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   'light color': {
     initial: [...p.initialControls.lightColor],
-    onColorChange(value: readonly [number, number, number]) {
+    onColorChange(value) {
       exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
     },
   },
@@ -152,13 +153,15 @@ export const controls = {
     max: [10, 10, 10],
     initial: [...p.initialControls.lightDirection],
     step: [0.01, 0.01, 0.01],
-    onVectorSliderChange(v: [number, number, number]) {
-      exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    onVectorSliderChange(v) {
+      exampleControlsUniform.writePartial({
+        lightDirection: d.vec3f(...(v as [number, number, number])),
+      });
     },
   },
   'ambient color': {
     initial: [...p.initialControls.ambientColor],
-    onColorChange(value: readonly [number, number, number]) {
+    onColorChange(value) {
       exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
     },
   },
@@ -167,7 +170,7 @@ export const controls = {
     max: 1,
     initial: p.initialControls.ambientStrength,
     step: 0.01,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ ambientStrength: v });
     },
   },
@@ -176,11 +179,11 @@ export const controls = {
     max: 16,
     initial: p.initialControls.specularExponent,
     step: 0.1,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ specularExponent: v });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

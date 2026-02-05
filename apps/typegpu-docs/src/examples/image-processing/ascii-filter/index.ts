@@ -1,4 +1,5 @@
 import tgpu, { common, d, std, type TgpuBindGroup } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 
@@ -258,15 +259,15 @@ if (isIOS) {
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
-export const controls = {
+export const controls = defineControls({
   'use extended characters': {
     initial: false,
     onToggleChange: (value: boolean) => charsetExtended.write(value ? 1 : 0),
   },
   'display mode': {
-    initial: 'color',
-    options: ['color', 'grayscale', 'white'],
-    onSelectChange: (value: 'color' | 'grayscale' | 'white') => {
+    initial: 'color' as const,
+    options: ['color', 'grayscale', 'white'] as const,
+    onSelectChange: (value) => {
       displayMode.write(displayModes[value]);
     },
   },
@@ -275,16 +276,16 @@ export const controls = {
     min: 0.1,
     max: 10.0,
     step: 0.1,
-    onSliderChange: (value: number) => gammaCorrection.write(value),
+    onSliderChange: (value) => gammaCorrection.write(value),
   },
   'glyph size (px)': {
     initial: 20,
     min: 4,
     max: 32,
     step: 2,
-    onSliderChange: (value: number) => glyphSize.write(value),
+    onSliderChange: (value) => glyphSize.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

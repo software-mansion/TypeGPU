@@ -12,6 +12,7 @@ import {
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
+import { defineControls } from '../../common/types.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -155,15 +156,15 @@ const qualityOptions = {
   },
 } as Record<string, Partial<d.Infer<typeof CloudsParams>>>;
 
-export const controls = {
+export const controls = defineControls({
   Quality: {
     initial: 'medium',
     options: ['very high', 'high', 'medium', 'low', 'very low'],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       paramsUniform.writePartial(qualityOptions[value]);
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);

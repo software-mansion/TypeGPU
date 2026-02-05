@@ -1,5 +1,6 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
@@ -141,9 +142,9 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    onColorChange: (value: readonly [number, number, number]) => {
+    onColorChange: (value) => {
       colorUniform.write(d.vec3f(...value));
     },
     initial: [0, 1, 0] as const,
@@ -153,9 +154,9 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => thresholdBuffer.write(value),
+    onSliderChange: (value) => thresholdBuffer.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

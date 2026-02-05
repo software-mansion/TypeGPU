@@ -1,4 +1,5 @@
 import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/types.ts';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;
@@ -148,7 +149,7 @@ const paramSettings = {
   step: 1,
 };
 
-export const controls = {
+export const controls = defineControls({
   Reshuffle: {
     onButtonClick: () => {
       run();
@@ -158,7 +159,7 @@ export const controls = {
   '#1 rows': {
     initial: firstRowCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstRowCount = value;
       run();
     },
@@ -167,7 +168,7 @@ export const controls = {
   '#1 columns': {
     initial: firstColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstColumnCount = value;
       run();
     },
@@ -176,12 +177,12 @@ export const controls = {
   '#2 columns': {
     initial: secondColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       secondColumnCount = value;
       run();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

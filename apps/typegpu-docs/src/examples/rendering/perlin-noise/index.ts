@@ -1,6 +1,7 @@
 import tgpu, { common, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
+import { defineControls } from '../../common/types.ts';
 
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
@@ -108,7 +109,7 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
-export const controls = {
+export const controls = defineControls({
   'grid size': {
     initial: '4',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
@@ -127,13 +128,13 @@ export const controls = {
     onSliderChange: (value: number) => sharpness.write(value),
   },
   'sharpening function': {
-    initial: 'exponential',
-    options: ['exponential', 'tanh'],
-    onSelectChange: (value: 'exponential' | 'tanh') => {
+    initial: 'exponential' as const,
+    options: ['exponential', 'tanh'] as const,
+    onSelectChange: (value) => {
       activeSharpenFn = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;
