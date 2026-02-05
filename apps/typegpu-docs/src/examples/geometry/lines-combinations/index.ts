@@ -33,6 +33,7 @@ import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
 import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -449,45 +450,45 @@ const subdivs = [
   },
 ];
 
-export const controls = {
+export const controls = defineControls({
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
-    onSelectChange: async (selected: keyof typeof testCases) => {
+    onSelectChange: async (selected) => {
       // biome-ignore lint/performance/noDynamicNamespaceImportAccess: no other way
-      testCase = testCases[selected];
+      testCase = testCases[selected as keyof typeof testCases];
       pipelines = createPipelines();
     },
   },
   'Start Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      startCap = lineCaps[selected];
+    onSelectChange: async (selected) => {
+      startCap = lineCaps[selected as keyof typeof lineCaps];
       pipelines = createPipelines();
     },
   },
   'End Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      endCap = lineCaps[selected];
+    onSelectChange: async (selected) => {
+      endCap = lineCaps[selected as keyof typeof lineCaps];
       pipelines = createPipelines();
     },
   },
   Join: {
     initial: 'round',
     options: Object.keys(lineJoins),
-    onSelectChange: async (selected: keyof typeof lineJoins) => {
-      join = lineJoins[selected];
+    onSelectChange: async (selected) => {
+      join = lineJoins[selected as keyof typeof lineJoins];
       pipelines = createPipelines();
     },
   },
   Fill: {
     initial: 'solid',
     options: Object.keys(fillOptions),
-    onSelectChange: async (selected: keyof typeof fillOptions) => {
-      fillType = fillOptions[selected];
+    onSelectChange: async (selected) => {
+      fillType = fillOptions[selected as keyof typeof fillOptions];
       uniformsBuffer.writePartial({ fillType });
     },
   },
@@ -496,19 +497,19 @@ export const controls = {
     min: 0,
     step: 1,
     max: 3,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       subdiv = subdivs[value];
     },
   },
   Wireframe: {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       wireframe = value;
     },
   },
   'Radius and centerline': {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       showRadii = value;
     },
   },
@@ -517,17 +518,17 @@ export const controls = {
     min: 0,
     step: 0.001,
     max: 5,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       animationSpeed = value;
     },
   },
   Reverse: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       reverse = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

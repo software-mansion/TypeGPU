@@ -11,6 +11,7 @@ import {
   VertexInfo,
   VisParams,
 } from './schema.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // WebGPU setup
 const root = await tgpu.init();
@@ -362,7 +363,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'camera X': {
     initial: -4.9,
     min: -10,
@@ -427,16 +428,16 @@ export const controls = {
     },
   },
   'shadow map size': {
-    initial: '2048',
-    options: ['512', '1024', '2048', '4096', '8192'],
-    onSelectChange: (value: string) => {
-      currentShadowMapSize = Number.parseInt(value);
+    initial: 2048,
+    options: [512, 1024, 2048, 4096, 8192],
+    onSelectChange: (value) => {
+      currentShadowMapSize = value;
       shadowTextures = createShadowTextures(currentShadowMapSize);
     },
   },
   'shadow map filtering': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       pcf = value;
       shadowTextures = createShadowTextures(
         currentShadowMapSize,
@@ -448,7 +449,7 @@ export const controls = {
   'display mode': {
     initial: 'color',
     options: ['color', 'shadow', 'light depth', 'inverse shadow'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       paramsUniform.write({
         shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
         lightDepth: value === 'light depth' ? 1 : 0,
@@ -463,7 +464,7 @@ export const controls = {
       );
     },
   },
-};
+});
 
 export function onCleanup() {
   if (frameId !== null) {

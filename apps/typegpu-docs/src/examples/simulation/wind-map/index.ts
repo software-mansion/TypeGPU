@@ -20,6 +20,7 @@ import {
 } from 'typegpu/data';
 import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   adapter: {
@@ -241,13 +242,13 @@ const draw = () => {
   uniformsBuffer.writePartial({ frameCount });
 
   pipelines.advect
-    .with(bindGroupLayoutWritable, bindGroupWritable)
+    .with(bindGroupWritable)
     .dispatchWorkgroups(
       Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE),
     );
 
   pipelines.fill
-    .with(bindGroupLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [1, 1, 1, 1],
@@ -279,14 +280,14 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-export const controls = {
+export const controls = defineControls({
   'Play': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       play = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
