@@ -3,7 +3,7 @@ import { it } from './utils/extendedIt.ts';
 import tgpu, { d } from '../src/index.ts';
 import { warnIfOverflow } from '../src/core/pipeline/limitsOverflow.ts';
 
-describe('thing', () => {
+describe('warnIfOverflow', () => {
   const limits = {
     maxUniformBuffersPerShaderStage: 2,
     maxStorageBuffersPerShaderStage: 1,
@@ -59,7 +59,7 @@ describe('thing', () => {
     warnIfOverflow([layout], limits);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (2) exceeds maxUniformBuffersPerShaderStage (1).`,
+      `Total number of storage buffers (2) exceeds maxStorageBuffersPerShaderStage (1).`,
     );
   });
 

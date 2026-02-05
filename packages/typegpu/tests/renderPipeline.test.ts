@@ -1135,7 +1135,7 @@ describe('TgpuRenderPipeline', () => {
 2. Increasing the limit when requesting a device or creating a root.`,
     );
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (9) exceeds maxUniformBuffersPerShaderStage (8).`,
+      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
     );
   });
 });

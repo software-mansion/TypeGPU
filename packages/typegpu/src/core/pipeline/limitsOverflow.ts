@@ -21,7 +21,7 @@ export function warnIfOverflow(
 
   if (storage > limits.maxStorageBuffersPerShaderStage) {
     console.warn(
-      `Total number of storage buffers (${storage}) exceeds maxUniformBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
+      `Total number of storage buffers (${storage}) exceeds maxStorageBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
     );
   }
 }
