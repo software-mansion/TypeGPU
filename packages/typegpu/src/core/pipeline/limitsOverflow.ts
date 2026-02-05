@@ -1,7 +1,7 @@
 import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 
 export function warnIfOverflow(
-  layouts: Record<number, TgpuBindGroupLayout>,
+  layouts: TgpuBindGroupLayout[],
   limits: GPUSupportedLimits,
 ) {
   const entries = Object.values(layouts)
@@ -21,7 +21,7 @@ export function warnIfOverflow(
 
   if (storage > limits.maxStorageBuffersPerShaderStage) {
     console.warn(
-      `Total number of storage buffers (${uniform}) exceeds maxUniformBuffersPerShaderStage (${limits.maxUniformBuffersPerShaderStage}).`,
+      `Total number of storage buffers (${storage}) exceeds maxUniformBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
     );
   }
 }
