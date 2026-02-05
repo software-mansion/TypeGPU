@@ -102,7 +102,7 @@ const lightSpaceUniform = root.createUniform(LightSpace, {
   viewProj: lightViewProj,
 });
 
-const currentShadowMapSize = 2048;
+let currentShadowMapSize = 2048;
 let currentSampleCompare: 'less-equal' | 'greater' = 'less-equal';
 let pcf = true;
 
@@ -431,6 +431,7 @@ export const controls = defineControls({
     initial: 2048,
     options: [512, 1024, 2048, 4096, 8192],
     onSelectChange: (value) => {
+      currentShadowMapSize = value;
       shadowTextures = createShadowTextures(currentShadowMapSize);
     },
   },

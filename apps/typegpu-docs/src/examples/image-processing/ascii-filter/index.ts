@@ -262,7 +262,7 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 export const controls = defineControls({
   'use extended characters': {
     initial: false,
-    onToggleChange: (value: boolean) => charsetExtended.write(value ? 1 : 0),
+    onToggleChange: (value) => charsetExtended.write(value ? 1 : 0),
   },
   'display mode': {
     initial: 'color' as const,

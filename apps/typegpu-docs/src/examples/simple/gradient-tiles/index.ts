@@ -44,7 +44,7 @@ draw(spanX, spanY);
 
 export const controls = defineControls({
   'x span ↔️': {
-    initial: spanY,
+    initial: spanX,
     min: 0,
     max: 20,
     step: 1,
