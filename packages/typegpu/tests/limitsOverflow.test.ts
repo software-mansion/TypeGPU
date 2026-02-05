@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, vi } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 import tgpu, { d } from '../src/index.ts';
 import { warnIfOverflow } from '../src/core/pipeline/limitsOverflow.ts';
@@ -60,6 +60,32 @@ describe('thing', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       `Total number of storage buffers (2) exceeds maxUniformBuffersPerShaderStage (1).`,
+    );
+  });
+
+  it('warns when resources are split among layouts', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const layout1 = tgpu.bindGroupLayout({
+      uniform1: { uniform: d.f32 },
+    });
+
+    const layout2 = tgpu.bindGroupLayout({
+      uniform2: { uniform: d.f32 },
+    });
+
+    const layout3 = tgpu.bindGroupLayout({
+      uniform3: { uniform: d.f32 },
+    });
+
+    warnIfOverflow([layout1, layout2, layout3], limits);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
+1. Grouping some of the uniforms into one using 'd.struct',
+2. Increasing the limit when requesting a device or creating a root.`,
     );
   });
 });
