@@ -28,7 +28,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(d.vec3f(randf.sample()), 1.0);
 });
 
-const pipelineCache = new Map<PRNG, TgpuRenderPipeline>();
+const pipelineCache = new Map<PRNG, TgpuRenderPipeline<d.Vec4f>>();
 let prng: PRNG = c.initialPRNG;
 
 const redraw = () => {

@@ -20,7 +20,7 @@ import {
 } from './schemas.ts';
 import {
   computeFn,
-  drawWithMaskFragment,
+  fragmentFn,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
@@ -162,9 +162,11 @@ const blurPipelines = [false, true].map((flip) =>
 
 const drawWithMaskPipeline = root['~unstable']
   .with(paramsAccess, paramsUniform)
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(drawWithMaskFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+  });
 
 // recalculating mask
 

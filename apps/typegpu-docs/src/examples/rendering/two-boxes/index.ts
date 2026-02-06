@@ -245,18 +245,21 @@ const fragment = tgpu['~unstable'].fragmentFn({
   out: d.vec4f,
 })((input) => input.color);
 
-const pipeline = root['~unstable']
-  .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex,
+  fragment,
+  targets: { format: presentationFormat },
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .createPipeline();
+  },
+});
 
 // Render Loop
 

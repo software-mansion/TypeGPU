@@ -210,7 +210,7 @@ export function size<TSize extends number, TData extends AnyData>(
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
  */
-export function location<TLocation extends number, TData extends AnyData>(
+export function location<TLocation extends number, TData extends BaseData>(
   location: TLocation,
   data: TData,
 ): Decorate<TData, Location<TLocation>> {

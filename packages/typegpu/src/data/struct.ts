@@ -2,7 +2,7 @@ import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
-import type { AnyWgslData, WgslStruct } from './wgslTypes.ts';
+import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -35,7 +35,7 @@ export function abstruct<TProps extends Record<string, AnyWgslData>>(
 // Implementation
 // --------------
 
-function INTERNAL_createStruct<TProps extends Record<string, AnyWgslData>>(
+export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
