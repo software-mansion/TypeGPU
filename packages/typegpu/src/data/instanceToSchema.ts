@@ -9,14 +9,17 @@ import type {
   Mat4x4f,
   U16,
   U32,
+  Vec2b,
   Vec2f,
   Vec2h,
   Vec2i,
   Vec2u,
+  Vec3b,
   Vec3f,
   Vec3h,
   Vec3i,
   Vec3u,
+  Vec4b,
   Vec4f,
   Vec4h,
   Vec4i,
@@ -37,6 +40,9 @@ type KindToSchemaMap = {
   vec2u: Vec2u;
   vec3u: Vec3u;
   vec4u: Vec4u;
+  'vec2<bool>': Vec2b;
+  'vec3<bool>': Vec3b;
+  'vec4<bool>': Vec4b;
   mat2x2f: Mat2x2f;
   mat3x3f: Mat3x3f;
   mat4x4f: Mat4x4f;

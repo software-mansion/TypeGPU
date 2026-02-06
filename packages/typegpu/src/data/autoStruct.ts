@@ -96,7 +96,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
     if (!this.#cachedStruct) {
       this.#cachedStruct = createIoSchema(
         Object.fromEntries(
-          Object.entries(this.#allocated).map(([key, alloc]) => {
+          Object.values(this.#allocated).map((alloc) => {
             return [alloc.prop, alloc.type];
           }),
         ),

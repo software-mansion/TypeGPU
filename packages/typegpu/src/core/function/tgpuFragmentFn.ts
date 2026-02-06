@@ -75,6 +75,7 @@ type TgpuFragmentFnShellHeader<
 
 type CleanIO<T> = T extends Record<string, BaseData>
   ? Prettify<UndecorateRecord<OmitBuiltins<T>>>
+  // a trick to use a non-record type in place of a record parameter
   : Prettify<UndecorateRecord<OmitBuiltins<{ a: T }>>> extends
     { a: infer Result } ? Result
   : never;
