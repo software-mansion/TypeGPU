@@ -47,6 +47,9 @@ export class AutoStruct implements BaseData, SelfResolvable {
     this.#usedWgslKeys = new Set();
   }
 
+  /**
+   * Used for accessing builtins, varying and attributes in code.
+   */
   accessProp(key: string): { prop: string; type: BaseData } | undefined {
     // If the prop is not found in validProps, we consider it an extra property
     const dataType = this.#validProps[key] ?? this.#typeForExtraProps;
@@ -57,27 +60,33 @@ export class AutoStruct implements BaseData, SelfResolvable {
     return this.provideProp(key, dataType);
   }
 
+  /**
+   * Used for providing new varyings.
+   *
+   * @privateRemarks
+   * Internally used by `accessProp`.
+   */
   provideProp(
     key: string,
     dataType: BaseData,
   ): { prop: string; type: BaseData } {
     let alloc = this.#allocated[key];
     if (!alloc) {
-      let wgslKey = key.replaceAll('$', '');
-      let idx = 1;
-      while (wgslKey in this.#validProps && this.#usedWgslKeys.has(wgslKey)) {
-        wgslKey = `${key}_${++idx}`;
+      const wgslKey = key.replaceAll('$', '');
+      if (this.#usedWgslKeys.has(wgslKey)) {
+        throw new Error(
+          `Property name '${wgslKey}' causes naming clashes. Choose a different name.`,
+        );
+      }
+      if (!isValidProp(wgslKey)) {
+        throw new Error(
+          `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
+        );
       }
 
       this.#usedWgslKeys.add(wgslKey);
       alloc = { prop: wgslKey, type: dataType };
       this.#allocated[key] = alloc;
-    }
-
-    if (!isValidProp(alloc.prop)) {
-      throw new Error(
-        `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-      );
     }
 
     return alloc;

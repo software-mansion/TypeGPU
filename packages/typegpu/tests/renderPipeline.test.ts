@@ -1475,6 +1475,76 @@ describe('root.createRenderPipeline', () => {
       }"
     `);
   });
+
+  it('correctly reports name clashes in vertex in', ({ root }) => {
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.f32));
+    const pipeline = root.createRenderPipeline({
+      attribs: { vertexIndex: vertexLayout.attrib },
+      vertex: ({ vertexIndex, $vertexIndex }) => {
+        'use gpu';
+        return { $position: d.vec4f() };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f();
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - autoVertexFn: Property name 'vertexIndex' causes naming clashes. Choose a different name.]
+    `);
+  });
+
+  it('correctly reports name clashes in vertex out', ({ root }) => {
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.f32));
+    const pipeline = root.createRenderPipeline({
+      attribs: { vertexIndex: vertexLayout.attrib },
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(), position: d.vec4f() };
+      },
+      fragment: ({ position }) => {
+        'use gpu';
+        return d.vec4f();
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - autoVertexFn: Property name 'position' causes naming clashes. Choose a different name.]
+    `);
+  });
+
+  it('correctly reports name clashes in fragment in', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(), frontFacing: 0 };
+      },
+      fragment: ({ $frontFacing, frontFacing }) => {
+        'use gpu';
+        return d.vec4f();
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - autoFragmentFn: Property name 'frontFacing' causes naming clashes. Choose a different name.]
+    `);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {
