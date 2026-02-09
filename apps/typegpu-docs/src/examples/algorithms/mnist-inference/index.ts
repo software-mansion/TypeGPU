@@ -91,9 +91,9 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
 });
 
 const pipelines = {
-  default: root['~unstable'].withCompute(defaultCompute).createPipeline(),
+  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].withCompute(subgroupCompute).createPipeline()
+    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 

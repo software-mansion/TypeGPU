@@ -59,9 +59,12 @@ const indexBuffer = root
   .$usage('index');
 
 const pipeline = root['~unstable']
-  .withVertex(vertex, { color: vertexLayout.attrib })
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline()
+  .createRenderPipeline({
+    attribs: { color: vertexLayout.attrib },
+    vertex,
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+  })
   .withIndexBuffer(indexBuffer);
 
 function render() {

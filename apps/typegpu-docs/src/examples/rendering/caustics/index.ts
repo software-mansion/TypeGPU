@@ -132,10 +132,11 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: mainVertex,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+});
 
 let isRunning = true;
 

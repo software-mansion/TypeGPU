@@ -249,17 +249,21 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
 
 // Pipeline Setup
 
-const cubePipeline = root['~unstable']
-  .withVertex(cubeVertexFn, cubeVertexLayout.attrib)
-  .withFragment(cubeFragmentFn, { format: presentationFormat })
-  .withPrimitive({ cullMode: 'front' })
-  .createPipeline();
+const cubePipeline = root['~unstable'].createRenderPipeline({
+  attribs: cubeVertexLayout.attrib,
+  vertex: cubeVertexFn,
+  fragment: cubeFragmentFn,
+  targets: { format: presentationFormat },
+  primitive: { cullMode: 'front' },
+});
 
-const pipeline = root['~unstable']
-  .withVertex(vertexFn, vertexLayout.attrib)
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .withPrimitive({ cullMode: 'back' })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: vertexFn,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+  primitive: { cullMode: 'back' },
+});
 
 // Render Functions
 

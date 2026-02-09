@@ -141,9 +141,11 @@ const perlinCache = perlin3d.staticCache({
 let renderPipeline = root['~unstable']
   .with(floorPatternSlot, circles)
   .pipe(perlinCache.inject())
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: vertexMain,
+    fragment: fragmentMain,
+    targets: { format: presentationFormat },
+  });
 
 let animationFrame: number;
 let floorAngle = 0;
@@ -224,9 +226,11 @@ export const controls = defineControls({
       renderPipeline = root['~unstable']
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
         .pipe(perlinCache.inject())
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: presentationFormat })
-        .createPipeline();
+        .createRenderPipeline({
+          vertex: vertexMain,
+          fragment: fragmentMain,
+          targets: { format: presentationFormat },
+        });
     },
   },
 });

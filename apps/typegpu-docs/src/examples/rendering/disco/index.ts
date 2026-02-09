@@ -38,9 +38,11 @@ const pipelines = fragmentShaders.map((fragment) =>
   root['~unstable']
     .with(timeAccess, time)
     .with(resolutionAccess, resolutionUniform)
-    .withVertex(mainVertex, {})
-    .withFragment(fragment, { format: presentationFormat })
-    .createPipeline()
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: fragment,
+      targets: { format: presentationFormat },
+    })
 );
 
 let currentPipeline = pipelines[0];

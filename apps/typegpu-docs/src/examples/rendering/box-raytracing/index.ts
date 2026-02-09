@@ -256,9 +256,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
 // pipeline
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(fragmentFunction, {
+const pipeline = root['~unstable'].createRenderPipeline({
+  primitive: {
+    topology: 'triangle-strip',
+  },
+  vertex: mainVertex,
+  fragment: fragmentFunction,
+  targets: {
     format: presentationFormat,
     blend: {
       color: {
@@ -272,11 +276,8 @@ const pipeline = root['~unstable']
         operation: 'add',
       },
     },
-  })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .createPipeline();
+  },
+});
 
 // UI
 
