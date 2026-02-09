@@ -42,9 +42,11 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: mainVertex,
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+  });
 
 setTimeout(() => {
   pipeline
