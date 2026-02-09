@@ -1,18 +1,18 @@
 import type { d } from 'typegpu';
 
 type SelectControlParam<T> = {
-  initial?: T;
+  initial: T;
   options: readonly T[];
   onSelectChange: (newValue: T) => void;
 };
 
 type ToggleControlParam = {
-  initial?: boolean;
+  initial: boolean;
   onToggleChange: (newValue: boolean) => void;
 };
 
 type SliderControlParam = {
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -20,7 +20,7 @@ type SliderControlParam = {
 };
 
 type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
-  initial?: T;
+  initial: T;
   min: T;
   max: T;
   step: T;
@@ -28,7 +28,7 @@ type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
 };
 
 type ColorPickerControlParam = {
-  initial?: d.v3f;
+  initial: d.v3f;
   onColorChange: (newValue: d.v3f) => void;
 };
 
@@ -37,7 +37,7 @@ type ButtonControlParam = {
 };
 
 type TextAreaControlParam = {
-  initial?: string;
+  initial: string;
   onTextChange: (newValue: string) => void;
 };
 

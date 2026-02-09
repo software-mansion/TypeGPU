@@ -197,6 +197,7 @@ export const controls = defineControls({
     },
   },
   'Gamut Clip': {
+    initial: 'Ad. L 0.5',
     options: Object.keys(gamutClipOptions),
     onSelectChange: (selected) => {
       selections.gamutClip =
@@ -217,6 +218,7 @@ export const controls = defineControls({
     },
   },
   'Out of Gamut Pattern': {
+    initial: 'Checker',
     options: Object.keys(outOfGamutPatternOptions),
     onSelectChange: (selected) => {
       selections.outOfGamutPattern = outOfGamutPatternOptions[

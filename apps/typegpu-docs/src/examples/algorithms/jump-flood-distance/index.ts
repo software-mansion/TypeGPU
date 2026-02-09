@@ -491,6 +491,7 @@ export const controls = defineControls({
     },
   },
   'Show negative distance': {
+    initial: false,
     onToggleChange(value: boolean) {
       paramsUniform.writePartial({ showInside: value ? 1 : 0 });
       render();

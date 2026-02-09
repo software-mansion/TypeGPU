@@ -306,6 +306,7 @@ const LUTFiles = {
 
 export const controls = defineControls({
   'color grading': {
+    initial: 'None',
     options: Object.keys(LUTFiles),
     onSelectChange: async (selected) => {
       if (selected === 'None') {
