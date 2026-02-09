@@ -329,8 +329,8 @@ export const controls = defineControls({
     },
   },
   Range: {
-    initial: '100%' as const,
-    options: ['100%', '50%', '20%', '10%', '1%'] as const,
+    initial: '100%',
+    options: ['100%', '50%', '20%', '10%', '1%'],
     onSelectChange(value) {
       startingRangePercent = Number.parseFloat(value) / 100;
       reset();

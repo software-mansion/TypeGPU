@@ -265,8 +265,8 @@ export const controls = defineControls({
     onToggleChange: (value) => charsetExtended.write(value ? 1 : 0),
   },
   'display mode': {
-    initial: 'color' as const,
-    options: ['color', 'grayscale', 'white'] as const,
+    initial: 'color',
+    options: ['color', 'grayscale', 'white'],
     onSelectChange: (value) => {
       displayMode.write(displayModes[value]);
     },

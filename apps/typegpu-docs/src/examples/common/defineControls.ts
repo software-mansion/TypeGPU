@@ -1,9 +1,9 @@
 import type { d } from 'typegpu';
 
-type SelectControlParam<T> = {
-  initial: T;
-  options: readonly T[];
-  onSelectChange: (newValue: T) => void;
+type SelectControlParam<T extends readonly string[] | readonly number[]> = {
+  initial: NoInfer<T[number]>;
+  options: T;
+  onSelectChange: (newValue: NoInfer<T[number]>) => void;
 };
 
 type ToggleControlParam = {
@@ -45,7 +45,11 @@ export function defineControls<const T extends Record<string, unknown>>(
   controls: {
     [Key in keyof T]:
       | false // short-circuit controls
-      | SelectControlParam<T[Key]>
+      | SelectControlParam<
+        T[Key] extends readonly string[] | number[] ? T[Key]
+          : T[Key] extends string[] ? string[]
+          : number[]
+      >
       | ToggleControlParam
       | SliderControlParam
       | VectorSliderControlParam<

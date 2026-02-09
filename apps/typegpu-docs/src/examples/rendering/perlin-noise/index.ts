@@ -128,8 +128,8 @@ export const controls = defineControls({
     onSliderChange: (value: number) => sharpness.write(value),
   },
   'sharpening function': {
-    initial: 'exponential' as const,
-    options: ['exponential', 'tanh'] as const,
+    initial: 'exponential',
+    options: ['exponential', 'tanh'],
     onSelectChange: (value) => {
       activeSharpenFn = value;
     },

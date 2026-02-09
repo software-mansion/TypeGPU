@@ -462,8 +462,8 @@ export const controls = defineControls({
     },
   },
   'interpolation points count': {
-    initial: 256 as const,
-    options: [4, 16, 64, 256, 1024, 4096] as const,
+    initial: 256,
+    options: [4, 16, 64, 256, 1024, 4096],
     onSelectChange(value) {
       properties.interpolationPoints = value;
 

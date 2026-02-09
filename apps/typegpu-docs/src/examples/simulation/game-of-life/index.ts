@@ -130,8 +130,8 @@ requestAnimationFrame(animate);
 
 export const controls = defineControls({
   size: {
-    initial: 64 as const,
-    options: [16, 32, 64, 128, 256, 512] as const,
+    initial: 64,
+    options: [16, 32, 64, 128, 256, 512],
     onSelectChange: (value) => {
       gameSize = value;
       game.cleanup();

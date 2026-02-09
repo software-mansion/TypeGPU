@@ -302,8 +302,8 @@ export const controls = defineControls({
   Reshuffle: { onButtonClick: () => generateMatrices() },
   Compute: { onButtonClick: () => compute() },
   strategy: {
-    initial: 'gpu-optimized' as const,
-    options: ['gpu-optimized', 'gpu-simple', 'cpu'] as const,
+    initial: 'gpu-optimized',
+    options: ['gpu-optimized', 'gpu-simple', 'cpu'],
     onSelectChange: (value) => {
       state.strategy = value;
     },

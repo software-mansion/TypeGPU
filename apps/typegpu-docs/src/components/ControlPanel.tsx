@@ -19,7 +19,7 @@ import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
 import { FPSCounter } from './FpsCounter.tsx';
-import { d } from 'typegpu';
+import type { d } from 'typegpu';
 
 function ToggleRow({
   label,

@@ -504,8 +504,8 @@ export const controls = defineControls({
     },
   },
   visualization: {
-    initial: 'image' as const,
-    options: ['image', 'velocity', 'ink'] as const,
+    initial: 'image',
+    options: ['image', 'velocity', 'ink'],
     onSelectChange: (value) => {
       p.params.displayMode = value;
     },

@@ -474,8 +474,8 @@ export const controls = defineControls({
     },
   },
   'cubemap texture': {
-    initial: chosenCubemap as 'campsite',
-    options: ['campsite', 'beach', 'chapel', 'city'] as const,
+    initial: chosenCubemap,
+    options: ['campsite', 'beach', 'chapel', 'city'],
     onSelectChange: async (value) => {
       chosenCubemap = value;
       await loadCubemap(texture, chosenCubemap);

@@ -303,8 +303,8 @@ async function animate() {
 
 export const controls = defineControls({
   'Controls Mode': {
-    initial: 'translate' as const,
-    options: ['translate', 'rotate', 'none'] as const,
+    initial: 'translate',
+    options: ['translate', 'rotate', 'none'],
     onSelectChange: (value) => {
       for (const { controls } of attractorsHelpers) {
         if (value === 'none') {
