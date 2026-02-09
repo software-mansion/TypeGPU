@@ -11,7 +11,7 @@ export function getCascadeDim(width: number, height: number) {
   const minPow2 = 16;
   const closestPowerOfTwo = Math.max(
     minPow2,
-    2 ** Math.round(Math.log2(diagonal)),
+    2 ** Math.floor(Math.log2(diagonal)),
   );
 
   let cascadeWidth: number;
@@ -212,7 +212,6 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
 export const BuildRadianceFieldParams = d.struct({
   outputProbes: d.vec2u,
   cascadeProbes: d.vec2u,
-  cascadeDim: d.vec2u,
 });
 
 export const buildRadianceFieldBGL = tgpu.bindGroupLayout({
@@ -232,8 +231,9 @@ export const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
   }
 
   const params = buildRadianceFieldBGL.$.params;
+  const cascadeDim = params.cascadeProbes.mul(2);
 
-  const invCascadeDim = d.vec2f(1.0).div(d.vec2f(params.cascadeDim));
+  const invCascadeDim = d.vec2f(1.0).div(d.vec2f(cascadeDim));
   const uv = d.vec2f(gid.xy).add(0.5).div(d.vec2f(params.outputProbes));
 
   const probePixel = std.clamp(

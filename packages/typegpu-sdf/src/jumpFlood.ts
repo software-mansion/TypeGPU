@@ -27,7 +27,7 @@ const initLayout = tgpu.bindGroupLayout({
 
 const distWriteLayout = tgpu.bindGroupLayout({
   sdfTexture: {
-    storageTexture: d.textureStorage2d('r32float', 'write-only'),
+    storageTexture: d.textureStorage2d('rgba16float', 'write-only'),
   },
   colorTexture: {
     storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
@@ -245,7 +245,7 @@ type FloodTexture =
 export type SdfTexture =
   & TgpuTexture<{
     size: [number, number];
-    format: 'r32float';
+    format: 'rgba16float';
   }>
   & StorageFlag
   & SampledFlag;
@@ -316,7 +316,7 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
   const sdfTexture = root['~unstable']
     .createTexture({
       size: [width, height],
-      format: 'r32float',
+      format: 'rgba16float',
     })
     .$usage('storage', 'sampled') as SdfTexture;
 
@@ -388,7 +388,7 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
 
   const distWriteBG = root.createBindGroup(distWriteLayout, {
     sdfTexture: sdfTexture.createView(
-      d.textureStorage2d('r32float', 'write-only'),
+      d.textureStorage2d('rgba16float', 'write-only'),
     ),
     colorTexture: colorTexture.createView(
       d.textureStorage2d('rgba8unorm', 'write-only'),

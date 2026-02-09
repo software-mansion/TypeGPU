@@ -5,10 +5,7 @@ import { fullScreenTriangle } from 'typegpu/common';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const root = await tgpu.init({
-  device: { optionalFeatures: ['float32-filterable'] },
-});
-const canFilterFloat32 = root.device.features.has('float32-filterable');
+const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -33,10 +30,6 @@ const sceneWriteView = sceneTexture.createView(
 const sceneSampledView = sceneTexture.createView();
 
 // Samplers.
-const nearestSampler = root['~unstable'].createSampler({
-  magFilter: 'nearest',
-  minFilter: 'nearest',
-});
 const linSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -110,7 +103,7 @@ const floodRunner = sdf
       'use gpu';
       const sceneData = std.textureSampleLevel(
         sceneDataLayout.$.sceneRead,
-        nearestSampler.$,
+        linSampler.$,
         d.vec2f(coord).add(0.5).div(d.vec2f(size)),
         0,
       );
@@ -126,7 +119,7 @@ const floodRunner = sdf
       const uv = d.vec2f(insidePx).add(0.5).div(d.vec2f(size));
       const seedData = std.textureSampleLevel(
         sceneDataLayout.$.sceneRead,
-        nearestSampler.$,
+        linSampler.$,
         uv,
         0,
       );
@@ -135,25 +128,19 @@ const floodRunner = sdf
   })
   .with(sceneDataBG);
 
-const floodSdfView = floodRunner.sdfOutput.createView(d.texture2d(), {
-  sampleType: canFilterFloat32 ? 'float' : 'unfilterable-float',
-});
+const floodSdfView = floodRunner.sdfOutput.createView(d.texture2d());
 const floodColorView = floodRunner.colorOutput.createView();
-
-const filterIfPossible = tgpu.comptime(() => {
-  return canFilterFloat32 ? linSampler.$ : nearestSampler.$;
-});
 
 const radianceRunner = rc.createRadianceCascades({
   root,
-  size: { width: width / 4, height: height / 4 },
+  size: { width: Math.floor(width / 4), height: Math.floor(height / 4) },
   sdfResolution: floodSize,
   sdf: (uv) => {
     'use gpu';
     if (std.any(std.lt(uv, d.vec2f(0))) || std.any(std.gt(uv, d.vec2f(1)))) {
       return d.f32(1);
     }
-    return std.textureSampleLevel(floodSdfView.$, filterIfPossible(), uv, 0).x;
+    return std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
   },
   color: (uv) => {
     'use gpu';
@@ -174,7 +161,7 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
     // sample sdf
     const sdfDist = std.textureSampleLevel(
       floodSdfView.$,
-      filterIfPossible(),
+      linSampler.$,
       uv,
       0,
     ).x;
@@ -199,7 +186,7 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
   } else {
     const signedDist = std.textureSampleLevel(
       floodSdfView.$,
-      filterIfPossible(),
+      linSampler.$,
       uv,
       0,
     ).x;
