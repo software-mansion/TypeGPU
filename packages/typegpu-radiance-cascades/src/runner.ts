@@ -26,8 +26,10 @@ import {
 } from './cascades.ts';
 
 type OutputTexture =
-  | (TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
-      StorageFlag)
+  | (
+    & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
+    & StorageFlag
+  )
   | TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
 
 type CascadesOptions = {
@@ -48,12 +50,13 @@ type CascadesOptions = {
   size?: { width: number; height: number };
 };
 
-type OutputTextureProp = TgpuTexture<{
-  size: [number, number];
-  format: 'rgba16float';
-}> &
-  StorageFlag &
-  SampledFlag;
+type OutputTextureProp =
+  & TgpuTexture<{
+    size: [number, number];
+    format: 'rgba16float';
+  }>
+  & StorageFlag
+  & SampledFlag;
 
 export type RadianceCascadesExecutor = {
   run(): void;
@@ -67,8 +70,8 @@ export function createRadianceCascades(
 ): RadianceCascadesExecutor {
   const { root, sdf, color, sdfResolution, output, size, rayMarch } = options;
 
-  const hasOutputProvided =
-    !!output && (isTexture(output) || isTextureView(output));
+  const hasOutputProvided = !!output &&
+    (isTexture(output) || isTextureView(output));
 
   // Determine output dimensions
   let outputWidth: number;
@@ -95,14 +98,12 @@ export function createRadianceCascades(
   }
 
   // Create or use provided output texture
-  const dst = hasOutputProvided
-    ? output
-    : root['~unstable']
-        .createTexture({
-          size: [outputWidth, outputHeight],
-          format: 'rgba16float',
-        })
-        .$usage('storage', 'sampled');
+  const dst = hasOutputProvided ? output : root['~unstable']
+    .createTexture({
+      size: [outputWidth, outputHeight],
+      format: 'rgba16float',
+    })
+    .$usage('storage', 'sampled');
 
   const ownsOutput = !hasOutputProvided;
 
@@ -184,9 +185,10 @@ export function createRadianceCascades(
 
   const dstView = isTexture(dst)
     ? (
-        dst as TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
-          StorageFlag
-      ).createView(d.textureStorage2d('rgba16float', 'write-only'))
+      dst as
+        & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
+        & StorageFlag
+    ).createView(d.textureStorage2d('rgba16float', 'write-only'))
     : dst;
 
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
