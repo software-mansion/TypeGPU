@@ -563,7 +563,8 @@ ${this.ctx.pre}}`;
         );
 
         // `d.arrayOf(...)([...])`.
-        // We resolve each element separately.
+        // We don't resolve the ArrayExpression object itself to
+        // avoid reference checks (we're copying so it's fine)
         if (arg.value instanceof ArrayExpression) {
           return snip(
             stitch`${

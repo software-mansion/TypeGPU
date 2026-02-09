@@ -15,6 +15,7 @@ import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
+import { extractSnippetFromFn } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -524,39 +525,18 @@ describe('wgslGenerator', () => {
   });
 
   it('creates intermediate representation for array expression', () => {
-    const testFn = tgpu.fn([], d.u32)(() => {
-      const arr = [d.u32(1), 2, 3];
-      return arr[1] as number;
-    });
+    const testFn = () => {
+      'use gpu';
+      [d.u32(1), 8, 8, 2];
+    };
 
-    const astInfo = getMetaData(
-      testFn[$internal].implementation as (...args: unknown[]) => unknown,
-    );
+    const snippet = extractSnippetFromFn(testFn);
 
-    if (!astInfo) {
-      throw new Error('Expected prebuilt AST to be present');
-    }
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        [],
-        {},
-        d.u32,
-        (astInfo.externals as () => Record<string, unknown>)() ?? {},
-      );
-
-      wgslGenerator.initGenerator(ctx);
-      const res = wgslGenerator.expression(
-        // deno-fmt-ignore: it's better that way
-        (
-          astInfo.ast?.body[1][0] as tinyest.Const
-        )[2] as unknown as tinyest.Expression,
-      );
-
-      expect(res.value instanceof ArrayExpression).toBe(true);
-      expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-    });
+    expect(snippet.value instanceof ArrayExpression).toBe(true);
+    expect((snippet.value as ArrayExpression).type.elementType.type)
+      .toStrictEqual('u32');
+    expect((snippet.value as ArrayExpression).type.elementCount)
+      .toStrictEqual(4);
   });
 
   it('generates correct code for array expressions', () => {
