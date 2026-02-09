@@ -124,8 +124,6 @@ const handleDraw = root['~unstable'].createGuardedComputePipeline((x, y) => {
   }
 });
 
-console.log(tgpu.resolve([handleDraw.pipeline]));
-
 const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
   (px, py) => {
     'use gpu';
