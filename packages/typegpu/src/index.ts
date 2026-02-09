@@ -28,7 +28,7 @@ export {
   isSlot,
 } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
-export { isTexture } from './core/texture/texture.ts';
+export { isTexture, isTextureView } from './core/texture/texture.ts';
 export {
   isUsableAsRender,
   isUsableAsSampled,
