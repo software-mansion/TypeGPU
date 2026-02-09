@@ -73,14 +73,18 @@ const renderPipelineBase = root['~unstable']
 const renderPipelines = {
   exponential: renderPipelineBase
     .with(sharpenFnSlot, exponentialSharpen)
-    .withVertex(common.fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    }),
   tanh: renderPipelineBase
     .with(sharpenFnSlot, tanhSharpen)
-    .withVertex(common.fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    }),
 };
 
 let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';

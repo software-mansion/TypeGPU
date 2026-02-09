@@ -165,16 +165,18 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, modelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  attribs: modelVertexLayout.attrib,
+  vertex: vertexShader,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
