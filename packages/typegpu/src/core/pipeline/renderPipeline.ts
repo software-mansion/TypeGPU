@@ -626,7 +626,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
         return attachment;
       }) as GPURenderPassColorAttachment[])
-      : [null];
+      : [];
 
     const renderPassDescriptor: GPURenderPassDescriptor = {
       label: getName(internals.core) ?? '<unnamed>',
