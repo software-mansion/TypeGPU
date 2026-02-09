@@ -1,3 +1,5 @@
+import type { d } from 'typegpu';
+
 type SelectControlParam<T> = {
   initial?: T;
   options: readonly T[];
@@ -17,12 +19,12 @@ type SliderControlParam = {
   onSliderChange: (newValue: number) => void;
 };
 
-type VectorSliderControlParam = {
-  initial?: number[];
-  min: number[];
-  max: number[];
-  step: number[];
-  onVectorSliderChange: (newValue: number[]) => void;
+type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
+  initial?: T;
+  min: T;
+  max: T;
+  step: T;
+  onVectorSliderChange: (newValue: T) => void;
 };
 
 type ColorPickerControlParam = {
@@ -39,16 +41,16 @@ type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
 };
 
-export function defineControls<
-  T extends Record<string, unknown>,
->(
+export function defineControls<const T extends Record<string, unknown>>(
   controls: {
     [Key in keyof T]:
       | false // short-circuit controls
       | SelectControlParam<T[Key]>
       | ToggleControlParam
       | SliderControlParam
-      | VectorSliderControlParam
+      | VectorSliderControlParam<
+        T[Key] extends d.v2f | d.v3f | d.v4f ? T[Key] : never
+      >
       | ColorPickerControlParam
       | ButtonControlParam
       | TextAreaControlParam;

@@ -164,12 +164,12 @@ export const controls = defineControls({
     },
   },
   'camera pos': {
-    min: [-10, -10],
-    max: [10, 10],
-    initial: [0, -7],
-    step: [0.01, 0.01],
+    min: d.vec2f(-10, -10),
+    max: d.vec2f(10, 10),
+    initial: d.vec2f(0, -7),
+    step: d.vec2f(0.01, 0.01),
     onVectorSliderChange(v) {
-      cameraPos.write(d.vec2f(...(v as [number, number])));
+      cameraPos.write(v);
     },
   },
   color: {

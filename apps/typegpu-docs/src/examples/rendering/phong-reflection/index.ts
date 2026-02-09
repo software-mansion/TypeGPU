@@ -149,14 +149,12 @@ export const controls = defineControls({
     },
   },
   'light direction': {
-    min: [-10, -10, -10],
-    max: [10, 10, 10],
-    initial: [...p.initialControls.lightDirection],
-    step: [0.01, 0.01, 0.01],
+    min: d.vec3f(-10, -10, -10),
+    max: d.vec3f(10, 10, 10),
+    initial: p.initialControls.lightDirection,
+    step: d.vec3f(0.01, 0.01, 0.01),
     onVectorSliderChange(v) {
-      exampleControlsUniform.writePartial({
-        lightDirection: d.vec3f(...(v as [number, number, number])),
-      });
+      exampleControlsUniform.writePartial({ lightDirection: v });
     },
   },
   'ambient color': {
