@@ -60,10 +60,12 @@ function createPipelines() {
     state.gpuTime = Number(end - start) / 1_000_000;
   };
 
-  const optimized = root['~unstable']
-    .withCompute(computeSharedMemory)
-    .createPipeline();
-  const simple = root['~unstable'].withCompute(computeSimple).createPipeline();
+  const optimized = root['~unstable'].createComputePipeline({
+    compute: computeSharedMemory,
+  });
+  const simple = root['~unstable'].createComputePipeline({
+    compute: computeSimple,
+  });
 
   return {
     'gpu-optimized': hasTimestampQuery

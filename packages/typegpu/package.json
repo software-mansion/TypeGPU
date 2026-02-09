@@ -65,7 +65,7 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
-    "@ark/attest": "^0.53.0",
+    "@ark/attest": "^0.56.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
