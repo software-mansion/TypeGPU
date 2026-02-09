@@ -46,7 +46,7 @@ export function defineControls<const T extends Record<string, unknown>>(
     [Key in keyof T]:
       | false // short-circuit controls
       | SelectControlParam<
-        T[Key] extends readonly string[] | number[] ? T[Key]
+        T[Key] extends readonly string[] | readonly number[] ? T[Key]
           : T[Key] extends string[] ? string[]
           : number[]
       >
