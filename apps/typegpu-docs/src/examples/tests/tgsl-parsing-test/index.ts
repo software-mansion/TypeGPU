@@ -24,9 +24,9 @@ const computeRunTests = tgpu['~unstable']
     }
   });
 
-const pipeline = root['~unstable']
-  .withCompute(computeRunTests)
-  .createPipeline();
+const pipeline = root['~unstable'].createComputePipeline({
+  compute: computeRunTests,
+});
 
 async function runTests() {
   pipeline.dispatchWorkgroups(1);
