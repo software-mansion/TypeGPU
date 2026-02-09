@@ -41,6 +41,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -285,6 +286,12 @@ ${this.ctx.pre}}`;
 
     try {
       const result = this.expression(expression);
+      if (expectedType instanceof AutoStruct) {
+        // We provide a certain AutoStruct object to later
+        // investigate what props were accessed. No need to
+        // convert the result.
+        return result;
+      }
       return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
@@ -675,40 +682,76 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.objectExpr) {
       // Object Literal
       const obj = expression[1];
-
       const structType = this.ctx.expectedType;
 
-      if (!structType || !wgsl.isWgslStruct(structType)) {
-        throw new WgslTypeError(
-          `No target type could be inferred for object with keys [${
-            Object.keys(obj).join(', ')
-          }], please wrap the object in the corresponding schema.`,
+      if (structType instanceof AutoStruct) {
+        const entries = Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => {
+            let accessed = structType.accessProp(key);
+            let expr: Snippet;
+            if (accessed) {
+              // Generating the expression expecting a specific type
+              expr = this.typedExpression(value, accessed.type);
+            } else {
+              // Generating the expression and inferring the type instead
+              expr = this.expression(value);
+              if (expr.dataType === UnknownData) {
+                throw new WgslTypeError(
+                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                );
+              }
+              accessed = structType.provideProp(key, concretize(expr.dataType));
+            }
+
+            return [accessed.prop, expr];
+          }),
+        );
+
+        const completeStruct = structType.completeStruct;
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          completeStruct,
+          entries,
+        );
+
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          completeStruct,
+          /* origin */ 'runtime',
         );
       }
 
-      const entries = Object.fromEntries(
-        Object.entries(structType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new WgslTypeError(
-              `Missing property ${key} in object literal for struct ${structType}`,
-            );
-          }
-          const result = this.typedExpression(val, value);
-          return [key, result];
-        }),
-      );
+      if (wgsl.isWgslStruct(structType)) {
+        const entries = Object.fromEntries(
+          Object.entries(structType.propTypes).map(([key, value]) => {
+            const val = obj[key];
+            if (val === undefined) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const result = this.typedExpression(val, value);
+            return [key, result];
+          }),
+        );
 
-      const convertedSnippets = convertStructValues(
-        this.ctx,
-        structType,
-        entries,
-      );
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          structType,
+          entries,
+        );
 
-      return snip(
-        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
-        structType,
-        /* origin */ 'runtime',
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          structType,
+          /* origin */ 'runtime',
+        );
+      }
+
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${
+          Object.keys(obj).join(', ')
+        }], please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -819,10 +862,7 @@ ${this.ctx.pre}}`;
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
         let returnSnippet = expectedReturnType
-          ? this.typedExpression(
-            returnNode,
-            expectedReturnType,
-          )
+          ? this.typedExpression(returnNode, expectedReturnType)
           : this.expression(returnNode);
 
         if (returnSnippet.value instanceof RefOperator) {

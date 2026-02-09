@@ -181,8 +181,7 @@ const pipeline = root['~unstable']
   // Plugging the cache into the pipeline
   .pipe(cache.inject())
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 ```
 Or in WebGPU:
 ```ts twoslash
@@ -240,8 +239,7 @@ const pipeline = root['~unstable']
   // Plugging the cache into the pipeline
   .pipe(cacheConfig.inject(dynamicLayout.$))
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 
 // Instantiating the cache with an initial size.
 const cache = cacheConfig.instance(root, d.vec3u(10, 10, 1));

@@ -84,6 +84,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
@@ -124,8 +125,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {
-    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
-      3;
+    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
     const hsv = rgbToHsv(desaturatedColor);
     hsv.y += desaturationFactor / 2;
     hsv.z += desaturationFactor;

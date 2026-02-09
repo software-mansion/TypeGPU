@@ -21,7 +21,7 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
+import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
 import {
@@ -79,6 +79,10 @@ import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
+import { accessProp } from './tgsl/accessProp.ts';
+import { createIoSchema } from './core/function/ioSchema.ts';
+import type { IOData } from './core/function/fnTypes.ts';
+import { AutoStruct } from './data/autoStruct.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -467,28 +471,23 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             break;
           }
           case FuncParameterType.destructuredObject: {
-            args.push(snip(`_arg_${i}`, argType, origin));
-            argAliases.push(...astParam.props.map(({ name, alias }) => {
-              if (!isWgslStruct(argType)) {
-                throw new WgslTypeError('Only structs can be destructured');
-              }
-              const propType = argType.propTypes[name];
-              if (!propType) {
-                throw new WgslTypeError(
-                  `Missing prop '${name}' on '${safeStringify(argType)}'`,
-                );
-              }
-
-              return [
-                alias,
-                // Undecorating, as the struct type can contain builtins
-                snip(`_arg_${i}.${name}`, undecorate(propType), 'argument'),
-              ] as [string, Snippet];
-            }));
+            const objSnippet = snip(`_arg_${i}`, argType, origin);
+            args.push(objSnippet);
+            argAliases.push(
+              ...astParam.props.map(({ name, alias }) =>
+                [alias, accessProp(objSnippet, name)] as [string, Snippet]
+              ),
+            );
             break;
           }
-          case undefined:
-            args.push(snip(`_arg_${i}`, argType, origin));
+          case undefined: {
+            // Only push the argument if it's not an auto-struct.
+            // If we're not using an auto-struct, it's not going to
+            // have any properties anyway.
+            if (!(argType instanceof AutoStruct)) {
+              args.push(snip(`_arg_${i}`, argType, origin));
+            }
+          }
         }
       }
 
@@ -505,6 +504,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const body = this.#shaderGenerator.functionDefinition(options.body);
 
       let returnType = options.returnType;
+      if (returnType instanceof AutoStruct) {
+        // We're expecting an "auto" return type, so if there were structs returned,
+        // we accept the struct, otherwise we let the rest of the code unify on a
+        // primitive type.
+        if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+          returnType = returnType.completeStruct;
+        } else {
+          returnType = undefined;
+        }
+      }
+
       if (!returnType) {
         const returnTypes = [...scope.reportedReturnTypes];
         if (returnTypes.length === 0) {
@@ -525,6 +535,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
 
         returnType = concretize(returnType);
+
+        if (
+          options.functionType === 'vertex' ||
+          options.functionType === 'fragment'
+        ) {
+          returnType = createIoSchema(returnType as IOData);
+        }
       }
 
       return {
@@ -1011,7 +1028,7 @@ export function resolve(
   };
 }
 
-export function resolveFunctionHeader(
+function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
   returnType: BaseData,
