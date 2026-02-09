@@ -8,7 +8,7 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const INVALID_COORD = 0xffffffff;
+const INVALID_COORD = 0xffff;
 
 const pingPongLayout = tgpu.bindGroupLayout({
   readView: {
@@ -65,11 +65,11 @@ const colorSlot = tgpu.slot<
 
 const sampleWithOffset = (
   tex: d.textureStorage2d<'rgba16uint', 'read-only'>,
+  dims: d.v2u,
   pos: d.v2i,
   offset: d.v2i,
 ) => {
   'use gpu';
-  const dims = std.textureDimensions(tex);
   const samplePos = pos.add(offset);
 
   const outOfBounds = samplePos.x < 0 ||
@@ -140,6 +140,7 @@ const jumpFloodCompute = tgpu['~unstable'].computeFn({
     for (let dx = -1; dx <= 1; dx++) {
       const sample = sampleWithOffset(
         pingPongLayout.$.readView,
+        size,
         d.vec2i(gid.xy),
         d.vec2i(dx * offset, dy * offset),
       );
@@ -406,16 +407,46 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     colorTexture.destroy();
   }
 
+  // Determine which ping-pong texture contains the final result.
+  // After all iterations, sourceIdx will have been flipped, so compute it.
+  const iterationCount = (() => {
+    let count = 0;
+    let o = maxRange;
+    while (o >= 1) {
+      count++;
+      o = Math.floor(o / 2);
+    }
+    return count;
+  })();
+  const finalSourceIdx = iterationCount % 2 === 0 ? 0 : 1;
+
   function createExecutor(
     additionalBindGroups: TgpuBindGroup[] = [],
   ): JumpFloodExecutor {
-    function run() {
-      // Initialize from seed function
-      let initPipeline = initFromSeedPipeline.with(initBG);
-      for (const bg of additionalBindGroups) {
-        initPipeline = initPipeline.with(bg);
+    // Pre-cache pipeline+bindgroup combos to avoid re-chaining per frame.
+    let prebuiltInitPipeline = initFromSeedPipeline.with(initBG);
+    for (const bg of additionalBindGroups) {
+      prebuiltInitPipeline = prebuiltInitPipeline.with(bg);
+    }
+
+    const prebuiltFloodPipelines = pingPongBGs.map((bg) => {
+      let p = jumpFloodPipeline.with(bg);
+      for (const addBg of additionalBindGroups) {
+        p = p.with(addBg);
       }
-      initPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
+      return p;
+    });
+
+    const prebuiltDistPipelines = pingPongBGs.map((bg) => {
+      let p = createDistancePipeline.with(bg).with(distWriteBG);
+      for (const addBg of additionalBindGroups) {
+        p = p.with(addBg);
+      }
+      return p;
+    });
+
+    function run() {
+      prebuiltInitPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
 
       // Run jump flood iterations
       let sourceIdx = 0;
@@ -423,40 +454,24 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
 
       while (offset >= 1) {
         offsetUniform.write(offset);
-
-        const bg = pingPongBGs[sourceIdx];
-        if (bg) {
-          let floodPipeline = jumpFloodPipeline.with(bg);
-          for (const addBg of additionalBindGroups) {
-            floodPipeline = floodPipeline.with(addBg);
-          }
-          floodPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
-        }
-
+        prebuiltFloodPipelines[sourceIdx]?.dispatchWorkgroups(
+          workgroupsX,
+          workgroupsY,
+        );
         sourceIdx ^= 1;
         offset = Math.floor(offset / 2);
       }
 
       // Create final distance field
-      const finalBG = pingPongBGs[sourceIdx];
-      if (finalBG) {
-        let distPipeline = createDistancePipeline.with(finalBG).with(
-          distWriteBG,
-        );
-        for (const bg of additionalBindGroups) {
-          distPipeline = distPipeline.with(bg);
-        }
-        distPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
-      }
-    }
-
-    function withBindGroup(bindGroup: TgpuBindGroup) {
-      return createExecutor([...additionalBindGroups, bindGroup]);
+      prebuiltDistPipelines[finalSourceIdx]?.dispatchWorkgroups(
+        workgroupsX,
+        workgroupsY,
+      );
     }
 
     return {
       run,
-      with: withBindGroup,
+      with: (bindGroup) => createExecutor([...additionalBindGroups, bindGroup]),
       destroy,
       sdfOutput: sdfTexture,
       colorOutput: colorTexture,

@@ -13,9 +13,9 @@ import {
   buildRadianceFieldBGL,
   buildRadianceFieldCompute,
   BuildRadianceFieldParams,
-  CascadeParams,
   cascadePassBGL,
   cascadePassCompute,
+  CascadeStaticParams,
   colorSlot,
   defaultRayMarch,
   getCascadeDim,
@@ -136,7 +136,15 @@ export function createRadianceCascades(
     addressModeV: 'clamp-to-edge',
   });
 
-  const paramsBuffer = root.createBuffer(CascadeParams).$usage('uniform');
+  const staticParamsBuffer = root
+    .createBuffer(CascadeStaticParams, {
+      baseProbes: d.vec2u(cascadeProbesX, cascadeProbesY),
+      cascadeDim: d.vec2u(cascadeDimX, cascadeDimY),
+      cascadeCount: cascadeAmount,
+    })
+    .$usage('uniform');
+
+  const layerBuffer = root.createBuffer(d.u32).$usage('uniform');
 
   const cascadePassPipeline = root['~unstable']
     .with(sdfResolutionSlot, d.vec2u(sdfResolution.width, sdfResolution.height))
@@ -154,7 +162,8 @@ export function createRadianceCascades(
       const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
 
       return root.createBindGroup(cascadePassBGL, {
-        params: paramsBuffer,
+        staticParams: staticParamsBuffer,
+        layer: layerBuffer,
         upper: srcTexture.createView(d.texture2d(d.f32), {
           baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
           arrayLayerCount: 1,
@@ -217,32 +226,34 @@ export function createRadianceCascades(
   function createExecutor(
     additionalBindGroups: TgpuBindGroup[] = [],
   ): RadianceCascadesExecutor {
+    const prebuiltCascadePipelines = cascadePassBindGroups.map((bg) => {
+      let p = cascadePassPipeline.with(bg);
+      for (const addBg of additionalBindGroups) {
+        p = p.with(addBg);
+      }
+      return p;
+    });
+
+    let prebuiltRadiancePipeline = buildRadianceFieldPipeline.with(
+      buildRadianceFieldBG,
+    );
+    for (const bg of additionalBindGroups) {
+      prebuiltRadiancePipeline = prebuiltRadiancePipeline.with(bg);
+    }
+
     function run() {
       for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
-        paramsBuffer.write({
-          layer,
-          baseProbes: d.vec2u(cascadeProbesX, cascadeProbesY),
-          cascadeDim: d.vec2u(cascadeDimX, cascadeDimY),
-          cascadeCount: cascadeAmount,
-        });
-
-        const bindGroup = cascadePassBindGroups[layer];
-        if (bindGroup) {
-          let pipeline = cascadePassPipeline.with(bindGroup);
-          for (const bg of additionalBindGroups) {
-            pipeline = pipeline.with(bg);
-          }
-          pipeline.dispatchWorkgroups(cascadeWorkgroupsX, cascadeWorkgroupsY);
-        }
+        layerBuffer.write(layer);
+        prebuiltCascadePipelines[layer]?.dispatchWorkgroups(
+          cascadeWorkgroupsX,
+          cascadeWorkgroupsY,
+        );
       }
 
-      let radiancePipeline = buildRadianceFieldPipeline.with(
-        buildRadianceFieldBG,
+      prebuiltRadiancePipeline.dispatchWorkgroups(
+        outputWorkgroupsX,
+        outputWorkgroupsY,
       );
-      for (const bg of additionalBindGroups) {
-        radiancePipeline = radiancePipeline.with(bg);
-      }
-      radiancePipeline.dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
     }
 
     return {

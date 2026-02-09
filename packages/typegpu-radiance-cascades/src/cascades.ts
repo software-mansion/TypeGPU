@@ -92,15 +92,15 @@ export const defaultRayMarch = tgpu.fn(
 
 export const rayMarchSlot = tgpu.slot(defaultRayMarch);
 
-export const CascadeParams = d.struct({
-  layer: d.u32,
+export const CascadeStaticParams = d.struct({
   baseProbes: d.vec2u,
   cascadeDim: d.vec2u,
   cascadeCount: d.u32,
 });
 
 export const cascadePassBGL = tgpu.bindGroupLayout({
-  params: { uniform: CascadeParams },
+  staticParams: { uniform: CascadeStaticParams },
+  layer: { uniform: d.u32 },
   upper: { texture: d.texture2d(d.f32) },
   upperSampler: { sampler: 'filtering' },
   dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
@@ -115,15 +115,16 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
     return;
   }
 
-  const params = cascadePassBGL.$.params;
+  const params = cascadePassBGL.$.staticParams;
+  const layer = cascadePassBGL.$.layer;
   const probes = d.vec2u(
-    std.max(params.baseProbes.x >> params.layer, d.u32(1)),
-    std.max(params.baseProbes.y >> params.layer, d.u32(1)),
+    std.max(params.baseProbes.x >> layer, d.u32(1)),
+    std.max(params.baseProbes.y >> layer, d.u32(1)),
   );
 
   const dirStored = gid.xy.div(probes);
   const probe = std.mod(gid.xy, probes);
-  const raysDimStored = d.u32(2) << params.layer;
+  const raysDimStored = d.u32(2) << layer;
   const raysDimActual = raysDimStored * 2;
   const rayCountActual = d.f32(raysDimActual) ** 2;
 
@@ -138,7 +139,7 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
     std.min(params.baseProbes.x, params.baseProbes.y),
   );
   const interval0 = 1.0 / cascadeProbesMinVal;
-  const pow4 = d.f32(d.u32(1) << (params.layer * d.u32(2)));
+  const pow4 = d.f32(d.u32(1) << (layer * d.u32(2)));
   const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
   const endUv = startUv + interval0 * pow4;
 
@@ -179,7 +180,7 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
     let rgb = d.vec3f(marchResult.color);
     let T = d.f32(marchResult.transmittance);
 
-    if (params.layer < d.u32(params.cascadeCount - 1) && T > 0.01) {
+    if (layer < d.u32(params.cascadeCount - 1) && T > 0.01) {
       const probesU = d.vec2u(
         std.max(probes.x >> d.u32(1), d.u32(1)),
         std.max(probes.y >> d.u32(1), d.u32(1)),

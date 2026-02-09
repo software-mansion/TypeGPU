@@ -197,17 +197,15 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
       );
     }
   } else {
-    const dims = std.textureDimensions(radianceRes.$);
-    const signedDist = std.textureSample(
+    const signedDist = std.textureSampleLevel(
       floodSdfView.$,
       filterIfPossible(),
       uv,
+      0,
     ).x;
     const absDist = std.abs(signedDist);
-    const maxDim = d.f32(std.max(dims.x, dims.y));
 
-    const normalizedDist = std.clamp(absDist / d.f32(maxDim * 0.5), 0.0, 1.0) **
-      0.8;
+    const normalizedDist = std.clamp(absDist * 2.0, 0.0, 1.0) ** 0.8;
 
     const isInside = signedDist < 0.0;
 
@@ -220,15 +218,19 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
     result = d.vec4f(distColor, 1.0);
   }
 
-  return d.vec4f(result.xyz, 1.0);
+  return result;
 });
 
-const displayPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
-  .withFragment(displayFragment, { format: presentationFormat })
-  .createPipeline();
+const displayPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: displayFragment,
+  targets: { format: presentationFormat },
+});
 
 let lastMousePos = { x: -1, y: -1 };
+let sceneDirty = false;
+let isDrawing = false;
+
 canvas.addEventListener('mousemove', (e) => {
   paramsUniform.writePartial({
     lastMousePos: d.vec2f(lastMousePos.x, lastMousePos.y),
@@ -241,29 +243,36 @@ canvas.addEventListener('mousemove', (e) => {
   paramsUniform.writePartial({
     mousePos: d.vec2f(x, y),
   });
+
+  if (isDrawing) {
+    sceneDirty = true;
+  }
 });
 
 canvas.addEventListener('mousedown', () => {
+  isDrawing = true;
+  sceneDirty = true;
   paramsUniform.writePartial({
     isDrawing: 1,
   });
 });
 
 canvas.addEventListener('mouseup', () => {
+  isDrawing = false;
   lastMousePos = { x: -1, y: -1 };
   paramsUniform.writePartial({
     isDrawing: 0,
   });
 });
 
-let frameId = 0;
+let frameId = requestAnimationFrame(frame);
 function frame() {
-  frameId++;
-
-  drawCompute.dispatchThreads(width, height);
-
-  floodRunner.run();
-  radianceRunner.run();
+  if (sceneDirty) {
+    drawCompute.dispatchThreads(width, height);
+    floodRunner.run();
+    radianceRunner.run();
+    sceneDirty = false;
+  }
 
   displayPipeline
     .withColorAttachment({
@@ -273,9 +282,8 @@ function frame() {
     })
     .draw(3);
 
-  requestAnimationFrame(frame);
+  frameId = requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
 
 export const controls = {
   'Light Color': {
@@ -307,6 +315,7 @@ export const controls = {
   Clear: {
     onButtonClick() {
       sceneTexture.clear();
+      sceneDirty = true;
     },
   },
 };
