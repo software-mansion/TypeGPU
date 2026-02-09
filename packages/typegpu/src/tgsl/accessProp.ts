@@ -1,4 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
 import {
   InfixDispatch,
   isUnstruct,
@@ -165,6 +166,14 @@ export function accessProp(
         ? 'constant'
         : 'runtime',
     );
+  }
+
+  if (target.dataType instanceof AutoStruct) {
+    const result = target.dataType.accessProp(propName);
+    if (!result) {
+      return undefined;
+    }
+    return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
   }
 
   if (isPtr(target.dataType)) {
