@@ -327,21 +327,24 @@ function resetGameData() {
     decideWaterLevel(input.gid.x, input.gid.y);
   });
 
-  const computePipeline = root['~unstable']
-    .withCompute(compute)
-    .createPipeline();
+  const computePipeline = root['~unstable'].createComputePipeline({
+    compute,
+  });
+
   const renderPipeline = root['~unstable']
-    .withVertex(vertex, {
-      squareData: vertexLayout.attrib,
-      currentStateData: vertexInstanceLayout.attrib,
+    .createRenderPipeline({
+      attribs: {
+        squareData: vertexLayout.attrib,
+        currentStateData: vertexInstanceLayout.attrib,
+      },
+      vertex,
+      fragment,
+      targets: { format: presentationFormat },
+
+      primitive: {
+        topology: 'triangle-strip',
+      },
     })
-    .withFragment(fragment, {
-      format: presentationFormat,
-    })
-    .withPrimitive({
-      topology: 'triangle-strip',
-    })
-    .createPipeline()
     .with(vertexLayout, squareBuffer)
     .with(vertexInstanceLayout, currentStateBuffer);
 
