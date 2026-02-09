@@ -25,7 +25,6 @@ const copyParamsType = d.struct({
 
 const sortUniformsType = d.struct({
   k: d.u32,
-  j: d.u32,
   jShift: d.u32,
 });
 
@@ -116,19 +115,6 @@ const bitonicStepKernel = tgpu['~unstable'].computeFn({
   }
 });
 
-type CopyParamsBuffer = TgpuBuffer<typeof copyParamsType> & UniformFlag;
-type SortUniformsBuffer = TgpuBuffer<typeof sortUniformsType> & UniformFlag;
-type CopyBindGroup = TgpuBindGroup<(typeof copyLayout)['entries']>;
-type SortBindGroup = TgpuBindGroup<(typeof sortLayout)['entries']>;
-
-interface PaddingResources {
-  workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
-  copyPadParams: CopyParamsBuffer;
-  copyBackParams: CopyParamsBuffer;
-  copyPadBindGroup: CopyBindGroup;
-  copyBackBindGroup: CopyBindGroup;
-}
-
 export function createBitonicSorter(
   root: TgpuRoot,
   data: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag,
@@ -141,8 +127,13 @@ export function createBitonicSorter(
   const paddingValue = options?.paddingValue ?? 0xffffffff;
   const compareFunc = options?.compare ?? defaultCompare;
 
-  // Resources for padding (only created if needed)
-  let paddingResources: PaddingResources | null = null;
+  let paddingResources: {
+    workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
+    copyPadParams: TgpuBuffer<typeof copyParamsType> & UniformFlag;
+    copyBackParams: TgpuBuffer<typeof copyParamsType> & UniformFlag;
+    copyPadBindGroup: TgpuBindGroup<(typeof copyLayout)['entries']>;
+    copyBackBindGroup: TgpuBindGroup<(typeof copyLayout)['entries']>;
+  } | null = null;
   let workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
 
   if (wasPadded) {
@@ -187,11 +178,11 @@ export function createBitonicSorter(
     workBuffer = data;
   }
 
-  const uniformBuffer: SortUniformsBuffer = root
+  const uniformBuffer = root
     .createBuffer(sortUniformsType)
     .$usage('uniform');
 
-  const sortBindGroup: SortBindGroup = root.createBindGroup(sortLayout, {
+  const sortBindGroup = root.createBindGroup(sortLayout, {
     data: workBuffer,
     uniforms: uniformBuffer,
   });
@@ -209,17 +200,12 @@ export function createBitonicSorter(
     .withCompute(copyBackKernel)
     .createPipeline();
 
-  const halfSize = paddedSize / 2;
-  const sortWorkgroups = Math.ceil(halfSize / WORKGROUP_SIZE);
+  const sortWorkgroups = Math.ceil(paddedSize / 2 / WORKGROUP_SIZE);
   const padWorkgroups = Math.ceil(paddedSize / WORKGROUP_SIZE);
   const copyBackWorkgroups = Math.ceil(originalSize / WORKGROUP_SIZE);
 
-  let totalSteps = 0;
-  for (let k = 2; k <= paddedSize; k <<= 1) {
-    for (let j = k >> 1; j > 0; j >>= 1) {
-      totalSteps++;
-    }
-  }
+  const log2N = Math.log2(paddedSize);
+  const totalSteps = (log2N * (log2N + 1)) / 2;
 
   function run(runOptions?: BitonicSorterRunOptions): void {
     const querySet = runOptions?.querySet;
@@ -239,28 +225,18 @@ export function createBitonicSorter(
     for (let k = 2; k <= paddedSize; k <<= 1) {
       for (let j = k >> 1; j > 0; j >>= 1) {
         const jShift = 31 - Math.clz32(j);
-        uniformBuffer.write({ k, j, jShift });
+        uniformBuffer.write({ k, jShift });
 
         let pipeline = sortPipeline.with(sortBindGroup);
 
         if (querySet && !paddingResources) {
-          const isFirstStep = stepIndex === 0;
-          const isLastStep = stepIndex === totalSteps - 1;
-          if (isFirstStep && isLastStep) {
+          const isFirst = stepIndex === 0;
+          const isLast = stepIndex === totalSteps - 1;
+          if (isFirst || isLast) {
             pipeline = pipeline.withTimestampWrites({
               querySet,
-              beginningOfPassWriteIndex: 0,
-              endOfPassWriteIndex: 1,
-            });
-          } else if (isFirstStep) {
-            pipeline = pipeline.withTimestampWrites({
-              querySet,
-              beginningOfPassWriteIndex: 0,
-            });
-          } else if (isLastStep) {
-            pipeline = pipeline.withTimestampWrites({
-              querySet,
-              endOfPassWriteIndex: 1,
+              ...(isFirst && { beginningOfPassWriteIndex: 0 }),
+              ...(isLast && { endOfPassWriteIndex: 1 }),
             });
           }
         }
