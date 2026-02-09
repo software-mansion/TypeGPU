@@ -13,6 +13,8 @@ describe('unwrappedPojos', () => {
       "const func = function() { 'use gpu'; return Schema({ a: 1 }); }",
       "() => { 'use gpu'; return Schema({ a: 1 }); }",
 
+      "() => { 'use gpu'; return Schema({ a: { b: 1 } }); }",
+
       // not inside 'use gpu' function
       'const pojo = { a: 1 };',
       'function func() { const unwrapped = { a: 1 }; }',
@@ -26,6 +28,8 @@ describe('unwrappedPojos', () => {
       "function func() { 'use gpu'; return { a: 1 }; }",
       "const func = function() { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: 1 }; }",
+
+      "() => { 'use gpu'; return { a: { b: 1 } }; }",
     ],
     invalid: [
       {
@@ -63,6 +67,15 @@ describe('unwrappedPojos', () => {
           {
             messageId: 'unwrappedPojo',
             data: { snippet: '{ a: 1 }' },
+          },
+        ],
+      },
+      {
+        code: "() => { 'use gpu'; const unwrapped = { a: { b: 1 } }; }",
+        errors: [
+          {
+            messageId: 'unwrappedPojo',
+            data: { snippet: '{ a: { b: 1 } }' },
           },
         ],
       },

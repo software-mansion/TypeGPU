@@ -11,7 +11,7 @@ export const unwrappedPojos = createRule({
     },
     messages: {
       unwrappedPojo:
-        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call.',
+        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.',
     },
     schema: [],
   },
@@ -25,10 +25,16 @@ export const unwrappedPojos = createRule({
         if (!directives.insideUseGpu()) {
           return;
         }
+        if (node.parent?.type === 'Property') {
+          // a part of a bigger struct
+          return;
+        }
         if (node.parent?.type === 'CallExpression') {
+          // wrapped in a schema call
           return;
         }
         if (node.parent?.type === 'ReturnStatement') {
+          // likely inferred (shelled fn or shell-less entry) so we cannot report
           return;
         }
         context.report({

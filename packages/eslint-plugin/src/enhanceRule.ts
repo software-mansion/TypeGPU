@@ -31,7 +31,7 @@ type State<TMap extends Record<string, RuleEnhancer<unknown>>> = {
  *           context.report({ node, messageId: 'error' });
  *         }
  *       },
- *     }
+ *     };
  */
 export function enhanceRule<
   TMap extends Record<string, RuleEnhancer<unknown>>,
