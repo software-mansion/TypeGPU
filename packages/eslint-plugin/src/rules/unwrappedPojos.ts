@@ -7,7 +7,7 @@ export const unwrappedPojos = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Always wrap Plain Old JavaScript Objects with schemas.`,
+      description: `Wrap Plain Old JavaScript Objects with schemas.`,
     },
     messages: {
       unwrappedPojo:
@@ -25,7 +25,10 @@ export const unwrappedPojos = createRule({
         if (!directives.insideUseGpu()) {
           return;
         }
-        if (node.parent.type === 'CallExpression') {
+        if (node.parent?.type === 'CallExpression') {
+          return;
+        }
+        if (node.parent?.type === 'ReturnStatement') {
           return;
         }
         context.report({
