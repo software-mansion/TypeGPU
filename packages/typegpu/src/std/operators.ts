@@ -236,7 +236,7 @@ type ModOverload = {
  */
 export const mod: ModOverload = dualImpl({
   name: 'mod',
-  signature: binaryArithmeticSignature,
+  signature: binaryDivSignature,
   normalImpl<T extends NumVec | number>(a: T, b: T): T {
     if (typeof a === 'number' && typeof b === 'number') {
       return (a % b) as T; // scalar % scalar

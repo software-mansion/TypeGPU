@@ -162,7 +162,7 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = callableSchema({
   name: 'f32',
-  signature: (arg) => ({ argTypes: [arg ? [arg] : []], returnType: f32 }),
+  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;

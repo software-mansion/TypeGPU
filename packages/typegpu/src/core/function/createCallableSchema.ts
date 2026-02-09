@@ -9,9 +9,9 @@ import {
   NormalState,
   type ResolutionCtx,
 } from '../../types.ts';
+import type { AnyFn } from './fnTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
-type AnyFn = (...args: never[]) => unknown;
 
 interface CallableSchemaOptions<T extends AnyFn> {
   readonly name: string;

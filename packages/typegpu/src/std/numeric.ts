@@ -1,6 +1,5 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
@@ -703,7 +702,7 @@ export const insertBits = dualImpl<typeof cpuInsertBits>({
     }
     return {
       argTypes: [...uargs, u32, u32],
-      returnType: uargs[0] as AnyData,
+      returnType: uargs[0] as BaseData,
     };
   },
   normalImpl:
@@ -898,13 +897,13 @@ export const mix = dualImpl({
           (e1 as unknown as Vec2f).primitive,
         ]);
       }
-      return { argTypes: [e1, e2, uarg[0] as AnyData], returnType: e1 };
+      return { argTypes: [e1, e2, uarg[0] as BaseData], returnType: e1 };
     }
     const uargs = unify([e1, e2, e3], anyFloat);
     if (!uargs) {
       throw new SignatureNotSupportedError([e1, e2, e3], anyFloat);
     }
-    return { argTypes: uargs, returnType: uargs[0] as AnyData };
+    return { argTypes: uargs, returnType: uargs[0] as BaseData };
   },
   normalImpl: cpuMix,
   codegenImpl: (_ctx, [e1, e2, e3]) => stitch`mix(${e1}, ${e2}, ${e3})`,

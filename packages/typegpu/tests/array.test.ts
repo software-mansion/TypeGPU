@@ -446,7 +446,7 @@ describe('array.length', () => {
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn() -> i32 {
-          return 5;
+          return 5u;
         }"
       `);
     });
