@@ -1048,9 +1048,9 @@ export const controls = defineControls({
     },
   },
   'Jelly Color': {
-    initial: [1.0, 0.45, 0.075],
+    initial: d.vec3f(1.0, 0.45, 0.075),
     onColorChange: (c) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Blur': {

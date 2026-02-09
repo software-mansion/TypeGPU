@@ -173,9 +173,9 @@ export const controls = defineControls({
     },
   },
   color: {
-    initial: [0.2, 0, 0.3],
-    onColorChange(value: readonly [number, number, number]) {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(0.2, 0, 0.3),
+    onColorChange(value) {
+      color.write(value);
     },
   },
 });

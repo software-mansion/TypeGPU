@@ -482,35 +482,23 @@ export const controls = defineControls({
     },
   },
   'ambient color': {
-    initial: [
-      materialProps.ambient.x,
-      materialProps.ambient.y,
-      materialProps.ambient.z,
-    ] as const,
+    initial: materialProps.ambient,
     onColorChange: (value) => {
-      materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
+      materialProps.ambient = value;
       materialBuffer.writePartial({ ambient: materialProps.ambient });
     },
   },
   'diffuse color': {
-    initial: [
-      materialProps.diffuse.x,
-      materialProps.diffuse.y,
-      materialProps.diffuse.z,
-    ] as const,
+    initial: materialProps.diffuse,
     onColorChange: (value) => {
-      materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
+      materialProps.diffuse = value;
       materialBuffer.writePartial({ diffuse: materialProps.diffuse });
     },
   },
   'specular color': {
-    initial: [
-      materialProps.specular.x,
-      materialProps.specular.y,
-      materialProps.specular.z,
-    ] as const,
+    initial: materialProps.specular,
     onColorChange: (value) => {
-      materialProps.specular = d.vec3f(value[0], value[1], value[2]);
+      materialProps.specular = value;
       materialBuffer.writePartial({ specular: materialProps.specular });
     },
   },

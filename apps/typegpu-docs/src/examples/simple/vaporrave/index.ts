@@ -212,9 +212,9 @@ export const controls = defineControls({
     },
   },
   'sphere color': {
-    initial: [...c.initialSphereColor] as const,
+    initial: c.initialSphereColor,
     onColorChange: (value) => {
-      sphereColorUniform.write(d.vec3f(...value));
+      sphereColorUniform.write(value);
     },
   },
   'floor pattern': {

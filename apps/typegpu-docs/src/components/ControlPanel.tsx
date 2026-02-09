@@ -19,6 +19,7 @@ import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
 import { FPSCounter } from './FpsCounter.tsx';
+import { d } from 'typegpu';
 
 function ToggleRow({
   label,
@@ -133,11 +134,11 @@ function ColorPickerRow({
   onChange,
 }: {
   label: string;
-  initial?: readonly [number, number, number];
-  onChange: (value: readonly [number, number, number]) => void;
+  initial?: d.v3f;
+  onChange: (value: d.v3f) => void;
 }) {
-  const [value, setValue] = useState<readonly [number, number, number]>(
-    initial ?? [0, 0, 0],
+  const [value, setValue] = useState<d.v3f>(
+    initial ?? d.vec3f(),
   );
   const runWithCatch = useSetAtom(runWithCatchAtom);
 

@@ -28,8 +28,8 @@ type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
 };
 
 type ColorPickerControlParam = {
-  initial?: readonly number[];
-  onColorChange: (newValue: readonly [number, number, number]) => void;
+  initial?: d.v3f;
+  onColorChange: (newValue: d.v3f) => void;
 };
 
 type ButtonControlParam = {

@@ -332,13 +332,13 @@ export const controls = defineControls({
     },
   },
   'Pattern Color 1': {
-    initial: [204 / 255, 144 / 255, 250 / 255],
+    initial: d.vec3f(204, 144, 250).div(255),
     onColorChange: (value) => {
       patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
     },
   },
   'Pattern Color 2': {
-    initial: [100 / 255, 125 / 255, 228 / 255],
+    initial: d.vec3f(100, 125, 228).div(255),
     onColorChange: (value) => {
       patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
     },
@@ -371,7 +371,7 @@ export const controls = defineControls({
     },
   },
   'Sheen Color': {
-    initial: new THREE.Color(API.sheenColor).toArray(),
+    initial: d.vec3f(API.sheenColor),
     onColorChange: (value) => {
       const color = new THREE.Color().fromArray(value);
       API.sheenColor = color.getHex();

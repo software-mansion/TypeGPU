@@ -165,9 +165,9 @@ export const controls = defineControls({
     },
   },
   color: {
-    initial: [1, 0.7, 0],
+    initial: d.vec3f(1, 0.7, 0),
     onColorChange(value) {
-      color.write(d.vec3f(...value));
+      color.write(value);
     },
   },
 });

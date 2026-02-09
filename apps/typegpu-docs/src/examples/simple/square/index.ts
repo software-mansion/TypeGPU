@@ -79,10 +79,10 @@ render();
 // #region Example controls & Cleanup
 
 function updateColor(
-  color: readonly [number, number, number],
+  color: d.v3f,
   position: keyof typeof colors,
 ): void {
-  colors[position] = d.vec4f(...color, 1);
+  colors[position] = d.vec4f(color, 1);
   const idx = colorIndices[position];
   colorBuffer.writePartial([
     {
@@ -96,19 +96,19 @@ function updateColor(
 export const controls = defineControls({
   topLeft: {
     onColorChange: (value) => updateColor(value, 'topLeft'),
-    initial: [...colors.topLeft.xyz],
+    initial: colors.topLeft.xyz,
   },
   topRight: {
     onColorChange: (value) => updateColor(value, 'topRight'),
-    initial: [...colors.topRight.xyz],
+    initial: colors.topRight.xyz,
   },
   bottomLeft: {
     onColorChange: (value) => updateColor(value, 'bottomLeft'),
-    initial: [...colors.bottomLeft.xyz],
+    initial: colors.bottomLeft.xyz,
   },
   bottomRight: {
     onColorChange: (value) => updateColor(value, 'bottomRight'),
-    initial: [...colors.bottomRight.xyz],
+    initial: colors.bottomRight.xyz,
   },
 });
 

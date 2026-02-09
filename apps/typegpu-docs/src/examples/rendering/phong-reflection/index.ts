@@ -143,9 +143,9 @@ frameId = requestAnimationFrame(frame);
 // #region Example controls and cleanup
 export const controls = defineControls({
   'light color': {
-    initial: [...p.initialControls.lightColor],
+    initial: p.initialControls.lightColor,
     onColorChange(value) {
-      exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
+      exampleControlsUniform.writePartial({ lightColor: value });
     },
   },
   'light direction': {
@@ -158,9 +158,9 @@ export const controls = defineControls({
     },
   },
   'ambient color': {
-    initial: [...p.initialControls.ambientColor],
+    initial: p.initialControls.ambientColor,
     onColorChange(value) {
-      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
+      exampleControlsUniform.writePartial({ ambientColor: value });
     },
   },
   'ambient strength': {

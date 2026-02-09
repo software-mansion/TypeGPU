@@ -390,13 +390,21 @@ export const controls = defineControls({
     },
   },
   'Color A': {
-    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
+    initial: d.vec3f(
+      colorA.node.value.r,
+      colorA.node.value.g,
+      colorA.node.value.b,
+    ),
     onColorChange: (newValue) => {
       colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
+    initial: d.vec3f(
+      colorB.node.value.r,
+      colorB.node.value.g,
+      colorB.node.value.b,
+    ),
     onColorChange: (newValue) => {
       colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },

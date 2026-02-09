@@ -1,4 +1,5 @@
 import { atom } from 'jotai';
+import type { d } from 'typegpu';
 
 export type SelectControlParam = {
   onSelectChange: (newValue: string) => void;
@@ -32,8 +33,8 @@ export type VectorSliderControlParam = {
 };
 
 export type ColorPickerControlParam = {
-  onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial?: readonly [number, number, number];
+  onColorChange: (newValue: d.v3f) => void;
+  initial?: d.v3f;
   label: string;
 };
 

@@ -145,9 +145,9 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 export const controls = defineControls({
   color: {
     onColorChange: (value) => {
-      colorUniform.write(d.vec3f(...value));
+      colorUniform.write(value);
     },
-    initial: [0, 1, 0] as const,
+    initial: d.vec3f(0, 1, 0),
   },
   threshold: {
     initial: 0.1,

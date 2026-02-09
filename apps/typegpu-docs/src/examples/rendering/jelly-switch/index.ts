@@ -765,9 +765,9 @@ export const controls = defineControls({
     },
   },
   'Jelly Color': {
-    initial: [0.08, 0.5, 1],
+    initial: d.vec3f(0.08, 0.5, 1),
     onColorChange: (c) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Dark Mode': {
