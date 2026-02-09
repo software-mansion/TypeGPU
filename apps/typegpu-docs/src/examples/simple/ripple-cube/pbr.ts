@@ -16,15 +16,15 @@ export const lightsAccess = tgpu['~unstable'].accessor(
 
 export const distributionGGX = (ndoth: number, roughness: number): number => {
   'use gpu';
-  const a = roughness * roughness;
-  const a2 = a * a;
-  const denom = std.max(ndoth * ndoth * (a2 - 1) + 1, 1e-4);
-  return a2 / (PI * denom * denom);
+  const a = roughness ** 2;
+  const a2 = a ** 2;
+  const denom = std.max(ndoth ** 2 * (a2 - 1) + 1, 1e-4);
+  return a2 / (PI * denom ** 2);
 };
 
 export const geometrySchlickGGX = (ndot: number, roughness: number): number => {
   'use gpu';
-  const k = ((roughness + 1) * (roughness + 1)) / 8;
+  const k = (roughness + 1) ** 2 / 8;
   return ndot / (ndot * (1 - k) + k);
 };
 
@@ -45,7 +45,7 @@ export const fresnelSchlick = (cosTheta: number, f0: d.v3f): d.v3f => {
     d
       .vec3f(1)
       .sub(f0)
-      .mul(std.pow(1 - cosTheta, 5)),
+      .mul((1 - cosTheta) ** 5),
   );
 };
 
@@ -62,7 +62,7 @@ export const evaluateLight = (
   const dist = std.length(toLight);
   const l = std.normalize(toLight);
   const h = std.normalize(v.add(l));
-  const radiance = light.color.mul(1 / dist ** 2);
+  const radiance = light.color.div(dist ** 2);
 
   const shadow = softShadow(p.add(n.mul(0.01)), l, dist);
 
@@ -101,11 +101,12 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
 
   const reflectDir = std.reflect(v, n);
 
+  const pScaled = p.mul(50);
   const roughOffset = d
     .vec3f(
-      perlin3d.sample(p.mul(50)) - 0.5,
-      perlin3d.sample(p.mul(50).add(100)) - 0.5,
-      perlin3d.sample(p.mul(50).add(200)) - 0.5,
+      perlin3d.sample(pScaled) - 0.5,
+      perlin3d.sample(pScaled.add(100)) - 0.5,
+      perlin3d.sample(pScaled.add(200)) - 0.5,
     )
     .mul(material.roughness * 0.5);
   const blurredReflectDir = std.normalize(reflectDir.add(roughOffset));
@@ -119,12 +120,7 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
 
   const ndotv = std.max(std.dot(n, v), 0);
 
-  const fresnel = f0.add(
-    d
-      .vec3f(1)
-      .sub(f0)
-      .mul(std.pow(1 - ndotv, 5)),
-  );
+  const fresnel = fresnelSchlick(ndotv, f0);
 
   const reflectionTint = std.mix(
     d.vec3f(1),
@@ -139,7 +135,7 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
     .mul(reflectionTint)
     .mul(reflectionStrength);
 
-  const ambient = d.vec3f(0.05).mul(material.albedo).mul(material.ao);
+  const ambient = material.albedo.mul(material.ao * 0.05);
   const color = ambient.add(lo).add(envContribution);
   return std.pow(color.div(color.add(1)), d.vec3f(1 / 2.2));
 };

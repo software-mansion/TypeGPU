@@ -26,7 +26,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const perlinCache = perlin3d.staticCache({
   root,
-  size: d.vec3u(64, 64, 64),
+  size: d.vec3u(8, 8, 8),
 });
 
 const [width, height] = [canvas.width / 2, canvas.height / 2];
@@ -100,7 +100,7 @@ const rayMarchPipeline = root['~unstable']
   .with(lightsAccess, lightsUniform)
   .createGuardedComputePipeline((x, y) => {
     'use gpu';
-    randf.seed2(d.vec2f(d.f32(x), d.f32(y)).add(timeUniform.$));
+    randf.seed2(d.vec2f(x, y).add(timeUniform.$));
     const textureSize = std.textureDimensions(
       postProcessing.result.writeView.$,
     );
