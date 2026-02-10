@@ -18,20 +18,29 @@ describe('Math', () => {
   it('allows using Math.sin', () => {
     const myFn = () => {
       'use gpu';
-      const a = 0;
+      const a = 0.5;
       const b = Math.sin(a);
     };
 
-    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0.5;
+        let b = sin(a);
+      }"
+    `);
   });
 
   it('precomputes Math.sin when applicable', () => {
     const myFn = () => {
       'use gpu';
-      const a = Math.sin(0);
+      const a = Math.sin(0.5);
     };
 
-    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0.479425538604203;
+      }"
+    `);
   });
 
   it('coerces Math.sin arguments', () => {
@@ -41,17 +50,27 @@ describe('Math', () => {
       const b = Math.sin(a);
     };
 
-    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0u;
+        let b = sin(f32(a));
+      }"
+    `);
   });
 
-  it('allows Math.max to accept multiple arguments', () => {
+  it('allows Math.min to accept multiple arguments', () => {
     const myFn = () => {
       'use gpu';
       const a = d.u32();
-      const b = Math.max(a, 1, 2, 3);
+      const b = Math.min(a, 1, 2, 3);
     };
 
-    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0u;
+        let b = min(min(min(a, 1u), 2u), 3u);
+      }"
+    `);
   });
 
   it('throws a readable error when unsupported Math feature is used', () => {
@@ -64,7 +83,7 @@ describe('Math', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): Function 'function log1p() { [native code] }' is not marked with the 'use gpu' directive and cannot be used in a shader]
+      - fn*:myFn(): Unsupported functionality 'Math.log1p'. Use an std alternative, or implement the function manually.]
     `);
   });
 });
