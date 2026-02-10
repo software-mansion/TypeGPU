@@ -226,13 +226,11 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     return {
       arrayStride: this.stride,
       stepMode: this.stepMode,
-      attributes: [
-        ...Object.entries(this.attrib).map(([key, attrib]) => ({
-          format: (attrib as TgpuVertexAttrib).format,
-          offset: (attrib as TgpuVertexAttrib).offset,
-          shaderLocation: this._customLocationMap[key],
-        })),
-      ] as GPUVertexAttribute[],
+      attributes: Object.entries(this.attrib).map(([key, attrib]) => ({
+        format: (attrib as TgpuVertexAttrib).format,
+        offset: (attrib as TgpuVertexAttrib).offset,
+        shaderLocation: this._customLocationMap[key],
+      })) as GPUVertexAttribute[],
     };
   }
 
