@@ -6,7 +6,10 @@ export const math = createRule({
   name: 'math',
   meta: {
     type: 'suggestion',
-    docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
+    docs: {
+      description:
+        `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead.`,
+    },
     messages: {
       math:
         "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
