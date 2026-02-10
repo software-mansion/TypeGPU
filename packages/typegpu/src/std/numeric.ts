@@ -1079,7 +1079,11 @@ function cpuRound(value: number): number;
 function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
 function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
-    return Math.round(value) as T;
+    const k = Math.floor(value);
+    if (k % 2 === 0) {
+      return k as T;
+    }
+    return k + 1 as T;
   }
   throw new MissingCpuImplError(
     'CPU implementation for round on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
