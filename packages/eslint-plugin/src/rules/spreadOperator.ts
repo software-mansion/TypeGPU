@@ -10,7 +10,7 @@ export const spreadOperator = createRule({
       description: `Do not use the spread operator inside TypeGPU functions.`,
     },
     messages: {
-      spreadOperator: '{{snippet}} is invalid inside of a TypeGPU function.',
+      spreadOperator: "'{{snippet}}' is invalid inside of a TypeGPU function.",
     },
     schema: [],
   },

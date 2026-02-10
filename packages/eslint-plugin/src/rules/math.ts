@@ -9,7 +9,7 @@ export const math = createRule({
     docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
     messages: {
       math:
-        "Using Math methods, such as '{{snippet}}', is not advised, and may not work. Use 'std' instead.",
+        "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
     },
     schema: [],
   },

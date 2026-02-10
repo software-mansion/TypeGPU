@@ -11,7 +11,7 @@ export const uninitializedVariable = createRule({
         `Always assign an initial value when declaring a variable inside TypeGPU functions.`,
     },
     messages: {
-      uninitializedVariable: '{{snippet}} should have an initial value.',
+      uninitializedVariable: "'{{snippet}}' should have an initial value.",
     },
     schema: [],
   },
