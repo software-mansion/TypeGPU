@@ -9,6 +9,7 @@ import {
   Vertex,
 } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialization
 
@@ -452,13 +453,13 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
   canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
-export const controls = {
+export const controls = defineControls({
   subdivisions: {
     initial: 2,
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       subdivisions = value;
       vertexBuffer = icosphereGenerator.createIcosphere(
         subdivisions,
@@ -468,7 +469,7 @@ export const controls = {
   },
   'smooth normals': {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       smoothNormals = value;
       vertexBuffer = icosphereGenerator.createIcosphere(
         subdivisions,
@@ -479,41 +480,29 @@ export const controls = {
   'cubemap texture': {
     initial: chosenCubemap,
     options: ['campsite', 'beach', 'chapel', 'city'],
-    onSelectChange: async (value: CubemapNames) => {
+    onSelectChange: async (value) => {
       chosenCubemap = value;
       await loadCubemap(texture, chosenCubemap);
     },
   },
   'ambient color': {
-    initial: [
-      materialProps.ambient.x,
-      materialProps.ambient.y,
-      materialProps.ambient.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.ambient,
+    onColorChange: (value) => {
+      materialProps.ambient = value;
       materialBuffer.writePartial({ ambient: materialProps.ambient });
     },
   },
   'diffuse color': {
-    initial: [
-      materialProps.diffuse.x,
-      materialProps.diffuse.y,
-      materialProps.diffuse.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.diffuse,
+    onColorChange: (value) => {
+      materialProps.diffuse = value;
       materialBuffer.writePartial({ diffuse: materialProps.diffuse });
     },
   },
   'specular color': {
-    initial: [
-      materialProps.specular.x,
-      materialProps.specular.y,
-      materialProps.specular.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.specular = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.specular,
+    onColorChange: (value) => {
+      materialProps.specular = value;
       materialBuffer.writePartial({ specular: materialProps.specular });
     },
   },
@@ -522,7 +511,7 @@ export const controls = {
     min: 1,
     max: 128,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       materialProps.shininess = value;
       materialBuffer.writePartial({ shininess: value });
     },
@@ -532,12 +521,12 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       materialProps.reflectivity = value;
       materialBuffer.writePartial({ reflectivity: value });
     },
   },
-};
+});
 
 export function onCleanup() {
   exampleDestroyed = true;
