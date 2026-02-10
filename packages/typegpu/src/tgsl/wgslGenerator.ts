@@ -452,7 +452,7 @@ ${this.ctx.pre}}`;
       }
 
       if (target.value === Math) {
-        if (property in mathToStd) {
+        if (property in mathToStd && mathToStd[property]) {
           return snip(
             mathToStd[property],
             UnknownData,

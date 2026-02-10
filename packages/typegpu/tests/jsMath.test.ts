@@ -86,4 +86,17 @@ describe('Math', () => {
       - fn*:myFn(): Unsupported functionality 'Math.log1p'. Use an std alternative, or implement the function manually.]
     `);
   });
+
+  it('correctly applies Math.fround', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = Math.fround(16777217);
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 16777216f;
+      }"
+    `);
+  });
 });
