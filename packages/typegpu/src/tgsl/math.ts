@@ -31,7 +31,7 @@ import {
 import type { DualFn } from '../types.ts';
 
 export const mathToStd: Record<string, DualFn<AnyFn> | undefined> = {
-  // -- one to one Math to WGSL corelation --
+  // -- one to one Math to WGSL correlation --
   abs,
   acos,
   acosh,

@@ -298,11 +298,11 @@ Only functions marked with `'use gpu'` can be called from within a shader. There
 of shaders in a familiar way, as well as most `Math` functions.
 
 :::caution
-Calling `Math` functions like (`Math.sin`) inside TypeGPU functions should be avoided.
+Calling `Math` functions such as `Math.sin` inside TypeGPU functions should be avoided.
 - not all `Math` functions are supported,
 - using `Math` functions may lead to unexpected type conversions.
 
-All supported `Math` functions fallback to their `std` equivalents, and it is advised to use `std` directly.
+All supported `Math` functions fall back to their `std` equivalents, and it is advised to use `std` directly.
 :::
 
 ### Standard library

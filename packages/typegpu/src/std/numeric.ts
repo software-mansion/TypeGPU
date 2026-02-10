@@ -1084,7 +1084,7 @@ function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
       if (floor % 2 === 0) {
         return floor as T;
       }
-      return floor + 1 as T;
+      return (floor + 1) as T;
     }
     return Math.round(value) as T;
   }
