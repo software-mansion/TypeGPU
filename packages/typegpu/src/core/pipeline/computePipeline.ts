@@ -210,7 +210,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     warnIfOverflow(
       memo.usedBindGroupLayouts,
-      this[$internal].branch.device.limits,
+      this[$internal].root.device.limits,
     );
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
