@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -280,7 +281,7 @@ frame();
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   Randomize: {
     onButtonClick: () => randomizePositions(),
   },
@@ -320,7 +321,7 @@ export const controls = {
   '🟥🟦': {
     onButtonClick: () => colorPalette.write(colorPresets.hotcold),
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;
