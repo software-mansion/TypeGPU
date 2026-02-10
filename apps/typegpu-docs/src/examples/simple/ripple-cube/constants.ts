@@ -1,4 +1,4 @@
-export const MAX_STEPS = 128;
+export const MAX_STEPS = 64;
 export const MAX_DIST = 40;
 export const SURF_DIST = 0.001;
 export const PI = Math.PI;
@@ -8,6 +8,7 @@ export const TAA_BLEND = 0.8;
 export const SHADOW_SOFTNESS = 8;
 
 export const CUBEMAP_SIZE = 512;
+export const GRID_SIZE = 64;
 
 export function halton(index: number, base: number): number {
   let result = 0;

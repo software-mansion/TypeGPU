@@ -11,12 +11,7 @@ import {
 } from './constants.ts';
 import { envMapLayout, lightsAccess, materialAccess, shade } from './pbr.ts';
 import { createPostProcessingPipelines } from './post-processing.ts';
-import {
-  blendFactorAccess,
-  getNormal,
-  sceneSDF,
-  timeAccess,
-} from './sdf-scene.ts';
+import { createSDFPrecalculator, getNormal, sceneSDF } from './sdf-scene.ts';
 import { BloomParams, Light, Material, Ray } from './types.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -26,7 +21,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const perlinCache = perlin3d.staticCache({
   root,
-  size: d.vec3u(8, 8, 8),
+  size: d.vec3u(64, 64, 64),
 });
 
 const [width, height] = [canvas.width / 2, canvas.height / 2];
@@ -54,6 +49,12 @@ const initialBloom = {
 };
 const bloomUniform = root.createUniform(BloomParams, initialBloom);
 const blendFactorUniform = root.createUniform(d.f32, 0.02);
+
+const sdfPrecalc = createSDFPrecalculator(
+  root,
+  timeUniform,
+  blendFactorUniform,
+);
 
 const backgroundCubemap = createBackgroundCubemap(root);
 
@@ -94,13 +95,11 @@ const getRayForUV = (uv: d.v2f) => {
 
 const rayMarchPipeline = root['~unstable']
   .pipe(perlinCache.inject())
-  .with(timeAccess, timeUniform)
-  .with(blendFactorAccess, blendFactorUniform)
   .with(materialAccess, materialUniform)
   .with(lightsAccess, lightsUniform)
   .createGuardedComputePipeline((x, y) => {
     'use gpu';
-    randf.seed2(d.vec2f(x, y).add(timeUniform.$));
+    randf.seed2(d.vec2f(d.f32(x), d.f32(y)).add(timeUniform.$));
     const textureSize = std.textureDimensions(
       postProcessing.result.writeView.$,
     );
@@ -170,7 +169,12 @@ function run(timestamp: number) {
   jitterUniform.write(d.vec2f(jitterX, jitterY));
   frameIndex++;
 
-  rayMarchPipeline.with(envMapBindGroup).dispatchThreads(width, height);
+  sdfPrecalc.precalculate();
+
+  rayMarchPipeline
+    .with(envMapBindGroup)
+    .with(sdfPrecalc.sdfBindGroup)
+    .dispatchThreads(width, height);
 
   postProcessing.runTaa();
 
@@ -252,6 +256,7 @@ export const controls = {
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
+  sdfPrecalc.destroy();
   perlinCache.destroy();
   root.destroy();
 }
