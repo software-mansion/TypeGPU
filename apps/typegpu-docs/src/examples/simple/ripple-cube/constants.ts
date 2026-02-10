@@ -7,8 +7,8 @@ export const BLUR_RADIUS = 16;
 export const TAA_BLEND = 0.8;
 export const SHADOW_SOFTNESS = 8;
 
-export const CUBEMAP_SIZE = 512;
-export const GRID_SIZE = 64;
+export const CUBEMAP_SIZE = 1024;
+export const GRID_SIZE = 198;
 
 export function halton(index: number, base: number): number {
   let result = 0;
