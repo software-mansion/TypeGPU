@@ -26,8 +26,8 @@ export const sceneSDF = (p: d.v3f): number => {
 
 export function createSDFPrecalculator(
   root: TgpuRoot,
-  timeUniform: TgpuUniform<typeof d.f32>,
-  blendFactorUniform: TgpuUniform<typeof d.f32>,
+  timeUniform: TgpuUniform<d.F32>,
+  blendFactorUniform: TgpuUniform<d.F32>,
 ) {
   const texture = root['~unstable']
     .createTexture({
