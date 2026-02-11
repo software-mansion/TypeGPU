@@ -182,9 +182,11 @@ export function createPostProcessingPipelines(
 
   const renderPipeline = root['~unstable']
     .with(bloomParamsAccess, bloomUniform)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(fragmentMain, { format: presentationFormat })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: fragmentMain,
+      targets: { format: presentationFormat },
+    });
 
   const taaBindGroup = root.createBindGroup(taaResolveLayout, {
     currentTexture: result.sampleView,
