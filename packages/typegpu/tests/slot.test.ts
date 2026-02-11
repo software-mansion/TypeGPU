@@ -345,7 +345,6 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
-
         return color;
       }"
     `);
