@@ -139,8 +139,8 @@ const getRayForUV = (uv: d.v2f) => {
   const camera = cameraUniform.$;
   const jitteredUV = uv.add(jitterUniform.$);
   const ndc = jitteredUV.mul(2).sub(1).mul(d.vec2f(1, -1));
-  const farView = camera.inverseProjection.mul(d.vec4f(ndc.xy, 1, 1));
-  const farWorld = camera.inverseView.mul(
+  const farView = camera.projectionInverse.mul(d.vec4f(ndc.xy, 1, 1));
+  const farWorld = camera.viewInverse.mul(
     d.vec4f(farView.xyz.div(farView.w), 1),
   );
   const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
