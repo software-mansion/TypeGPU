@@ -11,7 +11,7 @@ describe('autonaming', () => {
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
-    const myAccessor = tgpu['~unstable'].accessor(d.f32);
+    const myAccessor = tgpu.accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
     const myConst = tgpu.const(d.f32, 1);
