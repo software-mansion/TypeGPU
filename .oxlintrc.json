@@ -15,8 +15,7 @@
       "error",
       "always",
       { "ignorePackages": true }
-    ],
-    "eslint/no-unused-imports": "error"
+    ]
   },
   "ignorePatterns": ["**/*.astro"],
   "overrides": [
