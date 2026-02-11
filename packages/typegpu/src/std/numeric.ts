@@ -1081,6 +1081,13 @@ function cpuRound(value: number): number;
 function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
 function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   if (typeof value === 'number') {
+    const floor = Math.floor(value);
+    if (value === floor + 0.5) {
+      if (floor % 2 === 0) {
+        return floor as T;
+      }
+      return (floor + 1) as T;
+    }
     return Math.round(value) as T;
   }
   throw new MissingCpuImplError(

@@ -244,12 +244,7 @@ const Transpilers: Partial<
     }
 
     if (node.kind === 'const') {
-      if (init === undefined) {
-        throw new Error(
-          'Did not provide initial value in `const` declaration.',
-        );
-      }
-      return [NODE.const, id, init];
+      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
     }
 
     return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
@@ -320,6 +315,13 @@ const Transpilers: Partial<
     const condition = transpile(ctx, node.test) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
     return [NODE.while, condition, body];
+  },
+
+  ForOfStatement(ctx, node) {
+    const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
+    const iterable = transpile(ctx, node.right) as tinyest.Expression;
+    const body = transpile(ctx, node.body) as tinyest.Statement;
+    return [NODE.forOf, loopVar, iterable, body];
   },
 
   ContinueStatement() {
