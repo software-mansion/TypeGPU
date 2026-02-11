@@ -2,63 +2,6 @@ const SPRITE_SIZE = 384;
 const FRUIT_COUNT = 10;
 const MAX_DIST = SPRITE_SIZE / 2;
 
-/** BFS-based color dilation: fills transparent pixels with nearest opaque pixel's color. */
-function dilateColors(
-  rgba: Uint8ClampedArray,
-  width: number,
-  height: number,
-): void {
-  const size = width * height;
-  const filled = new Uint8Array(size);
-  const queue: number[] = [];
-
-  // Mark opaque pixels as filled and find frontier (opaque with a transparent neighbor)
-  for (let i = 0; i < size; i++) {
-    if (rgba[i * 4 + 3] > 128) {
-      filled[i] = 1;
-    }
-  }
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      if (!filled[idx]) continue;
-      if (
-        (x > 0 && !filled[idx - 1]) ||
-        (x < width - 1 && !filled[idx + 1]) ||
-        (y > 0 && !filled[idx - width]) ||
-        (y < height - 1 && !filled[idx + width])
-      ) {
-        queue.push(idx);
-      }
-    }
-  }
-
-  // Spread colors outward into transparent pixels
-  let head = 0;
-  while (head < queue.length) {
-    const idx = queue[head++];
-    const x = idx % width;
-    const y = (idx - x) / width;
-    const offsets = [
-      x > 0 ? -1 : 0,
-      x < width - 1 ? 1 : 0,
-      y > 0 ? -width : 0,
-      y < height - 1 ? width : 0,
-    ];
-    for (const off of offsets) {
-      if (off === 0) continue;
-      const nIdx = idx + off;
-      if (filled[nIdx]) continue;
-      filled[nIdx] = 1;
-      rgba[nIdx * 4] = rgba[idx * 4];
-      rgba[nIdx * 4 + 1] = rgba[idx * 4 + 1];
-      rgba[nIdx * 4 + 2] = rgba[idx * 4 + 2];
-      rgba[nIdx * 4 + 3] = 255;
-      queue.push(nIdx);
-    }
-  }
-}
-
 async function loadImage(path: string): Promise<ImageBitmap> {
   const response = await fetch(path);
   const blob = await response.blob();
@@ -130,9 +73,10 @@ function computeJfaSdf(
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        let bestDist = seedX[idx] >= 0
-          ? Math.hypot(x - seedX[idx], y - seedY[idx])
-          : Infinity;
+        let bestDist =
+          seedX[idx] >= 0
+            ? Math.hypot(x - seedX[idx], y - seedY[idx])
+            : Infinity;
 
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -229,14 +173,7 @@ export async function createAtlases(): Promise<{
 
     const sdf = computeJfaSdf(imgData.data, SPRITE_SIZE, SPRITE_SIZE);
 
-    // Dilate sprite colors outward so the smooth union zone has valid colors
-    const dilated = new Uint8ClampedArray(imgData.data);
-    dilateColors(dilated, SPRITE_SIZE, SPRITE_SIZE);
-    spriteCtx.putImageData(
-      new ImageData(dilated, SPRITE_SIZE, SPRITE_SIZE),
-      0,
-      level * SPRITE_SIZE,
-    );
+    spriteCtx.putImageData(imgData, 0, level * SPRITE_SIZE);
 
     const baseIdx = level * SPRITE_SIZE * SPRITE_SIZE;
     for (let j = 0; j < SPRITE_SIZE * SPRITE_SIZE; j++) {

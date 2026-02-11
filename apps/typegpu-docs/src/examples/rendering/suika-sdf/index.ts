@@ -36,7 +36,6 @@ const MAX_ACTIVE_FRUITS = MAX_FRUITS;
 const DROP_Y = 0.65;
 const SPAWN_WEIGHTS = [4, 3, 2, 1]; // levels 0–3, decreasing chance
 const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
-const BLEND_K = 0.1; // smooth-min blend radius (world units)
 const MERGE_DISTANCE_FACTOR = 0.6;
 const PLAYFIELD_HALF_WIDTH = 0.45;
 const SPAWN_COOLDOWN = 0.35;
@@ -138,7 +137,6 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
   fragment: ({ uv }) => {
     'use gpu';
     const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
-    const blendK = d.f32(BLEND_K);
     const levelScale = d.f32(LEVEL_SCALE);
     const clampRadius = d.f32(0.48);
     const activeCount = activeCountUniform.$;
@@ -166,8 +164,8 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
     bgColor = std.mix(bgColor, d.vec3f(1.0, 0.95, 0.74), sunMask);
 
     const hillX = uv.x + time * 0.025;
-    const hillLine = d.f32(0.2) + std.sin(hillX * 4.5) * 0.07 +
-      std.sin(hillX * 1.8) * 0.04;
+    const hillLine =
+      d.f32(0.2) + std.sin(hillX * 4.5) * 0.07 + std.sin(hillX * 1.8) * 0.04;
     const hillMask = std.clamp((hillLine - uv.y) * 50.0, d.f32(0), d.f32(1));
     bgColor = std.mix(bgColor, d.vec3f(0.41, 0.76, 0.46), hillMask);
 
@@ -214,29 +212,7 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
       );
       const spriteRgb = d.vec3f(spriteColor.x, spriteColor.y, spriteColor.z);
 
-      const sameLevel = std.abs(circle.level - closestLevel) < 0.5;
-
-      if (closestLevel < d.f32(0)) {
-        blendedDist = totalDist;
-        closestLevel = circle.level;
-        outColor = d.vec3f(spriteRgb);
-      } else if (sameLevel) {
-        const diff = blendedDist - totalDist;
-        const within = std.max(blendK - std.abs(diff), d.f32(0));
-        if (within > d.f32(0)) {
-          const h = std.clamp(
-            d.f32(0.5) + (d.f32(0.5) * diff) / blendK,
-            d.f32(0),
-            d.f32(1),
-          );
-          blendedDist = std.mix(blendedDist, totalDist, h) -
-            blendK * h * (d.f32(1) - h);
-          outColor = std.mix(outColor, d.vec3f(spriteRgb), h);
-        } else if (totalDist < blendedDist) {
-          blendedDist = totalDist;
-          outColor = d.vec3f(spriteRgb);
-        }
-      } else if (totalDist < blendedDist) {
+      if (totalDist < blendedDist) {
         blendedDist = totalDist;
         closestLevel = circle.level;
         outColor = d.vec3f(spriteRgb);
@@ -263,8 +239,8 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
           d.f32(0),
           d.f32(1),
         );
-        const speck = std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) *
-          d.f32(0.04);
+        const speck =
+          std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) * d.f32(0.04);
         const texture = stripeMask * d.f32(0.08) + speck;
         const edgeShade = std.clamp(0.35 - dist * 12.0, d.f32(0), d.f32(0.35));
         outColor = d.vec3f(
