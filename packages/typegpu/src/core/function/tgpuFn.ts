@@ -187,6 +187,15 @@ function createFn<ImplSchema extends AnyFn>(
     [$getNameForward]: FnCore;
   };
 
+  let pairs: SlotValuePair[] = [];
+  // Unwrapping generic functions
+  if (isGenericFn(implementation)) {
+    pairs = implementation[$providing]?.pairs ?? [];
+    implementation = implementation[$internal].inner as Implementation<
+      ImplSchema
+    >;
+  }
+
   const core = createFnCore(implementation as Implementation, '');
 
   const fnBase = {
@@ -270,6 +279,9 @@ function createFn<ImplSchema extends AnyFn>(
     },
   });
 
+  if (pairs.length > 0) {
+    return createBoundFunction(fn, pairs);
+  }
   return fn;
 }
 

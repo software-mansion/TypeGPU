@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { std } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
@@ -249,6 +249,117 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
 
       fn main() -> f32 {
         return (getValue() + getValueShelled());
+      }"
+    `);
+  });
+
+  it('allows for overloads', () => {
+    const mySlot = tgpu.slot<number | d.v2f>();
+    const f = (arg: number | d.v2f) => {
+      'use gpu';
+      return std.mul(arg, mySlot.$);
+    };
+
+    const fnum = tgpu.fn(f).with(mySlot, 3);
+    const fvec = tgpu.fn(f).with(mySlot, d.vec2f(1, 2));
+
+    const main = () => {
+      'use gpu';
+      fnum(1);
+      fnum(d.vec2f());
+      fvec(1);
+      fvec(d.vec2f());
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn f(arg: i32) -> i32 {
+        return (arg * 3i);
+      }
+
+      fn f_1(arg: vec2f) -> vec2f {
+        return (arg * 3f);
+      }
+
+      fn f_2(arg: i32) -> vec2f {
+        return (f32(arg) * vec2f(1, 2));
+      }
+
+      fn f_3(arg: vec2f) -> vec2f {
+        return (arg * vec2f(1, 2));
+      }
+
+      fn main() {
+        f(1i);
+        f_1(vec2f());
+        f_2(1i);
+        f_3(vec2f());
+      }"
+    `);
+  });
+
+  it('can be passed into .createGuardedComputePipeline', ({ root }) => {
+    const offsetSlot = tgpu.slot<number>();
+    const f = tgpu.fn((x: number, y: number, z: number) => {
+      'use gpu';
+      console.log(x + y + z + offsetSlot.$);
+    }).with(offsetSlot, 1);
+
+    const pipeline = root['~unstable'].createGuardedComputePipeline(f);
+
+    expect(tgpu.resolve([pipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32{
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeU32(n: u32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = n;
+      }
+
+      fn log1serializer(_arg_0: u32) {
+        serializeU32(_arg_0);
+      }
+
+      fn log1(_arg_0: u32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn f(x: u32, y: u32, z: u32) {
+        log1((((x + y) + z) + 1u));
+      }
+
+      struct mainCompute_Input {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
+          return;
+        }
+        f(in.id.x, in.id.y, in.id.z);
       }"
     `);
   });
