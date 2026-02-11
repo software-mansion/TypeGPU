@@ -21,7 +21,6 @@ import {
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
-  type Eventual,
   isAccessor,
   isMutableAccessor,
   type Providing,
@@ -42,7 +41,6 @@ import type {
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
 import type { Withable } from '../root/rootTypes.ts';
-import type { AnyData } from '../../data/index.ts';
 
 // ----------
 // Public API
@@ -104,23 +102,14 @@ export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
 /**
  * A function wrapper that allows providing slot and accessor overrides for shellless functions
  */
-export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable {
+export interface TgpuGenericFn<T extends AnyFn>
+  extends TgpuNamable, Withable<TgpuGenericFn<T>> {
   readonly [$internal]: {
     inner: T;
   };
   readonly [$getNameForward]: T;
   readonly [$providing]?: Providing | undefined;
   readonly resourceType: 'generic-function';
-
-  with<S>(slot: TgpuSlot<S>, value: Eventual<S>): TgpuGenericFn<T>;
-  with<S extends AnyData>(
-    accessor: TgpuAccessor<S>,
-    value: TgpuAccessor.In<S>,
-  ): TgpuGenericFn<T>;
-  with<S extends AnyData>(
-    accessor: TgpuMutableAccessor<S>,
-    value: TgpuMutableAccessor.In<S>,
-  ): TgpuGenericFn<T>;
 
   (...args: Parameters<T>): ReturnType<T>;
 }

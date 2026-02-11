@@ -23,12 +23,12 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return countAccess.$ * 2;
     };
 
-    const getDouble4 = tgpu.fn(getDouble);
+    const getDouble2 = tgpu.fn(getDouble);
 
     const main = () => {
       'use gpu';
       const original = getDouble();
-      const wrapped = getDouble4();
+      const wrapped = getDouble2();
       return original + wrapped;
     };
 
@@ -53,11 +53,11 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return countAccess.$ * 2;
     };
 
-    const getDouble4 = tgpu.fn(getDouble);
+    const getDouble2 = tgpu.fn(getDouble);
 
     const main = () => {
       'use gpu';
-      return getDouble4();
+      return getDouble2();
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -79,11 +79,11 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return countAccess.$ * 2;
     };
 
-    const getDouble4 = tgpu.fn(getDouble);
+    const getDouble2 = tgpu.fn(getDouble);
 
     const main = () => {
       'use gpu';
-      return getDouble4() + getDouble4();
+      return getDouble2() + getDouble2();
     };
 
     const wgsl = tgpu.resolve([main]);
@@ -99,7 +99,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('supports .with for slot bindings on generic functions', () => {
-    const multiplier = tgpu.slot(2).$name('multiplier');
+    const multiplier = tgpu.slot(2);
 
     const scale = () => {
       'use gpu';
