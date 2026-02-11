@@ -118,7 +118,7 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
 
   const perlinCache = perlin3d.staticCache({
     root,
-    size: d.vec3u(64, 64, 64),
+    size: d.vec3u(128, 128, 128),
   });
 
   const faceOutputLayout = tgpu.bindGroupLayout({

@@ -1,47 +1,30 @@
-import type {
-  TgpuGuardedComputePipeline,
-  TgpuRoot,
-  TgpuTexture,
-  TgpuTextureView,
-  TgpuUniform,
-} from 'typegpu';
+import type { TgpuRoot } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import { BLUR_RADIUS, TAA_BLEND } from './constants.ts';
 import { BloomParams } from './types.ts';
 
+export const bloomParamsAccess = tgpu['~unstable'].accessor(BloomParams);
+
 const taaResolveLayout = tgpu.bindGroupLayout({
-  currentTexture: { texture: d.texture2d(d.f32) },
-  historyTexture: { texture: d.texture2d(d.f32) },
+  currentTexture: { texture: d.texture2d() },
+  historyTexture: { texture: d.texture2d() },
   outputTexture: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-const copyLayout = tgpu.bindGroupLayout({
-  inputTexture: { texture: d.texture2d(d.f32) },
-  outputTexture: { storageTexture: d.textureStorage2d('rgba16float') },
-});
-
-const extractBrightLayout = tgpu.bindGroupLayout({
-  sourceTexture: { texture: d.texture2d(d.f32) },
-  outputTexture: { storageTexture: d.textureStorage2d('rgba16float') },
-  sampler: { sampler: 'filtering' },
-  params: { uniform: BloomParams },
-});
-
-const blurLayout = tgpu.bindGroupLayout({
-  inputTexture: { texture: d.texture2d(d.f32) },
+const processLayout = tgpu.bindGroupLayout({
+  inputTexture: { texture: d.texture2d() },
   outputTexture: { storageTexture: d.textureStorage2d('rgba16float') },
   sampler: { sampler: 'filtering' },
 });
 
 const compositeLayout = tgpu.bindGroupLayout({
-  colorTexture: { texture: d.texture2d(d.f32) },
-  bloomTexture: { texture: d.texture2d(d.f32) },
+  colorTexture: { texture: d.texture2d() },
+  bloomTexture: { texture: d.texture2d() },
   sampler: { sampler: 'filtering' },
-  params: { uniform: BloomParams },
 });
 
-export function createProcessingTexture(
+function createProcessingTexture(
   root: TgpuRoot,
   width: number,
   height: number,
@@ -60,26 +43,14 @@ export function createProcessingTexture(
   };
 }
 
-export interface ProcessingTexture {
-  texture: TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>;
-  writeView: TgpuTextureView<d.WgslStorageTexture2d<'rgba16float'>>;
-  sampleView: TgpuTextureView<d.WgslTexture2d<d.F32>>;
-}
-
-export interface PostProcessingPipelines {
-  result: ProcessingTexture;
-  runTaa: () => void;
-  runBloom: () => void;
-  render: (targetView: GPUTextureView) => void;
-}
-
 export function createPostProcessingPipelines(
   root: TgpuRoot,
   width: number,
   height: number,
-  bloomUniform: TgpuUniform<typeof BloomParams>,
   presentationFormat: GPUTextureFormat,
-): PostProcessingPipelines {
+  initialBloom: d.Infer<typeof BloomParams>,
+) {
+  const bloomUniform = root.createUniform(BloomParams, initialBloom);
   const bloomWidth = Math.max(1, Math.floor(width / 2));
   const bloomHeight = Math.max(1, Math.floor(height / 2));
 
@@ -143,43 +114,45 @@ export function createPostProcessingPipelines(
     (x, y) => {
       'use gpu';
       const color = std.textureLoad(
-        copyLayout.$.inputTexture,
+        processLayout.$.inputTexture,
         d.vec2i(d.i32(x), d.i32(y)),
         0,
       );
-      std.textureStore(copyLayout.$.outputTexture, d.vec2u(x, y), color);
+      std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), color);
     },
   );
 
-  const extractBright = root['~unstable'].createGuardedComputePipeline(
-    (x, y) => {
-      'use gpu';
-      const dimensions = std.textureDimensions(
-        extractBrightLayout.$.outputTexture,
-      );
-      const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
-      const color = std.textureSampleLevel(
-        extractBrightLayout.$.sourceTexture,
-        extractBrightLayout.$.sampler,
-        uv,
-        0,
-      );
-      const brightness = std.dot(color.xyz, d.vec3f(0.2126, 0.7152, 0.0722));
-      const threshold = extractBrightLayout.$.params.threshold;
-      const bright = std.max(brightness - threshold, 0) /
-        std.max(brightness, 1e-4);
-      const bloomColor = color.xyz.mul(bright);
-      std.textureStore(
-        extractBrightLayout.$.outputTexture,
-        d.vec2u(x, y),
-        d.vec4f(bloomColor, 1),
-      );
-    },
-  );
+  const extractBright = root['~unstable']
+    .with(bloomParamsAccess, bloomUniform)
+    .createGuardedComputePipeline(
+      (x, y) => {
+        'use gpu';
+        const dimensions = std.textureDimensions(
+          processLayout.$.outputTexture,
+        );
+        const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
+        const color = std.textureSampleLevel(
+          processLayout.$.inputTexture,
+          processLayout.$.sampler,
+          uv,
+          0,
+        );
+        const brightness = std.dot(color.xyz, d.vec3f(0.2126, 0.7152, 0.0722));
+        const threshold = bloomParamsAccess.$.threshold;
+        const bright = std.max(brightness - threshold, 0) /
+          std.max(brightness, 1e-4);
+        const bloomColor = color.xyz.mul(bright);
+        std.textureStore(
+          processLayout.$.outputTexture,
+          d.vec2u(x, y),
+          d.vec4f(bloomColor, 1),
+        );
+      },
+    );
 
-  const blurHorizontal = createBlurPass(root, 'horizontal', blurLayout);
+  const blurHorizontal = createBlurPass(root, 'horizontal');
 
-  const blurVertical = createBlurPass(root, 'vertical', blurLayout);
+  const blurVertical = createBlurPass(root, 'vertical');
 
   const fragmentMain = tgpu['~unstable'].fragmentFn({
     in: { uv: d.vec2f },
@@ -197,7 +170,7 @@ export function createPostProcessingPipelines(
     );
 
     let final = color.xyz.add(
-      bloomColor.xyz.mul(compositeLayout.$.params.intensity),
+      bloomColor.xyz.mul(bloomParamsAccess.$.intensity),
     );
 
     const centeredUV = uv.sub(0.5).mul(2);
@@ -208,6 +181,7 @@ export function createPostProcessingPipelines(
   });
 
   const renderPipeline = root['~unstable']
+    .with(bloomParamsAccess, bloomUniform)
     .withVertex(fullScreenTriangle, {})
     .withFragment(fragmentMain, { format: presentationFormat })
     .createPipeline();
@@ -218,25 +192,25 @@ export function createPostProcessingPipelines(
     outputTexture: taaOutput.writeView,
   });
 
-  const copyBindGroup = root.createBindGroup(copyLayout, {
+  const copyBindGroup = root.createBindGroup(processLayout, {
     inputTexture: taaOutput.sampleView,
     outputTexture: history.writeView,
+    sampler,
   });
 
-  const extractBindGroup = root.createBindGroup(extractBrightLayout, {
-    sourceTexture: result.sampleView,
+  const extractBindGroup = root.createBindGroup(processLayout, {
+    inputTexture: result.sampleView,
     outputTexture: bloom.writeView,
     sampler,
-    params: bloomUniform.buffer,
   });
 
-  const blurHorizontalBindGroup = root.createBindGroup(blurLayout, {
+  const blurHorizontalBindGroup = root.createBindGroup(processLayout, {
     inputTexture: bloom.sampleView,
     outputTexture: blurTemp.writeView,
     sampler,
   });
 
-  const blurVerticalBindGroup = root.createBindGroup(blurLayout, {
+  const blurVerticalBindGroup = root.createBindGroup(processLayout, {
     inputTexture: blurTemp.sampleView,
     outputTexture: bloom.writeView,
     sampler,
@@ -246,11 +220,11 @@ export function createPostProcessingPipelines(
     colorTexture: taaOutput.sampleView,
     bloomTexture: bloom.sampleView,
     sampler,
-    params: bloomUniform.buffer,
   });
 
   return {
     result,
+    bloomUniform,
     runTaa: () => {
       taaResolve.with(taaBindGroup).dispatchThreads(width, height);
       copyToHistory.with(copyBindGroup).dispatchThreads(width, height);
@@ -282,11 +256,10 @@ export function createPostProcessingPipelines(
 function createBlurPass(
   root: TgpuRoot,
   direction: 'horizontal' | 'vertical',
-  blurLayout: ReturnType<typeof tgpu.bindGroupLayout>,
-): TgpuGuardedComputePipeline {
+) {
   return root['~unstable'].createGuardedComputePipeline((x, y) => {
     'use gpu';
-    const dimensions = std.textureDimensions(blurLayout.$.inputTexture);
+    const dimensions = std.textureDimensions(processLayout.$.inputTexture);
     const texelSize = d.vec2f(1).div(d.vec2f(dimensions));
     const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
 
@@ -303,8 +276,8 @@ function createBlurPass(
       result = result.add(
         std
           .textureSampleLevel(
-            blurLayout.$.inputTexture,
-            blurLayout.$.sampler,
+            processLayout.$.inputTexture,
+            processLayout.$.sampler,
             uv.add(offset),
             0,
           )
@@ -314,7 +287,7 @@ function createBlurPass(
     }
 
     std.textureStore(
-      blurLayout.$.outputTexture,
+      processLayout.$.outputTexture,
       d.vec2u(x, y),
       d.vec4f(result.div(totalWeight), 1),
     );

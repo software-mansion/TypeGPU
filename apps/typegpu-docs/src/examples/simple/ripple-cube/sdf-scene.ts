@@ -5,7 +5,7 @@ export const timeAccess = tgpu['~unstable'].accessor(d.f32);
 export const blendFactorAccess = tgpu['~unstable'].accessor(d.f32);
 
 export const sdfLayout = tgpu.bindGroupLayout({
-  sdfTexture: { texture: d.texture3d(d.f32) },
+  sdfTexture: { texture: d.texture3d() },
   sdfSampler: { sampler: 'filtering' },
 });
 

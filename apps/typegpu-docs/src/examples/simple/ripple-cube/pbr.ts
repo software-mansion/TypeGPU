@@ -101,18 +101,18 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
   const pScaled = p.mul(50);
   const roughOffset = d
     .vec3f(
-      perlin3d.sample(pScaled) - 0.5,
-      perlin3d.sample(pScaled.add(100)) - 0.5,
-      perlin3d.sample(pScaled.add(200)) - 0.5,
+      perlin3d.sample(pScaled),
+      perlin3d.sample(pScaled.add(100)),
+      perlin3d.sample(pScaled.add(200)),
     )
-    .mul(material.roughness * 0.5);
+    .mul(material.roughness * 0.3);
   const blurredReflectDir = std.normalize(reflectDir.add(roughOffset));
 
   const envColor = std.textureSampleLevel(
     envMapLayout.$.envMap,
     envMapLayout.$.envSampler,
     blurredReflectDir,
-    0,
+    material.roughness * 4,
   );
 
   const ndotv = std.max(std.dot(n, v), 0);

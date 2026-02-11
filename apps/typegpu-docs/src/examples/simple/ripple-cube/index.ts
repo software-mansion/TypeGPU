@@ -20,7 +20,7 @@ import {
   sdfLayout,
   timeAccess,
 } from './sdf-scene.ts';
-import { BloomParams, Light, Material, Ray } from './types.ts';
+import { Light, Material, Ray } from './types.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const root = await tgpu.init();
@@ -40,9 +40,9 @@ const jitterUniform = root.createUniform(d.vec2f);
 
 const initialMaterial = {
   albedo: d.vec3f(0.98),
-  metallic: 0.8,
-  roughness: 0.5,
-  ao: 0.4,
+  metallic: 0.92,
+  roughness: 0.09,
+  ao: 0.3,
 };
 const materialUniform = root.createUniform(Material, initialMaterial);
 
@@ -52,11 +52,10 @@ const lightsUniform = root.createUniform(d.arrayOf(Light, LIGHT_COUNT), [
 ]);
 
 const initialBloom = {
-  threshold: 0.5,
-  intensity: 0.6,
+  threshold: 0.18,
+  intensity: 1.3,
 };
-const bloomUniform = root.createUniform(BloomParams, initialBloom);
-const blendFactorUniform = root.createUniform(d.f32, 0.02);
+const blendFactorUniform = root.createUniform(d.f32, 0.03);
 
 const sdfTexture = root['~unstable']
   .createTexture({
@@ -124,13 +123,13 @@ const postProcessing = createPostProcessingPipelines(
   root,
   width,
   height,
-  bloomUniform,
   presentationFormat,
+  initialBloom,
 );
 
 const cameraResult = setupOrbitCamera(
   canvas,
-  { initPos: d.vec4f(2, 2, 2, 1) },
+  { initPos: d.vec4f(2, 2, 2, 1), maxZoom: 4, minZoom: 1 },
   (newProps) => cameraUniform.writePartial(newProps),
 );
 
@@ -164,13 +163,14 @@ const rayMarchPipeline = root['~unstable']
     const rd = ray.direction.xyz;
 
     let totalDist = d.f32(0);
+    let lastDist = d.f32(MAX_DIST);
     let hit = d.bool(false);
 
     for (let i = 0; i < MAX_STEPS; i++) {
       const p = ro.add(rd.mul(totalDist));
-      const dist = sceneSDF(p);
+      lastDist = sceneSDF(p);
 
-      if (dist < SURF_DIST) {
+      if (lastDist < SURF_DIST) {
         hit = true;
         break;
       }
@@ -178,7 +178,11 @@ const rayMarchPipeline = root['~unstable']
         break;
       }
 
-      totalDist += dist;
+      totalDist += lastDist;
+    }
+
+    if (lastDist < SURF_DIST * 20 && totalDist < MAX_DIST) {
+      hit = true;
     }
 
     let finalColor = std.textureSampleLevel(
@@ -279,7 +283,7 @@ export const controls = {
     initial: initialBloom.threshold,
     step: 0.01,
     onSliderChange(v: number) {
-      bloomUniform.writePartial({ threshold: v });
+      postProcessing.bloomUniform.writePartial({ threshold: v });
     },
   },
   'bloom intensity': {
@@ -288,14 +292,14 @@ export const controls = {
     initial: initialBloom.intensity,
     step: 0.01,
     onSliderChange(v: number) {
-      bloomUniform.writePartial({ intensity: v });
+      postProcessing.bloomUniform.writePartial({ intensity: v });
     },
   },
   'blend factor': {
     min: 0.00001,
     max: 0.5,
     step: 0.00001,
-    initial: 0.004,
+    initial: 0.03,
     onSliderChange(v: number) {
       blendFactorUniform.write(v);
     },

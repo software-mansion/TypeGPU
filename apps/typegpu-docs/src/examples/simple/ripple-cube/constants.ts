@@ -1,9 +1,9 @@
-export const MAX_STEPS = 64;
-export const MAX_DIST = 40;
+export const MAX_STEPS = 48;
+export const MAX_DIST = 5;
 export const SURF_DIST = 0.001;
 export const PI = Math.PI;
 export const LIGHT_COUNT = 2;
-export const BLUR_RADIUS = 16;
+export const BLUR_RADIUS = 8;
 export const TAA_BLEND = 0.85;
 
 export const CUBEMAP_SIZE = 1024;
