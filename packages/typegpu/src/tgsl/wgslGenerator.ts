@@ -2,7 +2,6 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import {
-  type AnyData,
   ConsoleLog,
   InfixDispatch,
   isLooseData,
@@ -674,7 +673,7 @@ ${this.ctx.pre}}`;
               }
 
               const converted = args.map((s, idx) => {
-                const argType = shellless.argTypes[idx] as AnyData;
+                const argType = shellless.argTypes[idx] as wgsl.BaseData;
                 return tryConvertSnippet(
                   this.ctx,
                   s,
