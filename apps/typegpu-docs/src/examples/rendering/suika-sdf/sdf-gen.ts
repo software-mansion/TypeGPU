@@ -73,10 +73,9 @@ function computeJfaSdf(
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        let bestDist =
-          seedX[idx] >= 0
-            ? Math.hypot(x - seedX[idx], y - seedY[idx])
-            : Infinity;
+        let bestDist = seedX[idx] >= 0
+          ? Math.hypot(x - seedX[idx], y - seedY[idx])
+          : Infinity;
 
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -165,7 +164,7 @@ export async function createAtlases(): Promise<{
           (y > 0 && alpha[(idx - SPRITE_SIZE) * 4 + 3] <= 128) ||
           (y < SPRITE_SIZE - 1 && alpha[(idx + SPRITE_SIZE) * 4 + 3] <= 128);
         if (hasTransparentNeighbor) {
-          pts.push((x - center) / center, (y - center) / center);
+          pts.push((x - center) / center, -(y - center) / center);
         }
       }
     }
