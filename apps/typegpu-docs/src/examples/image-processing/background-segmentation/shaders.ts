@@ -27,7 +27,7 @@ export const prepareModelInput = (x: number, y: number) => {
   );
 
   prepareModelInputLayout.$
-    .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
+    .outputBuffer[y * MODEL_WIDTH + x] = col.x;
   prepareModelInputLayout.$
     .outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.y;
   prepareModelInputLayout.$

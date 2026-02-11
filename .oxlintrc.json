@@ -1,8 +1,25 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": null,
-  "categories": {},
-  "rules": {},
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "eslint/no-unused-vars": "off",
+    "eslint-plugin-unicorn/prefer-add-event-listener": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/tests/**"],
+      "rules": {
+        "eslint/no-unused-expressions": "off",
+        "eslint-plugin-unicorn/consistent-function-scoping": "off",
+        "eslint/no-unsafe-optional-chaining": "off",
+        "eslint/no-constant-condition": "off"
+      }
+    }
+  ],
   "settings": {
     "jsx-a11y": {
       "polymorphicPropName": null,

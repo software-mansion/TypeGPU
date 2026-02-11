@@ -66,14 +66,14 @@ describe('textureGather', () => {
         idx,
       );
 
-      if (false) {
+      (() => {
         expectTypeOf(gather2d).toEqualTypeOf<d.v4f>();
         expectTypeOf(gather2d_u32).toEqualTypeOf<d.v4u>();
         expectTypeOf(gather2d_array).toEqualTypeOf<d.v4i>();
         expectTypeOf(gathercube_array).toEqualTypeOf<d.v4f>();
         expectTypeOf(gatherdepth2d).toEqualTypeOf<d.v4f>();
         expectTypeOf(gatherdepth2d_array).toEqualTypeOf<d.v4f>();
-      }
+      });
     });
 
     expect(resolve([testFn])).toMatchInlineSnapshot(`

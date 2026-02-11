@@ -285,7 +285,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const { kind: type, length: componentCount } = new VecImpl();
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
-    const values = new Array(args.length);
+    const values: S[] = Array.from({ length: args.length });
 
     let j = 0;
     for (const arg of args) {
@@ -293,7 +293,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         values[j++] = arg;
       } else {
         for (let c = 0; c < arg.length; ++c) {
-          values[j++] = arg[c];
+          values[j++] = arg[c] as S;
         }
       }
     }

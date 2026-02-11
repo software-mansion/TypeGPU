@@ -175,11 +175,11 @@ const Transpilers: Partial<
         'BigInt literals are represented as numbers - loss of precision may occur.',
       );
     }
-    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
+    return [NODE.numericLiteral, String(Number(node.value))];
   },
 
   NumericLiteral(ctx, node) {
-    return [NODE.numericLiteral, String(node.value) ?? ''];
+    return [NODE.numericLiteral, String(node.value)];
   },
 
   BigIntLiteral(ctx, node) {

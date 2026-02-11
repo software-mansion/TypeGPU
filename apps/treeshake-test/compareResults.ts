@@ -46,9 +46,9 @@ async function generateReport(
 
   // Split tests into static and dynamic
   const staticTests = [...allTests].filter((t) => !t.includes('_from_'))
-    .sort();
+    .toSorted();
   const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
-    .sort();
+    .toSorted();
 
   // Summary statistics
   let totalDecreased = 0;

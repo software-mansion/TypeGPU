@@ -106,14 +106,16 @@ if (typeof window === 'undefined') {
         value: (reloadToDegrade || coepHasFailed && coi.coepDegrade())
           ? false
           : coi.coepCredentialless(),
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin
       });
       if (reloadToDegrade) {
-        !coi.quiet && console.log('Reloading page to degrade COEP.');
+        if (!coi.quiet) console.log('Reloading page to degrade COEP.');
         window.sessionStorage.setItem('coiReloadedBySelf', 'coepdegrade');
         coi.doReload('coepdegrade');
       }
 
       if (coi.shouldDeregister()) {
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin
         n.serviceWorker.controller.postMessage({ type: 'deregister' });
       }
     }
@@ -123,52 +125,58 @@ if (typeof window === 'undefined') {
     if (window.crossOriginIsolated !== false || !coi.shouldRegister()) return;
 
     if (!window.isSecureContext) {
-      !coi.quiet &&
+      if (!coi.quiet) {
         console.log(
           'COOP/COEP Service Worker not registered, a secure context is required.',
         );
+      }
       return;
     }
 
     // In some environments (e.g. Firefox private mode) this won't be available
     if (!n.serviceWorker) {
-      !coi.quiet &&
+      if (!coi.quiet) {
         console.error(
           'COOP/COEP Service Worker not registered, perhaps due to private mode.',
         );
+      }
       return;
     }
 
     n.serviceWorker.register(window.document.currentScript.src).then(
       (registration) => {
-        !coi.quiet &&
+        if (!coi.quiet) {
           console.log(
             'COOP/COEP Service Worker registered',
             registration.scope,
           );
+        }
 
         registration.addEventListener('updatefound', () => {
-          !coi.quiet &&
+          if (!coi.quiet) {
             console.log(
               'Reloading page to make use of updated COOP/COEP Service Worker.',
             );
+          }
           window.sessionStorage.setItem('coiReloadedBySelf', 'updatefound');
           coi.doReload();
         });
 
         // If the registration is active, but it's not controlling the page
         if (registration.active && !n.serviceWorker.controller) {
-          !coi.quiet &&
+          if (!coi.quiet) {
             console.log(
               'Reloading page to make use of COOP/COEP Service Worker.',
             );
+          }
           window.sessionStorage.setItem('coiReloadedBySelf', 'notcontrolling');
           coi.doReload();
         }
       },
       (err) => {
-        !coi.quiet &&
+        if (!coi.quiet) {
           console.error('COOP/COEP Service Worker failed to register:', err);
+        }
       },
     );
   })();

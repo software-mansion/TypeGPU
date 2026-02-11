@@ -126,6 +126,7 @@ describe('ternary operator', () => {
 
     const myFunction = tgpu.fn([])(() => {
       // biome-ignore lint/correctness/noConstantCondition: it's a test
+      // oxlint-disable-next-line no-constant-condition
       false ? counter.$++ : undefined;
     });
     expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
