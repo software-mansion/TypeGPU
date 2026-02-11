@@ -44,7 +44,7 @@ const Transpilers: Partial<
 
   ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
 
-  ArrowFunctionExpression: (ctx, node) => {
+  ArrowFunctionExpression: () => {
     throw new Error('Arrow functions are not supported inside TGSL.');
   },
 

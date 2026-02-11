@@ -43,15 +43,15 @@ bench
   .add(
     'string tags',
     () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of stringTaggedObjs) {
         if (obj[$internal].type === 'aaa') {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === 'bbb') {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === 'ccc') {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -69,15 +69,15 @@ bench
   .add(
     'number tags',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of numberTaggedObjs) {
         if (obj[$internal].type === NUMBER_TAG_CATALOG.aaa) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === NUMBER_TAG_CATALOG.bbb) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === NUMBER_TAG_CATALOG.ccc) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -95,15 +95,15 @@ bench
   .add(
     'number tags (inlined catalog)',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of numberTaggedObjs) {
         if (obj[$internal].type === 0) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === 1) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === 2) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -121,15 +121,15 @@ bench
   .add(
     'symbol tags',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of symbolTaggedObjs) {
         if (obj[$internal].type === aaa) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === bbb) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === ccc) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -147,15 +147,15 @@ bench
   .add(
     'symbol keys',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of symbolKeyedObjs) {
         if (obj[aaa]) {
-          count += 2;
+          _count += 2;
         } else if (obj[bbb]) {
-          count += 3;
+          _count += 3;
         } else if (obj[ccc]) {
-          count += 4;
+          _count += 4;
         }
       }
     },

@@ -6,13 +6,14 @@
     "suspicious": "warn"
   },
   "rules": {
-    "eslint/no-unused-vars": "off",
-    "eslint-plugin-unicorn/prefer-add-event-listener": "off"
+    "eslint-plugin-unicorn/prefer-add-event-listener": "off",
+    "eslint/no-unused-imports": "error"
   },
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/tests/**"],
       "rules": {
+        "eslint/no-unused-vars": "off",
         "eslint/no-unused-expressions": "off",
         "eslint-plugin-unicorn/consistent-function-scoping": "off",
         "eslint/no-unsafe-optional-chaining": "off",
