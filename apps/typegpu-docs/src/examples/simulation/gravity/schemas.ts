@@ -55,11 +55,11 @@ export const renderSkyBoxVertexLayout = tgpu.vertexLayout(
   d.arrayOf(SkyBoxVertex),
 );
 
-export const cameraAccess = tgpu['~unstable'].accessor(Camera);
+export const cameraAccess = tgpu.accessor(Camera);
 export const filteringSamplerSlot = tgpu.slot<TgpuSampler>();
-export const lightSourceAccess = tgpu['~unstable'].accessor(d.vec3f);
-export const timeAccess = tgpu['~unstable'].accessor(Time);
-export const skyBoxAccess = tgpu['~unstable'].accessor(d.textureCube(d.f32));
+export const lightSourceAccess = tgpu.accessor(d.vec3f);
+export const timeAccess = tgpu.accessor(Time);
+export const skyBoxAccess = tgpu.accessor(d.textureCube(d.f32));
 
 export const renderBindGroupLayout = tgpu
   .bindGroupLayout({

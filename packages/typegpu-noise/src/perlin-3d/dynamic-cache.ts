@@ -132,8 +132,8 @@ export function dynamicCacheConfig<Prefix extends string>(
 ): DynamicPerlin3DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin3DLayoutPrefix as Prefix } = options ?? {};
 
-  const sizeAccess = tgpu['~unstable'].accessor(d.vec4u);
-  const memoryAccess = tgpu['~unstable'].accessor(MemorySchema);
+  const sizeAccess = tgpu.accessor(d.vec4u);
+  const memoryAccess = tgpu.accessor(MemorySchema);
 
   const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
     const size = d.vec3i(sizeAccess.$.xyz);

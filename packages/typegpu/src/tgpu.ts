@@ -7,6 +7,7 @@ export { resolve, resolveWithContext } from './core/resolve/tgpuResolve.ts';
 export { init, initFromDevice } from './core/root/init.ts';
 export { slot } from './core/slot/slot.ts';
 export { lazy } from './core/slot/lazy.ts';
+export { accessor, mutableAccessor } from './core/slot/accessor.ts';
 export { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 export { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export { bindGroupLayout } from './tgpuBindGroupLayout.ts';

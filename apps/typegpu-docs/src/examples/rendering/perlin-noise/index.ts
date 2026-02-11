@@ -6,9 +6,9 @@ import { defineControls } from '../../common/defineControls.ts';
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
 
-const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
-const timeAccess = tgpu['~unstable'].accessor(d.f32);
-const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
+const gridSizeAccess = tgpu.accessor(d.f32);
+const timeAccess = tgpu.accessor(d.f32);
+const sharpnessAccess = tgpu.accessor(d.f32);
 
 const exponentialSharpen = (n: number, sharpness: number): number => {
   'use gpu';
