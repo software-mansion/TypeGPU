@@ -1,9 +1,8 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.ts';
 import * as std from '../src/std/index.ts';
 
 describe('constructors', () => {
@@ -37,7 +36,7 @@ describe('setters', () => {
     vec[0] = 1.1;
     vec[1] = -1.1;
     vec.z = 2.2;
-    expect(vec).toStrictEqual(d.vec3u(1, 4294967295, 2));
+    expect(vec).toStrictEqual(d.vec3u(1, 0, 2));
   });
 });
 

@@ -1,6 +1,6 @@
 import type * as tinyest from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import type { AnyData } from '../../src/data/index.ts';
+import type { BaseData } from '../../src/data/index.ts';
 import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { provideCtx } from '../../src/execMode.ts';
@@ -11,7 +11,7 @@ import type { Snippet } from '../../src/data/snippet.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import { CodegenState } from '../../src/types.ts';
 
-function extractSnippetFromFn(cb: () => unknown): Snippet {
+export function extractSnippetFromFn(cb: () => unknown): Snippet {
   const ctx = new ResolutionCtxImpl({
     namespace: namespace({ names: 'strict' }),
   });
@@ -75,6 +75,6 @@ export function expectSnippetOf(
 
 export function expectDataTypeOf(
   cb: () => unknown,
-): Assertion<AnyData | UnknownData> {
-  return expect<AnyData | UnknownData>(extractSnippetFromFn(cb).dataType);
+): Assertion<BaseData | UnknownData> {
+  return expect<BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }

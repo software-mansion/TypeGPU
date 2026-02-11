@@ -109,7 +109,9 @@ describe('fluid double buffering example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       @group(0) @binding(2) var<storage, read> gridBetaBuffer: array<vec4f, 1048576>;
@@ -159,7 +161,7 @@ describe('fluid double buffering example', () => {
         return true;
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -168,7 +170,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
@@ -224,13 +226,13 @@ describe('fluid double buffering example', () => {
         return 0;
       }
 
-      struct item_1 {
+      struct item {
         center: vec2f,
         radius: f32,
         intensity: f32,
       }
 
-      @group(0) @binding(4) var<uniform> sourceParams: item_1;
+      @group(0) @binding(4) var<uniform> sourceParams: item;
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
@@ -289,7 +291,9 @@ describe('fluid double buffering example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       @group(0) @binding(2) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
@@ -339,7 +343,7 @@ describe('fluid double buffering example', () => {
         return true;
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -348,7 +352,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
@@ -404,13 +408,13 @@ describe('fluid double buffering example', () => {
         return 0;
       }
 
-      struct item_1 {
+      struct item {
         center: vec2f,
         radius: f32,
         intensity: f32,
       }
 
-      @group(0) @binding(4) var<uniform> sourceParams: item_1;
+      @group(0) @binding(4) var<uniform> sourceParams: item;
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;

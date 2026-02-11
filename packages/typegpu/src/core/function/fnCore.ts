@@ -1,7 +1,12 @@
 import { getAttributesString } from '../../data/attributes.ts';
-import { type AnyData, undecorate } from '../../data/dataTypes.ts';
+import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
+import {
+  type BaseData,
+  isWgslData,
+  isWgslStruct,
+  Void,
+} from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
 import type { ResolutionCtx } from '../../types.ts';
@@ -17,12 +22,16 @@ export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
     ctx: ResolutionCtx,
-    argTypes: AnyData[],
+    /**
+     * The argument types can be AutoStruct if they're determined based on usage
+     * (like in auto-entry functions).
+     */
+    argTypes: BaseData[],
     /**
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: AnyData | undefined,
+    returnType: BaseData | undefined,
   ): ResolvedSnippet;
 }
 
@@ -45,8 +54,8 @@ export function createFnCore(
 
     resolve(
       ctx: ResolutionCtx,
-      argTypes: AnyData[],
-      returnType: AnyData | undefined,
+      argTypes: BaseData[],
+      returnType: BaseData | undefined,
     ): ResolvedSnippet {
       const externalMap: ExternalMap = {};
 

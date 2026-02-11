@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import {
   ioLayout,
   type LayerData,
@@ -8,6 +6,7 @@ import {
   weightsBiasesLayout,
 } from './data.ts';
 import { downloadLayers } from './helpers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
 
@@ -92,9 +91,9 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
 });
 
 const pipelines = {
-  default: root['~unstable'].withCompute(defaultCompute).createPipeline(),
+  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].withCompute(subgroupCompute).createPipeline()
+    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 
@@ -411,7 +410,7 @@ canvas.addEventListener('touchmove', (event) => {
   handleDrawing(x, y);
 }, { passive: false });
 
-export const controls = {
+export const controls = defineControls({
   Reset: {
     onButtonClick: resetDrawing,
   },
@@ -428,7 +427,7 @@ export const controls = {
         .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

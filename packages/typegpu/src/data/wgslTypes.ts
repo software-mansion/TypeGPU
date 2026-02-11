@@ -25,20 +25,19 @@ import type {
 } from '../shared/symbols.ts';
 import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
-import type { DualFn } from './dualFn.ts';
 import type {
   WgslExternalTexture,
   WgslStorageTexture,
   WgslTexture,
 } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
-import type { ref } from './ref.ts';
+import type { _ref as ref } from './ref.ts';
+import type { DualFn } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
 export interface BaseData {
-  // biome-ignore lint/suspicious/noExplicitAny: we sometimes house functions on the internal object, so the type needs to be wider
-  readonly [$internal]: true | Record<string, any>;
+  readonly [$internal]: Record<string, unknown>;
   readonly type: string;
   readonly [$repr]: unknown;
 }
@@ -119,7 +118,7 @@ export interface Void extends BaseData {
   // ---
 }
 export const Void = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'void',
   toString() {
     return 'void';
@@ -780,7 +779,8 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, DualFn<(v?: number | boolean) => boolean> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -793,7 +793,8 @@ export interface Bool extends DualFn<(v?: number | boolean) => boolean> {
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export interface F32 extends DualFn<(v?: number | boolean) => number> {
+export interface F32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
@@ -807,7 +808,8 @@ export interface F32 extends DualFn<(v?: number | boolean) => number> {
 /**
  * 16-bit float schema representing a single WGSL f16 value.
  */
-export interface F16 extends DualFn<(v?: number | boolean) => number> {
+export interface F16
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f16';
 
   // Type-tokens, not available at runtime
@@ -821,7 +823,8 @@ export interface F16 extends DualFn<(v?: number | boolean) => number> {
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export interface I32 extends DualFn<(v?: number | boolean) => number> {
+export interface I32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'i32';
 
   // Type-tokens, not available at runtime
@@ -836,7 +839,8 @@ export interface I32 extends DualFn<(v?: number | boolean) => number> {
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export interface U32 extends DualFn<(v?: number | boolean) => number> {
+export interface U32
+  extends BaseData, DualFn<(v?: number | boolean) => number> {
   readonly type: 'u32';
 
   // Type-tokens, not available at runtime
@@ -865,6 +869,7 @@ export interface U16 extends BaseData {
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
 export interface Vec2f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2f)
     & ((xy: number) => v2f)
@@ -886,6 +891,7 @@ export interface Vec2f extends
  * Type of the `d.vec2h` object/function: vector data type schema/constructor
  */
 export interface Vec2h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2h)
     & ((xy: number) => v2h)
@@ -907,6 +913,7 @@ export interface Vec2h extends
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
 export interface Vec2i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2i)
     & ((xy: number) => v2i)
@@ -928,6 +935,7 @@ export interface Vec2i extends
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
 export interface Vec2u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number) => v2u)
     & ((xy: number) => v2u)
@@ -950,6 +958,7 @@ export interface Vec2u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec2b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean) => v2b)
     & ((xy: boolean) => v2b)
@@ -970,6 +979,7 @@ export interface Vec2b extends
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
 export interface Vec3f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3f)
     & ((xyz: number) => v3f)
@@ -993,6 +1003,7 @@ export interface Vec3f extends
  * Type of the `d.vec3h` object/function: vector data type schema/constructor
  */
 export interface Vec3h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3h)
     & ((xyz: number) => v3h)
@@ -1016,6 +1027,7 @@ export interface Vec3h extends
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
 export interface Vec3i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3i)
     & ((xyz: number) => v3i)
@@ -1039,6 +1051,7 @@ export interface Vec3i extends
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
 export interface Vec3u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number) => v3u)
     & ((xyz: number) => v3u)
@@ -1063,6 +1076,7 @@ export interface Vec3u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec3b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean, z: boolean) => v3b)
     & ((xyz: boolean) => v3b)
@@ -1085,6 +1099,7 @@ export interface Vec3b extends
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
 export interface Vec4f extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4f)
     & ((xyzw: number) => v4f)
@@ -1112,6 +1127,7 @@ export interface Vec4f extends
  * Type of the `d.vec4h` object/function: vector data type schema/constructor
  */
 export interface Vec4h extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4h)
     & ((xyzw: number) => v4h)
@@ -1139,6 +1155,7 @@ export interface Vec4h extends
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
 export interface Vec4i extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4i)
     & ((xyzw: number) => v4i)
@@ -1166,6 +1183,7 @@ export interface Vec4i extends
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
 export interface Vec4u extends
+  BaseData,
   DualFn<
     & ((x: number, y: number, z: number, w: number) => v4u)
     & ((xyzw: number) => v4u)
@@ -1194,6 +1212,7 @@ export interface Vec4u extends
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec4b extends
+  BaseData,
   DualFn<
     & ((x: boolean, y: boolean, z: boolean, w: boolean) => v4b)
     & ((xyzw: boolean) => v4b)
@@ -1221,6 +1240,7 @@ export interface Vec4b extends
  */
 export interface Mat2x2f extends BaseData {
   readonly type: 'mat2x2f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
@@ -1239,6 +1259,7 @@ export interface Mat2x2f extends BaseData {
  */
 export interface Mat3x3f extends BaseData {
   readonly type: 'mat3x3f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
@@ -1258,6 +1279,7 @@ export interface Mat3x3f extends BaseData {
  */
 export interface Mat4x4f extends BaseData {
   readonly type: 'mat4x4f';
+  readonly primitive: F32;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
@@ -1284,7 +1306,10 @@ export interface Mat4x4f extends BaseData {
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its elementType.
  */
-export interface WgslArray<TElement extends BaseData = BaseData>
+// We restrict the element type to being BaseData, which is the widest type
+// we can use internally to work with generic arrays. The default type of
+// `AnyWgslData` is the best choice for end-users.
+export interface WgslArray<out TElement extends BaseData = BaseData>
   extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -1315,8 +1340,10 @@ export interface WgslArray<TElement extends BaseData = BaseData>
  * the `byteAlignment` requirement of its members.
  */
 export interface WgslStruct<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
-  TProps extends Record<string, BaseData> = any,
+  // We restrict the type to being Record<string, BaseData>, which is the widest type
+  // we can use internally to work with generic structs.
+  // @ts-expect-error: Override variance, as we want structs to behave like objects
+  out TProps extends Record<string, BaseData> = Record<string, BaseData>,
 > extends BaseData, TgpuNamable {
   readonly [$internal]: {
     isAbstruct: boolean;
@@ -1369,7 +1396,7 @@ export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
   TAddr extends AddressSpace = AddressSpace,
-  TInner extends StorableData = StorableData,
+  TInner extends BaseData = BaseData,
   TAccess extends Access = Access,
 > extends BaseData {
   readonly type: 'ptr';
@@ -1456,8 +1483,8 @@ export interface Invariant {
 }
 
 export interface Decorated<
-  TInner extends BaseData = BaseData,
-  TAttribs extends unknown[] = unknown[],
+  out TInner extends BaseData = BaseData,
+  out TAttribs extends unknown[] = unknown[],
 > extends BaseData {
   readonly type: 'decorated';
   readonly inner: TInner;
@@ -1532,6 +1559,8 @@ export const wgslTypeLiterals = [
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
+export type IsWgslData<T> = T extends { readonly type: WgslTypeLiteral } ? true
+  : false;
 
 export type PerspectiveOrLinearInterpolatableBaseType =
   | F32

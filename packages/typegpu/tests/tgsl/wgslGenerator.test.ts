@@ -14,16 +14,14 @@ import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
+import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
+import { extractSnippetFromFn } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
 const numberSlot = tgpu.slot(44);
-const derivedV4u = tgpu['~unstable'].derived(() =>
-  std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4))
-);
-const derivedV2f = tgpu['~unstable'].derived(() =>
-  std.mul(d.f32(numberSlot.value), d.vec2f(1, 2))
-);
+const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
+const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
 describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
@@ -158,7 +156,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu.fn([], d.u32)(() => {
-      return testUsage.value.a + testUsage.value.b.x;
+      return testUsage.$.a + testUsage.$.b.x;
     });
 
     const astInfo = getMetaData(
@@ -169,7 +167,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[1,[7,[7,"testUsage","value"],"a"],"+",[7,[7,[7,"testUsage","value"],"b"],"x"]]]]]"`,
+      `"[0,[[10,[1,[7,[7,"testUsage","$"],"a"],"+",[7,[7,[7,"testUsage","$"],"b"],"x"]]]]]"`,
     );
     ctx[$internal].itemStateStack.pushFunctionScope(
       'normal',
@@ -180,7 +178,7 @@ describe('wgslGenerator', () => {
     );
 
     provideCtx(ctx, () => {
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                   ^ this should be a u32
       const res1 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
@@ -193,7 +191,7 @@ describe('wgslGenerator', () => {
 
       expect(res1.dataType).toStrictEqual(d.u32);
 
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                                       ^ this should be a u32
       const res2 = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
@@ -205,7 +203,7 @@ describe('wgslGenerator', () => {
       );
       expect(res2.dataType).toStrictEqual(d.u32);
 
-      // Check for: return testUsage.value.a + testUsage.value.b.x;
+      // Check for: return testUsage.$.a + testUsage.$.b.x;
       //            ^ this should be a u32
       const sum = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -222,7 +220,7 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('uniform');
 
     const testFn = tgpu.fn([], d.u32)(() => {
-      return testUsage.value[3] as number;
+      return testUsage.$[3] as number;
     });
 
     const astInfo = getMetaData(
@@ -234,7 +232,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"testUsage","value"],[5,"3"]]]]]"`,
+      `"[0,[[10,[8,[7,"testUsage","$"],[5,"3"]]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -246,7 +244,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: return testUsage.value[3];
+      // Check for: return testUsage.$[3];
       //                   ^ this should be a u32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -281,10 +279,10 @@ describe('wgslGenerator', () => {
 
     const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
       // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-      const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
+      const vec = std.mix(d.vec4f(), testUsage.$.a, value);
       // biome-ignore lint/style/noNonNullAssertion: <no thanks>
-      std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       return vec;
     });
 
@@ -297,7 +295,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","value"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","value"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
+      `"[0,[[13,"value",[6,[7,"std","atomicLoad"],[[7,[8,[7,[7,[7,"testUsage","$"],"b"],"aa"],"idx"],"y"]]]],[13,"vec",[6,[7,"std","mix"],[[6,[7,"d","vec4f"],[]],[7,[7,"testUsage","$"],"a"],"value"]]],[6,[7,"std","atomicStore"],[[7,[8,[7,[7,[7,"testUsage","$"],"b"],"aa"],"idx"],"x"],[7,"vec","y"]]],[10,"vec"]]]"`,
     );
 
     if (
@@ -323,7 +321,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+      // Check for: const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
       //                           ^ this part should be a i32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
@@ -331,7 +329,7 @@ describe('wgslGenerator', () => {
 
       expect(res.dataType).toStrictEqual(d.i32);
 
-      // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+      // Check for: const vec = std.mix(d.vec4f(), testUsage.$.a, value);
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
       wgslGenerator.blockVariable('var', 'value', d.i32, 'runtime');
@@ -342,7 +340,7 @@ describe('wgslGenerator', () => {
 
       expect(res2.dataType).toStrictEqual(d.vec4f);
 
-      // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+      // Check for: std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       //                            ^ this part should be an atomic u32
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
@@ -620,12 +618,12 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for "for ... of ..." statements using derived and comptime iterables', () => {
+  it('creates correct code for "for ... of ..." statements using lazy and comptime iterables', () => {
     const comptimeVec = tgpu['~unstable'].comptime(() => d.vec2f(1, 2));
 
     const main = () => {
       'use gpu';
-      const v1 = derivedV4u.$;
+      const v1 = lazyV4u.$;
       for (const foo of v1) {
         // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
@@ -846,10 +844,8 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct resources for derived values and slots', () => {
-    const testFn = tgpu.fn([], d.vec4u)(() => {
-      return derivedV4u.value;
-    });
+  it('creates correct resources for lazy values and slots', () => {
+    const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec4u {
@@ -866,7 +862,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[7,"derivedV4u","value"]]]]"`,
+      `"[0,[[10,[7,"lazyV4u","$"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -879,7 +875,7 @@ describe('wgslGenerator', () => {
       );
 
       wgslGenerator.initGenerator(ctx);
-      // Check for: return derivedV4u.value;
+      // Check for: return lazyV4u.$;
       //                      ^ this should be a vec4u
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -889,9 +885,9 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it('creates correct resources for indexing into a derived value', () => {
+  it('creates correct resources for indexing into a lazy value', () => {
     const testFn = tgpu.fn([d.u32], d.f32)((idx) => {
-      return derivedV2f.value[idx] as number;
+      return lazyV2f.$[idx] as number;
     });
 
     const astInfo = getMetaData(
@@ -903,7 +899,7 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[8,[7,"derivedV2f","value"],"idx"]]]]"`,
+      `"[0,[[10,[8,[7,"lazyV2f","$"],"idx"]]]]"`,
     );
 
     provideCtx(ctx, () => {
@@ -915,7 +911,7 @@ describe('wgslGenerator', () => {
         (astInfo.externals as () => Record<string, unknown>)() ?? {},
       );
 
-      // Check for: return derivedV2f.value[idx];
+      // Check for: return lazyV2f.$[idx];
       //                      ^ this should be a f32
       const res = wgslGenerator.expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
@@ -923,6 +919,21 @@ describe('wgslGenerator', () => {
 
       expect(res.dataType).toStrictEqual(d.f32);
     });
+  });
+
+  it('creates intermediate representation for array expression', () => {
+    const testFn = () => {
+      'use gpu';
+      [d.u32(1), 8, 8, 2];
+    };
+
+    const snippet = extractSnippetFromFn(testFn);
+
+    expect(snippet.value instanceof ArrayExpression).toBe(true);
+    expect((snippet.value as ArrayExpression).type.elementType.type)
+      .toStrictEqual('u32');
+    expect((snippet.value as ArrayExpression).type.elementCount)
+      .toStrictEqual(4);
   });
 
   it('generates correct code for array expressions', () => {
@@ -991,6 +1002,42 @@ describe('wgslGenerator', () => {
         return arr[1i].x;
       }"
     `);
+
+    const astInfo = getMetaData(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[6,[7,"d","vec2u"],[[5,"1"],[5,"2"]]],[6,[7,"d","vec2u"],[[5,"3"],[5,"4"]]],[6,[7,"std","min"],[[6,[7,"d","vec2u"],[[5,"5"],[5,"8"]]],[6,[7,"d","vec2u"],[[5,"7"],[5,"6"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"x"]]]]"`,
+    );
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.u32,
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
+      );
+
+      // Check for: const arr = [1, 2, 3]
+      //                        ^ this should be an array<u32, 3>
+      wgslGenerator.initGenerator(ctx);
+      const res = wgslGenerator.expression(
+        // deno-fmt-ignore: it's better that way
+        (
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
+      );
+
+      expect(d.isWgslArray(res.dataType)).toBe(true);
+      expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
+      expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2u);
+    });
   });
 
   it('does not autocast lhs of an assignment', () => {
@@ -1069,9 +1116,9 @@ describe('wgslGenerator', () => {
     expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
   });
 
-  it('generates correct code for array expressions with derived elements', () => {
+  it('generates correct code for array expressions with lazy elements', () => {
     const testFn = tgpu.fn([], d.f32)(() => {
-      const arr = [derivedV2f.$, std.mul(derivedV2f.$, d.vec2f(2, 2))];
+      const arr = [lazyV2f.$, std.mul(lazyV2f.$, d.vec2f(2, 2))];
       return (arr[1] as d.v2f).y;
     });
 
@@ -1091,8 +1138,27 @@ describe('wgslGenerator', () => {
     }
 
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[7,"derivedV2f","$"],[6,[7,"std","mul"],[[7,"derivedV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
+      `"[0,[[13,"arr",[100,[[7,"lazyV2f","$"],[6,[7,"std","mul"],[[7,"lazyV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
+
+    const res = provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.f32,
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
+      );
+
+      wgslGenerator.initGenerator(ctx);
+      return wgslGenerator.expression(
+        (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
+      );
+    });
+
+    expect(d.isWgslArray(res.dataType)).toBe(true);
+    expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
+    expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2f);
   });
 
   it('allows for member access on values returned from function calls', () => {
@@ -1153,53 +1219,6 @@ describe('wgslGenerator', () => {
       );
 
       expect(res.dataType).toStrictEqual(d.f32);
-    });
-  });
-
-  it('properly handles .value struct properties in slots', ({ root }) => {
-    const UnfortunateStruct = d.struct({
-      value: d.vec3f,
-    });
-
-    const testBuffer = root.createBuffer(UnfortunateStruct).$usage('storage');
-
-    const testUsage = testBuffer.as('mutable');
-    const testSlot = tgpu.slot(testUsage);
-    const testFn = tgpu.fn([], d.f32)(() => {
-      const value = testSlot.value.value;
-      return value.x + value.y + value.z;
-    });
-
-    const astInfo = getMetaData(
-      testFn[$internal].implementation as (...args: unknown[]) => unknown,
-    );
-
-    if (!astInfo) {
-      throw new Error('Expected prebuilt AST to be present');
-    }
-
-    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
-      `"[0,[[13,"value",[7,[7,"testSlot","value"],"value"]],[10,[1,[1,[7,"value","x"],"+",[7,"value","y"]],"+",[7,"value","z"]]]]]"`,
-    );
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        [],
-        {},
-        d.f32,
-        (astInfo.externals as () => Record<string, unknown>)() ?? {},
-      );
-
-      // Check for: const value = testSlot.value.value;
-      //                  ^ this should be a vec3f
-      const res = wgslGenerator.expression(
-        (
-          astInfo.ast?.body[1][0] as tinyest.Const
-        )[2] as unknown as tinyest.Expression,
-      );
-
-      expect(res.dataType).toEqual(d.vec3f);
     });
   });
 
@@ -1319,8 +1338,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn
-      - fn:internalTestFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
+      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
     `);
   });
 
@@ -1349,7 +1367,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to type 'f32']
+      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 

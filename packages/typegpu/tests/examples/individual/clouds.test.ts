@@ -50,12 +50,14 @@ describe('clouds example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        seed2(seed);
+        {
+          seed2(seed);
+        }
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -64,7 +66,7 @@ describe('clouds example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       @group(1) @binding(1) var noiseTexture: texture_2d<f32>;
@@ -74,9 +76,9 @@ describe('clouds example', () => {
       fn noise3d(pos: vec3f) -> f32 {
         var idx = floor(pos);
         var frac = fract(pos);
-        var smooth_1 = ((frac * frac) * (3 - (2 * frac)));
-        var texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256));
-        var texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256));
+        var smooth_1 = ((frac * frac) * (3f - (2f * frac)));
+        var texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256f));
+        var texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256f));
         let val0 = textureSampleLevel(noiseTexture, sampler_1, texCoord0, 0).x;
         let val1 = textureSampleLevel(noiseTexture, sampler_1, texCoord1, 0).x;
         return ((mix(val0, val1, smooth_1.z) * 2f) - 1f);
@@ -100,7 +102,7 @@ describe('clouds example', () => {
       }
 
       fn sampleDensityCheap(pos: vec3f) -> f32 {
-        let noise = (noise3d((pos * 1.4)) * 1f);
+        let noise = (noise3d((pos * 1.4f)) * 1f);
         return clamp(((noise + 0.7f) - 0.5f), 0f, 1f);
       }
 
@@ -141,7 +143,7 @@ describe('clouds example', () => {
         randSeed2((_arg_0.uv * params.time));
         let screenRes = (&resolutionUniform);
         let aspect = ((*screenRes).x / (*screenRes).y);
-        var screenPos = ((_arg_0.uv - 0.5) * 2);
+        var screenPos = ((_arg_0.uv - 0.5f) * 2f);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
         var sunDir = vec3f(1, 0, 0);
         let time = params.time;

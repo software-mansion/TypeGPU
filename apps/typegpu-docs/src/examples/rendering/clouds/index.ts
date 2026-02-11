@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 import {
   FOV_FACTOR,
   NOISE_TEXTURE_SIZE,
@@ -15,18 +12,12 @@ import {
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const paramsUniform = root.createUniform(CloudsParams, {
   time: 0,
@@ -113,7 +104,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 });
 
 const pipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
@@ -165,15 +156,15 @@ const qualityOptions = {
   },
 } as Record<string, Partial<d.Infer<typeof CloudsParams>>>;
 
-export const controls = {
+export const controls = defineControls({
   Quality: {
     initial: 'medium',
     options: ['very high', 'high', 'medium', 'low', 'very low'],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       paramsUniform.writePartial(qualityOptions[value]);
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);

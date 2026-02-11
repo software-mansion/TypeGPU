@@ -1,10 +1,10 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.ts';
 import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';
 import { matrixOpsTests } from './matrix-ops.ts';
 import { pointersTest } from './pointers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
@@ -19,15 +19,15 @@ const computeRunTests = tgpu['~unstable']
     s = s && pointersTest();
 
     if (s) {
-      result.value = 1;
+      result.$ = 1;
     } else {
-      result.value = 0;
+      result.$ = 0;
     }
   });
 
-const pipeline = root['~unstable']
-  .withCompute(computeRunTests)
-  .createPipeline();
+const pipeline = root['~unstable'].createComputePipeline({
+  compute: computeRunTests,
+});
 
 async function runTests() {
   pipeline.dispatchWorkgroups(1);
@@ -44,13 +44,13 @@ runTests().then((result) => {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Log resolved pipeline': {
     async onButtonClick() {
       console.log(tgpu.resolve([pipeline]));
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

@@ -1,6 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { cos, sin } from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 // constants
 
@@ -18,14 +17,8 @@ const COLOR_PALETTE: d.v4f[] = [
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // data types
 
@@ -87,8 +80,8 @@ const dataLayout = tgpu.vertexLayout(
 
 const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   const pos = d.vec2f(
-    (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle)),
+    (v.x * std.cos(angle)) - (v.y * std.sin(angle)),
+    (v.x * std.sin(angle)) + (v.y * std.cos(angle)),
   );
 
   return pos;
@@ -150,25 +143,27 @@ const mainCompute = tgpu['~unstable'].computeFn({
 // pipelines
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    tilt: geometryLayout.attrib.tilt,
-    angle: geometryLayout.attrib.angle,
-    color: geometryLayout.attrib.color,
-    center: dataLayout.attrib.position,
+  .createRenderPipeline({
+    vertex: mainVert,
+    fragment: mainFrag,
+    targets: { format: presentationFormat },
+    attribs: {
+      tilt: geometryLayout.attrib.tilt,
+      angle: geometryLayout.attrib.angle,
+      color: geometryLayout.attrib.color,
+      center: dataLayout.attrib.position,
+    },
+
+    primitive: {
+      topology: 'triangle-strip',
+    },
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .createPipeline()
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
+const computePipeline = root['~unstable'].createComputePipeline({
+  compute: mainCompute,
+});
 
 // compute and draw
 
@@ -224,11 +219,11 @@ onFrame((dt) => {
 
 // example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   '🎉': {
-    onButtonClick: () => randomizePositions(),
+    onButtonClick: randomizePositions,
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

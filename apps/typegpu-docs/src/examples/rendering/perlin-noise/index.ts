@@ -1,8 +1,7 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
@@ -53,19 +52,13 @@ const perlinCacheConfig = perlin3d.dynamicCacheConfig();
 const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
-const device = root.device;
 
 // Instantiating the cache with an initial size.
 const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const gridSize = root.createUniform(d.f32);
 const time = root.createUniform(d.f32, 0);
@@ -80,14 +73,18 @@ const renderPipelineBase = root['~unstable']
 const renderPipelines = {
   exponential: renderPipelineBase
     .with(sharpenFnSlot, exponentialSharpen)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    }),
   tanh: renderPipelineBase
     .with(sharpenFnSlot, tanhSharpen)
-    .withVertex(fullScreenTriangle, {})
-    .withFragment(mainFragment, { format: presentationFormat })
-    .createPipeline(),
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    }),
 };
 
 let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';
@@ -116,7 +113,7 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
-export const controls = {
+export const controls = defineControls({
   'grid size': {
     initial: '4',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
@@ -137,11 +134,11 @@ export const controls = {
   'sharpening function': {
     initial: 'exponential',
     options: ['exponential', 'tanh'],
-    onSelectChange: (value: 'exponential' | 'tanh') => {
+    onSelectChange: (value) => {
       activeSharpenFn = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;

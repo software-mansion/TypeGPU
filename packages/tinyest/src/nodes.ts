@@ -31,6 +31,7 @@ export const NodeTypeCatalog = {
   postUpdate: 102,
   stringLiteral: 103,
   objectExpr: 104,
+  conditionalExpr: 105,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -216,6 +217,13 @@ export type ArrayExpression = readonly [
   values: Expression[],
 ];
 
+export type ConditionalExpression = readonly [
+  type: NodeTypeCatalog['conditionalExpr'],
+  test: Expression,
+  consequent: Expression,
+  alternative: Expression,
+];
+
 export type MemberAccess = readonly [
   type: NodeTypeCatalog['memberAccess'],
   object: Expression,
@@ -265,6 +273,7 @@ export type Expression =
   | MemberAccess
   | IndexAccess
   | ArrayExpression
+  | ConditionalExpression
   | PreUpdate
   | PostUpdate
   | Call

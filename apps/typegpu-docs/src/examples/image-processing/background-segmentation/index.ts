@@ -1,29 +1,30 @@
-import tgpu, {
-  type RenderFlag,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuBindGroup,
+  TgpuTexture,
 } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
+import tgpu, { common, d } from 'typegpu';
+
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {
   blockDim,
   blurLayout,
   drawWithMaskLayout,
-  flipSlot,
+  flipAccess,
   generateMaskLayout,
   Params,
-  paramsAccessor,
+  paramsAccess,
   prepareModelInputLayout,
 } from './schemas.ts';
 import {
   computeFn,
-  drawWithMaskFragment,
+  fragmentFn,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Background segmentation uses the u2netp model (https://github.com/xuebinqin/U-2-Net)
 // by Xuebin Qin et al., licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -64,14 +65,8 @@ const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = tgpu.initFromDevice({ device });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // resources
 
@@ -126,7 +121,7 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 // pipelines
 
 const prepareModelInputPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
+  .with(paramsAccess, paramsUniform)
   .createGuardedComputePipeline(
     prepareModelInput,
   );
@@ -161,16 +156,18 @@ const generateMaskFromOutputPipeline = root['~unstable']
 
 const blurPipelines = [false, true].map((flip) =>
   root['~unstable']
-    .with(flipSlot, flip)
+    .with(flipAccess, flip)
     .withCompute(computeFn)
     .createPipeline()
 );
 
 const drawWithMaskPipeline = root['~unstable']
-  .with(paramsAccessor, paramsUniform)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(drawWithMaskFragment, { format: presentationFormat })
-  .createPipeline();
+  .with(paramsAccess, paramsUniform)
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+  });
 
 // recalculating mask
 
@@ -333,11 +330,11 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   model: {
     initial: MODELS[0].name,
     options: MODELS.map((m) => m.name),
-    async onSelectChange(value: string) {
+    async onSelectChange(value) {
       const index = MODELS.findIndex((m) => m.name === value);
       if (index !== -1) {
         await switchModel(index);
@@ -347,7 +344,7 @@ export const controls = {
   'blur type': {
     initial: 'mipmaps',
     options: ['mipmaps', 'gaussian'],
-    async onSelectChange(value: string) {
+    async onSelectChange(value) {
       useGaussianBlur = value === 'gaussian';
       paramsUniform.writePartial({ useGaussian: useGaussianBlur ? 1 : 0 });
     },
@@ -357,21 +354,21 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       blurStrength = newValue;
       paramsUniform.writePartial({ sampleBias: blurStrength });
     },
   },
   'square crop': {
     initial: useSquareCrop,
-    onToggleChange(value: boolean) {
+    onToggleChange(value) {
       useSquareCrop = value;
       if (lastFrameSize) {
         updateCropBounds(lastFrameSize.width / lastFrameSize.height);
       }
     },
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

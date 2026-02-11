@@ -19,6 +19,7 @@ import {
 } from '../../data/vector.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   isWgslArray,
   isWgslData,
   isWgslStruct,
@@ -106,15 +107,16 @@ const deserializerMap: DeserializerMap = {
  */
 function deserialize(
   data: Uint32Array,
-  dataType: AnyWgslData,
+  dataType: BaseData,
 ): unknown {
-  const maybeDeserializer = deserializerMap[dataType.type];
+  const maybeDeserializer =
+    deserializerMap[dataType.type as AnyWgslData['type']];
   if (maybeDeserializer) {
     return maybeDeserializer(data);
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
-    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const propTypes = Object.values(dataType.propTypes);
     const decodedProps = deserializeCompound(data, propTypes);
     return Object.fromEntries(
       props.map((key, index) => [key, decodedProps[index]]),
@@ -142,7 +144,7 @@ function deserialize(
  */
 function deserializeCompound(
   data: Uint32Array,
-  dataTypes: (AnyWgslData | string)[],
+  dataTypes: (BaseData | string)[],
 ): unknown[] {
   let index = 0;
   return dataTypes.map((info) => {

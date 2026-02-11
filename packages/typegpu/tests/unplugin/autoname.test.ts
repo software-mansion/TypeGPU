@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import * as d from '../../src/data/index.ts';
 import { struct } from '../../src/data/index.ts';
-import tgpu, { type TgpuBindGroupLayout } from '../../src/index.ts';
+import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.ts';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 
@@ -40,11 +39,9 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-    const myPipeline = root['~unstable']
-      .withCompute(
-        tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
-      )
-      .createPipeline();
+    const myPipeline = root['~unstable'].createComputePipeline({
+      compute: tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+    });
     const myGuardedPipeline = root['~unstable']
       .createGuardedComputePipeline(() => {
         'use gpu';

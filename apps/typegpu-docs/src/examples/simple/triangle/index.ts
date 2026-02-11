@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
@@ -40,18 +39,14 @@ const root = await tgpu.init();
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: mainVertex,
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+  });
 
 setTimeout(() => {
   pipeline

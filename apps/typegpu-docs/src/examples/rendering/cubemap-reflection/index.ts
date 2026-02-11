@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import {
@@ -11,6 +9,7 @@ import {
   Vertex,
 } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialization
 
@@ -33,15 +32,9 @@ const root = tgpu.initFromDevice({ device });
 // Canvas Setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 let exampleDestroyed = false;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Geometry & Material Setup
 
@@ -132,7 +125,6 @@ const textureLayout = tgpu.bindGroupLayout({
   cubemap: { texture: d.textureCube(d.f32) },
   texSampler: { sampler: 'filtering' },
 });
-const { cubemap: cubemapBinding, texSampler } = textureLayout.bound;
 
 const textureBindGroup = root.createBindGroup(textureLayout, {
   cubemap,
@@ -175,57 +167,46 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   const normalizedNormal = std.normalize(input.normal.xyz);
   const normalizedLightDir = std.normalize(renderLayout.$.light.direction);
 
-  const ambientLight = std.mul(
-    renderLayout.$.material.ambient,
-    std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-  );
+  const ambientLight = renderLayout.$.material.ambient
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity);
 
   const diffuseFactor = std.max(
     std.dot(normalizedNormal, normalizedLightDir),
-    0.0,
+    0,
   );
-  const diffuseLight = std.mul(
-    diffuseFactor,
-    std.mul(
-      renderLayout.$.material.diffuse,
-      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-    ),
-  );
+  const diffuseLight = renderLayout.$.material.diffuse
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity)
+    .mul(diffuseFactor);
 
   const viewDirection = std.normalize(
-    std.sub(renderLayout.$.camera.position.xyz, input.worldPos.xyz),
+    renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz),
   );
   const reflectionDirection = std.reflect(
     std.neg(normalizedLightDir),
     normalizedNormal,
   );
 
-  const specularFactor = std.pow(
-    std.max(std.dot(viewDirection, reflectionDirection), 0.0),
-    renderLayout.$.material.shininess,
-  );
-  const specularLight = std.mul(
-    specularFactor,
-    std.mul(
-      renderLayout.$.material.specular,
-      std.mul(renderLayout.$.light.intensity, renderLayout.$.light.color),
-    ),
-  );
+  const specularFactor =
+    std.max(std.dot(viewDirection, reflectionDirection), 0) **
+      renderLayout.$.material.shininess;
+  const specularLight = renderLayout.$.material.specular
+    .mul(renderLayout.$.light.color)
+    .mul(renderLayout.$.light.intensity)
+    .mul(specularFactor);
 
   const reflectionVector = std.reflect(
     std.neg(viewDirection),
     normalizedNormal,
   );
   const environmentColor = std.textureSample(
-    cubemapBinding.$,
-    texSampler.$,
+    textureLayout.$.cubemap,
+    textureLayout.$.texSampler,
     reflectionVector,
   );
 
-  const directLighting = std.add(
-    ambientLight,
-    std.add(diffuseLight, specularLight),
-  );
+  const directLighting = ambientLight.add(diffuseLight.add(specularLight));
 
   const finalColor = std.mix(
     directLighting,
@@ -247,47 +228,42 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
   },
 })((input) => {
   const viewPos =
-    std.mul(renderLayout.$.camera.view, d.vec4f(input.position.xyz, 0)).xyz;
+    renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
 
   return {
-    pos: std.mul(
-      renderLayout.$.camera.projection,
-      d.vec4f(viewPos, 1),
-    ),
+    pos: renderLayout.$.camera.projection.mul(d.vec4f(viewPos, 1)),
     texCoord: input.position.xyz,
   };
 });
 
 const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    texCoord: d.vec3f,
-  },
+  in: { texCoord: d.vec3f },
   out: d.vec4f,
 })((input) => {
   return std.textureSample(
-    cubemapBinding.$,
-    texSampler.$,
+    textureLayout.$.cubemap,
+    textureLayout.$.texSampler,
     std.normalize(input.texCoord),
   );
 });
 
 // Pipeline Setup
 
-const cubePipeline = root['~unstable']
-  .withVertex(cubeVertexFn, cubeVertexLayout.attrib)
-  .withFragment(cubeFragmentFn, { format: presentationFormat })
-  .withPrimitive({
-    cullMode: 'front',
-  })
-  .createPipeline();
+const cubePipeline = root['~unstable'].createRenderPipeline({
+  attribs: cubeVertexLayout.attrib,
+  vertex: cubeVertexFn,
+  fragment: cubeFragmentFn,
+  targets: { format: presentationFormat },
+  primitive: { cullMode: 'front' },
+});
 
-const pipeline = root['~unstable']
-  .withVertex(vertexFn, vertexLayout.attrib)
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: vertexFn,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+  primitive: { cullMode: 'back' },
+});
 
 // Render Functions
 
@@ -477,13 +453,13 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
   canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
-export const controls = {
+export const controls = defineControls({
   subdivisions: {
     initial: 2,
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       subdivisions = value;
       vertexBuffer = icosphereGenerator.createIcosphere(
         subdivisions,
@@ -493,7 +469,7 @@ export const controls = {
   },
   'smooth normals': {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       smoothNormals = value;
       vertexBuffer = icosphereGenerator.createIcosphere(
         subdivisions,
@@ -504,41 +480,29 @@ export const controls = {
   'cubemap texture': {
     initial: chosenCubemap,
     options: ['campsite', 'beach', 'chapel', 'city'],
-    onSelectChange: async (value: CubemapNames) => {
+    onSelectChange: async (value) => {
       chosenCubemap = value;
       await loadCubemap(texture, chosenCubemap);
     },
   },
   'ambient color': {
-    initial: [
-      materialProps.ambient.x,
-      materialProps.ambient.y,
-      materialProps.ambient.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.ambient,
+    onColorChange: (value) => {
+      materialProps.ambient = value;
       materialBuffer.writePartial({ ambient: materialProps.ambient });
     },
   },
   'diffuse color': {
-    initial: [
-      materialProps.diffuse.x,
-      materialProps.diffuse.y,
-      materialProps.diffuse.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.diffuse,
+    onColorChange: (value) => {
+      materialProps.diffuse = value;
       materialBuffer.writePartial({ diffuse: materialProps.diffuse });
     },
   },
   'specular color': {
-    initial: [
-      materialProps.specular.x,
-      materialProps.specular.y,
-      materialProps.specular.z,
-    ] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      materialProps.specular = d.vec3f(value[0], value[1], value[2]);
+    initial: materialProps.specular,
+    onColorChange: (value) => {
+      materialProps.specular = value;
       materialBuffer.writePartial({ specular: materialProps.specular });
     },
   },
@@ -547,7 +511,7 @@ export const controls = {
     min: 1,
     max: 128,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       materialProps.shininess = value;
       materialBuffer.writePartial({ shininess: value });
     },
@@ -557,12 +521,12 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       materialProps.reflectivity = value;
       materialBuffer.writePartial({ reflectivity: value });
     },
   },
-};
+});
 
 export function onCleanup() {
   exampleDestroyed = true;

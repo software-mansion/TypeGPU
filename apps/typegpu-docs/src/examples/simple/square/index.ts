@@ -1,17 +1,10 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const colors = {
   bottomLeft: d.vec4f(1, 0, 0, 1),
@@ -66,9 +59,12 @@ const indexBuffer = root
   .$usage('index');
 
 const pipeline = root['~unstable']
-  .withVertex(vertex, { color: vertexLayout.attrib })
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline()
+  .createRenderPipeline({
+    attribs: { color: vertexLayout.attrib },
+    vertex,
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+  })
   .withIndexBuffer(indexBuffer);
 
 function render() {
@@ -86,10 +82,10 @@ render();
 // #region Example controls & Cleanup
 
 function updateColor(
-  color: readonly [number, number, number],
+  color: d.v3f,
   position: keyof typeof colors,
 ): void {
-  colors[position] = d.vec4f(...color, 1);
+  colors[position] = d.vec4f(color, 1);
   const idx = colorIndices[position];
   colorBuffer.writePartial([
     {
@@ -100,28 +96,24 @@ function updateColor(
   render();
 }
 
-export const controls = {
+export const controls = defineControls({
   topLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topLeft'),
-    initial: [...colors.topLeft.xyz],
+    onColorChange: (value) => updateColor(value, 'topLeft'),
+    initial: colors.topLeft.xyz,
   },
   topRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topRight'),
-    initial: [...colors.topRight.xyz],
+    onColorChange: (value) => updateColor(value, 'topRight'),
+    initial: colors.topRight.xyz,
   },
   bottomLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomLeft'),
-    initial: [...colors.bottomLeft.xyz],
+    onColorChange: (value) => updateColor(value, 'bottomLeft'),
+    initial: colors.bottomLeft.xyz,
   },
   bottomRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomRight'),
-    initial: [...colors.bottomRight.xyz],
+    onColorChange: (value) => updateColor(value, 'bottomRight'),
+    initial: colors.bottomRight.xyz,
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

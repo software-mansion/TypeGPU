@@ -150,6 +150,14 @@ const Transpilers: Partial<
     return [NODE.postUpdate, operator, argument];
   },
 
+  ConditionalExpression(ctx, node) {
+    const test = transpile(ctx, node.test) as tinyest.Expression;
+    const consequent = transpile(ctx, node.consequent) as tinyest.Expression;
+    const alternative = transpile(ctx, node.alternate) as tinyest.Expression;
+
+    return [NODE.conditionalExpr, test, consequent, alternative];
+  },
+
   Literal(ctx, node) {
     if (typeof node.value === 'boolean') {
       return node.value;

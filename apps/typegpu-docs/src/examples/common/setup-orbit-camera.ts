@@ -1,12 +1,13 @@
 import * as m from 'wgpu-matrix';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 export const Camera = d.struct({
   position: d.vec4f,
   targetPos: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
+  viewInverse: d.mat4x4f,
+  projectionInverse: d.mat4x4f,
 });
 
 export interface CameraOptions {
@@ -57,11 +58,16 @@ export function setupOrbitCamera(
     cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
     cameraState.target = tgt;
 
+    const view = calculateView(newPos, cameraState.target);
+    const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
+
     callback(Camera({
       position: newPos,
       targetPos: cameraState.target,
-      view: calculateView(newPos, cameraState.target),
-      projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
+      view,
+      projection,
+      viewInverse: invertMat(view),
+      projectionInverse: invertMat(projection),
     }));
   }
 
@@ -83,8 +89,11 @@ export function setupOrbitCamera(
       cameraState.yaw,
     );
 
+    const newView = calculateView(newCameraPos, cameraState.target);
+
     callback({
-      view: calculateView(newCameraPos, cameraState.target),
+      view: newView,
+      viewInverse: invertMat(newView),
       position: newCameraPos,
     });
   }
@@ -105,13 +114,17 @@ export function setupOrbitCamera(
     );
     const newView = calculateView(newPos, cameraState.target);
 
-    callback({ view: newView, position: newPos });
+    callback({
+      view: newView,
+      viewInverse: invertMat(newView),
+      position: newPos,
+    });
   }
 
   // resize observer
   const resizeObserver = new ResizeObserver(() => {
     const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
-    callback({ projection });
+    callback({ projection, projectionInverse: invertMat(projection) });
   });
   resizeObserver.observe(canvas);
 
@@ -119,6 +132,7 @@ export function setupOrbitCamera(
   let isDragging = false;
   let prevX = 0;
   let prevY = 0;
+  let lastPinchDist = 0;
 
   // mouse/touch events
   canvas.addEventListener('wheel', (event: WheelEvent) => {
@@ -138,6 +152,11 @@ export function setupOrbitCamera(
       isDragging = true;
       prevX = event.touches[0].clientX;
       prevY = event.touches[0].clientY;
+    } else if (event.touches.length === 2) {
+      isDragging = false;
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
     }
   }, { passive: false });
 
@@ -146,8 +165,14 @@ export function setupOrbitCamera(
   };
   window.addEventListener('mouseup', mouseUpEventListener);
 
-  const touchEndEventListener = () => {
-    isDragging = false;
+  const touchEndEventListener = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      prevX = e.touches[0].clientX;
+      prevY = e.touches[0].clientY;
+    } else {
+      isDragging = false;
+    }
   };
   window.addEventListener('touchend', touchEndEventListener);
 
@@ -164,7 +189,7 @@ export function setupOrbitCamera(
   window.addEventListener('mousemove', mouseMoveEventListener);
 
   const touchMoveEventListener = (event: TouchEvent) => {
-    if (isDragging && event.touches.length === 1) {
+    if (event.touches.length === 1 && isDragging) {
       event.preventDefault();
       const dx = event.touches[0].clientX - prevX;
       const dy = event.touches[0].clientY - prevY;
@@ -177,6 +202,17 @@ export function setupOrbitCamera(
   window.addEventListener('touchmove', touchMoveEventListener, {
     passive: false,
   });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      zoomCamera((lastPinchDist - pinchDist) * 0.5);
+      lastPinchDist = pinchDist;
+    }
+  }, { passive: false });
 
   function cleanupCamera() {
     window.removeEventListener('mouseup', mouseUpEventListener);
@@ -213,4 +249,8 @@ function calculateView(position: d.v4f, target: d.v4f) {
 
 function calculateProj(aspectRatio: number) {
   return m.mat4.perspective(Math.PI / 4, aspectRatio, 0.1, 1000, d.mat4x4f());
+}
+
+function invertMat(matrix: d.m4x4f) {
+  return m.mat4.invert(matrix, d.mat4x4f());
 }

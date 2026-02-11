@@ -203,6 +203,7 @@ export interface TgpuTextureView<
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+  readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
@@ -557,6 +558,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
     this.#branch.device.queue.submit([commandEncoder.finish()]);
   }
 
+  toString(): string {
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get destroyed() {
     return this.#destroyed;
   }
@@ -652,6 +657,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  get size(): number[] {
+    return this.#baseTexture.props.size;
   }
 
   toString() {

@@ -25,6 +25,16 @@ export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
 
 export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 
+/**
+ * A way for a schema to provide casting behavior, without the need to be explicitly
+ * callable by the end-user (e.g. vertex formats)
+ */
+export const $cast = Symbol(`typegpu:${version}:$cast`);
+/**
+ * Can be called on the GPU
+ */
+export const $gpuCallable = Symbol(`typegpu:${version}:$gpuCallable`);
+
 //
 // Type tokens
 //
