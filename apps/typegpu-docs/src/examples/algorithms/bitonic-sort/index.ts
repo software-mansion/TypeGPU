@@ -14,7 +14,7 @@ const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const state = {
-  arraySize: 1000 as number,
+  arraySize: 64,
   sortOrder: 'ascending' as 'ascending' | 'descending',
   inputArray: [] as number[],
 };
@@ -51,10 +51,11 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 });
 
 const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle)
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .withPrimitive({ topology: 'triangle-strip' })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+  });
 
 let buffer = root
   .createBuffer(d.arrayOf(d.u32, state.arraySize))
@@ -152,8 +153,6 @@ async function sort() {
   }
 }
 
-generateRandomArray();
-
 // #region Example controls & Cleanup
 
 type SortOrderKey = 'ascending' | 'descending';
@@ -177,8 +176,8 @@ export const controls = {
       state.sortOrder = value;
     },
   },
-  Reshuffle: { onButtonClick: () => generateRandomArray() },
-  Sort: { onButtonClick: () => sort() },
+  Reshuffle: { onButtonClick: () => generateRandomArray },
+  Sort: { onButtonClick: sort },
 };
 
 export function onCleanup() {
