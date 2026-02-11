@@ -268,7 +268,8 @@ export function fromHalfBits(h: number): number {
 
   // 1. Zero and sub‑normals.
   if (exp === 0) {
-    return mant ? sign * mant * 2 ** -24 : 0;
+    // oxlint-disable-next-line oxc/erasing-op negative zero exists
+    return mant ? sign * mant * 2 ** -24 : sign * 0;
   }
 
   // 2. Special cases (exp == 31).
