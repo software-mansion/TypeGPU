@@ -30,6 +30,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  ArrayExpression,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -137,7 +138,7 @@ function operatorToType<
   TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
-    if (op === '!' || op === '~') {
+    if (op === '!') {
       return bool;
     }
 
@@ -157,7 +158,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call,
-  'void': () => snip('', wgsl.Void, 'constant'),
+  'void': () => snip(undefined, wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -195,6 +196,7 @@ class WgslGenerator implements ShaderGenerator {
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))
+        .filter((statement) => statement.length > 0)
         .join('\n');
       this.ctx.dedent();
       return `{
@@ -263,6 +265,10 @@ ${this.ctx.pre}}`;
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
+    if (id === 'undefined') {
+      return snip(undefined, wgsl.Void, 'constant');
+    }
+
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -278,7 +284,7 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: wgsl.BaseData,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
@@ -503,21 +509,21 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const callee = this.expression(calleeNode);
 
-      if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
-        // Struct/array schema call.
+      if (wgsl.isWgslStruct(callee.value)) {
+        // Struct schema call.
         if (argNodes.length > 1) {
           throw new WgslTypeError(
-            'Array and struct schemas should always be called with at most 1 argument',
+            'Struct schemas should always be called with at most 1 argument',
           );
         }
 
         // No arguments `Struct()`, resolve struct name and return.
         if (!argNodes[0]) {
-          // the schema becomes the data type
+          // The schema becomes the data type.
           return snip(
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
-            // A new struct, so not a reference
+            // A new struct, so not a reference.
             /* origin */ 'runtime',
           );
         }
@@ -532,7 +538,54 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
-          // A new struct, so not a reference
+          // A new struct, so not a reference.
+          /* origin */ 'runtime',
+        );
+      }
+
+      if (wgsl.isWgslArray(callee.value)) {
+        // Array schema call.
+        if (argNodes.length > 1) {
+          throw new WgslTypeError(
+            'Array schemas should always be called with at most 1 argument',
+          );
+        }
+
+        // No arguments `array<...>()`, resolve array type and return.
+        if (!argNodes[0]) {
+          // The schema becomes the data type.
+          return snip(
+            `${this.ctx.resolve(callee.value).value}()`,
+            callee.value,
+            // A new array, so not a reference.
+            /* origin */ 'runtime',
+          );
+        }
+
+        const arg = this.typedExpression(
+          argNodes[0],
+          callee.value,
+        );
+
+        // `d.arrayOf(...)([...])`.
+        // We don't resolve the ArrayExpression object itself to
+        // avoid reference checks (we're copying so it's fine)
+        if (arg.value instanceof ArrayExpression) {
+          return snip(
+            stitch`${
+              this.ctx.resolve(callee.value).value
+            }(${arg.value.elements})`,
+            arg.dataType,
+            /* origin */ 'runtime',
+          );
+        }
+
+        // `d.arrayOf(...)(otherArr)`.
+        // We just let the argument resolve everything.
+        return snip(
+          this.ctx.resolve(arg.value, callee.value).value,
+          callee.value,
+          // A new array, so not a reference.
           /* origin */ 'runtime',
         );
       }
@@ -729,25 +782,9 @@ ${this.ctx.pre}}`;
         }
       } else {
         // The array is not typed, so we try to guess the types.
-        const valuesSnippets = valueNodes.map((value) => {
-          const snippet = this.expression(value as tinyest.Expression);
-          // We check if there are no references among the elements
-          if (
-            (snippet.origin === 'argument' &&
-              !wgsl.isNaturallyEphemeral(snippet.dataType)) ||
-            !isEphemeralSnippet(snippet)
-          ) {
-            const snippetStr =
-              this.ctx.resolve(snippet.value, snippet.dataType).value;
-            const snippetType =
-              this.ctx.resolve(concretize(snippet.dataType as wgsl.BaseData))
-                .value;
-            throw new WgslTypeError(
-              `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
-            );
-          }
-          return snippet;
-        });
+        const valuesSnippets = valueNodes.map((value) =>
+          this.expression(value as tinyest.Expression)
+        );
 
         if (valuesSnippets.length === 0) {
           throw new WgslTypeError(
@@ -766,13 +803,17 @@ ${this.ctx.pre}}`;
         elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
-      const arrayType = `array<${
-        this.ctx.resolve(elemType).value
-      }, ${values.length}>`;
+      const arrayType = arrayOf(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      );
 
       return snip(
-        stitch`${arrayType}(${values})`,
-        arrayOf(elemType as wgsl.AnyWgslData, values.length),
+        new ArrayExpression(
+          arrayType,
+          values,
+        ),
+        arrayType,
         /* origin */ 'runtime',
       );
     }
@@ -813,8 +854,9 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
-      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+      const id = this.identifier(statement);
+      const resolved = id.value && this.ctx.resolve(id.value).value;
+      return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
     if (typeof statement === 'boolean') {
@@ -1087,8 +1129,9 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    const resolved = this.ctx.resolve(this.expression(statement).value).value;
-    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+    const expr = this.expression(statement);
+    const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }
 
