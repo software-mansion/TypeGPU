@@ -8,7 +8,7 @@ import {
   Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { getMetaData, getName, setName } from '../../shared/meta.ts';
+import { getMetaData, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import {
