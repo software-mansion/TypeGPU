@@ -1,5 +1,6 @@
 import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -131,10 +132,11 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: mainVertex,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+});
 
 let isRunning = true;
 
@@ -157,17 +159,17 @@ requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'tile density': {
     initial: 10,
     min: 5,
     max: 20,
     step: 1,
-    onSliderChange: (density: number) => {
+    onSliderChange: (density) => {
       tileDensity.write(density);
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;

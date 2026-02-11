@@ -5,6 +5,7 @@ import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
+  type AnyWgslData,
   type BaseData,
   type F16,
   type F32,
@@ -57,11 +58,19 @@ function getAutoConversionRank(
     if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
   }
 
-  if (isVec(trueSrc) && isVec(trueDst)) {
+  if (
+    isVec(trueSrc) && isVec(trueDst) &&
+    // Same length vectors
+    trueSrc.type[3] === trueDst.type[3]
+  ) {
     return getAutoConversionRank(trueSrc.primitive, trueDst.primitive);
   }
 
-  if (isMat(trueSrc) && isMat(trueDst)) {
+  if (
+    isMat(trueSrc) && isMat(trueDst) &&
+    // Same dimensions
+    trueSrc.type[3] === trueDst.type[3]
+  ) {
     // Matrix conversion rank depends only on component type (always f32 for now)
     return { rank: 0, action: 'none' };
   }
@@ -272,11 +281,7 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
     return undefined;
   }
 
-  const primitiveTypes = inTypes.map((type) =>
-    isVec(type) || isMat(type) ? type.primitive : type as BaseData
-  );
-
-  const conversion = getBestConversion(primitiveTypes, restrictTo);
+  const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
   if (!conversion) {
     return undefined;
   }
@@ -332,38 +337,40 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
-  targetDataType: BaseData,
+  targetDataTypes: BaseData | BaseData[],
   verbose = true,
 ): Snippet {
-  if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType, snippet.origin);
+  const targets = Array.isArray(targetDataTypes)
+    ? targetDataTypes
+    : [targetDataTypes];
+
+  const { value, dataType, origin } = snippet;
+
+  if (targets.length === 1) {
+    const target = targets[0] as AnyWgslData;
+
+    if (target === dataType) {
+      return snip(value, target, origin);
+    }
+
+    if (dataType === UnknownData) {
+      // Commit unknown to the expected type.
+      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+    }
   }
 
-  if (snippet.dataType === UnknownData) {
-    // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(
-      stitch`${snip(snippet.value, targetDataType, snippet.origin)}`,
-      targetDataType,
-      snippet.origin,
-    );
+  const converted = convertToCommonType(ctx, [snippet], targets, verbose);
+  if (converted) {
+    return converted[0] as Snippet;
   }
 
-  const converted = convertToCommonType(
-    ctx,
-    [snippet],
-    [targetDataType],
-    verbose,
+  throw new WgslTypeError(
+    `Cannot convert value of type '${
+      String(
+        dataType,
+      )
+    }' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );
-
-  if (!converted) {
-    throw new WgslTypeError(
-      `Cannot convert value of type '${
-        String(snippet.dataType)
-      }' to type '${targetDataType.type}'`,
-    );
-  }
-
-  return converted[0] as Snippet;
 }
 
 export function convertStructValues(
