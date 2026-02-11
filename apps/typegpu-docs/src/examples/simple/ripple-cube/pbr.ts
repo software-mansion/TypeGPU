@@ -1,7 +1,7 @@
 import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
 import { LIGHT_COUNT, PI } from './constants.ts';
-import { softShadow } from './sdf-scene.ts';
+
 import { Light, Material } from './types.ts';
 
 export const envMapLayout = tgpu.bindGroupLayout({
@@ -64,8 +64,6 @@ export const evaluateLight = (
   const h = std.normalize(v.add(l));
   const radiance = light.color.div(dist ** 2);
 
-  const shadow = softShadow(p.add(n.mul(0.01)), l, dist);
-
   const ndotl = std.max(std.dot(n, l), 0);
   const ndoth = std.max(std.dot(n, h), 0);
   const ndotv = std.max(std.dot(n, v), 0.001);
@@ -85,8 +83,7 @@ export const evaluateLight = (
     .div(PI)
     .add(specular)
     .mul(radiance)
-    .mul(ndotl)
-    .mul(shadow);
+    .mul(ndotl);
 };
 
 export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {

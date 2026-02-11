@@ -4,11 +4,10 @@ export const SURF_DIST = 0.001;
 export const PI = Math.PI;
 export const LIGHT_COUNT = 2;
 export const BLUR_RADIUS = 16;
-export const TAA_BLEND = 0.8;
-export const SHADOW_SOFTNESS = 8;
+export const TAA_BLEND = 0.85;
 
 export const CUBEMAP_SIZE = 1024;
-export const GRID_SIZE = 198;
+export const GRID_SIZE = 212;
 
 export function halton(index: number, base: number): number {
   let result = 0;

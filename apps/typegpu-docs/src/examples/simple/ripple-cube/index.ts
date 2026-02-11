@@ -1,8 +1,10 @@
 import { perlin3d, randf } from '@typegpu/noise';
+import * as sdf from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { createBackgroundCubemap } from './background.ts';
 import {
+  GRID_SIZE,
   halton,
   LIGHT_COUNT,
   MAX_DIST,
@@ -11,7 +13,13 @@ import {
 } from './constants.ts';
 import { envMapLayout, lightsAccess, materialAccess, shade } from './pbr.ts';
 import { createPostProcessingPipelines } from './post-processing.ts';
-import { createSDFPrecalculator, getNormal, sceneSDF } from './sdf-scene.ts';
+import {
+  blendFactorAccess,
+  getNormal,
+  sceneSDF,
+  sdfLayout,
+  timeAccess,
+} from './sdf-scene.ts';
 import { BloomParams, Light, Material, Ray } from './types.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -21,10 +29,10 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const perlinCache = perlin3d.staticCache({
   root,
-  size: d.vec3u(64, 64, 64),
+  size: d.vec3u(32, 32, 32),
 });
 
-const [width, height] = [canvas.width / 2, canvas.height / 2];
+const [width, height] = [canvas.width / 1.4, canvas.height / 1.4];
 
 const cameraUniform = root.createUniform(Camera);
 const timeUniform = root.createUniform(d.f32);
@@ -50,11 +58,57 @@ const initialBloom = {
 const bloomUniform = root.createUniform(BloomParams, initialBloom);
 const blendFactorUniform = root.createUniform(d.f32, 0.02);
 
-const sdfPrecalc = createSDFPrecalculator(
-  root,
-  timeUniform,
-  blendFactorUniform,
-);
+const sdfTexture = root['~unstable']
+  .createTexture({
+    size: [GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2],
+    format: 'rgba16float',
+    dimension: '3d',
+  })
+  .$usage('sampled', 'storage');
+
+const sdfWriteView = sdfTexture.createView(d.textureStorage3d('rgba16float'));
+
+const sdfBindGroup = root.createBindGroup(sdfLayout, {
+  sdfTexture: sdfTexture,
+  sdfSampler: root['~unstable'].createSampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+  }),
+});
+
+const sdfPrecalcPipeline = root['~unstable']
+  .with(timeAccess, timeUniform)
+  .with(blendFactorAccess, blendFactorUniform)
+  .createGuardedComputePipeline((x, y, z) => {
+    'use gpu';
+    const cellSize = 1 / GRID_SIZE;
+    const p = d.vec3f(x, y, z).add(0.5).mul(cellSize);
+
+    const r = timeAccess.$ * 0.15;
+    const px = [p.x, 1 - p.x, 1 + p.x, 2 - p.x, 2 + p.x];
+    const py = [p.y, 1 - p.y, 1 + p.y, 2 - p.y, 2 + p.y];
+    const pz = [p.z, 1 - p.z, 1 + p.z, 2 - p.z, 2 + p.z];
+
+    let shellD = d.f32(1e10);
+    for (let ix = 0; ix < 5; ix++) {
+      for (let iy = 0; iy < 5; iy++) {
+        for (let iz = 0; iz < 5; iz++) {
+          const q = d.vec3f(px[ix], py[iy], pz[iz]);
+          shellD = sdf.opSmoothUnion(
+            shellD,
+            std.abs(std.length(q) - r) - 0.005,
+            blendFactorAccess.$,
+          );
+        }
+      }
+    }
+
+    std.textureStore(
+      sdfWriteView.$,
+      d.vec3u(x, y, z),
+      d.vec4f(shellD, 0, 0, 1),
+    );
+  });
 
 const backgroundCubemap = createBackgroundCubemap(root);
 
@@ -169,11 +223,15 @@ function run(timestamp: number) {
   jitterUniform.write(d.vec2f(jitterX, jitterY));
   frameIndex++;
 
-  sdfPrecalc.precalculate();
+  sdfPrecalcPipeline.dispatchThreads(
+    GRID_SIZE / 2,
+    GRID_SIZE / 2,
+    GRID_SIZE / 2,
+  );
 
   rayMarchPipeline
     .with(envMapBindGroup)
-    .with(sdfPrecalc.sdfBindGroup)
+    .with(sdfBindGroup)
     .dispatchThreads(width, height);
 
   postProcessing.runTaa();
@@ -256,7 +314,7 @@ export const controls = {
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
-  sdfPrecalc.destroy();
+  sdfTexture.destroy();
   perlinCache.destroy();
   root.destroy();
 }
