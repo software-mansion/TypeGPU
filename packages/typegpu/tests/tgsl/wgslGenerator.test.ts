@@ -14,6 +14,8 @@ import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from '../utils/extendedIt.ts';
+import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
+import { extractSnippetFromFn } from '../utils/parseResolved.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -522,6 +524,21 @@ describe('wgslGenerator', () => {
     });
   });
 
+  it('creates intermediate representation for array expression', () => {
+    const testFn = () => {
+      'use gpu';
+      [d.u32(1), 8, 8, 2];
+    };
+
+    const snippet = extractSnippetFromFn(testFn);
+
+    expect(snippet.value instanceof ArrayExpression).toBe(true);
+    expect((snippet.value as ArrayExpression).type.elementType.type)
+      .toStrictEqual('u32');
+    expect((snippet.value as ArrayExpression).type.elementCount)
+      .toStrictEqual(4);
+  });
+
   it('generates correct code for array expressions', () => {
     const testFn = tgpu.fn([], d.u32)(() => {
       const arr = [d.u32(1), 2, 3];
@@ -588,6 +605,42 @@ describe('wgslGenerator', () => {
         return arr[1i].x;
       }"
     `);
+
+    const astInfo = getMetaData(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
+      `"[0,[[13,"arr",[100,[[6,[7,"d","vec2u"],[[5,"1"],[5,"2"]]],[6,[7,"d","vec2u"],[[5,"3"],[5,"4"]]],[6,[7,"std","min"],[[6,[7,"d","vec2u"],[[5,"5"],[5,"8"]]],[6,[7,"d","vec2u"],[[5,"7"],[5,"6"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"x"]]]]"`,
+    );
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.u32,
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
+      );
+
+      // Check for: const arr = [1, 2, 3]
+      //                        ^ this should be an array<u32, 3>
+      wgslGenerator.initGenerator(ctx);
+      const res = wgslGenerator.expression(
+        // deno-fmt-ignore: it's better that way
+        (
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
+      );
+
+      expect(d.isWgslArray(res.dataType)).toBe(true);
+      expect((res.dataType as unknown as WgslArray).elementCount).toBe(3);
+      expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2u);
+    });
   });
 
   it('does not autocast lhs of an assignment', () => {
@@ -690,6 +743,25 @@ describe('wgslGenerator', () => {
     expect(JSON.stringify(astInfo.ast?.body)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[7,"lazyV2f","$"],[6,[7,"std","mul"],[[7,"lazyV2f","$"],[6,[7,"d","vec2f"],[[5,"2"],[5,"2"]]]]]]]],[10,[7,[8,"arr",[5,"1"]],"y"]]]]"`,
     );
+
+    const res = provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.f32,
+        (astInfo.externals as () => Record<string, unknown>)() ?? {},
+      );
+
+      wgslGenerator.initGenerator(ctx);
+      return wgslGenerator.expression(
+        (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
+      );
+    });
+
+    expect(d.isWgslArray(res.dataType)).toBe(true);
+    expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
+    expect((res.dataType as unknown as WgslArray).elementType).toBe(d.vec2f);
   });
 
   it('allows for member access on values returned from function calls', () => {
@@ -869,7 +941,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to type 'vec2f']
+      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
     `);
   });
 
@@ -898,7 +970,7 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to type 'f32']
+      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 

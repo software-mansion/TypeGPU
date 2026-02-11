@@ -1,5 +1,6 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -140,11 +141,11 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    initial: [0, 1, 0] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(0, 1, 0),
+    onColorChange: (value) => {
+      color.write(value);
     },
   },
   threshold: {
@@ -152,9 +153,9 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => threshold.write(value),
+    onSliderChange: (value) => threshold.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

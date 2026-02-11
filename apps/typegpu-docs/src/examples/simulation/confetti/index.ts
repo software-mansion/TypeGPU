@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 // constants
 
@@ -142,25 +143,27 @@ const mainCompute = tgpu['~unstable'].computeFn({
 // pipelines
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    tilt: geometryLayout.attrib.tilt,
-    angle: geometryLayout.attrib.angle,
-    color: geometryLayout.attrib.color,
-    center: dataLayout.attrib.position,
+  .createRenderPipeline({
+    vertex: mainVert,
+    fragment: mainFrag,
+    targets: { format: presentationFormat },
+    attribs: {
+      tilt: geometryLayout.attrib.tilt,
+      angle: geometryLayout.attrib.angle,
+      color: geometryLayout.attrib.color,
+      center: dataLayout.attrib.position,
+    },
+
+    primitive: {
+      topology: 'triangle-strip',
+    },
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .createPipeline()
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
+const computePipeline = root['~unstable'].createComputePipeline({
+  compute: mainCompute,
+});
 
 // compute and draw
 
@@ -216,11 +219,11 @@ onFrame((dt) => {
 
 // example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   '🎉': {
-    onButtonClick: () => randomizePositions(),
+    onButtonClick: randomizePositions,
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

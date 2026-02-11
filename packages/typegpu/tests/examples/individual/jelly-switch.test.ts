@@ -263,7 +263,7 @@ describe('jelly switch example', () => {
         let sqDist = sqLength((hitPosition - vec3f(switchX, 0f, 0f)));
         var bounceLight = ((*jellyColor).xyz * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
         var sideBounceLight = (((*jellyColor).xyz * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
-        let emission = ((smoothstep(0.7, 1, (*state).progress) * 2f) + 0.7f);
+        let emission = ((smoothstep(0.7f, 1f, (*state).progress) * 2f) + 0.7f);
         var litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
         var backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
         return vec4f(backgroundColor.xyz, 1f);
