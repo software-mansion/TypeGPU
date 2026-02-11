@@ -276,7 +276,7 @@ export interface WithBinding extends Withable<WithBinding> {
   ): TgpuComputePipeline;
 
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn
@@ -315,7 +315,7 @@ export interface WithBinding extends Withable<WithBinding> {
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn
@@ -354,7 +354,7 @@ export interface WithBinding extends Withable<WithBinding> {
       },
   ): TgpuRenderPipeline<Void>;
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn

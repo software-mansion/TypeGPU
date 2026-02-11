@@ -997,7 +997,7 @@ export function resolve(
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>
-              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
+              // oxlint-disable-next-line typescript/no-explicit-any <it's fine>
               [String(idx), binding.resource] as [string, any],
           ),
         ),

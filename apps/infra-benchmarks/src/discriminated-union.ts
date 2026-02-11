@@ -10,7 +10,7 @@ const bench = new Bench({
   name: 'discriminated union',
   time: 100,
   async setup() {
-    // biome-ignore lint/suspicious/noExplicitAny: making sure GC has no impact on the results
+    // oxlint-disable-next-line typescript/no-explicit-any making sure GC has no impact on the results
     (globalThis as any).gc();
   },
 });
@@ -59,7 +59,6 @@ bench
       beforeEach() {
         stringTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
             type: STRING_TAGS[Math.floor(Math.random() * STRING_TAGS.length)]!,
           },
         }));
@@ -85,7 +84,6 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -111,7 +109,6 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -137,7 +134,6 @@ bench
       beforeEach() {
         symbolTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
             type: SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!,
           },
         }));
@@ -165,7 +161,6 @@ bench
           { length: NUMBER_OF_OBJS },
           () =>
             ({
-              // biome-ignore lint/style/noNonNullAssertion: in range
               [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]:
                 true,
             }) as { [K in (typeof SYMBOL_TAGS)[number]]: boolean },

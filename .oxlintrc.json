@@ -6,6 +6,7 @@
     "suspicious": "warn"
   },
   "rules": {
+    "typescript/no-explicit-any": "error",
     "eslint-plugin-unicorn/prefer-add-event-listener": "off",
     "eslint-plugin-import/no-named-as-default": "off",
     "eslint-plugin-import/no-named-as-default-member": "off",

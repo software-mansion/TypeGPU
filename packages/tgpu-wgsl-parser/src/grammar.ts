@@ -1,3 +1,4 @@
+// oxlint-disable typescript/no-explicit-any
 // deno-fmt-ignore-file
 // @ts-nocheck
 // Generated automatically by nearley, version 2.20.1
