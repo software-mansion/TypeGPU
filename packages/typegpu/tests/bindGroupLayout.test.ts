@@ -182,7 +182,7 @@ describe('TgpuBindGroupLayout', () => {
     const getFirst = () => {
       'use gpu';
       const boids = layout.$.boids;
-      // biome-ignore lint/style/noNonNullAssertion: it's definitely there
+      // oxlint-disable-next-line typescript/no-non-null-assertion it's definitely there
       return Boid(boids[0]!);
     };
 

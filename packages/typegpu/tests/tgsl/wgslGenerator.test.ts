@@ -276,10 +276,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      // oxlint-disable-next-line typescript/no-non-null-assertion <no thanks>
       const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
       const vec = std.mix(d.vec4f(), testUsage.$.a, value);
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      // oxlint-disable-next-line typescript/no-non-null-assertion <no thanks>
       std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       return vec;
     });

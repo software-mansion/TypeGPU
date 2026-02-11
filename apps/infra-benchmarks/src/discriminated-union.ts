@@ -59,6 +59,7 @@ bench
       beforeEach() {
         stringTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: STRING_TAGS[Math.floor(Math.random() * STRING_TAGS.length)]!,
           },
         }));
@@ -84,6 +85,7 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -109,6 +111,7 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -134,6 +137,7 @@ bench
       beforeEach() {
         symbolTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!,
           },
         }));
@@ -161,6 +165,7 @@ bench
           { length: NUMBER_OF_OBJS },
           () =>
             ({
+              // oxlint-disable-next-line typescript/no-non-null-assertion
               [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]:
                 true,
             }) as { [K in (typeof SYMBOL_TAGS)[number]]: boolean },

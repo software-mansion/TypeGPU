@@ -7,6 +7,7 @@
   },
   "rules": {
     "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
     "eslint-plugin-unicorn/prefer-add-event-listener": "off",
     "eslint-plugin-import/no-named-as-default": "off",
     "eslint-plugin-import/no-named-as-default-member": "off",
@@ -22,6 +23,7 @@
     {
       "files": ["**/*.test.ts", "**/tests/**"],
       "rules": {
+        "typescript/no-non-null-assertion": "off",
         "eslint/no-unused-vars": "off",
         "eslint/no-unused-expressions": "off",
         "eslint-plugin-unicorn/consistent-function-scoping": "off",

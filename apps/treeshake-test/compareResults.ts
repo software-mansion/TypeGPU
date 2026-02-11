@@ -19,7 +19,7 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
     if (!grouped[result.testFilename]) {
       grouped[result.testFilename] = {};
     }
-    // biome-ignore lint/style/noNonNullAssertion: it's there...
+    // oxlint-disable-next-line typescript/no-non-null-assertion it's there...
     grouped[result.testFilename]![result.bundler] = result.size;
   }
   return grouped;
