@@ -10,12 +10,15 @@ describe('bitonic sort example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'bitonic-sort',
-      controlTriggers: ['Sort'],
-      expectedCalls: 4,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'bitonic-sort',
+        controlTriggers: ['Sort'],
+        expectedCalls: 4,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {
@@ -104,11 +107,12 @@ describe('bitonic sort example', () => {
         let k = uniforms.k;
         let shift = uniforms.jShift;
         let dataLength = arrayLength(&data);
-        let maskBelow = ((1u << shift) - 1u);
+        let stride = (1u << shift);
+        let maskBelow = (stride - 1u);
         let below = (tid & maskBelow);
-        let above = ((tid >> shift) << (shift + 1u));
-        let i = (above | below);
-        let ixj = (i | (1u << shift));
+        let above = (tid >> shift);
+        let i = (below + (above * (stride << 1u)));
+        let ixj = (i + stride);
         if ((ixj >= dataLength)) {
           return;
         }

@@ -90,13 +90,14 @@ const bitonicStepKernel = tgpu['~unstable'].computeFn({
   const k = sortLayout.$.uniforms.k;
   const shift = sortLayout.$.uniforms.jShift;
   const dataLength = d.u32(sortLayout.$.data.length);
+  const stride = 1 << shift;
 
-  const maskBelow = (1 << shift) - 1;
+  const maskBelow = stride - 1;
   const below = tid & maskBelow;
-  const above = (tid >> shift) << (shift + 1);
+  const above = tid >> shift;
 
-  const i = above | below;
-  const ixj = i | (1 << shift);
+  const i = below + above * (stride << 1);
+  const ixj = i + stride;
 
   if (ixj >= dataLength) {
     return;
@@ -178,9 +179,7 @@ export function createBitonicSorter(
     workBuffer = data;
   }
 
-  const uniformBuffer = root
-    .createBuffer(sortUniformsType)
-    .$usage('uniform');
+  const uniformBuffer = root.createBuffer(sortUniformsType).$usage('uniform');
 
   const sortBindGroup = root.createBindGroup(sortLayout, {
     data: workBuffer,
