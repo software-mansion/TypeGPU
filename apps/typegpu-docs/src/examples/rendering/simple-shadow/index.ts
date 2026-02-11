@@ -11,6 +11,7 @@ import {
   VertexInfo,
   VisParams,
 } from './schema.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // WebGPU setup
 const root = await tgpu.init();
@@ -242,36 +243,41 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 // Pipelines
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexInfo));
 
-const pipeline = root['~unstable']
-  .withVertex(mainVert, vertexLayout.attrib)
-  .withFragment(mainFrag, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: mainVert,
+  fragment: mainFrag,
+  targets: { format: presentationFormat },
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
-const shadowPipeline = root['~unstable']
-  .withVertex(shadowVert, vertexLayout.attrib)
-  .withDepthStencil({
+const shadowPipeline = root['~unstable'].createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: shadowVert,
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
     depthBias: 1,
     depthBiasSlopeScale: 4,
     depthBiasClamp: 0,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
 function updateLightDirection(dir: d.v3f) {
   currentLightDirection = dir;
@@ -362,7 +368,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'camera X': {
     initial: -4.9,
     min: -10,
@@ -427,16 +433,16 @@ export const controls = {
     },
   },
   'shadow map size': {
-    initial: '2048',
-    options: ['512', '1024', '2048', '4096', '8192'],
-    onSelectChange: (value: string) => {
-      currentShadowMapSize = Number.parseInt(value);
+    initial: 2048,
+    options: [512, 1024, 2048, 4096, 8192],
+    onSelectChange: (value) => {
+      currentShadowMapSize = value;
       shadowTextures = createShadowTextures(currentShadowMapSize);
     },
   },
   'shadow map filtering': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       pcf = value;
       shadowTextures = createShadowTextures(
         currentShadowMapSize,
@@ -448,7 +454,7 @@ export const controls = {
   'display mode': {
     initial: 'color',
     options: ['color', 'shadow', 'light depth', 'inverse shadow'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       paramsUniform.write({
         shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
         lightDepth: value === 'light depth' ? 1 : 0,
@@ -463,7 +469,7 @@ export const controls = {
       );
     },
   },
-};
+});
 
 export function onCleanup() {
   if (frameId !== null) {

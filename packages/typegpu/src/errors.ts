@@ -210,3 +210,20 @@ export class WgslTypeError extends Error {
     Object.setPrototypeOf(this, WgslTypeError.prototype);
   }
 }
+
+export class SignatureNotSupportedError extends Error {
+  constructor(actual: BaseData[], candidates: BaseData[]) {
+    super(
+      `Unsupported data types: ${
+        actual.map((a) => a.type).join(', ')
+      }. Supported types are: ${
+        candidates
+          .map((r) => r.type)
+          .join(', ')
+      }.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, SignatureNotSupportedError.prototype);
+  }
+}

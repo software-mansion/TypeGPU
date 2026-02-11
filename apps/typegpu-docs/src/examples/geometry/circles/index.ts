@@ -134,7 +134,7 @@ const pipeline = root['~unstable']
 
 setTimeout(() => {
   pipeline
-    .with(bindGroupLayout, uniformsBindGroup)
+    .with(uniformsBindGroup)
     .withColorAttachment({
       ...(multisample
         ? {

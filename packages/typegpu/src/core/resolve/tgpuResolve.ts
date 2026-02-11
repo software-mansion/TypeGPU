@@ -277,5 +277,5 @@ function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
       `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
     );
   }
-  return pipelines[0]?.[$internal].branch;
+  return pipelines[0]?.[$internal].root;
 }

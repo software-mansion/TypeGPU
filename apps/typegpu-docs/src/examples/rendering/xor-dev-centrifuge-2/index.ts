@@ -13,6 +13,7 @@
 import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
 import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -97,10 +98,11 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable']
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: vertexMain,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 let isRunning = true;
 
@@ -125,7 +127,7 @@ requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'tunnel depth': {
     initial: 50,
     min: 10,
@@ -163,21 +165,21 @@ export const controls = {
     },
   },
   'camera pos': {
-    min: [-10, -10],
-    max: [10, 10],
-    initial: [0, -7],
-    step: [0.01, 0.01],
-    onVectorSliderChange(v: [number, number]) {
-      cameraPos.write(d.vec2f(...v));
+    min: d.vec2f(-10, -10),
+    max: d.vec2f(10, 10),
+    initial: d.vec2f(0, -7),
+    step: d.vec2f(0.01, 0.01),
+    onVectorSliderChange(v) {
+      cameraPos.write(v);
     },
   },
   color: {
-    initial: [0.2, 0, 0.3],
-    onColorChange(value: readonly [number, number, number]) {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(0.2, 0, 0.3),
+    onColorChange(value) {
+      color.write(value);
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;

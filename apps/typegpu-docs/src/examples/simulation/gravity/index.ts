@@ -40,6 +40,7 @@ import {
   timeAccess,
 } from './schemas.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -100,35 +101,40 @@ const dynamicResourcesBox = {
 
 // Pipelines
 const computeCollisionsPipeline = root['~unstable']
-  .withCompute(computeCollisionsShader)
-  .createPipeline();
+  .createComputePipeline({ compute: computeCollisionsShader });
 
 const computeGravityPipeline = root['~unstable']
   .with(timeAccess, time)
-  .withCompute(computeGravityShader)
-  .createPipeline();
+  .createComputePipeline({ compute: computeGravityShader });
 
 const skyBoxPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
   .with(cameraAccess, camera)
   .with(skyBoxAccess, skyBox)
-  .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
-  .withFragment(skyBoxFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    attribs: renderSkyBoxVertexLayout.attrib,
+    vertex: skyBoxVertex,
+    fragment: skyBoxFragment,
+    targets: { format: presentationFormat },
+  });
 
 const renderPipeline = root['~unstable']
   .with(filteringSamplerSlot, sampler)
   .with(lightSourceAccess, lightSource)
   .with(cameraAccess, camera)
-  .withVertex(mainVertex, renderVertexLayout.attrib)
-  .withFragment(mainFragment, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
-  .createPipeline();
+  .createRenderPipeline({
+    attribs: renderVertexLayout.attrib,
+    vertex: mainVertex,
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+
+    primitive: { topology: 'triangle-list', cullMode: 'back' },
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -257,7 +263,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 // #region Camera controls
 
-export const controls = {
+export const controls = defineControls({
   preset: {
     initial: initialPreset,
     options: presets,
@@ -277,7 +283,7 @@ export const controls = {
       time.writePartial({ multiplier: 2 ** newValue });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

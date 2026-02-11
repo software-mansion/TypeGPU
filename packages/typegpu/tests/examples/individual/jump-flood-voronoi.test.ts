@@ -32,9 +32,7 @@ describe('jump flood (voronoi) example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       fn sample() -> f32 {

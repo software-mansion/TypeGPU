@@ -1,8 +1,8 @@
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const device = root.device;
 
 const spanUniform = root.createUniform(d.vec2f);
 
@@ -42,13 +42,13 @@ draw(spanX, spanY);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'x span ↔️': {
-    initial: spanY,
+    initial: spanX,
     min: 0,
     max: 20,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spanX = newValue;
       draw(spanX, spanY);
     },
@@ -59,12 +59,12 @@ export const controls = {
     min: 0,
     max: 20,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spanY = newValue;
       draw(spanX, spanY);
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

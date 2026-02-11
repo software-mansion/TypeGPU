@@ -5,6 +5,7 @@ import tgpu, {
   type TgpuFragmentFn,
   type TgpuVertexFn,
 } from '../src/index.ts';
+import { attest } from '@ark/attest';
 
 describe('entry functions accepting only the allowed subset of builtins', () => {
   it('works for vertex functions', () => {
@@ -119,5 +120,28 @@ describe('entry functions being always assignable to the type with default gener
     })``;
 
     test(fn);
+  });
+});
+
+describe('@location and @interpolate type stripping (irrelevant when verifying entry functions)', () => {
+  it('works for vertex functions', () => {
+    const vertexMain = tgpu['~unstable'].vertexFn({
+      out: { bar: d.location(0, d.vec3f) },
+    })(() => ({
+      bar: d.vec3f(),
+    }));
+
+    attest(vertexMain).type.toString.snap('TgpuVertexFn<{}, { bar: Vec3f }>');
+  });
+
+  it('works for fragment functions', () => {
+    const fragmentMain = tgpu['~unstable'].fragmentFn({
+      in: { bar: d.vec3f },
+      out: d.vec4f,
+    })(() => d.vec4f());
+
+    attest(fragmentMain).type.toString.snap(
+      'TgpuFragmentFn<{ bar: Vec3f }, Vec4f>',
+    );
   });
 });

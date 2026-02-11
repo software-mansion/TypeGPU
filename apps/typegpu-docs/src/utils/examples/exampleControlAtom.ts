@@ -1,21 +1,22 @@
 import { atom } from 'jotai';
+import type { d } from 'typegpu';
 
 export type SelectControlParam = {
   onSelectChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
   options: string[];
   label: string;
 };
 
 export type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;
-  initial?: boolean;
+  initial: boolean;
   label: string;
 };
 
 export type SliderControlParam = {
   onSliderChange: (newValue: number) => void;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -24,7 +25,7 @@ export type SliderControlParam = {
 
 export type VectorSliderControlParam = {
   onVectorSliderChange: (newValue: number[]) => void;
-  initial?: number[];
+  initial: number[];
   min: number[];
   max: number[];
   step: number[];
@@ -32,8 +33,8 @@ export type VectorSliderControlParam = {
 };
 
 export type ColorPickerControlParam = {
-  onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial?: readonly [number, number, number];
+  onColorChange: (newValue: d.v3f) => void;
+  initial: d.v3f;
   label: string;
 };
 
@@ -44,7 +45,7 @@ export type ButtonControlParam = {
 
 export type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
   label: string;
 };
 

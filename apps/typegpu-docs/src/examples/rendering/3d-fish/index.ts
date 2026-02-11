@@ -16,6 +16,7 @@ import {
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 let speedMultiplier = 1;
@@ -165,16 +166,18 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, modelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  attribs: modelVertexLayout.attrib,
+  vertex: vertexShader,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -296,11 +299,11 @@ requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Randomize positions': {
-    onButtonClick: () => randomizeFishPositions(),
+    onButtonClick: randomizeFishPositions,
   },
-};
+});
 
 // Variables for interaction
 

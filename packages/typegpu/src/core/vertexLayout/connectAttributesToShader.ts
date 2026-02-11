@@ -5,7 +5,8 @@ import type {
   AnyVertexAttribs,
   TgpuVertexAttrib,
 } from '../../shared/vertexFormat.ts';
-import type { IOData, IOLayout } from '../function/fnTypes.ts';
+import type { IOData } from '../function/fnTypes.ts';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type {
   INTERNAL_TgpuVertexAttrib,
   TgpuVertexLayout,
@@ -23,7 +24,7 @@ export function isAttribute<
 }
 
 export function connectAttributesToShader(
-  shaderInputLayout: IOLayout,
+  shaderInputLayout: TgpuVertexFn.In,
   attributes: AnyVertexAttribs,
 ): ConnectAttributesToShaderResult {
   const usedVertexLayouts: TgpuVertexLayout[] = [];
