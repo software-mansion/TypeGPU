@@ -107,25 +107,29 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     };
 
     const scaleGeneric = tgpu.fn(scale);
-    const scaleBy3 = scaleGeneric.with(multiplier, 3);
-    const scaleBy4 = scaleGeneric.with(multiplier, 4);
+    const scaleBy3 = scaleGeneric.with(multiplier, 3).$name('scaleBy3');
+    const scaleBy4 = scaleGeneric.with(multiplier, 4).$name('scaleBy4');
 
     const main = () => {
       'use gpu';
-      return scaleBy3() + scaleBy4();
+      return scale() + scaleBy3() + scaleBy4();
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn scale() -> f32 {
+        return 4f;
+      }
+
+      fn scaleBy3() -> f32 {
         return 6f;
       }
 
-      fn scale_1() -> f32 {
+      fn scaleBy4() -> f32 {
         return 8f;
       }
 
       fn main() -> f32 {
-        return (scale() + scale_1());
+        return ((scale() + scaleBy3()) + scaleBy4());
       }"
     `);
   });

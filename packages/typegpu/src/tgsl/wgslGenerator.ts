@@ -662,37 +662,36 @@ ${this.ctx.pre}}`;
           ? callee.value[$internal].inner
           : (callee.value as AnyFn);
 
-        const shelllessCall = this.ctx.withSlots(
-          slotPairs,
-          (): Snippet | undefined => {
-            const args = argNodes.map((arg) => this.expression(arg));
-            const shellless = this.ctx.shelllessRepo.get(
-              callback,
-              args,
-            );
-            if (!shellless) {
-              return undefined;
-            }
+        const shelllessCall = this.ctx.withRenamed(
+          callback,
+          getName(callee.value),
+          () =>
+            this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
+              const args = argNodes.map((arg) => this.expression(arg));
+              const shellless = this.ctx.shelllessRepo.get(callback, args);
+              if (!shellless) {
+                return undefined;
+              }
 
-            const converted = args.map((s, idx) => {
-              const argType = shellless.argTypes[idx] as AnyData;
-              return tryConvertSnippet(
-                this.ctx,
-                s,
-                argType,
-                /* verbose */ false,
-              );
-            });
+              const converted = args.map((s, idx) => {
+                const argType = shellless.argTypes[idx] as AnyData;
+                return tryConvertSnippet(
+                  this.ctx,
+                  s,
+                  argType,
+                  /* verbose */ false,
+                );
+              });
 
-            return this.ctx.withResetIndentLevel(() => {
-              const snippet = this.ctx.resolve(shellless);
-              return snip(
-                stitch`${snippet.value}(${converted})`,
-                snippet.dataType,
-                /* origin */ 'runtime',
-              );
-            });
-          },
+              return this.ctx.withResetIndentLevel(() => {
+                const snippet = this.ctx.resolve(shellless);
+                return snip(
+                  stitch`${snippet.value}(${converted})`,
+                  snippet.dataType,
+                  /* origin */ 'runtime',
+                );
+              });
+            }),
         );
 
         if (shelllessCall) {

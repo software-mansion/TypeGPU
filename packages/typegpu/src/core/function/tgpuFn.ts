@@ -107,7 +107,6 @@ export interface TgpuGenericFn<T extends AnyFn>
   readonly [$internal]: {
     inner: T;
   };
-  readonly [$getNameForward]: T;
   readonly [$providing]?: Providing | undefined;
   readonly resourceType: 'generic-function';
 
@@ -343,12 +342,15 @@ function createGenericFn<T extends AnyFn>(
 
   const fnBase = {
     [$internal]: { inner },
-    [$getNameForward]: inner,
     resourceType: 'generic-function' as const,
     [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
 
     $name(label: string): TgpuGenericFn<T> {
       setName(this, label);
+      // Giving `inner` a name if it doesn't have one
+      if (!getName(inner)) {
+        setName(inner, label);
+      }
       return this as TgpuGenericFn<T>;
     },
 
@@ -357,12 +359,7 @@ function createGenericFn<T extends AnyFn>(
       value: unknown,
     ): TgpuGenericFn<T> {
       const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
-      const result = createGenericFn(inner, [...pairs, [s, value]]);
-      const currentName = getName(this);
-      if (currentName) {
-        setName(result, currentName);
-      }
-      return result;
+      return createGenericFn(inner, [...pairs, [s, value]]);
     },
   };
 
@@ -372,9 +369,14 @@ function createGenericFn<T extends AnyFn>(
 
   const genericFn = Object.assign(call, fnBase) as unknown as This;
 
+  // Inheriting name from `inner`, if it exists
+  if (getName(inner)) {
+    setName(genericFn, getName(inner));
+  }
+
   Object.defineProperty(genericFn, 'toString', {
     value() {
-      const fnLabel = getName(inner) ?? '<unnamed>';
+      const fnLabel = getName(genericFn) ?? '<unnamed>';
       if (pairs.length > 0) {
         return `fn*:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
       }

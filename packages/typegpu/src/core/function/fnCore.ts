@@ -9,6 +9,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName, setName } from '../../shared/meta.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import {
   applyExternals,
@@ -48,6 +49,11 @@ export function createFnCore(
   const externalsToApply: ExternalMap[] = [];
 
   const core = {
+    // Making the implementation the holder of the name, as long as it's
+    // a function (and not a string implementation)
+    [$getNameForward]: typeof implementation === 'function'
+      ? implementation
+      : undefined,
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
@@ -212,13 +218,6 @@ export function createFnCore(
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },
   };
-
-  // The implementation could have been given a name by a bundler plugin,
-  // so we try to transfer it to the core.
-  const maybeName = getName(implementation);
-  if (maybeName !== undefined) {
-    setName(core, maybeName);
-  }
 
   return core;
 }
