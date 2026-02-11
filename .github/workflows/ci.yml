@@ -34,6 +34,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Test
-        run: pnpm exec oxlint --version && pnpm test
+        run: pnpm exec deno --version && pnpm test
       - name: Build docs
         run: cd apps/typegpu-docs && pnpm build
