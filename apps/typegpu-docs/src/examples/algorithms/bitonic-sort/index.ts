@@ -176,7 +176,7 @@ export const controls = {
       state.sortOrder = value;
     },
   },
-  Reshuffle: { onButtonClick: () => generateRandomArray },
+  Reshuffle: { onButtonClick: generateRandomArray },
   Sort: { onButtonClick: sort },
 };
 
