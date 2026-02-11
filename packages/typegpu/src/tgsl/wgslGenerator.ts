@@ -42,6 +42,7 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
+import { mathToStd } from './math.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -454,6 +455,21 @@ ${this.ctx.pre}}`;
           UnknownData,
           /* origin */ 'runtime',
         );
+      }
+
+      if (target.value === Math) {
+        if (property in mathToStd && mathToStd[property]) {
+          return snip(
+            mathToStd[property],
+            UnknownData,
+            /* origin */ 'runtime',
+          );
+        }
+        if (typeof Math[property as keyof typeof Math] === 'function') {
+          throw new Error(
+            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
+          );
+        }
       }
 
       const accessed = accessProp(target, property);
