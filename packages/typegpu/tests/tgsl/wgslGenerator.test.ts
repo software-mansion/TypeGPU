@@ -360,7 +360,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -390,7 +389,6 @@ describe('wgslGenerator', () => {
       'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -818,7 +816,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };

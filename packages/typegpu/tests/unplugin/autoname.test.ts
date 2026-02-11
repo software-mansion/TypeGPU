@@ -134,7 +134,6 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    // biome-ignore lint/style/useConst: it's a test
     let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
@@ -166,7 +165,6 @@ describe('autonaming', () => {
   });
 
   it('names function expression', () => {
-    // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
       'use gpu';
       return 0;

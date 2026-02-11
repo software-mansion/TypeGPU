@@ -112,7 +112,6 @@ export interface AbstractFloat extends BaseData {
 export interface Void extends BaseData {
   readonly type: 'void';
   // Type-tokens, not available at runtime
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is void
   readonly [$repr]: void;
   readonly [$invalidSchemaReason]: 'Void is not host-shareable';
   // ---

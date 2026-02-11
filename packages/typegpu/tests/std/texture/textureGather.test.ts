@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/noConstantCondition: we are using it intentionally to prune type checks */
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { textureGather } from '../../../src/std/texture.ts';

@@ -73,7 +73,6 @@ export interface ComputeFnOptions {
 
 export function computeFn(options: {
   workgroupSize: number[];
-  // biome-ignore lint/complexity/noBannedTypes: it's fine
 }): TgpuComputeFnShell<{}>;
 
 export function computeFn<

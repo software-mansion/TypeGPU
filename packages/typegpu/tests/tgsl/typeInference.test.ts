@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: not helpful at all in shaders */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import tgpu, { d, std } from '../../src/index.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
