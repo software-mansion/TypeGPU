@@ -36,7 +36,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -131,7 +131,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -178,7 +178,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let offset = (&neighborOffsets[i]);
           {
             var neighborDensity = getCell((x + (*offset).x), (y + (*offset).y));
@@ -311,7 +311,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -358,7 +358,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let offset = (&neighborOffsets[i]);
           {
             var neighborDensity = getCell((x + (*offset).x), (y + (*offset).y));
@@ -484,7 +484,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {

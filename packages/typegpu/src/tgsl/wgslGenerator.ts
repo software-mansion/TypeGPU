@@ -1222,7 +1222,7 @@ ${this.ctx.pre}else ${alternate}`;
       );
       this.ctx.defineVariable(loopVarName, loopVarSnippet);
 
-      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0; ${index} < ${
+      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
         tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
       }; ${index}++) {`;
 

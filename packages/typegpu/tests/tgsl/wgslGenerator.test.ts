@@ -493,7 +493,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
             res += foo;
@@ -520,10 +520,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
-            for (var i = 0; i < 3; i++) {
+            for (var i = 0u; i < 3; i++) {
               let boo = arr[i];
               {
                 res += (foo * boo);
@@ -551,10 +551,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
-            for (var i = 0; i < 3; i++) {
+            for (var i = 0u; i < 3; i++) {
               let foo2 = arr[i];
               {
                 res += (foo2 * foo2);
@@ -580,7 +580,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
         var res = 0;
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = (&arr[i]);
           {
             res += i32((*foo).x);
@@ -608,7 +608,7 @@ describe('wgslGenerator', () => {
 
       fn main() {
         var res = 0f;
-        for (var i = 0; i < arrayLength((&arr)); i++) {
+        for (var i = 0u; i < arrayLength((&arr)); i++) {
           let foo = arr[i];
           {
             res += foo;
@@ -639,14 +639,14 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         var v1 = vec4u(44, 88, 132, 176);
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let foo = v1[i];
           {
             continue;
           }
         }
         var v2 = vec2f(1, 2);
-        for (var i = 0; i < 2; i++) {
+        for (var i = 0u; i < 2; i++) {
           let foo = v2[i];
           {
             continue;
@@ -688,19 +688,19 @@ describe('wgslGenerator', () => {
         var res1 = 0f;
         var res2 = 0u;
         var res3 = false;
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let foo = v1[i];
           {
             res1 += foo;
           }
         }
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = v2[i];
           {
             res2 *= foo;
           }
         }
-        for (var i = 0; i < 2; i++) {
+        for (var i = 0u; i < 2; i++) {
           let foo = v3[i];
           {
             res3 = (foo != res3);
@@ -731,7 +731,7 @@ describe('wgslGenerator', () => {
 
       fn main() {
         var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0u; i < 4; i++) {
           let foo = testStruct.arr[i];
           {
             continue;
@@ -811,7 +811,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([f1])).toMatchInlineSnapshot(`
       "fn f1() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
             let i = foo;
@@ -834,7 +834,7 @@ describe('wgslGenerator', () => {
       "fn f2() {
         const i = 7;
         var arr = array<i32, 3>(1, 2, 3);
-        for (var ii = 0; ii < 3; ii++) {
+        for (var ii = 0u; ii < 3; ii++) {
           let foo = arr[ii];
           {
             continue;
