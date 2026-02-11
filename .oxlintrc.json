@@ -1,14 +1,22 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": null,
+  "plugins": ["import"],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn"
   },
   "rules": {
     "eslint-plugin-unicorn/prefer-add-event-listener": "off",
+    "eslint-plugin-import/no-named-as-default": "off",
+    "eslint-plugin-import/no-named-as-default-member": "off",
+    "eslint-plugin-import/extensions": [
+      "error",
+      "always",
+      { "ignorePackages": true }
+    ],
     "eslint/no-unused-imports": "error"
   },
+  "ignorePatterns": ["**/*.astro"],
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/tests/**"],
@@ -53,6 +61,5 @@
   "env": {
     "builtin": true
   },
-  "globals": {},
-  "ignorePatterns": []
+  "globals": {}
 }

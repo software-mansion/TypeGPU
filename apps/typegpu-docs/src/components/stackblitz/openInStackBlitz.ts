@@ -21,6 +21,7 @@ import typegpuDocsPackageJson from '../../../package.json' with {
 };
 import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
 // biome-ignore lint/correctness/useImportExtensions: dude it's there
+// oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({

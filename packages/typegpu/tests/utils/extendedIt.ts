@@ -1,6 +1,7 @@
 import { it as base, vi } from 'vitest';
 import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
 import tgpu from '../../src/index.ts';
+// oxlint-disable-next-line import/no-unassigned-import imported
 import './webgpuGlobals.ts';
 
 const adapterMock = {

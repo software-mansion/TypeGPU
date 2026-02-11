@@ -1,2 +1,2 @@
-export * from './grammar';
-export { default } from './grammar';
+export * from './grammar.ts';
+export { default } from './grammar.ts';
