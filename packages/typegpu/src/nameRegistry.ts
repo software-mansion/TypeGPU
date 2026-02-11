@@ -1,3 +1,5 @@
+import { invariant } from './errors.ts';
+
 const bannedTokens = new Set([
   // keywords
   'alias',
@@ -385,6 +387,8 @@ export interface NameRegistry {
 
   pushFunctionScope(): void;
   popFunctionScope(): void;
+  pushBlockScope(): void;
+  popBlockScope(): void;
 }
 
 function sanitizePrimer(primer: string | undefined) {
@@ -429,69 +433,121 @@ export function isValidProp(ident: string): boolean {
   const prefix = ident.split('_')[0] as string;
   return !bannedTokens.has(prefix);
 }
+type FunctionScopeLayer = {
+  type: 'functionScope';
+};
+
+type BlockScopeLayer = {
+  type: 'blockScope';
+  usedBlockScopeNames: Set<string>;
+};
+
+type ScopeLayer = FunctionScopeLayer | BlockScopeLayer;
 
 abstract class NameRegistryImpl implements NameRegistry {
-  abstract getUniqueVariant(base: string): string;
+  abstract getUniqueVariant(base: string, global: boolean): string;
 
   readonly #usedNames: Set<string>;
-  readonly #usedFunctionScopeNamesStack: Set<string>[];
+  readonly #usedAllTimeBlockScopeNames: Set<string>;
+  readonly #scopeStack: ScopeLayer[];
 
   constructor() {
     this.#usedNames = new Set<string>([
       ...bannedTokens,
       ...builtins,
     ]);
-    this.#usedFunctionScopeNamesStack = [];
+    this.#usedAllTimeBlockScopeNames = new Set();
+    this.#scopeStack = [];
   }
 
-  get usedFunctionScopeNames(): Set<string> | undefined {
-    return this
-      .#usedFunctionScopeNamesStack[
-        this.#usedFunctionScopeNamesStack.length - 1
-      ];
+  get #usedBlockScopeNames(): Set<string> | undefined {
+    return this.#scopeStack.findLast((scope) => scope.type === 'blockScope')
+      ?.usedBlockScopeNames;
   }
 
   makeUnique(primer: string | undefined, global: boolean): string {
     const sanitizedPrimer = sanitizePrimer(primer);
-    const name = this.getUniqueVariant(sanitizedPrimer);
+    const name = this.getUniqueVariant(sanitizedPrimer, global);
 
     if (global) {
       this.#usedNames.add(name);
     } else {
-      this.usedFunctionScopeNames?.add(name);
+      this.#usedAllTimeBlockScopeNames.add(name);
+      this.#usedBlockScopeNames?.add(name);
     }
 
     return name;
   }
 
+  #isUsedInBlocksBefore(name: string): boolean {
+    const functionScopeIndex = this.#scopeStack.findLastIndex((scope) =>
+      scope.type === 'functionScope'
+    );
+    return this.#scopeStack.slice(functionScopeIndex + 1).some((scope) =>
+      (scope as BlockScopeLayer).usedBlockScopeNames.has(name)
+    );
+  }
+
   makeValid(primer: string): string {
-    if (isValidIdentifier(primer) && !this.#usedNames.has(primer)) {
-      this.usedFunctionScopeNames?.add(primer);
+    if (
+      isValidIdentifier(primer) && !this.#usedNames.has(primer) &&
+      !this.#isUsedInBlocksBefore(primer)
+    ) {
+      this.#usedAllTimeBlockScopeNames.add(primer);
+      this.#usedBlockScopeNames?.add(primer);
       return primer;
     }
     return this.makeUnique(primer, false);
   }
 
-  isUsed(name: string): boolean {
-    return this.#usedNames.has(name) ||
-      !!this.usedFunctionScopeNames?.has(name);
+  isUsed(name: string, global: boolean): boolean {
+    const varyingCond = global
+      ? this.#usedAllTimeBlockScopeNames.has(name)
+      : this.#isUsedInBlocksBefore(name);
+    return this.#usedNames.has(name) || varyingCond;
   }
 
   pushFunctionScope(): void {
-    this.#usedFunctionScopeNamesStack.push(new Set<string>());
+    this.#scopeStack.push({ type: 'functionScope' });
+    this.#scopeStack.push({
+      type: 'blockScope',
+      usedBlockScopeNames: new Set(),
+    });
   }
 
   popFunctionScope(): void {
-    this.#usedFunctionScopeNamesStack.pop();
+    const functionScopeIndex = this.#scopeStack.findLastIndex((scope) =>
+      scope.type === 'functionScope'
+    );
+
+    if (functionScopeIndex === -1) {
+      return;
+    }
+
+    this.#scopeStack.splice(functionScopeIndex);
+  }
+
+  pushBlockScope(): void {
+    this.#scopeStack.push({
+      type: 'blockScope',
+      usedBlockScopeNames: new Set(),
+    });
+  }
+  popBlockScope(): void {
+    invariant(
+      this.#scopeStack[this.#scopeStack.length - 1]?.type === 'blockScope',
+      'Tried to pop block scope, but it is not present',
+    );
+    this.#scopeStack.pop();
   }
 }
 
 export class RandomNameRegistry extends NameRegistryImpl {
   #lastUniqueId = 0;
 
-  getUniqueVariant(base: string): string {
+  getUniqueVariant(base: string, global: boolean): string {
     let name = `${base}_${this.#lastUniqueId++}`;
-    while (this.isUsed(name)) {
+    while (this.isUsed(name, global)) {
       name = `${base}_${this.#lastUniqueId++}`;
     }
     return name;
@@ -499,10 +555,10 @@ export class RandomNameRegistry extends NameRegistryImpl {
 }
 
 export class StrictNameRegistry extends NameRegistryImpl {
-  getUniqueVariant(base: string): string {
+  getUniqueVariant(base: string, global: boolean): string {
     let index = 0;
     let name = base;
-    while (this.isUsed(name)) {
+    while (this.isUsed(name, global)) {
       index++;
       name = `${base}_${index}`;
     }
