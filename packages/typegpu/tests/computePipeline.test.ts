@@ -542,7 +542,6 @@ describe('TgpuComputePipeline', () => {
         {
           a[1i] = 1h;
         }
-
       }"
     `);
   });
