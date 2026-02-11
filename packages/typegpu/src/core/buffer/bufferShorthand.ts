@@ -1,7 +1,7 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
-import { setName, type TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferPartial } from '../../shared/repr.ts';
 import {
   $getNameForward,
@@ -134,6 +134,12 @@ export class TgpuBufferShorthandImpl<
 
   get value(): InferGPU<TData> {
     return this.$;
+  }
+
+  toString(): string {
+    return `${this.resourceType}BufferShorthand:${
+      getName(this) ?? '<unnamed>'
+    }`;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {

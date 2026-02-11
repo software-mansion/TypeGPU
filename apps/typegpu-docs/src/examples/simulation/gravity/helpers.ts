@@ -144,7 +144,7 @@ export async function loadSphereTextures(root: TgpuRoot) {
     .$usage('sampled', 'render');
 
   const planets = await Promise.all(
-    sphereTextureNames.map(async (name, i) => {
+    sphereTextureNames.map(async (name) => {
       const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
       const response = await fetch(url);
       const blob = await response.blob();

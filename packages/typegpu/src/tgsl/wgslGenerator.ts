@@ -36,6 +36,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  ArrayExpression,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -48,6 +49,7 @@ import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -144,7 +146,7 @@ function operatorToType<
   TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
-    if (op === '!' || op === '~') {
+    if (op === '!') {
       return bool;
     }
 
@@ -285,13 +287,19 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: wgsl.BaseData,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
 
     try {
       const result = this.expression(expression);
+      if (expectedType instanceof AutoStruct) {
+        // We provide a certain AutoStruct object to later
+        // investigate what props were accessed. No need to
+        // convert the result.
+        return result;
+      }
       return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
@@ -504,21 +512,21 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const callee = this.expression(calleeNode);
 
-      if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
-        // Struct/array schema call.
+      if (wgsl.isWgslStruct(callee.value)) {
+        // Struct schema call.
         if (argNodes.length > 1) {
           throw new WgslTypeError(
-            'Array and struct schemas should always be called with at most 1 argument',
+            'Struct schemas should always be called with at most 1 argument',
           );
         }
 
         // No arguments `Struct()`, resolve struct name and return.
         if (!argNodes[0]) {
-          // the schema becomes the data type
+          // The schema becomes the data type.
           return snip(
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
-            // A new struct, so not a reference
+            // A new struct, so not a reference.
             /* origin */ 'runtime',
           );
         }
@@ -533,7 +541,54 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
-          // A new struct, so not a reference
+          // A new struct, so not a reference.
+          /* origin */ 'runtime',
+        );
+      }
+
+      if (wgsl.isWgslArray(callee.value)) {
+        // Array schema call.
+        if (argNodes.length > 1) {
+          throw new WgslTypeError(
+            'Array schemas should always be called with at most 1 argument',
+          );
+        }
+
+        // No arguments `array<...>()`, resolve array type and return.
+        if (!argNodes[0]) {
+          // The schema becomes the data type.
+          return snip(
+            `${this.ctx.resolve(callee.value).value}()`,
+            callee.value,
+            // A new array, so not a reference.
+            /* origin */ 'runtime',
+          );
+        }
+
+        const arg = this.typedExpression(
+          argNodes[0],
+          callee.value,
+        );
+
+        // `d.arrayOf(...)([...])`.
+        // We don't resolve the ArrayExpression object itself to
+        // avoid reference checks (we're copying so it's fine)
+        if (arg.value instanceof ArrayExpression) {
+          return snip(
+            stitch`${
+              this.ctx.resolve(callee.value).value
+            }(${arg.value.elements})`,
+            arg.dataType,
+            /* origin */ 'runtime',
+          );
+        }
+
+        // `d.arrayOf(...)(otherArr)`.
+        // We just let the argument resolve everything.
+        return snip(
+          this.ctx.resolve(arg.value, callee.value).value,
+          callee.value,
+          // A new array, so not a reference.
           /* origin */ 'runtime',
         );
       }
@@ -655,40 +710,76 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.objectExpr) {
       // Object Literal
       const obj = expression[1];
-
       const structType = this.ctx.expectedType;
 
-      if (!structType || !wgsl.isWgslStruct(structType)) {
-        throw new WgslTypeError(
-          `No target type could be inferred for object with keys [${
-            Object.keys(obj).join(', ')
-          }], please wrap the object in the corresponding schema.`,
+      if (structType instanceof AutoStruct) {
+        const entries = Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => {
+            let accessed = structType.accessProp(key);
+            let expr: Snippet;
+            if (accessed) {
+              // Generating the expression expecting a specific type
+              expr = this.typedExpression(value, accessed.type);
+            } else {
+              // Generating the expression and inferring the type instead
+              expr = this.expression(value);
+              if (expr.dataType === UnknownData) {
+                throw new WgslTypeError(
+                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                );
+              }
+              accessed = structType.provideProp(key, concretize(expr.dataType));
+            }
+
+            return [accessed.prop, expr];
+          }),
+        );
+
+        const completeStruct = structType.completeStruct;
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          completeStruct,
+          entries,
+        );
+
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          completeStruct,
+          /* origin */ 'runtime',
         );
       }
 
-      const entries = Object.fromEntries(
-        Object.entries(structType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new WgslTypeError(
-              `Missing property ${key} in object literal for struct ${structType}`,
-            );
-          }
-          const result = this.typedExpression(val, value);
-          return [key, result];
-        }),
-      );
+      if (wgsl.isWgslStruct(structType)) {
+        const entries = Object.fromEntries(
+          Object.entries(structType.propTypes).map(([key, value]) => {
+            const val = obj[key];
+            if (val === undefined) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const result = this.typedExpression(val, value);
+            return [key, result];
+          }),
+        );
 
-      const convertedSnippets = convertStructValues(
-        this.ctx,
-        structType,
-        entries,
-      );
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          structType,
+          entries,
+        );
 
-      return snip(
-        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
-        structType,
-        /* origin */ 'runtime',
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          structType,
+          /* origin */ 'runtime',
+        );
+      }
+
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${
+          Object.keys(obj).join(', ')
+        }], please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -713,25 +804,9 @@ ${this.ctx.pre}}`;
         }
       } else {
         // The array is not typed, so we try to guess the types.
-        const valuesSnippets = valueNodes.map((value) => {
-          const snippet = this.expression(value as tinyest.Expression);
-          // We check if there are no references among the elements
-          if (
-            (snippet.origin === 'argument' &&
-              !wgsl.isNaturallyEphemeral(snippet.dataType)) ||
-            !isEphemeralSnippet(snippet)
-          ) {
-            const snippetStr =
-              this.ctx.resolve(snippet.value, snippet.dataType).value;
-            const snippetType =
-              this.ctx.resolve(concretize(snippet.dataType as wgsl.BaseData))
-                .value;
-            throw new WgslTypeError(
-              `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
-            );
-          }
-          return snippet;
-        });
+        const valuesSnippets = valueNodes.map((value) =>
+          this.expression(value as tinyest.Expression)
+        );
 
         if (valuesSnippets.length === 0) {
           throw new WgslTypeError(
@@ -750,13 +825,17 @@ ${this.ctx.pre}}`;
         elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
-      const arrayType = `array<${
-        this.ctx.resolve(elemType).value
-      }, ${values.length}>`;
+      const arrayType = arrayOf(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      );
 
       return snip(
-        stitch`${arrayType}(${values})`,
-        arrayOf(elemType as wgsl.AnyWgslData, values.length),
+        new ArrayExpression(
+          arrayType,
+          values,
+        ),
+        arrayType,
         /* origin */ 'runtime',
       );
     }
@@ -811,10 +890,7 @@ ${this.ctx.pre}}`;
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
         let returnSnippet = expectedReturnType
-          ? this.typedExpression(
-            returnNode,
-            expectedReturnType,
-          )
+          ? this.typedExpression(returnNode, expectedReturnType)
           : this.expression(returnNode);
 
         if (returnSnippet.value instanceof RefOperator) {

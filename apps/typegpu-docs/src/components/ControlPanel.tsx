@@ -18,6 +18,8 @@ import { Slider } from './design/Slider.tsx';
 import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
+import { FPSCounter } from './FpsCounter.tsx';
+import type { d } from 'typegpu';
 
 function ToggleRow({
   label,
@@ -25,7 +27,7 @@ function ToggleRow({
   onChange,
 }: {
   label: string;
-  initial?: boolean;
+  initial: boolean;
   onChange: (value: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
@@ -63,7 +65,7 @@ function SliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -99,7 +101,7 @@ function VectorSliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number[];
+  initial: number[];
   min: number[];
   max: number[];
   step: number[];
@@ -132,12 +134,10 @@ function ColorPickerRow({
   onChange,
 }: {
   label: string;
-  initial?: readonly [number, number, number];
-  onChange: (value: readonly [number, number, number]) => void;
+  initial: d.v3f;
+  onChange: (value: d.v3f) => void;
 }) {
-  const [value, setValue] = useState<readonly [number, number, number]>(
-    initial ?? [0, 0, 0],
-  );
+  const [value, setValue] = useState<d.v3f>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
@@ -161,7 +161,7 @@ function TextAreaRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial ?? '');
@@ -189,7 +189,7 @@ function SelectRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
@@ -316,6 +316,7 @@ export function ControlPanel() {
         'box-border flex max-h-[50%] flex-col gap-4 overflow-auto rounded-xl bg-grayscale-0 p-6 md:max-h-full',
       )}
     >
+      <FPSCounter />
       <div className='hidden flex-col gap-4 md:flex'>
         <h2 className='font-medium text-xl'>Control panel</h2>
 
