@@ -43,6 +43,7 @@ import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
+import { mathToStd } from './math.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -455,6 +456,21 @@ ${this.ctx.pre}}`;
           UnknownData,
           /* origin */ 'runtime',
         );
+      }
+
+      if (target.value === Math) {
+        if (property in mathToStd && mathToStd[property]) {
+          return snip(
+            mathToStd[property],
+            UnknownData,
+            /* origin */ 'runtime',
+          );
+        }
+        if (typeof Math[property as keyof typeof Math] === 'function') {
+          throw new Error(
+            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
+          );
+        }
       }
 
       const accessed = accessProp(target, property);
@@ -1157,7 +1173,7 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (elementType === UnknownData) {
         throw new WgslTypeError(
-          stitch`Elements of iterable ${iterableSnippet} are of unknown type`,
+          stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
         );
       }
 
