@@ -19,6 +19,7 @@ export interface PhysicsWorld {
     level: number,
     vx?: number,
     vy?: number,
+    angle?: number,
   ): number;
   removeBall(handle: number): void;
 }
@@ -38,7 +39,7 @@ export async function createPhysicsWorld(
     const colliderDesc = RAPIER.ColliderDesc.cuboid(wall.hw, wall.hh)
       .setTranslation(wall.cx, wall.cy)
       .setRestitution(0.2)
-      .setFriction(0.1)
+      .setFriction(0.6)
       .setCollisionGroups(wallGroup);
     world.createCollider(colliderDesc);
   }
@@ -53,10 +54,12 @@ export async function createPhysicsWorld(
     radius: number,
     contour: Float32Array,
     level: number,
+    angle: number,
   ) {
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(x, y)
-      .setLinvel(vx, vy);
+      .setLinvel(vx, vy)
+      .setRotation(angle);
     const body = world.createRigidBody(bodyDesc);
 
     const scaled = new Float32Array(contour.length);
@@ -106,8 +109,9 @@ export async function createPhysicsWorld(
       level: number,
       vx = 0,
       vy = 0,
+      angle = 0,
     ): number {
-      makeBall(x, y, vx, vy, radius, contour, level);
+      makeBall(x, y, vx, vy, radius, contour, level, angle);
       return ballBodies.length - 1;
     },
     removeBall(handle: number) {
