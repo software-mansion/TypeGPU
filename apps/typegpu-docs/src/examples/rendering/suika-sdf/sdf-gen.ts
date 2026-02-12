@@ -1,5 +1,6 @@
 const SPRITE_SIZE = 384;
 const FRUIT_COUNT = 10;
+const SHEET_SPLIT = 8;
 const MAX_DIST = SPRITE_SIZE / 2;
 
 async function loadImage(path: string): Promise<ImageBitmap> {
@@ -10,14 +11,14 @@ async function loadImage(path: string): Promise<ImageBitmap> {
 
 function drawFruitSlice(
   level: number,
-  ctx: CanvasRenderingContext2D,
+  ctx: OffscreenCanvasRenderingContext2D,
   sourceA: ImageBitmap,
   sourceB: ImageBitmap,
   dstX: number,
   dstY: number,
 ) {
-  const source = level < 8 ? sourceA : sourceB;
-  const localIndex = level < 8 ? level : level - 8;
+  const source = level < SHEET_SPLIT ? sourceA : sourceB;
+  const localIndex = level % SHEET_SPLIT;
   ctx.drawImage(
     source,
     localIndex * SPRITE_SIZE,
@@ -37,6 +38,7 @@ function computeJfaSdf(
   height: number,
 ): Float32Array {
   const size = width * height;
+  const maxDim = Math.max(width, height);
 
   // Alpha mask: 1 = inside shape
   const inside = new Uint8Array(size);
@@ -65,7 +67,7 @@ function computeJfaSdf(
   }
 
   // JFA iterations
-  let offset = Math.floor(Math.max(width, height) / 2);
+  let offset = Math.floor(maxDim / 2);
   while (offset >= 1) {
     const readX = seedX.slice();
     const readY = seedY.slice();
@@ -106,7 +108,9 @@ function computeJfaSdf(
   for (let i = 0; i < size; i++) {
     const x = i % width;
     const y = Math.floor(i / width);
-    const dist = seedX[i] >= 0 ? Math.hypot(x - seedX[i], y - seedY[i]) : width;
+    const dist = seedX[i] >= 0
+      ? Math.hypot(x - seedX[i], y - seedY[i])
+      : maxDim;
     sdf[i] = inside[i] ? -dist : dist;
   }
 
@@ -125,25 +129,35 @@ export async function createAtlases(): Promise<{
   ]);
 
   // Build sprite atlas (vertical stack, 384 × 3840)
-  const spriteCanvas = document.createElement('canvas');
+  const spriteCanvas = new OffscreenCanvas(
+    SPRITE_SIZE,
+    SPRITE_SIZE * FRUIT_COUNT,
+  );
   spriteCanvas.width = SPRITE_SIZE;
   spriteCanvas.height = SPRITE_SIZE * FRUIT_COUNT;
-  const spriteCtx = spriteCanvas.getContext('2d')!;
+  const spriteCtx = spriteCanvas.getContext('2d');
+  if (!spriteCtx) {
+    throw new Error('Failed to create sprite canvas context');
+  }
 
   for (let i = 0; i < FRUIT_COUNT; i++) {
     drawFruitSlice(i, spriteCtx, fruits1, fruits2, 0, i * SPRITE_SIZE);
   }
 
   // Extract each sprite and compute SDF
-  const tmpCanvas = document.createElement('canvas');
+  const tmpCanvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
   tmpCanvas.width = SPRITE_SIZE;
   tmpCanvas.height = SPRITE_SIZE;
-  const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true })!;
+  const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
+  if (!tmpCtx) {
+    throw new Error('Failed to create temporary canvas context');
+  }
 
   const sdfImageData = new ImageData(SPRITE_SIZE, SPRITE_SIZE * FRUIT_COUNT);
   const pixels = sdfImageData.data;
   const contours: Float32Array[] = [];
-  const center = SPRITE_SIZE / 2;
+  const center = SPRITE_SIZE * 0.5;
+  const invCenter = 1 / center;
 
   for (let level = 0; level < FRUIT_COUNT; level++) {
     tmpCtx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
@@ -164,15 +178,13 @@ export async function createAtlases(): Promise<{
           (y > 0 && alpha[(idx - SPRITE_SIZE) * 4 + 3] <= 128) ||
           (y < SPRITE_SIZE - 1 && alpha[(idx + SPRITE_SIZE) * 4 + 3] <= 128);
         if (hasTransparentNeighbor) {
-          pts.push((x - center) / center, -(y - center) / center);
+          pts.push((x - center) * invCenter, -(y - center) * invCenter);
         }
       }
     }
     contours.push(new Float32Array(pts));
 
     const sdf = computeJfaSdf(imgData.data, SPRITE_SIZE, SPRITE_SIZE);
-
-    spriteCtx.putImageData(imgData, 0, level * SPRITE_SIZE);
 
     const baseIdx = level * SPRITE_SIZE * SPRITE_SIZE;
     for (let j = 0; j < SPRITE_SIZE * SPRITE_SIZE; j++) {
