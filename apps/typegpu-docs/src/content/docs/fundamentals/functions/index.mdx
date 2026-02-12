@@ -288,19 +288,22 @@ descriptive error either at build time or at runtime (when compiling the shader)
 Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be supported in the context of shaders, **rather to allow for shaders to be written in JavaScript**. This distinction means we won't support every JavaScript feature, only those that make sense in the context of graphics programming.
 :::
 
-* **Calling other functions** --
-Only functions marked with `'use gpu'` can be called from within a shader. An exception to that rule is [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
-of shaders in a familiar way.
-
 * **Operators** --
 JavaScript does not support operator overloading.
 This means that, while you can still use operators for numbers,
 you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices, or use a fluent interface (*abc.mul(xyz), ...*)
 
-* **Math.\*** --
-Utility functions on the `Math` object can't automatically run on the GPU, but can usually be swapped with functions exported from `typegpu/std`.
-Additionally, if you're able to pull the call to `Math.*` out of the function, you can store the result in a constant and use it in the function
-no problem.
+* **Calling other functions** --
+Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
+of shaders in a familiar way, as well as most `Math` functions.
+
+:::caution
+Calling `Math` functions such as `Math.sin` inside TypeGPU functions should be avoided.
+- not all `Math` functions are supported,
+- using `Math` functions may lead to unexpected type conversions.
+
+All supported `Math` functions fall back to their `std` equivalents, and it is advised to use `std` directly.
+:::
 
 ### Standard library
 
