@@ -18,9 +18,9 @@ interface TgpuFnNodeData extends THREE.NodeData {
 }
 
 abstract class StageData {
+  declare readonly type: 'analyze' | 'generate';
   readonly stage: 'vertex' | 'fragment' | 'compute' | null;
   readonly namespace: Namespace;
-  declare readonly type: 'analyze' | 'generate';
 
   constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
     this.stage = stage;
@@ -30,8 +30,8 @@ abstract class StageData {
 
 class GenerateStageData extends StageData {
   readonly names: WeakMap<object, string>;
-  codeGeneratedThusFar: string;
   readonly type = 'generate';
+  codeGeneratedThusFar: string;
 
   constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
     super(stage);
@@ -229,8 +229,8 @@ class TgpuFnNode<T> extends THREE.Node {
    * Setting `needsInterpolation` flag to true in varying nodes
    */
   analyze(builder: THREE.NodeBuilder, output?: THREE.Node | null) {
-    this.#analyzeFunction(builder); // making sure it will find all TSL accessors
     super.analyze(builder, output);
+    this.#analyzeFunction(builder); // making sure it will find all TSL accessors
   }
 
   generate(
