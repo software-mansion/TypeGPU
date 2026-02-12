@@ -22,16 +22,25 @@ interface TgpuFnNodeData extends THREE.NodeData {
   };
 }
 
-class StageData {
+abstract class StageData {
   readonly stage: 'vertex' | 'fragment' | 'compute' | null;
-  readonly names: WeakMap<object, string>;
   readonly namespace: Namespace;
-  codeGeneratedThusFar: string;
+  declare readonly type: 'analyze' | 'generate';
 
   constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
     this.stage = stage;
-    this.names = new WeakMap();
     this.namespace = tgpu['~unstable'].namespace();
+  }
+}
+
+class GenerateStageData extends StageData {
+  readonly names: WeakMap<object, string>;
+  codeGeneratedThusFar: string;
+  readonly type = 'generate';
+
+  constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
+    super(stage);
+    this.names = new WeakMap();
     this.codeGeneratedThusFar = '';
 
     this.namespace.on('name', (event) => {
@@ -42,18 +51,43 @@ class StageData {
   }
 }
 
+class AnalyzeStageData extends StageData {
+  readonly type = 'analyze';
+}
+
 class BuilderData {
-  stageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, StageData>;
+  generateStageDataMap: Map<
+    'vertex' | 'fragment' | 'compute' | null,
+    GenerateStageData
+  >;
+  analyzeStageDataMap: Map<
+    'vertex' | 'fragment' | 'compute' | null,
+    AnalyzeStageData
+  >;
 
   constructor() {
-    this.stageDataMap = new Map();
+    this.generateStageDataMap = new Map();
+    this.analyzeStageDataMap = new Map();
   }
 
-  getStageData(stage: 'vertex' | 'fragment' | 'compute' | null): StageData {
-    let stageData = this.stageDataMap.get(stage);
+  getGenerateStageData(
+    stage: 'vertex' | 'fragment' | 'compute' | null,
+  ): GenerateStageData {
+    let stageData = this.generateStageDataMap.get(stage);
     if (!stageData) {
-      stageData = new StageData(stage);
-      this.stageDataMap.set(stage, stageData);
+      stageData = new GenerateStageData(stage);
+      this.generateStageDataMap.set(stage, stageData);
+    }
+    return stageData;
+  }
+
+  getAnalyzeStageData(
+    stage: 'vertex' | 'fragment' | 'compute' | null,
+  ): AnalyzeStageData {
+    let stageData = this.analyzeStageDataMap.get(stage);
+    if (!stageData) {
+      stageData = new AnalyzeStageData(stage);
+      this.analyzeStageDataMap.set(stage, stageData);
     }
     return stageData;
   }
@@ -113,7 +147,7 @@ class TgpuFnNode<T> extends THREE.Node {
       builderDataMap.set(builder, builderData);
     }
 
-    const stageData = builderData.getStageData(builder.shaderStage);
+    const stageData = builderData.getGenerateStageData(builder.shaderStage);
 
     if (!nodeData.custom) {
       if (currentlyGeneratingFnNodeCtx !== undefined) {
@@ -168,21 +202,39 @@ class TgpuFnNode<T> extends THREE.Node {
     return nodeData.custom.nodeFunction;
   }
 
-  analyze(builder: THREE.NodeBuilder, output?: THREE.Node | null): void {
-    /**
-     * Replicating Three.js `analyze` traversal.
-     * Setting `needsInterpolation` flag to true in varying nodes
-     */
+  #analyzeFunction(builder: THREE.NodeBuilder) {
+    let builderData = builderDataMap.get(builder);
 
-    // @ts-expect-error: since 0.9.0 `externals` field is callable
-    const externals = getMetaData(this.#impl)?.externals() || {};
-    for (const e of Object.values(externals)) {
-      if (e instanceof TSLAccessor) {
-        e.node.traverse((node: THREE.Node) => {
-          node.analyze(builder, output);
-        });
-      }
+    if (!builderData) {
+      builderData = new BuilderData();
+      builderDataMap.set(builder, builderData);
     }
+
+    const stageData = builderData.getAnalyzeStageData(builder.shaderStage);
+
+    const ctx: TgpuFnNodeContext = {
+      builder,
+      stageData,
+      dependencies: [],
+    };
+    currentlyGeneratingFnNodeCtx = ctx;
+    try {
+      tgpu.resolve({
+        names: stageData.namespace,
+        template: '___ID___ fnName',
+        externals: { fnName: this.#impl },
+      });
+    } finally {
+      currentlyGeneratingFnNodeCtx = undefined;
+    }
+  }
+
+  /**
+   * Replicating Three.js `analyze` traversal.
+   * Setting `needsInterpolation` flag to true in varying nodes
+   */
+  analyze(builder: THREE.NodeBuilder, output?: THREE.Node | null) {
+    this.#analyzeFunction(builder); // making sure it will find all TSL accessors
     super.analyze(builder, output);
   }
 
@@ -194,7 +246,7 @@ class TgpuFnNode<T> extends THREE.Node {
 
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     const builderData = builderDataMap.get(builder) as BuilderData;
-    const stageData = builderData.getStageData(builder.shaderStage);
+    const stageData = builderData.getGenerateStageData(builder.shaderStage);
 
     // Building dependencies
     const uniqueDeps = [...new Set(nodeData.custom.dependencies)];
@@ -254,6 +306,14 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
 
     if (!ctx) {
       throw new Error('Can only access TSL nodes on the GPU.');
+    }
+
+    if (ctx.stageData.type === 'analyze') {
+      this.node.traverse((node: THREE.Node) => {
+        node.analyze(ctx.builder);
+      });
+      // dummy return, only for types to match
+      return tgpu['~unstable'].rawCodeSnippet('', this.#dataType, 'runtime').$;
     }
 
     // biome-ignore lint/suspicious/noExplicitAny: smh

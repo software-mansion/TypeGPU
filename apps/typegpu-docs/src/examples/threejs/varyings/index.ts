@@ -25,6 +25,14 @@ const vNormal = TSL.varying(TSL.vec3(), 'vNormal');
 const vNormalAccessor = t3.fromTSL(vNormal, d.vec3f);
 const posAccessor = t3.fromTSL(TSL.positionLocal, d.vec3f);
 
+// prevents `vNormalAccessor` from appearing in externals
+const updateNormal = (newNormal: d.v3f) => {
+  'use gpu';
+  vNormalAccessor.$.x = newNormal.x;
+  vNormalAccessor.$.y = newNormal.y;
+  vNormalAccessor.$.z = newNormal.z;
+};
+
 const positionNode = t3.toTSL(() => {
   'use gpu';
   const frequency = d.f32(3.0);
@@ -38,9 +46,7 @@ const positionNode = t3.toTSL(() => {
 
   const newNormalLocal = d.vec3f(-derivative, 1.0, 0);
 
-  vNormalAccessor.$.x = newNormalLocal.x;
-  vNormalAccessor.$.y = newNormalLocal.y;
-  vNormalAccessor.$.z = newNormalLocal.z;
+  updateNormal(newNormalLocal);
 
   return d.vec3f(posAccessor.$);
 });
@@ -50,9 +56,15 @@ const transformedNormalAccessor = t3.fromTSL(
   d.vec3f,
 );
 
-const normalNode = t3.toTSL(() => {
+// prevents `vNormalAccessor` from appearing in externals
+const getTransformedAndNormalized = () => {
   'use gpu';
   return std.normalize(transformedNormalAccessor.$);
+};
+
+const normalNode = t3.toTSL(() => {
+  'use gpu';
+  return getTransformedAndNormalized();
 });
 
 const material = new THREE.MeshStandardNodeMaterial({
