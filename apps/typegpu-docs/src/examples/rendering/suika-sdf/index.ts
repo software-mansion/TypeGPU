@@ -10,7 +10,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const LEVEL_RADII = [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.44, 0.48];
+const LEVEL_RADII = [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.44, 0.48]
+  .map((x) => x * 1.3);
 const LEVEL_COUNT = LEVEL_RADII.length;
 const LEVEL_SCALE = 1 / LEVEL_COUNT;
 const MAX_LEVEL_RADIUS = LEVEL_RADII[LEVEL_COUNT - 1];
@@ -27,8 +28,8 @@ const OFFSCREEN = 10;
 const DROP_Y = 0.65;
 const SPAWN_WEIGHTS = [4, 3, 2, 1];
 const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
-const MERGE_DISTANCE_FACTOR = 0.6;
-const PLAYFIELD_HALF_WIDTH = 0.45;
+const MERGE_DISTANCE_FACTOR = 0.4;
+const PLAYFIELD_HALF_WIDTH = 0.65;
 const SPAWN_COOLDOWN = 0.35;
 const GHOST_ALPHA = 0.45;
 
@@ -268,7 +269,14 @@ function markDead(fruit: ActiveFruit) {
   physics.removeBall(fruit.bodyIndex);
 }
 
-function spawnFruit(level: number, x: number, y = DROP_Y, vx = 0, vy = 0) {
+function spawnFruit(
+  level: number,
+  x: number,
+  y = DROP_Y,
+  vx = 0,
+  vy = 0,
+  angle = 0,
+) {
   const radius = LEVEL_RADII[level];
   const bodyIndex = physics.addBall(
     x,
@@ -278,6 +286,7 @@ function spawnFruit(level: number, x: number, y = DROP_Y, vx = 0, vy = 0) {
     level,
     vx,
     vy,
+    angle,
   );
   activeFruits.push({ level, radius, bodyIndex, dead: false });
 }
@@ -326,7 +335,11 @@ function checkMerges() {
         const avgY = (sa.y + sb.y) * 0.5;
         const avgVx = (sa.vx + sb.vx) * 0.5;
         const avgVy = (sa.vy + sb.vy) * 0.5;
-        spawnFruit(newLevel, avgX, avgY, avgVx, avgVy);
+        const avgAngle = Math.atan2(
+          Math.sin(sa.angle) + Math.sin(sb.angle),
+          Math.cos(sa.angle) + Math.cos(sb.angle),
+        );
+        spawnFruit(newLevel, avgX, avgY, avgVx, avgVy, avgAngle);
         merged = true;
         break;
       }
