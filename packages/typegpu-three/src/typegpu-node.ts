@@ -1,12 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, {
-  getMetaData,
-  isVariable,
-  type Namespace,
-  type TgpuVar,
-} from 'typegpu';
+import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
