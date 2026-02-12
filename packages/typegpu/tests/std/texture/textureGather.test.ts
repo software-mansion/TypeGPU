@@ -102,7 +102,6 @@ describe('textureGather', () => {
         var gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
         var gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
         var gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
-
       }"
     `);
   });

@@ -42,22 +42,22 @@ export async function executeExample(
 
   function initializeParam(param: ExampleControlParam) {
     if ('onSelectChange' in param) {
-      return param.onSelectChange(param.initial ?? param.options[0]);
+      return param.onSelectChange(param.initial);
     }
     if ('onToggleChange' in param) {
-      return param.onToggleChange(param.initial ?? false);
+      return param.onToggleChange(param.initial);
     }
     if ('onSliderChange' in param) {
-      return param.onSliderChange(param.initial ?? param.min ?? 0);
+      return param.onSliderChange(param.initial);
     }
     if ('onVectorSliderChange' in param) {
-      return param.onVectorSliderChange(param.initial ?? [0, 0, 0]);
+      return param.onVectorSliderChange(param.initial);
     }
     if ('onColorChange' in param) {
-      return param.onColorChange(param.initial ?? [0, 0, 0]);
+      return param.onColorChange(param.initial);
     }
     if ('onTextChange' in param) {
-      return param.onTextChange(param.initial ?? '');
+      return param.onTextChange(param.initial);
     }
   }
 
