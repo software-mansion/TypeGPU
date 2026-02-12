@@ -329,7 +329,7 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     }
 
     return tgpu['~unstable'].rawCodeSnippet(
-      this.node.build(ctx.builder) as string,
+      builtNode,
       this.#dataType,
     ).$;
   }
@@ -394,6 +394,9 @@ export const fromTSL = tgpu.comptime(
     try { // sometimes it needs information (overrideNodes) from compilation context which is not present
       nodeType = node.getNodeType(sharedBuilder);
     } catch {
+      console.warn(
+        `fromTSL: failed to infer node type via getNodeType; skipping type comparison.`,
+      );
     }
 
     if (nodeType) {
