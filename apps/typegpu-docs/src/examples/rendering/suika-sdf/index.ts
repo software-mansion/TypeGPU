@@ -3,6 +3,7 @@ import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import { type BallState, createPhysicsWorld } from './physics.ts';
 import { createAtlases } from './sdf-gen.ts';
+import { skyColor } from './sky.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -20,6 +21,9 @@ const WALL_DEFS = [
 ];
 const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
 const MAX_FRUITS = 128;
+const MIN_RADIUS = 0.001;
+const EDGE_WIDTH = 0.003;
+const OFFSCREEN = 10;
 const DROP_Y = 0.65;
 const SPAWN_WEIGHTS = [4, 3, 2, 1];
 const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
@@ -53,6 +57,30 @@ const atlasUv = (p: d.v2f, level: number, levelScale: number) => {
   const uv = d.vec2f(p.x + 0.5, 0.5 - p.y);
   const offset = level * levelScale;
   return d.vec2f(uv.x, uv.y * levelScale + offset);
+};
+
+const sampleSdf = (
+  sdfView: d.texture2d<d.F32>,
+  sampler: d.sampler,
+  atlasUv: d.v2f,
+  radius: number,
+  localPos: d.v2f,
+) => {
+  'use gpu';
+  const sdfEncoded = std.textureSample(sdfView, sampler, atlasUv).x;
+  const sdfWorld = (sdfEncoded * 2 - 1) * radius;
+  const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
+  const outsideDist = std.length(outside) * radius * 2;
+  return sdfWorld + outsideDist;
+};
+
+const sampleSprite = (
+  spriteView: d.texture2d<d.F32>,
+  sampler: d.sampler,
+  atlasUv: d.v2f,
+) => {
+  'use gpu';
+  return std.textureSample(spriteView, sampler, atlasUv).xyz;
 };
 
 function randomLevel(): number {
@@ -117,8 +145,8 @@ const SdCircle = d.struct({
   angle: d.f32,
 });
 const INACTIVE_CIRCLE = {
-  center: d.vec2f(10, 10),
-  radius: 0.001,
+  center: d.vec2f(OFFSCREEN, OFFSCREEN),
+  radius: MIN_RADIUS,
   level: 0,
   angle: d.f32(0),
 };
@@ -149,27 +177,13 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
     const time = timeUniform.$;
     const ghostCircle = ghostCircleUniform.$;
     const ghostAlpha = ghostAlphaUniform.$;
-    const minRadius = 0.001;
-    const edge = 0.003;
+    const minRadius = MIN_RADIUS;
+    const edge = EDGE_WIDTH;
 
     let closestDist = d.f32(2e10);
     let outColor = d.vec3f(0, 0, 0);
 
-    const skyTop = d.vec3f(0.62, 0.86, 1.0);
-    const skyBottom = d.vec3f(0.98, 0.93, 0.78);
-    const skyMix = std.clamp(ndc.y * 0.5 + 0.5, 0, 1);
-    let bgColor = std.mix(skyBottom, skyTop, skyMix);
-
-    const sunPos = d.vec2f(0.78, 0.8);
-    const sunDist = std.length(uv.sub(sunPos));
-    const sunMask = std.clamp((0.1 - sunDist) * 40.0, 0, 1);
-    bgColor = std.mix(bgColor, d.vec3f(1.0, 0.95, 0.74), sunMask);
-
-    const hillX = uv.x + time * 0.025;
-    const hillLine = 0.2 + std.sin(hillX * 4.5) * 0.07 +
-      std.sin(hillX * 1.8) * 0.04;
-    const hillMask = std.clamp((hillLine - uv.y) * 50.0, 0, 1);
-    bgColor = std.mix(bgColor, d.vec3f(0.41, 0.76, 0.46), hillMask);
+    const bgColor = skyColor(uv, ndc, time);
 
     for (let i = d.u32(0); i < activeCount; i++) {
       const circle = circleUniform.$[i];
@@ -178,21 +192,14 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
       const localPos = rotate2d(raw, -circle.angle);
       const clamped = clampRadial(localPos, clampRadius, minRadius);
       const sdfAtlasUv = atlasUv(clamped, circle.level, levelScale);
-      const sdfEncoded = std.textureSample(
+      const totalDist = sampleSdf(
         sdfView.$,
         linSampler.$,
         sdfAtlasUv,
-      ).x;
-
-      const sdfWorld = (sdfEncoded * 2 - 1) * circle.radius;
-      const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
-      const outsideDist = std.length(outside) * circle.radius * 2;
-      const totalDist = sdfWorld + outsideDist;
-      const spriteRgb = std.textureSample(
-        spriteView.$,
-        linSampler.$,
-        sdfAtlasUv,
-      ).xyz;
+        circle.radius,
+        localPos,
+      );
+      const spriteRgb = sampleSprite(spriteView.$, linSampler.$, sdfAtlasUv);
 
       if (totalDist < closestDist) {
         closestDist = totalDist;
@@ -232,12 +239,14 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
       const gLocalPos = rotate2d(gRaw, -ghostCircle.angle);
       const gClamped = clampRadial(gLocalPos, clampRadius, minRadius);
       const gAtlasUv = atlasUv(gClamped, ghostCircle.level, levelScale);
-      const gRgb = std.textureSample(spriteView.$, linSampler.$, gAtlasUv).xyz;
-      const gOutside = std.max(std.abs(gLocalPos).sub(0.5), d.vec2f(0));
-      const gOutsideDist = std.length(gOutside) * ghostCircle.radius * 2;
-      const gEncoded = std.textureSample(sdfView.$, linSampler.$, gAtlasUv).x;
-      const gWorld = (gEncoded * 2 - 1) * ghostCircle.radius;
-      const gDist = gWorld + gOutsideDist;
+      const gRgb = sampleSprite(spriteView.$, linSampler.$, gAtlasUv);
+      const gDist = sampleSdf(
+        sdfView.$,
+        linSampler.$,
+        gAtlasUv,
+        ghostCircle.radius,
+        gLocalPos,
+      );
       const gAlpha = (std.clamp(-gDist, 0, edge) / edge) * ghostAlpha;
       finalColor = std.mix(finalColor, gRgb, gAlpha);
     }
