@@ -13,6 +13,8 @@ import type {
   WgslStruct,
 } from './wgslTypes.ts';
 import {
+  isNumericSchema,
+  isVec,
   isVec2,
   isVec3,
   isVec4,
@@ -131,6 +133,120 @@ function makeVecProxy(
   });
 }
 
+function isSchemaContiguous(schema: AnyWgslData): boolean {
+  if (isNumericSchema(schema) || isVec(schema)) {
+    return true;
+  }
+
+  if (isWgslArray(schema)) {
+    const elementType = schema.elementType as AnyWgslData;
+    const elementSize = sizeOf(elementType);
+    const stride = roundUp(elementSize, alignmentOf(elementType));
+    const hasPadding = stride > elementSize;
+
+    if (hasPadding) {
+      return false;
+    }
+
+    if (isWgslArray(elementType) || isWgslStruct(schema)) {
+      return isSchemaContiguous(elementType);
+    }
+
+    // numeric or vec2 or vec4
+    return true;
+  }
+
+  if (isWgslStruct(schema)) {
+    const offsets = offsetsForProps(schema);
+    const propTypes = schema.propTypes as Record<string, AnyWgslData>;
+    const propNames = Object.keys(propTypes);
+
+    for (let i = 0; i < propNames.length; i++) {
+      const name = propNames[i];
+      if (!name) {
+        continue;
+      }
+
+      const type = propTypes[name];
+      if (!type) {
+        continue;
+      }
+
+      if (!isSchemaContiguous(type)) {
+        return false;
+      }
+
+      const info = offsets[name] as PropOffsetInfo;
+      const padding = info.padding ?? 0;
+      if (padding > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // atomic
+  return true;
+}
+
+function getSchemaLongestContiguousPrefix(schema: BaseData): number {
+  if (isNumericSchema(schema)) {
+    return sizeOf(schema);
+  }
+
+  if (isVec(schema)) {
+    return Number(schema.type[3]) * 4;
+  }
+
+  if (isWgslArray(schema)) {
+    const elementType = schema.elementType as AnyWgslData;
+    const elementSize = sizeOf(elementType);
+    const stride = roundUp(elementSize, alignmentOf(elementType));
+    const hasPadding = stride > elementSize;
+    if (isSchemaContiguous(elementType) && !hasPadding) {
+      return schema.elementCount * elementSize;
+    } else if (isSchemaContiguous(elementType) && hasPadding) {
+      return elementSize;
+    } else {
+      return getSchemaLongestContiguousPrefix(elementType);
+    }
+  }
+
+  if (isWgslStruct(schema)) {
+    const offsets = offsetsForProps(schema);
+    const propTypes = schema.propTypes as Record<string, AnyWgslData>;
+    const propNames = Object.keys(propTypes);
+
+    let prefix = 0;
+    for (let i = 0; i < propNames.length; i++) {
+      const name = propNames[i];
+      if (!name) {
+        continue;
+      }
+      const type = propTypes[name];
+      if (!type) {
+        continue;
+      }
+
+      if (!isSchemaContiguous(type)) {
+        return prefix + getSchemaLongestContiguousPrefix(type);
+      }
+
+      const info = offsets[name] as PropOffsetInfo;
+      prefix += info.size;
+
+      const padding = info.padding ?? 0;
+      if (padding > 0) {
+        break;
+      }
+    }
+    return prefix;
+  }
+
+  // atomic
+  return sizeOf(schema);
+}
+
 function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
   const elementType = array.elementType as AnyWgslData;
   const elementSize = sizeOf(elementType);
@@ -161,10 +277,13 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
       }
 
       const elementOffset = index * stride;
-      const remainingFromHere = Math.max(
-        0,
-        t[CONTIGUOUS_MARKER] - elementOffset,
-      );
+      const remainingFromHere =
+        !isSchemaContiguous(elementType) && isWgslStruct(elementType)
+          ? elementSize + getSchemaLongestContiguousPrefix(elementType)
+          : Math.max(
+            0,
+            t[CONTIGUOUS_MARKER] - elementOffset,
+          );
 
       const childContiguous = hasPadding
         ? Math.min(remainingFromHere, elementSize)
@@ -197,15 +316,23 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
     if (!name) {
       continue;
     }
+    const type = propTypes[name];
+    if (!type) {
+      continue;
+    }
+
     const info = offsets[name] as PropOffsetInfo;
     const padding = info.padding ?? 0;
 
-    const isRunEnd = i === propNames.length - 1 || padding > 0;
+    const typeContiguous = isSchemaContiguous(type);
+    const isRunEnd = i === propNames.length - 1 || padding > 0 ||
+      !typeContiguous;
     if (!isRunEnd) {
       continue;
     }
 
-    const runEnd = info.offset + info.size;
+    const runEnd = info.offset +
+      (typeContiguous ? info.size : getSchemaLongestContiguousPrefix(type));
     for (let j = runStart; j <= i; j++) {
       const runName = propNames[j];
       if (!runName) {
@@ -238,7 +365,6 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
         t[CONTIGUOUS_MARKER] - m.offset,
       );
       const localLimit = Math.max(0, m.runEnd - m.offset);
-
       const propSchema = propTypes[prop];
       if (!propSchema) {
         return undefined;
@@ -247,7 +373,7 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
       return makeProxy(
         propSchema,
         t[OFFSET_MARKER] + m.offset,
-        Math.min(remainingFromHere, localLimit),
+        sizeOf(struct) === m.runEnd ? remainingFromHere : localLimit,
       );
     },
   });
