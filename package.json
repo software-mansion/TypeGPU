@@ -45,6 +45,7 @@
     "dpdm": "^3.14.0",
     "jiti": "catalog:build",
     "oxlint": "^1.43.0",
+    "oxlint-tsgolint": "^0.12.1",
     "pkg-pr-new": "^0.0.62",
     "tsup": "catalog:build",
     "typescript": "catalog:types",
