@@ -1,3 +1,4 @@
+import { Operator } from 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -69,6 +70,11 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
 
   div(other: number): T;
   div(other: T): T;
+
+  [Operator.plus](lhs: T | number, rhs: T | number): T;
+  [Operator.minus](lhs: T | number, rhs: T | number): T;
+  [Operator.star](lhs: T | number, rhs: T | number): T;
+  [Operator.slash](lhs: T, rhs: T | number): T;
 }
 
 /**

@@ -11,6 +11,7 @@ import type {
   U32,
 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { Operator } from 'tsover-runtime';
 
 export const abstractInt = {
   [$internal]: {},
