@@ -150,6 +150,7 @@ export {
 
 export {
   textureDimensions,
+  textureGather,
   textureLoad,
   textureSample,
   textureSampleBaseClampToEdge,

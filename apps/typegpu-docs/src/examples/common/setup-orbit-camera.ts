@@ -6,6 +6,8 @@ export const Camera = d.struct({
   targetPos: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
+  viewInverse: d.mat4x4f,
+  projectionInverse: d.mat4x4f,
 });
 
 export interface CameraOptions {
@@ -56,11 +58,16 @@ export function setupOrbitCamera(
     cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
     cameraState.target = tgt;
 
+    const view = calculateView(newPos, cameraState.target);
+    const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
+
     callback(Camera({
       position: newPos,
       targetPos: cameraState.target,
-      view: calculateView(newPos, cameraState.target),
-      projection: calculateProj(canvas.clientWidth / canvas.clientHeight),
+      view,
+      projection,
+      viewInverse: invertMat(view),
+      projectionInverse: invertMat(projection),
     }));
   }
 
@@ -82,8 +89,11 @@ export function setupOrbitCamera(
       cameraState.yaw,
     );
 
+    const newView = calculateView(newCameraPos, cameraState.target);
+
     callback({
-      view: calculateView(newCameraPos, cameraState.target),
+      view: newView,
+      viewInverse: invertMat(newView),
       position: newCameraPos,
     });
   }
@@ -104,13 +114,17 @@ export function setupOrbitCamera(
     );
     const newView = calculateView(newPos, cameraState.target);
 
-    callback({ view: newView, position: newPos });
+    callback({
+      view: newView,
+      viewInverse: invertMat(newView),
+      position: newPos,
+    });
   }
 
   // resize observer
   const resizeObserver = new ResizeObserver(() => {
     const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
-    callback({ projection });
+    callback({ projection, projectionInverse: invertMat(projection) });
   });
   resizeObserver.observe(canvas);
 
@@ -235,4 +249,8 @@ function calculateView(position: d.v4f, target: d.v4f) {
 
 function calculateProj(aspectRatio: number) {
   return m.mat4.perspective(Math.PI / 4, aspectRatio, 0.1, 1000, d.mat4x4f());
+}
+
+function invertMat(matrix: d.m4x4f) {
+  return m.mat4.invert(matrix, d.mat4x4f());
 }

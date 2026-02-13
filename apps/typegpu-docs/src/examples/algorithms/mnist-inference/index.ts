@@ -6,6 +6,7 @@ import {
   weightsBiasesLayout,
 } from './data.ts';
 import { downloadLayers } from './helpers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
 
@@ -409,7 +410,7 @@ canvas.addEventListener('touchmove', (event) => {
   handleDrawing(x, y);
 }, { passive: false });
 
-export const controls = {
+export const controls = defineControls({
   Reset: {
     onButtonClick: resetDrawing,
   },
@@ -426,7 +427,7 @@ export const controls = {
         .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

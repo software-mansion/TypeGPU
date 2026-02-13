@@ -6,6 +6,7 @@ import {
   oklabToRgb,
 } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
@@ -182,7 +183,7 @@ const selections = {
   outOfGamutPattern: patternL0ProjectionLines,
 };
 
-export const controls = {
+export const controls = defineControls({
   Hue: {
     initial: 0,
     min: 0,
@@ -195,9 +196,11 @@ export const controls = {
     },
   },
   'Gamut Clip': {
+    initial: 'Ad. L 0.5',
     options: Object.keys(gamutClipOptions),
-    onSelectChange: (selected: keyof typeof gamutClipOptions) => {
-      selections.gamutClip = gamutClipOptions[selected];
+    onSelectChange: (selected) => {
+      selections.gamutClip =
+        gamutClipOptions[selected as keyof typeof gamutClipOptions];
       setPipeline(selections);
       draw();
     },
@@ -214,14 +217,17 @@ export const controls = {
     },
   },
   'Out of Gamut Pattern': {
+    initial: 'Checker',
     options: Object.keys(outOfGamutPatternOptions),
-    onSelectChange: (selected: keyof typeof outOfGamutPatternOptions) => {
-      selections.outOfGamutPattern = outOfGamutPatternOptions[selected];
+    onSelectChange: (selected) => {
+      selections.outOfGamutPattern = outOfGamutPatternOptions[
+        selected as keyof typeof outOfGamutPatternOptions
+      ];
       setPipeline(selections);
       draw();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

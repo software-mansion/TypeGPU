@@ -47,9 +47,7 @@ describe('uniformity test example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       fn sample() -> f32 {
@@ -82,9 +80,7 @@ describe('uniformity test example', () => {
       }
 
       fn randSeed2_1(seed_1: vec2f) {
-        {
-          seed2_1(seed_1);
-        }
+        seed2_1(seed_1);
       }
 
       fn u32To01Float(value: u32) -> f32 {

@@ -15,6 +15,7 @@ import {
   SampleResult,
   VisualizationParams,
 } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -468,7 +469,7 @@ function updateBrushSize() {
   });
 }
 
-export const controls = {
+export const controls = defineControls({
   Clear: {
     onButtonClick: clearCanvas,
   },
@@ -490,6 +491,7 @@ export const controls = {
     },
   },
   'Show negative distance': {
+    initial: false,
     onToggleChange(value: boolean) {
       paramsUniform.writePartial({ showInside: value ? 1 : 0 });
       render();
@@ -505,7 +507,7 @@ export const controls = {
       updateBrushSize();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

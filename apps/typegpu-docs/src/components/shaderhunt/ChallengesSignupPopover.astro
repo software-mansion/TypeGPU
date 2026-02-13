@@ -98,12 +98,38 @@
 
   const dialogBoxes = Array.from(popovers).map((popover) => new DialogBox(popover));
 
+  function isElementVisible(element: Element): boolean {
+    // Check if the element or any of its ancestors have display: none
+    let current: Element | null = element;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none') {
+        return false;
+      }
+      current = current.parentElement;
+    }
+    return true;
+  }
+
+  function getVisibleDialogBox(): DialogBox | undefined {
+    // Find a dialog box whose link element is actually visible
+    for (let i = 0; i < dialogBoxes.length; i++) {
+      const popover = popovers[i];
+      const linkElement = popover?.querySelector('a');
+      if (linkElement && isElementVisible(linkElement)) {
+        return dialogBoxes[i];
+      }
+    }
+    // Fallback to first dialog box if none are visibly rendered
+    return dialogBoxes[0];
+  }
+
   // Check if URL hash indicates popover should be open
   if (window.location.hash === '#challenges-signup') {
-    const firstDialogBox = dialogBoxes[0]
-    if (!firstDialogBox) {
+    const visibleDialogBox = getVisibleDialogBox();
+    if (!visibleDialogBox) {
       throw new Error('Expected at least one dialog box');
     }
-    firstDialogBox.dialogElement.showModal();
+    visibleDialogBox.dialogElement.showModal();
   }
 </script>

@@ -181,6 +181,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: Camera;
@@ -234,6 +236,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera_1: Camera;

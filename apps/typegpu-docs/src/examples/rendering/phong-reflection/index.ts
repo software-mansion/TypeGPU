@@ -8,6 +8,7 @@ import {
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 const root = await tgpu.init();
@@ -142,26 +143,26 @@ function frame() {
 frameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   'light color': {
-    initial: [...p.initialControls.lightColor],
-    onColorChange(value: readonly [number, number, number]) {
-      exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
+    initial: p.initialControls.lightColor,
+    onColorChange(value) {
+      exampleControlsUniform.writePartial({ lightColor: value });
     },
   },
   'light direction': {
-    min: [-10, -10, -10],
-    max: [10, 10, 10],
-    initial: [...p.initialControls.lightDirection],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange(v: [number, number, number]) {
-      exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    min: d.vec3f(-10, -10, -10),
+    max: d.vec3f(10, 10, 10),
+    initial: p.initialControls.lightDirection,
+    step: d.vec3f(0.01, 0.01, 0.01),
+    onVectorSliderChange(v) {
+      exampleControlsUniform.writePartial({ lightDirection: v });
     },
   },
   'ambient color': {
-    initial: [...p.initialControls.ambientColor],
-    onColorChange(value: readonly [number, number, number]) {
-      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
+    initial: p.initialControls.ambientColor,
+    onColorChange(value) {
+      exampleControlsUniform.writePartial({ ambientColor: value });
     },
   },
   'ambient strength': {
@@ -169,7 +170,7 @@ export const controls = {
     max: 1,
     initial: p.initialControls.ambientStrength,
     step: 0.01,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ ambientStrength: v });
     },
   },
@@ -178,11 +179,11 @@ export const controls = {
     max: 16,
     initial: p.initialControls.specularExponent,
     step: 0.1,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ specularExponent: v });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

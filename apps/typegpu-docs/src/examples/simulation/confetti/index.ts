@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 // constants
 
@@ -218,11 +219,11 @@ onFrame((dt) => {
 
 // example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   '🎉': {
-    onButtonClick: () => randomizePositions(),
+    onButtonClick: randomizePositions,
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;
