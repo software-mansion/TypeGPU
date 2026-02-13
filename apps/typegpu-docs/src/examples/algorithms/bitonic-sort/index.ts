@@ -7,6 +7,7 @@ import {
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
 import { decomposeWorkgroups } from './decomposeWorkgroups.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
   if (!adapter) {
@@ -268,27 +269,26 @@ async function sort() {
 
 const sortOrderKeys = Object.keys(sortOrders) as SortOrderKey[];
 
-export const controls = {
+export const controls = defineControls({
   'Array Size': {
     initial: arraySizeOptions[2],
     options: arraySizeOptions,
-    onSelectChange: (value: number) => {
+    onSelectChange: (value) => {
       state.arraySize = isNaN(value) ? 64 : value;
       recreateBuffer();
       generateRandomArray();
     },
   },
   'Sort Order': {
-    initial: 'ascending' as SortOrderKey,
+    initial: 'ascending',
     options: sortOrderKeys,
-    sortOrderKeys,
-    onSelectChange: (value: SortOrderKey) => {
+    onSelectChange: (value) => {
       state.sortOrder = value;
     },
   },
   Reshuffle: { onButtonClick: generateRandomArray },
   Sort: { onButtonClick: sort },
-};
+});
 
 export function onCleanup() {
   for (const s of Object.values(sorters)) {
