@@ -21,6 +21,7 @@ import {
   timeAccess,
 } from './sdf-scene.ts';
 import { Light, Material, Ray } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const root = await tgpu.init();
@@ -94,9 +95,9 @@ const sdfPrecalcPipeline = root['~unstable']
     const iterCount = std.select(5, 11, extendedRippleUniform.$ === 1);
 
     let shellD = d.f32(1e10);
-    for (let ix = 0; ix < 11; ix++) {
-      for (let iy = 0; iy < 11; iy++) {
-        for (let iz = 0; iz < 11; iz++) {
+    for (let ix = 0; ix < iterCount; ix++) {
+      for (let iy = 0; iy < iterCount; iy++) {
+        for (let iz = 0; iz < iterCount; iz++) {
           const ox = pointOffsets.$[ix];
           const oy = pointOffsets.$[iy];
           const oz = pointOffsets.$[iz];
@@ -228,11 +229,16 @@ let frameIndex = 0;
 let timeScale = 0.5;
 let accumulatedTime = 0;
 let lastTimestamp = 0;
+let isExtendedRipplesEnabled = false;
 
 function run(timestamp: number) {
   const deltaTime = (timestamp - lastTimestamp) / 1000;
   lastTimestamp = timestamp;
-  accumulatedTime += deltaTime * timeScale;
+  const maxTime = isExtendedRipplesEnabled ? 62 : 28;
+  accumulatedTime = Math.min(
+    maxTime,
+    Math.max(0, accumulatedTime + deltaTime * timeScale),
+  );
   timeUniform.write(accumulatedTime);
 
   const jitterX = (halton(frameIndex % 16, 2) - 0.5) / width;
@@ -262,7 +268,7 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
-export const controls = {
+export const controls = defineControls({
   metallic: {
     min: 0,
     max: 1,
@@ -318,15 +324,22 @@ export const controls = {
     },
   },
   time: {
-    min: -1,
-    max: 1,
+    min: -5,
+    max: 5,
     initial: 0.5,
     step: 0.01,
     onSliderChange(v: number) {
       timeScale = v;
     },
   },
-};
+  'additional ripples': {
+    initial: false,
+    onToggleChange(val) {
+      isExtendedRipplesEnabled = val;
+      extendedRippleUniform.write(val ? 1 : 0);
+    },
+  },
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
