@@ -19,7 +19,7 @@
       { "ignorePackages": true }
     ]
   },
-  "ignorePatterns": ["**/*.astro"],
+  "ignorePatterns": ["**/*.astro", "**/*.mjs"],
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/tests/**"],
