@@ -30,9 +30,7 @@ describe('ripple-cube example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample() -> f32 {
@@ -84,9 +82,7 @@ describe('ripple-cube example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample() -> f32 {
@@ -201,9 +197,7 @@ describe('ripple-cube example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample_1() -> f32 {
@@ -260,27 +254,35 @@ describe('ripple-cube example', () => {
 
       @group(0) @binding(1) var<uniform> timeUniform: f32;
 
+      @group(0) @binding(2) var<uniform> extendedRippleUniform: u32;
+
+      const pointOffsets: array<f32, 11> = array<f32, 11>(0f, 1f, 1f, 2f, 2f, 3f, 3f, 4f, 4f, 5f, 5f);
+
       fn opSmoothUnion(d1: f32, d2: f32, k: f32) -> f32 {
         let h = (max((k - abs((d1 - d2))), 0f) / k);
         return (min(d1, d2) - (((h * h) * k) * 0.25f));
       }
 
-      @group(0) @binding(2) var<uniform> blendFactorUniform: f32;
+      @group(0) @binding(3) var<uniform> blendFactorUniform: f32;
 
-      @group(0) @binding(3) var sdfWriteView: texture_storage_3d<rgba16float, write>;
+      @group(0) @binding(4) var sdfWriteView: texture_storage_3d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, z: u32) {
         const cellSize = 0.0047169811320754715;
         var p = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) * cellSize);
         let r = (timeUniform * 0.15f);
-        var px = array<f32, 5>(p.x, (1f - p.x), (1f + p.x), (2f - p.x), (2f + p.x));
-        var py = array<f32, 5>(p.y, (1f - p.y), (1f + p.y), (2f - p.y), (2f + p.y));
-        var pz = array<f32, 5>(p.z, (1f - p.z), (1f + p.z), (2f - p.z), (2f + p.z));
+        let iterCount = select(5, 11, (extendedRippleUniform == 1u));
         var shellD = 1e+10f;
-        for (var ix = 0; (ix < 5i); ix++) {
-          for (var iy = 0; (iy < 5i); iy++) {
-            for (var iz = 0; (iz < 5i); iz++) {
-              var q = vec3f(px[ix], py[iy], pz[iz]);
+        for (var ix = 0; (ix < iterCount); ix++) {
+          for (var iy = 0; (iy < iterCount); iy++) {
+            for (var iz = 0; (iz < iterCount); iz++) {
+              let ox = pointOffsets[ix];
+              let oy = pointOffsets[iy];
+              let oz = pointOffsets[iz];
+              let qx = select((ox + p.x), (ox - p.x), ((ix % 2i) == 0i));
+              let qy = select((oy + p.y), (oy - p.y), ((iy % 2i) == 0i));
+              let qz = select((oz + p.z), (oz - p.z), ((iz % 2i) == 0i));
+              var q = vec3f(qx, qy, qz);
               shellD = opSmoothUnion(shellD, (abs((length(q) - r)) - 5e-3f), blendFactorUniform);
             }
           }
@@ -310,9 +312,7 @@ describe('ripple-cube example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       @group(0) @binding(2) var writeView: texture_storage_2d<rgba16float, write>;
