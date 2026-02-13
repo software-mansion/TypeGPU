@@ -1,9 +1,25 @@
 import tgpu, { d, std } from 'typegpu';
 import { type BitonicSorter, createBitonicSorter } from '@typegpu/sort';
+import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
+import { decomposeWorkgroups } from './decomposeWorkgroups.ts';
+
+const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
+  if (!adapter) {
+    throw new Error('No GPU adapter found');
+  }
+  const limits = adapter.limits;
+  return Math.min(limits.maxStorageBufferBindingSize, limits.maxBufferSize);
+});
 
 const root = await tgpu.init({
-  device: { optionalFeatures: ['timestamp-query'] },
+  device: {
+    optionalFeatures: ['timestamp-query'],
+    requiredLimits: {
+      maxStorageBufferBindingSize: maxBufferSize,
+      maxBufferSize: maxBufferSize,
+    },
+  },
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
@@ -13,11 +29,20 @@ const context = root.configureContext({ canvas });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
+const minLog = Math.log2(4);
+const maxLog = Math.floor(Math.log2(maxSide));
+const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
+  const side = Math.round(2 ** (minLog + (i * (maxLog - minLog)) / 7));
+  return side * side;
+});
+
 const state = {
-  arraySize: 64,
+  arraySize: arraySizeOptions[0],
   sortOrder: 'ascending' as 'ascending' | 'descending',
-  inputArray: [] as number[],
 };
+
+const WORKGROUP_SIZE = 256;
 
 const renderLayout = tgpu.bindGroupLayout({
   data: {
@@ -25,6 +50,16 @@ const renderLayout = tgpu.bindGroupLayout({
     access: 'readonly',
   },
 });
+
+const initLayout = tgpu.bindGroupLayout({
+  data: {
+    storage: d.arrayOf(d.u32),
+    access: 'mutable',
+  },
+});
+
+const initLength = root.createUniform(d.u32, state.arraySize);
+const initSeed = root.createUniform(d.f32, 0);
 
 const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -50,18 +85,45 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(normalized, normalized, normalized, 1);
 });
 
-const renderPipeline = root['~unstable']
-  .createRenderPipeline({
-    vertex: fullScreenTriangle,
-    fragment: fragmentFn,
-    targets: { format: presentationFormat },
-  });
+const initKernel = tgpu['~unstable'].computeFn({
+  workgroupSize: [WORKGROUP_SIZE],
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
+})((input) => {
+  const spanX = input.numWorkgroups.x * WORKGROUP_SIZE;
+  const spanY = input.numWorkgroups.y * spanX;
+  const idx = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
 
-let buffer = root
-  .createBuffer(d.arrayOf(d.u32, state.arraySize))
-  .$usage('storage');
+  if (idx >= initLength.$) {
+    return;
+  }
+
+  randf.seed3(
+    d.vec3f(d.f32(idx & 0xffff), d.f32(idx >> 16), initSeed.$),
+  );
+  const n = randf.sample();
+  initLayout.$.data[idx] = d.u32(std.floor(n * 256.0));
+});
+
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+});
+
+const initPipeline = root['~unstable'].withCompute(initKernel).createPipeline();
+
+let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage(
+  'storage',
+);
 
 let bindGroup = root.createBindGroup(renderLayout, {
+  data: buffer,
+});
+
+let initBindGroup = root.createBindGroup(initLayout, {
   data: buffer,
 });
 
@@ -79,11 +141,15 @@ function recreateBuffer() {
   descendingSorter.destroy();
   buffer.destroy();
 
-  buffer = root
-    .createBuffer(d.arrayOf(d.u32, state.arraySize))
-    .$usage('storage');
+  buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage(
+    'storage',
+  );
 
   bindGroup = root.createBindGroup(renderLayout, {
+    data: buffer,
+  });
+
+  initBindGroup = root.createBindGroup(initLayout, {
     data: buffer,
   });
 
@@ -98,11 +164,18 @@ function recreateBuffer() {
 }
 
 function generateRandomArray() {
-  state.inputArray = Array.from(
-    { length: state.arraySize },
-    () => Math.floor(Math.random() * 255),
+  const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
+  const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(
+    workgroupsTotal,
   );
-  buffer.write(state.inputArray);
+
+  initLength.write(state.arraySize);
+  initSeed.write(Math.random() * 1000);
+
+  initPipeline
+    .with(initBindGroup)
+    .dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
+
   render();
 }
 
@@ -117,10 +190,33 @@ function render() {
     .draw(3);
 }
 
-async function sort() {
-  const isDescending = state.sortOrder === 'descending';
-  const sorter = isDescending ? descendingSorter : ascendingSorter;
+const overlay = document.getElementById('sort-overlay') as HTMLDivElement;
+const spinnerEl = document.getElementById('sort-spinner') as HTMLDivElement;
+const statusEl = document.getElementById('sort-status') as HTMLSpanElement;
+canvas.parentElement?.appendChild(overlay);
 
+function showOverlay(text: string, showSpinner = true) {
+  spinnerEl.hidden = !showSpinner;
+  statusEl.textContent = text;
+  overlay.hidden = false;
+  overlay.classList.add('visible');
+}
+
+function hideOverlay(delayMs = 1500) {
+  setTimeout(() => {
+    overlay.classList.remove('visible');
+    overlay.addEventListener('transitionend', () => (overlay.hidden = true), {
+      once: true,
+    });
+  }, delayMs);
+}
+
+async function sort() {
+  const sorter = state.sortOrder === 'descending'
+    ? descendingSorter
+    : ascendingSorter;
+
+  showOverlay('Sorting...');
   sorter.run({ querySet: querySet ?? undefined });
 
   let gpuTimeMs: number | null = null;
@@ -132,25 +228,15 @@ async function sort() {
 
   render();
 
-  const paddedInfo = sorter.wasPadded
-    ? ` (padded to ${sorter.paddedSize})`
+  const timeStr = gpuTimeMs !== null
+    ? ` in ${
+      gpuTimeMs >= 1000
+        ? `${(gpuTimeMs / 1000).toFixed(2)}s`
+        : `${gpuTimeMs.toFixed(2)}ms`
+    }`
     : '';
-  const timeInfo = gpuTimeMs !== null ? `${gpuTimeMs.toFixed(3)}ms` : 'N/A';
-  console.log(
-    `Sorted ${sorter.originalSize} elements${paddedInfo} - GPU time: ${timeInfo}`,
-  );
-
-  const sorted = await buffer.read();
-  const isSorted = sorted.every((val, i, arr) => {
-    if (i === 0) {
-      return true;
-    }
-    return isDescending ? arr[i - 1] >= val : arr[i - 1] <= val;
-  });
-  if (!isSorted) {
-    console.error('Sort verification failed!');
-    console.log('Result:', sorted);
-  }
+  showOverlay(`\u2714 Sorted${timeStr}`, false);
+  hideOverlay();
 }
 
 // #region Example controls & Cleanup
@@ -159,11 +245,9 @@ type SortOrderKey = 'ascending' | 'descending';
 
 export const controls = {
   'Array Size': {
-    initial: 64,
-    min: 4,
-    max: 2 ** 20,
-    step: 1,
-    onSliderChange: (value: number) => {
+    initial: arraySizeOptions[0],
+    options: arraySizeOptions,
+    onSelectChange: (value: number) => {
       state.arraySize = value;
       recreateBuffer();
       generateRandomArray();

@@ -16,6 +16,29 @@ import type {
 import { nextPowerOf2 } from './utils.ts';
 
 const WORKGROUP_SIZE = 256;
+const MAX_WORKGROUPS_PER_DIMENSION = 65535;
+
+function decomposeWorkgroups(total: number): [number, number, number] {
+  if (total <= 0) {
+    return [1, 1, 1];
+  }
+
+  const x = Math.min(total, MAX_WORKGROUPS_PER_DIMENSION);
+  const remainingAfterX = Math.ceil(total / x);
+
+  const y = Math.min(remainingAfterX, MAX_WORKGROUPS_PER_DIMENSION);
+  const remainingAfterY = Math.ceil(remainingAfterX / y);
+
+  const z = Math.min(remainingAfterY, MAX_WORKGROUPS_PER_DIMENSION);
+
+  if (Math.ceil(total / (x * y * z)) > 1) {
+    throw new Error(
+      `Required workgroups (${total}) exceed device dispatch limits (${MAX_WORKGROUPS_PER_DIMENSION} per dimension)`,
+    );
+  }
+
+  return [x, y, z];
+}
 
 const copyParamsType = d.struct({
   srcLength: d.u32,
@@ -54,9 +77,16 @@ const copyLayout = tgpu.bindGroupLayout({
 
 const copyPadKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
-  in: { gid: d.builtin.globalInvocationId },
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
 })((input) => {
-  const idx = input.gid.x;
+  const spanX = input.numWorkgroups.x * WORKGROUP_SIZE;
+  const spanY = input.numWorkgroups.y * spanX;
+
+  const idx = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
+
   const dstLength = copyLayout.$.params.dstLength;
   const srcLength = copyLayout.$.params.srcLength;
 
@@ -73,9 +103,16 @@ const copyPadKernel = tgpu['~unstable'].computeFn({
 
 const copyBackKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
-  in: { gid: d.builtin.globalInvocationId },
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
 })((input) => {
-  const idx = input.gid.x;
+  const spanX = input.numWorkgroups.x * WORKGROUP_SIZE;
+  const spanY = input.numWorkgroups.y * spanX;
+
+  const idx = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
+
   if (idx < copyLayout.$.params.srcLength) {
     copyLayout.$.dst[idx] = copyLayout.$.src[idx] as number;
   }
@@ -83,9 +120,15 @@ const copyBackKernel = tgpu['~unstable'].computeFn({
 
 const bitonicStepKernel = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
-  in: { gid: d.builtin.globalInvocationId },
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
 })((input) => {
-  const tid = input.gid.x;
+  const spanX = input.numWorkgroups.x * WORKGROUP_SIZE;
+  const spanY = input.numWorkgroups.y * spanX;
+
+  const tid = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
 
   const k = sortLayout.$.uniforms.k;
   const shift = sortLayout.$.uniforms.jShift;
@@ -136,6 +179,19 @@ export function createBitonicSorter(
     copyBackBindGroup: TgpuBindGroup<(typeof copyLayout)['entries']>;
   } | null = null;
   let workBuffer: TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
+
+  const sortWorkgroupsTotal = Math.ceil(paddedSize / 2 / WORKGROUP_SIZE);
+  const [sortWorkgroupsX, sortWorkgroupsY, sortWorkgroupsZ] =
+    decomposeWorkgroups(sortWorkgroupsTotal);
+
+  const padWorkgroupsTotal = Math.ceil(paddedSize / WORKGROUP_SIZE);
+  const [padWorkgroupsX, padWorkgroupsY, padWorkgroupsZ] = decomposeWorkgroups(
+    padWorkgroupsTotal,
+  );
+
+  const copyBackWorkgroupsTotal = Math.ceil(originalSize / WORKGROUP_SIZE);
+  const [copyBackWorkgroupsX, copyBackWorkgroupsY, copyBackWorkgroupsZ] =
+    decomposeWorkgroups(copyBackWorkgroupsTotal);
 
   if (wasPadded) {
     const paddedWorkBuffer = root
@@ -199,10 +255,6 @@ export function createBitonicSorter(
     .withCompute(copyBackKernel)
     .createPipeline();
 
-  const sortWorkgroups = Math.ceil(paddedSize / 2 / WORKGROUP_SIZE);
-  const padWorkgroups = Math.ceil(paddedSize / WORKGROUP_SIZE);
-  const copyBackWorkgroups = Math.ceil(originalSize / WORKGROUP_SIZE);
-
   const log2N = Math.log2(paddedSize);
   const totalSteps = (log2N * (log2N + 1)) / 2;
 
@@ -217,7 +269,11 @@ export function createBitonicSorter(
           beginningOfPassWriteIndex: 0,
         });
       }
-      pipeline.dispatchWorkgroups(padWorkgroups);
+      pipeline.dispatchWorkgroups(
+        padWorkgroupsX,
+        padWorkgroupsY,
+        padWorkgroupsZ,
+      );
     }
 
     let stepIndex = 0;
@@ -240,7 +296,11 @@ export function createBitonicSorter(
           }
         }
 
-        pipeline.dispatchWorkgroups(sortWorkgroups);
+        pipeline.dispatchWorkgroups(
+          sortWorkgroupsX,
+          sortWorkgroupsY,
+          sortWorkgroupsZ,
+        );
         stepIndex++;
       }
     }
@@ -253,7 +313,11 @@ export function createBitonicSorter(
           endOfPassWriteIndex: 1,
         });
       }
-      pipeline.dispatchWorkgroups(copyBackWorkgroups);
+      pipeline.dispatchWorkgroups(
+        copyBackWorkgroupsX,
+        copyBackWorkgroupsY,
+        copyBackWorkgroupsZ,
+      );
     }
   }
 
