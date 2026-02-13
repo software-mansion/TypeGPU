@@ -1,7 +1,7 @@
 import { arrayOf } from './data/array.ts';
 import { attribute } from './data/attributes.ts';
 import type { LooseDecorated } from './data/dataTypes.ts';
-import { bool, f32, u32 } from './data/numeric.ts';
+import { _f32 as f32, bool, u32 } from './data/numeric.ts';
 import { vec3u, vec4f } from './data/vector.ts';
 import type {
   BaseData,

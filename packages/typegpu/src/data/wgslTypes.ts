@@ -1,3 +1,4 @@
+import { Operator } from 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -33,6 +34,7 @@ import type {
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 import type { _ref as ref } from './ref.ts';
 import type { DualFn } from '../types.ts';
+import type { _f32 as f32 } from './numeric.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -68,6 +70,11 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
 
   div(other: number): T;
   div(other: T): T;
+
+  [Operator.plus](lhs: T | number, rhs: T | number): T;
+  [Operator.minus](lhs: T | number, rhs: T | number): T;
+  [Operator.star](lhs: T | number, rhs: T | number): T;
+  [Operator.slash](lhs: T, rhs: T | number): T;
 }
 
 /**
@@ -794,11 +801,12 @@ export interface Bool
  * 32-bit float schema representing a single WGSL f32 value.
  */
 export interface F32
-  extends BaseData, DualFn<(v?: number | boolean) => number> {
+  extends BaseData, DualFn<(v?: number | f32 | boolean) => f32> {
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
+  readonly [$gpuRepr]: f32;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;

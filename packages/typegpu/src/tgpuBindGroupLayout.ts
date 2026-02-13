@@ -38,7 +38,7 @@ import {
   NotSampledError,
   type SampledFlag,
 } from './core/texture/usageExtension.ts';
-import { f32, i32, u32 } from './data/numeric.ts';
+import { _f32 as f32, i32, u32 } from './data/numeric.ts';
 import {
   type StorageTextureDimension,
   textureDescriptorToSchema,

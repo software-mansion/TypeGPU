@@ -4,7 +4,7 @@ import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
-import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
+import { _f32 as f32, bool, f16, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2b,

@@ -1,7 +1,7 @@
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
-import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import { _f32 as f32, bool, f16, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
   Vec2fImpl,

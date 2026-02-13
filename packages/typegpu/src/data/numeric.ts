@@ -11,6 +11,7 @@ import type {
   U32,
 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { Operator, type TsoverEnabled } from 'tsover-runtime';
 
 export const abstractInt = {
   [$internal]: {},
@@ -160,9 +161,20 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
+interface __f32 {
+  [Operator.plus](lhs: f32 | number, rhs: f32 | number): f32;
+  [Operator.minus](lhs: f32 | number, rhs: f32 | number): f32;
+  [Operator.star](lhs: f32 | number, rhs: f32 | number): f32;
+  [Operator.slash](lhs: f32 | number, rhs: f32 | number): f32;
+}
+
+type f32 = number & __f32;
+
+export type _f32 = TsoverEnabled extends true ? f32 : number;
+
 const f32Cast = callableSchema({
   name: 'f32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
+  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: _f32 }),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -173,7 +185,7 @@ const f32Cast = callableSchema({
     return Math.fround(v);
   },
   codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === f32
+    arg?.dataType === _f32
       // Already of type f32
       ? stitch`${arg}`
       : stitch`f32(${arg})`,
@@ -191,7 +203,7 @@ const f32Cast = callableSchema({
  * @example
  * const value = f32(true); // 1
  */
-export const f32: F32 = Object.assign(f32Cast, {
+export const _f32: F32 = Object.assign(f32Cast, {
   [$internal]: {},
   type: 'f32',
 }) as unknown as F32;
@@ -305,6 +317,15 @@ const f16Cast = callableSchema({
       ? stitch`${arg}`
       : stitch`f16(${arg})`,
 });
+
+interface _f16 {
+  [Operator.plus](lhs: f16 | number, rhs: f16 | number): f16;
+  [Operator.minus](lhs: f16 | number, rhs: f16 | number): f16;
+  [Operator.star](lhs: f16 | number, rhs: f16 | number): f16;
+  [Operator.slash](lhs: f16 | number, rhs: f16 | number): f16;
+}
+
+export type f16 = TsoverEnabled extends true ? number & _f16 : number;
 
 /**
  * A schema that represents a 16-bit float value. (equivalent to `f16` in WGSL)

@@ -12,7 +12,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { mul } from './operators.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { vec3f } from '../data/vector.ts';
-import { f32 } from '../data/numeric.ts';
+import { _f32 as f32 } from '../data/numeric.ts';
 
 const gpuTranslation4 = translation4[$gpuCallable].call;
 const gpuScaling4 = scaling4[$gpuCallable].call;

@@ -35,7 +35,7 @@ assignInfixOperator(MatBase, 'add');
 assignInfixOperator(MatBase, 'sub');
 assignInfixOperator(MatBase, 'mul');
 
-export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
+export { _f32 as f32, bool, f16, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
   isAtomic,

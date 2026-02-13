@@ -11,7 +11,7 @@ import type {
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
-import { f32, i32, u32 } from './numeric.ts';
+import { _f32 as f32, i32, u32 } from './numeric.ts';
 import {
   vec2f,
   vec2i,

@@ -1,6 +1,7 @@
+import { Operator } from 'tsover-runtime';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import { _f32 as f32, bool, f16, i32, u32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import type { BaseData, VecKind } from './wgslTypes.ts';
 
@@ -432,6 +433,13 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
 
   set y(value: S) {
     this[1] = this.castElement()(value);
+  }
+
+  [Operator.plus](lhs: Vec2<S>, rhs: Vec2<S>) {
+    return new this._Vec2(
+      (lhs[0] as number) + (rhs[0] as number) as S,
+      (lhs[1] as number) + (rhs[1] as number) as S,
+    );
   }
 }
 

@@ -3,10 +3,10 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import {
+  _f32 as f32,
   abstractFloat,
   abstractInt,
   f16,
-  f32,
   i32,
   u32,
 } from '../data/numeric.ts';
@@ -770,8 +770,12 @@ export const ldexp = dualImpl<typeof cpuLdexp>({
 });
 
 function cpuLength(value: number): number;
-function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
-function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
+function cpuLength<T extends v2f | v3f | v4f>(value: T): f32;
+function cpuLength<T extends v2h | v3h | v4h>(value: T): f16;
+function cpuLength<T extends AnyFloatVecInstance>(value: T): f32 | f16;
+function cpuLength<T extends AnyFloatVecInstance | number>(
+  value: T,
+): f32 | f16 | number {
   if (typeof value === 'number') {
     return Math.abs(value);
   }

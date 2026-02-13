@@ -1,7 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { bitcastU32toF32Impl, bitcastU32toI32Impl } from '../data/numberOps.ts';
-import { f32, i32, u32 } from '../data/numeric.ts';
+import { _f32 as f32, i32, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import { vec2f, vec2i, vec3f, vec3i, vec4f, vec4i } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';

@@ -1,7 +1,7 @@
 import type { StorageTextureFormats } from '../core/texture/textureFormats.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
 import type { Default, WithDefaults } from '../shared/utilityTypes.ts';
-import { f32 } from './numeric.ts';
+import { _f32 as f32 } from './numeric.ts';
 import type { F32 } from './wgslTypes.ts';
 import type { BaseData, TextureSampleTypes } from './wgslTypes.ts';
 

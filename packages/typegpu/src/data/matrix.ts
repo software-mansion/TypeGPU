@@ -5,7 +5,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import { f32 } from './numeric.ts';
+import { _f32 as f32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {

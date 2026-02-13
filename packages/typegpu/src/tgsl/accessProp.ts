@@ -7,7 +7,14 @@ import {
   undecorate,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
+import {
+  _f32 as f32,
+  abstractInt,
+  bool,
+  f16,
+  i32,
+  u32,
+} from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {

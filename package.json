@@ -65,6 +65,7 @@
     ],
     "overrides": {
       "rollup": "4.34.8",
+      "typescript": "catalog:types",
       "three": "catalog:example"
     }
   }

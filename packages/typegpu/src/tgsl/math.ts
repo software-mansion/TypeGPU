@@ -1,5 +1,5 @@
 import type { AnyFn } from '../core/function/fnTypes.ts';
-import { f32 } from '../data/numeric.ts';
+import { _f32 as f32 } from '../data/numeric.ts';
 import {
   abs,
   acos,

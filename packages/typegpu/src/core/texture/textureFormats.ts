@@ -1,4 +1,4 @@
-import { f32, i32, u32 } from '../../data/numeric.ts';
+import { _f32 as f32, i32, u32 } from '../../data/numeric.ts';
 import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
 import type {
   F32,

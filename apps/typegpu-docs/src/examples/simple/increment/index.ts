@@ -5,6 +5,16 @@ const root = await tgpu.init();
 // Allocating memory for the counter
 const counter = root.createMutable(d.u32);
 
+const A = d.vec2f(1, 2);
+const B = d.vec2f(3, 4);
+
+const foo = () => {
+  'use gpu';
+  const C = A + B;
+  counter.$ += 1;
+};
+console.log(tgpu.resolve([foo]));
+
 // A 0-dimensional compute pipeline
 const incrementPipeline = root['~unstable'].createGuardedComputePipeline(() => {
   'use gpu';

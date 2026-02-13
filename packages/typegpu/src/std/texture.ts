@@ -7,7 +7,7 @@ import {
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
-import { f32, i32, u32 } from '../data/numeric.ts';
+import { _f32 as f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
   type BaseData,

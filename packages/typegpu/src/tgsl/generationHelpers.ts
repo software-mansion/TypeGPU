@@ -1,5 +1,11 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
+import {
+  _f32 as f32,
+  abstractFloat,
+  abstractInt,
+  bool,
+  i32,
+} from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
   isEphemeralSnippet,
