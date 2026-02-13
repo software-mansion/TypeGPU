@@ -6,6 +6,7 @@
     "suspicious": "warn"
   },
   "rules": {
+    "typescript/no-unsafe-type-assertion": "off",
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
     "eslint-plugin-unicorn/prefer-add-event-listener": "off",

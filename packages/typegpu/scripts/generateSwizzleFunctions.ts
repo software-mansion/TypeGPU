@@ -37,6 +37,7 @@ function printSwizzlingFor(components: Record<string, number>) {
       const implementation =
         `  get ${swizzle}() { return new this.${vecClassName}(${
           [
+            // oxlint-disable-next-line typescript/no-misused-spread there are no emojis in this string
             ...swizzle,
           ]
             .map((s) => `this[${components[s]}]`)
