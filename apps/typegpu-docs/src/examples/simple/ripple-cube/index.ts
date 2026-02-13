@@ -75,6 +75,12 @@ const sdfBindGroup = root.createBindGroup(sdfLayout, {
   }),
 });
 
+const pointOffsets = tgpu.const(
+  d.arrayOf(d.f32, 11),
+  [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+);
+
+const extendedRippleUniform = root.createUniform(d.u32);
 const sdfPrecalcPipeline = root['~unstable']
   .with(timeAccess, timeUniform)
   .with(blendFactorAccess, blendFactorUniform)
@@ -84,15 +90,22 @@ const sdfPrecalcPipeline = root['~unstable']
     const p = d.vec3f(x, y, z).add(0.5).mul(cellSize);
 
     const r = timeAccess.$ * 0.15;
-    const px = [p.x, 1 - p.x, 1 + p.x, 2 - p.x, 2 + p.x];
-    const py = [p.y, 1 - p.y, 1 + p.y, 2 - p.y, 2 + p.y];
-    const pz = [p.z, 1 - p.z, 1 + p.z, 2 - p.z, 2 + p.z];
+
+    const iterCount = std.select(5, 11, extendedRippleUniform.$ === 1);
 
     let shellD = d.f32(1e10);
-    for (let ix = 0; ix < 5; ix++) {
-      for (let iy = 0; iy < 5; iy++) {
-        for (let iz = 0; iz < 5; iz++) {
-          const q = d.vec3f(px[ix], py[iy], pz[iz]);
+    for (let ix = 0; ix < 11; ix++) {
+      for (let iy = 0; iy < 11; iy++) {
+        for (let iz = 0; iz < 11; iz++) {
+          const ox = pointOffsets.$[ix];
+          const oy = pointOffsets.$[iy];
+          const oz = pointOffsets.$[iz];
+
+          const qx = std.select(ox + p.x, ox - p.x, ix % 2 === 0);
+          const qy = std.select(oy + p.y, oy - p.y, iy % 2 === 0);
+          const qz = std.select(oz + p.z, oz - p.z, iz % 2 === 0);
+
+          const q = d.vec3f(qx, qy, qz);
           shellD = sdf.opSmoothUnion(
             shellD,
             std.abs(std.length(q) - r) - 0.005,
