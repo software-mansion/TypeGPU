@@ -344,7 +344,5 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
-  sdfTexture.destroy();
-  perlinCache.destroy();
   root.destroy();
 }
