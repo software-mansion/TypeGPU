@@ -493,8 +493,8 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   #writeSingleLayer(source: ExternalImageSource, layer?: number) {
-    const targetWidth = this.props.size[0] as number;
-    const targetHeight = (this.props.size[1] ?? 1) as number;
+    const targetWidth = this.props.size[0];
+    const targetHeight = this.props.size[1] ?? 1;
     const { width: sourceWidth, height: sourceHeight } =
       getImageSourceDimensions(source);
     const needsResampling = sourceWidth !== targetWidth ||

@@ -153,13 +153,13 @@ export function isBuffer<T extends TgpuBuffer<BaseData>>(
 export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & VertexFlag {
-  return !!(buffer as T).usableAsVertex;
+  return !!buffer.usableAsVertex;
 }
 
 export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & IndexFlag {
-  return !!(buffer as T).usableAsIndex;
+  return !!buffer.usableAsIndex;
 }
 
 // --------------

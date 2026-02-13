@@ -800,7 +800,7 @@ ${this.ctx.pre}}`;
       } else {
         // The array is not typed, so we try to guess the types.
         const valuesSnippets = valueNodes.map((value) =>
-          this.expression(value as tinyest.Expression)
+          this.expression(value)
         );
 
         if (valuesSnippets.length === 0) {
