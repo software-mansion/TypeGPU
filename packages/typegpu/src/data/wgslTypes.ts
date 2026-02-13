@@ -112,7 +112,6 @@ export interface AbstractFloat extends BaseData {
 export interface Void extends BaseData {
   readonly type: 'void';
   // Type-tokens, not available at runtime
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is void
   readonly [$repr]: void;
   readonly [$invalidSchemaReason]: 'Void is not host-shareable';
   // ---
@@ -878,6 +877,7 @@ export interface Vec2f extends
   > {
   readonly type: 'vec2f';
   readonly primitive: F32;
+  readonly componentCount: 2;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
@@ -900,6 +900,7 @@ export interface Vec2h extends
   > {
   readonly type: 'vec2h';
   readonly primitive: F16;
+  readonly componentCount: 2;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
@@ -922,6 +923,7 @@ export interface Vec2i extends
   > {
   readonly type: 'vec2i';
   readonly primitive: I32;
+  readonly componentCount: 2;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
@@ -944,6 +946,7 @@ export interface Vec2u extends
   > {
   readonly type: 'vec2u';
   readonly primitive: U32;
+  readonly componentCount: 2;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
@@ -967,6 +970,7 @@ export interface Vec2b extends
   > {
   readonly type: 'vec2<bool>';
   readonly primitive: Bool;
+  readonly componentCount: 2;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2b;
@@ -990,6 +994,7 @@ export interface Vec3f extends
   > {
   readonly type: 'vec3f';
   readonly primitive: F32;
+  readonly componentCount: 3;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
@@ -1014,6 +1019,7 @@ export interface Vec3h extends
   > {
   readonly type: 'vec3h';
   readonly primitive: F16;
+  readonly componentCount: 3;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
@@ -1038,6 +1044,7 @@ export interface Vec3i extends
   > {
   readonly type: 'vec3i';
   readonly primitive: I32;
+  readonly componentCount: 3;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
@@ -1062,6 +1069,7 @@ export interface Vec3u extends
   > {
   readonly type: 'vec3u';
   readonly primitive: U32;
+  readonly componentCount: 3;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
@@ -1087,6 +1095,7 @@ export interface Vec3b extends
   > {
   readonly type: 'vec3<bool>';
   readonly primitive: Bool;
+  readonly componentCount: 3;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3b;
@@ -1114,6 +1123,7 @@ export interface Vec4f extends
   > {
   readonly type: 'vec4f';
   readonly primitive: F32;
+  readonly componentCount: 4;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
@@ -1142,6 +1152,7 @@ export interface Vec4h extends
   > {
   readonly type: 'vec4h';
   readonly primitive: F16;
+  readonly componentCount: 4;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
@@ -1170,6 +1181,7 @@ export interface Vec4i extends
   > {
   readonly type: 'vec4i';
   readonly primitive: I32;
+  readonly componentCount: 4;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
@@ -1198,6 +1210,7 @@ export interface Vec4u extends
   > {
   readonly type: 'vec4u';
   readonly primitive: U32;
+  readonly componentCount: 4;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
@@ -1227,6 +1240,7 @@ export interface Vec4b extends
   > {
   readonly type: 'vec4<bool>';
   readonly primitive: Bool;
+  readonly componentCount: 4;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4b;
@@ -1975,6 +1989,6 @@ export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
   // these schema properties are assigned on the prototype of vector and matrix instances
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  // oxlint-disable-next-line typescript/no-explicit-any explained above
   return (vec as any).schema;
 }

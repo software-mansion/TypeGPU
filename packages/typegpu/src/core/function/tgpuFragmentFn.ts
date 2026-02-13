@@ -140,7 +140,6 @@ export function fragmentFn<
   FragmentOut extends FragmentOutConstrained,
 >(options: {
   out: FragmentOut;
-  // biome-ignore lint/complexity/noBannedTypes: it's fine
 }): TgpuFragmentFnShell<{}, FragmentOut>;
 
 export function fragmentFn<

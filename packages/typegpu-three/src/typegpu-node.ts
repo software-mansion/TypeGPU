@@ -232,7 +232,7 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       throw new Error('Can only access TSL nodes on the GPU.');
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: smh
+    // oxlint-disable-next-line typescript/no-explicit-any smh
     ctx.dependencies.push(this as any);
 
     if (this.var) {

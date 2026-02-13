@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: they're useful */
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
@@ -105,7 +104,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
       .createPipeline()
-      // biome-ignore lint/suspicious/noExplicitAny: <not testing color attachment at this time>
+      // oxlint-disable-next-line typescript/no-explicit-any <not testing color attachment at this time>
       .withColorAttachment({ out: {} } as any);
 
     expect(() => pipeline.draw(6)).toThrowError(
@@ -120,22 +119,18 @@ describe('root.withVertex(...).withFragment(...)', () => {
   it('allows to omit input in entry function shell', () => {
     expectTypeOf(
       tgpu['~unstable'].vertexFn({ in: {}, out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 

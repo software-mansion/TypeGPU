@@ -14,13 +14,12 @@ import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
   type: 'json',
 };
-// biome-ignore lint/correctness/useImportExtensions: dude it's there
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json' with {
   type: 'json',
 };
 import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
-// biome-ignore lint/correctness/useImportExtensions: dude it's there
+// oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
