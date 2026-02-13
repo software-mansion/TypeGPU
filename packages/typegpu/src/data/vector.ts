@@ -287,7 +287,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const componentCount = length as 2 | 3 | 4;
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
-    const values = new Array(args.length);
+    const values: S[] = Array.from({ length: args.length });
 
     let j = 0;
     for (const arg of args) {
@@ -295,7 +295,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         values[j++] = arg;
       } else {
         for (let c = 0; c < arg.length; ++c) {
-          values[j++] = arg[c];
+          values[j++] = arg[c] as S;
         }
       }
     }
@@ -339,7 +339,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  // oxlint-disable-next-line typescript/no-explicit-any explained above
   (VecImpl.prototype as any).schema = schema;
 
   return schema;

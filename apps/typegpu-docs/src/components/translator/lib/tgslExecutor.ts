@@ -62,6 +62,7 @@ export async function executeTgslCode(tgslCode: string): Promise<string> {
       `Failed to execute TGSL code: ${
         error instanceof Error ? error.message : String(error)
       }`,
+      { cause: error },
     );
   }
 }

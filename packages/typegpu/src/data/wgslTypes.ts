@@ -112,7 +112,6 @@ export interface AbstractFloat extends BaseData {
 export interface Void extends BaseData {
   readonly type: 'void';
   // Type-tokens, not available at runtime
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is void
   readonly [$repr]: void;
   readonly [$invalidSchemaReason]: 'Void is not host-shareable';
   // ---
@@ -1990,6 +1989,6 @@ export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
   // these schema properties are assigned on the prototype of vector and matrix instances
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  // oxlint-disable-next-line typescript/no-explicit-any explained above
   return (vec as any).schema;
 }
