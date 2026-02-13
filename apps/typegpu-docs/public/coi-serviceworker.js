@@ -109,7 +109,9 @@ if (typeof window === 'undefined') {
         // oxlint-disable-next-line unicorn/require-post-message-target-origin
       });
       if (reloadToDegrade) {
-        if (!coi.quiet) console.log('Reloading page to degrade COEP.');
+        if (!coi.quiet) {
+          console.log('Reloading page to degrade COEP.');
+        }
         window.sessionStorage.setItem('coiReloadedBySelf', 'coepdegrade');
         coi.doReload('coepdegrade');
       }
