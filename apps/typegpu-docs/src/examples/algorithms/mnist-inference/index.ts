@@ -393,7 +393,7 @@ canvas.addEventListener('mousemove', (event) => {
   const cellSize = canvas.width / SIZE;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
   const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 });
 
 canvas.addEventListener('touchmove', (event) => {
@@ -407,7 +407,7 @@ canvas.addEventListener('touchmove', (event) => {
   const y = Math.floor(
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 }, { passive: false });
 
 export const controls = defineControls({

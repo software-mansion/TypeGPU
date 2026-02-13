@@ -99,7 +99,7 @@ scene.environment = hdrTexture;
 setupWireframe();
 const clothMesh = setupClothMesh();
 
-renderer.setAnimationLoop(render);
+void renderer.setAnimationLoop(render);
 
 function setupWireframe() {
   // adds helpers to visualize the verlet system

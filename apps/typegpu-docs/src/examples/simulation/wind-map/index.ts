@@ -272,7 +272,7 @@ const runAnimationFrame = () => {
     draw();
     frameCount++;
     framesInFlight.add(frameIdLocal);
-    device.queue.onSubmittedWorkDone().then(() => {
+    void device.queue.onSubmittedWorkDone().then(() => {
       framesInFlight.delete(frameIdLocal);
     });
   }

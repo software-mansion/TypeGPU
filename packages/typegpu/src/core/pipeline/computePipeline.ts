@@ -240,7 +240,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     if (this._priors.performanceCallback) {
-      triggerPerformanceCallback({
+      void triggerPerformanceCallback({
         root,
         priors: this._priors,
       });
@@ -343,7 +343,7 @@ class ComputePipelineCore implements SelfResolvable {
       };
 
       if (PERF?.enabled) {
-        (async () => {
+        void (async () => {
           const start = performance.mark('typegpu:compile-start');
           await device.queue.onSubmittedWorkDone();
           const compileMeasure = performance.measure('typegpu:compiled', {
