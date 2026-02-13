@@ -1717,15 +1717,27 @@ export function isVec(
   | Vec2h
   | Vec2i
   | Vec2u
+  | Vec2b
   | Vec3f
   | Vec3h
   | Vec3i
   | Vec3u
+  | Vec3b
   | Vec4f
   | Vec4h
   | Vec4i
-  | Vec4u {
+  | Vec4u
+  | Vec4b {
   return isVec2(value) || isVec3(value) || isVec4(value);
+}
+
+export function isVecBool(
+  value: unknown,
+): value is
+  | Vec2b
+  | Vec3b
+  | Vec4b {
+  return isVec(value) && value.type.includes('b');
 }
 
 export function isMatInstance(value: unknown): value is AnyMatInstance {

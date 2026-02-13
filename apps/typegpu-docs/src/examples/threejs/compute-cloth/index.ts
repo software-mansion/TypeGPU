@@ -371,7 +371,11 @@ export const controls = defineControls({
     },
   },
   'Sheen Color': {
-    initial: d.vec3f(API.sheenColor),
+    initial: d.vec3f(
+      ((API.sheenColor >> 16) & 0xff) / 255,
+      ((API.sheenColor >> 8) & 0xff) / 255,
+      (API.sheenColor & 0xff) / 255,
+    ),
     onColorChange: (value) => {
       const color = new THREE.Color().fromArray(value);
       API.sheenColor = color.getHex();
