@@ -1,5 +1,9 @@
 import tgpu, { d, std } from 'typegpu';
-import { type BitonicSorter, createBitonicSorter } from '@typegpu/sort';
+import {
+  type BitonicSorter,
+  type BitonicSorterOptions,
+  createBitonicSorter,
+} from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
 import { decomposeWorkgroups } from './decomposeWorkgroups.ts';
@@ -37,9 +41,38 @@ const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
   return side * side;
 });
 
+type SortOrderKey =
+  | 'ascending'
+  | 'descending'
+  | 'bit-reversed'
+  | 'xor-scatter';
+
+const sortOrders: Record<SortOrderKey, BitonicSorterOptions> = {
+  ascending: {},
+  descending: {
+    compare: (a, b) => {
+      'use gpu';
+      return a > b;
+    },
+    paddingValue: 0,
+  },
+  'bit-reversed': {
+    compare: (a, b) => {
+      'use gpu';
+      return std.reverseBits(a) < std.reverseBits(b);
+    },
+  },
+  'xor-scatter': {
+    compare: (a, b) => {
+      'use gpu';
+      return (a ^ 0xaa) < (b ^ 0xaa);
+    },
+  },
+};
+
 const state = {
-  arraySize: arraySizeOptions[0],
-  sortOrder: 'ascending' as 'ascending' | 'descending',
+  arraySize: arraySizeOptions[2],
+  sortOrder: 'ascending' as SortOrderKey,
 };
 
 const WORKGROUP_SIZE = 256;
@@ -65,11 +98,10 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const arrayLength = renderLayout.$.data.length;
-  const maxValue = d.u32(255);
+  const arrayLength = initLength.$;
 
-  const cols = d.u32(std.ceil(std.sqrt(d.f32(arrayLength))));
-  const rows = d.u32(std.ceil(arrayLength / cols));
+  const cols = d.u32(std.round(std.sqrt(d.f32(arrayLength))));
+  const rows = d.u32(std.round(arrayLength / cols));
 
   const col = d.u32(std.floor(input.uv.x * d.f32(cols)));
   const row = d.u32(std.floor(input.uv.y * d.f32(rows)));
@@ -80,7 +112,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   }
 
   const value = renderLayout.$.data[idx];
-  const normalized = value / maxValue;
+  const normalized = value / 255;
 
   return d.vec4f(normalized, normalized, normalized, 1);
 });
@@ -127,18 +159,21 @@ let initBindGroup = root.createBindGroup(initLayout, {
   data: buffer,
 });
 
-let ascendingSorter: BitonicSorter = createBitonicSorter(root, buffer);
-let descendingSorter: BitonicSorter = createBitonicSorter(root, buffer, {
-  compare: (a, b) => {
-    'use gpu';
-    return a > b;
-  },
-  paddingValue: 0,
-});
+function createSorters(buf: typeof buffer) {
+  return Object.fromEntries(
+    Object.entries(sortOrders).map(([key, opts]) => [
+      key,
+      createBitonicSorter(root, buf, opts),
+    ]),
+  ) as Record<SortOrderKey, BitonicSorter>;
+}
+
+let sorters = createSorters(buffer);
 
 function recreateBuffer() {
-  ascendingSorter.destroy();
-  descendingSorter.destroy();
+  for (const s of Object.values(sorters)) {
+    s.destroy();
+  }
   buffer.destroy();
 
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage(
@@ -153,14 +188,7 @@ function recreateBuffer() {
     data: buffer,
   });
 
-  ascendingSorter = createBitonicSorter(root, buffer);
-  descendingSorter = createBitonicSorter(root, buffer, {
-    compare: (a, b) => {
-      'use gpu';
-      return a > b;
-    },
-    paddingValue: 0,
-  });
+  sorters = createSorters(buffer);
 }
 
 function generateRandomArray() {
@@ -212,9 +240,7 @@ function hideOverlay(delayMs = 1500) {
 }
 
 async function sort() {
-  const sorter = state.sortOrder === 'descending'
-    ? descendingSorter
-    : ascendingSorter;
+  const sorter = sorters[state.sortOrder];
 
   showOverlay('Sorting...');
   sorter.run({ querySet: querySet ?? undefined });
@@ -241,11 +267,11 @@ async function sort() {
 
 // #region Example controls & Cleanup
 
-type SortOrderKey = 'ascending' | 'descending';
+const sortOrderKeys = Object.keys(sortOrders) as SortOrderKey[];
 
 export const controls = {
   'Array Size': {
-    initial: arraySizeOptions[0],
+    initial: arraySizeOptions[2],
     options: arraySizeOptions,
     onSelectChange: (value: number) => {
       state.arraySize = value;
@@ -254,8 +280,9 @@ export const controls = {
     },
   },
   'Sort Order': {
-    initial: 'ascending',
-    options: ['ascending', 'descending'] as const,
+    initial: 'ascending' as SortOrderKey,
+    options: sortOrderKeys,
+    sortOrderKeys,
     onSelectChange: (value: SortOrderKey) => {
       state.sortOrder = value;
     },
@@ -265,8 +292,9 @@ export const controls = {
 };
 
 export function onCleanup() {
-  ascendingSorter.destroy();
-  descendingSorter.destroy();
+  for (const s of Object.values(sorters)) {
+    s.destroy();
+  }
   root.destroy();
 }
 
