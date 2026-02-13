@@ -28,9 +28,7 @@ describe('vaporrave example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample() -> f32 {

@@ -138,6 +138,10 @@ const mockDevice = {
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
   },
+  limits: {
+    maxUniformBuffersPerShaderStage: 12,
+    maxStorageBuffersPerShaderStage: 8,
+  },
   destroy: vi.fn(),
 };
 
