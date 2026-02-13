@@ -9,6 +9,7 @@ const adapterMock = {
   requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),
   limits: {
     maxStorageBufferBindingSize: 64 * 1024 * 1024,
+    maxBufferSize: 64 * 1024 * 1024,
   },
 };
 

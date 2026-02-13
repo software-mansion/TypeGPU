@@ -176,9 +176,8 @@ function recreateBuffer() {
   }
   buffer.destroy();
 
-  buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage(
-    'storage',
-  );
+  buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize))
+    .$usage('storage');
 
   bindGroup = root.createBindGroup(renderLayout, {
     data: buffer,
@@ -274,7 +273,7 @@ export const controls = {
     initial: arraySizeOptions[2],
     options: arraySizeOptions,
     onSelectChange: (value: number) => {
-      state.arraySize = value;
+      state.arraySize = isNaN(value) ? 64 : value;
       recreateBuffer();
       generateRandomArray();
     },
