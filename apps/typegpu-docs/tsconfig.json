@@ -3,6 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "lib": ["ESNext", "DOM"],
     "types": ["@webgpu/types"]
   },
   "include": [".astro/types.d.ts", "**/*"],
