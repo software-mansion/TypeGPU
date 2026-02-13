@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
 import { describe, expect, expectTypeOf } from 'vitest';
 import tgpu, { d, std, type TgpuAccessor } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';

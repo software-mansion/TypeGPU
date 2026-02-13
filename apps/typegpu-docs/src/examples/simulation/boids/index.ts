@@ -177,11 +177,7 @@ const simulate = (index: number) => {
   let alignmentCount = 0;
   let cohesionCount = 0;
 
-  for (let i = d.u32(0); i < layout.$.currentTrianglePos.length; i++) {
-    if (i === index) {
-      continue;
-    }
-    const other = layout.$.currentTrianglePos[i];
+  for (const other of layout.$.currentTrianglePos) {
     const dist = std.distance(instanceInfo.position, other.position);
     if (dist < params.$.separationDistance) {
       separation = std.add(

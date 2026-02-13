@@ -23,6 +23,6 @@ export const arrayLength = dualImpl({
     isRef(a) ? a.$.length : a.length,
   codegenImpl(_ctx, [a]) {
     const length = sizeOfPointedToArray(a.dataType);
-    return length > 0 ? `${length}u` : stitch`arrayLength(${a})`;
+    return length > 0 ? `${length}` : stitch`arrayLength(${a})`;
   },
 });

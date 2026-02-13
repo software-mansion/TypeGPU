@@ -455,7 +455,6 @@ export const controls = defineControls({
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
     onSelectChange: async (selected) => {
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: no other way
       testCase = testCases[selected as keyof typeof testCases];
       pipelines = createPipelines();
     },

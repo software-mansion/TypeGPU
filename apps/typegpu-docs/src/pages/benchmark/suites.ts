@@ -25,7 +25,7 @@ export type SuiteSetupOptions = {
   d: TypeGPUDataModule;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: <sshhhhhh...>
+// oxlint-disable-next-line typescript/no-explicit-any <sshhhhhh...>
 export type Suite<T extends { bench: Bench } = any> = {
   setup(options: SuiteSetupOptions): T;
   tests: Record<string, (getCtx: () => T) => () => Promise<unknown>>;

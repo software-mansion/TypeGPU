@@ -134,7 +134,7 @@ export const rollUpImpl = (rawOptions: Options) => {
         const magicString = new MagicStringAST(code);
 
         walk(ast, {
-          enter(_node, _parent, prop, index) {
+          enter(_node, _parent) {
             const node = _node as acorn.AnyNode;
             const parent = _parent as acorn.AnyNode;
 
