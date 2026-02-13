@@ -62,8 +62,8 @@ export interface TgpuComputePipeline
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
   ): void;
 }
 
@@ -190,8 +190,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
   ): void {
     const memo = this._core.unwrap();
     const { root } = this._core;

@@ -780,7 +780,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(
     item: unknown,
-    schema?: BaseData | UnknownData | undefined,
+    schema?: BaseData | UnknownData,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (

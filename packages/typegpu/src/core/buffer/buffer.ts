@@ -189,7 +189,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
+    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
     private readonly _disallowedUsages?:
       ('uniform' | 'storage' | 'vertex' | 'index')[],
   ) {

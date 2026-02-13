@@ -111,7 +111,7 @@ export function fn<
 export function fn<
   Args extends BaseData[] | [],
   Return extends BaseData = Void,
->(argTypes: Args, returnType?: Return | undefined): TgpuFnShell<Args, Return> {
+>(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   const shell: TgpuFnShellHeader<Args, Return> = {
     [$internal]: true,
     argTypes,

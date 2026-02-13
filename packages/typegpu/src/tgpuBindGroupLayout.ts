@@ -370,7 +370,6 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       | TgpuSampler
       | GPUSampler
       | TgpuComparisonSampler
-      | GPUSampler
       | TgpuTexture
       | GPUTextureView
       | GPUExternalTexture
