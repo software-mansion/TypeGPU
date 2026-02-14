@@ -181,7 +181,7 @@ function createFn<ImplSchema extends AnyFn>(
     Parameters<ImplSchema>,
     Extract<ReturnType<ImplSchema>, BaseData>
   >,
-  implementation: Implementation<ImplSchema>,
+  _implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
   type This = TgpuFnBase<ImplSchema> & SelfResolvable & {
     [$getNameForward]: FnCore;
@@ -189,11 +189,12 @@ function createFn<ImplSchema extends AnyFn>(
 
   let pairs: SlotValuePair[] = [];
   // Unwrapping generic functions
-  if (isGenericFn(implementation)) {
-    pairs = implementation[$providing]?.pairs ?? [];
-    implementation = implementation[$internal].inner as Implementation<
-      ImplSchema
-    >;
+  let implementation: Implementation<ImplSchema>;
+  if (isGenericFn(_implementation)) {
+    pairs = _implementation[$providing]?.pairs ?? [];
+    implementation = _implementation[$internal].inner as typeof implementation;
+  } else {
+    implementation = _implementation;
   }
 
   const core = createFnCore(implementation as Implementation, '');
@@ -350,8 +351,6 @@ function createGenericFn<T extends AnyFn>(
   inner: T,
   pairs: SlotValuePair[],
 ): TgpuGenericFn<T> {
-  type This = TgpuGenericFn<T>;
-
   const fnBase = {
     [$internal]: { inner },
     resourceType: 'generic-function' as const,
@@ -379,7 +378,7 @@ function createGenericFn<T extends AnyFn>(
     return inner(...args) as ReturnType<T>;
   };
 
-  const genericFn = Object.assign(call, fnBase) as unknown as This;
+  const genericFn = Object.assign(call, fnBase) as unknown as TgpuGenericFn<T>;
 
   // Inheriting name from `inner`, if it exists
   if (getName(inner)) {
