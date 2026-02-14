@@ -13,54 +13,53 @@ import {
   operatorSlot,
   scanLayout,
   uniformAddLayout,
-  workgroupSize,
+  WORKGROUP_SIZE,
 } from './schemas.ts';
 import { scanBlock } from './compute/scan.ts';
 import { uniformOp } from './compute/applySums.ts';
 import { scanGreatestBlock } from './compute/singleScan.ts';
 
-const cache = new WeakMap<TgpuRoot, WeakMap<BinaryOp, PrefixScanComputer>>();
+const cache = new WeakMap<
+  TgpuRoot,
+  WeakMap<BinaryOp['operation'], PrefixScanComputer>
+>();
 
 class PrefixScanComputer {
   #scanPipeline?: TgpuComputePipeline;
+  #reducePipeline?: TgpuComputePipeline;
   #addPipeline?: TgpuComputePipeline;
-  #querySet: TgpuQuerySet<'timestamp'> | null = null;
-  #first = true;
-  #timeCallback?:
-    | ((timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void)
-    | undefined = undefined;
 
   constructor(
     private root: TgpuRoot,
-    private binaryOp: BinaryOp,
-    private onlyGreatestElement: boolean,
+    private operation: BinaryOp['operation'],
+    private identityElement: BinaryOp['identityElement'],
   ) {}
 
-  updateTimeCallback(
-    timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
-  ): void {
-    this.#timeCallback = timeCallback;
-    this.#querySet = this.root.createQuerySet('timestamp', 2);
-  }
-
-  private get scanPipeline(): TgpuComputePipeline {
-    if (!this.#scanPipeline) {
-      this.#scanPipeline = this.root['~unstable']
-        .with(operatorSlot, this.binaryOp.operation as TgpuFn)
-        .with(identitySlot, this.binaryOp.identityElement)
-        .withCompute(this.onlyGreatestElement ? scanGreatestBlock : scanBlock)
+  private getScanPipeline(
+    onlyGreatestElement: boolean,
+  ): TgpuComputePipeline {
+    if (onlyGreatestElement) {
+      this.#reducePipeline ??= this.root['~unstable']
+        .with(operatorSlot, this.operation as TgpuFn)
+        .with(identitySlot, this.identityElement)
+        .withCompute(scanGreatestBlock)
         .createPipeline();
+      return this.#reducePipeline;
     }
+
+    this.#scanPipeline ??= this.root['~unstable']
+      .with(operatorSlot, this.operation as TgpuFn)
+      .with(identitySlot, this.identityElement)
+      .withCompute(scanBlock)
+      .createPipeline();
     return this.#scanPipeline;
   }
 
   private get addPipeline(): TgpuComputePipeline {
-    if (!this.#addPipeline) {
-      this.#addPipeline = this.root['~unstable']
-        .with(operatorSlot, this.binaryOp.operation as TgpuFn)
-        .withCompute(uniformOp)
-        .createPipeline();
-    }
+    this.#addPipeline ??= this.root['~unstable']
+      .with(operatorSlot, this.operation as TgpuFn)
+      .withCompute(uniformOp)
+      .createPipeline();
     return this.#addPipeline;
   }
 
@@ -73,9 +72,12 @@ class PrefixScanComputer {
   private recursiveScan(
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
     actualLength: number,
-    level = 0,
+    onlyGreatestElement: boolean,
+    querySet: TgpuQuerySet<'timestamp'> | null,
+    isFirstPass: boolean,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const numWorkgroups = Math.ceil(actualLength / (workgroupSize * 8));
+    const numWorkgroups = Math.ceil(actualLength / (WORKGROUP_SIZE * 8));
+    const scanPipeline = this.getScanPipeline(onlyGreatestElement);
 
     // Base case: single workgroup
     if (numWorkgroups === 1) {
@@ -84,56 +86,57 @@ class PrefixScanComputer {
         input: buffer,
         sums: finalSums,
       });
-      let pipeline = this.scanPipeline.with(bg);
-      if (this.#timeCallback) {
+      let pipeline = scanPipeline.with(bg);
+      if (querySet) {
         pipeline = pipeline.withTimestampWrites({
-          querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
-          beginningOfPassWriteIndex: this.#first
-            ? 0
-            : (undefined as unknown as number),
+          querySet,
+          ...(isFirstPass && { beginningOfPassWriteIndex: 0 }),
           endOfPassWriteIndex: 1,
         });
       }
       pipeline.dispatchWorkgroups(1);
 
-      if (this.onlyGreatestElement) {
-        return finalSums;
-      }
-      return buffer;
+      return onlyGreatestElement ? finalSums : buffer;
     }
+
     // Recursive case:
     let sumsBuffer = this.getScratchBuffer(numWorkgroups);
 
-    // Up-scan & Down-scan
     const scanBg = this.root.createBindGroup(scanLayout, {
       input: buffer,
       sums: sumsBuffer,
     });
-    let scanPipeline = this.scanPipeline.with(scanBg);
-    if (this.#timeCallback && this.#first) {
-      scanPipeline = scanPipeline.withTimestampWrites({
-        querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+    let pipeline = scanPipeline.with(scanBg);
+    if (querySet && isFirstPass) {
+      pipeline = pipeline.withTimestampWrites({
+        querySet,
         beginningOfPassWriteIndex: 0,
       });
-      this.#first = false;
     }
-    scanPipeline.dispatchWorkgroups(numWorkgroups);
+    pipeline.dispatchWorkgroups(numWorkgroups);
 
     // Recursively scan the sums
-    sumsBuffer = this.recursiveScan(sumsBuffer, numWorkgroups, level + 1);
+    sumsBuffer = this.recursiveScan(
+      sumsBuffer,
+      numWorkgroups,
+      onlyGreatestElement,
+      querySet,
+      false,
+    );
 
-    if (this.onlyGreatestElement) {
+    if (onlyGreatestElement) {
       return sumsBuffer;
     }
+
     // Add the scanned sums back
     const addBg = this.root.createBindGroup(uniformAddLayout, {
       input: buffer,
       sums: sumsBuffer,
     });
     let addPipeline = this.addPipeline.with(addBg);
-    if (this.#timeCallback) {
+    if (querySet) {
       addPipeline = addPipeline.withTimestampWrites({
-        querySet: this.#querySet as TgpuQuerySet<'timestamp'>,
+        querySet,
         endOfPassWriteIndex: 1,
       });
     }
@@ -143,14 +146,16 @@ class PrefixScanComputer {
 
   compute(
     buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
+    onlyGreatestElement: boolean,
+    querySet?: TgpuQuerySet<'timestamp'>,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const result = this.recursiveScan(buffer, buffer.dataType.elementCount);
-
-    this.#querySet?.resolve();
-    if (this.#timeCallback && this.#querySet) {
-      this.#timeCallback(this.#querySet);
-    }
-    return result;
+    return this.recursiveScan(
+      buffer,
+      buffer.dataType.elementCount,
+      onlyGreatestElement,
+      querySet ?? null,
+      true,
+    );
   }
 }
 
@@ -165,8 +170,8 @@ class PrefixScanComputer {
  *   - outputBuffer: A storage buffer where the scanned values will be written
  *   - operation: The binary operation to use for the scan (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
- *                              GPU dispatch has been submitted; useful for measuring execution time.
+ * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
+ *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
  * @returns The `outputBuffer` instance which contains the scanned values.
  *
  * @example
@@ -212,9 +217,9 @@ export function prefixScan(
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
   },
-  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+  querySet?: TgpuQuerySet<'timestamp'>,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  return runScan(root, options, false, timeCallback);
+  return runScan(root, options, false, querySet);
 }
 
 /**
@@ -227,8 +232,8 @@ export function prefixScan(
  *   - inputBuffer: A storage buffer with the input values to reduce
  *   - operation: The binary operation to use for the reduction (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- * @param timeCallback - Optional callback invoked with a timestamp `TgpuQuerySet` after the
- *                              GPU dispatch has been submitted; useful for measuring execution time.
+ * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
+ *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
  *
  * @example
@@ -268,9 +273,9 @@ export function scan(
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
   },
-  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+  querySet?: TgpuQuerySet<'timestamp'>,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  return runScan(root, options, true, timeCallback);
+  return runScan(root, options, true, querySet);
 }
 
 function runScan(
@@ -282,24 +287,15 @@ function runScan(
     identityElement: BinaryOp['identityElement'];
   },
   onlyGreatestElement: boolean,
-  timeCallback?: (timeTgpuQuery: TgpuQuerySet<'timestamp'>) => void,
+  querySet?: TgpuQuerySet<'timestamp'>,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  const binaryOp: BinaryOp = {
+  const computer = initCache(root, {
     operation: options.operation,
     identityElement: options.identityElement,
-  };
-
-  let computer = cache.get(root)?.get(binaryOp);
-  if (!computer) {
-    computer = initCache(root, binaryOp, onlyGreatestElement);
-  }
-
-  if (timeCallback) {
-    (computer as PrefixScanComputer).updateTimeCallback(timeCallback);
-  }
+  });
 
   if (onlyGreatestElement) {
-    return computer.compute(options.inputBuffer);
+    return computer.compute(options.inputBuffer, true, querySet);
   }
 
   const outputBuffer = options.outputBuffer ?? options.inputBuffer;
@@ -307,7 +303,7 @@ function runScan(
     outputBuffer.copyFrom(options.inputBuffer);
   }
 
-  return computer.compute(outputBuffer);
+  return computer.compute(outputBuffer, false, querySet);
 }
 
 /**
@@ -315,27 +311,27 @@ function runScan(
  *
  * @param root - The TypeGPU root/context to associate with the cached computer.
  * @param binaryOp - The binary operation used by the computer.
- * @param onlyGreatestElement - When true, the created/retrieved computer will compute only the
- *                              top-level reduction(s) instead of the full prefix-scan.
  * @returns A `PrefixScanComputer` instance associated with the provided `root` and `binaryOp`.
  */
 export function initCache(
   root: TgpuRoot,
   binaryOp: BinaryOp,
-  onlyGreatestElement = false,
 ): PrefixScanComputer {
   let rootCache = cache.get(root);
   if (!rootCache) {
     rootCache = new WeakMap();
     cache.set(root, rootCache);
   }
-  if (!rootCache.has(binaryOp)) {
-    rootCache.set(
-      binaryOp,
-      new PrefixScanComputer(root, binaryOp, onlyGreatestElement),
+  let computer = rootCache.get(binaryOp.operation);
+  if (!computer) {
+    computer = new PrefixScanComputer(
+      root,
+      binaryOp.operation,
+      binaryOp.identityElement,
     );
+    rootCache.set(binaryOp.operation, computer);
   }
-  return rootCache.get(binaryOp) as PrefixScanComputer;
+  return computer;
 }
 
 export type { BinaryOp };
