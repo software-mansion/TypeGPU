@@ -50,9 +50,7 @@ describe('jelly switch example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       struct Camera {
@@ -120,13 +118,6 @@ describe('jelly switch example', () => {
 
       @group(0) @binding(2) var<uniform> stateUniform: SwitchState;
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(3) var<uniform> lightUniform: DirectionalLight;
-
       fn opRotateAxisAngle(p: vec3f, axis: vec3f, angle: f32) -> vec3f {
         return (mix((axis * dot(p, axis)), p, cos(angle)) + (cross(p, axis) * sin(angle)));
       }
@@ -184,11 +175,18 @@ describe('jelly switch example', () => {
         return getApproxNormal(position, 1e-4f);
       }
 
-      @group(0) @binding(4) var<uniform> jellyColorUniform: vec4f;
+      @group(0) @binding(3) var<uniform> jellyColorUniform: vec4f;
 
       fn sqLength(a: vec3f) -> f32 {
         return dot(a, a);
       }
+
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(4) var<uniform> lightUniform: DirectionalLight;
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
         if ((position.y < -0.03f)) {
@@ -253,12 +251,6 @@ describe('jelly switch example', () => {
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32) -> vec4f {
         let state = (&stateUniform);
         var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var offsetX = 0f;
-        var offsetZ = 0.05000000074505806f;
-        let lightDir = (&lightUniform.direction);
-        const causticScale = 0.2;
-        offsetX -= ((*lightDir).x * causticScale);
-        offsetZ += ((*lightDir).z * causticScale);
         var newNormal = getNormal(hitPosition);
         let switchX = (((*state).progress - 0.5f) * 0.4f);
         let jellyColor = (&jellyColorUniform);

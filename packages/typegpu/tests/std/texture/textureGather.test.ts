@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/noConstantCondition: we are using it intentionally to prune type checks */
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { textureGather } from '../../../src/std/texture.ts';
@@ -102,7 +101,6 @@ describe('textureGather', () => {
         var gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
         var gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
         var gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
-
       }"
     `);
   });

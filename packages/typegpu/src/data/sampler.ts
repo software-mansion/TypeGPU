@@ -86,18 +86,6 @@ export interface WgslComparisonSamplerProps {
   maxAnisotropy?: number;
 }
 
-const SamplerPropsDefaults: WgslSamplerProps = {
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
-  addressModeW: 'clamp-to-edge',
-  magFilter: 'nearest',
-  minFilter: 'nearest',
-  mipmapFilter: 'nearest',
-  lodMinClamp: 0,
-  lodMaxClamp: 32,
-  maxAnisotropy: 1,
-};
-
 export interface sampler {
   [$internal]: true;
   type: 'sampler';

@@ -107,9 +107,7 @@ const time = root.createUniform(d.f32);
 
 const isInsideObstacle = (x: number, y: number): boolean => {
   'use gpu';
-  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-    const obs = obstacles.$[obsIdx];
-
+  for (const obs of obstacles.$) {
     if (obs.enabled === 0) {
       continue;
     }
@@ -162,8 +160,7 @@ const computeVelocity = (x: number, y: number): d.v2f => {
   ];
   let dirChoiceCount = 1;
 
-  for (let i = 0; i < 4; i++) {
-    const offset = neighborOffsets[i];
+  for (const offset of neighborOffsets) {
     const neighborDensity = getCell(x + offset.x, y + offset.y);
     const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 

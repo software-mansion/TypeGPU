@@ -58,7 +58,7 @@ export type TgpuComputeFnShell<
   ) => TgpuComputeFn<ComputeIn>);
 
 export interface TgpuComputeFn<
-  // biome-ignore lint/suspicious/noExplicitAny: to allow assigning any compute fn to TgpuComputeFn (non-generic) type
+  // oxlint-disable-next-line typescript/no-explicit-any to allow assigning any compute fn to TgpuComputeFn (non-generic) type
   ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
   readonly [$internal]: true;
@@ -73,7 +73,6 @@ export interface ComputeFnOptions {
 
 export function computeFn(options: {
   workgroupSize: number[];
-  // biome-ignore lint/complexity/noBannedTypes: it's fine
 }): TgpuComputeFnShell<{}>;
 
 export function computeFn<

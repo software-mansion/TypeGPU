@@ -59,7 +59,6 @@ export const PERF = (DEV || TEST) && ({
         return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
       },
       record(name: string, data: unknown) {
-        // biome-ignore lint/suspicious/noAssignInExpressions: it's fine
         const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
         let entries = records.get(name);
         if (!entries) {

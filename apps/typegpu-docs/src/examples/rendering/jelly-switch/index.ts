@@ -376,14 +376,6 @@ const renderBackground = (
   const state = switchBehavior.stateUniform.$;
   const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
 
-  let offsetX = d.f32();
-  let offsetZ = d.f32(0.05);
-
-  const lightDir = lightUniform.$.direction;
-  const causticScale = 0.2;
-  offsetX -= lightDir.x * causticScale;
-  offsetZ += lightDir.z * causticScale;
-
   const newNormal = getNormal(hitPosition);
 
   // Calculate fake bounce lighting

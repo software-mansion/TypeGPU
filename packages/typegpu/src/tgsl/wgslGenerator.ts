@@ -48,7 +48,9 @@ import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
+import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
+import { mathToStd } from './math.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -165,7 +167,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call,
-  'void': () => snip('', wgsl.Void, 'constant'),
+  'void': () => snip(undefined, wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -203,6 +205,7 @@ class WgslGenerator implements ShaderGenerator {
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))
+        .filter((statement) => statement.length > 0)
         .join('\n');
       this.ctx.dedent();
       return `{
@@ -271,6 +274,10 @@ ${this.ctx.pre}}`;
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
+    if (id === 'undefined') {
+      return snip(undefined, wgsl.Void, 'constant');
+    }
+
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -456,6 +463,21 @@ ${this.ctx.pre}}`;
           UnknownData,
           /* origin */ 'runtime',
         );
+      }
+
+      if (target.value === Math) {
+        if (property in mathToStd && mathToStd[property]) {
+          return snip(
+            mathToStd[property],
+            UnknownData,
+            /* origin */ 'runtime',
+          );
+        }
+        if (typeof Math[property as keyof typeof Math] === 'function') {
+          throw new Error(
+            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
+          );
+        }
       }
 
       const accessed = accessProp(target, property);
@@ -874,8 +896,9 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
-      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+      const id = this.identifier(statement);
+      const resolved = id.value && this.ctx.resolve(id.value).value;
+      return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
     if (typeof statement === 'boolean') {
@@ -1140,6 +1163,131 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
     }
 
+    if (statement[0] === NODE.forOf) {
+      const [_, loopVar, iterable, body] = statement;
+      const iterableSnippet = this.expression(iterable);
+
+      if (isEphemeralSnippet(iterableSnippet)) {
+        throw new Error(
+          '`for ... of ...` loops only support iterables stored in variables',
+        );
+      }
+
+      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
+      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
+      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
+      // so we can safely use `i`.
+      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
+      while (this.ctx.getById(index) !== null) {
+        index += 'i';
+      }
+
+      const elementSnippet = accessIndex(
+        iterableSnippet,
+        snip(index, u32, 'runtime'),
+      );
+      if (!elementSnippet) {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+
+      const iterableDataType = iterableSnippet.dataType;
+      let elementCountSnippet: Snippet;
+      let elementType = elementSnippet.dataType;
+
+      if (elementType === UnknownData) {
+        throw new WgslTypeError(
+          stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+        );
+      }
+
+      if (wgsl.isWgslArray(iterableDataType)) {
+        elementCountSnippet = iterableDataType.elementCount > 0
+          ? snip(
+            `${iterableDataType.elementCount}`,
+            u32,
+            'constant',
+          )
+          : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
+      } else if (wgsl.isVec(iterableDataType)) {
+        elementCountSnippet = snip(
+          `${Number(iterableDataType.type.match(/\d/))}`,
+          u32,
+          'constant',
+        );
+      } else {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+
+      if (loopVar[0] !== NODE.const) {
+        throw new WgslTypeError(
+          'Only `for (const ... of ... )` loops are supported',
+        );
+      }
+
+      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+      // an implicit pointer to it
+      let loopVarKind = 'let';
+      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+      if (!isEphemeralSnippet(elementSnippet)) {
+        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
+          loopVarKind = 'const';
+        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
+          loopVarKind = 'let';
+        } else {
+          loopVarKind = 'let';
+          if (!wgsl.isPtr(elementType)) {
+            const ptrType = createPtrFromOrigin(
+              elementSnippet.origin,
+              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
+            );
+            invariant(
+              ptrType !== undefined,
+              `Creating pointer type from origin ${elementSnippet.origin}`,
+            );
+            elementType = ptrType;
+          }
+
+          elementType = implicitFrom(elementType as wgsl.Ptr);
+        }
+      }
+
+      const loopVarSnippet = snip(
+        loopVarName,
+        elementType,
+        elementSnippet.origin,
+      );
+      this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+        tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+      }; ${index}++) {`;
+
+      this.ctx.indent();
+
+      const loopVarDeclStr =
+        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+          tryConvertSnippet(
+            this.ctx,
+            elementSnippet,
+            elementType,
+            false,
+          )
+        };`;
+
+      const bodyStr = `${this.ctx.pre}${
+        this.block(blockifySingleStatement(body))
+      }`;
+
+      this.ctx.dedent();
+
+      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+    }
+
     if (statement[0] === NODE.continue) {
       return `${this.ctx.pre}continue;`;
     }
@@ -1148,8 +1296,9 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    const resolved = this.ctx.resolve(this.expression(statement).value).value;
-    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+    const expr = this.expression(statement);
+    const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }
 
