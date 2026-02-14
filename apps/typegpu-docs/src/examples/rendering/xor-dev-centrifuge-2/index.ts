@@ -12,7 +12,7 @@
 
 import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
-import { abs, atan2, cos, gt, length, normalize, select, sign, sub, tanh } from 'typegpu/std';
+import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
@@ -32,16 +32,20 @@ const safeTanh = (v: d.v3f) => {
 // shaders, etc.
 const root = await tgpu.init();
 
-// Uniforms are used to send read-only data to the GPU
-const time = root.createUniform(d.f32);
-const aspectRatio = root.createUniform(d.f32);
+const Params = d.struct({
+  time: d.f32,
+  aspectRatio: d.f32,
 
-const cameraPos = root.createUniform(d.vec2f);
-const tunnelDepth = root.createUniform(d.i32);
-const bigStrips = root.createUniform(d.f32);
-const smallStrips = root.createUniform(d.f32);
-const dollyZoom = root.createUniform(d.f32);
-const color = root.createUniform(d.vec3f);
+  cameraPos: d.vec2f,
+  tunnelDepth: d.i32,
+  bigStrips: d.f32,
+  smallStrips: d.f32,
+  dollyZoom: d.f32,
+  color: d.vec3f,
+});
+
+// Uniforms are used to send read-only data to the GPU
+const paramsUniform = root.createUniform(Params);
 
 const tunnelRadius = 11;
 const moveSpeed = 5;
@@ -50,31 +54,33 @@ const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const ratio = d.vec2f(aspectRatio.$, 1);
-  const dir = normalize(d.vec3f(uv.mul(ratio), -1));
+  'use gpu';
+  const params = paramsUniform.$;
+  const ratio = d.vec2f(params.aspectRatio, 1);
+  const dir = normalize(d.vec3f(uv * ratio, -1));
 
   let z = d.f32(0);
   let acc = d.vec3f();
-  for (let i = 0; i < tunnelDepth.$; i++) {
-    const p = dir.mul(z);
-    p.x += cameraPos.$.x;
-    p.y += cameraPos.$.y;
+  for (let i = 0; i < params.tunnelDepth; i++) {
+    const p = dir * z;
+    p.x += params.cameraPos.x;
+    p.y += params.cameraPos.y;
 
     const coords = d.vec3f(
-      atan2(p.y, p.x) * bigStrips.$ + time.$,
-      p.z * dollyZoom.$ - moveSpeed * time.$,
+      atan2(p.y, p.x) * params.bigStrips + params.time,
+      p.z * params.dollyZoom - moveSpeed * params.time,
       length(p.xy) - tunnelRadius,
     );
 
-    const coords2 = cos(coords.add(cos(coords.mul(smallStrips.$)))).sub(1);
+    const coords2 = cos(coords + cos(coords * params.smallStrips)) - 1;
     const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
 
-    acc = acc.add(sub(1.2, cos(color.$.mul(p.z))).div(dd));
+    acc = acc + (1.2 - cos(params.color * p.z)) / dd;
     z += dd;
   }
 
   // Tone mapping
-  acc = safeTanh(acc.mul(0.005));
+  acc = safeTanh(acc * 0.005);
 
   return d.vec4f(acc, 1);
 });
@@ -107,8 +113,10 @@ let isRunning = true;
 function draw(timestamp: number) {
   if (!isRunning) return;
 
-  aspectRatio.write(canvas.clientWidth / canvas.clientHeight);
-  time.write((timestamp * 0.001) % 1000);
+  paramsUniform.writePartial({
+    aspectRatio: canvas.clientWidth / canvas.clientHeight,
+    time: (timestamp * 0.001) % 1000,
+  });
 
   pipeline
     .withColorAttachment({ view: context })
@@ -128,7 +136,7 @@ export const controls = defineControls({
     max: 200,
     step: 1,
     onSliderChange(v: number) {
-      tunnelDepth.write(v);
+      paramsUniform.writePartial({ tunnelDepth: v });
     },
   },
   'big strips': {
@@ -137,7 +145,7 @@ export const controls = defineControls({
     max: 60,
     step: 0.01,
     onSliderChange(v: number) {
-      bigStrips.write(v);
+      paramsUniform.writePartial({ bigStrips: v });
     },
   },
   'small strips': {
@@ -146,7 +154,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.01,
     onSliderChange(v: number) {
-      smallStrips.write(v);
+      paramsUniform.writePartial({ smallStrips: v });
     },
   },
   'dolly zoom': {
@@ -155,7 +163,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.01,
     onSliderChange(v: number) {
-      dollyZoom.write(v);
+      paramsUniform.writePartial({ dollyZoom: v });
     },
   },
   'camera pos': {
@@ -164,13 +172,13 @@ export const controls = defineControls({
     initial: d.vec2f(0, -7),
     step: d.vec2f(0.01, 0.01),
     onVectorSliderChange(v) {
-      cameraPos.write(v);
+      paramsUniform.writePartial({ cameraPos: v });
     },
   },
   color: {
     initial: d.vec3f(0.2, 0, 0.3),
     onColorChange(value) {
-      color.write(value);
+      paramsUniform.writePartial({ color: value });
     },
   },
 });
