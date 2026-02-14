@@ -6,7 +6,7 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 
-describe('triangle example', () => {
+describe('triangle (next) example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
