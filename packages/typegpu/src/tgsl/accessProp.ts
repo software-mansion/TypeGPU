@@ -198,23 +198,11 @@ export function accessProp(
 
   const propLength = propName.length;
   if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
-    // Validate swizzle: must be all xyzw OR all rgba, not mixed
-    const hasXYZW = /[xyzw]/.test(propName);
-    const hasRGBA = /[rgba]/.test(propName);
-    
-    if (hasXYZW && hasRGBA) {
-      // Mixed swizzle components (e.g., .xrgy) are invalid
-      return undefined;
-    }
+    const isXYZW = /^[xyzw]+$/.test(propName);
+    const isRGBA = /^[rgba]+$/.test(propName);
 
-    // Check that all characters are valid swizzle components
-    const isValidSwizzle = hasXYZW
-      ? /^[xyzw]+$/.test(propName)
-      : hasRGBA
-      ? /^[rgba]+$/.test(propName)
-      : false;
-
-    if (!isValidSwizzle) {
+    if (!isXYZW && !isRGBA) {
+      // Not a valid swizzle
       return undefined;
     }
 
