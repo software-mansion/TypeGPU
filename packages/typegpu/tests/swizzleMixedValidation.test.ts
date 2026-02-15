@@ -60,38 +60,48 @@ describe('Mixed swizzle validation', () => {
       const main = () => {
         'use gpu';
         const vec = d.vec4f(1, 2, 3, 4);
-        // Accessing a mixed swizzle should return undefined from accessProp
-        // This will cause resolution to fail
+        // oxlint-disable-next-line typescript/no-explicit-any Accessing a mixed swizzle should cause an error
         const mixed = (vec as any).xrgy;
         return mixed;
       };
 
       // The resolution should fail because accessProp returns undefined for mixed swizzles
-      expect(() => tgpu.resolve([main])).toThrow();
+      expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:main
+        - fn*:main(): Property 'xrgy' not found on value 'vec' of type vec4f]
+      `);
     });
 
     it('should NOT resolve another mixed pattern', () => {
       const main = () => {
         'use gpu';
         const vec = d.vec4f(1, 2, 3, 4);
+        // oxlint-disable-next-line typescript/no-explicit-any Accessing a mixed swizzle should cause an error
         const mixed = (vec as any).rgxw;
         return mixed;
       };
 
-      expect(() => tgpu.resolve([main])).toThrow();
+      expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:main
+        - fn*:main(): Property 'rgxw' not found on value 'vec' of type vec4f]
+      `);
     });
   });
 
   describe('Edge cases', () => {
     it('should handle single component access for both xyzw and rgba', () => {
       const vec = d.vec4f(1, 2, 3, 4);
-      
+
       // Single xyzw components should work
       expect(vec.x).toBe(1);
       expect(vec.y).toBe(2);
       expect(vec.z).toBe(3);
       expect(vec.w).toBe(4);
-      
+
       // Single rgba components should also work
       expect(vec.r).toBe(1);
       expect(vec.g).toBe(2);
@@ -101,7 +111,7 @@ describe('Mixed swizzle validation', () => {
 
     it('should not allow invalid characters in swizzles', () => {
       const vec = d.vec4f(1, 2, 3, 4);
-      
+
       // Invalid characters should result in undefined
       // @ts-expect-error
       expect(vec.xyz1).toBeUndefined();
@@ -115,7 +125,7 @@ describe('Mixed swizzle validation', () => {
 
     it('should not allow swizzles longer than 4 components', () => {
       const vec = d.vec4f(1, 2, 3, 4);
-      
+
       // Swizzles longer than 4 should not exist
       // @ts-expect-error
       expect(vec.xyzwx).toBeUndefined();

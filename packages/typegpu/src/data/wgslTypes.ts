@@ -781,7 +781,11 @@ type Tuple4<S> = [S, S, S, S];
  * A vector with 2 elements of type f32
  */
 export interface v2f
-  extends Tuple2<number>, Swizzle2<v2f, v3f, v4f>, SwizzleRGBA2<v2f, v3f, v4f>, vecInfixNotation<v2f> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2f, v3f, v4f>,
+    SwizzleRGBA2<v2f, v3f, v4f>,
+    vecInfixNotation<v2f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
@@ -796,7 +800,11 @@ export interface v2f
  * A vector with 2 elements of type f16
  */
 export interface v2h
-  extends Tuple2<number>, Swizzle2<v2h, v3h, v4h>, SwizzleRGBA2<v2h, v3h, v4h>, vecInfixNotation<v2h> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2h, v3h, v4h>,
+    SwizzleRGBA2<v2h, v3h, v4h>,
+    vecInfixNotation<v2h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
@@ -811,7 +819,11 @@ export interface v2h
  * A vector with 2 elements of type i32
  */
 export interface v2i
-  extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, SwizzleRGBA2<v2i, v3i, v4i>, vecInfixNotation<v2i> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2i, v3i, v4i>,
+    SwizzleRGBA2<v2i, v3i, v4i>,
+    vecInfixNotation<v2i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
@@ -826,7 +838,11 @@ export interface v2i
  * A vector with 2 elements of type u32
  */
 export interface v2u
-  extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, SwizzleRGBA2<v2u, v3u, v4u>, vecInfixNotation<v2u> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2u, v3u, v4u>,
+    SwizzleRGBA2<v2u, v3u, v4u>,
+    vecInfixNotation<v2u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
@@ -840,7 +856,11 @@ export interface v2u
  * Interface representing its WGSL vector type counterpart: `vec2<bool>`.
  * A vector with 2 elements of type `bool`
  */
-export interface v2b extends Tuple2<boolean>, Swizzle2<v2b, v3b, v4b>, SwizzleRGBA2<v2b, v3b, v4b> {
+export interface v2b
+  extends
+    Tuple2<boolean>,
+    Swizzle2<v2b, v3b, v4b>,
+    SwizzleRGBA2<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2<bool>';
@@ -855,7 +875,11 @@ export interface v2b extends Tuple2<boolean>, Swizzle2<v2b, v3b, v4b>, SwizzleRG
  * A vector with 3 elements of type f32
  */
 export interface v3f
-  extends Tuple3<number>, Swizzle3<v2f, v3f, v4f>, SwizzleRGBA3<v2f, v3f, v4f>, vecInfixNotation<v3f> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2f, v3f, v4f>,
+    SwizzleRGBA3<v2f, v3f, v4f>,
+    vecInfixNotation<v3f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
@@ -872,7 +896,11 @@ export interface v3f
  * A vector with 3 elements of type f16
  */
 export interface v3h
-  extends Tuple3<number>, Swizzle3<v2h, v3h, v4h>, SwizzleRGBA3<v2h, v3h, v4h>, vecInfixNotation<v3h> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2h, v3h, v4h>,
+    SwizzleRGBA3<v2h, v3h, v4h>,
+    vecInfixNotation<v3h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
@@ -889,7 +917,11 @@ export interface v3h
  * A vector with 3 elements of type i32
  */
 export interface v3i
-  extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, SwizzleRGBA3<v2i, v3i, v4i>, vecInfixNotation<v3i> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2i, v3i, v4i>,
+    SwizzleRGBA3<v2i, v3i, v4i>,
+    vecInfixNotation<v3i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
@@ -906,7 +938,11 @@ export interface v3i
  * A vector with 3 elements of type u32
  */
 export interface v3u
-  extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, SwizzleRGBA3<v2u, v3u, v4u>, vecInfixNotation<v3u> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2u, v3u, v4u>,
+    SwizzleRGBA3<v2u, v3u, v4u>,
+    vecInfixNotation<v3u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
@@ -922,7 +958,11 @@ export interface v3u
  * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
  * A vector with 3 elements of type `bool`
  */
-export interface v3b extends Tuple3<boolean>, Swizzle3<v2b, v3b, v4b>, SwizzleRGBA3<v2b, v3b, v4b> {
+export interface v3b
+  extends
+    Tuple3<boolean>,
+    Swizzle3<v2b, v3b, v4b>,
+    SwizzleRGBA3<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3<bool>';
@@ -939,7 +979,11 @@ export interface v3b extends Tuple3<boolean>, Swizzle3<v2b, v3b, v4b>, SwizzleRG
  * A vector with 4 elements of type f32
  */
 export interface v4f
-  extends Tuple4<number>, Swizzle4<v2f, v3f, v4f>, SwizzleRGBA4<v2f, v3f, v4f>, vecInfixNotation<v4f> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2f, v3f, v4f>,
+    SwizzleRGBA4<v2f, v3f, v4f>,
+    vecInfixNotation<v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
@@ -958,7 +1002,11 @@ export interface v4f
  * A vector with 4 elements of type f16
  */
 export interface v4h
-  extends Tuple4<number>, Swizzle4<v2h, v3h, v4h>, SwizzleRGBA4<v2h, v3h, v4h>, vecInfixNotation<v4h> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2h, v3h, v4h>,
+    SwizzleRGBA4<v2h, v3h, v4h>,
+    vecInfixNotation<v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
@@ -977,7 +1025,11 @@ export interface v4h
  * A vector with 4 elements of type i32
  */
 export interface v4i
-  extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, SwizzleRGBA4<v2i, v3i, v4i>, vecInfixNotation<v4i> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2i, v3i, v4i>,
+    SwizzleRGBA4<v2i, v3i, v4i>,
+    vecInfixNotation<v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -996,7 +1048,11 @@ export interface v4i
  * A vector with 4 elements of type u32
  */
 export interface v4u
-  extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, SwizzleRGBA4<v2u, v3u, v4u>, vecInfixNotation<v4u> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2u, v3u, v4u>,
+    SwizzleRGBA4<v2u, v3u, v4u>,
+    vecInfixNotation<v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -1014,7 +1070,11 @@ export interface v4u
  * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
  * A vector with 4 elements of type `bool`
  */
-export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b>, SwizzleRGBA4<v2b, v3b, v4b> {
+export interface v4b
+  extends
+    Tuple4<boolean>,
+    Swizzle4<v2b, v3b, v4b>,
+    SwizzleRGBA4<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4<bool>';

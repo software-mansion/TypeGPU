@@ -1171,7 +1171,7 @@ describe('RGBA swizzles', () => {
       expect(vec.g).toBe(20);
       expect(vec.b).toBe(30);
       expect(vec.a).toBe(40);
-      
+
       const swizzled = vec.bgra;
       expect(swizzled.r).toBe(30);
       expect(swizzled.g).toBe(20);
@@ -1186,7 +1186,7 @@ describe('RGBA swizzles', () => {
       expect(vec.r).toBe(true);
       expect(vec.g).toBe(false);
       expect(vec.b).toBe(true);
-      
+
       const swizzled = vec.bgr;
       expect(swizzled.r).toBe(true);
       expect(swizzled.g).toBe(false);
