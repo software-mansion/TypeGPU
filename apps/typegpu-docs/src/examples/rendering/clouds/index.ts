@@ -29,13 +29,9 @@ const resolutionUniform = root.createUniform(
   d.vec2f(canvas.width, canvas.height),
 );
 
-const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE * 4);
-for (let i = 0; i < noiseData.length; i += 4) {
-  const value = Math.random() * 255;
-  noiseData[i] = value;
-  noiseData[i + 1] = Math.random() * 255;
-  noiseData[i + 2] = value;
-  noiseData[i + 3] = 255;
+const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE);
+for (let i = 0; i < noiseData.length; i += 1) {
+  noiseData[i] = Math.random() * 255;
 }
 
 const sampler = root['~unstable'].createSampler({
@@ -48,16 +44,10 @@ const sampler = root['~unstable'].createSampler({
 const noiseTexture = root['~unstable']
   .createTexture({
     size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
-    format: 'rgba8unorm',
+    format: 'r8unorm',
   })
   .$usage('sampled', 'render');
-
-root.device.queue.writeTexture(
-  { texture: root.unwrap(noiseTexture) },
-  noiseData,
-  { bytesPerRow: NOISE_TEXTURE_SIZE * 4 },
-  { width: NOISE_TEXTURE_SIZE, height: NOISE_TEXTURE_SIZE },
-);
+noiseTexture.write(noiseData);
 
 const bindGroup = root.createBindGroup(cloudsLayout, {
   params: paramsUniform.buffer,
