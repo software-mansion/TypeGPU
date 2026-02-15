@@ -94,14 +94,14 @@ export function createPostProcessingPipelines(
           taaResolveLayout.$.currentTexture,
           clampedCoord,
           0,
-        ).xyz;
+        ).rgb;
         minColor = std.min(minColor, neighbor);
         maxColor = std.max(maxColor, neighbor);
       }
     }
 
-    const clampedHistory = std.clamp(historyColor.xyz, minColor, maxColor);
-    const blended = std.mix(current.xyz, clampedHistory, TAA_BLEND);
+    const clampedHistory = std.clamp(historyColor.rgb, minColor, maxColor);
+    const blended = std.mix(current.rgb, clampedHistory, TAA_BLEND);
 
     std.textureStore(
       taaResolveLayout.$.outputTexture,
@@ -137,11 +137,11 @@ export function createPostProcessingPipelines(
           uv,
           0,
         );
-        const brightness = std.dot(color.xyz, d.vec3f(0.2126, 0.7152, 0.0722));
+        const brightness = std.dot(color.rgb, d.vec3f(0.2126, 0.7152, 0.0722));
         const threshold = bloomParamsAccess.$.threshold;
         const bright = std.max(brightness - threshold, 0) /
           std.max(brightness, 1e-4);
-        const bloomColor = color.xyz.mul(bright);
+        const bloomColor = color.rgb.mul(bright);
         std.textureStore(
           processLayout.$.outputTexture,
           d.vec2u(x, y),
@@ -169,8 +169,8 @@ export function createPostProcessingPipelines(
       uv,
     );
 
-    let final = color.xyz.add(
-      bloomColor.xyz.mul(bloomParamsAccess.$.intensity),
+    let final = color.rgb.add(
+      bloomColor.rgb.mul(bloomParamsAccess.$.intensity),
     );
 
     const centeredUV = uv.sub(0.5).mul(2);
@@ -283,7 +283,7 @@ function createBlurPass(
             uv.add(offset),
             0,
           )
-          .xyz.mul(weight),
+          .rgb.mul(weight),
       );
       totalWeight += weight;
     }

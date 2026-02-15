@@ -88,7 +88,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   skyCol = std.add(skyCol, std.mul(SUN_GLOW, sunGlow));
 
   const cloudCol = raymarch(rayOrigin, rayDir, sunDir);
-  const finalCol = std.add(std.mul(skyCol, 1.1 - cloudCol.w), cloudCol.xyz);
+  const finalCol = std.add(std.mul(skyCol, 1.1 - cloudCol.a), cloudCol.rgb);
 
   return d.vec4f(finalCol, 1.0);
 });

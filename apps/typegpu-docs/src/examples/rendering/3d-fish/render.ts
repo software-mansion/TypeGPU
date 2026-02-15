@@ -94,7 +94,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     layout.$.sampler,
     input.textureUV,
   );
-  const textureColor = textureColorWithAlpha.xyz;
+  const textureColor = textureColorWithAlpha.rgb;
 
   const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
@@ -141,5 +141,5 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);
   }
 
-  return d.vec4f(foggedColor.xyz, 1);
+  return d.vec4f(foggedColor, 1);
 });
