@@ -50,9 +50,7 @@ describe('jelly switch example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       struct Camera {
@@ -120,13 +118,6 @@ describe('jelly switch example', () => {
 
       @group(0) @binding(2) var<uniform> stateUniform: SwitchState;
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(3) var<uniform> lightUniform: DirectionalLight;
-
       fn opRotateAxisAngle(p: vec3f, axis: vec3f, angle: f32) -> vec3f {
         return (mix((axis * dot(p, axis)), p, cos(angle)) + (cross(p, axis) * sin(angle)));
       }
@@ -184,11 +175,18 @@ describe('jelly switch example', () => {
         return getApproxNormal(position, 1e-4f);
       }
 
-      @group(0) @binding(4) var<uniform> jellyColorUniform: vec4f;
+      @group(0) @binding(3) var<uniform> jellyColorUniform: vec4f;
 
       fn sqLength(a: vec3f) -> f32 {
         return dot(a, a);
       }
+
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(4) var<uniform> lightUniform: DirectionalLight;
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
         if ((position.y < -0.03f)) {
@@ -212,7 +210,7 @@ describe('jelly switch example', () => {
         var specular = (lightUniform.color * (specularFactor * 0.6f));
         var baseColor = vec3f(0.8999999761581421);
         var directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
-        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6);
+        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
         var finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
       }
@@ -253,19 +251,13 @@ describe('jelly switch example', () => {
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32) -> vec4f {
         let state = (&stateUniform);
         var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var offsetX = 0f;
-        var offsetZ = 0.05000000074505806f;
-        let lightDir = (&lightUniform.direction);
-        const causticScale = 0.2;
-        offsetX -= ((*lightDir).x * causticScale);
-        offsetZ += ((*lightDir).z * causticScale);
         var newNormal = getNormal(hitPosition);
         let switchX = (((*state).progress - 0.5f) * 0.4f);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(switchX, 0f, 0f)));
         var bounceLight = ((*jellyColor).xyz * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
         var sideBounceLight = (((*jellyColor).xyz * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
-        let emission = ((smoothstep(0.7, 1, (*state).progress) * 2f) + 0.7f);
+        let emission = ((smoothstep(0.7f, 1f, (*state).progress) * 2f) + 0.7f);
         var litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
         var backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
         return vec4f(backgroundColor.xyz, 1f);
@@ -368,11 +360,11 @@ describe('jelly switch example', () => {
             var refractedColor = vec3f();
             if ((k > 0f)) {
               var refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
-              var p = (hitPosition + (refrDir * 2e-3));
-              var exitPos = (p + (refrDir * 2e-3));
+              var p = (hitPosition + (refrDir * 2e-3f));
+              var exitPos = (p + (refrDir * 2e-3f));
               var env = rayMarchNoJelly(exitPos, refrDir);
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).xyz * 1.5);
+              var scatterTint = ((*jellyColor).xyz * 1.5f);
               const density = 20f;
               var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
               let state = (&stateUniform);

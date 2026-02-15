@@ -105,7 +105,7 @@ describe('gravity example', () => {
               var posDiff = (current.position - (*other).position);
               var velDiff = (current.velocity - (*other).velocity);
               let posDiffFactor = ((((2f * (*other).mass) / (current.mass + (*other).mass)) * dot(velDiff, posDiff)) / dot(posDiff, posDiff));
-              current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99);
+              current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99f);
             }
             else {
               let isCurrentAbsorbed = ((current.collisionBehavior == 1u) || ((current.collisionBehavior == 2u) && isSmaller(currentId, otherId)));
@@ -181,6 +181,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: Camera;
@@ -234,6 +236,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera_1: Camera;

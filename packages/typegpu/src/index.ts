@@ -23,7 +23,7 @@ export {
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export {
   isAccessor,
-  isDerived,
+  isLazy,
   isMutableAccessor,
   isSlot,
 } from './core/slot/slotTypes.ts';
@@ -37,6 +37,9 @@ export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
+export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
+export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
 
 // types
@@ -48,6 +51,7 @@ export type {
   ValidateBufferSchema,
   ValidateStorageSchema,
   ValidateUniformSchema,
+  Withable,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -55,7 +59,10 @@ export type {
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+export type {
+  TgpuPrimitiveState,
+  TgpuRenderPipeline,
+} from './core/pipeline/renderPipeline.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type {
   IndexFlag,
@@ -77,11 +84,9 @@ export type {
   TgpuUniform,
 } from './core/buffer/bufferShorthand.ts';
 export type {
-  AccessorIn,
   Eventual,
-  MutableAccessorIn,
   TgpuAccessor,
-  TgpuDerived,
+  TgpuLazy,
   TgpuMutableAccessor,
   TgpuSlot,
 } from './core/slot/slotTypes.ts';
@@ -116,7 +121,11 @@ export type {
   TgpuLayoutTexture,
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';
-export type { TgpuFn, TgpuFnShell } from './core/function/tgpuFn.ts';
+export type {
+  TgpuFn,
+  TgpuFnShell,
+  TgpuGenericFn,
+} from './core/function/tgpuFn.ts';
 export type { TgpuComptime } from './core/function/comptime.ts';
 export type {
   TgpuVertexFn,
@@ -130,8 +139,18 @@ export type {
   TgpuComputeFn,
   TgpuComputeFnShell,
 } from './core/function/tgpuComputeFn.ts';
+export type {
+  AutoFragmentIn,
+  AutoFragmentOut,
+  AutoVertexIn,
+  AutoVertexOut,
+} from './core/function/autoIO.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 export type { Namespace } from './core/resolve/namespace.ts';
 // Exported for being able to track use of these global extensions easier,
 // and to establish a solid contract between tooling using them.
 export type { INTERNAL_GlobalExt } from './shared/meta.ts';
+
+/** @deprecated Use TgpuRenderPipeline.Descriptor */
+export type TgpuRenderPipelineDescriptor =
+  import('./core/pipeline/renderPipeline.ts').TgpuRenderPipeline.Descriptor;

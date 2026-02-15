@@ -65,12 +65,12 @@ describe('xor dev centrifuge example', () => {
           p.x += cameraPos.x;
           p.y += cameraPos.y;
           var coords = vec3f(((atan2(p.y, p.x) * bigStrips) + time), ((p.z * dollyZoom) - (5f * time)), (length(p.xy) - 11f));
-          var coords2 = (cos((coords + cos((coords * smallStrips)))) - 1);
+          var coords2 = (cos((coords + cos((coords * smallStrips)))) - 1f);
           let dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
-          acc = (acc + ((1.2 - cos((color * p.z))) / dd));
+          acc = (acc + ((1.2f - cos((color * p.z))) / dd));
           z += dd;
         }
-        acc = safeTanh((acc * 5e-3));
+        acc = safeTanh((acc * 5e-3f));
         return vec4f(acc, 1f);
       }"
     `);

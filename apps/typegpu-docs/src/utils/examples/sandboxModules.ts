@@ -1,6 +1,7 @@
 import { entries, fromEntries, map, pipe } from 'remeda';
 
 import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';
+// oxlint-disable-next-line import/default
 import dtsWgpuMatrix from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
 
 interface SandboxModuleDefinition {

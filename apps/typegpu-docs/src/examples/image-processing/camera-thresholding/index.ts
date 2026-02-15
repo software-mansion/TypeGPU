@@ -1,5 +1,6 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
@@ -49,14 +50,8 @@ if (navigator.mediaDevices.getUserMedia) {
 const root = await tgpu.init();
 const device = root.device;
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const thresholdBuffer = root.createUniform(d.f32, 0.5);
 const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
@@ -134,12 +129,9 @@ function processVideoFrame(
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .with(
-      textureLayout,
-      root.createBindGroup(textureLayout, {
-        inputTexture: device.importExternalTexture({ source: video }),
-      }),
-    )
+    .with(root.createBindGroup(textureLayout, {
+      inputTexture: device.importExternalTexture({ source: video }),
+    }))
     .draw(3);
 
   spinner.style.display = 'none';
@@ -150,21 +142,21 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    onColorChange: (value: readonly [number, number, number]) => {
-      colorUniform.write(d.vec3f(...value));
+    onColorChange: (value) => {
+      colorUniform.write(value);
     },
-    initial: [0, 1, 0] as const,
+    initial: d.vec3f(0, 1, 0),
   },
   threshold: {
     initial: 0.1,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => thresholdBuffer.write(value),
+    onSliderChange: (value) => thresholdBuffer.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

@@ -108,6 +108,75 @@ describe('d.ref', () => {
     `);
   });
 
+  it('allows updating a struct property from another function', () => {
+    type Entity = d.Infer<typeof Entity>;
+    const Entity = d.struct({ pos: d.vec3f });
+
+    const clearPosition = (entity: d.ref<Entity>) => {
+      'use gpu';
+      entity.pos = d.vec3f();
+    };
+
+    const main = () => {
+      'use gpu';
+      const entity = Entity({ pos: d.vec3f(1, 2, 3) });
+      clearPosition(d.ref(entity));
+      // entity.pos should be vec3f(0, 0, 0)
+      return entity;
+    };
+
+    // Works in JS
+    expect(main().pos).toStrictEqual(d.vec3f(0, 0, 0));
+
+    // And on the GPU
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Entity {
+        pos: vec3f,
+      }
+
+      fn clearPosition(entity: ptr<function, Entity>) {
+        (*entity).pos = vec3f();
+      }
+
+      fn main() -> Entity {
+        var entity = Entity(vec3f(1, 2, 3));
+        clearPosition((&entity));
+        return entity;
+      }"
+    `);
+  });
+
+  it('allows updating a vector component from another function', () => {
+    const clearX = (pos: d.ref<d.v3f>) => {
+      'use gpu';
+      pos.x = 0;
+    };
+
+    const main = () => {
+      'use gpu';
+      const pos = d.vec3f(1, 0, 0);
+      clearX(d.ref(pos));
+      // pos should be vec3f(0, 0, 0)
+      return pos;
+    };
+
+    // Works in JS
+    expect(main()).toStrictEqual(d.vec3f(0, 0, 0));
+
+    // And on the GPU
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn clearX(pos: ptr<function, vec3f>) {
+        (*pos).x = 0f;
+      }
+
+      fn main() -> vec3f {
+        var pos = vec3f(1, 0, 0);
+        clearX((&pos));
+        return pos;
+      }"
+    `);
+  });
+
   it('allows updating a number from another function', () => {
     const increment = (value: d.ref<number>) => {
       'use gpu';
@@ -223,7 +292,7 @@ describe('d.ref', () => {
 
     const main = () => {
       'use gpu';
-      // biome-ignore lint/style/noNonNullAssertion: it's there
+      // oxlint-disable-next-line typescript/no-non-null-assertion it's there
       const pos = layout.$.positions[0]!;
       advance(d.ref(pos));
       d.ref(pos);

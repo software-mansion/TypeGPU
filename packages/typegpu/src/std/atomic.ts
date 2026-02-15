@@ -1,8 +1,13 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
-import { type atomicI32, type atomicU32, Void } from '../data/wgslTypes.ts';
+import {
+  type atomicI32,
+  type atomicU32,
+  type BaseData,
+  isAtomic,
+  Void,
+} from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
@@ -34,7 +39,7 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   name: 'atomicLoad',
   normalImpl: atomicNormalError,
   signature: (a) => {
-    if (a.type !== 'atomic') {
+    if (!isAtomic(a)) {
       throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
     }
     return { argTypes: [a], returnType: a.inner };
@@ -42,8 +47,8 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
 });
 
-const atomicActionSignature = (a: AnyData, param: AnyData) => {
-  if (a.type !== 'atomic') {
+const atomicActionSignature = (a: BaseData) => {
+  if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
   return {
@@ -52,8 +57,8 @@ const atomicActionSignature = (a: AnyData, param: AnyData) => {
   };
 };
 
-const atomicOpSignature = (a: AnyData, param: AnyData) => {
-  if (a.type !== 'atomic') {
+const atomicOpSignature = (a: BaseData) => {
+  if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
   const paramType = a.inner.type === 'u32' ? u32 : i32;

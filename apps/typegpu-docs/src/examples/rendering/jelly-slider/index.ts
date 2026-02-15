@@ -42,22 +42,19 @@ import {
   SURF_DIST,
 } from './constants.ts';
 import { NumberProvider } from './numbers.ts';
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: {
     optionalFeatures: ['timestamp-query'],
   },
 });
+
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const NUM_POINTS = 17;
 
@@ -1004,7 +1001,7 @@ async function autoSetQuaility() {
   return resolutionScale;
 }
 
-export const controls = {
+export const controls = defineControls({
   'Quality': {
     initial: 'Auto',
     options: [
@@ -1015,7 +1012,7 @@ export const controls = {
       'High',
       'Ultra',
     ],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       if (value === 'Auto') {
         autoSetQuaility().then((scale) => {
           qualityScale = scale;
@@ -1041,7 +1038,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
@@ -1051,18 +1048,18 @@ export const controls = {
     },
   },
   'Jelly Color': {
-    initial: [1.0, 0.45, 0.075],
-    onColorChange: (c: [number, number, number]) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+    initial: d.vec3f(1.0, 0.45, 0.075),
+    onColorChange: (c) => {
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Blur': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       blurEnabledUniform.write(d.u32(v));
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);

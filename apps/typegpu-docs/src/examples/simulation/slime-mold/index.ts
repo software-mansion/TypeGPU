@@ -1,18 +1,11 @@
 import { randf } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const resolution = d.vec2f(canvas.width, canvas.height);
 
@@ -295,13 +288,13 @@ requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Move Speed': {
     initial: defaultParams.moveSpeed,
     min: 0,
     max: 100,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ moveSpeed: newValue });
     },
   },
@@ -310,7 +303,7 @@ export const controls = {
     min: 0,
     max: 3.14,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorAngle: newValue });
     },
   },
@@ -319,7 +312,7 @@ export const controls = {
     min: 1,
     max: 50,
     step: 0.5,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorDistance: newValue });
     },
   },
@@ -328,7 +321,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ turnSpeed: newValue });
     },
   },
@@ -337,11 +330,11 @@ export const controls = {
     min: 0,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ evaporationRate: newValue });
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

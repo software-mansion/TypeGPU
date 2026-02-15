@@ -1,20 +1,15 @@
 import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Globals and init
 
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const initialFunctions: Array<{ name: string; color: d.v4f; code: string }> = [
   {
@@ -73,6 +68,7 @@ const computeLayout = tgpu.bindGroupLayout({
 
 const functionExprSlot = tgpu.slot<TgpuRawCodeSnippet<d.F32>>();
 
+// oxlint-disable-next-line no-unused-vars it is used in wgsl
 const interpolatedFunction = (x: number) => {
   'use gpu';
   return functionExprSlot.$;
@@ -153,10 +149,7 @@ const renderBackgroundPipeline = root['~unstable']
   .createPipeline();
 
 let msTexture = device.createTexture({
-  size: [
-    canvas.clientWidth * window.devicePixelRatio,
-    canvas.clientHeight * window.devicePixelRatio,
-  ],
+  size: [canvas.width, canvas.height],
   sampleCount: 4,
   format: presentationFormat,
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -429,10 +422,7 @@ const resizeObserver = new ResizeObserver(() => {
 
   msTexture.destroy();
   msTexture = device.createTexture({
-    size: [
-      canvas.clientWidth * window.devicePixelRatio,
-      canvas.clientHeight * window.devicePixelRatio,
-    ],
+    size: [canvas.width, canvas.height],
     sampleCount: 4,
     format: presentationFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -444,7 +434,7 @@ resizeObserver.observe(canvas);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   [initialFunctions[0].name]: {
     initial: initialFunctions[0].code,
     async onTextChange(value: string) {
@@ -473,11 +463,10 @@ export const controls = {
     },
   },
   'interpolation points count': {
-    initial: '256',
-    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange(value: string) {
-      const num = Number.parseInt(value);
-      properties.interpolationPoints = num;
+    initial: 256,
+    options: [4, 16, 64, 256, 1024, 4096],
+    onSelectChange(value) {
+      properties.interpolationPoints = value;
 
       const oldBuffers = lineVerticesBuffers;
       lineVerticesBuffers = createLineVerticesBuffers();
@@ -493,7 +482,7 @@ export const controls = {
       );
     },
   },
-};
+});
 
 export function onCleanup() {
   destroyed = true;

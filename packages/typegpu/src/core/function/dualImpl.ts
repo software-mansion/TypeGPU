@@ -1,16 +1,17 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
+import { concretize } from '../../tgsl/generationHelpers.ts';
 import {
   type DualFn,
   isKnownAtComptime,
   NormalState,
   type ResolutionCtx,
 } from '../../types.ts';
+import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
-type MapValueToDataType<T> = { [K in keyof T]: AnyData };
+type MapValueToDataType<T> = { [K in keyof T]: BaseData };
 type AnyFn = (...args: never[]) => unknown;
 
 interface DualImplOptions<T extends AnyFn> {
@@ -21,10 +22,13 @@ interface DualImplOptions<T extends AnyFn> {
     args: MapValueToSnippet<Parameters<T>>,
   ) => string;
   readonly signature:
-    | { argTypes: AnyData[]; returnType: AnyData }
+    | {
+      argTypes: (BaseData | BaseData[])[];
+      returnType: BaseData;
+    }
     | ((
       ...inArgTypes: MapValueToDataType<Parameters<T>>
-    ) => { argTypes: AnyData[]; returnType: AnyData });
+    ) => { argTypes: (BaseData | BaseData[])[]; returnType: BaseData });
   /**
    * Whether the function should skip trying to execute the "normal" implementation if
    * all arguments are known at compile time.
@@ -64,7 +68,7 @@ export function dualImpl<T extends AnyFn>(
         ? options.signature(
           ...args.map((s) => {
             // Dereference implicit pointers
-            if (s.dataType.type === 'ptr' && s.dataType.implicit) {
+            if (isPtr(s.dataType) && s.dataType.implicit) {
               return s.dataType.inner;
             }
             return s.dataType;
@@ -112,7 +116,7 @@ export function dualImpl<T extends AnyFn>(
 
       return snip(
         options.codegenImpl(ctx, converted),
-        returnType,
+        concretize(returnType),
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
       );

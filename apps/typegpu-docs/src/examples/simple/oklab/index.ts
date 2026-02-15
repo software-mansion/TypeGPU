@@ -6,9 +6,11 @@ import {
   oklabToRgb,
 } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
+const root = await tgpu.init();
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const cssProbe = document.querySelector('#css-probe') as HTMLDivElement;
@@ -20,7 +22,7 @@ if (canvas.parentElement) {
   canvas.parentElement.appendChild(cssProbe);
   canvas.parentElement.appendChild(probePositionText);
 }
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cleanupController = new AbortController();
 
@@ -95,30 +97,21 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(std.select(color, color.mul(patternScaled), outOfGamut), 1);
 });
 
-const root = await tgpu.init();
-
 const uniforms = root.createUniform(d.struct({
   hue: d.f32,
   alpha: d.f32,
 }));
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const uniformsValue = {
   hue: 0.7,
   alpha: 0.05,
 };
 
-let pipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(mainFragment, {
-    format: presentationFormat,
-  })
-  .createPipeline();
+let pipeline = root['~unstable'].createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+});
 
 function setPipeline({
   outOfGamutPattern,
@@ -131,11 +124,11 @@ function setPipeline({
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
     .with(oklabGamutClipAlphaAccess, () => uniforms.$.alpha)
-    .withVertex(common.fullScreenTriangle, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-    })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: mainFragment,
+      targets: { format: presentationFormat },
+    });
 }
 
 function draw() {
@@ -190,7 +183,7 @@ const selections = {
   outOfGamutPattern: patternL0ProjectionLines,
 };
 
-export const controls = {
+export const controls = defineControls({
   Hue: {
     initial: 0,
     min: 0,
@@ -203,9 +196,11 @@ export const controls = {
     },
   },
   'Gamut Clip': {
+    initial: 'Ad. L 0.5',
     options: Object.keys(gamutClipOptions),
-    onSelectChange: (selected: keyof typeof gamutClipOptions) => {
-      selections.gamutClip = gamutClipOptions[selected];
+    onSelectChange: (selected) => {
+      selections.gamutClip =
+        gamutClipOptions[selected as keyof typeof gamutClipOptions];
       setPipeline(selections);
       draw();
     },
@@ -222,14 +217,17 @@ export const controls = {
     },
   },
   'Out of Gamut Pattern': {
+    initial: 'Checker',
     options: Object.keys(outOfGamutPatternOptions),
-    onSelectChange: (selected: keyof typeof outOfGamutPatternOptions) => {
-      selections.outOfGamutPattern = outOfGamutPatternOptions[selected];
+    onSelectChange: (selected) => {
+      selections.outOfGamutPattern = outOfGamutPatternOptions[
+        selected as keyof typeof outOfGamutPatternOptions
+      ];
       setPipeline(selections);
       draw();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

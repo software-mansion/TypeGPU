@@ -144,22 +144,22 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer<T extends TgpuBuffer<AnyData>>(
+export function isBuffer<T extends TgpuBuffer<BaseData>>(
   value: T | unknown,
 ): value is T {
-  return (value as TgpuBuffer<AnyData>).resourceType === 'buffer';
+  return (value as T).resourceType === 'buffer';
 }
 
-export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & VertexFlag {
-  return !!(buffer as unknown as VertexFlag).usableAsVertex;
+  return !!(buffer as T).usableAsVertex;
 }
 
-export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & IndexFlag {
-  return !!(buffer as unknown as IndexFlag).usableAsIndex;
+  return !!(buffer as T).usableAsIndex;
 }
 
 // --------------
@@ -167,7 +167,7 @@ export function isUsableAsIndex<T extends TgpuBuffer<AnyData>>(
 // --------------
 const endianness = getSystemEndianness();
 
-class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
+class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   public readonly [$internal] = true;
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST |

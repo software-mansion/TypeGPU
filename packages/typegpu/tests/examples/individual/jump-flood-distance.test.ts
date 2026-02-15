@@ -63,7 +63,7 @@ describe('jump flood (distance) example', () => {
         var dims = textureDimensions(tex);
         var samplePos = (pos + offset);
         let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
-        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1)));
+        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
         var loaded = textureLoad(tex, safePos);
         var inside = loaded.xy;
         var outside = loaded.zw;
@@ -205,7 +205,7 @@ describe('jump flood (distance) example', () => {
           baseColor = insideBase;
         }
         let contourFreq = (maxDist / 12f);
-        let contour = smoothstep(0, 0.15, abs((fract((unsigned / contourFreq)) - 0.5f)));
+        let contour = smoothstep(0f, 0.15f, abs((fract((unsigned / contourFreq)) - 0.5f)));
         var color = (baseColor * (0.7f + (0.3f * contour)));
         return vec4f(color, 1f);
       }"

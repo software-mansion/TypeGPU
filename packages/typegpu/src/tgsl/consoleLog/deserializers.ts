@@ -19,6 +19,7 @@ import {
 } from '../../data/vector.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   isWgslArray,
   isWgslData,
   isWgslStruct,
@@ -106,9 +107,10 @@ const deserializerMap: DeserializerMap = {
  */
 function deserialize(
   data: Uint32Array,
-  dataType: AnyWgslData,
+  dataType: BaseData,
 ): unknown {
-  const maybeDeserializer = deserializerMap[dataType.type];
+  const maybeDeserializer =
+    deserializerMap[dataType.type as AnyWgslData['type']];
   if (maybeDeserializer) {
     return maybeDeserializer(data);
   }
@@ -142,7 +144,7 @@ function deserialize(
  */
 function deserializeCompound(
   data: Uint32Array,
-  dataTypes: (AnyWgslData | string)[],
+  dataTypes: (BaseData | string)[],
 ): unknown[] {
   let index = 0;
   return dataTypes.map((info) => {
@@ -188,12 +190,12 @@ export function logDataFromGPU(resources: LogResources) {
         if (results.length === 0) {
           results.push('');
         }
-        console[op](...[
+        console[op](
           `%c${options.messagePrefix}%c ${results[0]}`,
           'background: #936ff5; color: white;',
           'color: inherit; background: none',
           ...results.slice(1),
-        ]);
+        );
       });
   });
 

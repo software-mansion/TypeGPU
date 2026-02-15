@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   unstable_logOptions: {
@@ -35,17 +36,11 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(0.769, 0.392, 1.0, 1);
 });
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'One argument': {
     onButtonClick: () =>
       root['~unstable'].createGuardedComputePipeline(() => {
@@ -213,18 +208,16 @@ export const controls = {
   },
   'Render pipeline': {
     onButtonClick: () => {
-      const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-      context.configure({
-        device: root.device,
-        format: presentationFormat,
+      const context = root.configureContext({
+        canvas,
         alphaMode: 'premultiplied',
       });
 
-      const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
-        .withFragment(mainFragment, { format: presentationFormat })
-        .createPipeline();
+      const pipeline = root['~unstable'].createRenderPipeline({
+        vertex: mainVertex,
+        fragment: mainFragment,
+        targets: { format: presentationFormat },
+      });
 
       pipeline
         .withColorAttachment({
@@ -238,10 +231,11 @@ export const controls = {
   },
   'Draw indexed': {
     onButtonClick: () => {
-      const pipeline = root['~unstable']
-        .withVertex(mainVertex, {})
-        .withFragment(mainFragment, { format: presentationFormat })
-        .createPipeline();
+      const pipeline = root['~unstable'].createRenderPipeline({
+        vertex: mainVertex,
+        fragment: mainFragment,
+        targets: { format: presentationFormat },
+      });
 
       const indexBuffer = root
         .createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2])
@@ -266,7 +260,7 @@ export const controls = {
         console.log('Log 3 from thread', x);
       }).dispatchThreads(16),
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

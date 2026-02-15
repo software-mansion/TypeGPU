@@ -1,3 +1,4 @@
+// oxlint-disable typescript/no-explicit-any
 // deno-fmt-ignore-file
 // @ts-nocheck
 // Generated automatically by nearley, version 2.20.1
@@ -353,7 +354,7 @@ const grammar: Grammar = {
     {"name": "continue_statement", "symbols": [{"literal":"continue"}], "postprocess": () => ({ type: 'continue_statement' })},
     {"name": "while_statement$ebnf$1", "symbols": []},
     {"name": "while_statement$ebnf$1", "symbols": ["while_statement$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "while_statement", "symbols": ["while_statement$ebnf$1", {"literal":"while"}, "expression", "compound_statement"], "postprocess": ([attrs, , expression, body]) => ({ type: 'while_statement', expression, body })},
+    {"name": "while_statement", "symbols": ["while_statement$ebnf$1", {"literal":"while"}, "expression", "compound_statement"], "postprocess": ([, , expression, body]) => ({ type: 'while_statement', expression, body })},
     {"name": "variable_updating_statement", "symbols": ["assignment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["increment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["decrement_statement"], "postprocess": id},

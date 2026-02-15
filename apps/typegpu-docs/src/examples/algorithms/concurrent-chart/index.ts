@@ -89,7 +89,7 @@ function drawCharts() {
     ? [0, 0, 0, 0, 0]
     : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
 
-  const reversedLabels = yAxisLabels.slice().reverse();
+  const reversedLabels = yAxisLabels.slice().toReversed();
   for (let index = 0; index < reversedLabels.length; index++) {
     const label = reversedLabels[index];
     label.textContent = yAxisTicks[index].toFixed(1);

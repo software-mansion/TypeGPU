@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
-import { describe, expect } from 'vitest';
-import { d, std, tgpu } from '../src/index.ts';
+import { describe, expect, expectTypeOf } from 'vitest';
+import tgpu, { d, std, type TgpuAccessor } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 const RED = d.vec3f(1, 0, 0);
@@ -514,6 +513,31 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         let hello = image.pixels[4].x;
+      }"
+    `);
+  });
+
+  it('allows for arbitrarily nested access functions', ({ root }) => {
+    const counterMutable = root.createMutable(d.u32);
+
+    const counterAccess = tgpu['~unstable'].accessor(
+      d.u32,
+      () => () => () => counterMutable.$,
+    );
+
+    const main = () => {
+      'use gpu';
+      return counterAccess.$ / 2;
+    };
+
+    expectTypeOf(counterAccess).toEqualTypeOf<TgpuAccessor<d.U32>>();
+    expectTypeOf<typeof counterAccess.$>().toEqualTypeOf<number>();
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> counterMutable: u32;
+
+      fn main() -> f32 {
+        return (f32(counterMutable) / 2f);
       }"
     `);
   });

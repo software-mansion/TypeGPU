@@ -1,10 +1,10 @@
 import { sdRoundedBox2d } from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
@@ -55,12 +55,6 @@ const defaultParams = {
 };
 
 const paramsUniform = root.createUniform(Params, defaultParams);
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const Weights = d.struct({
   inside: d.f32,
@@ -162,12 +156,11 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     .add(normalSample.mul(weights.outside));
 });
 
-const pipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(fragmentShader, {
-    format: presentationFormat,
-  })
-  .createPipeline();
+const pipeline = root['~unstable'].createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
 let isRectangleFixed = false;
 
@@ -220,15 +213,15 @@ function render() {
 }
 frameId = requestAnimationFrame(render);
 
-export const controls = {
+export const controls = defineControls({
   'Rectangle dims': {
     initial: defaultParams.rectDims,
     min: d.vec2f(0.01, 0.01),
     max: d.vec2f(0.5, 0.5),
     step: d.vec2f(0.01, 0.01),
-    onVectorSliderChange: (v: [number, number]) => {
+    onVectorSliderChange: (v) => {
       paramsUniform.writePartial({
-        rectDims: d.vec2f(...v),
+        rectDims: d.vec2f(...(v as [number, number])),
       });
     },
   },
@@ -237,7 +230,7 @@ export const controls = {
     min: 0.0,
     max: 0.05,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         radius: v,
       });
@@ -248,7 +241,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         start: v,
       });
@@ -259,7 +252,7 @@ export const controls = {
     min: 0.0,
     max: 0.2,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         end: v,
       });
@@ -270,7 +263,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         chromaticStrength: v,
       });
@@ -281,7 +274,7 @@ export const controls = {
     min: 0.0,
     max: 0.2,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         refractionStrength: v,
       });
@@ -292,7 +285,7 @@ export const controls = {
     min: 0.0,
     max: 6.0,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ blur: v });
     },
   },
@@ -301,7 +294,7 @@ export const controls = {
     min: 0.0,
     max: 1.0,
     step: 0.05,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ edgeBlurMultiplier: v });
     },
   },
@@ -310,7 +303,7 @@ export const controls = {
     min: 0.0,
     max: 3.0,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ edgeFeather: v });
     },
   },
@@ -319,17 +312,19 @@ export const controls = {
     min: 0.0,
     max: 1.0,
     step: 0.01,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ tintStrength: v });
     },
   },
   'Tint color': {
     initial: defaultParams.tintColor,
-    onColorChange: (rgb: [number, number, number]) => {
-      paramsUniform.writePartial({ tintColor: d.vec3f(...rgb) });
+    onColorChange: (rgb) => {
+      paramsUniform.writePartial({
+        tintColor: d.vec3f(...(rgb as [number, number, number])),
+      });
     },
   },
-};
+});
 
 export function onCleanup() {
   if (frameId) {

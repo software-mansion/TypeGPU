@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -111,14 +112,8 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 })((input) => input.color);
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
@@ -182,11 +177,7 @@ const simulate = (index: number) => {
   let alignmentCount = 0;
   let cohesionCount = 0;
 
-  for (let i = d.u32(0); i < layout.$.currentTrianglePos.length; i++) {
-    if (i === index) {
-      continue;
-    }
-    const other = layout.$.currentTrianglePos[i];
+  for (const other of layout.$.currentTrianglePos) {
     const dist = std.distance(instanceInfo.position, other.position);
     if (dist < params.$.separationDistance) {
       separation = std.add(
@@ -286,7 +277,7 @@ frame();
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   Randomize: {
     onButtonClick: () => randomizePositions(),
   },
@@ -326,7 +317,7 @@ export const controls = {
   '🟥🟦': {
     onButtonClick: () => colorPalette.write(colorPresets.hotcold),
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

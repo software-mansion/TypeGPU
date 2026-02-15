@@ -39,11 +39,9 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-    const myPipeline = root['~unstable']
-      .withCompute(
-        tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
-      )
-      .createPipeline();
+    const myPipeline = root['~unstable'].createComputePipeline({
+      compute: tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+    });
     const myGuardedPipeline = root['~unstable']
       .createGuardedComputePipeline(() => {
         'use gpu';
@@ -136,7 +134,6 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    // biome-ignore lint/style/useConst: it's a test
     let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
@@ -168,7 +165,6 @@ describe('autonaming', () => {
   });
 
   it('names function expression', () => {
-    // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
       'use gpu';
       return 0;
