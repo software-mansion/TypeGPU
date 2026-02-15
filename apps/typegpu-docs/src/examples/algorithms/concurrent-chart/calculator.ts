@@ -29,9 +29,9 @@ export async function performCalculationsWithTime(
   const jsTime = performance.now() - jsStartTime;
 
   // GPU Version
-  initCache(root, { operation: std.add, identityElement: 0 }, true);
+  initCache(root, { operation: std.add, identityElement: 0 });
+  const querySet = root.createQuerySet('timestamp', 2);
   const gpuStartTime = performance.now();
-  let timestampPromise: Promise<bigint[]> = Promise.resolve([]);
   const calcResult = prefixScan(
     root,
     {
@@ -40,15 +40,14 @@ export async function performCalculationsWithTime(
       operation: std.add,
       identityElement: 0,
     },
-    (timeTgpuQuery) => {
-      timestampPromise = timeTgpuQuery.read();
-    },
+    querySet,
   );
+  querySet.resolve();
   await root.device.queue.onSubmittedWorkDone();
   const gpuTime = performance.now() - gpuStartTime;
   // Compare results
   const gpuResult = await calcResult.read();
-  const timestamps = await timestampPromise;
+  const timestamps = await querySet.read();
   const gpuShaderTime = Number(timestamps[1] - timestamps[0]) / 1_000_000;
   const isEqual = compareArrayWithBuffer(jsResult, gpuResult);
   return {

@@ -1,29 +1,27 @@
 import tgpu from 'typegpu';
 import {
-  calculateIndex,
   identitySlot,
   operatorSlot,
   scanLayout,
-  workgroupSize,
+  WORKGROUP_SIZE,
 } from '../schemas.ts';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const workgroupMemory = tgpu['~unstable'].workgroupVar(
-  d.arrayOf(d.f32, workgroupSize),
+const workgroupMemory = tgpu.workgroupVar(
+  d.arrayOf(d.f32, WORKGROUP_SIZE),
 );
 
 export const scanBlock = tgpu['~unstable'].computeFn({
-  workgroupSize: [workgroupSize],
+  workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
     lid: d.builtin.localInvocationId,
-    nwg: d.builtin.numWorkgroups,
     wid: d.builtin.workgroupId,
   },
-})(({ gid, lid, nwg, wid }) => {
-  const globalIdx = calculateIndex(gid, nwg);
-  const globalWid = calculateIndex(wid, nwg);
+})(({ gid, lid, wid }) => {
+  const globalIdx = gid.x;
+  const workgroupId = wid.x;
   const localIdx = lid.x;
   const arrayLength = scanLayout.$.input.length;
   let offset = d.u32(1);
@@ -47,13 +45,13 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   workgroupMemory.$[localIdx] = partialSums[7] as number;
 
   // Upsweep
-  for (let d_val = d.u32(workgroupSize / 2); d_val > 0; d_val >>= 1) {
+  for (let d_val = d.u32(WORKGROUP_SIZE / 2); d_val > 0; d_val >>= 1) {
     std.workgroupBarrier();
     if (localIdx < d_val) {
       const ai = offset * (2 * localIdx + 1) - 1;
       const bi = offset * (2 * localIdx + 2) - 1;
       workgroupMemory.$[bi] = operatorSlot.$(
-        workgroupMemory.$[ai],
+        workgroupMemory.$[ai] as number,
         workgroupMemory.$[bi] as number,
       );
     }
@@ -61,21 +59,24 @@ export const scanBlock = tgpu['~unstable'].computeFn({
   }
 
   if (localIdx === 0) {
-    scanLayout.$.sums[globalWid] = workgroupMemory
-      .$[workgroupSize - 1] as number;
-    workgroupMemory.$[workgroupSize - 1] = d.f32(identitySlot.$);
+    scanLayout.$.sums[workgroupId] = workgroupMemory
+      .$[WORKGROUP_SIZE - 1] as number;
+    workgroupMemory.$[WORKGROUP_SIZE - 1] = d.f32(identitySlot.$);
   }
 
   // Downsweep
-  for (let d_val = d.u32(1); d_val < workgroupSize; d_val <<= 1) {
+  for (let d_val = d.u32(1); d_val < WORKGROUP_SIZE; d_val <<= 1) {
     offset >>= 1;
     std.workgroupBarrier();
     if (localIdx < d_val) {
       const ai = offset * (2 * localIdx + 1) - 1;
       const bi = offset * (2 * localIdx + 2) - 1;
-      const t = workgroupMemory.$[ai];
+      const t = workgroupMemory.$[ai] as number;
       workgroupMemory.$[ai] = workgroupMemory.$[bi] as number;
-      workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi], t);
+      workgroupMemory.$[bi] = operatorSlot.$(
+        workgroupMemory.$[bi] as number,
+        t,
+      );
     }
   }
 
