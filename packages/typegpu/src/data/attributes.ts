@@ -167,7 +167,7 @@ export function align<TAlign extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@align',
     params: [alignment],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -191,7 +191,7 @@ export function size<TSize extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@size',
     params: [size],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -208,7 +208,7 @@ export function size<TSize extends number, TData extends AnyData>(
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
  */
-export function location<TLocation extends number, TData extends AnyData>(
+export function location<TLocation extends number, TData extends BaseData>(
   location: TLocation,
   data: TData,
 ): Decorate<TData, Location<TLocation>> {
@@ -216,7 +216,7 @@ export function location<TLocation extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@location',
     params: [location],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -279,7 +279,7 @@ export function interpolate<
     [$internal]: true,
     type: '@interpolate',
     params: [interpolationType],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -322,7 +322,7 @@ export function invariant(
     [$internal]: true,
     type: '@invariant',
     params: [],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 

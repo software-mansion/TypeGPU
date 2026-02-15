@@ -15,17 +15,13 @@ import {
   SampleResult,
   VisualizationParams,
 } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 let brushSize = 1;
 let isDrawing = false;
@@ -473,7 +469,7 @@ function updateBrushSize() {
   });
 }
 
-export const controls = {
+export const controls = defineControls({
   Clear: {
     onButtonClick: clearCanvas,
   },
@@ -495,6 +491,7 @@ export const controls = {
     },
   },
   'Show negative distance': {
+    initial: false,
     onToggleChange(value: boolean) {
       paramsUniform.writePartial({ showInside: value ? 1 : 0 });
       render();
@@ -510,7 +507,7 @@ export const controls = {
       updateBrushSize();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

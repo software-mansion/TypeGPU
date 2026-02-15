@@ -19,7 +19,12 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { $gpuCallable, isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $providing,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
@@ -30,6 +35,7 @@ import {
   tryConvertSnippet,
 } from './conversion.ts';
 import {
+  ArrayExpression,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -40,6 +46,11 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { isGenericFn } from '../core/function/tgpuFn.ts';
+import type { AnyFn } from '../core/function/fnTypes.ts';
+import { arrayLength } from '../std/array.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
+import { mathToStd } from './math.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -136,7 +147,7 @@ function operatorToType<
   TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
-    if (op === '!' || op === '~') {
+    if (op === '!') {
       return bool;
     }
 
@@ -156,7 +167,7 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call,
-  'void': () => snip('', wgsl.Void, 'constant'),
+  'void': () => snip(undefined, wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
@@ -194,6 +205,7 @@ class WgslGenerator implements ShaderGenerator {
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))
+        .filter((statement) => statement.length > 0)
         .join('\n');
       this.ctx.dedent();
       return `{
@@ -262,6 +274,10 @@ ${this.ctx.pre}}`;
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
+    if (id === 'undefined') {
+      return snip(undefined, wgsl.Void, 'constant');
+    }
+
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -277,13 +293,19 @@ ${this.ctx.pre}}`;
    */
   public typedExpression(
     expression: tinyest.Expression,
-    expectedType: wgsl.BaseData,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
 
     try {
       const result = this.expression(expression);
+      if (expectedType instanceof AutoStruct) {
+        // We provide a certain AutoStruct object to later
+        // investigate what props were accessed. No need to
+        // convert the result.
+        return result;
+      }
       return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
@@ -443,6 +465,21 @@ ${this.ctx.pre}}`;
         );
       }
 
+      if (target.value === Math) {
+        if (property in mathToStd && mathToStd[property]) {
+          return snip(
+            mathToStd[property],
+            UnknownData,
+            /* origin */ 'runtime',
+          );
+        }
+        if (typeof Math[property as keyof typeof Math] === 'function') {
+          throw new Error(
+            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
+          );
+        }
+      }
+
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
@@ -496,21 +533,21 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const callee = this.expression(calleeNode);
 
-      if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
-        // Struct/array schema call.
+      if (wgsl.isWgslStruct(callee.value)) {
+        // Struct schema call.
         if (argNodes.length > 1) {
           throw new WgslTypeError(
-            'Array and struct schemas should always be called with at most 1 argument',
+            'Struct schemas should always be called with at most 1 argument',
           );
         }
 
         // No arguments `Struct()`, resolve struct name and return.
         if (!argNodes[0]) {
-          // the schema becomes the data type
+          // The schema becomes the data type.
           return snip(
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
-            // A new struct, so not a reference
+            // A new struct, so not a reference.
             /* origin */ 'runtime',
           );
         }
@@ -525,7 +562,54 @@ ${this.ctx.pre}}`;
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
-          // A new struct, so not a reference
+          // A new struct, so not a reference.
+          /* origin */ 'runtime',
+        );
+      }
+
+      if (wgsl.isWgslArray(callee.value)) {
+        // Array schema call.
+        if (argNodes.length > 1) {
+          throw new WgslTypeError(
+            'Array schemas should always be called with at most 1 argument',
+          );
+        }
+
+        // No arguments `array<...>()`, resolve array type and return.
+        if (!argNodes[0]) {
+          // The schema becomes the data type.
+          return snip(
+            `${this.ctx.resolve(callee.value).value}()`,
+            callee.value,
+            // A new array, so not a reference.
+            /* origin */ 'runtime',
+          );
+        }
+
+        const arg = this.typedExpression(
+          argNodes[0],
+          callee.value,
+        );
+
+        // `d.arrayOf(...)([...])`.
+        // We don't resolve the ArrayExpression object itself to
+        // avoid reference checks (we're copying so it's fine)
+        if (arg.value instanceof ArrayExpression) {
+          return snip(
+            stitch`${
+              this.ctx.resolve(callee.value).value
+            }(${arg.value.elements})`,
+            arg.dataType,
+            /* origin */ 'runtime',
+          );
+        }
+
+        // `d.arrayOf(...)(otherArr)`.
+        // We just let the argument resolve everything.
+        return snip(
+          this.ctx.resolve(arg.value, callee.value).value,
+          callee.value,
+          // A new array, so not a reference.
           /* origin */ 'runtime',
         );
       }
@@ -590,31 +674,49 @@ ${this.ctx.pre}}`;
         }
       }
 
-      if (!isMarkedInternal(callee.value)) {
-        const args = argNodes.map((arg) => this.expression(arg));
-        const shellless = this.ctx.shelllessRepo.get(
-          callee.value as (...args: never[]) => unknown,
-          args,
-        );
-        if (shellless) {
-          const converted = args.map((s, idx) => {
-            const argType = shellless.argTypes[idx] as wgsl.BaseData;
-            return tryConvertSnippet(
-              this.ctx,
-              s,
-              argType,
-              /* verbose */ false,
-            );
-          });
+      const isGeneric = isGenericFn(callee.value);
+      if (!isMarkedInternal(callee.value) || isGeneric) {
+        const slotPairs = isGeneric
+          ? (callee.value[$providing]?.pairs ?? [])
+          : [];
+        const callback = isGeneric
+          ? callee.value[$internal].inner
+          : (callee.value as AnyFn);
 
-          return this.ctx.withResetIndentLevel(() => {
-            const snippet = this.ctx.resolve(shellless);
-            return snip(
-              stitch`${snippet.value}(${converted})`,
-              snippet.dataType,
-              /* origin */ 'runtime',
-            );
-          });
+        const shelllessCall = this.ctx.withRenamed(
+          callback,
+          getName(callee.value),
+          () =>
+            this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
+              const args = argNodes.map((arg) => this.expression(arg));
+              const shellless = this.ctx.shelllessRepo.get(callback, args);
+              if (!shellless) {
+                return undefined;
+              }
+
+              const converted = args.map((s, idx) => {
+                const argType = shellless.argTypes[idx] as wgsl.BaseData;
+                return tryConvertSnippet(
+                  this.ctx,
+                  s,
+                  argType,
+                  /* verbose */ false,
+                );
+              });
+
+              return this.ctx.withResetIndentLevel(() => {
+                const snippet = this.ctx.resolve(shellless);
+                return snip(
+                  stitch`${snippet.value}(${converted})`,
+                  snippet.dataType,
+                  /* origin */ 'runtime',
+                );
+              });
+            }),
+        );
+
+        if (shelllessCall) {
+          return shelllessCall;
         }
       }
 
@@ -628,40 +730,76 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.objectExpr) {
       // Object Literal
       const obj = expression[1];
-
       const structType = this.ctx.expectedType;
 
-      if (!structType || !wgsl.isWgslStruct(structType)) {
-        throw new WgslTypeError(
-          `No target type could be inferred for object with keys [${
-            Object.keys(obj).join(', ')
-          }], please wrap the object in the corresponding schema.`,
+      if (structType instanceof AutoStruct) {
+        const entries = Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => {
+            let accessed = structType.accessProp(key);
+            let expr: Snippet;
+            if (accessed) {
+              // Generating the expression expecting a specific type
+              expr = this.typedExpression(value, accessed.type);
+            } else {
+              // Generating the expression and inferring the type instead
+              expr = this.expression(value);
+              if (expr.dataType === UnknownData) {
+                throw new WgslTypeError(
+                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                );
+              }
+              accessed = structType.provideProp(key, concretize(expr.dataType));
+            }
+
+            return [accessed.prop, expr];
+          }),
+        );
+
+        const completeStruct = structType.completeStruct;
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          completeStruct,
+          entries,
+        );
+
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          completeStruct,
+          /* origin */ 'runtime',
         );
       }
 
-      const entries = Object.fromEntries(
-        Object.entries(structType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new WgslTypeError(
-              `Missing property ${key} in object literal for struct ${structType}`,
-            );
-          }
-          const result = this.typedExpression(val, value);
-          return [key, result];
-        }),
-      );
+      if (wgsl.isWgslStruct(structType)) {
+        const entries = Object.fromEntries(
+          Object.entries(structType.propTypes).map(([key, value]) => {
+            const val = obj[key];
+            if (val === undefined) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const result = this.typedExpression(val, value);
+            return [key, result];
+          }),
+        );
 
-      const convertedSnippets = convertStructValues(
-        this.ctx,
-        structType,
-        entries,
-      );
+        const convertedSnippets = convertStructValues(
+          this.ctx,
+          structType,
+          entries,
+        );
 
-      return snip(
-        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
-        structType,
-        /* origin */ 'runtime',
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          structType,
+          /* origin */ 'runtime',
+        );
+      }
+
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${
+          Object.keys(obj).join(', ')
+        }], please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -686,25 +824,9 @@ ${this.ctx.pre}}`;
         }
       } else {
         // The array is not typed, so we try to guess the types.
-        const valuesSnippets = valueNodes.map((value) => {
-          const snippet = this.expression(value as tinyest.Expression);
-          // We check if there are no references among the elements
-          if (
-            (snippet.origin === 'argument' &&
-              !wgsl.isNaturallyEphemeral(snippet.dataType)) ||
-            !isEphemeralSnippet(snippet)
-          ) {
-            const snippetStr =
-              this.ctx.resolve(snippet.value, snippet.dataType).value;
-            const snippetType =
-              this.ctx.resolve(concretize(snippet.dataType as wgsl.BaseData))
-                .value;
-            throw new WgslTypeError(
-              `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
-            );
-          }
-          return snippet;
-        });
+        const valuesSnippets = valueNodes.map((value) =>
+          this.expression(value as tinyest.Expression)
+        );
 
         if (valuesSnippets.length === 0) {
           throw new WgslTypeError(
@@ -723,13 +845,17 @@ ${this.ctx.pre}}`;
         elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
-      const arrayType = `array<${
-        this.ctx.resolve(elemType).value
-      }, ${values.length}>`;
+      const arrayType = arrayOf(
+        elemType as wgsl.AnyWgslData,
+        values.length,
+      );
 
       return snip(
-        stitch`${arrayType}(${values})`,
-        arrayOf(elemType as wgsl.AnyWgslData, values.length),
+        new ArrayExpression(
+          arrayType,
+          values,
+        ),
+        arrayType,
         /* origin */ 'runtime',
       );
     }
@@ -770,8 +896,9 @@ ${this.ctx.pre}}`;
     statement: tinyest.Statement,
   ): string {
     if (typeof statement === 'string') {
-      const resolved = this.ctx.resolve(this.identifier(statement).value).value;
-      return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+      const id = this.identifier(statement);
+      const resolved = id.value && this.ctx.resolve(id.value).value;
+      return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
     if (typeof statement === 'boolean') {
@@ -784,10 +911,7 @@ ${this.ctx.pre}}`;
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
         let returnSnippet = expectedReturnType
-          ? this.typedExpression(
-            returnNode,
-            expectedReturnType,
-          )
+          ? this.typedExpression(returnNode, expectedReturnType)
           : this.expression(returnNode);
 
         if (returnSnippet.value instanceof RefOperator) {
@@ -1039,6 +1163,131 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
     }
 
+    if (statement[0] === NODE.forOf) {
+      const [_, loopVar, iterable, body] = statement;
+      const iterableSnippet = this.expression(iterable);
+
+      if (isEphemeralSnippet(iterableSnippet)) {
+        throw new Error(
+          '`for ... of ...` loops only support iterables stored in variables',
+        );
+      }
+
+      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
+      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
+      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
+      // so we can safely use `i`.
+      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
+      while (this.ctx.getById(index) !== null) {
+        index += 'i';
+      }
+
+      const elementSnippet = accessIndex(
+        iterableSnippet,
+        snip(index, u32, 'runtime'),
+      );
+      if (!elementSnippet) {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+
+      const iterableDataType = iterableSnippet.dataType;
+      let elementCountSnippet: Snippet;
+      let elementType = elementSnippet.dataType;
+
+      if (elementType === UnknownData) {
+        throw new WgslTypeError(
+          stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+        );
+      }
+
+      if (wgsl.isWgslArray(iterableDataType)) {
+        elementCountSnippet = iterableDataType.elementCount > 0
+          ? snip(
+            `${iterableDataType.elementCount}`,
+            u32,
+            'constant',
+          )
+          : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
+      } else if (wgsl.isVec(iterableDataType)) {
+        elementCountSnippet = snip(
+          `${Number(iterableDataType.type.match(/\d/))}`,
+          u32,
+          'constant',
+        );
+      } else {
+        throw new WgslTypeError(
+          '`for ... of ...` loops only support array or vector iterables',
+        );
+      }
+
+      if (loopVar[0] !== NODE.const) {
+        throw new WgslTypeError(
+          'Only `for (const ... of ... )` loops are supported',
+        );
+      }
+
+      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+      // an implicit pointer to it
+      let loopVarKind = 'let';
+      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+      if (!isEphemeralSnippet(elementSnippet)) {
+        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
+          loopVarKind = 'const';
+        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
+          loopVarKind = 'let';
+        } else {
+          loopVarKind = 'let';
+          if (!wgsl.isPtr(elementType)) {
+            const ptrType = createPtrFromOrigin(
+              elementSnippet.origin,
+              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
+            );
+            invariant(
+              ptrType !== undefined,
+              `Creating pointer type from origin ${elementSnippet.origin}`,
+            );
+            elementType = ptrType;
+          }
+
+          elementType = implicitFrom(elementType as wgsl.Ptr);
+        }
+      }
+
+      const loopVarSnippet = snip(
+        loopVarName,
+        elementType,
+        elementSnippet.origin,
+      );
+      this.ctx.defineVariable(loopVarName, loopVarSnippet);
+
+      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+        tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+      }; ${index}++) {`;
+
+      this.ctx.indent();
+
+      const loopVarDeclStr =
+        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+          tryConvertSnippet(
+            this.ctx,
+            elementSnippet,
+            elementType,
+            false,
+          )
+        };`;
+
+      const bodyStr = `${this.ctx.pre}${
+        this.block(blockifySingleStatement(body))
+      }`;
+
+      this.ctx.dedent();
+
+      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+    }
+
     if (statement[0] === NODE.continue) {
       return `${this.ctx.pre}continue;`;
     }
@@ -1047,8 +1296,9 @@ ${this.ctx.pre}else ${alternate}`;
       return `${this.ctx.pre}break;`;
     }
 
-    const resolved = this.ctx.resolve(this.expression(statement).value).value;
-    return resolved.length === 0 ? '' : `${this.ctx.pre}${resolved};`;
+    const expr = this.expression(statement);
+    const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }
 

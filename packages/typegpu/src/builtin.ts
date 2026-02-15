@@ -67,7 +67,7 @@ function defineBuiltin<T extends Decorated | LooseDecorated>(
   return attribute(dataType, {
     [$internal]: true,
     type: '@builtin',
-    // biome-ignore lint/suspicious/noExplicitAny: it's fine
+    // oxlint-disable-next-line typescript/no-explicit-any it's fine
     params: [value as any],
   }) as T;
 }
@@ -134,5 +134,9 @@ export type AnyFragmentOutputBuiltin = BuiltinFragDepth | BuiltinSampleMask;
 export type OmitBuiltins<S> = S extends AnyBuiltin ? never
   : S extends BaseData ? S
   : {
-    [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
+    [
+      Key in keyof S as S[Key] extends AnyBuiltin ? never
+        : Key extends `$${string}` ? never
+        : Key
+    ]: S[Key];
   };

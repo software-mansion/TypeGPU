@@ -8,7 +8,8 @@ import {
   Void,
 } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { getMetaData, getName, setName } from '../../shared/meta.ts';
+import { getMetaData, getName } from '../../shared/meta.ts';
+import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import {
   applyExternals,
@@ -22,6 +23,10 @@ export interface FnCore {
   applyExternals(newExternals: ExternalMap): void;
   resolve(
     ctx: ResolutionCtx,
+    /**
+     * The argument types can be AutoStruct if they're determined based on usage
+     * (like in auto-entry functions).
+     */
     argTypes: BaseData[],
     /**
      * The return type of the function. If undefined, the type should be inferred
@@ -44,6 +49,11 @@ export function createFnCore(
   const externalsToApply: ExternalMap[] = [];
 
   const core = {
+    // Making the implementation the holder of the name, as long as it's
+    // a function (and not a string implementation)
+    [$getNameForward]: typeof implementation === 'function'
+      ? implementation
+      : undefined,
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
@@ -176,7 +186,7 @@ export function createFnCore(
         applyExternals(
           externalMap,
           {
-            // biome-ignore lint/style/noNonNullAssertion: entry functions cannot be shellless
+            // oxlint-disable-next-line typescript/no-non-null-assertion entry functions cannot be shellless
             [maybeSecondArg.name]: undecorate(returnType!),
           },
         );
@@ -208,13 +218,6 @@ export function createFnCore(
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },
   };
-
-  // The implementation could have been given a name by a bundler plugin,
-  // so we try to transfer it to the core.
-  const maybeName = getName(implementation);
-  if (maybeName !== undefined) {
-    setName(core, maybeName);
-  }
 
   return core;
 }

@@ -13,7 +13,8 @@ import {
   renderLayout,
 } from './render.ts';
 import * as c from './simulation.ts';
-import type { BrushState, DisplayMode } from './types.ts';
+import type { BrushState } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
 const adapter = await navigator.gpu.requestAdapter();
@@ -25,14 +26,8 @@ const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const format = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format,
-  alphaMode: 'premultiplied',
-});
 
 // Helpers
 function createField(name: string) {
@@ -43,7 +38,9 @@ function createField(name: string) {
 }
 
 function createComputePipeline(fn: TgpuComputeFn) {
-  return root['~unstable'].withCompute(fn).createPipeline();
+  return root['~unstable'].createComputePipeline({
+    compute: fn,
+  });
 }
 
 function toGrid(x: number, y: number): [number, number] {
@@ -145,13 +142,15 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
-  return root['~unstable']
-    .withVertex(renderFn, {})
-    .withFragment(fragmentFn, { format })
-    .withPrimitive({
+  return root['~unstable'].createRenderPipeline({
+    vertex: renderFn,
+    fragment: fragmentFn,
+    targets: { format },
+
+    primitive: {
       topology: 'triangle-strip',
-    })
-    .createPipeline();
+    },
+  });
 }
 
 const renderPipelineInk = createRenderPipeline(fragmentInkFn);
@@ -474,13 +473,13 @@ for (const eventName of ['click', 'touchstart']) {
   canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
-export const controls = {
+export const controls = defineControls({
   'timestep (dt)': {
     initial: p.params.dt,
     min: 0.05,
     max: 2.0,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.dt = value;
       simParamBuffer.writePartial({
         dt: p.params.dt,
@@ -492,7 +491,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.000001,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.viscosity = value;
       simParamBuffer.writePartial({
         viscosity: p.params.viscosity,
@@ -504,24 +503,24 @@ export const controls = {
     min: 2,
     max: 50,
     step: 2,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.jacobiIter = value;
     },
   },
   visualization: {
     initial: 'image',
     options: ['image', 'velocity', 'ink'],
-    onSelectChange: (value: DisplayMode) => {
+    onSelectChange: (value) => {
       p.params.displayMode = value;
     },
   },
   pause: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       p.params.paused = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);

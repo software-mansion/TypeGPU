@@ -10,17 +10,10 @@ import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const triangleVertex = wgsl
   .buffer(arrayOf(vec2f, 3), [

@@ -12,18 +12,12 @@ import {
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
 import { randf } from '@typegpu/noise';
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const paramsUniform = root.createUniform(CloudsParams, {
   time: 0,
@@ -35,13 +29,9 @@ const resolutionUniform = root.createUniform(
   d.vec2f(canvas.width, canvas.height),
 );
 
-const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE * 4);
-for (let i = 0; i < noiseData.length; i += 4) {
-  const value = Math.random() * 255;
-  noiseData[i] = value;
-  noiseData[i + 1] = Math.random() * 255;
-  noiseData[i + 2] = value;
-  noiseData[i + 3] = 255;
+const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE);
+for (let i = 0; i < noiseData.length; i += 1) {
+  noiseData[i] = Math.random() * 255;
 }
 
 const sampler = root['~unstable'].createSampler({
@@ -54,16 +44,10 @@ const sampler = root['~unstable'].createSampler({
 const noiseTexture = root['~unstable']
   .createTexture({
     size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
-    format: 'rgba8unorm',
+    format: 'r8unorm',
   })
   .$usage('sampled', 'render');
-
-root.device.queue.writeTexture(
-  { texture: root.unwrap(noiseTexture) },
-  noiseData,
-  { bytesPerRow: NOISE_TEXTURE_SIZE * 4 },
-  { width: NOISE_TEXTURE_SIZE, height: NOISE_TEXTURE_SIZE },
-);
+noiseTexture.write(noiseData);
 
 const bindGroup = root.createBindGroup(cloudsLayout, {
   params: paramsUniform.buffer,
@@ -162,15 +146,15 @@ const qualityOptions = {
   },
 } as Record<string, Partial<d.Infer<typeof CloudsParams>>>;
 
-export const controls = {
+export const controls = defineControls({
   Quality: {
     initial: 'medium',
     options: ['very high', 'high', 'medium', 'low', 'very low'],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       paramsUniform.writePartial(qualityOptions[value]);
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);

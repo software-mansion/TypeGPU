@@ -13,15 +13,15 @@ import type {
 } from './core/root/rootTypes.ts';
 import {
   type Eventual,
-  isDerived,
+  isLazy,
   isProviding,
   isSlot,
   type SlotValuePair,
-  type TgpuDerived,
+  type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
+import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
 import {
@@ -79,6 +79,10 @@ import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
+import { accessProp } from './tgsl/accessProp.ts';
+import { createIoSchema } from './core/function/ioSchema.ts';
+import type { IOData } from './core/function/fnTypes.ts';
+import { AutoStruct } from './data/autoStruct.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -467,28 +471,23 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             break;
           }
           case FuncParameterType.destructuredObject: {
-            args.push(snip(`_arg_${i}`, argType, origin));
-            argAliases.push(...astParam.props.map(({ name, alias }) => {
-              if (!isWgslStruct(argType)) {
-                throw new WgslTypeError('Only structs can be destructured');
-              }
-              const propType = argType.propTypes[name];
-              if (!propType) {
-                throw new WgslTypeError(
-                  `Missing prop '${name}' on '${safeStringify(argType)}'`,
-                );
-              }
-
-              return [
-                alias,
-                // Undecorating, as the struct type can contain builtins
-                snip(`_arg_${i}.${name}`, undecorate(propType), 'argument'),
-              ] as [string, Snippet];
-            }));
+            const objSnippet = snip(`_arg_${i}`, argType, origin);
+            args.push(objSnippet);
+            argAliases.push(
+              ...astParam.props.map(({ name, alias }) =>
+                [alias, accessProp(objSnippet, name)] as [string, Snippet]
+              ),
+            );
             break;
           }
-          case undefined:
-            args.push(snip(`_arg_${i}`, argType, origin));
+          case undefined: {
+            // Only push the argument if it's not an auto-struct.
+            // If we're not using an auto-struct, it's not going to
+            // have any properties anyway.
+            if (!(argType instanceof AutoStruct)) {
+              args.push(snip(`_arg_${i}`, argType, origin));
+            }
+          }
         }
       }
 
@@ -505,6 +504,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const body = this.#shaderGenerator.functionDefinition(options.body);
 
       let returnType = options.returnType;
+      if (returnType instanceof AutoStruct) {
+        // We're expecting an "auto" return type, so if there were structs returned,
+        // we accept the struct, otherwise we let the rest of the code unify on a
+        // primitive type.
+        if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+          returnType = returnType.completeStruct;
+        } else {
+          returnType = undefined;
+        }
+      }
+
       if (!returnType) {
         const returnTypes = [...scope.reportedReturnTypes];
         if (returnTypes.length === 0) {
@@ -525,6 +535,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
 
         returnType = concretize(returnType);
+
+        if (
+          options.functionType === 'vertex' ||
+          options.functionType === 'fragment'
+        ) {
+          returnType = createIoSchema(returnType as IOData);
+        }
       }
 
       return {
@@ -581,6 +598,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+    if (pairs.length === 0) {
+      return callback();
+    }
+
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {
@@ -608,17 +629,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     }
     const oldName = getName(item);
-    setName(item, name);
-    const result = callback();
-    setName(item, oldName);
-    return result;
+    try {
+      setName(item, name);
+      return callback();
+    } finally {
+      setName(item, oldName);
+    }
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
-      return this.withSlots(
-        eventual[$providing].pairs,
-        () => this.unwrap(eventual[$providing].inner) as T,
+      return this.withRenamed(
+        eventual[$providing].inner,
+        getName(eventual),
+        () =>
+          this.withSlots(
+            eventual[$providing].pairs,
+            () => this.unwrap(eventual[$providing].inner) as T,
+          ),
       );
     }
 
@@ -628,7 +656,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     while (true) {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
-      } else if (isDerived(maybeEventual)) {
+      } else if (isLazy(maybeEventual)) {
         maybeEventual = this._getOrCompute(maybeEventual);
       } else {
         break;
@@ -638,9 +666,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeEventual;
   }
 
-  _getOrCompute<T>(derived: TgpuDerived<T>): T {
-    // All memoized versions of `derived`
-    const instances = this.#namespaceInternal.memoizedDerived.get(derived) ??
+  _getOrCompute<T>(lazy: TgpuLazy<T>): T {
+    // All memoized versions of `lazy`
+    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ??
       [];
 
     this._itemStateStack.pushItem();
@@ -664,7 +692,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let result: T;
       try {
-        result = derived['~compute']();
+        result = lazy[$internal].compute();
       } finally {
         this.popMode('normal');
       }
@@ -676,14 +704,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       instances.push({ slotToValueMap, result });
-      this.#namespaceInternal.memoizedDerived.set(derived, instances);
+      this.#namespaceInternal.memoizedLazy.set(lazy, instances);
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
-        throw err.appendToTrace(derived);
+        throw err.appendToTrace(lazy);
       }
 
-      throw new ResolutionError(err, [derived]);
+      throw new ResolutionError(err, [lazy]);
     } finally {
       this._itemStateStack.pop('item');
     }
@@ -716,7 +744,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
         result = snip(resolveData(this, item), Void, /* origin */ 'runtime');
-      } else if (isDerived(item) || isSlot(item)) {
+      } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item[$resolve](this);
@@ -980,7 +1008,7 @@ export function resolve(
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>
-              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
+              // oxlint-disable-next-line typescript/no-explicit-any <it's fine>
               [String(idx), binding.resource] as [string, any],
           ),
         ),
@@ -1011,7 +1039,7 @@ export function resolve(
   };
 }
 
-export function resolveFunctionHeader(
+function resolveFunctionHeader(
   ctx: ResolutionCtx,
   args: Snippet[],
   returnType: BaseData,

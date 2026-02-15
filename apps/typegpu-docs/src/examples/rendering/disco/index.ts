@@ -10,18 +10,12 @@ import {
   mainFragment7,
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-const device = root.device;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
@@ -44,9 +38,11 @@ const pipelines = fragmentShaders.map((fragment) =>
   root['~unstable']
     .with(timeAccess, time)
     .with(resolutionAccess, resolutionUniform)
-    .withVertex(mainVertex, {})
-    .withFragment(fragment, { format: presentationFormat })
-    .createPipeline()
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: fragment,
+      targets: { format: presentationFormat },
+    })
 );
 
 let currentPipeline = pipelines[0];
@@ -79,7 +75,7 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   Pattern: {
     initial: 'pattern1',
     options: [
@@ -91,7 +87,7 @@ export const controls = {
       'pattern6',
       'pattern7',
     ],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       const patternIndex = {
         pattern1: 0,
         pattern2: 1,
@@ -116,4 +112,4 @@ export const controls = {
       );
     },
   },
-};
+});

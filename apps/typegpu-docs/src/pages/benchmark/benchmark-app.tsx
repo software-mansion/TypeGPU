@@ -85,7 +85,6 @@ export default function BenchmarkApp() {
           <ul className='m-0 my-1 flex w-full list-none flex-col items-start gap-1 p-0'>
             {parameterSetAtoms.map((paramsAtom, index) => (
               <li
-                // biome-ignore lint/suspicious/noArrayIndexKey: <it's fine React>
                 key={`${index}`}
                 className='w-full'
               >

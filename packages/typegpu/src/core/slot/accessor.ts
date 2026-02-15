@@ -1,6 +1,6 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
@@ -13,14 +13,12 @@ import {
   $resolve,
 } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
-import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import {
   getOwnSnippet,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
 } from '../../types.ts';
-import { isComptimeFn } from '../function/comptime.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
 import {
   getGpuValueRecursively,
@@ -28,8 +26,6 @@ import {
 } from '../valueProxyUtils.ts';
 import { slot as slotConstructor } from './slot.ts';
 import type {
-  AccessorIn,
-  MutableAccessorIn,
   TgpuAccessor,
   TgpuMutableAccessor,
   TgpuSlot,
@@ -38,10 +34,9 @@ import type {
 // ----------
 // Public API
 // ----------
-
 export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
-  defaultValue?: AccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>> | undefined,
 ): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuAccessorImpl(
     schemaOrConstructor,
@@ -53,11 +48,11 @@ export function mutableAccessor<
   T extends AnyData | ((count: number) => AnyData),
 >(
   schemaOrConstructor: T,
-  defaultValue?: MutableAccessorIn<UnwrapRuntimeConstructor<NoInfer<T>>>,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>> | undefined,
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
-    defaultValue as MutableAccessorIn<BaseData>,
+    defaultValue as TgpuMutableAccessor.In<BaseData>,
   ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 }
 
@@ -67,7 +62,7 @@ export function mutableAccessor<
 
 abstract class AccessorBase<
   T extends BaseData,
-  TValue extends AccessorIn<T> | MutableAccessorIn<T>,
+  TValue extends TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
 > implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: unknown;
@@ -104,9 +99,26 @@ abstract class AccessorBase<
    * @returns A snippet representing the accessor.
    */
   #createSnippet() {
-    // biome-ignore lint/style/noNonNullAssertion: it's there
+    // oxlint-disable-next-line typescript/no-non-null-assertion it's there
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
+
+    while (
+      typeof value === 'function' &&
+      !isTgpuFn(value) &&
+      !hasTinyestMetadata(value)
+    ) {
+      // Not a GPU function, so has to be a resource accessor (ran in codegen mode) or comptime
+      value = value();
+      if (isSnippet(value)) {
+        value = value.value;
+      }
+    }
+
+    const ownSnippet = getOwnSnippet(value);
+    if (ownSnippet) {
+      return ownSnippet;
+    }
 
     if (isTgpuFn(value) || hasTinyestMetadata(value)) {
       return ctx.withResetIndentLevel(() =>
@@ -118,24 +130,8 @@ abstract class AccessorBase<
       );
     }
 
-    const ownSnippet = getOwnSnippet(value);
-    if (ownSnippet) {
-      return ownSnippet;
-    }
-
-    if (typeof value === 'function' && !isComptimeFn(value)) {
-      // Not a comptime or GPU function, so has to be a resource accessor
-      // Running the function in codegen mode
-      return coerceToSnippet(value());
-    }
-
     ctx.pushMode(new NormalState());
     try {
-      if (typeof value === 'function') {
-        // Has to be comptime
-        value = value();
-      }
-
       // Doing a deep copy each time so that we don't have to deal with refs
       const cloned = schemaCallWrapper(this.schema, value);
       return snip(cloned, this.schema, 'constant');
@@ -179,13 +175,13 @@ abstract class AccessorBase<
 }
 
 export class TgpuAccessorImpl<T extends BaseData>
-  extends AccessorBase<T, AccessorIn<T>>
+  extends AccessorBase<T, TgpuAccessor.In<T>>
   implements TgpuAccessor<T> {
   readonly resourceType = 'accessor';
 
   constructor(
     schemaOrConstructor: T | ((count: number) => T),
-    defaultValue: AccessorIn<T> | undefined = undefined,
+    defaultValue: TgpuAccessor.In<T> | undefined = undefined,
   ) {
     super(schemaOrConstructor, defaultValue);
   }
@@ -202,13 +198,13 @@ export class TgpuAccessorImpl<T extends BaseData>
 }
 
 export class TgpuMutableAccessorImpl<T extends BaseData>
-  extends AccessorBase<T, MutableAccessorIn<T>>
+  extends AccessorBase<T, TgpuMutableAccessor.In<T>>
   implements TgpuMutableAccessor<T> {
   readonly resourceType = 'mutable-accessor';
 
   constructor(
     schemaOrConstructor: T | ((count: number) => T),
-    defaultValue: MutableAccessorIn<T> | undefined = undefined,
+    defaultValue: TgpuMutableAccessor.In<T> | undefined = undefined,
   ) {
     super(schemaOrConstructor, defaultValue);
   }

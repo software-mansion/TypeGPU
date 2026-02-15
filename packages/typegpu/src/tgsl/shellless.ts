@@ -68,7 +68,9 @@ export class ShelllessRepository {
 
       if (s.dataType === UnknownData) {
         throw new Error(
-          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)`,
+          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)\n` +
+            `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
+            `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,
         );
       }
 
@@ -78,7 +80,7 @@ export class ShelllessRepository {
         s.origin === 'constant-tgpu-const-ref' ||
         s.origin === 'runtime-tgpu-const-ref'
       ) {
-        // biome-ignore lint/style/noNonNullAssertion: it's there
+        // oxlint-disable-next-line typescript/no-non-null-assertion it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
           `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${

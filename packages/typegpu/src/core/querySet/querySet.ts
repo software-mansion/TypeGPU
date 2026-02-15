@@ -86,6 +86,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   }
 
   get [$internal]() {
+    // oxlint-disable-next-line typescript/no-this-alias
     const self = this;
     return {
       get readBuffer(): GPUBuffer {

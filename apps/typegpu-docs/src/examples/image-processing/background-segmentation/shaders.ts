@@ -27,7 +27,7 @@ export const prepareModelInput = (x: number, y: number) => {
   );
 
   prepareModelInputLayout.$
-    .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
+    .outputBuffer[y * MODEL_WIDTH + x] = col.x;
   prepareModelInputLayout.$
     .outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.y;
   prepareModelInputLayout.$
@@ -99,14 +99,13 @@ export const computeFn = tgpu['~unstable'].computeFn({
   }
 });
 
-export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.location(0, d.vec2f), pos: d.builtin.position },
-  out: d.vec4f,
-})((input) => {
+export const fragmentFn = (input: { uv: d.v2f }) => {
+  'use gpu';
+  const uv = input.uv;
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,
-    input.uv,
+    uv,
   );
 
   let blurredColor = d.vec4f();
@@ -114,13 +113,13 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
     blurredColor = std.textureSampleBaseClampToEdge(
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
-      input.uv,
+      uv,
     );
   } else {
     blurredColor = std.textureSampleBias(
       drawWithMaskLayout.$.inputBlurredTexture,
       drawWithMaskLayout.$.sampler,
-      input.uv,
+      uv,
       paramsAccess.$.sampleBias,
     );
   }
@@ -128,19 +127,19 @@ export const drawWithMaskFragment = tgpu['~unstable'].fragmentFn({
   const cropBounds = paramsAccess.$.cropBounds;
   const uvMin = cropBounds.xy;
   const uvMax = cropBounds.zw;
-  const maskUV = d.vec2f(input.uv).sub(uvMin).div(uvMax.sub(uvMin));
+  const maskUV = d.vec2f(uv).sub(uvMin).div(uvMax.sub(uvMin));
   const sampledMask = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.maskTexture,
     drawWithMaskLayout.$.sampler,
     maskUV,
   ).x;
 
-  const inCropRegion = input.uv.x >= uvMin.x &&
-    input.uv.x <= uvMax.x &&
-    input.uv.y >= uvMin.y &&
-    input.uv.y <= uvMax.y;
+  const inCropRegion = uv.x >= uvMin.x &&
+    uv.x <= uvMax.x &&
+    uv.y >= uvMin.y &&
+    uv.y <= uvMax.y;
   // use mask only inside the crop region
   const mask = std.select(0, sampledMask, inCropRegion);
 
   return std.mix(blurredColor, originalColor, mask);
-});
+};

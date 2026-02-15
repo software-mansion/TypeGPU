@@ -1,5 +1,6 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
+import type { BaseData, U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,

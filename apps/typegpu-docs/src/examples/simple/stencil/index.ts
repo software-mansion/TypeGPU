@@ -2,13 +2,8 @@ import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
 
 let stencilTexture = root['~unstable'].createTexture({
   size: [canvas.width, canvas.height],
