@@ -9,7 +9,7 @@ import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {
-    // oxlint-disable-next-line no-new
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval no-new
     new Function('return true');
     return true;
   } catch {
@@ -324,6 +324,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   try {
     const body = buildWriter(schema, 'offset', 'value', 0);
 
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval
     const fn = new Function(
       'output',
       'offset',

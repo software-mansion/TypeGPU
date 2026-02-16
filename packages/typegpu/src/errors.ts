@@ -1,8 +1,7 @@
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type { Disarray } from './data/dataTypes.ts';
-import type { BaseData, WgslArray } from './data/wgslTypes.ts';
+import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
