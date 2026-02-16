@@ -1314,6 +1314,7 @@ describe('root.createRenderPipeline', () => {
         'use gpu';
         return { $position: d.vec4f() };
       },
+      // @ts-expect-error: The prop is not in the object
       fragment: ({ prop }) => {
         'use gpu';
         const a = prop;
