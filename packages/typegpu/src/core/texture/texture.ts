@@ -381,7 +381,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   generateMipmaps(baseMipLevel = 0, mipLevels?: number) {
-    if (this.usableAsRender === false) {
+    if (!this.usableAsRender) {
       throw new Error(
         "generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.",
       );

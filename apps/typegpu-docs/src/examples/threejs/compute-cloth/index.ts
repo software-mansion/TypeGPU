@@ -49,7 +49,7 @@ const API = {
   sheenColor: 0xffffff, // sRGB
 };
 
-if (WebGPU.isAvailable() === false) {
+if (!WebGPU.isAvailable()) {
   document.body.appendChild(WebGPU.getErrorMessage());
 
   throw new Error('No WebGPU support');
