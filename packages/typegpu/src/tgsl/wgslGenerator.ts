@@ -873,6 +873,7 @@ ${this.ctx.pre}}`;
     if (typeof statement === 'string') {
       const id = this.identifier(statement);
       const resolved = id.value && this.ctx.resolve(id.value).value;
+      // oxlint-disable-next-line typescript/no-base-to-string
       return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
@@ -1273,6 +1274,7 @@ ${this.ctx.pre}else ${alternate}`;
 
     const expr = this.expression(statement);
     const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    // oxlint-disable-next-line typescript/no-base-to-string
     return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }

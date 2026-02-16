@@ -40,6 +40,7 @@ export interface BaseData {
   readonly [$internal]: Record<string, unknown>;
   readonly type: string;
   readonly [$repr]: unknown;
+  toString(): string;
 }
 
 export interface NumberArrayView {

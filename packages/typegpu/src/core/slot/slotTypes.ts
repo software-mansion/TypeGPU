@@ -29,6 +29,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
+  toString(): string;
 }
 
 export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {

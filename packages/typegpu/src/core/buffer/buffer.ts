@@ -127,6 +127,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
+  toString(): string;
 }
 
 export function INTERNAL_createBuffer<TData extends AnyData>(
