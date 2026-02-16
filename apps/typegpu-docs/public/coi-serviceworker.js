@@ -107,7 +107,6 @@ if (typeof window === 'undefined') {
           ? false
           : coi.coepCredentialless(),
         // oxlint-disable-next-line unicorn/require-post-message-target-origin
-        // oxlint-disable-next-line unicorn/require-post-message-target-origin
       });
       if (reloadToDegrade) {
         if (!coi.quiet) {

@@ -296,7 +296,6 @@ function makeVecSchema<TValue, S extends number | boolean>(
       } else {
         for (let c = 0; c < arg.length; ++c) {
           values[j++] = arg[c] as S;
-          values[j++] = arg[c] as S;
         }
       }
     }
