@@ -67,9 +67,7 @@ export function workgroupVar<TDataType extends AnyData>(
   return new TgpuVarImpl('workgroup', dataType);
 }
 
-export function isVariable<T extends TgpuVar>(
-  value: T | unknown,
-): value is T {
+export function isVariable(value: unknown): value is TgpuVar {
   return value instanceof TgpuVarImpl;
 }
 

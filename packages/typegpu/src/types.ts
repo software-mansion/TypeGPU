@@ -413,11 +413,12 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
   );
 }
 
-export function isBufferUsage<
-  T extends
+export function isBufferUsage(value: unknown): value is
+  | TgpuBufferUniform<BaseData>
+  | TgpuBufferReadonly<BaseData>
+  | TgpuBufferMutable<BaseData> {
+  return (value as
     | TgpuBufferUniform<BaseData>
     | TgpuBufferReadonly<BaseData>
-    | TgpuBufferMutable<BaseData>,
->(value: T | unknown): value is T {
-  return (value as T)?.resourceType === 'buffer-usage';
+    | TgpuBufferMutable<BaseData>)?.resourceType === 'buffer-usage';
 }

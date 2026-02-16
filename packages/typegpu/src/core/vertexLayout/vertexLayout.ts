@@ -50,10 +50,8 @@ export function vertexLayout<TData extends WgslArray | Disarray>(
   return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
 }
 
-export function isVertexLayout<T extends TgpuVertexLayout>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'vertex-layout';
+export function isVertexLayout(value: unknown): value is TgpuVertexLayout {
+  return (value as TgpuVertexLayout)?.resourceType === 'vertex-layout';
 }
 
 // --------------

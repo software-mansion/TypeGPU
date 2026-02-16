@@ -131,7 +131,7 @@ export function fn<
 }
 
 export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
-  value: unknown | TgpuFn<(...args: Args) => Return>,
+  value: unknown,
 ): value is TgpuFn<(...args: Args) => Return> {
   return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';

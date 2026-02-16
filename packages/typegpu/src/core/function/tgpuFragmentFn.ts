@@ -190,7 +190,7 @@ export function isTgpuFragmentFn<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 >(
-  value: unknown | TgpuFragmentFn<FragmentIn, FragmentOut>,
+  value: unknown,
 ): value is TgpuFragmentFn<FragmentIn, FragmentOut> {
   return (value as TgpuFragmentFn<FragmentIn, FragmentOut>)?.shell
     ?.entryPoint ===

@@ -333,7 +333,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     ) as (
       output: DataView,
       offset: number,
-      value: Infer<T> | unknown,
+      value: unknown,
       littleEndian?: boolean,
     ) => void;
 

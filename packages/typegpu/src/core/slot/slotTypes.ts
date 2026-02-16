@@ -129,14 +129,12 @@ export type Providing = {
   pairs: SlotValuePair[];
 };
 
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+export function isSlot<T>(value: unknown): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';
 }
 
-export function isLazy<T extends TgpuLazy<unknown>>(
-  value: T | unknown,
-): value is T {
-  return (value as T)?.resourceType === 'lazy';
+export function isLazy<T>(value: unknown): value is TgpuLazy<T> {
+  return (value as TgpuLazy<T>)?.resourceType === 'lazy';
 }
 
 export function isProviding(
@@ -146,13 +144,13 @@ export function isProviding(
 }
 
 export function isAccessor<T extends BaseData>(
-  value: unknown | TgpuAccessor<T>,
+  value: unknown,
 ): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
 
 export function isMutableAccessor<T extends BaseData>(
-  value: unknown | TgpuMutableAccessor<T>,
+  value: unknown,
 ): value is TgpuMutableAccessor<T> {
   return (value as TgpuMutableAccessor<T>)?.resourceType === 'mutable-accessor';
 }

@@ -223,17 +223,17 @@ export function INTERNAL_createTexture(
   return new TgpuTextureImpl(props, branch);
 }
 
-export function isTexture<T extends TgpuTexture>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'texture' && !!(value as T)[$internal];
+export function isTexture(value: unknown): value is TgpuTexture {
+  return (
+    (value as TgpuTexture)?.resourceType === 'texture' &&
+    !!(value as TgpuTexture)[$internal]
+  );
 }
 
-export function isTextureView<T extends TgpuTextureView>(
-  value: unknown | T,
-): value is T {
+export function isTextureView(value: unknown): value is TgpuTextureView {
   return (
-    (value as T)?.resourceType === 'texture-view' && !!(value as T)[$internal]
+    (value as TgpuTextureView)?.resourceType === 'texture-view' &&
+    !!(value as TgpuTextureView)[$internal]
   );
 }
 

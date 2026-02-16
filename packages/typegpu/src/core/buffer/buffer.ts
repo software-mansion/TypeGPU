@@ -144,10 +144,8 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer<T extends TgpuBuffer<BaseData>>(
-  value: T | unknown,
-): value is T {
-  return (value as T).resourceType === 'buffer';
+export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
+  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
 }
 
 export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
