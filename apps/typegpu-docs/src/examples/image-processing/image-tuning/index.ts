@@ -79,7 +79,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const color = std.textureSample(imageView.$, imageSampler.$, uv).xyz;
+  const color = std.textureSample(imageView.$, imageSampler.$, uv).rgb;
   const inputLuminance = std.dot(color, d.vec3f(0.299, 0.587, 0.114));
   const normColor = std.saturate(
     std.div(color.sub(lut.$.min), lut.$.max.sub(lut.$.min)),
@@ -92,7 +92,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
       lutSampler.$,
       normColor,
       0,
-    ).xyz,
+    ).rgb,
     d.bool(lut.$.enabled),
   );
   const lutColorNormalized = std.saturate(lutColor);

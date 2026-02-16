@@ -490,7 +490,7 @@ describe('ripple-cube example', () => {
         var fresnel = fresnelSchlick(ndotv, f0);
         var reflectionTint = mix(vec3f(1), (*material).albedo, (*material).metallic);
         let reflectionStrength = (1f - ((*material).roughness * 0.85f));
-        var envContribution = (((envColor.xyz * fresnel) * reflectionTint) * reflectionStrength);
+        var envContribution = (((envColor.rgb * fresnel) * reflectionTint) * reflectionStrength);
         var ambient = ((*material).albedo * ((*material).ao * 0.05f));
         var color = ((ambient + lo) + envContribution);
         return pow((color / (color + 1f)), vec3f(0.4545454680919647));
@@ -521,7 +521,7 @@ describe('ripple-cube example', () => {
         if (((lastDist < 0.02f) && (totalDist < 5f))) {
           hit = true;
         }
-        var finalColor = textureSampleLevel(envMap, envSampler, rd, 0).xyz;
+        var finalColor = textureSampleLevel(envMap, envSampler, rd, 0).rgb;
         if (hit) {
           var p = (ro + (rd * totalDist));
           var n = getNormal(p);
@@ -563,13 +563,13 @@ describe('ripple-cube example', () => {
           for (var oy = -1; (oy <= 1i); oy++) {
             var sampleCoord = (coord + vec2i(ox, oy));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).xyz;
+            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
         }
-        var clampedHistory = clamp(historyColor.xyz, minColor, maxColor);
-        var blended = mix(current.xyz, clampedHistory, 0.85f);
+        var clampedHistory = clamp(historyColor.rgb, minColor, maxColor);
+        var blended = mix(current.rgb, clampedHistory, 0.85f);
         textureStore(outputTexture, vec2u(x, y), vec4f(blended, 1f));
       }
 
@@ -625,10 +625,10 @@ describe('ripple-cube example', () => {
         var dimensions = textureDimensions(outputTexture);
         var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
         var color = textureSampleLevel(inputTexture, sampler_1, uv, 0);
-        let brightness = dot(color.xyz, vec3f(0.2125999927520752, 0.7152000069618225, 0.0722000002861023));
+        let brightness = dot(color.rgb, vec3f(0.2125999927520752, 0.7152000069618225, 0.0722000002861023));
         let threshold = bloomUniform.threshold;
         let bright = (max((brightness - threshold), 0f) / max(brightness, 1e-4f));
-        var bloomColor = (color.xyz * bright);
+        var bloomColor = (color.rgb * bright);
         textureStore(outputTexture, vec2u(x, y), vec4f(bloomColor, 1f));
       }
 
@@ -661,7 +661,7 @@ describe('ripple-cube example', () => {
         for (var i = -8; (i <= 8i); i++) {
           var offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
-          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).xyz * weight));
+          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight));
           totalWeight += weight;
         }
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
@@ -696,7 +696,7 @@ describe('ripple-cube example', () => {
         for (var i = -8; (i <= 8i); i++) {
           var offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
-          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).xyz * weight));
+          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight));
           totalWeight += weight;
         }
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
@@ -749,7 +749,7 @@ describe('ripple-cube example', () => {
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         var color = textureSample(colorTexture, sampler_1, _arg_0.uv);
         var bloomColor = textureSample(bloomTexture, sampler_1, _arg_0.uv);
-        var final_1 = (color.xyz + (bloomColor.xyz * bloomUniform.intensity));
+        var final_1 = (color.rgb + (bloomColor.rgb * bloomUniform.intensity));
         var centeredUV = ((_arg_0.uv - 0.5f) * 2f);
         let vignette = (1f - (dot(centeredUV, centeredUV) * 0.15f));
         final_1 = (final_1 * vignette);

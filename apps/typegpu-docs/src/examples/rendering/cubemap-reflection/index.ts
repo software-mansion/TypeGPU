@@ -210,7 +210,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
 
   const finalColor = std.mix(
     directLighting,
-    environmentColor.xyz,
+    environmentColor.rgb,
     renderLayout.$.material.reflectivity,
   );
 

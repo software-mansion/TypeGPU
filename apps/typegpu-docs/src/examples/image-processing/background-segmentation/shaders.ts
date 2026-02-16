@@ -68,7 +68,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
         blurLayout.$.sampler,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
-      ).xyz;
+      ).rgb;
     }
   }
 

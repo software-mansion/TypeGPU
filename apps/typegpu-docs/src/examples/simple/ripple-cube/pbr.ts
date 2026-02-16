@@ -127,7 +127,7 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
 
   const reflectionStrength = 1 - material.roughness * 0.85;
 
-  const envContribution = envColor.xyz
+  const envContribution = envColor.rgb
     .mul(fresnel)
     .mul(reflectionTint)
     .mul(reflectionStrength);

@@ -40,17 +40,17 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
         0,
       );
 
-      minColor = std.min(minColor, neighborColor.xyz);
-      maxColor = std.max(maxColor, neighborColor.xyz);
+      minColor = std.min(minColor, neighborColor.rgb);
+      maxColor = std.max(maxColor, neighborColor.rgb);
     }
   }
 
-  const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
+  const historyColorClamped = std.clamp(historyColor.rgb, minColor, maxColor);
 
   const blendFactor = d.f32(0.9);
 
   const resolvedColor = d.vec4f(
-    std.mix(currentColor.xyz, historyColorClamped, blendFactor),
+    std.mix(currentColor.rgb, historyColorClamped, blendFactor),
     1.0,
   );
 
