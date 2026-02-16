@@ -88,6 +88,7 @@ lexer.next = (next => () => {
   let tok;
   while ((tok = next.call(lexer)) && (tok.type === "comment" || tok.type === "WS" || tok.type === "NL")) {}
   return tok;
+  // oxlint-disable-next-line typescript/unbound-method we know what we're doing
 })(lexer.next);
 
 

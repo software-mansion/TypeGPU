@@ -24,6 +24,7 @@
     {
       "files": ["**/*.test.ts", "**/tests/**"],
       "rules": {
+        "typescript/unbound-method": "off",
         "typescript/no-non-null-assertion": "off",
         "eslint/no-unused-vars": "off",
         "eslint/no-unused-expressions": "off",

@@ -159,18 +159,18 @@ function operatorToType<
 }
 
 const unaryOpCodeToCodegen = {
-  '-': neg[$gpuCallable].call,
+  '-': neg[$gpuCallable].call.bind(neg),
   'void': () => snip(undefined, wgsl.Void, 'constant'),
 } satisfies Partial<
   Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
 >;
 
 const binaryOpCodeToCodegen = {
-  '+': add[$gpuCallable].call,
-  '-': sub[$gpuCallable].call,
-  '*': mul[$gpuCallable].call,
-  '/': div[$gpuCallable].call,
-  '**': pow[$gpuCallable].call,
+  '+': add[$gpuCallable].call.bind(add),
+  '-': sub[$gpuCallable].call.bind(sub),
+  '*': mul[$gpuCallable].call.bind(mul),
+  '/': div[$gpuCallable].call.bind(div),
+  '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<
   Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
 >;
