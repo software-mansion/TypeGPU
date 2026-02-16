@@ -119,7 +119,6 @@ function createMatSchema<
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // oxlint-disable-next-line typescript/no-explicit-any explained above
   options.MatImpl.prototype.schema = schema;
 
   return schema;

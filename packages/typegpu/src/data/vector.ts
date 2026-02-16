@@ -275,6 +275,7 @@ export const vecTypeToConstructor = {
 
 type VecSchemaBase<TValue> = {
   readonly type: string;
+  readonly componentCount: 2 | 3 | 4;
   readonly [$repr]: TValue;
 };
 
@@ -282,7 +283,8 @@ function makeVecSchema<TValue, S extends number | boolean>(
   VecImpl: new (...args: S[]) => VecBase<S>,
   primitive: F32 | F16 | I32 | U32 | Bool,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
-  const { kind: type, length: componentCount } = new VecImpl();
+  const { kind: type, length } = new VecImpl();
+  const componentCount = length as 2 | 3 | 4;
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
     const values: S[] = Array.from({ length: args.length });
@@ -293,6 +295,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         values[j++] = arg;
       } else {
         for (let c = 0; c < arg.length; ++c) {
+          values[j++] = arg[c] as S;
           values[j++] = arg[c] as S;
         }
       }
@@ -331,6 +334,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       [$internal]: {},
       type,
       primitive,
+      componentCount,
       [$repr]: undefined as TValue,
     });
 
