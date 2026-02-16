@@ -384,6 +384,348 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   get wwwy() { return new this._Vec4(this[3], this[3], this[3], this[1]); }
   get wwwz() { return new this._Vec4(this[3], this[3], this[3], this[2]); }
   get wwww() { return new this._Vec4(this[3], this[3], this[3], this[3]); }
+
+  // RGBA swizzles (length 2)
+  get rr() { return new this._Vec2(this[0], this[0]); }
+  get rg() { return new this._Vec2(this[0], this[1]); }
+  get rb() { return new this._Vec2(this[0], this[2]); }
+  get ra() { return new this._Vec2(this[0], this[3]); }
+  get gr() { return new this._Vec2(this[1], this[0]); }
+  get gg() { return new this._Vec2(this[1], this[1]); }
+  get gb() { return new this._Vec2(this[1], this[2]); }
+  get ga() { return new this._Vec2(this[1], this[3]); }
+  get br() { return new this._Vec2(this[2], this[0]); }
+  get bg() { return new this._Vec2(this[2], this[1]); }
+  get bb() { return new this._Vec2(this[2], this[2]); }
+  get ba() { return new this._Vec2(this[2], this[3]); }
+  get ar() { return new this._Vec2(this[3], this[0]); }
+  get ag() { return new this._Vec2(this[3], this[1]); }
+  get ab() { return new this._Vec2(this[3], this[2]); }
+  get aa() { return new this._Vec2(this[3], this[3]); }
+
+  // RGBA swizzles (length 3)
+  get rrr() { return new this._Vec3(this[0], this[0], this[0]); }
+  get rrg() { return new this._Vec3(this[0], this[0], this[1]); }
+  get rrb() { return new this._Vec3(this[0], this[0], this[2]); }
+  get rra() { return new this._Vec3(this[0], this[0], this[3]); }
+  get rgr() { return new this._Vec3(this[0], this[1], this[0]); }
+  get rgg() { return new this._Vec3(this[0], this[1], this[1]); }
+  get rgb() { return new this._Vec3(this[0], this[1], this[2]); }
+  get rga() { return new this._Vec3(this[0], this[1], this[3]); }
+  get rbr() { return new this._Vec3(this[0], this[2], this[0]); }
+  get rbg() { return new this._Vec3(this[0], this[2], this[1]); }
+  get rbb() { return new this._Vec3(this[0], this[2], this[2]); }
+  get rba() { return new this._Vec3(this[0], this[2], this[3]); }
+  get rar() { return new this._Vec3(this[0], this[3], this[0]); }
+  get rag() { return new this._Vec3(this[0], this[3], this[1]); }
+  get rab() { return new this._Vec3(this[0], this[3], this[2]); }
+  get raa() { return new this._Vec3(this[0], this[3], this[3]); }
+  get grr() { return new this._Vec3(this[1], this[0], this[0]); }
+  get grg() { return new this._Vec3(this[1], this[0], this[1]); }
+  get grb() { return new this._Vec3(this[1], this[0], this[2]); }
+  get gra() { return new this._Vec3(this[1], this[0], this[3]); }
+  get ggr() { return new this._Vec3(this[1], this[1], this[0]); }
+  get ggg() { return new this._Vec3(this[1], this[1], this[1]); }
+  get ggb() { return new this._Vec3(this[1], this[1], this[2]); }
+  get gga() { return new this._Vec3(this[1], this[1], this[3]); }
+  get gbr() { return new this._Vec3(this[1], this[2], this[0]); }
+  get gbg() { return new this._Vec3(this[1], this[2], this[1]); }
+  get gbb() { return new this._Vec3(this[1], this[2], this[2]); }
+  get gba() { return new this._Vec3(this[1], this[2], this[3]); }
+  get gar() { return new this._Vec3(this[1], this[3], this[0]); }
+  get gag() { return new this._Vec3(this[1], this[3], this[1]); }
+  get gab() { return new this._Vec3(this[1], this[3], this[2]); }
+  get gaa() { return new this._Vec3(this[1], this[3], this[3]); }
+  get brr() { return new this._Vec3(this[2], this[0], this[0]); }
+  get brg() { return new this._Vec3(this[2], this[0], this[1]); }
+  get brb() { return new this._Vec3(this[2], this[0], this[2]); }
+  get bra() { return new this._Vec3(this[2], this[0], this[3]); }
+  get bgr() { return new this._Vec3(this[2], this[1], this[0]); }
+  get bgg() { return new this._Vec3(this[2], this[1], this[1]); }
+  get bgb() { return new this._Vec3(this[2], this[1], this[2]); }
+  get bga() { return new this._Vec3(this[2], this[1], this[3]); }
+  get bbr() { return new this._Vec3(this[2], this[2], this[0]); }
+  get bbg() { return new this._Vec3(this[2], this[2], this[1]); }
+  get bbb() { return new this._Vec3(this[2], this[2], this[2]); }
+  get bba() { return new this._Vec3(this[2], this[2], this[3]); }
+  get bar() { return new this._Vec3(this[2], this[3], this[0]); }
+  get bag() { return new this._Vec3(this[2], this[3], this[1]); }
+  get bab() { return new this._Vec3(this[2], this[3], this[2]); }
+  get baa() { return new this._Vec3(this[2], this[3], this[3]); }
+  get arr() { return new this._Vec3(this[3], this[0], this[0]); }
+  get arg() { return new this._Vec3(this[3], this[0], this[1]); }
+  get arb() { return new this._Vec3(this[3], this[0], this[2]); }
+  get ara() { return new this._Vec3(this[3], this[0], this[3]); }
+  get agr() { return new this._Vec3(this[3], this[1], this[0]); }
+  get agg() { return new this._Vec3(this[3], this[1], this[1]); }
+  get agb() { return new this._Vec3(this[3], this[1], this[2]); }
+  get aga() { return new this._Vec3(this[3], this[1], this[3]); }
+  get abr() { return new this._Vec3(this[3], this[2], this[0]); }
+  get abg() { return new this._Vec3(this[3], this[2], this[1]); }
+  get abb() { return new this._Vec3(this[3], this[2], this[2]); }
+  get aba() { return new this._Vec3(this[3], this[2], this[3]); }
+  get aar() { return new this._Vec3(this[3], this[3], this[0]); }
+  get aag() { return new this._Vec3(this[3], this[3], this[1]); }
+  get aab() { return new this._Vec3(this[3], this[3], this[2]); }
+  get aaa() { return new this._Vec3(this[3], this[3], this[3]); }
+
+  // RGBA swizzles (length 4)
+  get rrrr() { return new this._Vec4(this[0], this[0], this[0], this[0]); }
+  get rrrg() { return new this._Vec4(this[0], this[0], this[0], this[1]); }
+  get rrrb() { return new this._Vec4(this[0], this[0], this[0], this[2]); }
+  get rrra() { return new this._Vec4(this[0], this[0], this[0], this[3]); }
+  get rrgr() { return new this._Vec4(this[0], this[0], this[1], this[0]); }
+  get rrgg() { return new this._Vec4(this[0], this[0], this[1], this[1]); }
+  get rrgb() { return new this._Vec4(this[0], this[0], this[1], this[2]); }
+  get rrga() { return new this._Vec4(this[0], this[0], this[1], this[3]); }
+  get rrbr() { return new this._Vec4(this[0], this[0], this[2], this[0]); }
+  get rrbg() { return new this._Vec4(this[0], this[0], this[2], this[1]); }
+  get rrbb() { return new this._Vec4(this[0], this[0], this[2], this[2]); }
+  get rrba() { return new this._Vec4(this[0], this[0], this[2], this[3]); }
+  get rrar() { return new this._Vec4(this[0], this[0], this[3], this[0]); }
+  get rrag() { return new this._Vec4(this[0], this[0], this[3], this[1]); }
+  get rrab() { return new this._Vec4(this[0], this[0], this[3], this[2]); }
+  get rraa() { return new this._Vec4(this[0], this[0], this[3], this[3]); }
+  get rgrr() { return new this._Vec4(this[0], this[1], this[0], this[0]); }
+  get rgrg() { return new this._Vec4(this[0], this[1], this[0], this[1]); }
+  get rgrb() { return new this._Vec4(this[0], this[1], this[0], this[2]); }
+  get rgra() { return new this._Vec4(this[0], this[1], this[0], this[3]); }
+  get rggr() { return new this._Vec4(this[0], this[1], this[1], this[0]); }
+  get rggg() { return new this._Vec4(this[0], this[1], this[1], this[1]); }
+  get rggb() { return new this._Vec4(this[0], this[1], this[1], this[2]); }
+  get rgga() { return new this._Vec4(this[0], this[1], this[1], this[3]); }
+  get rgbr() { return new this._Vec4(this[0], this[1], this[2], this[0]); }
+  get rgbg() { return new this._Vec4(this[0], this[1], this[2], this[1]); }
+  get rgbb() { return new this._Vec4(this[0], this[1], this[2], this[2]); }
+  get rgba() { return new this._Vec4(this[0], this[1], this[2], this[3]); }
+  get rgar() { return new this._Vec4(this[0], this[1], this[3], this[0]); }
+  get rgag() { return new this._Vec4(this[0], this[1], this[3], this[1]); }
+  get rgab() { return new this._Vec4(this[0], this[1], this[3], this[2]); }
+  get rgaa() { return new this._Vec4(this[0], this[1], this[3], this[3]); }
+  get rbrr() { return new this._Vec4(this[0], this[2], this[0], this[0]); }
+  get rbrg() { return new this._Vec4(this[0], this[2], this[0], this[1]); }
+  get rbrb() { return new this._Vec4(this[0], this[2], this[0], this[2]); }
+  get rbra() { return new this._Vec4(this[0], this[2], this[0], this[3]); }
+  get rbgr() { return new this._Vec4(this[0], this[2], this[1], this[0]); }
+  get rbgg() { return new this._Vec4(this[0], this[2], this[1], this[1]); }
+  get rbgb() { return new this._Vec4(this[0], this[2], this[1], this[2]); }
+  get rbga() { return new this._Vec4(this[0], this[2], this[1], this[3]); }
+  get rbbr() { return new this._Vec4(this[0], this[2], this[2], this[0]); }
+  get rbbg() { return new this._Vec4(this[0], this[2], this[2], this[1]); }
+  get rbbb() { return new this._Vec4(this[0], this[2], this[2], this[2]); }
+  get rbba() { return new this._Vec4(this[0], this[2], this[2], this[3]); }
+  get rbar() { return new this._Vec4(this[0], this[2], this[3], this[0]); }
+  get rbag() { return new this._Vec4(this[0], this[2], this[3], this[1]); }
+  get rbab() { return new this._Vec4(this[0], this[2], this[3], this[2]); }
+  get rbaa() { return new this._Vec4(this[0], this[2], this[3], this[3]); }
+  get rarr() { return new this._Vec4(this[0], this[3], this[0], this[0]); }
+  get rarg() { return new this._Vec4(this[0], this[3], this[0], this[1]); }
+  get rarb() { return new this._Vec4(this[0], this[3], this[0], this[2]); }
+  get rara() { return new this._Vec4(this[0], this[3], this[0], this[3]); }
+  get ragr() { return new this._Vec4(this[0], this[3], this[1], this[0]); }
+  get ragg() { return new this._Vec4(this[0], this[3], this[1], this[1]); }
+  get ragb() { return new this._Vec4(this[0], this[3], this[1], this[2]); }
+  get raga() { return new this._Vec4(this[0], this[3], this[1], this[3]); }
+  get rabr() { return new this._Vec4(this[0], this[3], this[2], this[0]); }
+  get rabg() { return new this._Vec4(this[0], this[3], this[2], this[1]); }
+  get rabb() { return new this._Vec4(this[0], this[3], this[2], this[2]); }
+  get raba() { return new this._Vec4(this[0], this[3], this[2], this[3]); }
+  get raar() { return new this._Vec4(this[0], this[3], this[3], this[0]); }
+  get raag() { return new this._Vec4(this[0], this[3], this[3], this[1]); }
+  get raab() { return new this._Vec4(this[0], this[3], this[3], this[2]); }
+  get raaa() { return new this._Vec4(this[0], this[3], this[3], this[3]); }
+  get grrr() { return new this._Vec4(this[1], this[0], this[0], this[0]); }
+  get grrg() { return new this._Vec4(this[1], this[0], this[0], this[1]); }
+  get grrb() { return new this._Vec4(this[1], this[0], this[0], this[2]); }
+  get grra() { return new this._Vec4(this[1], this[0], this[0], this[3]); }
+  get grgr() { return new this._Vec4(this[1], this[0], this[1], this[0]); }
+  get grgg() { return new this._Vec4(this[1], this[0], this[1], this[1]); }
+  get grgb() { return new this._Vec4(this[1], this[0], this[1], this[2]); }
+  get grga() { return new this._Vec4(this[1], this[0], this[1], this[3]); }
+  get grbr() { return new this._Vec4(this[1], this[0], this[2], this[0]); }
+  get grbg() { return new this._Vec4(this[1], this[0], this[2], this[1]); }
+  get grbb() { return new this._Vec4(this[1], this[0], this[2], this[2]); }
+  get grba() { return new this._Vec4(this[1], this[0], this[2], this[3]); }
+  get grar() { return new this._Vec4(this[1], this[0], this[3], this[0]); }
+  get grag() { return new this._Vec4(this[1], this[0], this[3], this[1]); }
+  get grab() { return new this._Vec4(this[1], this[0], this[3], this[2]); }
+  get graa() { return new this._Vec4(this[1], this[0], this[3], this[3]); }
+  get ggrr() { return new this._Vec4(this[1], this[1], this[0], this[0]); }
+  get ggrg() { return new this._Vec4(this[1], this[1], this[0], this[1]); }
+  get ggrb() { return new this._Vec4(this[1], this[1], this[0], this[2]); }
+  get ggra() { return new this._Vec4(this[1], this[1], this[0], this[3]); }
+  get gggr() { return new this._Vec4(this[1], this[1], this[1], this[0]); }
+  get gggg() { return new this._Vec4(this[1], this[1], this[1], this[1]); }
+  get gggb() { return new this._Vec4(this[1], this[1], this[1], this[2]); }
+  get ggga() { return new this._Vec4(this[1], this[1], this[1], this[3]); }
+  get ggbr() { return new this._Vec4(this[1], this[1], this[2], this[0]); }
+  get ggbg() { return new this._Vec4(this[1], this[1], this[2], this[1]); }
+  get ggbb() { return new this._Vec4(this[1], this[1], this[2], this[2]); }
+  get ggba() { return new this._Vec4(this[1], this[1], this[2], this[3]); }
+  get ggar() { return new this._Vec4(this[1], this[1], this[3], this[0]); }
+  get ggag() { return new this._Vec4(this[1], this[1], this[3], this[1]); }
+  get ggab() { return new this._Vec4(this[1], this[1], this[3], this[2]); }
+  get ggaa() { return new this._Vec4(this[1], this[1], this[3], this[3]); }
+  get gbrr() { return new this._Vec4(this[1], this[2], this[0], this[0]); }
+  get gbrg() { return new this._Vec4(this[1], this[2], this[0], this[1]); }
+  get gbrb() { return new this._Vec4(this[1], this[2], this[0], this[2]); }
+  get gbra() { return new this._Vec4(this[1], this[2], this[0], this[3]); }
+  get gbgr() { return new this._Vec4(this[1], this[2], this[1], this[0]); }
+  get gbgg() { return new this._Vec4(this[1], this[2], this[1], this[1]); }
+  get gbgb() { return new this._Vec4(this[1], this[2], this[1], this[2]); }
+  get gbga() { return new this._Vec4(this[1], this[2], this[1], this[3]); }
+  get gbbr() { return new this._Vec4(this[1], this[2], this[2], this[0]); }
+  get gbbg() { return new this._Vec4(this[1], this[2], this[2], this[1]); }
+  get gbbb() { return new this._Vec4(this[1], this[2], this[2], this[2]); }
+  get gbba() { return new this._Vec4(this[1], this[2], this[2], this[3]); }
+  get gbar() { return new this._Vec4(this[1], this[2], this[3], this[0]); }
+  get gbag() { return new this._Vec4(this[1], this[2], this[3], this[1]); }
+  get gbab() { return new this._Vec4(this[1], this[2], this[3], this[2]); }
+  get gbaa() { return new this._Vec4(this[1], this[2], this[3], this[3]); }
+  get garr() { return new this._Vec4(this[1], this[3], this[0], this[0]); }
+  get garg() { return new this._Vec4(this[1], this[3], this[0], this[1]); }
+  get garb() { return new this._Vec4(this[1], this[3], this[0], this[2]); }
+  get gara() { return new this._Vec4(this[1], this[3], this[0], this[3]); }
+  get gagr() { return new this._Vec4(this[1], this[3], this[1], this[0]); }
+  get gagg() { return new this._Vec4(this[1], this[3], this[1], this[1]); }
+  get gagb() { return new this._Vec4(this[1], this[3], this[1], this[2]); }
+  get gaga() { return new this._Vec4(this[1], this[3], this[1], this[3]); }
+  get gabr() { return new this._Vec4(this[1], this[3], this[2], this[0]); }
+  get gabg() { return new this._Vec4(this[1], this[3], this[2], this[1]); }
+  get gabb() { return new this._Vec4(this[1], this[3], this[2], this[2]); }
+  get gaba() { return new this._Vec4(this[1], this[3], this[2], this[3]); }
+  get gaar() { return new this._Vec4(this[1], this[3], this[3], this[0]); }
+  get gaag() { return new this._Vec4(this[1], this[3], this[3], this[1]); }
+  get gaab() { return new this._Vec4(this[1], this[3], this[3], this[2]); }
+  get gaaa() { return new this._Vec4(this[1], this[3], this[3], this[3]); }
+  get brrr() { return new this._Vec4(this[2], this[0], this[0], this[0]); }
+  get brrg() { return new this._Vec4(this[2], this[0], this[0], this[1]); }
+  get brrb() { return new this._Vec4(this[2], this[0], this[0], this[2]); }
+  get brra() { return new this._Vec4(this[2], this[0], this[0], this[3]); }
+  get brgr() { return new this._Vec4(this[2], this[0], this[1], this[0]); }
+  get brgg() { return new this._Vec4(this[2], this[0], this[1], this[1]); }
+  get brgb() { return new this._Vec4(this[2], this[0], this[1], this[2]); }
+  get brga() { return new this._Vec4(this[2], this[0], this[1], this[3]); }
+  get brbr() { return new this._Vec4(this[2], this[0], this[2], this[0]); }
+  get brbg() { return new this._Vec4(this[2], this[0], this[2], this[1]); }
+  get brbb() { return new this._Vec4(this[2], this[0], this[2], this[2]); }
+  get brba() { return new this._Vec4(this[2], this[0], this[2], this[3]); }
+  get brar() { return new this._Vec4(this[2], this[0], this[3], this[0]); }
+  get brag() { return new this._Vec4(this[2], this[0], this[3], this[1]); }
+  get brab() { return new this._Vec4(this[2], this[0], this[3], this[2]); }
+  get braa() { return new this._Vec4(this[2], this[0], this[3], this[3]); }
+  get bgrr() { return new this._Vec4(this[2], this[1], this[0], this[0]); }
+  get bgrg() { return new this._Vec4(this[2], this[1], this[0], this[1]); }
+  get bgrb() { return new this._Vec4(this[2], this[1], this[0], this[2]); }
+  get bgra() { return new this._Vec4(this[2], this[1], this[0], this[3]); }
+  get bggr() { return new this._Vec4(this[2], this[1], this[1], this[0]); }
+  get bggg() { return new this._Vec4(this[2], this[1], this[1], this[1]); }
+  get bggb() { return new this._Vec4(this[2], this[1], this[1], this[2]); }
+  get bgga() { return new this._Vec4(this[2], this[1], this[1], this[3]); }
+  get bgbr() { return new this._Vec4(this[2], this[1], this[2], this[0]); }
+  get bgbg() { return new this._Vec4(this[2], this[1], this[2], this[1]); }
+  get bgbb() { return new this._Vec4(this[2], this[1], this[2], this[2]); }
+  get bgba() { return new this._Vec4(this[2], this[1], this[2], this[3]); }
+  get bgar() { return new this._Vec4(this[2], this[1], this[3], this[0]); }
+  get bgag() { return new this._Vec4(this[2], this[1], this[3], this[1]); }
+  get bgab() { return new this._Vec4(this[2], this[1], this[3], this[2]); }
+  get bgaa() { return new this._Vec4(this[2], this[1], this[3], this[3]); }
+  get bbrr() { return new this._Vec4(this[2], this[2], this[0], this[0]); }
+  get bbrg() { return new this._Vec4(this[2], this[2], this[0], this[1]); }
+  get bbrb() { return new this._Vec4(this[2], this[2], this[0], this[2]); }
+  get bbra() { return new this._Vec4(this[2], this[2], this[0], this[3]); }
+  get bbgr() { return new this._Vec4(this[2], this[2], this[1], this[0]); }
+  get bbgg() { return new this._Vec4(this[2], this[2], this[1], this[1]); }
+  get bbgb() { return new this._Vec4(this[2], this[2], this[1], this[2]); }
+  get bbga() { return new this._Vec4(this[2], this[2], this[1], this[3]); }
+  get bbbr() { return new this._Vec4(this[2], this[2], this[2], this[0]); }
+  get bbbg() { return new this._Vec4(this[2], this[2], this[2], this[1]); }
+  get bbbb() { return new this._Vec4(this[2], this[2], this[2], this[2]); }
+  get bbba() { return new this._Vec4(this[2], this[2], this[2], this[3]); }
+  get bbar() { return new this._Vec4(this[2], this[2], this[3], this[0]); }
+  get bbag() { return new this._Vec4(this[2], this[2], this[3], this[1]); }
+  get bbab() { return new this._Vec4(this[2], this[2], this[3], this[2]); }
+  get bbaa() { return new this._Vec4(this[2], this[2], this[3], this[3]); }
+  get barr() { return new this._Vec4(this[2], this[3], this[0], this[0]); }
+  get barg() { return new this._Vec4(this[2], this[3], this[0], this[1]); }
+  get barb() { return new this._Vec4(this[2], this[3], this[0], this[2]); }
+  get bara() { return new this._Vec4(this[2], this[3], this[0], this[3]); }
+  get bagr() { return new this._Vec4(this[2], this[3], this[1], this[0]); }
+  get bagg() { return new this._Vec4(this[2], this[3], this[1], this[1]); }
+  get bagb() { return new this._Vec4(this[2], this[3], this[1], this[2]); }
+  get baga() { return new this._Vec4(this[2], this[3], this[1], this[3]); }
+  get babr() { return new this._Vec4(this[2], this[3], this[2], this[0]); }
+  get babg() { return new this._Vec4(this[2], this[3], this[2], this[1]); }
+  get babb() { return new this._Vec4(this[2], this[3], this[2], this[2]); }
+  get baba() { return new this._Vec4(this[2], this[3], this[2], this[3]); }
+  get baar() { return new this._Vec4(this[2], this[3], this[3], this[0]); }
+  get baag() { return new this._Vec4(this[2], this[3], this[3], this[1]); }
+  get baab() { return new this._Vec4(this[2], this[3], this[3], this[2]); }
+  get baaa() { return new this._Vec4(this[2], this[3], this[3], this[3]); }
+  get arrr() { return new this._Vec4(this[3], this[0], this[0], this[0]); }
+  get arrg() { return new this._Vec4(this[3], this[0], this[0], this[1]); }
+  get arrb() { return new this._Vec4(this[3], this[0], this[0], this[2]); }
+  get arra() { return new this._Vec4(this[3], this[0], this[0], this[3]); }
+  get argr() { return new this._Vec4(this[3], this[0], this[1], this[0]); }
+  get argg() { return new this._Vec4(this[3], this[0], this[1], this[1]); }
+  get argb() { return new this._Vec4(this[3], this[0], this[1], this[2]); }
+  get arga() { return new this._Vec4(this[3], this[0], this[1], this[3]); }
+  get arbr() { return new this._Vec4(this[3], this[0], this[2], this[0]); }
+  get arbg() { return new this._Vec4(this[3], this[0], this[2], this[1]); }
+  get arbb() { return new this._Vec4(this[3], this[0], this[2], this[2]); }
+  get arba() { return new this._Vec4(this[3], this[0], this[2], this[3]); }
+  get arar() { return new this._Vec4(this[3], this[0], this[3], this[0]); }
+  get arag() { return new this._Vec4(this[3], this[0], this[3], this[1]); }
+  get arab() { return new this._Vec4(this[3], this[0], this[3], this[2]); }
+  get araa() { return new this._Vec4(this[3], this[0], this[3], this[3]); }
+  get agrr() { return new this._Vec4(this[3], this[1], this[0], this[0]); }
+  get agrg() { return new this._Vec4(this[3], this[1], this[0], this[1]); }
+  get agrb() { return new this._Vec4(this[3], this[1], this[0], this[2]); }
+  get agra() { return new this._Vec4(this[3], this[1], this[0], this[3]); }
+  get aggr() { return new this._Vec4(this[3], this[1], this[1], this[0]); }
+  get aggg() { return new this._Vec4(this[3], this[1], this[1], this[1]); }
+  get aggb() { return new this._Vec4(this[3], this[1], this[1], this[2]); }
+  get agga() { return new this._Vec4(this[3], this[1], this[1], this[3]); }
+  get agbr() { return new this._Vec4(this[3], this[1], this[2], this[0]); }
+  get agbg() { return new this._Vec4(this[3], this[1], this[2], this[1]); }
+  get agbb() { return new this._Vec4(this[3], this[1], this[2], this[2]); }
+  get agba() { return new this._Vec4(this[3], this[1], this[2], this[3]); }
+  get agar() { return new this._Vec4(this[3], this[1], this[3], this[0]); }
+  get agag() { return new this._Vec4(this[3], this[1], this[3], this[1]); }
+  get agab() { return new this._Vec4(this[3], this[1], this[3], this[2]); }
+  get agaa() { return new this._Vec4(this[3], this[1], this[3], this[3]); }
+  get abrr() { return new this._Vec4(this[3], this[2], this[0], this[0]); }
+  get abrg() { return new this._Vec4(this[3], this[2], this[0], this[1]); }
+  get abrb() { return new this._Vec4(this[3], this[2], this[0], this[2]); }
+  get abra() { return new this._Vec4(this[3], this[2], this[0], this[3]); }
+  get abgr() { return new this._Vec4(this[3], this[2], this[1], this[0]); }
+  get abgg() { return new this._Vec4(this[3], this[2], this[1], this[1]); }
+  get abgb() { return new this._Vec4(this[3], this[2], this[1], this[2]); }
+  get abga() { return new this._Vec4(this[3], this[2], this[1], this[3]); }
+  get abbr() { return new this._Vec4(this[3], this[2], this[2], this[0]); }
+  get abbg() { return new this._Vec4(this[3], this[2], this[2], this[1]); }
+  get abbb() { return new this._Vec4(this[3], this[2], this[2], this[2]); }
+  get abba() { return new this._Vec4(this[3], this[2], this[2], this[3]); }
+  get abar() { return new this._Vec4(this[3], this[2], this[3], this[0]); }
+  get abag() { return new this._Vec4(this[3], this[2], this[3], this[1]); }
+  get abab() { return new this._Vec4(this[3], this[2], this[3], this[2]); }
+  get abaa() { return new this._Vec4(this[3], this[2], this[3], this[3]); }
+  get aarr() { return new this._Vec4(this[3], this[3], this[0], this[0]); }
+  get aarg() { return new this._Vec4(this[3], this[3], this[0], this[1]); }
+  get aarb() { return new this._Vec4(this[3], this[3], this[0], this[2]); }
+  get aara() { return new this._Vec4(this[3], this[3], this[0], this[3]); }
+  get aagr() { return new this._Vec4(this[3], this[3], this[1], this[0]); }
+  get aagg() { return new this._Vec4(this[3], this[3], this[1], this[1]); }
+  get aagb() { return new this._Vec4(this[3], this[3], this[1], this[2]); }
+  get aaga() { return new this._Vec4(this[3], this[3], this[1], this[3]); }
+  get aabr() { return new this._Vec4(this[3], this[3], this[2], this[0]); }
+  get aabg() { return new this._Vec4(this[3], this[3], this[2], this[1]); }
+  get aabb() { return new this._Vec4(this[3], this[3], this[2], this[2]); }
+  get aaba() { return new this._Vec4(this[3], this[3], this[2], this[3]); }
+  get aaar() { return new this._Vec4(this[3], this[3], this[3], this[0]); }
+  get aaag() { return new this._Vec4(this[3], this[3], this[3], this[1]); }
+  get aaab() { return new this._Vec4(this[3], this[3], this[3], this[2]); }
+  get aaaa() { return new this._Vec4(this[3], this[3], this[3], this[3]); }
 }
 
 type Tuple2<S> = [S, S];
@@ -431,6 +773,22 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   set y(value: S) {
+    this[1] = this.castElement()(value);
+  }
+
+  get r() {
+    return this[0];
+  }
+
+  get g() {
+    return this[1];
+  }
+
+  set r(value: S) {
+    this[0] = this.castElement()(value);
+  }
+
+  set g(value: S) {
     this[1] = this.castElement()(value);
   }
 }
@@ -496,6 +854,30 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   set z(value: S) {
     this[2] = this.castElement()(value);
   }
+
+  get r() {
+    return this[0];
+  }
+
+  get g() {
+    return this[1];
+  }
+
+  get b() {
+    return this[2];
+  }
+
+  set r(value: S) {
+    this[0] = this.castElement()(value);
+  }
+
+  set g(value: S) {
+    this[1] = this.castElement()(value);
+  }
+
+  set b(value: S) {
+    this[2] = this.castElement()(value);
+  }
 }
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
@@ -552,6 +934,38 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 
   get y() {
     return this[1];
+  }
+
+  get r() {
+    return this[0];
+  }
+
+  get g() {
+    return this[1];
+  }
+
+  get b() {
+    return this[2];
+  }
+
+  get a() {
+    return this[3];
+  }
+
+  set r(value: S) {
+    this[0] = value;
+  }
+
+  set g(value: S) {
+    this[1] = value;
+  }
+
+  set b(value: S) {
+    this[2] = value;
+  }
+
+  set a(value: S) {
+    this[3] = value;
   }
 
   get z() {

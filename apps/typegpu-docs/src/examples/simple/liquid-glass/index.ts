@@ -99,7 +99,7 @@ const sampleWithChromaticAberration = (
   for (let i = 0; i < 3; i++) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
     samples[i] =
-      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).xyz;
+      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).rgb;
   }
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
@@ -148,7 +148,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     strength: paramsUniform.$.tintStrength,
   });
 
-  const tintedBlur = applyTint(blurSample.xyz, tint);
+  const tintedBlur = applyTint(blurSample.rgb, tint);
   const tintedRing = applyTint(refractedSample, tint);
 
   return tintedBlur.mul(weights.inside)
