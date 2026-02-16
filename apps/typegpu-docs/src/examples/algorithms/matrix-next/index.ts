@@ -61,10 +61,10 @@ function createPipelines() {
     state.gpuTime = Number(end - start) / 1_000_000;
   };
 
-  const optimized = root['~unstable'].createComputePipeline({
+  const optimized = root.createComputePipeline({
     compute: computeSharedMemory,
   });
-  const simple = root['~unstable'].createComputePipeline({
+  const simple = root.createComputePipeline({
     compute: computeSimple,
   });
 

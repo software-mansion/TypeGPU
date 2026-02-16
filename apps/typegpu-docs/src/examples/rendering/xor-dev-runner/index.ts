@@ -86,7 +86,7 @@ const controlsOffsetUniform = root.createUniform(d.f32);
 const colorUniform = root.createUniform(d.vec3f);
 const shiftUniform = root.createUniform(d.f32);
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -125,7 +125,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 /**
  * A full-screen triangle vertex shader
  */
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -148,7 +148,7 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(canvas, {
   cameraUniform.writePartial(props);
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
   targets: { format: presentationFormat },

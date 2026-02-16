@@ -64,7 +64,7 @@ const root = await tgpu.init();
 const dataMutable = root
   .createMutable(d.arrayOf(d.u32, 8), [1, 2, 3, 4, 5, 6, 7, 8]);
 
-const computeMain = tgpu['~unstable'].computeFn({
+const computeMain = tgpu.computeFn({
   workgroupSize: [1],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -72,9 +72,7 @@ const computeMain = tgpu['~unstable'].computeFn({
   dataMutable.$[index] *= 2;
 });
 
-const multiplyPipeline = root['~unstable']
-  .withCompute(computeMain)
-  .createPipeline();
+const multiplyPipeline = root.createComputePipeline({ compute: computeMain });
 
 const resolved = tgpu.resolve([multiplyPipeline]);
 ```
