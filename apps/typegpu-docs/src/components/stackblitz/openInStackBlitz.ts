@@ -10,6 +10,9 @@ import typegpuNoisePackageJson from '@typegpu/noise/package.json' with {
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with {
   type: 'json',
 };
+import typegpuThreePackageJson from '@typegpu/three/package.json' with {
+  type: 'json',
+};
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
   type: 'json',
@@ -33,6 +36,7 @@ const pnpmWorkspaceYaml = type({
     types: {
       typescript: 'string',
       '@webgpu/types': 'string',
+      '@types/three': 'string',
     },
     test: {
       vitest: 'string',
@@ -43,6 +47,7 @@ const pnpmWorkspaceYaml = type({
     },
     example: {
       'wgpu-matrix': 'string',
+      'three': 'string',
     },
   },
 })(parse(pnpmWorkspace));
@@ -127,7 +132,8 @@ ${example.htmlFile.content}
     "devDependencies": {
       "typescript": "${pnpmWorkspaceYaml.catalogs.types.typescript}",
       "vite": "^6.1.1",
-      "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}"
+      "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}",
+      "@types/three": "${pnpmWorkspaceYaml.catalogs.types['@types/three']}"
     },
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",
@@ -139,9 +145,11 @@ ${example.htmlFile.content}
       "@loaders.gl/obj": "${
           typegpuDocsPackageJson.dependencies['@loaders.gl/obj']
         }",
+      "three": "${pnpmWorkspaceYaml.catalogs.example.three}",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",
-      "@typegpu/sdf": "${typegpuSdfPackageJson.version}"
+      "@typegpu/sdf": "${typegpuSdfPackageJson.version}",
+      "@typegpu/three": "${typegpuThreePackageJson.version}"
     }
 }`,
         'vite.config.js': `\
