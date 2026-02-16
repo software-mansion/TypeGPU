@@ -6,10 +6,6 @@ import { defineControls } from '../../common/defineControls.ts';
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
 
-const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
-const timeAccess = tgpu['~unstable'].accessor(d.f32);
-const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
-
 const exponentialSharpen = (n: number, sharpness: number): number => {
   'use gpu';
   return sign(n) * pow(abs(n), 1 - sharpness);
@@ -20,10 +16,6 @@ const tanhSharpen = (n: number, sharpness: number): number => {
   return tanh(n * (1 + sharpness * 10));
 };
 
-const sharpenFnSlot = tgpu.slot<(n: number, sharpness: number) => number>(
-  exponentialSharpen,
-);
-
 // Configuring a dynamic (meaning it's size can change) cache
 // for perlin noise gradients.
 const perlinCacheConfig = perlin3d.dynamicCacheConfig();
@@ -33,6 +25,10 @@ const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
 
+const gridSize = root.createUniform(d.f32);
+const time = root.createUniform(d.f32, 0);
+const sharpness = root.createUniform(d.f32, 0.1);
+
 // Instantiating the cache with an initial size.
 const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
@@ -40,29 +36,20 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const gridSize = root.createUniform(d.f32);
-const time = root.createUniform(d.f32, 0);
-const sharpness = root.createUniform(d.f32, 0.1);
-
 const createRenderPipeline = (
   sharpenFn: (n: number, sharpness: number) => number,
 ) =>
   root['~unstable']
     .pipe(perlinCacheConfig.inject(dynamicLayout.$))
-    .with(gridSizeAccess, gridSize)
-    .with(timeAccess, time)
-    .with(sharpnessAccess, sharpness)
-    .with(sharpenFnSlot, sharpenFn)
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: ({ uv }) => {
         'use gpu';
-        const suv = mul(gridSizeAccess.$, uv);
-
-        const n = perlin3d.sample(d.vec3f(suv, timeAccess.$));
+        const suv = mul(gridSize.$, uv);
+        const n = perlin3d.sample(d.vec3f(suv, time.$));
 
         // Apply sharpening function
-        const sharp = sharpenFnSlot.$(n, sharpnessAccess.$);
+        const sharp = sharpenFn(n, sharpness.$);
 
         // Map to 0-1 range
         const n01 = sharp * 0.5 + 0.5;
@@ -111,7 +98,7 @@ export const controls = defineControls({
     initial: '4',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
     onSelectChange: (value: string) => {
-      const iSize = Number.parseInt(value);
+      const iSize = Number.parseInt(value, 10);
       perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
       gridSize.write(iSize);
       bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
