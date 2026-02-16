@@ -5,10 +5,10 @@
 
     <!-- Y-axis labels -->
     <div class="y-axis-labels">
-      <span>40</span>
-      <span>30</span>
-      <span>20</span>
-      <span>10</span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
       <span>0</span>
     </div>
 
@@ -17,86 +17,86 @@
       <!-- Data group 1 -->
       <div class="data-group">
         <div class="bars">
-          <div class="bar bar-gpu">
+          <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-threads">
+          <div class="bar bar-gpu-total">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-sequential">
+          <div class="bar bar-gpu-shader">
             <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">0.7x</div>
-        <div class="x-axis-label">10K</div>
+        <div class="speedup-label"></div>
+        <div class="x-axis-label">21K</div>
       </div>
 
       <!-- Data group 2 -->
       <div class="data-group">
         <div class="bars">
-          <div class="bar bar-gpu">
+          <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-threads">
+          <div class="bar bar-gpu-total">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-sequential">
+          <div class="bar bar-gpu-shader">
             <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">2.5x</div>
-        <div class="x-axis-label">50K</div>
+        <div class="speedup-label"></div>
+        <div class="x-axis-label">131K</div>
       </div>
 
       <!-- Data group 3 -->
       <div class="data-group">
         <div class="bars">
-          <div class="bar bar-gpu">
+          <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-threads">
+          <div class="bar bar-gpu-total">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-sequential">
+          <div class="bar bar-gpu-shader">
             <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">3.0x</div>
+        <div class="speedup-label"></div>
         <div class="x-axis-label">1M</div>
       </div>
 
       <!-- Data group 4 -->
       <div class="data-group">
         <div class="bars">
-          <div class="bar bar-gpu">
+          <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-threads">
+          <div class="bar bar-gpu-total">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-sequential">
+          <div class="bar bar-gpu-shader">
             <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">4x</div>
-        <div class="x-axis-label">5M</div>
+        <div class="speedup-label"></div>
+        <div class="x-axis-label">4M</div>
       </div>
 
       <!-- Data group 5 -->
       <div class="data-group">
         <div class="bars">
-          <div class="bar bar-gpu">
+          <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-threads">
+          <div class="bar bar-gpu-total">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-sequential">
+          <div class="bar bar-gpu-shader">
             <div class="bar-tooltip"></div>
           </div>
         </div>
-        <div class="speedup-label">6x</div>
-        <div class="x-axis-label">10M</div>
+        <div class="speedup-label"></div>
+        <div class="x-axis-label">8M</div>
       </div>
     </div>
   </div>
@@ -106,9 +106,8 @@
   :root {
     --axis-color: #e6e6f2;
     --bar-gradient: linear-gradient(to right, #c464ff, #1d72f0);
-    --bar-color-gpu: #ffd54a;
-    --bar-color-threads: #18b6d5;
-    --bar-color-sequential: #ff6b6b;
+    --bar-color-gpu-shader: #ffd54a;
+    --bar-color-gpu-total: #18b6d5;
     --bar-track-bg: linear-gradient(to right, transparent, var(--axis-color));
   }
 
@@ -128,7 +127,6 @@
     border-bottom: 2px solid var(--axis-color);
   }
 
-  /* Y-axis title */
   .y-axis-title {
     grid-area: y-title;
     writing-mode: vertical-rl;
@@ -141,7 +139,6 @@
     color: #333;
   }
 
-  /* Y-axis labels */
   .y-axis-labels {
     grid-area: y-labels;
     display: flex;
@@ -153,7 +150,6 @@
     color: #666;
   }
 
-  /* Chart area */
   .chart-area {
     grid-area: bars;
     display: grid;
@@ -164,7 +160,6 @@
     position: relative;
   }
 
-  /* Data groups */
   .data-group {
     display: grid;
     grid-template-areas:
@@ -176,7 +171,6 @@
     gap: 0.5rem;
   }
 
-  /* Bars container */
   .bars {
     grid-area: bars;
     display: grid;
@@ -186,7 +180,6 @@
     height: 10rem;
   }
 
-  /* Individual bars */
   .bar {
     position: relative;
     width: 1rem;
@@ -201,25 +194,23 @@
   .bar::after {
     content: '';
     width: 100%;
-    height: calc(100% * clamp(0, var(--bar-height, 0.5), 1));
+    height: calc(100% * clamp(0, var(--bar-height, 0), 1));
     border-radius: 9999px;
     transition: height 0.3s ease-in-out;
   }
 
-  /* Bar colors */
-  .bar-gpu::after {
-    background-color: var(--bar-color-gpu);
+  .bar-gpu-shader::after {
+    background-color: var(--bar-color-gpu-shader);
   }
 
-  .bar-threads::after {
-    background-color: var(--bar-color-threads);
+  .bar-gpu-total::after {
+    background-color: var(--bar-color-gpu-total);
   }
 
-  .bar-sequential::after {
+  .bar-js::after {
     background-image: var(--bar-gradient);
   }
 
-  /* Speedup labels */
   .speedup-label {
     grid-area: speedup;
     font-weight: 600;
@@ -228,7 +219,6 @@
     text-align: center;
   }
 
-  /* X-axis labels */
   .x-axis-label {
     grid-area: x-label;
     font-size: 0.875rem;
@@ -236,7 +226,6 @@
     text-align: center;
   }
 
-  /* Tooltips */
   .bar-tooltip {
     position: absolute;
     bottom: 100%;
@@ -270,7 +259,6 @@
     visibility: visible;
   }
 
-  /* Axis arrows */
   .chart-container::before {
     content: '';
     position: absolute;
@@ -297,7 +285,6 @@
     transform: translateY(1px);
   }
 
-  /* Responsive adjustments */
   @media (max-width: 1024px) {
     .chart-container {
       grid-template-columns: 3rem 2rem 1fr;

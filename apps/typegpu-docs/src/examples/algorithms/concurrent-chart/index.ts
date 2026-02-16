@@ -1,154 +1,89 @@
 import tgpu from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 import { performCalculationsWithTime } from './calculator.ts';
 
-const barElements = document.querySelectorAll<HTMLDivElement>('.bar');
-const bars = Array.from({ length: 5 }, (_, i) => ({
-  jsBar: barElements[i * 3 + 0],
-  gpuTotalBar: barElements[i * 3 + 1],
-  gpuBar: barElements[i * 3 + 2],
-}));
-bars.forEach((bar) => {
-  bar.jsBar.style.setProperty('--highlight-opacity', '1');
-  bar.gpuTotalBar.style.setProperty('--highlight-opacity', '1');
-  bar.gpuBar.style.setProperty('--highlight-opacity', '1');
+const SIZES = [21037, 131072, 1048576, 4194304, 8388608] as const;
+
+const root = await tgpu.init({
+  device: {
+    requiredFeatures: ['timestamp-query'],
+  },
 });
 
-const tooltipElements = document.querySelectorAll<HTMLDivElement>(
-  '.bar-tooltip',
-);
-const tooltips = Array.from({ length: 5 }, (_, i) => ({
-  jsTooltip: tooltipElements[i * 3 + 0],
-  gpuTotalTooltip: tooltipElements[i * 3 + 1],
-  gpuTooltip: tooltipElements[i * 3 + 2],
-}));
-const speedupLabels = Array.from(
-  document.querySelectorAll<HTMLDivElement>('.speedup-label'),
-);
-const xAxisLabels = Array.from(
-  document.querySelectorAll<HTMLDivElement>('.x-axis-label'),
+const dataGroups = Array.from(
+  document.querySelectorAll<HTMLDivElement>('.data-group'),
 );
 const yAxisLabels = Array.from(
   document.querySelectorAll<HTMLSpanElement>('.y-axis-labels span'),
 );
-let dropdown = '8388608';
 
-const root = await tgpu.init({
-  device: {
-    requiredFeatures: [
-      'timestamp-query',
-    ],
+const results = SIZES.map(() => ({ jsTime: 0, gpuTime: 0, gpuShaderTime: 0 }));
+
+function drawCharts() {
+  const overallMax = Math.max(
+    ...results.map((r) => Math.max(r.jsTime, r.gpuTime, r.gpuShaderTime)),
+  );
+
+  // Update y-axis
+  const ticks = overallMax <= 0
+    ? [0, 0, 0, 0, 0]
+    : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
+  for (const [i, label] of yAxisLabels.toReversed().entries()) {
+    label.textContent = ticks[i].toFixed(1);
+  }
+
+  const metrics = [
+    { cls: '.bar-js', key: 'jsTime', label: 'JS' },
+    { cls: '.bar-gpu-total', key: 'gpuTime', label: 'Total GPU' },
+    { cls: '.bar-gpu-shader', key: 'gpuShaderTime', label: 'GPU shader' },
+  ] as const;
+
+  for (const [i, group] of dataGroups.entries()) {
+    const r = results[i];
+
+    // Update speedup label
+    const speedup = r.gpuShaderTime > 0
+      ? (r.jsTime / r.gpuShaderTime).toFixed(1)
+      : '-';
+    (group.querySelector('.speedup-label') as HTMLDivElement).textContent =
+      `${speedup}x`;
+
+    // Update bars and tooltips
+    for (const m of metrics) {
+      const bar = group.querySelector(m.cls) as HTMLDivElement;
+      const value = r[m.key];
+      const height = overallMax > 0 ? value / overallMax : 0;
+      bar.style.setProperty('--bar-height', `${height}`);
+
+      const tooltip = bar.querySelector('.bar-tooltip') as HTMLDivElement;
+      tooltip.textContent = `${m.label}: ${value.toFixed(2)}ms`;
+    }
+  }
+}
+
+async function runBenchmarks() {
+  for (const [i, size] of SIZES.entries()) {
+    const input = Array(size).fill(1);
+    const result = await performCalculationsWithTime(root, input);
+    if (result.success) {
+      results[i] = result;
+    }
+  }
+  drawCharts();
+}
+
+runBenchmarks();
+
+// #region Example controls & Cleanup
+
+export const controls = defineControls({
+  Recalculate: {
+    onButtonClick: runBenchmarks,
   },
 });
 
-let yAxisTicks: number[] = [];
-
-const lengthMap: Record<
-  string,
-  { jsTime: number; gpuTime: number; gpuShaderTime: number }
-> = {
-  '21037': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
-  '131072': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
-  '1048576': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
-  '4194304': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
-  '8388608': { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 },
-};
-async function initCalc() {
-  const inputArrays: number[][] = [];
-
-  for (const length of Object.keys(lengthMap)) {
-    const arrayLength = Number.parseInt(length);
-    const onesArray = Array(arrayLength).fill(1);
-    inputArrays.push(onesArray);
-    const { success, jsTime, gpuTime, gpuShaderTime } =
-      await performCalculationsWithTime(
-        root,
-        onesArray,
-      );
-    if (
-      success && jsTime !== undefined && gpuTime !== undefined &&
-      gpuShaderTime !== undefined
-    ) {
-      lengthMap[onesArray.length].jsTime = jsTime;
-      lengthMap[onesArray.length].gpuTime = gpuTime;
-      lengthMap[onesArray.length].gpuShaderTime = gpuShaderTime;
-    }
-  }
-  return inputArrays;
-}
-function drawCharts() {
-  const maxJsTime = Math.max(...Object.values(lengthMap).map((x) => x.jsTime));
-  const maxGpuTime = Math.max(
-    ...Object.values(lengthMap).map((x) => x.gpuTime),
-  );
-  const maxGpuShaderTime = Math.max(
-    ...Object.values(lengthMap).map((x) => x.gpuShaderTime),
-  );
-  const overallMax = Math.max(maxJsTime, maxGpuTime, maxGpuShaderTime);
-
-  yAxisTicks = overallMax <= 0
-    ? [0, 0, 0, 0, 0]
-    : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
-
-  const reversedLabels = yAxisLabels.slice().toReversed();
-  for (let index = 0; index < reversedLabels.length; index++) {
-    const label = reversedLabels[index];
-    label.textContent = yAxisTicks[index].toFixed(1);
-  }
-
-  const keys = Object.keys(lengthMap);
-  for (let i = 0; i < bars.length; i++) {
-    const value = lengthMap[keys[i]];
-    const bar = bars[i];
-    const tooltip = tooltips[i];
-    speedupLabels[i].textContent = `${
-      (value.jsTime / value.gpuShaderTime).toFixed(1)
-    }x`;
-    xAxisLabels[i].textContent = keys[i];
-
-    // CPU
-    const normalizedJsHeight = maxJsTime > 0 ? value.jsTime / overallMax : 0;
-    bar.jsBar.style.setProperty('--bar-height', `${normalizedJsHeight}`);
-    tooltip.jsTooltip.textContent = `JS time: ${
-      value.jsTime.toFixed(2)
-    }ms  |  Array size: ${keys[i]}`;
-
-    // GPU Total
-    const normalizedGpuHeight = maxGpuTime > 0 ? value.gpuTime / overallMax : 0;
-    bar.gpuTotalBar.style.setProperty('--bar-height', `${normalizedGpuHeight}`);
-    tooltip.gpuTotalTooltip.textContent = `Total GPU time: ${
-      value.gpuTime.toFixed(2)
-    }ms  |  Array size: ${keys[i]}`;
-
-    // GPU shader
-    const normalizedGpuShaderHeight = maxGpuShaderTime > 0
-      ? value.gpuShaderTime / overallMax
-      : 0;
-    bar.gpuBar.style.setProperty(
-      '--bar-height',
-      `${normalizedGpuShaderHeight}`,
-    );
-    tooltip.gpuTooltip.textContent = `GPU shader time: ${
-      value.gpuShaderTime.toFixed(2)
-    }ms  |  Array size: ${keys[i]}`;
-  }
+export function onCleanup() {
+  root.destroy();
 }
 
-export const controls = {
-  Calculate: {
-    onButtonClick: async () => {
-      await initCalc();
-      drawCharts();
-    },
-  },
-  'Array length': {
-    initial: '8388608',
-    options: [2 ** 19, 2 ** 21, 2 ** 23, 2 ** 24].map((x) => x.toString()),
-    async onSelectChange(value: string) {
-      delete lengthMap[dropdown];
-      dropdown = value;
-      lengthMap[dropdown] = { jsTime: 0, gpuTime: 0, gpuShaderTime: 0 };
-      await initCalc();
-      drawCharts();
-    },
-  },
-};
+// #endregion
