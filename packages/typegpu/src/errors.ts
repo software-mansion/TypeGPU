@@ -172,7 +172,7 @@ export class MissingBindGroupsError extends Error {
 }
 
 export class MissingVertexBuffersError extends Error {
-  constructor(layouts: Iterable<TgpuVertexLayout<WgslArray | Disarray>>) {
+  constructor(layouts: Iterable<TgpuVertexLayout>) {
     super(
       `Missing vertex buffers for layouts: '${
         [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')

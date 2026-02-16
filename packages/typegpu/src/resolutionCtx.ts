@@ -131,7 +131,7 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+  pushSlotBindings(pairs: SlotValuePair[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
@@ -597,7 +597,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {

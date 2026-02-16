@@ -138,7 +138,7 @@ export interface ItemStateStack {
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -279,7 +279,7 @@ export interface ResolutionCtx {
     binding: number;
   };
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
 
   pushMode(state: ExecState): void;
   popMode(expected?: ExecMode): void;

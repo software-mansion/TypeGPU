@@ -206,7 +206,7 @@ function createFragmentFn(
   implementation: Implementation,
 ): TgpuFragmentFn {
   type This =
-    & TgpuFragmentFn<TgpuFragmentFn.In, TgpuFragmentFn.Out>
+    & TgpuFragmentFn<TgpuFragmentFn.In>
     & SelfResolvable
     & {
       [$internal]: true;

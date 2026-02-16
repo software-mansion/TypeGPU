@@ -86,8 +86,8 @@ export type AnyAttribute<
 > =
   | Align<number>
   | Size<number>
-  | Location<number>
-  | Interpolate<InterpolationType>
+  | Location
+  | Interpolate
   | Invariant
   | AllowedBuiltins;
 

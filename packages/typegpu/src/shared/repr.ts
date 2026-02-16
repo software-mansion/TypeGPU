@@ -110,7 +110,7 @@ export type IsValidVertexSchema<T> =
  * Accepts only arrays (or disarrays) of u32 or u16.
  */
 export type IsValidIndexSchema<T> = Undecorate<T> extends
-  WgslArray<BaseData> | Disarray<BaseData>
+  WgslArray | Disarray
   ? (Undecorate<Undecorate<T>['elementType']>) extends U32 | U16 ? true : false
   : false;
 

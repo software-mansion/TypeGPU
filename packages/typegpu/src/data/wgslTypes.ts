@@ -1840,7 +1840,7 @@ export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
  * isAtomic(d.atomic(d.u32)) // true
  * isAtomic(d.u32) // false
  */
-export function isAtomic<T extends Atomic<U32 | I32>>(
+export function isAtomic<T extends Atomic>(
   schema: T | unknown,
 ): schema is T {
   return isMarkedInternal(schema) && (schema as T)?.type === 'atomic';
@@ -1858,13 +1858,13 @@ export function isSizeAttrib<T extends Size<number>>(
   return isMarkedInternal(value) && (value as T)?.type === '@size';
 }
 
-export function isLocationAttrib<T extends Location<number>>(
+export function isLocationAttrib<T extends Location>(
   value: unknown | T,
 ): value is T {
   return isMarkedInternal(value) && (value as T)?.type === '@location';
 }
 
-export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
+export function isInterpolateAttrib<T extends Interpolate>(
   value: unknown | T,
 ): value is T {
   return isMarkedInternal(value) && (value as T)?.type === '@interpolate';
