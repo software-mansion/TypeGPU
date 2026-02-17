@@ -40,6 +40,7 @@ import {
   SURF_DIST,
   SWITCH_RAIL_LENGTH,
 } from './constants.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: {
@@ -375,22 +376,14 @@ const renderBackground = (
   const state = switchBehavior.stateUniform.$;
   const hitPosition = rayOrigin.add(rayDirection.mul(backgroundHitDist));
 
-  let offsetX = d.f32();
-  let offsetZ = d.f32(0.05);
-
-  const lightDir = lightUniform.$.direction;
-  const causticScale = 0.2;
-  offsetX -= lightDir.x * causticScale;
-  offsetZ += lightDir.z * causticScale;
-
   const newNormal = getNormal(hitPosition);
 
   // Calculate fake bounce lighting
   const switchX = (state.progress - 0.5) * SWITCH_RAIL_LENGTH;
   const jellyColor = jellyColorUniform.$;
   const sqDist = sqLength(hitPosition.sub(d.vec3f(switchX, 0, 0)));
-  const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
-  const sideBounceLight = jellyColor.xyz
+  const bounceLight = jellyColor.rgb.mul(1 / (sqDist * 15 + 1) * 0.4);
+  const sideBounceLight = jellyColor.rgb
     .mul(1 / (sqDist * 40 + 1) * 0.3)
     .mul(std.abs(newNormal.z));
   const emission = std.smoothstep(0.7, 1, state.progress) * 2 + 0.7;
@@ -405,7 +398,7 @@ const renderBackground = (
     .add(d.vec4f(bounceLight.mul(emission), 0))
     .add(d.vec4f(sideBounceLight.mul(emission), 0));
 
-  return d.vec4f(backgroundColor.xyz, 1);
+  return d.vec4f(backgroundColor.rgb, 1);
 };
 
 const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
@@ -476,9 +469,9 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
         const env = rayMarchNoJelly(exitPos, refrDir);
         const jellyColor = jellyColorUniform.$;
 
-        const scatterTint = jellyColor.xyz.mul(1.5);
+        const scatterTint = jellyColor.rgb.mul(1.5);
         const density = d.f32(20.0);
-        const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
+        const absorb = d.vec3f(1.0).sub(jellyColor.rgb).mul(density);
 
         const state = switchBehavior.stateUniform.$;
         const progress = std.saturate(
@@ -533,7 +526,7 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   );
 
   const exposure = std.select(1.5, 2, darkModeUniform.$ === 1);
-  return d.vec4f(std.tanh(color.xyz.mul(exposure)), 1);
+  return d.vec4f(std.tanh(color.rgb.mul(exposure)), 1);
 });
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
@@ -717,7 +710,7 @@ async function autoSetQuaility() {
   return resolutionScale;
 }
 
-export const controls = {
+export const controls = defineControls({
   'Quality': {
     initial: 'Auto',
     options: [
@@ -728,7 +721,7 @@ export const controls = {
       'High',
       'Ultra',
     ],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       if (value === 'Auto') {
         autoSetQuaility().then((scale) => {
           qualityScale = scale;
@@ -754,7 +747,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
@@ -764,9 +757,9 @@ export const controls = {
     },
   },
   'Jelly Color': {
-    initial: [0.08, 0.5, 1],
-    onColorChange: (c: [number, number, number]) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+    initial: d.vec3f(0.08, 0.5, 1),
+    onColorChange: (c) => {
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Dark Mode': {
@@ -775,7 +768,7 @@ export const controls = {
       darkModeUniform.write(d.u32(v));
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);

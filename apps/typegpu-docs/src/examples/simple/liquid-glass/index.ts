@@ -1,5 +1,6 @@
 import { sdRoundedBox2d } from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -98,7 +99,7 @@ const sampleWithChromaticAberration = (
   for (let i = 0; i < 3; i++) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
     samples[i] =
-      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).xyz;
+      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).rgb;
   }
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
@@ -147,7 +148,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     strength: paramsUniform.$.tintStrength,
   });
 
-  const tintedBlur = applyTint(blurSample.xyz, tint);
+  const tintedBlur = applyTint(blurSample.rgb, tint);
   const tintedRing = applyTint(refractedSample, tint);
 
   return tintedBlur.mul(weights.inside)
@@ -212,15 +213,15 @@ function render() {
 }
 frameId = requestAnimationFrame(render);
 
-export const controls = {
+export const controls = defineControls({
   'Rectangle dims': {
     initial: defaultParams.rectDims,
     min: d.vec2f(0.01, 0.01),
     max: d.vec2f(0.5, 0.5),
     step: d.vec2f(0.01, 0.01),
-    onVectorSliderChange: (v: [number, number]) => {
+    onVectorSliderChange: (v) => {
       paramsUniform.writePartial({
-        rectDims: d.vec2f(...v),
+        rectDims: d.vec2f(...(v as [number, number])),
       });
     },
   },
@@ -229,7 +230,7 @@ export const controls = {
     min: 0.0,
     max: 0.05,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         radius: v,
       });
@@ -240,7 +241,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         start: v,
       });
@@ -251,7 +252,7 @@ export const controls = {
     min: 0.0,
     max: 0.2,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         end: v,
       });
@@ -262,7 +263,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         chromaticStrength: v,
       });
@@ -273,7 +274,7 @@ export const controls = {
     min: 0.0,
     max: 0.2,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({
         refractionStrength: v,
       });
@@ -284,7 +285,7 @@ export const controls = {
     min: 0.0,
     max: 6.0,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ blur: v });
     },
   },
@@ -293,7 +294,7 @@ export const controls = {
     min: 0.0,
     max: 1.0,
     step: 0.05,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ edgeBlurMultiplier: v });
     },
   },
@@ -302,7 +303,7 @@ export const controls = {
     min: 0.0,
     max: 3.0,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ edgeFeather: v });
     },
   },
@@ -311,17 +312,19 @@ export const controls = {
     min: 0.0,
     max: 1.0,
     step: 0.01,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       paramsUniform.writePartial({ tintStrength: v });
     },
   },
   'Tint color': {
     initial: defaultParams.tintColor,
-    onColorChange: (rgb: [number, number, number]) => {
-      paramsUniform.writePartial({ tintColor: d.vec3f(...rgb) });
+    onColorChange: (rgb) => {
+      paramsUniform.writePartial({
+        tintColor: d.vec3f(...(rgb as [number, number, number])),
+      });
     },
   },
-};
+});
 
 export function onCleanup() {
   if (frameId) {

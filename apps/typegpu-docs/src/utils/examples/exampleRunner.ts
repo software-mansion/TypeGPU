@@ -3,6 +3,27 @@ import type { ExampleState } from './exampleState.ts';
 
 type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
+function initializeParam(param: ExampleControlParam) {
+  if ('onSelectChange' in param) {
+    return param.onSelectChange(param.initial);
+  }
+  if ('onToggleChange' in param) {
+    return param.onToggleChange(param.initial);
+  }
+  if ('onSliderChange' in param) {
+    return param.onSliderChange(param.initial);
+  }
+  if ('onVectorSliderChange' in param) {
+    return param.onVectorSliderChange(param.initial);
+  }
+  if ('onColorChange' in param) {
+    return param.onColorChange(param.initial);
+  }
+  if ('onTextChange' in param) {
+    return param.onTextChange(param.initial);
+  }
+}
+
 export async function executeExample(
   tsImport: () => unknown,
 ): Promise<ExampleState> {
@@ -37,27 +58,6 @@ export async function executeExample(
 
       // Eager run to initialize the values.
       initializeParam(param);
-    }
-  }
-
-  function initializeParam(param: ExampleControlParam) {
-    if ('onSelectChange' in param) {
-      return param.onSelectChange(param.initial ?? param.options[0]);
-    }
-    if ('onToggleChange' in param) {
-      return param.onToggleChange(param.initial ?? false);
-    }
-    if ('onSliderChange' in param) {
-      return param.onSliderChange(param.initial ?? param.min ?? 0);
-    }
-    if ('onVectorSliderChange' in param) {
-      return param.onVectorSliderChange(param.initial ?? [0, 0, 0]);
-    }
-    if ('onColorChange' in param) {
-      return param.onColorChange(param.initial ?? [0, 0, 0]);
-    }
-    if ('onTextChange' in param) {
-      return param.onTextChange(param.initial ?? '');
     }
   }
 

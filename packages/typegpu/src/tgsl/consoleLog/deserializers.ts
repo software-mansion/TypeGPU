@@ -190,12 +190,12 @@ export function logDataFromGPU(resources: LogResources) {
         if (results.length === 0) {
           results.push('');
         }
-        console[op](...[
+        console[op](
           `%c${options.messagePrefix}%c ${results[0]}`,
           'background: #936ff5; color: white;',
           'color: inherit; background: none',
           ...results.slice(1),
-        ]);
+        );
       });
   });
 

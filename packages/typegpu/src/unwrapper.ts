@@ -26,6 +26,6 @@ export interface Unwrapper {
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
   unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
-  // biome-ignore lint/suspicious/noExplicitAny: we need to supress validation
+  // oxlint-disable-next-line typescript/no-explicit-any we need to supress validation
   unwrap(resource: TgpuTexture<any>): GPUTexture;
 }

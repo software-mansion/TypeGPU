@@ -15,6 +15,7 @@
 import tgpu, { d } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
 import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -145,13 +146,13 @@ requestAnimationFrame(draw);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   scale: {
     initial: 2,
     min: -15,
     max: 100,
     step: 0.01,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       scale.write(v);
     },
   },
@@ -160,17 +161,17 @@ export const controls = {
     min: 100,
     max: 200,
     step: 0.001,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       shift.write(v / 180 * Math.PI);
     },
   },
   color: {
-    initial: [1, 0.7, 0],
-    onColorChange(value: readonly [number, number, number]) {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(1, 0.7, 0),
+    onColorChange(value) {
+      color.write(value);
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;

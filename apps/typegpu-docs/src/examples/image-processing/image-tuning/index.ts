@@ -1,4 +1,5 @@
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 type LUTData = {
   title: string;
@@ -78,7 +79,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const color = std.textureSample(imageView.$, imageSampler.$, uv).xyz;
+  const color = std.textureSample(imageView.$, imageSampler.$, uv).rgb;
   const inputLuminance = std.dot(color, d.vec3f(0.299, 0.587, 0.114));
   const normColor = std.saturate(
     std.div(color.sub(lut.$.min), lut.$.max.sub(lut.$.min)),
@@ -91,7 +92,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
       lutSampler.$,
       normColor,
       0,
-    ).xyz,
+    ).rgb,
     d.bool(lut.$.enabled),
   );
   const lutColorNormalized = std.saturate(lutColor);
@@ -303,15 +304,16 @@ const LUTFiles = {
     'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Sam_Kolder.cube',
 };
 
-export const controls = {
+export const controls = defineControls({
   'color grading': {
+    initial: 'None',
     options: Object.keys(LUTFiles),
-    onSelectChange: async (selected: keyof typeof LUTFiles) => {
+    onSelectChange: async (selected) => {
       if (selected === 'None') {
         currentLUTTexture = defaultLUTTexture;
         lut.writePartial({ enabled: 0 });
       } else {
-        await updateLUT(LUTFiles[selected]);
+        await updateLUT(LUTFiles[selected as keyof typeof LUTFiles]);
       }
       render();
     },
@@ -321,7 +323,7 @@ export const controls = {
     min: -2.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       adjustments.writePartial({ exposure: value });
       render();
     },
@@ -331,7 +333,7 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       adjustments.writePartial({ contrast: value });
       render();
     },
@@ -341,7 +343,7 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       adjustments.writePartial({ highlights: value });
       render();
     },
@@ -351,7 +353,7 @@ export const controls = {
     min: 0.1,
     max: 1.9,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       adjustments.writePartial({ shadows: value });
       render();
     },
@@ -361,12 +363,12 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       adjustments.writePartial({ saturation: value });
       render();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
