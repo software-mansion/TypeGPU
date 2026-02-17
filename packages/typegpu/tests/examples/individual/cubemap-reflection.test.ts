@@ -194,7 +194,7 @@ describe('cubemap reflection example', () => {
         var reflectionVector = reflect(-(viewDirection), normalizedNormal);
         var environmentColor = textureSample(cubemap, texSampler, reflectionVector);
         var directLighting = (ambientLight + (diffuseLight + specularLight));
-        var finalColor = mix(directLighting, environmentColor.xyz, material.reflectivity);
+        var finalColor = mix(directLighting, environmentColor.rgb, material.reflectivity);
         return vec4f(finalColor, 1f);
       }"
     `);

@@ -1,4 +1,5 @@
 import { comptime } from '../core/function/comptime.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
@@ -64,7 +65,7 @@ function createMatSchema<
 >(
   options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
-  const construct = dualImpl({
+  const construct = callableSchema({
     name: options.type,
     normalImpl: (...args: (number | ColumnType)[]): ValueType => {
       const elements: number[] = [];
@@ -94,7 +95,6 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    ignoreImplicitCastWarning: true,
     signature: (...args) => ({
       argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
       returnType: schema as unknown as BaseData,
@@ -119,7 +119,7 @@ function createMatSchema<
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  // oxlint-disable-next-line typescript/no-explicit-any explained above
   (options.MatImpl.prototype as any).schema = schema;
 
   return schema;

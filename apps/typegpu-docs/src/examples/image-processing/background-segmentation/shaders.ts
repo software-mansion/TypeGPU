@@ -27,7 +27,7 @@ export const prepareModelInput = (x: number, y: number) => {
   );
 
   prepareModelInputLayout.$
-    .outputBuffer[0 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.x;
+    .outputBuffer[y * MODEL_WIDTH + x] = col.x;
   prepareModelInputLayout.$
     .outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.y;
   prepareModelInputLayout.$
@@ -68,7 +68,7 @@ export const computeFn = tgpu['~unstable'].computeFn({
         blurLayout.$.sampler,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
-      ).xyz;
+      ).rgb;
     }
   }
 

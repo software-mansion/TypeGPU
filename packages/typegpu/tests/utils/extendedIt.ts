@@ -1,6 +1,7 @@
 import { it as base, vi } from 'vitest';
 import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
 import tgpu from '../../src/index.ts';
+// oxlint-disable-next-line import/no-unassigned-import imported for side effects
 import './webgpuGlobals.ts';
 
 const adapterMock = {
@@ -137,6 +138,10 @@ const mockDevice = {
     submit: vi.fn(),
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
+  },
+  limits: {
+    maxUniformBuffersPerShaderStage: 12,
+    maxStorageBuffersPerShaderStage: 8,
   },
   destroy: vi.fn(),
 };

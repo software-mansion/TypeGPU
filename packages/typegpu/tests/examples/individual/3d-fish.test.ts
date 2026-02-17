@@ -38,9 +38,7 @@ describe('3d fish example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       fn sample() -> f32 {
@@ -402,7 +400,7 @@ describe('3d fish example', () => {
 
       @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
         var textureColorWithAlpha = textureSample(modelTexture, sampler_1, input.textureUV);
-        var textureColor = textureColorWithAlpha.xyz;
+        var textureColor = textureColorWithAlpha.rgb;
         var ambient = (0.5f * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
         let cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
         var diffuse = (max(0f, cosTheta) * (textureColor * vec3f(0.800000011920929, 0.800000011920929, 1)));
@@ -427,7 +425,7 @@ describe('3d fish example', () => {
           let fogFactor = (fogParameter / (1f + fogParameter));
           foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);
         }
-        return vec4f(foggedColor.xyz, 1f);
+        return vec4f(foggedColor, 1f);
       }"
     `);
   });

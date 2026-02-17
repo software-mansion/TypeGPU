@@ -28,6 +28,7 @@ import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import { warnIfOverflow } from './limitsOverflow.ts';
 import {
   getOffsetInfoAt,
   type PrimitiveOffsetInfo,
@@ -297,6 +298,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     pass.setPipeline(memo.pipeline);
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+
+    warnIfOverflow(
+      memo.usedBindGroupLayouts,
+      this[$internal].root.device.limits,
+    );
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {

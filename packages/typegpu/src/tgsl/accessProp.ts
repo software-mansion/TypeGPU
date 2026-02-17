@@ -198,6 +198,14 @@ export function accessProp(
 
   const propLength = propName.length;
   if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
+    const isXYZW = /^[xyzw]+$/.test(propName);
+    const isRGBA = /^[rgba]+$/.test(propName);
+
+    if (!isXYZW && !isRGBA) {
+      // Not a valid swizzle
+      return undefined;
+    }
+
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
@@ -209,7 +217,7 @@ export function accessProp(
 
     return snip(
       isKnownAtComptime(target)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, the prop is there
+        // oxlint-disable-next-line typescript/no-explicit-any it's fine, the prop is there
         ? (target.value as any)[propName]
         : stitch`${target}.${propName}`,
       swizzleType,
@@ -224,7 +232,7 @@ export function accessProp(
   }
 
   if (isKnownAtComptime(target) || target.dataType === UnknownData) {
-    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
+    // oxlint-disable-next-line typescript/no-explicit-any we either know exactly what it is, or have no idea at all
     return coerceToSnippet((target.value as any)[propName]);
   }
 

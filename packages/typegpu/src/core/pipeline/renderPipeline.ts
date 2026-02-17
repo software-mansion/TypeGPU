@@ -75,6 +75,7 @@ import {
   isTexture,
   isTextureView,
   type TextureInternals,
+  // oxlint-disable-next-line no-unused-vars used in docs
   type TgpuTexture,
   type TgpuTextureRenderView,
   type TgpuTextureView,
@@ -87,6 +88,7 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
+import { warnIfOverflow } from './limitsOverflow.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -656,6 +658,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+
+    warnIfOverflow(
+      memo.usedBindGroupLayouts,
+      this[$internal].root.device.limits,
+    );
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
