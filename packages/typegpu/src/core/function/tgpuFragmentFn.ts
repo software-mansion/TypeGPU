@@ -48,9 +48,9 @@ export type FragmentInConstrained = IORecord<
   | AnyFragmentInputBuiltin
 >;
 
-export type FragmentInFromVertexOut<T> =
-  & OmitBuiltins<{ [K in keyof T]: InstanceToSchema<T[K]> }>
-  & Record<string, AnyFragmentInputBuiltin>;
+export type VertexOutToVarying<T> = OmitBuiltins<
+  { [K in keyof T]: InstanceToSchema<T[K]> }
+>;
 
 type FragmentColorValue = Vec4f | Vec4i | Vec4u;
 
