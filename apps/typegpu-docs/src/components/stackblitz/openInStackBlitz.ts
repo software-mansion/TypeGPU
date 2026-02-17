@@ -27,11 +27,6 @@ import index from './stackBlitzIndex.ts?raw';
 
 const pnpmWorkspaceYaml = type({
   catalogs: {
-    build: {
-      tsup: 'string',
-      unbuild: 'string',
-      jiti: 'string',
-    },
     types: {
       typescript: 'string',
       '@webgpu/types': 'string',
