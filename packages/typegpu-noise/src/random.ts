@@ -30,21 +30,25 @@ const warnIfNotProvided = tgpu.comptime(
 
 export const randSeed = tgpu.fn([d.f32])((seed) => {
   warnIfNotProvided('seed');
+  // oxlint-disable-next-line no-unused-expressions
   randomGeneratorSlot.$.seed ? randomGeneratorSlot.$.seed(seed) : undefined;
 });
 
 export const randSeed2 = tgpu.fn([d.vec2f])((seed) => {
   warnIfNotProvided('seed2');
+  // oxlint-disable-next-line no-unused-expressions
   randomGeneratorSlot.$.seed2 ? randomGeneratorSlot.$.seed2(seed) : undefined;
 });
 
 export const randSeed3 = tgpu.fn([d.vec3f])((seed) => {
   warnIfNotProvided('seed3');
+  // oxlint-disable-next-line no-unused-expressions
   randomGeneratorSlot.$.seed3 ? randomGeneratorSlot.$.seed3(seed) : undefined;
 });
 
 export const randSeed4 = tgpu.fn([d.vec4f])((seed) => {
   warnIfNotProvided('seed4');
+  // oxlint-disable-next-line no-unused-expressions
   randomGeneratorSlot.$.seed4 ? randomGeneratorSlot.$.seed4(seed) : undefined;
 });
 

@@ -112,7 +112,6 @@ export interface AbstractFloat extends BaseData {
 export interface Void extends BaseData {
   readonly type: 'void';
   // Type-tokens, not available at runtime
-  // biome-ignore lint/suspicious/noConfusingVoidType: void is void
   readonly [$repr]: void;
   readonly [$invalidSchemaReason]: 'Void is not host-shareable';
   // ---
@@ -441,6 +440,338 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
+// RGBA Swizzle interfaces (mirror xyzw swizzles for color components)
+interface SwizzleRGBA2<T2, T3, T4> {
+  readonly rr: T2;
+  readonly rg: T2;
+  readonly gr: T2;
+  readonly gg: T2;
+
+  readonly rrr: T3;
+  readonly rrg: T3;
+  readonly rgr: T3;
+  readonly rgg: T3;
+  readonly grr: T3;
+  readonly grg: T3;
+  readonly ggr: T3;
+  readonly ggg: T3;
+
+  readonly rrrr: T4;
+  readonly rrrg: T4;
+  readonly rrgr: T4;
+  readonly rrgg: T4;
+  readonly rgrr: T4;
+  readonly rgrg: T4;
+  readonly rggr: T4;
+  readonly rggg: T4;
+  readonly grrr: T4;
+  readonly grrg: T4;
+  readonly grgr: T4;
+  readonly grgg: T4;
+  readonly ggrr: T4;
+  readonly ggrg: T4;
+  readonly gggr: T4;
+  readonly gggg: T4;
+}
+
+interface SwizzleRGBA3<T2, T3, T4> extends SwizzleRGBA2<T2, T3, T4> {
+  readonly rb: T2;
+  readonly gb: T2;
+  readonly br: T2;
+  readonly bg: T2;
+  readonly bb: T2;
+
+  readonly rrb: T3;
+  readonly rgb: T3;
+  readonly rbr: T3;
+  readonly rbg: T3;
+  readonly rbb: T3;
+  readonly grb: T3;
+  readonly ggb: T3;
+  readonly gbr: T3;
+  readonly gbg: T3;
+  readonly gbb: T3;
+  readonly brr: T3;
+  readonly brg: T3;
+  readonly brb: T3;
+  readonly bgr: T3;
+  readonly bgg: T3;
+  readonly bgb: T3;
+  readonly bbr: T3;
+  readonly bbg: T3;
+  readonly bbb: T3;
+
+  readonly rrrb: T4;
+  readonly rrgb: T4;
+  readonly rrbr: T4;
+  readonly rrbg: T4;
+  readonly rrbb: T4;
+  readonly rgrb: T4;
+  readonly rggb: T4;
+  readonly rgbr: T4;
+  readonly rgbg: T4;
+  readonly rgbb: T4;
+  readonly rbrr: T4;
+  readonly rbrg: T4;
+  readonly rbrb: T4;
+  readonly rbgr: T4;
+  readonly rbgg: T4;
+  readonly rbgb: T4;
+  readonly rbbr: T4;
+  readonly rbbg: T4;
+  readonly rbbb: T4;
+  readonly grrb: T4;
+  readonly grgb: T4;
+  readonly grbr: T4;
+  readonly grbg: T4;
+  readonly grbb: T4;
+  readonly ggrb: T4;
+  readonly gggb: T4;
+  readonly ggbr: T4;
+  readonly ggbg: T4;
+  readonly ggbb: T4;
+  readonly gbrr: T4;
+  readonly gbrg: T4;
+  readonly gbrb: T4;
+  readonly gbgr: T4;
+  readonly gbgg: T4;
+  readonly gbgb: T4;
+  readonly gbbr: T4;
+  readonly gbbg: T4;
+  readonly gbbb: T4;
+  readonly brrr: T4;
+  readonly brrg: T4;
+  readonly brrb: T4;
+  readonly brgr: T4;
+  readonly brgg: T4;
+  readonly brgb: T4;
+  readonly brbr: T4;
+  readonly brbg: T4;
+  readonly brbb: T4;
+  readonly bgrr: T4;
+  readonly bgrg: T4;
+  readonly bgrb: T4;
+  readonly bggr: T4;
+  readonly bggg: T4;
+  readonly bggb: T4;
+  readonly bgbr: T4;
+  readonly bgbg: T4;
+  readonly bgbb: T4;
+  readonly bbrr: T4;
+  readonly bbrg: T4;
+  readonly bbrb: T4;
+  readonly bbgr: T4;
+  readonly bbgg: T4;
+  readonly bbgb: T4;
+  readonly bbbr: T4;
+  readonly bbbg: T4;
+  readonly bbbb: T4;
+}
+
+interface SwizzleRGBA4<T2, T3, T4> extends SwizzleRGBA3<T2, T3, T4> {
+  readonly ga: T2;
+  readonly ba: T2;
+  readonly ra: T2;
+  readonly ar: T2;
+  readonly ag: T2;
+  readonly ab: T2;
+  readonly aa: T2;
+
+  readonly rra: T3;
+  readonly rga: T3;
+  readonly rba: T3;
+  readonly rar: T3;
+  readonly rag: T3;
+  readonly rab: T3;
+  readonly raa: T3;
+  readonly gra: T3;
+  readonly gga: T3;
+  readonly gba: T3;
+  readonly gar: T3;
+  readonly gag: T3;
+  readonly gab: T3;
+  readonly gaa: T3;
+  readonly bra: T3;
+  readonly bga: T3;
+  readonly bba: T3;
+  readonly bar: T3;
+  readonly bag: T3;
+  readonly bab: T3;
+  readonly baa: T3;
+  readonly arr: T3;
+  readonly arb: T3;
+  readonly arg: T3;
+  readonly agg: T3;
+  readonly agb: T3;
+  readonly abb: T3;
+  readonly aar: T3;
+  readonly aag: T3;
+  readonly aab: T3;
+  readonly aaa: T3;
+
+  readonly rrra: T4;
+  readonly rrga: T4;
+  readonly rrba: T4;
+  readonly rrar: T4;
+  readonly rrag: T4;
+  readonly rrab: T4;
+  readonly rraa: T4;
+  readonly rgra: T4;
+  readonly rgga: T4;
+  readonly rgba: T4;
+  readonly rgar: T4;
+  readonly rgag: T4;
+  readonly rgab: T4;
+  readonly rgaa: T4;
+  readonly rbra: T4;
+  readonly rbga: T4;
+  readonly rbba: T4;
+  readonly rbar: T4;
+  readonly rbag: T4;
+  readonly rbab: T4;
+  readonly rbaa: T4;
+  readonly rarr: T4;
+  readonly rarg: T4;
+  readonly rarb: T4;
+  readonly ragg: T4;
+  readonly ragb: T4;
+  readonly rabb: T4;
+  readonly raar: T4;
+  readonly raag: T4;
+  readonly raab: T4;
+  readonly raaa: T4;
+  readonly grra: T4;
+  readonly grga: T4;
+  readonly grba: T4;
+  readonly grar: T4;
+  readonly grag: T4;
+  readonly grab: T4;
+  readonly graa: T4;
+  readonly ggra: T4;
+  readonly ggga: T4;
+  readonly ggba: T4;
+  readonly ggar: T4;
+  readonly ggag: T4;
+  readonly ggab: T4;
+  readonly ggaa: T4;
+  readonly gbra: T4;
+  readonly gbga: T4;
+  readonly gbba: T4;
+  readonly gbar: T4;
+  readonly gbag: T4;
+  readonly gbab: T4;
+  readonly gbaa: T4;
+  readonly garr: T4;
+  readonly garg: T4;
+  readonly garb: T4;
+  readonly gara: T4;
+  readonly gagg: T4;
+  readonly gagb: T4;
+  readonly gaga: T4;
+  readonly gabb: T4;
+  readonly gaar: T4;
+  readonly gaag: T4;
+  readonly gaab: T4;
+  readonly gaaa: T4;
+  readonly brra: T4;
+  readonly brga: T4;
+  readonly brba: T4;
+  readonly brar: T4;
+  readonly brag: T4;
+  readonly brab: T4;
+  readonly braa: T4;
+  readonly bgra: T4;
+  readonly bgga: T4;
+  readonly bgba: T4;
+  readonly bgar: T4;
+  readonly bgag: T4;
+  readonly bgab: T4;
+  readonly bgaa: T4;
+  readonly bbra: T4;
+  readonly bbga: T4;
+  readonly bbba: T4;
+  readonly bbar: T4;
+  readonly bbag: T4;
+  readonly bbab: T4;
+  readonly bbaa: T4;
+  readonly barr: T4;
+  readonly barg: T4;
+  readonly barb: T4;
+  readonly bara: T4;
+  readonly bagg: T4;
+  readonly bagb: T4;
+  readonly baga: T4;
+  readonly babb: T4;
+  readonly baar: T4;
+  readonly baag: T4;
+  readonly baab: T4;
+  readonly baaa: T4;
+  readonly arrr: T4;
+  readonly arrg: T4;
+  readonly arrb: T4;
+  readonly arra: T4;
+  readonly argr: T4;
+  readonly argg: T4;
+  readonly argb: T4;
+  readonly arga: T4;
+  readonly arbr: T4;
+  readonly arbg: T4;
+  readonly arbb: T4;
+  readonly arba: T4;
+  readonly arar: T4;
+  readonly arag: T4;
+  readonly arab: T4;
+  readonly araa: T4;
+  readonly agrr: T4;
+  readonly agrg: T4;
+  readonly agrb: T4;
+  readonly agra: T4;
+  readonly aggr: T4;
+  readonly aggg: T4;
+  readonly aggb: T4;
+  readonly agga: T4;
+  readonly agbr: T4;
+  readonly agbg: T4;
+  readonly agbb: T4;
+  readonly agba: T4;
+  readonly agar: T4;
+  readonly agag: T4;
+  readonly agab: T4;
+  readonly agaa: T4;
+  readonly abrr: T4;
+  readonly abrg: T4;
+  readonly abrb: T4;
+  readonly abra: T4;
+  readonly abgr: T4;
+  readonly abgg: T4;
+  readonly abgb: T4;
+  readonly abga: T4;
+  readonly abbr: T4;
+  readonly abbg: T4;
+  readonly abbb: T4;
+  readonly abba: T4;
+  readonly abar: T4;
+  readonly abag: T4;
+  readonly abab: T4;
+  readonly abaa: T4;
+  readonly aarr: T4;
+  readonly aarg: T4;
+  readonly aarb: T4;
+  readonly aara: T4;
+  readonly aagr: T4;
+  readonly aagg: T4;
+  readonly aagb: T4;
+  readonly aaga: T4;
+  readonly aabr: T4;
+  readonly aabg: T4;
+  readonly aabb: T4;
+  readonly aaba: T4;
+  readonly aaar: T4;
+  readonly aaag: T4;
+  readonly aaab: T4;
+  readonly aaaa: T4;
+}
+
 type Tuple2<S> = [S, S];
 type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
@@ -450,12 +781,18 @@ type Tuple4<S> = [S, S, S, S];
  * A vector with 2 elements of type f32
  */
 export interface v2f
-  extends Tuple2<number>, Swizzle2<v2f, v3f, v4f>, vecInfixNotation<v2f> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2f, v3f, v4f>,
+    SwizzleRGBA2<v2f, v3f, v4f>,
+    vecInfixNotation<v2f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
   y: number;
+  r: number;
+  g: number;
 }
 
 /**
@@ -463,12 +800,18 @@ export interface v2f
  * A vector with 2 elements of type f16
  */
 export interface v2h
-  extends Tuple2<number>, Swizzle2<v2h, v3h, v4h>, vecInfixNotation<v2h> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2h, v3h, v4h>,
+    SwizzleRGBA2<v2h, v3h, v4h>,
+    vecInfixNotation<v2h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
   x: number;
   y: number;
+  r: number;
+  g: number;
 }
 
 /**
@@ -476,12 +819,18 @@ export interface v2h
  * A vector with 2 elements of type i32
  */
 export interface v2i
-  extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNotation<v2i> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2i, v3i, v4i>,
+    SwizzleRGBA2<v2i, v3i, v4i>,
+    vecInfixNotation<v2i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
   y: number;
+  r: number;
+  g: number;
 }
 
 /**
@@ -489,24 +838,36 @@ export interface v2i
  * A vector with 2 elements of type u32
  */
 export interface v2u
-  extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, vecInfixNotation<v2u> {
+  extends
+    Tuple2<number>,
+    Swizzle2<v2u, v3u, v4u>,
+    SwizzleRGBA2<v2u, v3u, v4u>,
+    vecInfixNotation<v2u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
   y: number;
+  r: number;
+  g: number;
 }
 
 /**
  * Interface representing its WGSL vector type counterpart: `vec2<bool>`.
  * A vector with 2 elements of type `bool`
  */
-export interface v2b extends Tuple2<boolean>, Swizzle2<v2b, v3b, v4b> {
+export interface v2b
+  extends
+    Tuple2<boolean>,
+    Swizzle2<v2b, v3b, v4b>,
+    SwizzleRGBA2<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2<bool>';
   x: boolean;
   y: boolean;
+  r: boolean;
+  g: boolean;
 }
 
 /**
@@ -514,13 +875,20 @@ export interface v2b extends Tuple2<boolean>, Swizzle2<v2b, v3b, v4b> {
  * A vector with 3 elements of type f32
  */
 export interface v3f
-  extends Tuple3<number>, Swizzle3<v2f, v3f, v4f>, vecInfixNotation<v3f> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2f, v3f, v4f>,
+    SwizzleRGBA3<v2f, v3f, v4f>,
+    vecInfixNotation<v3f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
   y: number;
   z: number;
+  r: number;
+  g: number;
+  b: number;
 }
 
 /**
@@ -528,13 +896,20 @@ export interface v3f
  * A vector with 3 elements of type f16
  */
 export interface v3h
-  extends Tuple3<number>, Swizzle3<v2h, v3h, v4h>, vecInfixNotation<v3h> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2h, v3h, v4h>,
+    SwizzleRGBA3<v2h, v3h, v4h>,
+    vecInfixNotation<v3h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
   x: number;
   y: number;
   z: number;
+  r: number;
+  g: number;
+  b: number;
 }
 
 /**
@@ -542,13 +917,20 @@ export interface v3h
  * A vector with 3 elements of type i32
  */
 export interface v3i
-  extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNotation<v3i> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2i, v3i, v4i>,
+    SwizzleRGBA3<v2i, v3i, v4i>,
+    vecInfixNotation<v3i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
   y: number;
   z: number;
+  r: number;
+  g: number;
+  b: number;
 }
 
 /**
@@ -556,26 +938,40 @@ export interface v3i
  * A vector with 3 elements of type u32
  */
 export interface v3u
-  extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, vecInfixNotation<v3u> {
+  extends
+    Tuple3<number>,
+    Swizzle3<v2u, v3u, v4u>,
+    SwizzleRGBA3<v2u, v3u, v4u>,
+    vecInfixNotation<v3u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
   y: number;
   z: number;
+  r: number;
+  g: number;
+  b: number;
 }
 
 /**
  * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
  * A vector with 3 elements of type `bool`
  */
-export interface v3b extends Tuple3<boolean>, Swizzle3<v2b, v3b, v4b> {
+export interface v3b
+  extends
+    Tuple3<boolean>,
+    Swizzle3<v2b, v3b, v4b>,
+    SwizzleRGBA3<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3<bool>';
   x: boolean;
   y: boolean;
   z: boolean;
+  r: boolean;
+  g: boolean;
+  b: boolean;
 }
 
 /**
@@ -583,7 +979,11 @@ export interface v3b extends Tuple3<boolean>, Swizzle3<v2b, v3b, v4b> {
  * A vector with 4 elements of type f32
  */
 export interface v4f
-  extends Tuple4<number>, Swizzle4<v2f, v3f, v4f>, vecInfixNotation<v4f> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2f, v3f, v4f>,
+    SwizzleRGBA4<v2f, v3f, v4f>,
+    vecInfixNotation<v4f> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
@@ -591,6 +991,10 @@ export interface v4f
   y: number;
   z: number;
   w: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 /**
@@ -598,7 +1002,11 @@ export interface v4f
  * A vector with 4 elements of type f16
  */
 export interface v4h
-  extends Tuple4<number>, Swizzle4<v2h, v3h, v4h>, vecInfixNotation<v4h> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2h, v3h, v4h>,
+    SwizzleRGBA4<v2h, v3h, v4h>,
+    vecInfixNotation<v4h> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
@@ -606,6 +1014,10 @@ export interface v4h
   y: number;
   z: number;
   w: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 /**
@@ -613,7 +1025,11 @@ export interface v4h
  * A vector with 4 elements of type i32
  */
 export interface v4i
-  extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNotation<v4i> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2i, v3i, v4i>,
+    SwizzleRGBA4<v2i, v3i, v4i>,
+    vecInfixNotation<v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -621,6 +1037,10 @@ export interface v4i
   y: number;
   z: number;
   w: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 /**
@@ -628,7 +1048,11 @@ export interface v4i
  * A vector with 4 elements of type u32
  */
 export interface v4u
-  extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, vecInfixNotation<v4u> {
+  extends
+    Tuple4<number>,
+    Swizzle4<v2u, v3u, v4u>,
+    SwizzleRGBA4<v2u, v3u, v4u>,
+    vecInfixNotation<v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -636,13 +1060,21 @@ export interface v4u
   y: number;
   z: number;
   w: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 /**
  * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
  * A vector with 4 elements of type `bool`
  */
-export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
+export interface v4b
+  extends
+    Tuple4<boolean>,
+    Swizzle4<v2b, v3b, v4b>,
+    SwizzleRGBA4<v2b, v3b, v4b> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4<bool>';
@@ -650,6 +1082,10 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
   y: boolean;
   z: boolean;
   w: boolean;
+  r: boolean;
+  g: boolean;
+  b: boolean;
+  a: boolean;
 }
 
 export type AnyFloat32VecInstance = v2f | v3f | v4f;
@@ -1990,6 +2426,6 @@ export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
   // these schema properties are assigned on the prototype of vector and matrix instances
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
+  // oxlint-disable-next-line typescript/no-explicit-any explained above
   return (vec as any).schema;
 }

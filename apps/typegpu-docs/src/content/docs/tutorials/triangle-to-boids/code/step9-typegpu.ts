@@ -17,7 +17,6 @@ import {
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });

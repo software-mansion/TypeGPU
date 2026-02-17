@@ -138,7 +138,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format: data.type as VertexFormat,
         offset,
-        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any <too many type shenanigans>
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
@@ -151,7 +151,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format,
         offset,
-        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any <too many type shenanigans>
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
   }
@@ -226,13 +226,11 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     return {
       arrayStride: this.stride,
       stepMode: this.stepMode,
-      attributes: [
-        ...Object.entries(this.attrib).map(([key, attrib]) => ({
-          format: (attrib as TgpuVertexAttrib).format,
-          offset: (attrib as TgpuVertexAttrib).offset,
-          shaderLocation: this._customLocationMap[key],
-        })),
-      ] as GPUVertexAttribute[],
+      attributes: Object.entries(this.attrib).map(([key, attrib]) => ({
+        format: (attrib as TgpuVertexAttrib).format,
+        offset: (attrib as TgpuVertexAttrib).offset,
+        shaderLocation: this._customLocationMap[key],
+      })) as GPUVertexAttribute[],
     };
   }
 

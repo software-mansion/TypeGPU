@@ -278,10 +278,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu.fn([d.u32], d.vec4f)((idx) => {
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      // oxlint-disable-next-line typescript/no-non-null-assertion <no thanks>
       const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
       const vec = std.mix(d.vec4f(), testUsage.$.a, value);
-      // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+      // oxlint-disable-next-line typescript/no-non-null-assertion <no thanks>
       std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
       return vec;
     });
@@ -362,7 +362,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -392,7 +391,6 @@ describe('wgslGenerator', () => {
       'use gpu';
       let i = 0;
       for (; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -1287,7 +1285,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (let i = 0; i < 10; i += 1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };

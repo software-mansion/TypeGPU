@@ -33,7 +33,6 @@ describe('ternary operator', () => {
     const lazy = tgpu.lazy(() => slot.$);
 
     const myFn = tgpu.fn([])(() => {
-      // biome-ignore lint/correctness/noConstantCondition: it's a test
       const a = true ? 1 : 0;
       const b = std.allEq(d.vec2f(1, 2), d.vec2f(1, 2)) ? 1 : 0;
       const c = condition ? 1 : 0;
@@ -125,7 +124,6 @@ describe('ternary operator', () => {
     const counter = root.createMutable(d.u32);
 
     const myFunction = tgpu.fn([])(() => {
-      // biome-ignore lint/correctness/noConstantCondition: it's a test
       false ? counter.$++ : undefined;
     });
     expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`

@@ -75,6 +75,7 @@ import {
   isTexture,
   isTextureView,
   type TextureInternals,
+  // oxlint-disable-next-line no-unused-vars used in docs
   type TgpuTexture,
   type TgpuTextureRenderView,
   type TgpuTextureView,

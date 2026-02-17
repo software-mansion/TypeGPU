@@ -58,7 +58,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[r][((_arg_0.lid.x * 4u) + u32(c))] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).xyz;
+            tileData[r][((_arg_0.lid.x * 4u) + u32(c))] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         workgroupBarrier();
