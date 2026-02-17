@@ -1,5 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
-import { sizeOf } from '../../data/schemaMemoryLayout.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2b,
   vec2f,

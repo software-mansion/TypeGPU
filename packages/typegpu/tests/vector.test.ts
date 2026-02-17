@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
-import { sizeOf } from '../src/data/schemaMemoryLayout.ts';
+import { sizeOf } from '../src/data/sizeOf.ts';
 import tgpu, { d } from '../src/index.ts';
 import * as std from '../src/std/index.ts';
 

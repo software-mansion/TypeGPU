@@ -1,7 +1,7 @@
 import { comptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
-import { sizeOf } from './schemaMemoryLayout.ts';
+import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
 
 // ----------

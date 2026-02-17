@@ -4,11 +4,9 @@ import {
   type OffsetInfo as PropOffsetInfo,
   offsetsForProps,
 } from './offsets.ts';
-import {
-  getLongestContiguousPrefix,
-  isContiguous,
-  sizeOf,
-} from './schemaMemoryLayout.ts';
+import { sizeOf } from './sizeOf.ts';
+import { isContiguous } from './isContiguous.ts';
+import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
 import type {
   AnyWgslData,
   BaseData,

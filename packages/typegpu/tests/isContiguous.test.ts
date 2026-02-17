@@ -159,7 +159,7 @@ describe('d.isContiguous', () => {
     expect(d.isContiguous(S2)).toBe(false);
 
     const S3 = d.struct({
-      arr: d.size(64, d.arrayOf(d.vec3f, 4)),
+      arr: d.size(72, d.arrayOf(d.vec3f, 4)),
     });
     expect(d.isContiguous(S3)).toBe(false);
 

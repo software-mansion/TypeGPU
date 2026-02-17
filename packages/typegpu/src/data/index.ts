@@ -210,11 +210,11 @@ export {
   isLooseDecorated,
   isUnstruct,
 } from './dataTypes.ts';
+export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
+export { PUBLIC_isContiguous as isContiguous } from './isContiguous.ts';
 export {
   PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix,
-  PUBLIC_isContiguous as isContiguous,
-  PUBLIC_sizeOf as sizeOf,
-} from './schemaMemoryLayout.ts';
+} from './getLongestContiguousPrefix.ts';
 export { getOffsetInfoAt } from './offsetUtils.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';

@@ -3,7 +3,7 @@ import type { Infer } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
-import { sizeOf } from './schemaMemoryLayout.ts';
+import { sizeOf } from './sizeOf.ts';
 import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 

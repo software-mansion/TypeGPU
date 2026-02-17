@@ -1,11 +1,6 @@
 import { roundUp } from '../mathUtils.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
-import type {
-  AnyData,
-  Disarray,
-  LooseTypeLiteral,
-  Unstruct,
-} from './dataTypes.ts';
+import type { Disarray, LooseTypeLiteral, Unstruct } from './dataTypes.ts';
 import {
   getCustomSize,
   isDisarray,
@@ -98,8 +93,8 @@ interface SchemaMemoryLayout {
 
 function computeMLOfStruct(struct: WgslStruct): SchemaMemoryLayout {
   let size = 0;
-  let isContiguous = true;
   let longestContiguousPrefix = 0;
+  let isContiguous = true;
   let prefixEnd = false;
 
   for (const property of Object.values(struct.propTypes)) {
@@ -145,8 +140,8 @@ function computeMLOfStruct(struct: WgslStruct): SchemaMemoryLayout {
 
 function computeMLOfUnstruct(data: Unstruct): SchemaMemoryLayout {
   let size = 0;
-  let isContiguous = true;
   let longestContiguousPrefix = 0;
+  let isContiguous = true;
   let prefixEnd = false;
 
   for (const property of Object.values(data.propTypes)) {
@@ -189,6 +184,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   const elementMemoryLayout = computeMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
   const stride = roundUp(elementSize, alignmentOf(elementType));
+
   const hasPadding = stride > elementSize;
   const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
 
@@ -196,7 +192,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
     ? Number.NaN
     : data.elementCount * stride;
 
-  let longestContiguousPrefix = 0;
+  let longestContiguousPrefix: number;
   if (isContiguous) {
     longestContiguousPrefix = size;
   } else if (hasPadding && elementMemoryLayout.isContiguous) {
@@ -213,6 +209,7 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   const elementMemoryLayout = computeMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
   const stride = roundUp(elementSize, customAlignmentOf(elementType));
+
   const hasPadding = stride > elementSize;
   const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
 
@@ -260,9 +257,11 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
   if (isDecorated(data) || isLooseDecorated(data)) {
     const size = getCustomSize(data);
     const undecoratedLayout = computeMemoryLayout(undecorate(data));
+
     if (size) {
       const isContiguous = size === undecoratedLayout.size &&
         undecoratedLayout.isContiguous;
+
       return {
         isContiguous,
         size,
@@ -281,7 +280,10 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
  */
 const cachedLayouts = new WeakMap<BaseData, SchemaMemoryLayout>();
 
-export function sizeOf(schema: BaseData): number {
+export function getLayoutInfo<T extends keyof SchemaMemoryLayout>(
+  schema: BaseData,
+  key: T,
+): SchemaMemoryLayout[T] {
   let layout = cachedLayouts.get(schema);
 
   if (layout === undefined) {
@@ -289,48 +291,5 @@ export function sizeOf(schema: BaseData): number {
     cachedLayouts.set(schema, layout);
   }
 
-  return layout.size;
-}
-
-/**
- * Returns the size (in bytes) of data represented by the `schema`.
- */
-export function PUBLIC_sizeOf(schema: AnyData): number {
-  return sizeOf(schema);
-}
-
-export function isContiguous(schema: BaseData): boolean {
-  let layout = cachedLayouts.get(schema);
-
-  if (layout === undefined) {
-    layout = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, layout);
-  }
-
-  return layout.isContiguous;
-}
-
-/**
- * Returns `true` if data represented by the `schema` don't have padding.
- */
-export function PUBLIC_isContiguous(schema: AnyData): boolean {
-  return isContiguous(schema);
-}
-
-export function getLongestContiguousPrefix(schema: BaseData): number {
-  let layout = cachedLayouts.get(schema);
-
-  if (layout === undefined) {
-    layout = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, layout);
-  }
-
-  return layout.longestContiguousPrefix;
-}
-
-/**
- * Returns the size (in bytes) of the longest contiguous memory prefix of data represented by the `schema`.
- */
-export function PUBLIC_getLongestContiguousPrefix(schema: AnyData): number {
-  return getLongestContiguousPrefix(schema);
+  return layout[key];
 }

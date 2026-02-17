@@ -5,7 +5,7 @@ import {
   isLooseDecorated,
   isUnstruct,
 } from '../../data/dataTypes.ts';
-import { sizeOf } from '../../data/schemaMemoryLayout.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';

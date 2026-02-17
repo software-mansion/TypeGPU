@@ -5,7 +5,7 @@ import { alignmentOf } from './alignmentOf.ts';
 import { writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
-import { sizeOf } from './schemaMemoryLayout.ts';
+import { sizeOf } from './sizeOf.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
 

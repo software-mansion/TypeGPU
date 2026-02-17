@@ -45,8 +45,8 @@ describe('d.getLongestContiguousPrefix', () => {
   it('decorated', () => {
     expect(d.getLongestContiguousPrefix(d.size(4, d.u32))).toBe(4);
     expect(d.getLongestContiguousPrefix(d.size(16, d.u32))).toBe(4);
-    expect(d.getLongestContiguousPrefix(d.size(64, d.mat3x3f))).toBe(12);
-    expect(d.getLongestContiguousPrefix(d.align(16, d.vec3f))).toBe(12);
+    expect(d.getLongestContiguousPrefix(d.size(128, d.mat3x3f))).toBe(12);
+    expect(d.getLongestContiguousPrefix(d.align(32, d.vec3f))).toBe(12);
     expect(d.getLongestContiguousPrefix(d.location(1, d.u32))).toBe(4);
   });
 
@@ -156,7 +156,7 @@ describe('d.getLongestContiguousPrefix', () => {
     expect(d.getLongestContiguousPrefix(S2)).toBe(16);
 
     const S3 = d.struct({
-      arr: d.size(64, d.arrayOf(d.vec3f, 4)),
+      arr: d.size(72, d.arrayOf(d.vec3f, 4)),
     });
     expect(d.getLongestContiguousPrefix(S3)).toBe(12);
 

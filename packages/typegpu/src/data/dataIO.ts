@@ -10,7 +10,7 @@ import type {
   Unstruct,
 } from './dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import { sizeOf } from './schemaMemoryLayout.ts';
+import { sizeOf } from './sizeOf.ts';
 import {
   vec2f,
   vec2h,
