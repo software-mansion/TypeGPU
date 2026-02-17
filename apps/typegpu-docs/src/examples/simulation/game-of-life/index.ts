@@ -323,9 +323,11 @@ const [displayPipeline, bitpackedDisplayPipeline] = [
 ].map((fn) =>
   root['~unstable']
     .with(cellSamplerSlot, fn)
-    .withVertex(fullScreenTriangle)
-    .withFragment(displayFragment, { format: presentationFormat })
-    .createPipeline()
+    .createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: displayFragment,
+      targets: { format: presentationFormat },
+    })
 );
 
 const bitpackedRandomInit = root['~unstable'].createGuardedComputePipeline(
