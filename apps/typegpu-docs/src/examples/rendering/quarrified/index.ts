@@ -1,13 +1,14 @@
 import * as m from 'wgpu-matrix';
 import tgpu, { d } from 'typegpu';
-import { Camera } from './schemas.ts';
+import { Camera, CubeVertex, vertexCubeLayout } from './schemas.ts';
+import { cubeVertices } from './cubeVertices.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const viewPosition = d.vec3f(2, 2, 2);
+const viewPosition = d.vec3f(5, 5, 5);
 const viewTarget = d.vec3f(0, 0, 0);
 const aspectRatio = canvas.clientWidth / canvas.clientHeight;
 const camera = Camera({
@@ -21,20 +22,20 @@ const camera = Camera({
   ),
 });
 const cameraUniform = root.createUniform(Camera, camera);
+const cubeVertexBuffer = root
+  .createBuffer(d.disarrayOf(CubeVertex, 36), cubeVertices)
+  .$usage('vertex');
 
 const renderPipeline = root['~unstable'].createRenderPipeline({
+  attribs: { ...vertexCubeLayout.attrib },
   vertex: tgpu['~unstable'].vertexFn({
-    in: { vId: d.builtin.vertexIndex },
+    in: { position: d.vec4f, uv: d.vec2f },
     out: { pos: d.builtin.position },
-  })(({ vId }) => {
-    const positions = [
-      d.vec4f(0, 0.5, 0, 1),
-      d.vec4f(0.5, -0.5, 0, 1),
-      d.vec4f(-0.5, -0.5, 0, 1),
-    ];
+  })((input) => {
+    const position = input.position;
     const uv = cameraUniform.$.projection
       .mul(cameraUniform.$.view)
-      .mul(positions[vId]);
+      .mul(position);
 
     return { pos: uv };
   }),
@@ -47,12 +48,13 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
 let frameId = requestAnimationFrame(draw);
 function draw() {
   renderPipeline
+    .with(vertexCubeLayout, cubeVertexBuffer)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
     })
-    .draw(3);
+    .draw(36);
 
   frameId = requestAnimationFrame(draw);
 }
