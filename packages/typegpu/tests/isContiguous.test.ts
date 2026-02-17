@@ -46,7 +46,7 @@ describe('d.isContiguous', () => {
     expect(d.isContiguous(d.size(4, d.u32))).toBe(true);
     expect(d.isContiguous(d.size(16, d.u32))).toBe(false);
     expect(d.isContiguous(d.size(64, d.mat3x3f))).toBe(false);
-    expect(d.isContiguous(d.align(16, d.u32))).toBe(true);
+    expect(d.isContiguous(d.align(16, d.vec3f))).toBe(true);
     expect(d.isContiguous(d.location(1, d.u32))).toBe(true);
   });
 
@@ -154,7 +154,7 @@ describe('d.isContiguous', () => {
 
     // align breaks the contiguousness
     const S2 = d.struct({
-      v: d.size(32, d.vec4u),
+      v: d.align(32, d.vec4u),
     });
     expect(d.isContiguous(S2)).toBe(false);
 
@@ -173,7 +173,7 @@ describe('d.isContiguous', () => {
   });
 
   it('complex - deep struct (positive)', () => {
-    // offset calculator for this struct: https://shorturl.at/TcoqP
+    // layout for this struct: https://shorturl.at/TcoqP
     const DeepStruct = d.struct({
       someData: d.arrayOf(d.f32, 16),
       nested: d.struct({
@@ -200,7 +200,7 @@ describe('d.isContiguous', () => {
   });
 
   it('complex - deep struct (negative)', () => {
-    // offset calculator for this struct: https://shorturl.at/NQggS
+    // layout for this struct: https://shorturl.at/NQggS
     const DeepStruct = d.struct({
       someData: d.arrayOf(d.f32, 13),
       nested: d.struct({

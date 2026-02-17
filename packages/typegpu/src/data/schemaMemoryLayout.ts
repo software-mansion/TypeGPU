@@ -112,19 +112,25 @@ function computeMLOfStruct(struct: WgslStruct): SchemaMemoryLayout {
 
     const hasPadding = prevSize !== size;
 
-    const propInfo = computeMemoryLayout(property);
-    size += propInfo.size;
-
-    if ((hasPadding || !propInfo.isContiguous) && !prefixEnd) {
-      prefixEnd = true;
-      isContiguous = false;
-      longestContiguousPrefix += propInfo.longestContiguousPrefix;
-    } else {
-      longestContiguousPrefix += propInfo.size;
-    }
+    const propLayout = computeMemoryLayout(property);
+    size += propLayout.size;
 
     if (Number.isNaN(size) && property.type !== 'array') {
       throw new Error('Cannot nest unbounded struct within another struct');
+    }
+
+    if (prefixEnd) {
+      continue;
+    }
+
+    if (!hasPadding && propLayout.isContiguous) {
+      longestContiguousPrefix += propLayout.size;
+    } else {
+      prefixEnd = true;
+      isContiguous = false;
+      if (!hasPadding) {
+        longestContiguousPrefix += propLayout.longestContiguousPrefix;
+      }
     }
   }
 
@@ -153,15 +159,21 @@ function computeMLOfUnstruct(data: Unstruct): SchemaMemoryLayout {
       isContiguous = false;
     }
 
-    const propInfo = computeMemoryLayout(property);
-    size += propInfo.size;
+    const propLayout = computeMemoryLayout(property);
+    size += propLayout.size;
 
-    if ((hasPadding || !propInfo.isContiguous) && !prefixEnd) {
-      isContiguous = false;
-      prefixEnd = true;
-      longestContiguousPrefix += propInfo.longestContiguousPrefix;
+    if (prefixEnd) {
+      continue;
+    }
+
+    if (!hasPadding && propLayout.isContiguous) {
+      longestContiguousPrefix += propLayout.size;
     } else {
-      longestContiguousPrefix += propInfo.size;
+      prefixEnd = true;
+      isContiguous = false;
+      if (!hasPadding) {
+        longestContiguousPrefix += propLayout.longestContiguousPrefix;
+      }
     }
   }
 
@@ -174,11 +186,11 @@ function computeMLOfUnstruct(data: Unstruct): SchemaMemoryLayout {
 
 function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   const elementType = data.elementType;
-  const elementInfo = computeMemoryLayout(elementType);
-  const elementSize = elementInfo.size;
+  const elementMemoryLayout = computeMemoryLayout(elementType);
+  const elementSize = elementMemoryLayout.size;
   const stride = roundUp(elementSize, alignmentOf(elementType));
   const hasPadding = stride > elementSize;
-  const isContiguous = !hasPadding && elementInfo.isContiguous;
+  const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
 
   const size = data.elementCount === 0
     ? Number.NaN
@@ -187,10 +199,10 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   let longestContiguousPrefix = 0;
   if (isContiguous) {
     longestContiguousPrefix = size;
-  } else if (hasPadding && elementInfo.isContiguous) {
-    longestContiguousPrefix = elementInfo.size;
+  } else if (hasPadding && elementMemoryLayout.isContiguous) {
+    longestContiguousPrefix = elementMemoryLayout.size;
   } else {
-    longestContiguousPrefix = elementInfo.longestContiguousPrefix;
+    longestContiguousPrefix = elementMemoryLayout.longestContiguousPrefix;
   }
 
   return { size, isContiguous, longestContiguousPrefix };
@@ -198,21 +210,21 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
 
 function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   const elementType = data.elementType;
-  const elementInfo = computeMemoryLayout(elementType);
-  const elementSize = elementInfo.size;
+  const elementMemoryLayout = computeMemoryLayout(elementType);
+  const elementSize = elementMemoryLayout.size;
   const stride = roundUp(elementSize, customAlignmentOf(elementType));
   const hasPadding = stride > elementSize;
-  const isContiguous = !hasPadding && elementInfo.isContiguous;
+  const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
 
   const size = data.elementCount * stride;
 
   let longestContiguousPrefix: number;
   if (isContiguous) {
     longestContiguousPrefix = size;
-  } else if (hasPadding && elementInfo.isContiguous) {
-    longestContiguousPrefix = elementInfo.size;
+  } else if (hasPadding && elementMemoryLayout.isContiguous) {
+    longestContiguousPrefix = elementMemoryLayout.size;
   } else {
-    longestContiguousPrefix = elementInfo.longestContiguousPrefix;
+    longestContiguousPrefix = elementMemoryLayout.longestContiguousPrefix;
   }
 
   return { size, isContiguous, longestContiguousPrefix };
@@ -270,14 +282,14 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
 const cachedLayouts = new WeakMap<BaseData, SchemaMemoryLayout>();
 
 export function sizeOf(schema: BaseData): number {
-  let info = cachedLayouts.get(schema);
+  let layout = cachedLayouts.get(schema);
 
-  if (info === undefined) {
-    info = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, info);
+  if (layout === undefined) {
+    layout = computeMemoryLayout(schema);
+    cachedLayouts.set(schema, layout);
   }
 
-  return info.size;
+  return layout.size;
 }
 
 /**
@@ -288,14 +300,14 @@ export function PUBLIC_sizeOf(schema: AnyData): number {
 }
 
 export function isContiguous(schema: BaseData): boolean {
-  let info = cachedLayouts.get(schema);
+  let layout = cachedLayouts.get(schema);
 
-  if (info === undefined) {
-    info = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, info);
+  if (layout === undefined) {
+    layout = computeMemoryLayout(schema);
+    cachedLayouts.set(schema, layout);
   }
 
-  return info.isContiguous;
+  return layout.isContiguous;
 }
 
 /**
@@ -306,14 +318,14 @@ export function PUBLIC_isContiguous(schema: AnyData): boolean {
 }
 
 export function getLongestContiguousPrefix(schema: BaseData): number {
-  let info = cachedLayouts.get(schema);
+  let layout = cachedLayouts.get(schema);
 
-  if (info === undefined) {
-    info = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, info);
+  if (layout === undefined) {
+    layout = computeMemoryLayout(schema);
+    cachedLayouts.set(schema, layout);
   }
 
-  return info.longestContiguousPrefix;
+  return layout.longestContiguousPrefix;
 }
 
 /**
