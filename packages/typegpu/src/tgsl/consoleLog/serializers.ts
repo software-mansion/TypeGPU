@@ -5,7 +5,7 @@ import { privateVar } from '../../core/variable/tgpuVariable.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
+import { sizeOf } from '../../data/schemaMemoryLayout.ts';
 import {
   vec2b,
   vec2f,

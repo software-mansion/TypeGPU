@@ -3,7 +3,7 @@ import { roundUp } from '../mathUtils.ts';
 import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import { isUnstruct, type Unstruct } from './dataTypes.ts';
-import { sizeOf } from './sizeOf.ts';
+import { sizeOf } from './schemaMemoryLayout.ts';
 import type { WgslStruct } from './wgslTypes.ts';
 
 export interface OffsetInfo {

@@ -4,7 +4,7 @@ import {
   getCompiledWriterForSchema,
 } from '../src/data/compiledIO.ts';
 import * as d from '../src/data/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
+import { sizeOf } from '../src/data/schemaMemoryLayout.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('buildWriter', () => {

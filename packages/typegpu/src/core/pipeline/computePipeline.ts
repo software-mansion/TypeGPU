@@ -1,7 +1,7 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
+import { sizeOf } from '../../data/schemaMemoryLayout.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';

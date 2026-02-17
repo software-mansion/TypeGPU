@@ -11,7 +11,7 @@ import {
   getCustomLocation,
   type UndecorateRecord,
 } from '../../data/dataTypes.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
+import { sizeOf } from '../../data/schemaMemoryLayout.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
   WgslTexture,

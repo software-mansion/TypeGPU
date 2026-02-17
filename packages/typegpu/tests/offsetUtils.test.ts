@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { d } from '../src/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
+import { sizeOf } from '../src/data/schemaMemoryLayout.ts';
 import { getOffsetInfoAt } from '../src/data/offsetUtils.ts';
 
 describe('getOffsetInfoAt (default)', () => {
@@ -88,6 +88,7 @@ describe('getOffsetInfoAt (struct runs)', () => {
 });
 
 describe('getOffsetInfoAt (nested layouts)', () => {
+  // offset calculator for this struct: https://shorturl.at/NQggS
   const DeepStruct = d.struct({
     someData: d.arrayOf(d.f32, 13),
     nested: d.struct({

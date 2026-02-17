@@ -28,7 +28,7 @@ import {
   type LooseDecorated,
   type Undecorate,
 } from './dataTypes.ts';
-import { sizeOf } from './sizeOf.ts';
+import { sizeOf } from './schemaMemoryLayout.ts';
 import {
   type Align,
   type AnyWgslData,

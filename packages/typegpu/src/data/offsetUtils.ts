@@ -4,7 +4,7 @@ import {
   type OffsetInfo as PropOffsetInfo,
   offsetsForProps,
 } from './offsets.ts';
-import { sizeOf } from './sizeOf.ts';
+import { sizeOf } from './schemaMemoryLayout.ts';
 import type {
   AnyWgslData,
   BaseData,
