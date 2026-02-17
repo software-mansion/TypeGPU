@@ -1,5 +1,5 @@
 import * as m from 'wgpu-matrix';
-import tgpu, { d } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import { Camera, CubeVertex, vertexCubeLayout } from './schemas.ts';
 import { cubeVertices } from './cubeVertices.ts';
 
@@ -30,19 +30,35 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
   attribs: { ...vertexCubeLayout.attrib },
   vertex: tgpu['~unstable'].vertexFn({
     in: { position: d.vec4f, uv: d.vec2f },
-    out: { pos: d.builtin.position },
+    out: { pos: d.builtin.position, worldPos: d.vec4f },
   })((input) => {
     const position = input.position;
     const uv = cameraUniform.$.projection
       .mul(cameraUniform.$.view)
       .mul(position);
 
-    return { pos: uv };
+    return { pos: uv, worldPos: position };
   }),
-  fragment: tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
-    return d.vec4f(0, 1, 0, 1);
+  fragment: tgpu['~unstable'].fragmentFn({
+    in: { worldPos: d.vec4f },
+    out: d.vec4f,
+  })(({ worldPos }) => {
+    // one of the coordinates is zero, we ignore that one
+    const localPos = std.fract(worldPos.xyz);
+    const nearEdge = std.min(localPos, d.vec3f(1).sub(localPos));
+    const highest = std.max(nearEdge.x, nearEdge.y, nearEdge.z);
+    const secondHighest = nearEdge.x + nearEdge.y + nearEdge.z - highest;
+    const distFromEdge = std.min(highest, secondHighest);
+    const color = std.select(
+      d.vec3f(0, 1, 0),
+      d.vec3f(0, 0.8, 0),
+      distFromEdge < 0.05,
+    );
+
+    return d.vec4f(color, 1);
   }),
   targets: { format: presentationFormat },
+  primitive: { cullMode: 'back' },
 });
 
 let frameId = requestAnimationFrame(draw);
