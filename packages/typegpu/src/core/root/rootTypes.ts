@@ -1,4 +1,8 @@
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type {
+  AnyComputeBuiltin,
+  AnyFragmentInputBuiltin,
+  OmitBuiltins,
+} from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type {
   AnyData,
@@ -56,9 +60,9 @@ import type {
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
-  FragmentInFromVertexOut,
   FragmentOutConstrained,
   TgpuFragmentFn,
+  VertexOutToVarying,
 } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
@@ -300,13 +304,14 @@ export interface WithBinding extends Withable<WithBinding> {
           ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
         fragment:
           | TgpuFragmentFn<
-            FragmentInFromVertexOut<TVertexOut>,
+            & VertexOutToVarying<TVertexOut>
+            & Record<string, AnyFragmentInputBuiltin>,
             Assume<TFragmentOut, TgpuFragmentFn.Out>
           >
           | ((
             input: AutoFragmentIn<
               Assume<
-                InferGPURecord<FragmentInFromVertexOut<TVertexOut>>,
+                InferGPURecord<VertexOutToVarying<TVertexOut>>,
                 AnyAutoCustoms
               >
             >,
@@ -339,7 +344,8 @@ export interface WithBinding extends Withable<WithBinding> {
         fragment?:
           | undefined
           | TgpuFragmentFn<
-            FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+            & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+            & Record<string, AnyFragmentInputBuiltin>,
             Record<string, never> | Void
           >
           | ((
@@ -387,7 +393,8 @@ export interface WithBinding extends Withable<WithBinding> {
               >,
             ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>)
             | TgpuFragmentFn<
-              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+              & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
           targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
@@ -407,7 +414,8 @@ export interface WithBinding extends Withable<WithBinding> {
           fragment?:
             | undefined
             | TgpuFragmentFn<
-              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+              & Record<string, AnyFragmentInputBuiltin>,
               Record<string, never>
             >
             | ((

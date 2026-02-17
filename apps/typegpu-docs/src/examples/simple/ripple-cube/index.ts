@@ -204,7 +204,7 @@ const rayMarchPipeline = root['~unstable']
       envMapLayout.$.envSampler,
       rd,
       0,
-    ).xyz;
+    ).rgb;
 
     if (hit) {
       const p = ro.add(rd.mul(totalDist));

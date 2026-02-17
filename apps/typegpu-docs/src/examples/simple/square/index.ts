@@ -99,19 +99,19 @@ function updateColor(
 export const controls = defineControls({
   topLeft: {
     onColorChange: (value) => updateColor(value, 'topLeft'),
-    initial: colors.topLeft.xyz,
+    initial: colors.topLeft.rgb,
   },
   topRight: {
     onColorChange: (value) => updateColor(value, 'topRight'),
-    initial: colors.topRight.xyz,
+    initial: colors.topRight.rgb,
   },
   bottomLeft: {
     onColorChange: (value) => updateColor(value, 'bottomLeft'),
-    initial: colors.bottomLeft.xyz,
+    initial: colors.bottomLeft.rgb,
   },
   bottomRight: {
     onColorChange: (value) => updateColor(value, 'bottomRight'),
-    initial: colors.bottomRight.xyz,
+    initial: colors.bottomRight.rgb,
   },
 });
 

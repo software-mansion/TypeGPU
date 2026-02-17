@@ -6,22 +6,20 @@ import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
 
-describe('perlin noise example', () => {
+describe('smoky triangle', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest({
       category: 'rendering',
-      name: 'perlin-noise',
+      name: 'smoky-triangle',
       expectedCalls: 2,
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      @group(1) @binding(0) var<uniform> size_1: vec4u;
-
-      @group(1) @binding(1) var<storage, read_write> memory: array<vec3f>;
+      @group(0) @binding(1) var<storage, read_write> memoryBuffer: array<vec3f, 32768>;
 
       var<private> seed: vec2f;
 
@@ -55,10 +53,9 @@ describe('perlin noise example', () => {
         return randOnUnitSphere();
       }
 
-      fn mainCompute_1(x: u32, y: u32, z: u32) {
-        let size = (&size_1);
-        let idx = ((x + (y * (*size).x)) + ((z * (*size).x) * (*size).y));
-        memory[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
+      fn wrappedCallback(x: u32, y: u32, z: u32) {
+        let idx = ((x + (y * 32u)) + ((z * 32u) * 32u));
+        memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
       struct mainCompute_Input {
@@ -69,39 +66,47 @@ describe('perlin noise example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        mainCompute_1(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(in.id.x, in.id.y, in.id.z);
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
+      const positions: array<vec2f, 3> = array<vec2f, 3>(vec2f(0, 0.800000011920929), vec2f(-0.800000011920929), vec2f(0.800000011920929, -0.800000011920929));
 
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
+      const uvs: array<vec2f, 3> = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
+
+      struct VertexOut {
+        @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
-        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @group(0) @binding(0) var<uniform> gridSize: f32;
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        return VertexOut(vec4f(positions[_arg_0.vertexIndex], 0f, 1f), uvs[_arg_0.vertexIndex]);
+      }
 
-      @group(0) @binding(1) var<uniform> time: f32;
+      struct Params {
+        fromColor: vec3f,
+        toColor: vec3f,
+        polarCoords: u32,
+        squashed: u32,
+        sharpness: f32,
+        distortion: f32,
+        time: f32,
+        grainSeed: f32,
+      }
 
-      @group(1) @binding(0) var<uniform> perlin3dCache__size: vec4u;
+      @group(0) @binding(0) var<uniform> paramsUniform: Params;
 
-      @group(1) @binding(1) var<storage, read> perlin3dCache__memory: array<vec3f>;
+      @group(0) @binding(1) var<storage, read> memoryBuffer: array<vec3f, 32768>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size = vec3i(perlin3dCache__size.xyz);
-        let x = (((pos.x % size.x) + size.x) % size.x);
-        let y = (((pos.y % size.y) + size.y) % size.y);
-        let z = (((pos.z % size.z) + size.z) % size.z);
-        return perlin3dCache__memory[((x + (y * size.x)) + ((z * size.x) * size.y))];
+        var size_i = vec3i(32);
+        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
+        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
+        let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
+        return memoryBuffer[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
@@ -135,24 +140,43 @@ describe('perlin noise example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn exponentialSharpen(n: f32, sharpness2: f32) -> f32 {
-        return (sign(n) * pow(abs(n), (1f - sharpness2)));
+      fn tanhVec(v: vec2f) -> vec2f {
+        let len = length(v);
+        let tanh_1 = tanh(len);
+        return ((v / len) * tanh_1);
       }
 
-      @group(0) @binding(2) var<uniform> sharpness: f32;
+      fn getGradientColor(ratio: f32) -> vec3f {
+        let p = (&paramsUniform);
+        if (((*p).squashed == 1u)) {
+          return mix((*p).fromColor, (*p).toColor, smoothstep(0.1f, 0.9f, ratio));
+        }
+        return mix((*p).fromColor, (*p).toColor, ratio);
+      }
+
+      fn grain(color: vec3f, uv: vec2f) -> vec3f {
+        return (color + (sample(vec3f((uv * 200f), paramsUniform.grainSeed)) * 0.1f));
+      }
 
       struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var suv = (gridSize * _arg_0.uv);
-        let n = sample(vec3f(suv, time));
-        let sharp = exponentialSharpen(n, sharpness);
-        let n01 = ((sharp * 0.5f) + 0.5f);
-        var dark = vec3f(0, 0.20000000298023224, 1);
-        var light = vec3f(1, 0.30000001192092896, 0.5);
-        return vec4f(mix(dark, light, n01), 1f);
+        let params = (&paramsUniform);
+        let t = ((*params).time * 0.1f);
+        var ouv = ((_arg_0.uv * 5f) + vec2f(0f, -(t)));
+        var off = (vec2f(sample(vec3f(ouv, t)), (sample(vec3f((ouv * 2f), (t + 10f))) * 0.5f)) + -0.1f);
+        off = tanhVec((off * (*params).sharpness));
+        var p = (_arg_0.uv + (off * (*params).distortion));
+        var factor = 0f;
+        if (((*params).polarCoords == 1u)) {
+          factor = length(((p - vec2f(0.5, 0.30000001192092896)) * 2f));
+        }
+        else {
+          factor = ((p.x + p.y) * 0.7f);
+        }
+        return saturate(vec4f(grain(getGradientColor(factor), _arg_0.uv), 1f));
       }"
     `);
   });

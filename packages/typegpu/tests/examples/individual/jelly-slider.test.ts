@@ -219,7 +219,7 @@ describe('jelly-slider example', () => {
           var finalUV = vec2f((((position.x - ((position.z * lightDir.x) * sign(lightDir.z))) * 0.5f) + 0.5f), ((1f - ((-(position.z) / lightDir.z) * 0.5f)) - 0.2f));
           var data = textureSampleLevel(bezierTexture, filteringSampler, finalUV, 0);
           let jellySaturation = mix(0f, data.y, saturate(((position.x * 1.5f) + 1.1f)));
-          var shadowColor = mix(vec3f(), (*jellyColor).xyz, jellySaturation);
+          var shadowColor = mix(vec3f(), (*jellyColor).rgb, jellySaturation);
           let contrast = ((20f * saturate(finalUV.y)) * (0.8f + (endCapX * 0.2f)));
           const shadowOffset = -0.3;
           const featherSharpness = 10;
@@ -350,12 +350,12 @@ describe('jelly-slider example', () => {
         var newNormal = getNormalMain(posOffset);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(endCapX, 0f, 0f)));
-        var bounceLight = ((*jellyColor).xyz * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
-        var sideBounceLight = (((*jellyColor).xyz * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
+        var bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
+        var sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
         var litColor = calculateLighting(posOffset, newNormal, rayOrigin);
         var backgroundColor = ((applyAO((vec3f(1) * litColor), posOffset, newNormal) + vec4f(bounceLight, 0f)) + vec4f(sideBounceLight, 0f));
-        var textColor = saturate((backgroundColor.xyz * vec3f(0.5)));
-        return vec4f((mix(backgroundColor.xyz, textColor, percentageSample.x) * (1f + highlights)), 1f);
+        var textColor = saturate((backgroundColor.rgb * vec3f(0.5)));
+        return vec4f((mix(backgroundColor.rgb, textColor, percentageSample.x) * (1f + highlights)), 1f);
       }
 
       struct BoxIntersection {
@@ -503,7 +503,7 @@ describe('jelly-slider example', () => {
           }
         }
         if ((distanceFromOrigin < 10f)) {
-          return renderBackground(rayOrigin, rayDirection, distanceFromOrigin, select(0f, 0.87f, (blurEnabledUniform == 1u))).xyz;
+          return renderBackground(rayOrigin, rayDirection, distanceFromOrigin, select(0f, 0.87f, (blurEnabledUniform == 1u))).rgb;
         }
         return vec3f();
       }
@@ -561,9 +561,9 @@ describe('jelly-slider example', () => {
               var env = rayMarchNoJelly(exitPos, refrDir);
               let progress = hitInfo.t;
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).xyz * 1.5f);
+              var scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
+              var absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
               var T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
               var lightDir = -(lightUniform.direction);
               let forward = max(0f, dot(lightDir, refrDir));
@@ -589,7 +589,7 @@ describe('jelly-slider example', () => {
         var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
         var ray = getRay(ndc);
         var color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
-        return vec4f(tanh((color.xyz * 1.3f)), 1f);
+        return vec4f(tanh((color.rgb * 1.3f)), 1f);
       }
 
       @group(0) @binding(0) var currentTexture: texture_2d<f32>;
@@ -613,11 +613,11 @@ describe('jelly-slider example', () => {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(x, y));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.xyz);
-            maxColor = max(maxColor, neighborColor.xyz);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        var historyColorClamped = clamp(historyColor.xyz, minColor, maxColor);
+        var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         var uv = (vec2f(_arg_0.gid.xy) / vec2f(dimensions.xy));
         const textRegionMinX = 0.7099999785423279f;
         const textRegionMaxX = 0.8500000238418579f;
@@ -630,7 +630,7 @@ describe('jelly-slider example', () => {
         let fadeOutY = (1f - smoothstep((textRegionMaxY - borderSize), (textRegionMaxY + borderSize), uv.y));
         let inTextRegion = (((fadeInX * fadeOutX) * fadeInY) * fadeOutY);
         let blendFactor = mix(0.8999999761581421f, 0.699999988079071f, inTextRegion);
-        var resolvedColor = vec4f(mix(currentColor.xyz, historyColorClamped, blendFactor), 1f);
+        var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(_arg_0.gid.x, _arg_0.gid.y), resolvedColor);
       }
 
