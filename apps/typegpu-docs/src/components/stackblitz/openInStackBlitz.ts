@@ -57,10 +57,10 @@ export const openInStackBlitz = (
   const tsFiles: Record<string, string> = {};
 
   for (const file of example.tsFiles) {
-    tsFiles[`src/${file.path}`] = file.content;
+    tsFiles[`src/${file.path}`] = file.tsnotoverContent ?? file.content;
   }
   for (const file of common) {
-    tsFiles[`src/common/${file.path}`] = file.content;
+    tsFiles[`src/common/${file.path}`] = file.tsnotoverContent ?? file.content;
   }
 
   for (const key of Object.keys(tsFiles)) {

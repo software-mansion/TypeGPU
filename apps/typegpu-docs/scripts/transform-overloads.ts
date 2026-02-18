@@ -278,6 +278,7 @@ async function main() {
         `Failed to transform ${
           relative(projectRoot, filePath)
         }: ${errorMessage}`,
+        { cause: error },
       );
     }
   }
