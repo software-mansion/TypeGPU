@@ -82,7 +82,7 @@ const root = await tgpu.init();
 
 // Uniforms are used to send read-only data to the GPU
 const time = root.createUniform(d.f32);
-const scale = root.createUniform(d.f32);
+const offset = root.createUniform(d.f32);
 const color = root.createUniform(d.vec3f);
 const shift = root.createUniform(d.f32);
 const aspectRatio = root.createUniform(d.f32);
@@ -100,10 +100,11 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = mul(ray.direction.xyz, z)
-      .add(scale.$)
+    const p = d.vec3f(3, 0, 3)
+      .add(offset.$)
+      .add(d.vec3f(time.$, 0, time.$))
       .add(ray.origin.xyz)
-      .add(d.vec3f(time.$ + 3, 0, time.$ + 3));
+      .add(mul(ray.direction.xyz, z));
     let q = d.vec3f(p);
     let prox = p.y;
     for (let i = 40.1; i > 0.01; i *= 0.2) {
@@ -178,13 +179,13 @@ requestAnimationFrame(draw);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  scale: {
+  offset: {
     initial: 2,
     min: -15,
     max: 100,
     step: 0.01,
     onSliderChange(v) {
-      scale.write(v);
+      offset.write(v);
     },
   },
   'pattern shift': {
