@@ -1,7 +1,28 @@
 import * as sdf from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
-import { type BallState, createPhysicsWorld } from './physics.ts';
+import {
+  DROP_Y,
+  EDGE_WIDTH,
+  GHOST_ALPHA,
+  LEVEL_COUNT,
+  LEVEL_RADII,
+  LEVEL_SCALE,
+  MAX_FRUITS,
+  MAX_LEVEL_RADIUS,
+  MERGE_DISTANCE_FACTOR,
+  MIN_RADIUS,
+  OFFSCREEN,
+  PLAYFIELD_HALF_WIDTH,
+  SPAWN_COOLDOWN,
+  SPAWN_WEIGHT_TOTAL,
+  SPAWN_WEIGHTS,
+  WALL_COLOR,
+  WALL_DEFS,
+  WALL_ROUNDNESS,
+} from './constants.ts';
+import type { BallState } from './physics.ts';
+import { createPhysicsWorld } from './physics.ts';
 import { createAtlases } from './sdf-gen.ts';
 import { skyColor } from './sky.ts';
 
@@ -9,37 +30,6 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const LEVEL_RADII = [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.44, 0.48]
-  .map((x) => x * 1.3);
-const LEVEL_COUNT = LEVEL_RADII.length;
-const LEVEL_SCALE = 1 / LEVEL_COUNT;
-const MAX_LEVEL_RADIUS = LEVEL_RADII[LEVEL_COUNT - 1];
-const WALL_DEFS = [
-  { cx: 0, cy: -0.5, hw: 0.5, hh: 0.05 },
-  { cx: 0.5, cy: 0, hw: 0.05, hh: 0.55 },
-  { cx: -0.5, cy: 0, hw: 0.05, hh: 0.55 },
-];
-const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
-const WALL_ROUNDNESS = 0.035;
-const MAX_FRUITS = 128;
-const MIN_RADIUS = 0.001;
-const EDGE_WIDTH = 0.003;
-const OFFSCREEN = 10;
-const DROP_Y = 0.65;
-const SPAWN_WEIGHTS = [4, 3, 2, 1];
-const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
-const MERGE_DISTANCE_FACTOR = 0.4;
-const PLAYFIELD_HALF_WIDTH = 0.65;
-const SPAWN_COOLDOWN = 0.35;
-const GHOST_ALPHA = 0.45;
-
-function clampSpawnX(x: number, radius: number) {
-  return Math.max(
-    -PLAYFIELD_HALF_WIDTH + radius,
-    Math.min(PLAYFIELD_HALF_WIDTH - radius, x),
-  );
-}
 
 const rotate2d = (p: d.v2f, angle: number) => {
   'use gpu';
@@ -54,7 +44,7 @@ const clampRadial = (p: d.v2f, clampRadius: number, minRadius: number) => {
   return p.mul(std.min(clampRadius / len, 1));
 };
 
-const atlasUv = (p: d.v2f, level: number, levelScale: number) => {
+const circleAtlasUv = (p: d.v2f, level: number, levelScale: number) => {
   'use gpu';
   const uv = d.vec2f(p.x + 0.5, 0.5 - p.y);
   return d.vec2f(uv.x, uv.y * levelScale + level * levelScale);
@@ -63,12 +53,12 @@ const atlasUv = (p: d.v2f, level: number, levelScale: number) => {
 const sampleSdf = (
   sdfView: d.texture2d<d.F32>,
   sampler: d.sampler,
-  atlasUv: d.v2f,
+  uv: d.v2f,
   radius: number,
   localPos: d.v2f,
 ) => {
   'use gpu';
-  const sdfEncoded = std.textureSample(sdfView, sampler, atlasUv).x;
+  const sdfEncoded = std.textureSample(sdfView, sampler, uv).x;
   const sdfWorld = (sdfEncoded * 2 - 1) * radius;
   const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
   return sdfWorld + std.length(outside) * radius * 2;
@@ -77,11 +67,28 @@ const sampleSdf = (
 const sampleSprite = (
   spriteView: d.texture2d<d.F32>,
   sampler: d.sampler,
-  atlasUv: d.v2f,
+  uv: d.v2f,
 ) => {
   'use gpu';
-  return std.textureSample(spriteView, sampler, atlasUv).xyz;
+  return std.textureSample(spriteView, sampler, uv).xyz;
 };
+
+const wallColor = (local: d.v2f, dist: number) => {
+  'use gpu';
+  const stripe = std.abs(std.fract(local.x * 18.0 + local.y * 6.0) - 0.5);
+  const stripeMask = std.clamp(0.55 - stripe * 1.6, 0, 1);
+  const speck = std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) * 0.04;
+  const texture = stripeMask * 0.08 + speck;
+  const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
+  return WALL_COLOR.add(d.vec3f(1, 0.8, 0.6).mul(edgeShade + texture));
+};
+
+interface ActiveFruit {
+  level: number;
+  radius: number;
+  bodyIndex: number;
+  dead: boolean;
+}
 
 function randomLevel(): number {
   let r = Math.random() * SPAWN_WEIGHT_TOTAL;
@@ -92,11 +99,11 @@ function randomLevel(): number {
   return 0;
 }
 
-interface ActiveFruit {
-  level: number;
-  radius: number;
-  bodyIndex: number;
-  dead: boolean;
+function clampSpawnX(x: number, radius: number) {
+  return Math.max(
+    -PLAYFIELD_HALF_WIDTH + radius,
+    Math.min(PLAYFIELD_HALF_WIDTH - radius, x),
+  );
 }
 
 let activeFruits: ActiveFruit[] = [];
@@ -174,93 +181,110 @@ const linSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
+const SceneHit = d.struct({ dist: d.f32, color: d.vec3f });
+
+const evalFruits = (ndc: d.v2f, activeCount: number) => {
+  'use gpu';
+  let closestDist = d.f32(2e10);
+  let outColor = d.vec3f(0, 0, 0);
+  for (let i = d.u32(0); i < activeCount; i++) {
+    const circle = circleUniform.$[i];
+    const raw = ndc.sub(circle.center).div(circle.radius * 2);
+    const localPos = rotate2d(raw, -circle.angle);
+    const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
+    const aUv = circleAtlasUv(clamped, circle.level, LEVEL_SCALE);
+    const dist = sampleSdf(
+      sdfView.$,
+      linSampler.$,
+      aUv,
+      circle.radius,
+      localPos,
+    );
+    const spriteRgb = sampleSprite(spriteView.$, linSampler.$, aUv);
+    if (dist < closestDist) {
+      closestDist = dist;
+      outColor = d.vec3f(spriteRgb);
+    }
+  }
+  return SceneHit({ dist: closestDist, color: outColor });
+};
+
+const evalWalls = (ndc: d.v2f, hit: d.Infer<typeof SceneHit>) => {
+  'use gpu';
+  let closestDist = hit.dist;
+  let outColor = d.vec3f(hit.color);
+  for (const rect of rectUniform.$) {
+    const dist = sdf.sdRoundedBox2d(
+      ndc.sub(rect.center),
+      rect.size.mul(0.5),
+      WALL_ROUNDNESS,
+    );
+    if (dist < closestDist) {
+      closestDist = dist;
+      outColor = d.vec3f(wallColor(ndc.sub(rect.center), dist));
+    }
+  }
+  return SceneHit({ dist: closestDist, color: outColor });
+};
+
+const applyGhost = (
+  baseColor: d.v3f,
+  ghost: d.Infer<typeof SdCircle>,
+  ndc: d.v2f,
+) => {
+  'use gpu';
+  if (ghost.radius <= MIN_RADIUS) {
+    return d.vec3f(baseColor);
+  }
+  const raw = ndc.sub(ghost.center).div(ghost.radius * 2);
+  const localPos = rotate2d(raw, -ghost.angle);
+  const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
+  const uv = circleAtlasUv(clamped, ghost.level, LEVEL_SCALE);
+  const dist = sampleSdf(sdfView.$, linSampler.$, uv, ghost.radius, localPos);
+  const alpha = (std.clamp(-dist, 0, EDGE_WIDTH) / EDGE_WIDTH) * GHOST_ALPHA;
+  return std.mix(
+    baseColor,
+    sampleSprite(spriteView.$, linSampler.$, uv),
+    alpha,
+  );
+};
+
+// --- Render pipeline ---
+
 const renderPipeline = root['~unstable'].createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
     const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
     const frame = frameUniform.$;
-
-    let closestDist = d.f32(2e10);
-    let outColor = d.vec3f(0, 0, 0);
-
     const bgColor = skyColor(uv, ndc, frame.time);
-
-    for (let i = d.u32(0); i < frame.activeCount; i++) {
-      const circle = circleUniform.$[i];
-      const raw = ndc.sub(circle.center).div(circle.radius * 2);
-      const localPos = rotate2d(raw, -circle.angle);
-      const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-      const aUv = atlasUv(clamped, circle.level, LEVEL_SCALE);
-      const totalDist = sampleSdf(
-        sdfView.$,
-        linSampler.$,
-        aUv,
-        circle.radius,
-        localPos,
-      );
-      const spriteRgb = sampleSprite(spriteView.$, linSampler.$, aUv);
-
-      if (totalDist < closestDist) {
-        closestDist = totalDist;
-        outColor = d.vec3f(spriteRgb);
-      }
-    }
-
-    for (const rect of rectUniform.$) {
-      const dist = sdf.sdRoundedBox2d(
-        ndc.sub(rect.center),
-        rect.size.mul(0.5),
-        WALL_ROUNDNESS,
-      );
-      if (dist < closestDist) {
-        closestDist = dist;
-        const local = ndc.sub(rect.center);
-        const stripe = std.abs(std.fract(local.x * 18.0 + local.y * 6.0) - 0.5);
-        const stripeMask = std.clamp(0.55 - stripe * 1.6, 0, 1);
-        const speck = std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) * 0.04;
-        const texture = stripeMask * 0.08 + speck;
-        const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
-        outColor = d.vec3f(
-          WALL_COLOR.x + edgeShade + texture,
-          WALL_COLOR.y + edgeShade * 0.8 + texture * 0.8,
-          WALL_COLOR.z + edgeShade * 0.6 + texture * 0.6,
-        );
-      }
-    }
-
-    const alpha = std.clamp(-closestDist, 0, EDGE_WIDTH) / EDGE_WIDTH;
-    let finalColor = std.mix(bgColor, outColor, alpha);
-
-    const ghost = frame.ghostCircle;
-    if (ghost.radius > MIN_RADIUS) {
-      const gRaw = ndc.sub(ghost.center).div(ghost.radius * 2);
-      const gLocalPos = rotate2d(gRaw, -ghost.angle);
-      const gClamped = clampRadial(gLocalPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-      const gUv = atlasUv(gClamped, ghost.level, LEVEL_SCALE);
-      const gRgb = sampleSprite(spriteView.$, linSampler.$, gUv);
-      const gDist = sampleSdf(
-        sdfView.$,
-        linSampler.$,
-        gUv,
-        ghost.radius,
-        gLocalPos,
-      );
-      const gAlpha = (std.clamp(-gDist, 0, EDGE_WIDTH) / EDGE_WIDTH) *
-        GHOST_ALPHA;
-      finalColor = std.mix(finalColor, gRgb, gAlpha);
-    }
-
-    return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
+    const hit = evalWalls(ndc, evalFruits(ndc, frame.activeCount));
+    const alpha = std.clamp(-hit.dist, 0, EDGE_WIDTH) / EDGE_WIDTH;
+    const sceneColor = std.mix(bgColor, hit.color, alpha);
+    return d.vec4f(applyGhost(sceneColor, frame.ghostCircle, ndc), 1);
   },
   targets: { format: presentationFormat },
 });
+
+// --- Event handlers ---
 
 canvas.addEventListener('pointermove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   ghostX = clampSpawnX(ndcX, LEVEL_RADII[ghostLevel]);
 });
+
+canvas.addEventListener('click', () => {
+  const now = performance.now() * 0.001;
+  if (now - lastSpawnTime < SPAWN_COOLDOWN) return;
+  if (activeFruits.length >= MAX_FRUITS) return;
+  spawnFruit(ghostLevel, ghostX);
+  lastSpawnTime = now;
+  ghostLevel = randomLevel();
+  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
+});
+
+// --- Game logic ---
 
 function markDead(fruit: ActiveFruit) {
   if (fruit.dead) return;
@@ -293,16 +317,6 @@ function spawnFruit(
 function pruneDead() {
   activeFruits = activeFruits.filter((fruit) => !fruit.dead);
 }
-
-canvas.addEventListener('click', () => {
-  const now = performance.now() * 0.001;
-  if (now - lastSpawnTime < SPAWN_COOLDOWN) return;
-  if (activeFruits.length >= MAX_FRUITS) return;
-  spawnFruit(ghostLevel, ghostX);
-  lastSpawnTime = now;
-  ghostLevel = randomLevel();
-  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
-});
 
 function checkMerges() {
   const maxLevel = LEVEL_COUNT - 1;
@@ -344,6 +358,8 @@ function checkMerges() {
   }
   return merged;
 }
+
+// --- Frame loop ---
 
 let lastTime = performance.now();
 
