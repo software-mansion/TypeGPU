@@ -276,7 +276,7 @@ export const forOfHelpers = {
 
     if (wgsl.isVec(iterableDataType)) {
       return snip(
-        `${Number(iterableDataType.type.match(/\d/))}`,
+        `${iterableDataType.componentCount}`,
         u32,
         'constant',
       );
