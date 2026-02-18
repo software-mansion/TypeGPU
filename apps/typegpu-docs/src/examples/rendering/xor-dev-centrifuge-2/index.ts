@@ -75,7 +75,7 @@ const fragmentMain = tgpu.fragmentFn({
     const coords2 = cos(coords + cos(coords * params.smallStrips)) - 1;
     const dd = length(d.vec4f(coords.z, coords2)) * 0.5 - 0.1;
 
-    acc = acc + (1.2 - cos(params.color * p.z)) / dd;
+    acc += (1.2 - cos(params.color * p.z)) / dd;
     z += dd;
   }
 
