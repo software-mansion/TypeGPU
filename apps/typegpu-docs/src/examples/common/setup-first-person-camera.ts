@@ -34,18 +34,17 @@ export function setupFirstPersonCamera(
     CameraOptions
   >;
 
-  // orbit variables storing the current camera position
+  // `runCallback` creates a Camera object based on the `cameraState` and passes it to the callback
   const cameraState = {
     pos: options.initPos,
     yaw: 0,
     pitch: 0,
   };
 
-  // initialize the camera
-  targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
-
-  function targetCamera(newPos: d.v3f, yaw: number, pitch: number) {
-    const position = newPos;
+  function runCallback() {
+    const position = cameraState.pos;
+    const pitch = cameraState.pitch;
+    const yaw = cameraState.yaw;
     const target = position.add(d.vec3f(
       std.cos(pitch) * std.sin(yaw),
       std.sin(pitch),
@@ -75,12 +74,12 @@ export function setupFirstPersonCamera(
       Math.PI / 2 - 0.01,
     );
 
-    targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
+    runCallback();
   }
 
   // resize observer
   const resizeObserver = new ResizeObserver(() => {
-    targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
+    runCallback();
   });
   resizeObserver.observe(canvas);
 
@@ -149,10 +148,11 @@ export function setupFirstPersonCamera(
       cameraState.pos.y += moveSpeed;
     }
 
-    targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
+    runCallback();
   };
 
-  return { cleanupCamera, targetCamera, updatePosition };
+  runCallback();
+  return { cleanupCamera, updatePosition };
 }
 
 function calculateView(position: d.v3f, target: d.v3f) {
