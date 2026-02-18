@@ -94,13 +94,15 @@ export function setupFirstPersonCamera(
   let moveSpeed = options.speed.y;
 
   // keyboard events
-  window.addEventListener('keydown', (event) => {
+  const keyDownEventListener = (event: KeyboardEvent) => {
     pressedKeys.add(event.key.toLowerCase());
-  });
+  };
+  window.addEventListener('keydown', keyDownEventListener);
 
-  window.addEventListener('keyup', (event) => {
+  const keyUpEventListener = (event: KeyboardEvent) => {
     pressedKeys.delete(event.key.toLowerCase());
-  });
+  };
+  window.addEventListener('keyup', keyUpEventListener);
 
   // mouse events
   canvas.addEventListener('mousedown', () => {
@@ -127,6 +129,8 @@ export function setupFirstPersonCamera(
   }, { passive: false });
 
   function cleanupCamera() {
+    window.removeEventListener('keydown', keyDownEventListener);
+    window.removeEventListener('keyup', keyUpEventListener);
     resizeObserver.unobserve(canvas);
   }
 
