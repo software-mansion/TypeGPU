@@ -13,11 +13,17 @@ export const Camera = d.struct({
 export interface CameraOptions {
   initPos?: d.v3f;
   target?: d.v3f;
+  /**
+   * Scrolling accelerates/decelerates the movement.
+   * `d.vec3f(minimum, initial, maximum)`
+   */
+  speed?: d.v3f;
 }
 
 const cameraDefaults: Partial<CameraOptions> = {
   initPos: d.vec3f(0, 0, 0),
   target: d.vec3f(0, 1, 0),
+  speed: d.vec3f(1, 1, 1),
 };
 
 /**
@@ -85,7 +91,7 @@ export function setupFirstPersonCamera(
 
   // Variables for interaction.
   const pressedKeys = new Set<string>();
-  const moveSpeed = 0.1;
+  let moveSpeed = options.speed.y;
 
   // keyboard events
   window.addEventListener('keydown', (event) => {
@@ -101,18 +107,26 @@ export function setupFirstPersonCamera(
     canvas.requestPointerLock();
   });
 
-  const mouseMoveEventListener = (event: MouseEvent) => {
+  canvas.addEventListener('mousemove', (event: MouseEvent) => {
     if (document.pointerLockElement !== canvas) {
       return;
     }
     const dx = event.movementX;
     const dy = event.movementY;
     rotateCamera(dx, dy);
-  };
-  window.addEventListener('mousemove', mouseMoveEventListener);
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    moveSpeed = std.clamp(
+      moveSpeed * (1 - e.deltaY * 0.0005),
+      options.speed.x,
+      options.speed.z,
+    );
+    console.log(moveSpeed);
+  }, { passive: false });
 
   function cleanupCamera() {
-    window.removeEventListener('mousemove', mouseMoveEventListener);
     resizeObserver.unobserve(canvas);
   }
 

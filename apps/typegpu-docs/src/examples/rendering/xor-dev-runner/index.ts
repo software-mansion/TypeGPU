@@ -143,7 +143,9 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cameraUniform = root.createUniform(Camera);
-const { updatePosition } = setupFirstPersonCamera(canvas, {}, (props) => {
+const { cleanupCamera, updatePosition } = setupFirstPersonCamera(canvas, {
+  speed: d.vec3f(0.001, 0.1, 1),
+}, (props) => {
   cameraUniform.writePartial(props);
 });
 
@@ -219,6 +221,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
+  cleanupCamera();
   root.destroy();
 }
 
