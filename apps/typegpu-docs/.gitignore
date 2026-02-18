@@ -26,3 +26,7 @@ src/content/docs/api
 # tests
 tests/artifacts
 !tests/artifacts/README.md
+
+# generated transformed files
+*.tsnotover.ts
+*.tsnotover.tsx
