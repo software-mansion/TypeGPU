@@ -21,6 +21,7 @@ const WALL_DEFS = [
   { cx: -0.5, cy: 0, hw: 0.05, hh: 0.55 },
 ];
 const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
+const WALL_ROUNDNESS = 0.035;
 const MAX_FRUITS = 128;
 const MIN_RADIUS = 0.001;
 const EDGE_WIDTH = 0.003;
@@ -56,8 +57,7 @@ const clampRadial = (p: d.v2f, clampRadius: number, minRadius: number) => {
 const atlasUv = (p: d.v2f, level: number, levelScale: number) => {
   'use gpu';
   const uv = d.vec2f(p.x + 0.5, 0.5 - p.y);
-  const offset = level * levelScale;
-  return d.vec2f(uv.x, uv.y * levelScale + offset);
+  return d.vec2f(uv.x, uv.y * levelScale + level * levelScale);
 };
 
 const sampleSdf = (
@@ -71,8 +71,7 @@ const sampleSdf = (
   const sdfEncoded = std.textureSample(sdfView, sampler, atlasUv).x;
   const sdfWorld = (sdfEncoded * 2 - 1) * radius;
   const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
-  const outsideDist = std.length(outside) * radius * 2;
-  return sdfWorld + outsideDist;
+  return sdfWorld + std.length(outside) * radius * 2;
 };
 
 const sampleSprite = (
@@ -106,7 +105,6 @@ let ghostX = 0;
 let lastSpawnTime = -Infinity;
 
 const { spriteAtlas, sdfAtlas, contours } = await createAtlases();
-
 const physics = await createPhysicsWorld(WALL_DEFS);
 
 const spriteTexture = root['~unstable']
@@ -136,9 +134,6 @@ const rectUniform = root.createUniform(
   })),
 );
 
-const wallColorUniform = root.createUniform(d.vec3f, WALL_COLOR);
-const wallRoundnessUniform = root.createUniform(d.f32, 0.035);
-
 const SdCircle = d.struct({
   center: d.vec2f,
   radius: d.f32,
@@ -147,19 +142,31 @@ const SdCircle = d.struct({
 });
 const INACTIVE_CIRCLE = {
   center: d.vec2f(OFFSCREEN, OFFSCREEN),
-  radius: MIN_RADIUS,
+  radius: 0,
   level: 0,
-  angle: d.f32(0),
+  angle: 0,
 };
+
 const circleUniform = root.createUniform(
   d.arrayOf(SdCircle, MAX_FRUITS),
   Array.from({ length: MAX_FRUITS }, () => INACTIVE_CIRCLE),
 );
-const ghostCircleUniform = root.createUniform(SdCircle, INACTIVE_CIRCLE);
-const ghostAlphaUniform = root.createUniform(d.f32, GHOST_ALPHA);
-const activeCountUniform = root.createUniform(d.u32, 0);
-const timeUniform = root.createUniform(d.f32, 0);
-const circleData = Array.from({ length: MAX_FRUITS }, () => INACTIVE_CIRCLE);
+
+const Frame = d.struct({
+  ghostCircle: SdCircle,
+  time: d.f32,
+  activeCount: d.u32,
+});
+const frameUniform = root.createUniform(Frame, {
+  ghostCircle: INACTIVE_CIRCLE,
+  time: 0,
+  activeCount: 0,
+});
+
+const circleData = Array.from(
+  { length: MAX_FRUITS },
+  () => ({ ...INACTIVE_CIRCLE }),
+);
 const frameStates: (BallState | null)[] = [];
 
 const linSampler = root['~unstable'].createSampler({
@@ -172,35 +179,27 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
   fragment: ({ uv }) => {
     'use gpu';
     const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
-    const levelScale = d.f32(LEVEL_SCALE);
-    const clampRadius = MAX_LEVEL_RADIUS;
-    const activeCount = activeCountUniform.$;
-    const time = timeUniform.$;
-    const ghostCircle = ghostCircleUniform.$;
-    const ghostAlpha = ghostAlphaUniform.$;
-    const minRadius = MIN_RADIUS;
-    const edge = EDGE_WIDTH;
+    const frame = frameUniform.$;
 
     let closestDist = d.f32(2e10);
     let outColor = d.vec3f(0, 0, 0);
 
-    const bgColor = skyColor(uv, ndc, time);
+    const bgColor = skyColor(uv, ndc, frame.time);
 
-    for (let i = d.u32(0); i < activeCount; i++) {
+    for (let i = d.u32(0); i < frame.activeCount; i++) {
       const circle = circleUniform.$[i];
-      if (circle.radius < minRadius) continue;
       const raw = ndc.sub(circle.center).div(circle.radius * 2);
       const localPos = rotate2d(raw, -circle.angle);
-      const clamped = clampRadial(localPos, clampRadius, minRadius);
-      const sdfAtlasUv = atlasUv(clamped, circle.level, levelScale);
+      const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
+      const aUv = atlasUv(clamped, circle.level, LEVEL_SCALE);
       const totalDist = sampleSdf(
         sdfView.$,
         linSampler.$,
-        sdfAtlasUv,
+        aUv,
         circle.radius,
         localPos,
       );
-      const spriteRgb = sampleSprite(spriteView.$, linSampler.$, sdfAtlasUv);
+      const spriteRgb = sampleSprite(spriteView.$, linSampler.$, aUv);
 
       if (totalDist < closestDist) {
         closestDist = totalDist;
@@ -208,13 +207,11 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
       }
     }
 
-    const wc = wallColorUniform.$;
-    const wallRoundness = wallRoundnessUniform.$;
     for (const rect of rectUniform.$) {
       const dist = sdf.sdRoundedBox2d(
         ndc.sub(rect.center),
         rect.size.mul(0.5),
-        wallRoundness,
+        WALL_ROUNDNESS,
       );
       if (dist < closestDist) {
         closestDist = dist;
@@ -225,30 +222,32 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
         const texture = stripeMask * 0.08 + speck;
         const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
         outColor = d.vec3f(
-          wc.x + edgeShade + texture,
-          wc.y + edgeShade * 0.8 + texture * 0.8,
-          wc.z + edgeShade * 0.6 + texture * 0.6,
+          WALL_COLOR.x + edgeShade + texture,
+          WALL_COLOR.y + edgeShade * 0.8 + texture * 0.8,
+          WALL_COLOR.z + edgeShade * 0.6 + texture * 0.6,
         );
       }
     }
 
-    const alpha = std.clamp(-closestDist, 0, edge) / edge;
+    const alpha = std.clamp(-closestDist, 0, EDGE_WIDTH) / EDGE_WIDTH;
     let finalColor = std.mix(bgColor, outColor, alpha);
 
-    if (ghostCircle.radius > minRadius) {
-      const gRaw = ndc.sub(ghostCircle.center).div(ghostCircle.radius * 2);
-      const gLocalPos = rotate2d(gRaw, -ghostCircle.angle);
-      const gClamped = clampRadial(gLocalPos, clampRadius, minRadius);
-      const gAtlasUv = atlasUv(gClamped, ghostCircle.level, levelScale);
-      const gRgb = sampleSprite(spriteView.$, linSampler.$, gAtlasUv);
+    const ghost = frame.ghostCircle;
+    if (ghost.radius > MIN_RADIUS) {
+      const gRaw = ndc.sub(ghost.center).div(ghost.radius * 2);
+      const gLocalPos = rotate2d(gRaw, -ghost.angle);
+      const gClamped = clampRadial(gLocalPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
+      const gUv = atlasUv(gClamped, ghost.level, LEVEL_SCALE);
+      const gRgb = sampleSprite(spriteView.$, linSampler.$, gUv);
       const gDist = sampleSdf(
         sdfView.$,
         linSampler.$,
-        gAtlasUv,
-        ghostCircle.radius,
+        gUv,
+        ghost.radius,
         gLocalPos,
       );
-      const gAlpha = (std.clamp(-gDist, 0, edge) / edge) * ghostAlpha;
+      const gAlpha = (std.clamp(-gDist, 0, EDGE_WIDTH) / EDGE_WIDTH) *
+        GHOST_ALPHA;
       finalColor = std.mix(finalColor, gRgb, gAlpha);
     }
 
@@ -315,7 +314,6 @@ function checkMerges() {
     const sa = frameStates[i];
     if (!sa) continue;
     const mergeDist = a.radius * MERGE_DISTANCE_FACTOR;
-    const mergeDistSq = mergeDist * mergeDist;
 
     for (let j = i + 1; j < count; j++) {
       const b = activeFruits[j];
@@ -325,21 +323,20 @@ function checkMerges() {
 
       const dx = sa.x - sb.x;
       const dy = sa.y - sb.y;
-      if (dx * dx + dy * dy < mergeDistSq) {
-        const newLevel = a.level + 1;
-
+      if (dx * dx + dy * dy < mergeDist * mergeDist) {
         markDead(a);
         markDead(b);
-
-        const avgX = (sa.x + sb.x) * 0.5;
-        const avgY = (sa.y + sb.y) * 0.5;
-        const avgVx = (sa.vx + sb.vx) * 0.5;
-        const avgVy = (sa.vy + sb.vy) * 0.5;
-        const avgAngle = Math.atan2(
-          Math.sin(sa.angle) + Math.sin(sb.angle),
-          Math.cos(sa.angle) + Math.cos(sb.angle),
+        spawnFruit(
+          a.level + 1,
+          (sa.x + sb.x) * 0.5,
+          (sa.y + sb.y) * 0.5,
+          (sa.vx + sb.vx) * 0.5,
+          (sa.vy + sb.vy) * 0.5,
+          Math.atan2(
+            Math.sin(sa.angle) + Math.sin(sb.angle),
+            Math.cos(sa.angle) + Math.cos(sb.angle),
+          ),
         );
-        spawnFruit(newLevel, avgX, avgY, avgVx, avgVy, avgAngle);
         merged = true;
         break;
       }
@@ -354,8 +351,6 @@ function frame() {
   const now = performance.now();
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
-
-  timeUniform.write((now * 0.001) % 1000);
 
   physics.step(dt);
   frameStates.length = activeFruits.length;
@@ -386,15 +381,16 @@ function frame() {
     }
   }
 
-  circleData.fill(INACTIVE_CIRCLE, drawCount);
-
-  activeCountUniform.write(drawCount);
   circleUniform.write(circleData);
-  ghostCircleUniform.write({
-    center: d.vec2f(ghostX, DROP_Y),
-    radius: LEVEL_RADII[ghostLevel],
-    level: ghostLevel,
-    angle: d.f32(0),
+  frameUniform.write({
+    time: (now * 0.001) % 1000,
+    activeCount: drawCount,
+    ghostCircle: {
+      center: d.vec2f(ghostX, DROP_Y),
+      radius: LEVEL_RADII[ghostLevel],
+      level: ghostLevel,
+      angle: 0,
+    },
   });
 
   renderPipeline
