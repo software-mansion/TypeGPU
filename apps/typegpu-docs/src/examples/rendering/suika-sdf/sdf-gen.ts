@@ -1,5 +1,6 @@
+import { LEVEL_COUNT } from './constants.ts';
+
 const SPRITE_SIZE = 384;
-const FRUIT_COUNT = 10;
 const MAX_DIST = SPRITE_SIZE / 2;
 
 async function loadImage(path: string): Promise<ImageBitmap> {
@@ -126,7 +127,7 @@ export async function createAtlases(): Promise<{
 
   const spriteCanvas = new OffscreenCanvas(
     SPRITE_SIZE,
-    SPRITE_SIZE * FRUIT_COUNT,
+    SPRITE_SIZE * LEVEL_COUNT,
   );
   const spriteCtx = spriteCanvas.getContext('2d');
   if (!spriteCtx) {
@@ -139,12 +140,12 @@ export async function createAtlases(): Promise<{
     throw new Error('Failed to create temporary canvas context');
   }
 
-  const sdfImageData = new ImageData(SPRITE_SIZE, SPRITE_SIZE * FRUIT_COUNT);
+  const sdfImageData = new ImageData(SPRITE_SIZE, SPRITE_SIZE * LEVEL_COUNT);
   const pixels = sdfImageData.data;
   const contours: Float32Array[] = [];
   const halfSize = SPRITE_SIZE / 2;
 
-  for (let level = 0; level < FRUIT_COUNT; level++) {
+  for (let level = 0; level < LEVEL_COUNT; level++) {
     tmpCtx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
     drawFruitSlice(level, tmpCtx, fruits, 0, 0);
     spriteCtx.drawImage(tmpCanvas, 0, level * SPRITE_SIZE);
