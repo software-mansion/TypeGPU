@@ -163,7 +163,7 @@ function draw() {
   }
 
   aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
-  if (autoMove) {
+  if (autoMove && !document.pointerLockElement) {
     autoMoveOffset = autoMoveOffset.add(d.vec3f(0.01, 0, 0.01));
     autoMoveOffsetUniform.write(autoMoveOffset);
   }

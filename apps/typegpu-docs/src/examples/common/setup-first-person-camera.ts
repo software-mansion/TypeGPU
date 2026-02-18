@@ -87,9 +87,6 @@ export function setupFirstPersonCamera(
   // Variables for interaction.
   const pressedKeys = new Set<string>();
   const moveSpeed = 0.1;
-  let isInsideWindow = false;
-  let prevX = 0;
-  let prevY = 0;
 
   // keyboard events
   window.addEventListener('keydown', (event) => {
@@ -102,18 +99,16 @@ export function setupFirstPersonCamera(
 
   // mouse events
   canvas.addEventListener('mousedown', () => {
-    isInsideWindow = true;
+    canvas.requestPointerLock();
   });
 
   const mouseMoveEventListener = (event: MouseEvent) => {
-    const dx = event.clientX - prevX;
-    const dy = event.clientY - prevY;
-    prevX = event.clientX;
-    prevY = event.clientY;
-
-    if (isInsideWindow) {
-      rotateCamera(dx, dy);
+    if (document.pointerLockElement !== canvas) {
+      return;
     }
+    const dx = event.movementX;
+    const dy = event.movementY;
+    rotateCamera(dx, dy);
   };
   window.addEventListener('mousemove', mouseMoveEventListener);
 
@@ -124,6 +119,10 @@ export function setupFirstPersonCamera(
 
   // update position function
   const updatePosition = () => {
+    if (document.pointerLockElement !== canvas) {
+      return;
+    }
+
     const forward = std.normalize(d.vec3f(
       std.sin(cameraState.yaw),
       0,
