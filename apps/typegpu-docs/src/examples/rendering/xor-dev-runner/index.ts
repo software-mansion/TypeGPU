@@ -143,7 +143,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cameraUniform = root.createUniform(Camera);
-setupFirstPersonCamera(canvas, {}, (props) => {
+const { updatePosition } = setupFirstPersonCamera(canvas, {}, (props) => {
   cameraUniform.writePartial(props);
 });
 
@@ -167,6 +167,7 @@ function draw() {
     autoMoveOffset = autoMoveOffset.add(d.vec3f(0.01, 0, 0.01));
     autoMoveOffsetUniform.write(autoMoveOffset);
   }
+  updatePosition();
 
   pipeline
     .withColorAttachment({

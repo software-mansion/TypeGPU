@@ -11,13 +11,13 @@ export const Camera = d.struct({
 });
 
 export interface CameraOptions {
-  initPos?: d.v4f;
-  target?: d.v4f;
+  initPos?: d.v3f;
+  target?: d.v3f;
 }
 
 const cameraDefaults: Partial<CameraOptions> = {
-  initPos: d.vec4f(0, 0, 0, 1),
-  target: d.vec4f(0, 1, 0, 1),
+  initPos: d.vec3f(0, 0, 0),
+  target: d.vec3f(0, 1, 0),
 };
 
 /**
@@ -44,21 +44,20 @@ export function setupFirstPersonCamera(
   // initialize the camera
   targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
 
-  function targetCamera(newPos: d.v4f, yaw: number, pitch: number) {
+  function targetCamera(newPos: d.v3f, yaw: number, pitch: number) {
     const position = newPos;
-    const target = position.add(d.vec4f(
+    const target = position.add(d.vec3f(
       std.cos(pitch) * std.sin(yaw),
       std.sin(pitch),
       std.cos(pitch) * std.cos(yaw),
-      0,
     ));
 
     const view = calculateView(position, target);
     const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
 
     callback(Camera({
-      position: position,
-      targetPos: target,
+      position: d.vec4f(position, 1),
+      targetPos: d.vec4f(target, 1),
       view,
       projection,
       viewInverse: invertMat(view),
@@ -68,7 +67,6 @@ export function setupFirstPersonCamera(
 
   function rotateCamera(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
-    cameraState.pos.y -= 0.01;
     cameraState.yaw += -dx * orbitSensitivity;
     cameraState.pitch -= dy * orbitSensitivity;
     cameraState.pitch = std.clamp(
@@ -86,12 +84,23 @@ export function setupFirstPersonCamera(
   });
   resizeObserver.observe(canvas);
 
-  // Variables for mouse/touch interaction.
+  // Variables for interaction.
+  const pressedKeys = new Set<string>();
+  const moveSpeed = 0.1;
   let isInsideWindow = false;
   let prevX = 0;
   let prevY = 0;
 
-  // mouse/touch events
+  // keyboard events
+  window.addEventListener('keydown', (event) => {
+    pressedKeys.add(event.key.toLowerCase());
+  });
+
+  window.addEventListener('keyup', (event) => {
+    pressedKeys.delete(event.key.toLowerCase());
+  });
+
+  // mouse events
   canvas.addEventListener('mousedown', () => {
     isInsideWindow = true;
   });
@@ -113,14 +122,45 @@ export function setupFirstPersonCamera(
     resizeObserver.unobserve(canvas);
   }
 
-  return { cleanupCamera, targetCamera };
+  // update position function
+  const updatePosition = () => {
+    const forward = std.normalize(d.vec3f(
+      std.sin(cameraState.yaw),
+      0,
+      std.cos(cameraState.yaw),
+    )).mul(moveSpeed);
+    const left = d.vec3f(forward.z, 0, -forward.x);
+
+    if (pressedKeys.has('w')) {
+      cameraState.pos = cameraState.pos.add(forward);
+    }
+    if (pressedKeys.has('s')) {
+      cameraState.pos = cameraState.pos.sub(forward);
+    }
+    if (pressedKeys.has('a')) {
+      cameraState.pos = cameraState.pos.add(left);
+    }
+    if (pressedKeys.has('d')) {
+      cameraState.pos = cameraState.pos.sub(left);
+    }
+    if (pressedKeys.has('shift')) {
+      cameraState.pos.y -= moveSpeed;
+    }
+    if (pressedKeys.has(' ')) {
+      cameraState.pos.y += moveSpeed;
+    }
+
+    targetCamera(cameraState.pos, cameraState.yaw, cameraState.pitch);
+  };
+
+  return { cleanupCamera, targetCamera, updatePosition };
 }
 
-function calculateView(position: d.v4f, target: d.v4f) {
+function calculateView(position: d.v3f, target: d.v3f) {
   return m.mat4.lookAt(
-    position,
-    target,
-    d.vec3f(0, 1, 0),
+    d.vec4f(position, 1),
+    d.vec4f(target, 1),
+    d.vec4f(0, 1, 0, 1),
     d.mat4x4f(),
   );
 }
