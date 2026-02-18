@@ -321,17 +321,17 @@ function checkMerges() {
       const sb = frameStates[j];
       if (!sb) continue;
 
-      const dx = sa.x - sb.x;
-      const dy = sa.y - sb.y;
+      const dx = sa.pos.x - sb.pos.x;
+      const dy = sa.pos.y - sb.pos.y;
       if (dx * dx + dy * dy < mergeDist * mergeDist) {
         markDead(a);
         markDead(b);
         spawnFruit(
           a.level + 1,
-          (sa.x + sb.x) * 0.5,
-          (sa.y + sb.y) * 0.5,
-          (sa.vx + sb.vx) * 0.5,
-          (sa.vy + sb.vy) * 0.5,
+          (sa.pos.x + sb.pos.x) * 0.5,
+          (sa.pos.y + sb.pos.y) * 0.5,
+          (sa.vel.x + sb.vel.x) * 0.5,
+          (sa.vel.y + sb.vel.y) * 0.5,
           Math.atan2(
             Math.sin(sa.angle) + Math.sin(sb.angle),
             Math.cos(sa.angle) + Math.cos(sb.angle),
@@ -372,7 +372,7 @@ function frame() {
     frameStates[i] = state;
     if (drawCount < MAX_FRUITS) {
       circleData[drawCount] = {
-        center: d.vec2f(state.x, state.y),
+        center: d.vec2f(state.pos.x, state.pos.y),
         radius: f.radius,
         level: f.level,
         angle: state.angle,
