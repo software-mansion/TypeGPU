@@ -617,7 +617,7 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for "for ... of ..." statements using lazy and comptime iterables', () => {
-    const comptimeVec = tgpu['~unstable'].comptime(() => d.vec2f(1, 2));
+    const comptimeVec = tgpu.comptime(() => d.vec2f(1, 2));
 
     const main = () => {
       'use gpu';
@@ -794,6 +794,23 @@ describe('wgslGenerator', () => {
       - <root>
       - fn*:main
       - fn*:main(): Only \`for (const ... of ... )\` loops are supported]
+    `);
+  });
+
+  it('throws error when "for ... of ..." loop variable name is not correct in wgsl', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const __foo of arr) {
+        continue;
+      }
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Invalid identifier '__foo'. Choose an identifier without whitespaces or leading underscores.]
     `);
   });
 

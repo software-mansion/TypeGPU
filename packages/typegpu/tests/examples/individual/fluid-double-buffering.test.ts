@@ -102,10 +102,10 @@ describe('fluid double buffering example', () => {
 
       @group(0) @binding(1) var<uniform> time: f32;
 
-      var<private> seed: vec2f;
+      var<private> seed_1: vec2f;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        seed_1 = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -160,11 +160,11 @@ describe('fluid double buffering example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
       fn randFloat01() -> f32 {
@@ -282,10 +282,10 @@ describe('fluid double buffering example', () => {
 
       @group(0) @binding(1) var<uniform> time: f32;
 
-      var<private> seed: vec2f;
+      var<private> seed_1: vec2f;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        seed_1 = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -340,11 +340,11 @@ describe('fluid double buffering example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
       fn randFloat01() -> f32 {

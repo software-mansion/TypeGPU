@@ -69,10 +69,10 @@ describe('jelly-slider example', () => {
 
       @group(0) @binding(0) var<uniform> randomUniform: vec2f;
 
-      var<private> seed: vec2f;
+      var<private> seed_1: vec2f;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        seed_1 = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -166,11 +166,11 @@ describe('jelly-slider example', () => {
       @group(0) @binding(6) var bezierTexture: texture_2d<f32>;
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
       fn randFloat01() -> f32 {
@@ -533,7 +533,7 @@ describe('jelly-slider example', () => {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
-        for (var i = 0; (i < 64i); i++) {
+        for (var i_1 = 0; (i_1 < 64i); i_1++) {
           if ((totalSteps >= 64u)) {
             break;
           }

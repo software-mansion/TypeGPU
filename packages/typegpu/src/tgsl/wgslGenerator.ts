@@ -1228,64 +1228,74 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
-      // an implicit pointer to it
-      let loopVarKind = 'let';
-      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+      try {
+        this.ctx.pushBlockScope();
 
-      if (!isEphemeralSnippet(elementSnippet)) {
-        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
-          loopVarKind = 'const';
-        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
-          loopVarKind = 'let';
-        } else {
-          loopVarKind = 'let';
-          if (!wgsl.isPtr(elementType)) {
-            const ptrType = createPtrFromOrigin(
-              elementSnippet.origin,
-              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
-            );
-            invariant(
-              ptrType !== undefined,
-              `Creating pointer type from origin ${elementSnippet.origin}`,
-            );
-            elementType = ptrType;
+        // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+        // an implicit pointer to it
+        let loopVarKind = 'let';
+        const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+        if (!isEphemeralSnippet(elementSnippet)) {
+          if (elementSnippet.origin === 'constant-tgpu-const-ref') {
+            loopVarKind = 'const';
+          } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
+            loopVarKind = 'let';
+          } else {
+            loopVarKind = 'let';
+            if (!wgsl.isPtr(elementType)) {
+              const ptrType = createPtrFromOrigin(
+                elementSnippet.origin,
+                concretize(
+                  elementType as wgsl.AnyWgslData,
+                ) as wgsl.StorableData,
+              );
+              invariant(
+                ptrType !== undefined,
+                `Creating pointer type from origin ${elementSnippet.origin}`,
+              );
+              elementType = ptrType;
+            }
+
+            elementType = implicitFrom(elementType as wgsl.Ptr);
           }
-
-          elementType = implicitFrom(elementType as wgsl.Ptr);
         }
+
+        const loopVarSnippet = snip(
+          loopVarName,
+          elementType,
+          elementSnippet.origin,
+        );
+
+        this.ctx.defineVariable(loopVar[1], loopVarSnippet);
+
+        const forStr =
+          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+          }; ${index}++) {`;
+
+        this.ctx.indent();
+
+        const loopVarDeclStr =
+          stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+            tryConvertSnippet(
+              this.ctx,
+              elementSnippet,
+              elementType,
+              false,
+            )
+          };`;
+
+        const bodyStr = `${this.ctx.pre}${
+          this.block(blockifySingleStatement(body))
+        }`;
+
+        this.ctx.dedent();
+
+        return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+      } finally {
+        this.ctx.popBlockScope();
       }
-
-      const loopVarSnippet = snip(
-        loopVarName,
-        elementType,
-        elementSnippet.origin,
-      );
-      this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
-      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-        tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-      }; ${index}++) {`;
-
-      this.ctx.indent();
-
-      const loopVarDeclStr =
-        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
-          tryConvertSnippet(
-            this.ctx,
-            elementSnippet,
-            elementType,
-            false,
-          )
-        };`;
-
-      const bodyStr = `${this.ctx.pre}${
-        this.block(blockifySingleStatement(body))
-      }`;
-
-      this.ctx.dedent();
-
-      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.continue) {
