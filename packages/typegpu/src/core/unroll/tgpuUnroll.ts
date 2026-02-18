@@ -1,8 +1,11 @@
 import { stitch } from '../resolve/stitch.ts';
-import { $internal, $resolve } from '../../../src/shared/symbols.ts';
-import { inCodegenMode } from '../../../src/execMode.ts';
+import {
+  $gpuCallable,
+  $internal,
+  $resolve,
+} from '../../../src/shared/symbols.ts';
 import { setName } from '../../../src/shared/meta.ts';
-import type { DualFn } from '../../../src/data/dualFn.ts';
+import type { DualFn } from '../../../src/types.ts';
 
 import type { AnyData } from '../../../src/data/dataTypes.ts';
 import {
@@ -35,29 +38,18 @@ export class UnrolledIterable implements SelfResolvable {
  * Marks an iterable to be unrolled by the wgslGenerator.
  */
 export const unroll = (() => {
-  const gpuImpl = (value: Snippet) => {
-    return snip(new UnrolledIterable(value), value.dataType, value.origin);
-  };
-
-  const jsImpl = <T extends Iterable<unknown>>(value: T) => value;
-
-  const impl = <T extends Iterable<unknown>>(value: T) => {
-    if (inCodegenMode()) {
-      return gpuImpl(value as unknown as Snippet);
-    }
-    return jsImpl(value);
-  };
+  const impl = (<T extends Iterable<unknown>>(value: T) => value) as unknown as
+    & DualFn<(<T extends Iterable<unknown>>(value: T) => T)>
+    & { [$internal]: true };
 
   setName(impl, 'unroll');
   impl.toString = () => 'unroll';
-  Object.defineProperty(impl, $internal, {
-    value: {
-      jsImpl,
-      gpuImpl,
+  impl[$internal] = true;
+  impl[$gpuCallable] = {
+    call(_ctx, [value]) {
+      return snip(new UnrolledIterable(value), value.dataType, value.origin);
     },
-  });
+  };
 
-  return impl as unknown as DualFn<
-    <T extends Iterable<unknown>>(value: T) => T
-  >;
+  return impl;
 })();

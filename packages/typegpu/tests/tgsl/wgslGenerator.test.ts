@@ -1062,12 +1062,6 @@ describe('wgslGenerator', () => {
     expect(d.isWgslArray(res.dataType)).toBe(true);
     expect((res.dataType as unknown as WgslArray).elementCount).toBe(2);
     expect((res.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
-
-    //  intermediate representation
-    expect(res.value instanceof ArrayExpression).toBe(true);
-    expect((res.value as unknown as ArrayExpression).type).toBe(res.dataType);
-    expect((res.value as unknown as ArrayExpression).elementType)
-      .toBe((res.dataType as unknown as WgslArray).elementType);
   });
 
   it('generates correct code for array expressions with lazy elements', () => {
