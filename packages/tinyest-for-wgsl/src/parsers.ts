@@ -44,7 +44,7 @@ const Transpilers: Partial<
 
   ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
 
-  ArrowFunctionExpression: (ctx, node) => {
+  ArrowFunctionExpression: () => {
     throw new Error('Arrow functions are not supported inside TGSL.');
   },
 
@@ -150,6 +150,14 @@ const Transpilers: Partial<
     return [NODE.postUpdate, operator, argument];
   },
 
+  ConditionalExpression(ctx, node) {
+    const test = transpile(ctx, node.test) as tinyest.Expression;
+    const consequent = transpile(ctx, node.consequent) as tinyest.Expression;
+    const alternative = transpile(ctx, node.alternate) as tinyest.Expression;
+
+    return [NODE.conditionalExpr, test, consequent, alternative];
+  },
+
   Literal(ctx, node) {
     if (typeof node.value === 'boolean') {
       return node.value;
@@ -167,11 +175,11 @@ const Transpilers: Partial<
         'BigInt literals are represented as numbers - loss of precision may occur.',
       );
     }
-    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
+    return [NODE.numericLiteral, String(Number(node.value))];
   },
 
   NumericLiteral(ctx, node) {
-    return [NODE.numericLiteral, String(node.value) ?? ''];
+    return [NODE.numericLiteral, String(node.value)];
   },
 
   BigIntLiteral(ctx, node) {

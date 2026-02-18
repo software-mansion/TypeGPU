@@ -1,7 +1,11 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, {
+  d,
+  std,
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+} from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
 
@@ -437,14 +441,8 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
@@ -485,10 +483,13 @@ function makePipelines(
 
   const renderPipeline = root['~unstable']
     .with(inputGridSlot, inputGridReadonly)
-    .withVertex(vertexMain, {})
-    .withFragment(fragmentMain, { format: presentationFormat })
-    .withPrimitive({ topology: 'triangle-strip' })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: vertexMain,
+      fragment: fragmentMain,
+      targets: { format: presentationFormat },
+
+      primitive: { topology: 'triangle-strip' },
+    });
 
   return {
     init() {
@@ -586,13 +587,13 @@ onFrame((deltaTime) => {
   }
 });
 
-export const controls = {
+export const controls = defineControls({
   'source intensity': {
     initial: sourceIntensity,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceIntensity = value;
     },
   },
@@ -602,7 +603,7 @@ export const controls = {
     min: 0.01,
     max: 0.1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceRadius = value;
     },
   },
@@ -612,7 +613,7 @@ export const controls = {
     min: 0.2,
     max: 0.8,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxX = value;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -624,7 +625,7 @@ export const controls = {
     min: 0.2,
     max: 0.85,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxY = value;
       obstaclesCpu[OBSTACLE_BOX].y = boxY;
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -636,14 +637,14 @@ export const controls = {
     min: 0,
     max: 0.6,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       leftWallX = value;
       obstaclesCpu[OBSTACLE_LEFT_WALL].x = leftWallX;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

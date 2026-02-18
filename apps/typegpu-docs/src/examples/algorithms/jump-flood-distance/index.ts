@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
 import { distanceFrag } from './visualization.ts';
 import {
   BrushParams,
@@ -18,17 +15,13 @@ import {
   SampleResult,
   VisualizationParams,
 } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 let brushSize = 1;
 let isDrawing = false;
@@ -285,7 +278,7 @@ const createDistanceField = root['~unstable'].createGuardedComputePipeline(
 
 const distancePipeline = root['~unstable']
   .with(paramsAccess, paramsUniform)
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(distanceFrag, { format: presentationFormat })
   .createPipeline();
 
@@ -476,7 +469,7 @@ function updateBrushSize() {
   });
 }
 
-export const controls = {
+export const controls = defineControls({
   Clear: {
     onButtonClick: clearCanvas,
   },
@@ -498,6 +491,7 @@ export const controls = {
     },
   },
   'Show negative distance': {
+    initial: false,
     onToggleChange(value: boolean) {
       paramsUniform.writePartial({ showInside: value ? 1 : 0 });
       render();
@@ -513,7 +507,7 @@ export const controls = {
       updateBrushSize();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

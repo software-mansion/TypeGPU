@@ -30,7 +30,7 @@ let resolutionCtx: ResolutionCtx | undefined;
 /**
  * Used to mock the context before all tests. For normal use-cases, use `provideCtx`
  */
-export function INTERNAL_setCtx<T>(ctx: ResolutionCtx | undefined) {
+export function INTERNAL_setCtx(ctx: ResolutionCtx | undefined) {
   resolutionCtx = ctx;
 }
 

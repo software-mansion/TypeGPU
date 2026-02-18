@@ -1,5 +1,4 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
 import { $internal } from '../shared/symbols.ts';
 import type {
   AbstractFloat,
@@ -11,9 +10,10 @@ import type {
   U16,
   U32,
 } from './wgslTypes.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 
 export const abstractInt = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'abstractInt',
   toString() {
     return 'abstractInt';
@@ -21,14 +21,14 @@ export const abstractInt = {
 } as AbstractInt;
 
 export const abstractFloat = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'abstractFloat',
   toString() {
     return 'abstractFloat';
   },
 } as AbstractFloat;
 
-const boolCast = dualImpl({
+const boolCast = callableSchema({
   name: 'bool',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
   normalImpl(v?: number | boolean) {
@@ -40,8 +40,8 @@ const boolCast = dualImpl({
     }
     return !!v;
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'bool'
+  codegenImpl: (_ctx, [arg]) =>
+    arg?.dataType === bool
       // Already of type bool
       ? stitch`${arg}`
       : stitch`bool(${arg})`,
@@ -62,10 +62,11 @@ const boolCast = dualImpl({
  * const value = bool(21.37); // true
  */
 export const bool: Bool = Object.assign(boolCast, {
+  [$internal]: {},
   type: 'bool',
 }) as unknown as Bool;
 
-const u32Cast = dualImpl({
+const u32Cast = callableSchema({
   name: 'u32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: u32 }),
   normalImpl(v?: number | boolean) {
@@ -75,10 +76,21 @@ const u32Cast = dualImpl({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isInteger(v)) {
+      const truncated = Math.trunc(v);
+      if (truncated < 0) {
+        return 0;
+      }
+      if (truncated > 0xffffffff) {
+        return 0xffffffff;
+      }
+      return truncated;
+    }
+    // Integer input: treat as bit reinterpretation (i32 -> u32)
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'u32'
+  codegenImpl: (_ctx, [arg]) =>
+    arg?.dataType === u32
       // Already of type u32
       ? stitch`${arg}`
       : stitch`u32(${arg})`,
@@ -101,10 +113,11 @@ const u32Cast = dualImpl({
  * const value = u32(-3.1); // 0
  */
 export const u32: U32 = Object.assign(u32Cast, {
+  [$internal]: {},
   type: 'u32',
 }) as unknown as U32;
 
-const i32Cast = dualImpl({
+const i32Cast = callableSchema({
   name: 'i32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: i32 }),
   normalImpl(v?: number | boolean) {
@@ -116,15 +129,15 @@ const i32Cast = dualImpl({
     }
     return v | 0;
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'i32'
+  codegenImpl: (_ctx, [arg]) =>
+    arg?.dataType === i32
       // Already of type i32
       ? stitch`${arg}`
       : stitch`i32(${arg})`,
 });
 
 export const u16: U16 = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'u16',
 } as U16;
 
@@ -143,10 +156,11 @@ export const u16: U16 = {
  * const value = i32(10000000000) // 1410065408
  */
 export const i32: I32 = Object.assign(i32Cast, {
+  [$internal]: {},
   type: 'i32',
 }) as unknown as I32;
 
-const f32Cast = dualImpl({
+const f32Cast = callableSchema({
   name: 'f32',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
   normalImpl(v?: number | boolean) {
@@ -158,8 +172,8 @@ const f32Cast = dualImpl({
     }
     return Math.fround(v);
   },
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'f32'
+  codegenImpl: (_ctx, [arg]) =>
+    arg?.dataType === f32
       // Already of type f32
       ? stitch`${arg}`
       : stitch`f32(${arg})`,
@@ -178,6 +192,7 @@ const f32Cast = dualImpl({
  * const value = f32(true); // 1
  */
 export const f32: F32 = Object.assign(f32Cast, {
+  [$internal]: {},
   type: 'f32',
 }) as unknown as F32;
 
@@ -253,6 +268,7 @@ export function fromHalfBits(h: number): number {
 
   // 1. Zero and sub‑normals.
   if (exp === 0) {
+    // oxlint-disable-next-line oxc/erasing-op negative zero exists
     return mant ? sign * mant * 2 ** -24 : sign * 0;
   }
 
@@ -271,7 +287,7 @@ function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 
-const f16Cast = dualImpl({
+const f16Cast = callableSchema({
   name: 'f16',
   signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
   normalImpl(v?: number | boolean) {
@@ -284,8 +300,8 @@ const f16Cast = dualImpl({
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (arg) =>
-    arg.dataType.type === 'f16'
+  codegenImpl: (_ctx, [arg]) =>
+    arg?.dataType === f16
       // Already of type f16
       ? stitch`${arg}`
       : stitch`f16(${arg})`,
@@ -306,5 +322,6 @@ const f16Cast = dualImpl({
  * const value = f16(21877.5); // 21872
  */
 export const f16: F16 = Object.assign(f16Cast, {
+  [$internal]: {},
   type: 'f16',
 }) as unknown as F16;

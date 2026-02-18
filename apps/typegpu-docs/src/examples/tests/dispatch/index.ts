@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -89,7 +87,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   test.dispatchThreads(2);
   test.dispatchThreads(4);
   const filled = await mutable.read();
-  return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
+  return isEqual(filled, [0, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }
 
 async function testDifferentBindGroups(): Promise<boolean> {

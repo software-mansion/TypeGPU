@@ -1,4 +1,3 @@
-import { $internal } from '../shared/symbols.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
   bitcastU32toF32Impl,
@@ -19,22 +18,21 @@ type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
 
 type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 
-// We're doing operations on the CPU, so we fallthrough directly to the JS impl
-const vec2b = vectorConstructors.vec2b[$internal].jsImpl;
-const vec2f = vectorConstructors.vec2f[$internal].jsImpl;
-const vec2h = vectorConstructors.vec2h[$internal].jsImpl;
-const vec2i = vectorConstructors.vec2i[$internal].jsImpl;
-const vec2u = vectorConstructors.vec2u[$internal].jsImpl;
-const vec3b = vectorConstructors.vec3b[$internal].jsImpl;
-const vec3f = vectorConstructors.vec3f[$internal].jsImpl;
-const vec3h = vectorConstructors.vec3h[$internal].jsImpl;
-const vec3i = vectorConstructors.vec3i[$internal].jsImpl;
-const vec3u = vectorConstructors.vec3u[$internal].jsImpl;
-const vec4b = vectorConstructors.vec4b[$internal].jsImpl;
-const vec4f = vectorConstructors.vec4f[$internal].jsImpl;
-const vec4h = vectorConstructors.vec4h[$internal].jsImpl;
-const vec4i = vectorConstructors.vec4i[$internal].jsImpl;
-const vec4u = vectorConstructors.vec4u[$internal].jsImpl;
+const vec2b = vectorConstructors.vec2b;
+const vec2f = vectorConstructors.vec2f;
+const vec2h = vectorConstructors.vec2h;
+const vec2i = vectorConstructors.vec2i;
+const vec2u = vectorConstructors.vec2u;
+const vec3b = vectorConstructors.vec3b;
+const vec3f = vectorConstructors.vec3f;
+const vec3h = vectorConstructors.vec3h;
+const vec3i = vectorConstructors.vec3i;
+const vec3u = vectorConstructors.vec3u;
+const vec4b = vectorConstructors.vec4b;
+const vec4f = vectorConstructors.vec4f;
+const vec4h = vectorConstructors.vec4h;
+const vec4i = vectorConstructors.vec4i;
+const vec4u = vectorConstructors.vec4u;
 
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);

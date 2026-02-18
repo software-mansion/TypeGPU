@@ -20,6 +20,7 @@ import {
 } from 'typegpu/data';
 import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   adapter: {
@@ -29,14 +30,9 @@ const root = await tgpu.init({
 const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const Uniforms = struct({
   stepSize: f32,
@@ -246,13 +242,13 @@ const draw = () => {
   uniformsBuffer.writePartial({ frameCount });
 
   pipelines.advect
-    .with(bindGroupLayoutWritable, bindGroupWritable)
+    .with(bindGroupWritable)
     .dispatchWorkgroups(
       Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE),
     );
 
   pipelines.fill
-    .with(bindGroupLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [1, 1, 1, 1],
@@ -284,14 +280,14 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-export const controls = {
+export const controls = defineControls({
   'Play': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       play = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

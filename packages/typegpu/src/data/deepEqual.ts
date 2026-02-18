@@ -55,7 +55,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       const keyB = bKeys[i];
       if (
         keyA !== keyB || !keyA || !keyB ||
-        !deepEqual(aProps[keyA], bProps[keyB])
+        !deepEqual(aProps[keyA] as AnyData, bProps[keyB] as AnyData)
       ) {
         return false;
       }
@@ -79,7 +79,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
   }
 
   if (isAtomic(a) && isAtomic(b)) {
-    return deepEqual(a.inner as AnyData, b.inner as AnyData);
+    return deepEqual(a.inner, b.inner);
   }
 
   if (

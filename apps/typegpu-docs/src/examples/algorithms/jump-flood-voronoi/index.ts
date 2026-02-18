@@ -1,23 +1,14 @@
-import tgpu, {
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuTexture,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
+import type { SampledFlag, StorageFlag, TgpuTexture } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 let stepDelayMs = 50;
 let seedThreshold = 0.999;
@@ -222,7 +213,7 @@ const voronoiFrag = tgpu['~unstable'].fragmentFn({
 );
 
 const voronoiPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
+  .withVertex(common.fullScreenTriangle, {})
   .withFragment(voronoiFrag, { format: presentationFormat })
   .createPipeline();
 
@@ -306,7 +297,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
@@ -321,7 +312,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       const density = 10 ** (-5 + 4 * value);
       seedThreshold = 1 - density;
       seedThresholdUniform.write(seedThreshold);
@@ -333,19 +324,19 @@ export const controls = {
     min: 0,
     max: 1000,
     step: 50,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       stepDelayMs = value;
     },
   },
   Range: {
     initial: '100%',
     options: ['100%', '50%', '20%', '10%', '1%'],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       startingRangePercent = Number.parseFloat(value) / 100;
       reset();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

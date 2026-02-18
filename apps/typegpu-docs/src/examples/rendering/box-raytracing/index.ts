@@ -1,6 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import {
   add,
   discard,
@@ -13,6 +12,7 @@ import {
   sub,
 } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 // init canvas and values
 
@@ -27,17 +27,10 @@ let cameraDistance = 16;
 
 let frame = 0;
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // structs
 
@@ -263,9 +256,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
 // pipeline
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(fragmentFunction, {
+const pipeline = root['~unstable'].createRenderPipeline({
+  primitive: {
+    topology: 'triangle-strip',
+  },
+  vertex: mainVertex,
+  fragment: fragmentFunction,
+  targets: {
     format: presentationFormat,
     blend: {
       color: {
@@ -279,11 +276,8 @@ const pipeline = root['~unstable']
         operation: 'add',
       },
     },
-  })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .createPipeline();
+  },
+});
 
 // UI
 
@@ -339,12 +333,12 @@ onFrame((deltaTime) => {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'rotation speed': {
     initial: rotationSpeed,
     min: 0,
     max: 5,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       rotationSpeed = value;
     },
   },
@@ -353,7 +347,7 @@ export const controls = {
     initial: cameraDistance,
     min: 10,
     max: 100,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       cameraDistance = value;
     },
   },
@@ -362,7 +356,7 @@ export const controls = {
     initial: 1,
     min: 0.1,
     max: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       uniforms.writePartial({
         boxSize: value,
       });
@@ -373,13 +367,13 @@ export const controls = {
     initial: 2,
     min: 0.2,
     max: 2,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       uniforms.writePartial({
         materialDensity: value,
       });
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

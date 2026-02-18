@@ -187,12 +187,14 @@ describe('d.unstruct', () => {
     const buffer = new ArrayBuffer(d.sizeOf(a));
     const writer = new BufferWriter(buffer);
 
-    writeData(writer, a, [
-      ...Array.from({ length: 8 }, () => ({
+    writeData(
+      writer,
+      a,
+      Array.from({ length: 8 }, () => ({
         a: d.vec2f(0.5, 0.75),
         b: d.vec2f(-0.25, 0.25),
       })),
-    ]);
+    );
 
     const reader = new BufferReader(buffer);
     const data = readData(reader, a);

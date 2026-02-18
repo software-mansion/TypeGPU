@@ -124,11 +124,11 @@ describe('tgsl parsing test example', () => {
       fn arrayAndStructConstructorsTest() -> bool {
         var s = true;
         var defaultComplexStruct = ComplexStruct();
-        s = (s && (2 == 2));
+        s = (s && (2 == 2i));
         s = (s && (defaultComplexStruct.arr[0i] == 0i));
         s = (s && (defaultComplexStruct.arr[1i] == 0i));
         var defaultComplexArray = array<SimpleStruct, 3>();
-        s = (s && (3 == 3));
+        s = (s && (3 == 3i));
         s = (s && all(defaultComplexArray[0i].vec == vec2f()));
         s = (s && all(defaultComplexArray[1i].vec == vec2f()));
         s = (s && all(defaultComplexArray[2i].vec == vec2f()));

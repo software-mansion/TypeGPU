@@ -1,7 +1,7 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { Disarray, Undecorate } from '../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
-import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
+import type { BaseData, U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
@@ -109,7 +109,8 @@ export type IsValidVertexSchema<T> =
 /**
  * Accepts only arrays (or disarrays) of u32 or u16.
  */
-export type IsValidIndexSchema<T> = Undecorate<T> extends WgslArray | Disarray
+export type IsValidIndexSchema<T> = Undecorate<T> extends
+  WgslArray<BaseData> | Disarray<BaseData>
   ? (Undecorate<Undecorate<T>['elementType']>) extends U32 | U16 ? true : false
   : false;
 
