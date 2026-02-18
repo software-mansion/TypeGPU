@@ -1,6 +1,7 @@
 import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Globals and init
 
@@ -67,6 +68,7 @@ const computeLayout = tgpu.bindGroupLayout({
 
 const functionExprSlot = tgpu.slot<TgpuRawCodeSnippet<d.F32>>();
 
+// oxlint-disable-next-line no-unused-vars it is used in wgsl
 const interpolatedFunction = (x: number) => {
   'use gpu';
   return functionExprSlot.$;
@@ -432,7 +434,7 @@ resizeObserver.observe(canvas);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   [initialFunctions[0].name]: {
     initial: initialFunctions[0].code,
     async onTextChange(value: string) {
@@ -461,11 +463,10 @@ export const controls = {
     },
   },
   'interpolation points count': {
-    initial: '256',
-    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange(value: string) {
-      const num = Number.parseInt(value);
-      properties.interpolationPoints = num;
+    initial: 256,
+    options: [4, 16, 64, 256, 1024, 4096],
+    onSelectChange(value) {
+      properties.interpolationPoints = value;
 
       const oldBuffers = lineVerticesBuffers;
       lineVerticesBuffers = createLineVerticesBuffers();
@@ -481,7 +482,7 @@ export const controls = {
       );
     },
   },
-};
+});
 
 export function onCleanup() {
   destroyed = true;

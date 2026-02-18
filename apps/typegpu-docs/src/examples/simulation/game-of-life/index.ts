@@ -1,6 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import { fragmentFn } from './shaders/fragment.ts';
 import { sizeSlot, vertexFn } from './shaders/vertex.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 let gameSize = 64;
 let timestep = 15;
@@ -31,7 +32,6 @@ function createGame() {
 
   const countNeighbors = (x: number, y: number) => {
     'use gpu';
-    // biome-ignore format: clearer that way
     return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) +
       getCell(x - 1, y) + getCell(x + 1, y) +
       getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
@@ -127,12 +127,12 @@ requestAnimationFrame(animate);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   size: {
-    initial: '64',
-    options: [16, 32, 64, 128, 256, 512].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      gameSize = Number.parseInt(value);
+    initial: 64,
+    options: [16, 32, 64, 128, 256, 512],
+    onSelectChange: (value) => {
+      gameSize = value;
       game.cleanup();
       game = createGame();
     },
@@ -161,7 +161,7 @@ export const controls = {
       game = createGame();
     },
   },
-};
+});
 
 export function onCleanup() {
   paused = true;

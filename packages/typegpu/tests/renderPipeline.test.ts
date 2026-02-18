@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: they're useful */
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
@@ -105,7 +104,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
       .createPipeline()
-      // biome-ignore lint/suspicious/noExplicitAny: <not testing color attachment at this time>
+      // oxlint-disable-next-line typescript/no-explicit-any <not testing color attachment at this time>
       .withColorAttachment({ out: {} } as any);
 
     expect(() => pipeline.draw(6)).toThrowError(
@@ -120,22 +119,18 @@ describe('root.withVertex(...).withFragment(...)', () => {
   it('allows to omit input in entry function shell', () => {
     expectTypeOf(
       tgpu['~unstable'].vertexFn({ in: {}, out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
 
     expectTypeOf(
       tgpu['~unstable'].fragmentFn({ out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
@@ -1057,6 +1052,88 @@ describe('root.withVertex(...).withFragment(...)', () => {
       },
     });
   });
+
+  it('warns when buffer limits are exceeded', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const uniform1 = root.createUniform(d.u32);
+    const uniform2 = root.createUniform(d.u32);
+    const uniform3 = root.createUniform(d.u32);
+    const uniform4 = root.createUniform(d.u32);
+    const uniform5 = root.createUniform(d.u32);
+    const uniform6 = root.createUniform(d.u32);
+    const uniform7 = root.createUniform(d.u32);
+    const uniform8 = root.createUniform(d.u32);
+    const uniform9 = root.createUniform(d.u32);
+    const uniform10 = root.createUniform(d.u32);
+    const uniform11 = root.createUniform(d.u32);
+    const uniform12 = root.createUniform(d.u32);
+    const uniform13 = root.createUniform(d.u32);
+
+    const readonly1 = root.createReadonly(d.u32);
+    const readonly2 = root.createReadonly(d.u32);
+    const readonly3 = root.createReadonly(d.u32);
+    const readonly4 = root.createReadonly(d.u32);
+    const readonly5 = root.createReadonly(d.u32);
+    const readonly6 = root.createReadonly(d.u32);
+    const readonly7 = root.createReadonly(d.u32);
+    const readonly8 = root.createReadonly(d.u32);
+    const readonly9 = root.createReadonly(d.u32);
+
+    const vertexFn = tgpu['~unstable'].vertexFn({
+      out: { pos: d.builtin.position },
+    })('');
+
+    const fragmentFn = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+      let a = d.u32();
+      a = uniform1.$;
+      a = uniform2.$;
+      a = uniform3.$;
+      a = uniform4.$;
+      a = uniform5.$;
+      a = uniform6.$;
+      a = uniform7.$;
+      a = uniform8.$;
+      a = uniform9.$;
+      a = uniform10.$;
+      a = uniform11.$;
+      a = uniform12.$;
+      a = uniform13.$;
+      a = readonly1.$;
+      a = readonly2.$;
+      a = readonly3.$;
+      a = readonly4.$;
+      a = readonly5.$;
+      a = readonly6.$;
+      a = readonly7.$;
+      a = readonly8.$;
+      a = readonly9.$;
+
+      return d.vec4f();
+    });
+
+    const pipeline = root
+      .withVertex(vertexFn)
+      .withFragment(fragmentFn, { format: 'rgba8unorm' })
+      .createPipeline();
+
+    pipeline.withColorAttachment({
+      loadOp: 'load',
+      storeOp: 'store',
+      view: {} as unknown as GPUTextureView,
+    }).draw(3);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of uniform buffers (13) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+1. Grouping some of the uniforms into one using 'd.struct',
+2. Increasing the limit when requesting a device or creating a root.`,
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
+    );
+  });
 });
 
 describe('root.createRenderPipeline', () => {
@@ -1237,6 +1314,7 @@ describe('root.createRenderPipeline', () => {
         'use gpu';
         return { $position: d.vec4f() };
       },
+      // @ts-expect-error: The prop is not in the object
       fragment: ({ prop }) => {
         'use gpu';
         const a = prop;

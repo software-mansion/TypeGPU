@@ -50,9 +50,7 @@ describe('clouds example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
@@ -124,9 +122,9 @@ describe('clouds example', () => {
             var light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + (vec3f(1, 0.699999988079071, 0.30000001192092896) * (lightVal * 0.9f)));
             var color = mix(vec3f(1), vec3f(0.20000000298023224), cloudDensity);
             var lit = (color * light);
-            var contrib = (vec4f(lit, 1f) * (cloudDensity * (0.88f - accum.w)));
+            var contrib = (vec4f(lit, 1f) * (cloudDensity * (0.88f - accum.a)));
             accum = (accum + contrib);
-            if ((accum.w >= 0.879f)) {
+            if ((accum.a >= 0.879f)) {
               break;
             }
           }
@@ -154,7 +152,7 @@ describe('clouds example', () => {
         var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * (rayDir.y * 0.35f)));
         skyCol = (skyCol + (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow));
         var cloudCol = raymarch(rayOrigin, rayDir, sunDir);
-        var finalCol = ((skyCol * (1.1f - cloudCol.w)) + cloudCol.xyz);
+        var finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);
         return vec4f(finalCol, 1f);
       }"
     `);

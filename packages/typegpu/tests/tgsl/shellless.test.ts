@@ -455,7 +455,7 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when an accessor argument is not dereferenced', () => {
-    const myAccess = tgpu['~unstable'].accessor(d.f32);
+    const myAccess = tgpu.accessor(d.f32);
     const fn = (access: TgpuAccessor<d.F32>) => {
       'use gpu';
       return 0;

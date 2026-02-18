@@ -50,24 +50,25 @@ Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
 
-The first way to bind a value to a slot is to call the `with` method on a `TgpuFn` instance:
+The first way to bind a value to a slot is to call the `with` method on a wrapped TypeGPU function:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
 // ---cut---
 const filterColorSlot = tgpu.slot<d.v3f>();
 
-const filter = tgpu.fn([d.vec3f], d.vec3f)((color) => {
+const filter = (color: d.v3f): d.v3f => {
+  'use gpu';
   const filterColor = filterColorSlot.$;
   return color.mul(filterColor);
-});
+};
 
 // Bind the filter function with a red color.
-const filterWithRed = filter
+const filterWithRed = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(1, 0, 0));
 
 // Bind the filter function with a green color.
-const filterWithGreen = filter
+const filterWithGreen = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
 

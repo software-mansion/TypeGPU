@@ -11,7 +11,7 @@ describe('autonaming', () => {
     const myVertexLayout = tgpu.vertexLayout((n: number) =>
       d.arrayOf(d.i32, n)
     );
-    const myAccessor = tgpu['~unstable'].accessor(d.f32);
+    const myAccessor = tgpu.accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
     const myConst = tgpu.const(d.f32, 1);
@@ -134,7 +134,6 @@ describe('autonaming', () => {
   });
 
   it('autonames assignment expressions', () => {
-    // biome-ignore lint/style/useConst: it's a test
     let layout: TgpuBindGroupLayout;
     layout = tgpu
       .bindGroupLayout({
@@ -166,7 +165,6 @@ describe('autonaming', () => {
   });
 
   it('names function expression', () => {
-    // biome-ignore lint/complexity/useArrowFunction: shhh it's a test
     const myFun = function () {
       'use gpu';
       return 0;

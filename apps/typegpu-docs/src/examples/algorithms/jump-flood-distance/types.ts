@@ -21,7 +21,7 @@ export const SampleResult = d.struct({
   outside: d.vec2f,
 });
 
-export const paramsAccess = tgpu['~unstable'].accessor(VisualizationParams);
+export const paramsAccess = tgpu.accessor(VisualizationParams);
 
 export const distSampleLayout = tgpu.bindGroupLayout({
   distTexture: { texture: d.texture2d() },

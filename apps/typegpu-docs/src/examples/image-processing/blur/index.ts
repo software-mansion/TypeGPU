@@ -2,6 +2,7 @@
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -86,7 +87,7 @@ const computeFn = tgpu['~unstable'].computeFn({
         sampler.$,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
-      ).xyz;
+      ).rgb;
     }
   }
 
@@ -186,13 +187,13 @@ render();
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   'filter size': {
     initial: 3,
     min: 3,
     max: 41,
     step: 2,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.filterDim = newValue;
       render();
     },
@@ -203,12 +204,12 @@ export const controls = {
     min: 1,
     max: 10,
     step: 1,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.iterations = newValue;
       render();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
