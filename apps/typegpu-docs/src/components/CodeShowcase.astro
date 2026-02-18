@@ -1,0 +1,167 @@
+---
+import CodeButton from "./CodeButton.astro";
+import CodePen from "./CodePen.astro";
+import as_a_foundation from "../assets/hero/as_a_foundation.svg";
+import as_a_puzzle_piece from "../assets/hero/as_a_puzzle_piece.svg";
+import for_libraries from "../assets/hero/for_libraries.svg";
+
+const sectionId = "interactive-code-section";
+---
+
+<div class="flex flex-col" id={sectionId}>
+    <div
+        class="flex gap-4 sm:grid sm:grid-cols-3 -mx-6 px-6 pb-2 sm:overflow-visible overflow-x-auto horizontal-scroll"
+    >
+        <div
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
+        >
+            <CodeButton
+                title="As a foundation"
+                message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+                icon={for_libraries}
+            />
+        </div>
+        <div
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
+        >
+            <CodeButton
+                title="As a puzzle piece"
+                message="Pick and choose the APIs, then plug them into your code however you want."
+                icon={as_a_puzzle_piece}
+            />
+        </div>
+        <div
+            class="flex-shrink-0 opacity-60 hover:opacity-100 w-72 sm:w-auto transition-opacity duration-200 ease-in-out cursor-pointer code-button-wrapper"
+        >
+            <CodeButton
+                title="For libraries"
+                message="Simplify library internals, and make your user-facing API type-safe by default."
+                icon={as_a_foundation}
+            />
+        </div>
+    </div>
+
+    <div class="codepen-container">
+        <CodePen
+            code={`const neighborhood = (a: number, r: number) => {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+};
+
+//
+// #1) Can be called in JS
+//
+const range = neighborhood(1.1, 0.5);
+//    ^? d.v2f
+
+//
+// #2) Used to generate WGSL
+//
+const main = () => {
+  'use gpu';
+  return neighborhood(1.1, 0.5);
+};
+
+const wgsl = tgpu.resolve([main]);
+//    ^? string
+
+//
+// #3) Executed on the GPU (generates WGSL underneath)
+//
+root['~unstable']
+  .createGuardedComputePipeline(main)
+  .dispatchThreads();`}
+            language="typescript"
+        />
+        <CodePen
+            code={`import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import * as d from 'typegpu/data';
+
+// We can define schemas, or functions that return schemas...
+const HeightMap = (width: number, height: number) =>
+  d.arrayOf(d.arrayOf(d.f32, height), width);
+
+// ...then infer types from them
+type HeightMap = ReturnType<typeof HeightMap>;
+
+export async function generateHeightMap(
+  root: TgpuRoot,
+  opts: { width: number; height: number },
+): Promise<TgpuBuffer<HeightMap> & StorageFlag> {
+  const buffer = root
+    .createBuffer(HeightMap(opts.width, opts.height))
+    .$usage('storage');
+
+  const rawBuffer = root.unwrap(buffer); // => GPUBuffer
+
+  // Here we can do anything we would usually do with a
+  // WebGPU buffer, like populating it in a compute shader.
+  // 'rawBuffer' is the WebGPU resource that is backing the
+  // typed 'buffer' object, meaning any changes to it will
+  // be visible in both.
+
+  return buffer;
+}`}
+            language="typescript"
+        />
+        <CodePen
+            code={`import tgpu from 'typegpu';
+import gen from '@xyz/gen';
+import plot from '@abc/plot';
+
+// common root for allocating resources
+const root = await tgpu.init();
+
+const terrainBuffer = await gen.generateHeightMap(root, { ... });
+//    ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
+
+// ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
+// not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
+plot.array1d(root, terrainBuffer);
+
+// SUCCESS!
+plot.array2d(root, terrainBuffer);}`}
+            language="typescript"
+        />
+    </div>
+</div>
+
+<style>
+    .horizontal-scroll {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .horizontal-scroll::-webkit-scrollbar {
+        display: none;
+    }
+</style>
+
+<script define:vars={{ sectionId }}>
+    const section = document.getElementById(sectionId);
+    const buttons = Array.from(
+        section.querySelectorAll(".code-button-wrapper"),
+    );
+    const codePens = Array.from(
+        section.querySelectorAll(".codepen-container > *"),
+    );
+    function showContent(indexToShow) {
+        buttons.forEach((button, index) => {
+            if (button instanceof HTMLElement) {
+                button.classList.toggle("opacity-100", index === indexToShow);
+                button.classList.toggle("opacity-60", index !== indexToShow);
+            }
+        });
+
+        codePens.forEach((pen, index) => {
+            if (pen instanceof HTMLElement) {
+                pen.style.display = index === indexToShow ? "block" : "none";
+            }
+        });
+    }
+
+    buttons.forEach((button, index) => {
+        button.addEventListener("click", () => showContent(index));
+    });
+    showContent(0);
+</script>
