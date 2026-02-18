@@ -1,6 +1,6 @@
 import { LEVEL_COUNT } from './constants.ts';
 
-const SPRITE_SIZE = 384;
+export const SPRITE_SIZE = 384;
 const MAX_DIST = SPRITE_SIZE / 2;
 
 async function loadImage(path: string): Promise<ImageBitmap> {
@@ -118,37 +118,28 @@ function computeJfaSdf(
 }
 
 export async function createAtlases(): Promise<{
-  spriteAtlas: ImageBitmap;
-  sdfAtlas: ImageBitmap;
+  spriteAtlas: ImageBitmap[];
+  sdfAtlas: ImageBitmap[];
   /** Boundary points per level, normalized to [-1, 1] relative to sprite center. */
   contours: Float32Array[];
 }> {
   const fruits = await loadImage('./assets/suika-sdf/fruits.png');
 
-  const spriteCanvas = new OffscreenCanvas(
-    SPRITE_SIZE,
-    SPRITE_SIZE * LEVEL_COUNT,
-  );
-  const spriteCtx = spriteCanvas.getContext('2d');
-  if (!spriteCtx) {
-    throw new Error('Failed to create sprite canvas context');
-  }
-
   const tmpCanvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
   const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
   if (!tmpCtx) {
-    throw new Error('Failed to create temporary canvas context');
+    throw new Error('Failed to create canvas context');
   }
 
-  const sdfImageData = new ImageData(SPRITE_SIZE, SPRITE_SIZE * LEVEL_COUNT);
-  const pixels = sdfImageData.data;
+  const spriteAtlas: ImageBitmap[] = [];
+  const sdfAtlas: ImageBitmap[] = [];
   const contours: Float32Array[] = [];
   const halfSize = SPRITE_SIZE / 2;
 
   for (let level = 0; level < LEVEL_COUNT; level++) {
     tmpCtx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
     drawFruitSlice(level, tmpCtx, fruits, 0, 0);
-    spriteCtx.drawImage(tmpCanvas, 0, level * SPRITE_SIZE);
+    spriteAtlas.push(await createImageBitmap(tmpCanvas));
 
     const imgData = tmpCtx.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
     const alpha = imgData.data;
@@ -172,23 +163,19 @@ export async function createAtlases(): Promise<{
     contours.push(new Float32Array(pts));
 
     const sdf = computeJfaSdf(imgData.data, SPRITE_SIZE, SPRITE_SIZE);
-    const baseIdx = level * SPRITE_SIZE * SPRITE_SIZE;
+    const levelSdfData = new ImageData(SPRITE_SIZE, SPRITE_SIZE);
     for (let j = 0; j < SPRITE_SIZE * SPRITE_SIZE; j++) {
       const byte = Math.round(
         Math.max(0, Math.min(1, (sdf[j] / MAX_DIST + 1) * 0.5)) * 255,
       );
-      const idx = (baseIdx + j) * 4;
-      pixels[idx] = byte;
-      pixels[idx + 1] = byte;
-      pixels[idx + 2] = byte;
-      pixels[idx + 3] = 255;
+      const idx = j * 4;
+      levelSdfData.data[idx] = byte;
+      levelSdfData.data[idx + 1] = byte;
+      levelSdfData.data[idx + 2] = byte;
+      levelSdfData.data[idx + 3] = 255;
     }
+    sdfAtlas.push(await createImageBitmap(levelSdfData));
   }
-
-  const [spriteAtlas, sdfAtlas] = await Promise.all([
-    createImageBitmap(spriteCanvas),
-    createImageBitmap(sdfImageData),
-  ]);
 
   return { spriteAtlas, sdfAtlas, contours };
 }

@@ -3,7 +3,6 @@ import { d } from 'typegpu';
 export const LEVEL_RADII = [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.44, 0.48]
   .map((x) => x * 1.3);
 export const LEVEL_COUNT = LEVEL_RADII.length;
-export const LEVEL_SCALE = 1 / LEVEL_COUNT;
 export const MAX_LEVEL_RADIUS = LEVEL_RADII[LEVEL_COUNT - 1];
 
 export const WALL_DEFS = [
