@@ -7,7 +7,6 @@ import {
   GHOST_ALPHA,
   LEVEL_COUNT,
   LEVEL_RADII,
-  LEVEL_SCALE,
   MAX_FRUITS,
   MAX_LEVEL_RADIUS,
   MERGE_DISTANCE_FACTOR,
@@ -23,7 +22,7 @@ import {
 } from './constants.ts';
 import type { BallState } from './physics.ts';
 import { createPhysicsWorld } from './physics.ts';
-import { createAtlases } from './sdf-gen.ts';
+import { createAtlases, SPRITE_SIZE } from './sdf-gen.ts';
 import { skyColor } from './sky.ts';
 
 const root = await tgpu.init();
@@ -44,33 +43,9 @@ const clampRadial = (p: d.v2f, clampRadius: number, minRadius: number) => {
   return p.mul(std.min(clampRadius / len, 1));
 };
 
-const circleAtlasUv = (p: d.v2f, level: number, levelScale: number) => {
+const circleUv = (p: d.v2f) => {
   'use gpu';
-  const uv = d.vec2f(p.x + 0.5, 0.5 - p.y);
-  return d.vec2f(uv.x, uv.y * levelScale + level * levelScale);
-};
-
-const sampleSdf = (
-  sdfView: d.texture2d<d.F32>,
-  sampler: d.sampler,
-  uv: d.v2f,
-  radius: number,
-  localPos: d.v2f,
-) => {
-  'use gpu';
-  const sdfEncoded = std.textureSample(sdfView, sampler, uv).x;
-  const sdfWorld = (sdfEncoded * 2 - 1) * radius;
-  const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
-  return sdfWorld + std.length(outside) * radius * 2;
-};
-
-const sampleSprite = (
-  spriteView: d.texture2d<d.F32>,
-  sampler: d.sampler,
-  uv: d.v2f,
-) => {
-  'use gpu';
-  return std.textureSample(spriteView, sampler, uv).xyz;
+  return d.vec2f(p.x + 0.5, 0.5 - p.y);
 };
 
 const wallColor = (local: d.v2f, dist: number) => {
@@ -116,21 +91,21 @@ const physics = await createPhysicsWorld(WALL_DEFS);
 
 const spriteTexture = root['~unstable']
   .createTexture({
-    size: [spriteAtlas.width, spriteAtlas.height],
+    size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
     format: 'rgba8unorm',
   })
   .$usage('sampled', 'render');
 spriteTexture.write(spriteAtlas);
-const spriteView = spriteTexture.createView();
+const spriteView = spriteTexture.createView(d.texture2dArray());
 
 const sdfTexture = root['~unstable']
   .createTexture({
-    size: [sdfAtlas.width, sdfAtlas.height],
+    size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
     format: 'rgba8unorm',
   })
   .$usage('sampled', 'render');
 sdfTexture.write(sdfAtlas);
-const sdfView = sdfTexture.createView();
+const sdfView = sdfTexture.createView(d.texture2dArray());
 
 const SdRect = d.struct({ center: d.vec2f, size: d.vec2f });
 const rectUniform = root.createUniform(
@@ -144,7 +119,7 @@ const rectUniform = root.createUniform(
 const SdCircle = d.struct({
   center: d.vec2f,
   radius: d.f32,
-  level: d.f32,
+  level: d.i32,
   angle: d.f32,
 });
 const INACTIVE_CIRCLE = {
@@ -183,6 +158,24 @@ const linSampler = root['~unstable'].createSampler({
 
 const SceneHit = d.struct({ dist: d.f32, color: d.vec3f });
 
+const sampleSdf = (
+  uv: d.v2f,
+  radius: number,
+  localPos: d.v2f,
+  level: number,
+) => {
+  'use gpu';
+  const sdfEncoded = std.textureSample(sdfView.$, linSampler.$, uv, level).x;
+  const sdfWorld = (sdfEncoded * 2 - 1) * radius;
+  const outside = std.max(std.abs(localPos).sub(0.5), d.vec2f(0));
+  return sdfWorld + std.length(outside) * radius * 2;
+};
+
+const sampleSprite = (uv: d.v2f, level: number) => {
+  'use gpu';
+  return std.textureSample(spriteView.$, linSampler.$, uv, level).xyz;
+};
+
 const evalFruits = (ndc: d.v2f, activeCount: number) => {
   'use gpu';
   let closestDist = d.f32(2e10);
@@ -192,15 +185,9 @@ const evalFruits = (ndc: d.v2f, activeCount: number) => {
     const raw = ndc.sub(circle.center).div(circle.radius * 2);
     const localPos = rotate2d(raw, -circle.angle);
     const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-    const aUv = circleAtlasUv(clamped, circle.level, LEVEL_SCALE);
-    const dist = sampleSdf(
-      sdfView.$,
-      linSampler.$,
-      aUv,
-      circle.radius,
-      localPos,
-    );
-    const spriteRgb = sampleSprite(spriteView.$, linSampler.$, aUv);
+    const uv = circleUv(clamped);
+    const dist = sampleSdf(uv, circle.radius, localPos, circle.level);
+    const spriteRgb = sampleSprite(uv, circle.level);
     if (dist < closestDist) {
       closestDist = dist;
       outColor = d.vec3f(spriteRgb);
@@ -239,17 +226,13 @@ const applyGhost = (
   const raw = ndc.sub(ghost.center).div(ghost.radius * 2);
   const localPos = rotate2d(raw, -ghost.angle);
   const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-  const uv = circleAtlasUv(clamped, ghost.level, LEVEL_SCALE);
-  const dist = sampleSdf(sdfView.$, linSampler.$, uv, ghost.radius, localPos);
+  const uv = circleUv(clamped);
+  const dist = sampleSdf(uv, ghost.radius, localPos, ghost.level);
   const alpha = (std.clamp(-dist, 0, EDGE_WIDTH) / EDGE_WIDTH) * GHOST_ALPHA;
-  return std.mix(
-    baseColor,
-    sampleSprite(spriteView.$, linSampler.$, uv),
-    alpha,
-  );
+  return std.mix(baseColor, sampleSprite(uv, ghost.level), alpha);
 };
 
-// --- Render pipeline ---
+// Render pipeline
 
 const renderPipeline = root['~unstable'].createRenderPipeline({
   vertex: fullScreenTriangle,
@@ -266,7 +249,7 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
-// --- Event handlers ---
+// Event handlers
 
 canvas.addEventListener('pointermove', (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -284,7 +267,7 @@ canvas.addEventListener('click', () => {
   ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
 });
 
-// --- Game logic ---
+// Game logic
 
 function markDead(fruit: ActiveFruit) {
   if (fruit.dead) return;
