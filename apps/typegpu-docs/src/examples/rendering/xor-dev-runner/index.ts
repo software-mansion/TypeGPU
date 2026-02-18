@@ -12,10 +12,14 @@
  * ```
  */
 
-import tgpu, { d } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 // deno-fmt-ignore: just a list of standard functions
-import { abs, add, cos, max, min, mul, normalize, select, sign, sin, sub, tanh } from 'typegpu/std';
+import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
+import {
+  Camera,
+  setupFirstPersonCamera,
+} from '../../common/setup-first-person-camera.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -52,6 +56,26 @@ const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
   )
 );
 
+export const Ray = d.struct({
+  origin: d.vec4f,
+  direction: d.vec4f,
+});
+
+/**
+ * Returns a ray direction and ray origin for given uv,
+ * in accordance to camera.
+ */
+const getRayForUV = (uv: d.v2f) => {
+  'use gpu';
+  const camera = cameraUniform.$;
+  const farView = camera.projectionInverse.mul(d.vec4f(uv, 1, 1));
+  const farWorld = camera.viewInverse.mul(
+    d.vec4f(farView.xyz.div(farView.w), 1),
+  );
+  const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
+  return Ray({ origin: camera.position, direction: d.vec4f(direction, 0) });
+};
+
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
 // shaders, etc.
 const root = await tgpu.init();
@@ -69,15 +93,17 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 })(({ uv }) => {
   // Increasing the color intensity
   const icolor = mul(color.$, 4);
-  const ratio = d.vec2f(aspectRatio.$, 1);
-  const dir = normalize(d.vec3f(mul(uv, ratio), -1));
+
+  // Calculate ray direction based on UV and camera orientation
+  const ray = getRayForUV(uv);
 
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = sub(mul(z, dir), scale.$);
-    p.x -= time.$ + 3;
-    p.z -= time.$ + 3;
+    const p = mul(ray.direction.xyz, z)
+      .add(scale.$)
+      .add(ray.origin.xyz)
+      .add(d.vec3f(time.$ + 3, 0, time.$ + 3));
     let q = d.vec3f(p);
     let prox = p.y;
     for (let i = 40.1; i > 0.01; i *= 0.2) {
@@ -114,6 +140,11 @@ const vertexMain = tgpu['~unstable'].vertexFn({
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
+const cameraUniform = root.createUniform(Camera);
+setupFirstPersonCamera(canvas, {}, (props) => {
+  cameraUniform.writePartial(props);
+});
 
 const pipeline = root['~unstable'].createRenderPipeline({
   vertex: vertexMain,
