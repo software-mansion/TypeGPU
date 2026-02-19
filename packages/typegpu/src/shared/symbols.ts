@@ -58,29 +58,21 @@ export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);
 
-/**
- * Type token, signaling that a schema can be used in a storage buffer.
- */
-export const $validStorageSchema = Symbol(
+/** Signaling that a schema cannot be used in a storage buffer. */
+export const $invalidStorageSchema = Symbol(
   `typegpu:${version}:$invalidStorageSchema`,
 );
-/**
- * Type token, signaling that a schema can be used in a uniform buffer.
- */
-export const $validUniformSchema = Symbol(
-  `typegpu:${version}:$validUniformSchema`,
+/** Signaling that a schema cannot be used in a uniform buffer. */
+export const $invalidUniformSchema = Symbol(
+  `typegpu:${version}:$invalidUniformSchema`,
 );
-/**
- * Type token, signaling that a schema can be used in a vertex buffer.
- */
-export const $validVertexSchema = Symbol(
-  `typegpu:${version}:$validVertexSchema`,
+/** Signaling that a schema cannot be used in a vertex buffer. */
+export const $invalidVertexSchema = Symbol(
+  `typegpu:${version}:$invalidVertexSchema`,
 );
-/**
- * Type token, containing a reason for why the schema is invalid (if it is).
- */
-export const $invalidSchemaReason = Symbol(
-  `typegpu:${version}:$invalidSchemaReason`,
+/** Signaling that a schema cannot be used in an index buffer. */
+export const $invalidIndexSchema = Symbol(
+  `typegpu:${version}:$invalidIndexSchema`,
 );
 
 export function isMarkedInternal(

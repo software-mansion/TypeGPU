@@ -34,6 +34,7 @@ import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
   type AnySignedVecInstance,
+  type AnyWgslData,
   type BaseData,
   isHalfPrecisionSchema,
   isVecInstance,

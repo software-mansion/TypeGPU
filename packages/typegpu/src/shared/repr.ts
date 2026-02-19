@@ -1,17 +1,16 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
-import type { Disarray, Undecorate } from '../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
 import type { BaseData, U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
-  $invalidSchemaReason,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
+  $invalidVertexSchema,
   $memIdent,
   $repr,
   $reprPartial,
-  $validStorageSchema,
-  $validUniformSchema,
-  $validVertexSchema,
 } from './symbols.ts';
 import type { ViewDimensionToDimension } from '../core/texture/textureFormats.ts';
 import type { Default } from './utilityTypes.ts';
@@ -81,48 +80,6 @@ export type MemIdentityRecord<
 > = {
   [Key in keyof T]: MemIdentity<T[Key]>;
 };
-
-export type IsValidStorageSchema<T> =
-  (T extends { readonly [$validStorageSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
-  false ? false
-    : true;
-
-export type IsValidUniformSchema<T> =
-  (T extends { readonly [$validUniformSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
-  false ? false
-    : true;
-
-export type IsValidVertexSchema<T> =
-  (T extends { readonly [$validVertexSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
-  false ? false
-    : true;
-
-/**
- * Accepts only arrays (or disarrays) of u32 or u16.
- */
-export type IsValidIndexSchema<T> = Undecorate<T> extends
-  WgslArray<BaseData> | Disarray<BaseData>
-  ? (Undecorate<Undecorate<T>['elementType']>) extends U32 | U16 ? true : false
-  : false;
-
-/**
- * Checks if a schema can be used in a buffer at all
- */
-export type IsValidBufferSchema<T> = (
-  | IsValidStorageSchema<T>
-  | IsValidUniformSchema<T>
-  | IsValidVertexSchema<T>
-  | IsValidIndexSchema<T>
-) extends false ? false : true;
 
 /**
  * Validates if a texture can be used as sampled texture
@@ -214,7 +171,28 @@ export type ValidateTextureViewSchema<
     ? SelfOrErrors<TSchema, ValidSampledUsage<TTexture, TSchema>>
   : never;
 
-export type ExtractInvalidSchemaError<T, TPrefix extends string = ''> =
-  [T] extends [{ readonly [$invalidSchemaReason]: string }]
-    ? `${TPrefix}${T[typeof $invalidSchemaReason]}`
+export type ExtractInvalidStorageError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidStorageSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidStorageSchema]}`
     : never;
+
+export type ExtractInvalidUniformError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidUniformSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidUniformSchema]}`
+    : never;
+
+export type ExtractInvalidVertexError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidVertexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidVertexSchema]}`
+    : never;
+
+export type ExtractInvalidIndexError<T, TPrefix extends string = ''> =
+  [T] extends [{ readonly [$invalidIndexSchema]: string }]
+    ? `${TPrefix}${T[typeof $invalidIndexSchema]}`
+    : never;
+
+export type ExtractInvalidSchemaError<T, TPrefix extends string = ''> =
+  | ExtractInvalidStorageError<T, TPrefix>
+  | ExtractInvalidUniformError<T, TPrefix>
+  | ExtractInvalidVertexError<T, TPrefix>
+  | ExtractInvalidIndexError<T, TPrefix>;

@@ -1,5 +1,12 @@
 import type { StorageTextureFormats } from '../core/texture/textureFormats.ts';
-import { $internal, $repr } from '../shared/symbols.ts';
+import {
+  $internal,
+  $repr,
+  $validIndexSchema,
+  $validStorageSchema,
+  $validUniformSchema,
+  $validVertexSchema,
+} from '../shared/symbols.ts';
 import type { Default, WithDefaults } from '../shared/utilityTypes.ts';
 import { f32 } from './numeric.ts';
 import type { F32 } from './wgslTypes.ts';
@@ -51,6 +58,10 @@ export interface WgslTexture<
 > extends BaseData {
   readonly [$repr]: unknown;
   readonly type: SampledTextureLiteral;
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: false;
+  readonly [$validIndexSchema]: false;
 
   readonly sampleType: ResolvedTextureProps<TProps>['sampleType'];
   readonly dimension: ResolvedTextureProps<TProps>['dimension'];
@@ -63,6 +74,10 @@ export interface WgslStorageTexture<
 > extends BaseData {
   readonly [$repr]: unknown;
   readonly type: StorageTextureLiteral;
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: false;
+  readonly [$validIndexSchema]: false;
 
   readonly format: ResolvedStorageTextureProps<TProps>['format'];
   readonly dimension: ResolvedStorageTextureProps<TProps>['dimension'];
@@ -72,6 +87,10 @@ export interface WgslStorageTexture<
 export interface WgslExternalTexture extends BaseData {
   readonly [$repr]: textureExternal;
   readonly type: 'texture_external';
+  readonly [$validStorageSchema]: false;
+  readonly [$validUniformSchema]: false;
+  readonly [$validVertexSchema]: false;
+  readonly [$validIndexSchema]: false;
 
   readonly dimension: '2d';
 }
@@ -389,6 +408,10 @@ function createTexture<TProps extends WgslTextureProps>(
 
   return {
     [$internal]: {},
+    [$validStorageSchema]: false,
+    [$validUniformSchema]: false,
+    [$validVertexSchema]: false,
+    [$validIndexSchema]: false,
     [$repr]: undefined as unknown as WgslTexture<TProps>,
     type,
     bindingSampleType: sampleTypes,
@@ -402,6 +425,10 @@ function createStorageTexture<TProps extends WgslStorageTextureProps>(
 ): WgslStorageTexture<TProps> {
   return {
     [$internal]: {},
+    [$validStorageSchema]: false,
+    [$validUniformSchema]: false,
+    [$validVertexSchema]: false,
+    [$validIndexSchema]: false,
     [$repr]: undefined as unknown as WgslStorageTexture<TProps>,
     type,
     ...props,
@@ -802,6 +829,10 @@ export function textureExternal() {
   const key = 'texture_external';
   return getOrCreate(key, () => ({
     [$internal]: {},
+    [$validStorageSchema]: false,
+    [$validUniformSchema]: false,
+    [$validVertexSchema]: false,
+    [$validIndexSchema]: false,
     [$repr]: undefined as unknown as textureExternal,
     type: 'texture_external',
     dimension: '2d',

@@ -14,7 +14,6 @@ import type {
   WgslSamplerProps,
 } from '../../data/sampler.ts';
 import type {
-  AnyWgslData,
   BaseData,
   U16,
   U32,
@@ -23,15 +22,14 @@ import type {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import type {
-  ExtractInvalidSchemaError,
-  Infer,
-  InferGPURecord,
-  IsValidBufferSchema,
-  IsValidStorageSchema,
-  IsValidUniformSchema,
-} from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { ExtractInvalidSchemaError, Infer } from '../../shared/repr.ts';
+import {
+  $internal,
+  $invalidIndexSchema,
+  $invalidStorageSchema,
+  $invalidUniformSchema,
+  $invalidVertexSchema,
+} from '../../shared/symbols.ts';
 import type {
   Assume,
   Mutable,
@@ -84,6 +82,7 @@ import type {
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
+import { Illegal } from '../../errors.ts';
 import type {
   AnyAutoCustoms,
   AutoFragmentIn,
@@ -759,20 +758,21 @@ export interface RenderPass {
   ): undefined;
 }
 
-export type ValidateBufferSchema<TData extends BaseData> =
-  IsValidBufferSchema<TData> extends false
-    ? ExtractInvalidSchemaError<TData, '(Error) '>
-    : TData;
+/** @deprecated Not useful anymore, it's now an identity type */
+export type ValidateBufferSchema<TData extends BaseData> = TData;
+/** @deprecated Not useful anymore, it's now an identity type */
+export type ValidateStorageSchema<TData extends BaseData> = TData;
+/** @deprecated Not useful anymore, it's now an identity type */
+export type ValidateUniformSchema<TData extends BaseData> = TData;
 
-export type ValidateStorageSchema<TData extends BaseData> =
-  IsValidStorageSchema<TData> extends false
-    ? ExtractInvalidSchemaError<TData, '(Error) '>
-    : TData;
-
-export type ValidateUniformSchema<TData extends BaseData> =
-  IsValidUniformSchema<TData> extends false
-    ? ExtractInvalidSchemaError<TData, '(Error) '>
-    : TData;
+type InvalidBufferData =
+  & BaseData
+  & ({
+    readonly [$invalidStorageSchema]: string;
+    readonly [$invalidUniformSchema]: string;
+    readonly [$invalidVertexSchema]: string;
+    readonly [$invalidIndexSchema]: string;
+  });
 
 export type ConfigureContextOptions = {
   /**
@@ -804,6 +804,16 @@ export interface TgpuRoot extends Unwrapper {
   configureContext(options: ConfigureContextOptions): GPUCanvasContext;
 
   /**
+   * **The provided schema is not host-shareable**
+   * @deprecated
+   */
+  createBuffer<TData extends InvalidBufferData>(
+    typeSchema: TData,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: Infer<NoInfer<TData>> | undefined,
+  ): Illegal<ExtractInvalidSchemaError<TData>>;
+
+  /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    *
    * @remarks
@@ -812,8 +822,8 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createBuffer<TData extends AnyData>(
-    typeSchema: ValidateBufferSchema<TData>,
+  createBuffer<TData extends BaseData>(
+    typeSchema: TData,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>> | undefined,
   ): TgpuBuffer<TData>;
@@ -827,7 +837,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createBuffer<TData extends AnyData>(
+  createBuffer<TData extends BaseData>(
     typeSchema: ValidateBufferSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
@@ -840,7 +850,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createUniform<TData extends AnyWgslData>(
+  createUniform<TData extends BaseData>(
     typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
@@ -854,7 +864,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createUniform<TData extends AnyWgslData>(
+  createUniform<TData extends BaseData>(
     typeSchema: ValidateUniformSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuUniform<TData>;
@@ -867,7 +877,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createMutable<TData extends AnyWgslData>(
+  createMutable<TData extends BaseData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
@@ -881,7 +891,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createMutable<TData extends AnyWgslData>(
+  createMutable<TData extends BaseData>(
     typeSchema: ValidateStorageSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuMutable<TData>;
@@ -894,7 +904,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createReadonly<TData extends AnyWgslData>(
+  createReadonly<TData extends BaseData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: Infer<NoInfer<TData>>,
@@ -908,7 +918,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createReadonly<TData extends AnyWgslData>(
+  createReadonly<TData extends BaseData>(
     typeSchema: ValidateStorageSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuReadonly<TData>;
