@@ -21,7 +21,10 @@ import { uniformOp } from './compute/applySums.ts';
 
 const cache = new WeakMap<
   TgpuRoot,
-  WeakMap<BinaryOp['operation'], PrefixScanComputer>
+  WeakMap<
+    BinaryOp['operation'],
+    Map<BinaryOp['identityElement'], PrefixScanComputer>
+  >
 >();
 
 export class PrefixScanComputer {
@@ -328,14 +331,21 @@ export function initCache(
     rootCache = new WeakMap();
     cache.set(root, rootCache);
   }
-  let computer = rootCache.get(binaryOp.operation);
+
+  let opCache = rootCache.get(binaryOp.operation);
+  if (!opCache) {
+    opCache = new Map();
+    rootCache.set(binaryOp.operation, opCache);
+  }
+
+  let computer = opCache.get(binaryOp.identityElement);
   if (!computer) {
     computer = new PrefixScanComputer(
       root,
       binaryOp.operation,
       binaryOp.identityElement,
     );
-    rootCache.set(binaryOp.operation, computer);
+    opCache.set(binaryOp.identityElement, computer);
   }
   return computer;
 }
