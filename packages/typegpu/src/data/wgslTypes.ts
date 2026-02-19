@@ -69,7 +69,7 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
     lhs: mBaseForVec<T> | T | number,
     rhs: mBaseForVec<T> | T | number,
   ): T;
-  [Operator.slash](lhs: T, rhs: T | number): T;
+  [Operator.slash](lhs: T | number, rhs: T | number): T;
 }
 
 /**
@@ -88,10 +88,8 @@ export interface matInfixNotation<T extends AnyMatInstance> {
   [Operator.plus](lhs: T, rhs: T): T;
   [Operator.minus](lhs: T, rhs: T): T;
   [Operator.star](lhs: T | number, rhs: T | number): T;
-  [Operator.star](
-    lhs: T | vBaseForMat<T>,
-    rhs: T | vBaseForMat<T>,
-  ): vBaseForMat<T>;
+  [Operator.star](lhs: T, rhs: vBaseForMat<T>): vBaseForMat<T>;
+  [Operator.star](lhs: vBaseForMat<T>, rhs: T): vBaseForMat<T>;
 }
 
 /**

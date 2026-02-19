@@ -11,17 +11,21 @@ const examplesDir = join(projectRoot, 'src', 'examples');
 
 const operatorToMethod: Record<string, string> = {
   [ts.SyntaxKind.PlusToken]: 'add',
+  [ts.SyntaxKind.PlusEqualsToken]: 'add',
   [ts.SyntaxKind.MinusToken]: 'sub',
+  [ts.SyntaxKind.MinusEqualsToken]: 'sub',
   [ts.SyntaxKind.AsteriskToken]: 'mul',
+  [ts.SyntaxKind.AsteriskEqualsToken]: 'mul',
   [ts.SyntaxKind.SlashToken]: 'div',
+  [ts.SyntaxKind.SlashEqualsToken]: 'div',
 };
 
-const compoundToBaseOperator: Record<string, ts.BinaryOperator> = {
-  [ts.SyntaxKind.PlusEqualsToken]: ts.SyntaxKind.PlusToken,
-  [ts.SyntaxKind.MinusEqualsToken]: ts.SyntaxKind.MinusToken,
-  [ts.SyntaxKind.AsteriskEqualsToken]: ts.SyntaxKind.AsteriskToken,
-  [ts.SyntaxKind.SlashEqualsToken]: ts.SyntaxKind.SlashToken,
-};
+const assignmentOperators = [
+  ts.SyntaxKind.PlusEqualsToken,
+  ts.SyntaxKind.MinusEqualsToken,
+  ts.SyntaxKind.AsteriskEqualsToken,
+  ts.SyntaxKind.SlashEqualsToken,
+];
 
 async function findTypeScriptFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
@@ -89,42 +93,6 @@ function isOverloadedBinary(
   return { isOverloaded: true, useLeftMethod: leftHasMethod };
 }
 
-function isOverloadedCompoundAssignment(
-  node: ts.BinaryExpression,
-  checker: ts.TypeChecker,
-): { isOverloaded: boolean; baseOperator: ts.SyntaxKind | undefined } {
-  const baseOperator = compoundToBaseOperator[node.operatorToken.kind];
-  if (!baseOperator) {
-    return { isOverloaded: false, baseOperator: undefined };
-  }
-
-  const methodName = operatorToMethod[baseOperator];
-  if (!methodName) {
-    return { isOverloaded: false, baseOperator: undefined };
-  }
-
-  // Get the types of both operands
-  const leftType = checker.getTypeAtLocation(node.left);
-  const rightType = checker.getTypeAtLocation(node.right);
-
-  const overloadType = checker.__tsover__getOverloadReturnType(
-    node.left,
-    baseOperator,
-    node.right,
-    leftType,
-    rightType,
-  );
-
-  if (!overloadType) {
-    return { isOverloaded: false, baseOperator: undefined };
-  }
-
-  // Check if left operand has the method (compound assignment only uses left method)
-  const leftHasMethod = leftType.getProperty(methodName) !== undefined;
-
-  return { isOverloaded: leftHasMethod, baseOperator };
-}
-
 function createProgram(allFiles: string[]): ts.Program {
   const configPath = join(projectRoot, 'tsconfig.json');
   const configText = ts.sys.readFile(configPath);
@@ -166,68 +134,52 @@ function transformFile(
   let hasChanges = false;
 
   function visit(node: ts.Node): void {
+    // Visit all children of the node first, then process the node itself
     ts.forEachChild(node, visit);
 
-    if (ts.isBinaryExpression(node)) {
-      const { isOverloaded, useLeftMethod } = isOverloadedBinary(node, checker);
+    if (!ts.isBinaryExpression(node)) {
+      return;
+    }
 
-      if (isOverloaded) {
-        const methodName = operatorToMethod[node.operatorToken.kind];
-        if (methodName) {
-          hasChanges = true;
+    const { isOverloaded, useLeftMethod } = isOverloadedBinary(node, checker);
+    const methodName = operatorToMethod[node.operatorToken.kind];
 
-          const start = node.getStart();
-          const end = node.getEnd();
-          const leftStart = node.left.getStart();
-          const leftEnd = node.left.getEnd();
-          const rightStart = node.right.getStart();
-          const rightEnd = node.right.getEnd();
+    if (!isOverloaded || !methodName) {
+      return;
+    }
 
-          const leftText = magic.slice(leftStart, leftEnd);
-          const rightText = magic.slice(rightStart, rightEnd);
+    hasChanges = true;
 
-          if (useLeftMethod) {
-            magic.overwrite(
-              start,
-              end,
-              `${leftText}.${methodName}(${rightText})`,
-            );
-          } else {
-            magic.overwrite(
-              start,
-              end,
-              `${rightText}.${methodName}(${leftText})`,
-            );
-          }
-        }
-      }
+    const start = node.getStart();
+    const end = node.getEnd();
+    const leftStart = node.left.getStart();
+    const leftEnd = node.left.getEnd();
+    const rightStart = node.right.getStart();
+    const rightEnd = node.right.getEnd();
 
-      // Handle compound assignment operators (+=, -=, *=, /=)
-      const { isOverloaded: isCompoundOverloaded, baseOperator } =
-        isOverloadedCompoundAssignment(node, checker);
+    const leftText = magic.slice(leftStart, leftEnd);
+    const rightText = magic.slice(rightStart, rightEnd);
 
-      if (isCompoundOverloaded && baseOperator) {
-        const methodName = operatorToMethod[baseOperator];
-        if (methodName) {
-          hasChanges = true;
-
-          const start = node.getStart();
-          const end = node.getEnd();
-          const leftStart = node.left.getStart();
-          const leftEnd = node.left.getEnd();
-          const rightStart = node.right.getStart();
-          const rightEnd = node.right.getEnd();
-
-          const leftText = magic.slice(leftStart, leftEnd);
-          const rightText = magic.slice(rightStart, rightEnd);
-
-          // Transform a += b into a = a.add(b)
-          magic.overwrite(
-            start,
-            end,
-            `${leftText} = ${leftText}.${methodName}(${rightText})`,
-          );
-        }
+    if (assignmentOperators.includes(node.operatorToken.kind)) {
+      // Transform a += b into a = a.add(b)
+      magic.overwrite(
+        start,
+        end,
+        `${leftText} = ${leftText}.${methodName}(${rightText})`,
+      );
+    } else {
+      if (useLeftMethod) {
+        magic.overwrite(
+          start,
+          end,
+          `${leftText}.${methodName}(${rightText})`,
+        );
+      } else {
+        magic.overwrite(
+          start,
+          end,
+          `${rightText}.${methodName}(${leftText})`,
+        );
       }
     }
   }
