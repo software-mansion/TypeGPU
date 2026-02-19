@@ -31,14 +31,17 @@ export const computeBlock = tgpu['~unstable'].computeFn({
 
   const partialSums = d.arrayOf(d.f32, 8)(fillIdentityArray());
 
+  let prev = identitySlot.$;
   let lastIdx = d.u32(0);
+
   // TODO: use `tgpu.unroll(8)`
   for (let i = d.u32(); i < 8; i++) {
     if (baseIdx + i < scanLayout.$.input.length) {
       partialSums[i] = operatorSlot.$(
-        partialSums[i - 1] as number,
+        prev,
         scanLayout.$.input[baseIdx + i] as number,
       );
+      prev = partialSums[i] as number;
       lastIdx = i;
     }
   }

@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { operatorSlot, uniformAddLayout, WORKGROUP_SIZE } from '../schemas.ts';
+import { operatorSlot, uniformOpLayout, WORKGROUP_SIZE } from '../schemas.ts';
 
 export const uniformOp = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
@@ -12,14 +12,14 @@ export const uniformOp = tgpu['~unstable'].computeFn({
   const globalIdx = gid.x;
   const workgroupId = wid.x;
   const baseIdx = globalIdx * 8;
-  const sumValue = uniformAddLayout.$.sums[workgroupId];
+  const opValue = uniformOpLayout.$.sums[workgroupId];
 
   // TODO: use `tgpu.unroll(8)`
   for (let i = d.u32(0); i < 8; i++) {
-    if (baseIdx + i < uniformAddLayout.$.input.length) {
-      (uniformAddLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
-        uniformAddLayout.$.input[baseIdx + i] as number,
-        sumValue as number,
+    if (baseIdx + i < uniformOpLayout.$.input.length) {
+      (uniformOpLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
+        uniformOpLayout.$.input[baseIdx + i] as number,
+        opValue as number,
       );
     }
   }

@@ -13,7 +13,7 @@ import {
   onlyGreatestElementSlot,
   operatorSlot,
   scanLayout,
-  uniformAddLayout,
+  uniformOpLayout,
   WORKGROUP_SIZE,
 } from './schemas.ts';
 import { computeBlock } from './compute/scan.ts';
@@ -27,7 +27,7 @@ const cache = new WeakMap<
 class PrefixScanComputer {
   #scanPipeline?: TgpuComputePipeline;
   #reducePipeline?: TgpuComputePipeline;
-  #addPipeline?: TgpuComputePipeline;
+  #opPipeline?: TgpuComputePipeline;
 
   constructor(
     private root: TgpuRoot,
@@ -62,12 +62,12 @@ class PrefixScanComputer {
     return pipeline;
   }
 
-  private get addPipeline(): TgpuComputePipeline {
-    this.#addPipeline ??= this.root['~unstable']
+  private get opPipeline(): TgpuComputePipeline {
+    this.#opPipeline ??= this.root['~unstable']
       .with(operatorSlot, this.operation as TgpuFn)
       .withCompute(uniformOp)
       .createPipeline();
-    return this.#addPipeline;
+    return this.#opPipeline;
   }
 
   private getScratchBuffer(
@@ -135,19 +135,18 @@ class PrefixScanComputer {
       return sumsBuffer;
     }
 
-    // Add the scanned sums back
-    const addBg = this.root.createBindGroup(uniformAddLayout, {
+    const opBg = this.root.createBindGroup(uniformOpLayout, {
       input: buffer,
       sums: sumsBuffer,
     });
-    let addPipeline = this.addPipeline.with(addBg);
+    let opPipeline = this.opPipeline.with(opBg);
     if (querySet) {
-      addPipeline = addPipeline.withTimestampWrites({
+      opPipeline = opPipeline.withTimestampWrites({
         querySet,
         endOfPassWriteIndex: 1,
       });
     }
-    addPipeline.dispatchWorkgroups(numWorkgroups);
+    opPipeline.dispatchWorkgroups(numWorkgroups);
     return buffer;
   }
 
