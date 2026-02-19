@@ -58,22 +58,17 @@ export interface NumberArrayView {
  * but are instead assigned to `VecBase` after both `data` and `std` are initialized.
  */
 export interface vecInfixNotation<T extends AnyNumericVecInstance> {
-  add(other: number): T;
-  add(other: T): T;
-
-  sub(other: number): T;
-  sub(other: T): T;
-
-  mul(other: number): T;
-  mul(other: T): T;
-  mul(other: mBaseForVec<T>): T;
-
-  div(other: number): T;
-  div(other: T): T;
+  add(other: T | number): T;
+  sub(other: T | number): T;
+  mul(other: mBaseForVec<T> | T | number): T;
+  div(other: T | number): T;
 
   [Operator.plus](lhs: T | number, rhs: T | number): T;
   [Operator.minus](lhs: T | number, rhs: T | number): T;
-  [Operator.star](lhs: T | number, rhs: T | number): T;
+  [Operator.star](
+    lhs: mBaseForVec<T> | T | number,
+    rhs: mBaseForVec<T> | T | number,
+  ): T;
   [Operator.slash](lhs: T, rhs: T | number): T;
 }
 
@@ -86,12 +81,17 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
  */
 export interface matInfixNotation<T extends AnyMatInstance> {
   add(other: T): T;
-
   sub(other: T): T;
-
-  mul(other: number): T;
+  mul(other: T | number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
-  mul(other: T): T;
+
+  [Operator.plus](lhs: T, rhs: T): T;
+  [Operator.minus](lhs: T, rhs: T): T;
+  [Operator.star](lhs: T | number, rhs: T | number): T;
+  [Operator.star](
+    lhs: T | vBaseForMat<T>,
+    rhs: T | vBaseForMat<T>,
+  ): vBaseForMat<T>;
 }
 
 /**
