@@ -1,10 +1,10 @@
 import { d, std } from 'typegpu';
 
-export const skyColor = (uv: d.v2f, ndc: d.v2f, time: number) => {
+export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
   'use gpu';
   const skyTop = d.vec3f(0.62, 0.86, 1.0);
   const skyBottom = d.vec3f(0.98, 0.93, 0.78);
-  const skyMix = std.clamp(ndc.y * 0.5 + 0.5, 0, 1);
+  const skyMix = std.clamp(scenePos.y * 0.5 + 0.5, 0, 1);
   let bgColor = std.mix(skyBottom, skyTop, skyMix);
 
   const sunPos = d.vec2f(0.78, 0.2);
