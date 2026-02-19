@@ -18,8 +18,8 @@ export const uniformOp = tgpu['~unstable'].computeFn({
   for (let i = d.u32(0); i < 8; i++) {
     if (baseIdx + i < uniformOpLayout.$.input.length) {
       (uniformOpLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
-        uniformOpLayout.$.input[baseIdx + i] as number,
         opValue as number,
+        uniformOpLayout.$.input[baseIdx + i] as number,
       );
     }
   }

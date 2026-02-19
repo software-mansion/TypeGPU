@@ -20,6 +20,9 @@ const calcResult = prefixScan(
 Example usage (only the greatest element + timing the shader):
 
 ```ts
+// Note: 'timestamp-query' must be requested when initialising the root
+const querySet = root.createQuerySet('timestamp', 2);
+
 const calcResult = scan(
   root,
   {
@@ -27,8 +30,10 @@ const calcResult = scan(
     operation: std.mul,
     identityElement: 1,
   },
-  (timeTgpuQuery) => {
-    timestampPromise = timeTgpuQuery.read();
-  },
+  querySet,
 );
+
+querySet.resolve();
+const [start, end] = await querySet.read();
+const gpuTimeMs = Number(end - start) / 1_000_000;
 ```

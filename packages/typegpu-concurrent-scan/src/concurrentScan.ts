@@ -176,12 +176,13 @@ export class PrefixScanComputer {
  * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
  * @param options - Configuration object containing:
  *   - inputBuffer: A storage buffer with the input values to scan
- *   - outputBuffer: A storage buffer where the scanned values will be written
+ *   - outputBuffer: (optional) A storage buffer where the scanned values will be written.
+ *                   Defaults to in-place (overwrites `inputBuffer`).
  *   - operation: The binary operation to use for the scan (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
  * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
  *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
- * @returns The `outputBuffer` instance which contains the scanned values.
+ * @returns The output buffer instance which contains the scanned values.
  *
  * @example
  * ```typescript
@@ -189,11 +190,22 @@ export class PrefixScanComputer {
  * const inputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
  *   .$usage('storage');
+ *
+ * // in-place (inputBuffer is modified)
+ * const result = prefixScan(
+ *   root,
+ *   {
+ *     inputBuffer,
+ *     operation: std.add,
+ *     identityElement: 0,
+ *   },
+ * );
+ *
+ * // out-of-place
  * const outputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4))
  *   .$usage('storage');
  *
- * // using an std function
  * const result = prefixScan(
  *   root,
  *   {
@@ -203,26 +215,13 @@ export class PrefixScanComputer {
  *     identityElement: 0,
  *   },
  * );
- *
- * // using a custom tgpu.fn
- * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
- *
- * const result = prefixScan(
- *   root,
- *   {
- *     inputBuffer,
- *     outputBuffer,
- *     operation: multiply,
- *     identityElement: 1,
- *   },
- * );
  * ```
  */
 export function prefixScan(
   root: TgpuRoot,
   options: {
     inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    outputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+    outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
   },
