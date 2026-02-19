@@ -7,7 +7,7 @@ export function isContiguous(schema: BaseData): boolean {
 }
 
 /**
- * Returns `true` if data represented by the `schema` don't have padding.
+ * Returns `true` if data represented by the `schema` doesn't have padding.
  */
 export function PUBLIC_isContiguous(schema: AnyData): boolean {
   return isContiguous(schema);
