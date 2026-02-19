@@ -236,7 +236,7 @@ async function runTests(): Promise<boolean> {
 
   result = await testAdd8() && result;
   result = await testAdd123() && result;
-  // result = await testMul() && result; // fails, returns 0
+  result = await testMul() && result;
   result = await testStdMax() && result;
   result = await testConcat() && result;
   result = await testLength1() && result;

@@ -18,3 +18,4 @@ export const uniformAddLayout = tgpu.bindGroupLayout({
 });
 export const operatorSlot = tgpu.slot<(a: number, b: number) => number>();
 export const identitySlot = tgpu.slot<number>();
+export const onlyGreatestElementSlot = tgpu.slot<boolean>();

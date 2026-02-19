@@ -10,14 +10,14 @@ import * as d from 'typegpu/data';
 import {
   type BinaryOp,
   identitySlot,
+  onlyGreatestElementSlot,
   operatorSlot,
   scanLayout,
   uniformAddLayout,
   WORKGROUP_SIZE,
 } from './schemas.ts';
-import { scanBlock } from './compute/scan.ts';
+import { computeBlock } from './compute/scan.ts';
 import { uniformOp } from './compute/applySums.ts';
-import { scanGreatestBlock } from './compute/singleScan.ts';
 
 const cache = new WeakMap<
   TgpuRoot,
@@ -38,21 +38,28 @@ class PrefixScanComputer {
   private getScanPipeline(
     onlyGreatestElement: boolean,
   ): TgpuComputePipeline {
-    if (onlyGreatestElement) {
-      this.#reducePipeline ??= this.root['~unstable']
-        .with(operatorSlot, this.operation as TgpuFn)
-        .with(identitySlot, this.identityElement)
-        .withCompute(scanGreatestBlock)
-        .createPipeline();
-      return this.#reducePipeline;
+    const cached = onlyGreatestElement
+      ? this.#reducePipeline
+      : this.#scanPipeline;
+
+    if (cached) {
+      return cached;
     }
 
-    this.#scanPipeline ??= this.root['~unstable']
+    const pipeline = this.root['~unstable']
       .with(operatorSlot, this.operation as TgpuFn)
       .with(identitySlot, this.identityElement)
-      .withCompute(scanBlock)
+      .with(onlyGreatestElementSlot, onlyGreatestElement)
+      .withCompute(computeBlock)
       .createPipeline();
-    return this.#scanPipeline;
+
+    if (onlyGreatestElement) {
+      this.#reducePipeline = pipeline;
+    } else {
+      this.#scanPipeline = pipeline;
+    }
+
+    return pipeline;
   }
 
   private get addPipeline(): TgpuComputePipeline {
