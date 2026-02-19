@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+const purple = d.vec4f(0.769, 0.392, 1, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
 const getGradientColor = (ratio: number) => {

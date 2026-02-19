@@ -144,7 +144,7 @@ const pipeline = root['~unstable'].createRenderPipeline({
     let resultColor = d.vec3f(1);
     // Color mode
     if (displayMode.$ === displayModes.color) {
-      resultColor = color.mul(charValue).xyz;
+      resultColor = color.mul(charValue).rgb;
     }
     // Grayscale mode
     if (displayMode.$ === displayModes.grayscale) {

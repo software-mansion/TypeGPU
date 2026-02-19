@@ -255,12 +255,12 @@ describe('jelly switch example', () => {
         let switchX = (((*state).progress - 0.5f) * 0.4f);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(switchX, 0f, 0f)));
-        var bounceLight = ((*jellyColor).xyz * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
-        var sideBounceLight = (((*jellyColor).xyz * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
+        var bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
+        var sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
         let emission = ((smoothstep(0.7f, 1f, (*state).progress) * 2f) + 0.7f);
         var litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
         var backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
-        return vec4f(backgroundColor.xyz, 1f);
+        return vec4f(backgroundColor.rgb, 1f);
       }
 
       struct BoundingBox {
@@ -364,9 +364,9 @@ describe('jelly switch example', () => {
               var exitPos = (p + (refrDir * 2e-3f));
               var env = rayMarchNoJelly(exitPos, refrDir);
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).xyz * 1.5f);
+              var scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
+              var absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
               let state = (&stateUniform);
               let progress = (saturate(mix(1f, 0.6f, ((hitPosition.y * 1.6666666004392863f) + 0.25f))) * (*state).progress);
               var T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
@@ -395,7 +395,7 @@ describe('jelly switch example', () => {
         var ray = getRay(ndc);
         var color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
         let exposure = select(1.5, 2., (darkModeUniform == 1u));
-        return vec4f(tanh((color.xyz * exposure)), 1f);
+        return vec4f(tanh((color.rgb * exposure)), 1f);
       }
 
       @group(0) @binding(0) var currentTexture: texture_2d<f32>;
@@ -419,13 +419,13 @@ describe('jelly switch example', () => {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(x, y));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.xyz);
-            maxColor = max(maxColor, neighborColor.xyz);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        var historyColorClamped = clamp(historyColor.xyz, minColor, maxColor);
+        var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         const blendFactor = 0.8999999761581421f;
-        var resolvedColor = vec4f(mix(currentColor.xyz, historyColorClamped, blendFactor), 1f);
+        var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(_arg_0.gid.x, _arg_0.gid.y), resolvedColor);
       }
 

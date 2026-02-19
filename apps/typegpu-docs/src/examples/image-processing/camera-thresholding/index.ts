@@ -16,7 +16,7 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
     sampler.$,
     uv2,
   );
-  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
+  const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
 
   const crDiff = std.abs(ycbcr.y - colycbcr.y);

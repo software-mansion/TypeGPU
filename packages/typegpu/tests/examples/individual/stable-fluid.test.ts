@@ -257,7 +257,7 @@ describe('stable-fluid example', () => {
         var distortVector = vec2f(gradientX, gradientY);
         var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
         var outputColor = textureSample(background, linSampler, vec2f(distortedUV.x, (1f - distortedUV.y)));
-        return vec4f(outputColor.xyz, 1f);
+        return vec4f(outputColor.rgb, 1f);
       }"
     `);
   });

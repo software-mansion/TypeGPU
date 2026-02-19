@@ -598,6 +598,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+    if (pairs.length === 0) {
+      return callback();
+    }
+
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {
@@ -625,17 +629,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     }
     const oldName = getName(item);
-    setName(item, name);
-    const result = callback();
-    setName(item, oldName);
-    return result;
+    try {
+      setName(item, name);
+      return callback();
+    } finally {
+      setName(item, oldName);
+    }
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
-      return this.withSlots(
-        eventual[$providing].pairs,
-        () => this.unwrap(eventual[$providing].inner) as T,
+      return this.withRenamed(
+        eventual[$providing].inner,
+        getName(eventual),
+        () =>
+          this.withSlots(
+            eventual[$providing].pairs,
+            () => this.unwrap(eventual[$providing].inner) as T,
+          ),
       );
     }
 
