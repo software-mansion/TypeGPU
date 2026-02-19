@@ -36,6 +36,7 @@ import {
 } from './conversion.ts';
 import {
   ArrayExpression,
+  coerceToSnippet,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -51,6 +52,7 @@ import type { AnyFn } from '../core/function/fnTypes.ts';
 import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
+import { ExternalMap } from '../../src/core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -200,8 +202,19 @@ class WgslGenerator implements ShaderGenerator {
 
   public block(
     [_, statements]: tinyest.Block,
+    externalMap?: ExternalMap,
   ): string {
     this.ctx.pushBlockScope();
+
+    if (externalMap) {
+      const externals = Object.fromEntries(
+        Object.entries(externalMap).map((
+          [id, value],
+        ) => [id, coerceToSnippet(value)]),
+      );
+      this.ctx.pushBlockExternals(externals);
+    }
+
     try {
       this.ctx.indent();
       const body = statements.map((statement) => this.statement(statement))
@@ -1186,6 +1199,7 @@ ${this.ctx.pre}else ${alternate}`;
         iterableSnippet,
         snip(index, u32, 'runtime'),
       );
+
       if (!elementSnippet) {
         throw new WgslTypeError(
           '`for ... of ...` loops only support array or vector iterables',
@@ -1231,7 +1245,6 @@ ${this.ctx.pre}else ${alternate}`;
       // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
       // an implicit pointer to it
       let loopVarKind = 'let';
-      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
 
       if (!isEphemeralSnippet(elementSnippet)) {
         if (elementSnippet.origin === 'constant-tgpu-const-ref') {
@@ -1256,19 +1269,12 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
-      const loopVarSnippet = snip(
-        loopVarName,
-        elementType,
-        elementSnippet.origin,
-      );
-      this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
       const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
         tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
       }; ${index}++) {`;
-
       this.ctx.indent();
 
+      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
       const loopVarDeclStr =
         stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
           tryConvertSnippet(
@@ -1280,7 +1286,9 @@ ${this.ctx.pre}else ${alternate}`;
         };`;
 
       const bodyStr = `${this.ctx.pre}${
-        this.block(blockifySingleStatement(body))
+        this.block(blockifySingleStatement(body), {
+          [loopVar[1]]: snip(loopVarName, elementType, elementSnippet.origin),
+        })
       }`;
 
       this.ctx.dedent();

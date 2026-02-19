@@ -124,6 +124,7 @@ export type SlotBindingLayer = {
 export type BlockScopeLayer = {
   type: 'blockScope';
   declarations: Map<string, Snippet>;
+  externals: Map<string, Snippet>;
 };
 
 export type StackLayer =
@@ -151,6 +152,8 @@ export interface ItemStateStack {
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
   pushBlockScope(): void;
+  pushBlockExternals(externals: Record<string, Snippet>): void;
+  popBlockExternals(): void;
 
   pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
   pop(): StackLayer | undefined;
