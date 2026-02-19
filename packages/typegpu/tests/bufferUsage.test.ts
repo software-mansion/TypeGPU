@@ -158,6 +158,29 @@ describe('TgpuBufferMutable', () => {
     `);
   });
 
+  it('cannot be mutated (primitive)', ({ root }) => {
+    const foo = root.createUniform(d.f32);
+
+    const main = () => {
+      'use gpu';
+      // @ts-expect-error
+      foo.$ += 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('cannot be mutated (non-primitive)', ({ root }) => {
+    const foo = root.createUniform(d.vec3f);
+
+    const main = () => {
+      'use gpu';
+      foo.$.x += 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
+
   describe('simulate mode', () => {
     it('allows accessing .$ in simulate mode', ({ root }) => {
       const buffer = root.createBuffer(d.u32, 0).$usage('storage');
@@ -283,6 +306,29 @@ describe('TgpuBufferReadonly', () => {
       [Error: Execution of the following tree failed:
       - fn:foo: Cannot access buffer:fooBuffer. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
     `);
+  });
+
+  it('cannot be mutated (primitive)', ({ root }) => {
+    const foo = root.createReadonly(d.f32);
+
+    const main = () => {
+      'use gpu';
+      // @ts-expect-error
+      foo.$ += 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('cannot be mutated (non-primitive)', ({ root }) => {
+    const foo = root.createReadonly(d.vec3f);
+
+    const main = () => {
+      'use gpu';
+      foo.$.x += 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 
   describe('simulate mode', () => {
