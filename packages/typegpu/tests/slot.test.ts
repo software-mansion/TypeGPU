@@ -286,7 +286,7 @@ describe('tgpu.slot', () => {
     const uniformSlotSlot = tgpu.slot(uniformSlot);
 
     const getColor = tgpu.fn([], d.vec3f)(() => d.vec3f(1, 2, 3));
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, getColor);
+    const colorAccess = tgpu.accessor(d.vec3f, getColor);
     const colorAccessSlot = tgpu.slot(colorAccess);
 
     const func = tgpu.fn([])(() => {
