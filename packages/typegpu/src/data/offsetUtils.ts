@@ -5,6 +5,8 @@ import {
   offsetsForProps,
 } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { isContiguous } from './isContiguous.ts';
+import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
 import type {
   AnyWgslData,
   BaseData,
@@ -12,13 +14,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from './wgslTypes.ts';
-import {
-  isVec2,
-  isVec3,
-  isVec4,
-  isWgslArray,
-  isWgslStruct,
-} from './wgslTypes.ts';
+import { isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 import { undecorate } from './dataTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 
@@ -60,12 +56,8 @@ function makeProxy(
 ): unknown {
   const unwrapped = undecorate(schema);
 
-  const vecComponentCount = isVec2(unwrapped)
-    ? 2
-    : isVec3(unwrapped)
-    ? 3
-    : isVec4(unwrapped)
-    ? 4
+  const vecComponentCount = isVec(unwrapped)
+    ? unwrapped.componentCount
     : undefined;
 
   if (vecComponentCount !== undefined) {
@@ -161,10 +153,12 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
       }
 
       const elementOffset = index * stride;
-      const remainingFromHere = Math.max(
-        0,
-        t[CONTIGUOUS_MARKER] - elementOffset,
-      );
+      const remainingFromHere = !isContiguous(elementType)
+        ? elementSize + getLongestContiguousPrefix(elementType) // it is too much, but we correct it later
+        : Math.max(
+          0,
+          t[CONTIGUOUS_MARKER] - elementOffset,
+        );
 
       const childContiguous = hasPadding
         ? Math.min(remainingFromHere, elementSize)
@@ -197,15 +191,23 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
     if (!name) {
       continue;
     }
+    const type = propTypes[name];
+    if (!type) {
+      continue;
+    }
+
     const info = offsets[name] as PropOffsetInfo;
     const padding = info.padding ?? 0;
 
-    const isRunEnd = i === propNames.length - 1 || padding > 0;
+    const typeContiguous = isContiguous(type);
+    const isRunEnd = i === propNames.length - 1 || padding > 0 ||
+      !typeContiguous;
     if (!isRunEnd) {
       continue;
     }
 
-    const runEnd = info.offset + info.size;
+    const runEnd = info.offset +
+      (typeContiguous ? info.size : getLongestContiguousPrefix(type));
     for (let j = runStart; j <= i; j++) {
       const runName = propNames[j];
       if (!runName) {
@@ -238,7 +240,6 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
         t[CONTIGUOUS_MARKER] - m.offset,
       );
       const localLimit = Math.max(0, m.runEnd - m.offset);
-
       const propSchema = propTypes[prop];
       if (!propSchema) {
         return undefined;
@@ -247,7 +248,7 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
       return makeProxy(
         propSchema,
         t[OFFSET_MARKER] + m.offset,
-        Math.min(remainingFromHere, localLimit),
+        sizeOf(struct) === m.runEnd ? remainingFromHere : localLimit,
       );
     },
   });

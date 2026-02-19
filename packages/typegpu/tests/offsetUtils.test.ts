@@ -88,6 +88,7 @@ describe('getOffsetInfoAt (struct runs)', () => {
 });
 
 describe('getOffsetInfoAt (nested layouts)', () => {
+  // offset calculator for this struct: https://shorturl.at/NQggS
   const DeepStruct = d.struct({
     someData: d.arrayOf(d.f32, 13),
     nested: d.struct({
@@ -125,7 +126,7 @@ describe('getOffsetInfoAt (nested layouts)', () => {
     );
 
     expect(info.offset).toBe(128);
-    expect(info.contiguous).toBe(16);
+    expect(info.contiguous).toBe(28);
   });
 
   it('tracks offsets inside a later struct run', () => {
@@ -136,5 +137,85 @@ describe('getOffsetInfoAt (nested layouts)', () => {
 
     expect(info.offset).toBe(184);
     expect(info.contiguous).toBe(124);
+  });
+});
+
+describe('getOffsetInfoAt (edge cases)', () => {
+  it('tracks offsets between array elements', () => {
+    const E = d.struct({
+      x: d.u32,
+      vec: d.vec4u,
+    });
+
+    const S = d.struct({
+      arr: d.arrayOf(E, 3),
+    });
+
+    const info = getOffsetInfoAt(
+      S,
+      (s) => s.arr[1]?.vec.x as number,
+    );
+
+    expect(info.offset).toBe(48);
+    expect(info.contiguous).toBe(20);
+  });
+
+  it('tracks offsets between structs', () => {
+    const I = d.struct({
+      vec: d.vec4u,
+    });
+
+    const S = d.struct({
+      l: I,
+      r: I,
+    });
+
+    const info = getOffsetInfoAt(
+      S,
+      (s) => s.l.vec.z as number,
+    );
+
+    expect(info.offset).toBe(8);
+    expect(info.contiguous).toBe(24);
+  });
+
+  it('tracks offsets between vectors', () => {
+    const E = d.struct({
+      x: d.vec4u,
+      y: d.vec4u,
+      z: d.vec4u,
+      w: d.vec4u,
+    });
+
+    const S = d.struct({
+      arr: d.arrayOf(E, 4),
+    });
+
+    const info = getOffsetInfoAt(
+      S,
+      (s) => s.arr[1]?.x.x as number,
+    );
+
+    expect(info.offset).toBe(64);
+    expect(info.contiguous).toBe(192);
+  });
+
+  it('tracks offsets between array last element and struct', () => {
+    const I = d.struct({
+      x: d.u32,
+      vec: d.vec4u,
+    });
+    const S = d.struct({
+      arr: d.arrayOf(d.vec4u, 1),
+      s: I,
+    });
+
+    const info = getOffsetInfoAt(
+      S,
+      (s) => s.arr[0]?.y as number,
+    );
+
+    expect(info.offset).toBe(4);
+    expect(info.contiguous).toBe(16);
   });
 });
