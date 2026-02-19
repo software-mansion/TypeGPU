@@ -201,7 +201,7 @@ export class PrefixScanComputer {
  *   },
  * );
  *
- * // out-of-place
+ * // with separate output buffer
  * const outputBuffer = root
  *   .createBuffer(d.arrayOf(d.f32, 4))
  *   .$usage('storage');
