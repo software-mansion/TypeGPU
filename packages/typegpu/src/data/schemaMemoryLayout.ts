@@ -195,8 +195,6 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   let longestContiguousPrefix: number;
   if (isContiguous) {
     longestContiguousPrefix = size;
-  } else if (hasPadding && elementMemoryLayout.isContiguous) {
-    longestContiguousPrefix = elementMemoryLayout.size;
   } else {
     longestContiguousPrefix = elementMemoryLayout.longestContiguousPrefix;
   }
@@ -218,8 +216,6 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   let longestContiguousPrefix: number;
   if (isContiguous) {
     longestContiguousPrefix = size;
-  } else if (hasPadding && elementMemoryLayout.isContiguous) {
-    longestContiguousPrefix = elementMemoryLayout.size;
   } else {
     longestContiguousPrefix = elementMemoryLayout.longestContiguousPrefix;
   }
