@@ -445,10 +445,9 @@ type BlockScopeLayer = {
 type ScopeLayer = FunctionScopeLayer | BlockScopeLayer;
 
 abstract class NameRegistryImpl implements NameRegistry {
-  abstract getUniqueVariant(base: string, global: boolean): string;
+  abstract getUniqueVariant(base: string): string;
 
   readonly #usedNames: Set<string>;
-  readonly #usedAllTimeBlockScopeNames: Set<string>;
   readonly #scopeStack: ScopeLayer[];
 
   constructor() {
@@ -456,7 +455,6 @@ abstract class NameRegistryImpl implements NameRegistry {
       ...bannedTokens,
       ...builtins,
     ]);
-    this.#usedAllTimeBlockScopeNames = new Set();
     this.#scopeStack = [];
   }
 
@@ -467,12 +465,11 @@ abstract class NameRegistryImpl implements NameRegistry {
 
   makeUnique(primer: string | undefined, global: boolean): string {
     const sanitizedPrimer = sanitizePrimer(primer);
-    const name = this.getUniqueVariant(sanitizedPrimer, global);
+    const name = this.getUniqueVariant(sanitizedPrimer);
 
     if (global) {
       this.#usedNames.add(name);
     } else {
-      this.#usedAllTimeBlockScopeNames.add(name);
       this.#usedBlockScopeNames?.add(name);
     }
 
@@ -493,18 +490,14 @@ abstract class NameRegistryImpl implements NameRegistry {
       isValidIdentifier(primer) && !this.#usedNames.has(primer) &&
       !this.#isUsedInBlocksBefore(primer)
     ) {
-      this.#usedAllTimeBlockScopeNames.add(primer);
       this.#usedBlockScopeNames?.add(primer);
       return primer;
     }
     return this.makeUnique(primer, false);
   }
 
-  isUsed(name: string, global: boolean): boolean {
-    const varyingCond = global
-      ? this.#usedAllTimeBlockScopeNames.has(name)
-      : this.#isUsedInBlocksBefore(name);
-    return this.#usedNames.has(name) || varyingCond;
+  isUsed(name: string): boolean {
+    return this.#usedNames.has(name) || this.#isUsedInBlocksBefore(name);
   }
 
   pushFunctionScope(): void {
@@ -545,9 +538,9 @@ abstract class NameRegistryImpl implements NameRegistry {
 export class RandomNameRegistry extends NameRegistryImpl {
   #lastUniqueId = 0;
 
-  getUniqueVariant(base: string, global: boolean): string {
+  getUniqueVariant(base: string): string {
     let name = `${base}_${this.#lastUniqueId++}`;
-    while (this.isUsed(name, global)) {
+    while (this.isUsed(name)) {
       name = `${base}_${this.#lastUniqueId++}`;
     }
     return name;
@@ -555,10 +548,10 @@ export class RandomNameRegistry extends NameRegistryImpl {
 }
 
 export class StrictNameRegistry extends NameRegistryImpl {
-  getUniqueVariant(base: string, global: boolean): string {
+  getUniqueVariant(base: string): string {
     let index = 0;
     let name = base;
-    while (this.isUsed(name, global)) {
+    while (this.isUsed(name)) {
       index++;
       name = `${base}_${index}`;
     }

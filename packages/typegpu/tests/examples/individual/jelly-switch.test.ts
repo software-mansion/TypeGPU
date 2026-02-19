@@ -43,10 +43,10 @@ describe('jelly switch example', () => {
 
       @group(0) @binding(0) var<uniform> randomUniform: vec2f;
 
-      var<private> seed_1: vec2f;
+      var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed_1 = value;
+        seed = value;
       }
 
       fn randSeed2(seed: vec2f) {

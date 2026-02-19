@@ -40,10 +40,10 @@ describe('uniformity test example', () => {
 
       @group(0) @binding(1) var<uniform> gridSizeUniform: f32;
 
-      var<private> seed_1: vec2f;
+      var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed_1 = value;
+        seed = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -51,11 +51,11 @@ describe('uniformity test example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
       fn randFloat01() -> f32 {
@@ -73,14 +73,14 @@ describe('uniformity test example', () => {
         return vec4f(vec3f(randFloat01()), 1f);
       }
 
-      var<private> seed_2: u32;
+      var<private> seed_1: u32;
 
       fn seed2_1(value: vec2f) {
-        seed_2 = u32(((value.x * 32768f) + (value.y * 1024f)));
+        seed_1 = u32(((value.x * 32768f) + (value.y * 1024f)));
       }
 
-      fn randSeed2_1(seed: vec2f) {
-        seed2_1(seed);
+      fn randSeed2_1(seed_1: vec2f) {
+        seed2_1(seed_1);
       }
 
       fn u32To01Float(value: u32) -> f32 {
@@ -91,8 +91,8 @@ describe('uniformity test example', () => {
       }
 
       fn sample_1() -> f32 {
-        seed_2 = ((seed_2 * 1664525u) + 1013904223u);
-        return u32To01Float(seed_2);
+        seed_1 = ((seed_1 * 1664525u) + 1013904223u);
+        return u32To01Float(seed_1);
       }
 
       fn randFloat01_1() -> f32 {

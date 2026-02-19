@@ -43,10 +43,10 @@ describe('clouds example', () => {
 
       @group(1) @binding(0) var<uniform> params: CloudsParams;
 
-      var<private> seed_1: vec2f;
+      var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed_1 = value;
+        seed = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -56,11 +56,11 @@ describe('clouds example', () => {
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
       fn randFloat01() -> f32 {

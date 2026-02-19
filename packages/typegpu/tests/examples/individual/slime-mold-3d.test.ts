@@ -19,10 +19,10 @@ describe('slime mold 3d example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      var<private> seed_2: vec2f;
+      var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed_2 = vec2f(value, 0f);
+        seed = vec2f(value, 0f);
       }
 
       fn randSeed(seed: f32) {
@@ -30,11 +30,11 @@ describe('slime mold 3d example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
-        seed_2.x = fract((cos(a) * 136.8168f));
-        seed_2.y = fract((cos(b) * 534.7645f));
-        return seed_2.y;
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
       fn randUniformExclusive() -> f32 {
@@ -126,10 +126,10 @@ describe('slime mold 3d example', () => {
         textureStore(newState, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
-      var<private> seed_2: vec2f;
+      var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed_2 = vec2f(value, 0f);
+        seed = vec2f(value, 0f);
       }
 
       fn randSeed(seed: f32) {
@@ -199,11 +199,11 @@ describe('slime mold 3d example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
-        seed_2.x = fract((cos(a) * 136.8168f));
-        seed_2.y = fract((cos(b) * 534.7645f));
-        return seed_2.y;
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
       fn randOnUnitSphere() -> vec3f {
@@ -318,10 +318,10 @@ describe('slime mold 3d example', () => {
         return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      var<private> seed_1: vec2f;
+      var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed_1 = value;
+        seed = value;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -355,11 +355,11 @@ describe('slime mold 3d example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
+        seed.x = fract((cos(a) * 136.8168f));
+        seed.y = fract((cos(b) * 534.7645f));
+        return seed.y;
       }
 
       fn randFloat01() -> f32 {

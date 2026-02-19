@@ -208,7 +208,7 @@ describe('tgsl parsing test example', () => {
         return s;
       }
 
-      @group(0) @binding(0) var<storage, read_write> result_1: i32;
+      @group(0) @binding(0) var<storage, read_write> result: i32;
 
       @compute @workgroup_size(1) fn computeRunTests() {
         var s = true;
@@ -218,10 +218,10 @@ describe('tgsl parsing test example', () => {
         s = (s && arrayAndStructConstructorsTest());
         s = (s && pointersTest());
         if (s) {
-          result_1 = 1i;
+          result = 1i;
         }
         else {
-          result_1 = 0i;
+          result = 0i;
         }
       }"
     `);
