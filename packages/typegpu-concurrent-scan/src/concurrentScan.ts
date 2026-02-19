@@ -24,7 +24,7 @@ const cache = new WeakMap<
   WeakMap<BinaryOp['operation'], PrefixScanComputer>
 >();
 
-class PrefixScanComputer {
+export class PrefixScanComputer {
   #scanPipeline?: TgpuComputePipeline;
   #reducePipeline?: TgpuComputePipeline;
   #opPipeline?: TgpuComputePipeline;
