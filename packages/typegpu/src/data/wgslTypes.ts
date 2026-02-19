@@ -1,4 +1,4 @@
-import { Operator } from 'tsover-runtime';
+import type { Operator } from 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
