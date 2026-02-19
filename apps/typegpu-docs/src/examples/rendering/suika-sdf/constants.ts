@@ -18,6 +18,8 @@ export const WALL_ROUNDNESS = 0.035;
 export const EDGE_WIDTH = 0.003;
 export const MIN_RADIUS = 0.001;
 export const GHOST_ALPHA = 0.45;
+export const SMOOTH_MIN_K = 32.0;
+export const COLOR_BLEND_K = 8.0;
 
 // Game logic
 export const MAX_FRUITS = 128;

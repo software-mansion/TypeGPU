@@ -2,6 +2,7 @@ import * as sdf from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
+  COLOR_BLEND_K,
   DROP_Y,
   EDGE_WIDTH,
   GHOST_ALPHA,
@@ -13,6 +14,7 @@ import {
   MIN_RADIUS,
   OFFSCREEN,
   PLAYFIELD_HALF_WIDTH,
+  SMOOTH_MIN_K,
   SPAWN_COOLDOWN,
   SPAWN_WEIGHT_TOTAL,
   SPAWN_WEIGHTS,
@@ -107,6 +109,14 @@ const sdfTexture = root['~unstable']
 sdfTexture.write(sdfAtlas);
 const sdfView = sdfTexture.createView(d.texture2dArray());
 
+const mergedFieldTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'rgba16float',
+  })
+  .$usage('sampled', 'render');
+const mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+
 const SdRect = d.struct({ center: d.vec2f, size: d.vec2f });
 const rectUniform = root.createUniform(
   d.arrayOf(SdRect, WALL_DEFS.length),
@@ -121,12 +131,16 @@ const SdCircle = d.struct({
   radius: d.f32,
   level: d.i32,
   angle: d.f32,
+  neighborCenter: d.vec2f,
+  neighborWeight: d.f32,
 });
 const INACTIVE_CIRCLE = {
   center: d.vec2f(OFFSCREEN, OFFSCREEN),
   radius: 0,
   level: 0,
   angle: 0,
+  neighborCenter: d.vec2f(OFFSCREEN, OFFSCREEN),
+  neighborWeight: 0,
 };
 
 const circleUniform = root.createUniform(
@@ -173,27 +187,31 @@ const sampleSdf = (
 
 const sampleSprite = (uv: d.v2f, level: number) => {
   'use gpu';
-  return std.textureSample(spriteView.$, linSampler.$, uv, level).xyz;
+  return std.textureSample(spriteView.$, linSampler.$, uv, level);
+};
+
+const sampleMergedField = (uv: d.v2f) => {
+  'use gpu';
+  return std.textureSample(mergedFieldView.$, linSampler.$, uv);
 };
 
 const evalFruits = (scenePos: d.v2f, activeCount: number) => {
   'use gpu';
-  let closestDist = d.f32(2e10);
-  let outColor = d.vec3f(0, 0, 0);
-  for (let i = d.u32(0); i < activeCount; i++) {
-    const circle = circleUniform.$[i];
-    const raw = scenePos.sub(circle.center).div(circle.radius * 2);
-    const localPos = rotate2d(raw, -circle.angle);
-    const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-    const uv = circleUv(clamped);
-    const dist = sampleSdf(uv, circle.radius, localPos, circle.level);
-    const spriteRgb = sampleSprite(uv, circle.level);
-    if (dist < closestDist) {
-      closestDist = dist;
-      outColor = d.vec3f(spriteRgb);
-    }
+  if (activeCount === 0) {
+    return SceneHit({ dist: d.f32(2e10), color: d.vec3f(0, 0, 0) });
   }
-  return SceneHit({ dist: closestDist, color: outColor });
+
+  const screenUv = d.vec2f(scenePos.x * 0.5 + 0.5, 0.5 - scenePos.y * 0.5);
+
+  const field = sampleMergedField(screenUv);
+  const dist = field.x;
+  const uv = d.vec2f(field.y, field.z);
+  const levelIdx = d.i32(field.w);
+  const sprite = sampleSprite(uv, levelIdx);
+  const centerColor = sampleSprite(d.vec2f(0.5, 0.5), levelIdx).xyz;
+  const spriteColor = std.mix(centerColor, sprite.xyz, sprite.w);
+
+  return SceneHit({ dist, color: d.vec3f(spriteColor) });
 };
 
 const evalWalls = (scenePos: d.v2f, hit: d.Infer<typeof SceneHit>) => {
@@ -229,10 +247,61 @@ const applyGhost = (
   const uv = circleUv(clamped);
   const dist = sampleSdf(uv, ghost.radius, localPos, ghost.level);
   const alpha = (std.clamp(-dist, 0, EDGE_WIDTH) / EDGE_WIDTH) * GHOST_ALPHA;
-  return std.mix(baseColor, sampleSprite(uv, ghost.level), alpha);
+  const sprite = sampleSprite(uv, ghost.level);
+  const centerColor = sampleSprite(d.vec2f(0.5, 0.5), ghost.level).xyz;
+  const spriteColor = std.mix(centerColor, sprite.xyz, sprite.w);
+  return std.mix(baseColor, spriteColor, alpha);
 };
 
 // Render pipeline
+
+const mergedFieldPipeline = root['~unstable'].createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const scenePos = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
+    const frame = frameUniform.$;
+
+    let bestDist = d.f32(2e10);
+    let bestLevel = d.f32(0);
+    let bestUv = d.vec2f(0.5, 0.5);
+
+    for (let level = d.i32(0); level < LEVEL_COUNT; level++) {
+      let smoothAccum = d.f32(0);
+      let uvAccum = d.vec2f(0, 0);
+      let uvWeight = d.f32(0);
+
+      for (let i = d.u32(0); i < frame.activeCount; i++) {
+        const circle = circleUniform.$[i];
+        if (circle.level !== level) {
+          continue;
+        }
+        const raw = scenePos.sub(circle.center).div(circle.radius * 2);
+        const localPos = rotate2d(raw, -circle.angle);
+        const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
+        const uvLocal = circleUv(clamped);
+        const dist = sampleSdf(uvLocal, circle.radius, localPos, circle.level);
+        const weight = std.exp(-SMOOTH_MIN_K * dist);
+
+        smoothAccum = smoothAccum + weight;
+        uvAccum = uvAccum.add(uvLocal.mul(weight));
+        uvWeight = uvWeight + weight;
+      }
+
+      const safeSmooth = std.max(smoothAccum, d.f32(1e-6));
+      const dist = -std.log(safeSmooth) / SMOOTH_MIN_K;
+      const blendedUv = uvAccum.div(std.max(uvWeight, d.f32(1e-6)));
+      if (uvWeight > d.f32(0) && dist < bestDist) {
+        bestDist = dist;
+        bestLevel = d.f32(level);
+        bestUv = d.vec2f(blendedUv);
+      }
+    }
+
+    return d.vec4f(bestDist, bestUv.x, bestUv.y, bestLevel);
+  },
+  targets: { format: 'rgba16float' },
+});
 
 const renderPipeline = root['~unstable'].createRenderPipeline({
   vertex: fullScreenTriangle,
@@ -369,15 +438,57 @@ function frame() {
       continue;
     }
     frameStates[i] = state;
-    if (drawCount < MAX_FRUITS) {
-      circleData[drawCount] = {
-        center: d.vec2f(state.pos.x, state.pos.y),
-        radius: f.radius,
-        level: f.level,
-        angle: state.angle,
-      };
-      drawCount++;
+  }
+
+  for (let i = 0; i < activeFruits.length; i++) {
+    const f = activeFruits[i];
+    const state = frameStates[i];
+    if (!state) {
+      continue;
     }
+    if (drawCount >= MAX_FRUITS) {
+      break;
+    }
+
+    let nearestIndex = -1;
+    let nearestDistSq = Infinity;
+    for (let j = 0; j < activeFruits.length; j++) {
+      if (i === j) {
+        continue;
+      }
+      const other = activeFruits[j];
+      if (other.dead || other.level !== f.level) {
+        continue;
+      }
+      const otherState = frameStates[j];
+      if (!otherState) {
+        continue;
+      }
+      const dx = state.pos.x - otherState.pos.x;
+      const dy = state.pos.y - otherState.pos.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < nearestDistSq) {
+        nearestDistSq = distSq;
+        nearestIndex = j;
+      }
+    }
+
+    const neighborState = nearestIndex >= 0 ? frameStates[nearestIndex] : null;
+    const neighborWeight = neighborState
+      ? Math.max(0, 1 - Math.sqrt(nearestDistSq) / (f.radius * 3.5))
+      : 0;
+
+    circleData[drawCount] = {
+      center: d.vec2f(state.pos.x, state.pos.y),
+      radius: f.radius,
+      level: f.level,
+      angle: state.angle,
+      neighborCenter: neighborState
+        ? d.vec2f(neighborState.pos.x, neighborState.pos.y)
+        : d.vec2f(OFFSCREEN, OFFSCREEN),
+      neighborWeight,
+    };
+    drawCount++;
   }
 
   circleUniform.write(circleData);
@@ -389,8 +500,19 @@ function frame() {
       radius: LEVEL_RADII[ghostLevel],
       level: ghostLevel,
       angle: 0,
+      neighborCenter: d.vec2f(OFFSCREEN, OFFSCREEN),
+      neighborWeight: 0,
     },
   });
+
+  mergedFieldPipeline
+    .withColorAttachment({
+      view: mergedFieldView,
+      loadOp: 'clear',
+      storeOp: 'store',
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    })
+    .draw(3);
 
   renderPipeline
     .withColorAttachment({
