@@ -1172,64 +1172,56 @@ ${this.ctx.pre}else ${alternate}`;
           '`for ... of ...` loops only support iterables stored in variables',
         );
       }
-
-      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
-      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
-      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
-      // so we can safely use `i`.
-      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
-      while (this.ctx.getById(index) !== null) {
-        index += 'i';
-      }
-
-      const elementSnippet = accessIndex(
-        iterableSnippet,
-        snip(index, u32, 'runtime'),
-      );
-      if (!elementSnippet) {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
-        );
-      }
-
-      const iterableDataType = iterableSnippet.dataType;
-      let elementCountSnippet: Snippet;
-      let elementType = elementSnippet.dataType;
-
-      if (elementType === UnknownData) {
-        throw new WgslTypeError(
-          stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
-        );
-      }
-
-      if (wgsl.isWgslArray(iterableDataType)) {
-        elementCountSnippet = iterableDataType.elementCount > 0
-          ? snip(
-            `${iterableDataType.elementCount}`,
-            u32,
-            'constant',
-          )
-          : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
-      } else if (wgsl.isVec(iterableDataType)) {
-        elementCountSnippet = snip(
-          `${Number(iterableDataType.type.match(/\d/))}`,
-          u32,
-          'constant',
-        );
-      } else {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
-        );
-      }
-
-      if (loopVar[0] !== NODE.const) {
-        throw new WgslTypeError(
-          'Only `for (const ... of ... )` loops are supported',
-        );
-      }
-
       try {
         this.ctx.pushBlockScope();
+
+        const index = this.ctx.makeNameValid('i');
+
+        const elementSnippet = accessIndex(
+          iterableSnippet,
+          snip(index, u32, 'runtime'),
+        );
+        if (!elementSnippet) {
+          throw new WgslTypeError(
+            '`for ... of ...` loops only support array or vector iterables',
+          );
+        }
+
+        const iterableDataType = iterableSnippet.dataType;
+        let elementCountSnippet: Snippet;
+        let elementType = elementSnippet.dataType;
+
+        if (elementType === UnknownData) {
+          throw new WgslTypeError(
+            stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+          );
+        }
+
+        if (wgsl.isWgslArray(iterableDataType)) {
+          elementCountSnippet = iterableDataType.elementCount > 0
+            ? snip(
+              `${iterableDataType.elementCount}`,
+              u32,
+              'constant',
+            )
+            : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
+        } else if (wgsl.isVec(iterableDataType)) {
+          elementCountSnippet = snip(
+            `${Number(iterableDataType.type.match(/\d/))}`,
+            u32,
+            'constant',
+          );
+        } else {
+          throw new WgslTypeError(
+            '`for ... of ...` loops only support array or vector iterables',
+          );
+        }
+
+        if (loopVar[0] !== NODE.const) {
+          throw new WgslTypeError(
+            'Only `for (const ... of ... )` loops are supported',
+          );
+        }
 
         // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
         // an implicit pointer to it
