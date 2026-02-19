@@ -874,7 +874,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('handles "for ... of ..." internal index variable when "i" is buffer used later', ({ root }) => {
+  it('handles "for ... of ..." internal index variable when "i" is the buffer used later', ({ root }) => {
     const i = root.createUniform(d.u32, 7);
     const f = () => {
       'use gpu';
@@ -899,7 +899,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('handles "for ... of ..." internal index variable when "i" is buffer returned from accessor', ({ root }) => {
+  it('handles "for ... of ..." internal index variable when "i" is the buffer returned from accessor', ({ root }) => {
     const i = root.createUniform(d.u32, 7);
 
     const acc = tgpu.accessor(d.u32, () => i.$);
@@ -927,22 +927,24 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('handles "for ... of ..." internal index variable when "i" is loop variable', ({ root }) => {
+  it('handles "for ... of ..." internal index variable when "i" is the loop variable', () => {
     const f = () => {
       'use gpu';
       const arr = [1, 2, 3];
+      let res = 0;
       for (const i of arr) {
-        continue;
+        res += i;
       }
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
+        var res = 0;
         for (var i = 0u; i < 3; i++) {
           let i_1 = arr[i];
           {
-            continue;
+            res += i_1;
           }
         }
       }"
