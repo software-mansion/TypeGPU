@@ -38,7 +38,7 @@ describe('xor dev runner example', () => {
       @group(0) @binding(0) var<uniform> colorUniform: vec3f;
 
       struct Camera {
-        position: vec4f,
+        pos: vec4f,
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
@@ -57,8 +57,8 @@ describe('xor dev runner example', () => {
         let camera = (&cameraUniform);
         var farView = ((*camera).projectionInverse * vec4f(uv, 1f, 1f));
         var farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
-        var direction = normalize((farWorld.xyz - (*camera).position.xyz));
-        return Ray((*camera).position, vec4f(direction, 0f));
+        var direction = normalize((farWorld.xyz - (*camera).pos.xyz));
+        return Ray((*camera).pos, vec4f(direction, 0f));
       }
 
       @group(0) @binding(2) var<uniform> controlsOffsetUniform: f32;

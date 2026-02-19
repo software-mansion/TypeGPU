@@ -2,7 +2,7 @@ import * as m from 'wgpu-matrix';
 import { d, std } from 'typegpu';
 
 export const Camera = d.struct({
-  position: d.vec4f,
+  pos: d.vec4f,
   targetPos: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
@@ -61,7 +61,7 @@ export function setupFirstPersonCamera(
     const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
 
     callback(Camera({
-      position: d.vec4f(position, 1),
+      pos: d.vec4f(position, 1),
       targetPos: d.vec4f(target, 1),
       view,
       projection,
@@ -125,7 +125,6 @@ export function setupFirstPersonCamera(
       options.speed.x,
       options.speed.z,
     );
-    console.log(moveSpeed);
   }, { passive: false });
 
   function cleanupCamera() {
@@ -175,9 +174,9 @@ export function setupFirstPersonCamera(
 
 function calculateView(position: d.v3f, target: d.v3f) {
   return m.mat4.lookAt(
-    d.vec4f(position, 1),
-    d.vec4f(target, 1),
-    d.vec4f(0, 1, 0, 1),
+    position,
+    target,
+    d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
 }

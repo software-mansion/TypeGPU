@@ -72,8 +72,8 @@ const getRayForUV = (uv: d.v2f) => {
   const farWorld = camera.viewInverse.mul(
     d.vec4f(farView.xyz.div(farView.w), 1),
   );
-  const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
-  return Ray({ origin: camera.position, direction: d.vec4f(direction, 0) });
+  const direction = std.normalize(farWorld.xyz.sub(camera.pos.xyz));
+  return Ray({ origin: camera.pos, direction: d.vec4f(direction, 0) });
 };
 
 // Roots are your GPU handle, and can be used to allocate memory, dispatch
@@ -85,7 +85,6 @@ const autoMoveOffsetUniform = root.createUniform(d.vec3f);
 const controlsOffsetUniform = root.createUniform(d.f32);
 const colorUniform = root.createUniform(d.vec3f);
 const shiftUniform = root.createUniform(d.f32);
-const aspectRatioUniform = root.createUniform(d.f32);
 
 const fragmentMain = tgpu['~unstable'].fragmentFn({
   in: { uv: d.vec2f },
@@ -164,7 +163,6 @@ function draw() {
     return;
   }
 
-  aspectRatioUniform.write(canvas.clientWidth / canvas.clientHeight);
   if (autoMove && !document.pointerLockElement) {
     autoMoveOffset = autoMoveOffset.add(d.vec3f(0.01, 0, 0.01));
     autoMoveOffsetUniform.write(autoMoveOffset);
