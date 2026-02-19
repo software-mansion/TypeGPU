@@ -86,18 +86,6 @@ export interface WgslComparisonSamplerProps {
   maxAnisotropy?: number;
 }
 
-const SamplerPropsDefaults: WgslSamplerProps = {
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
-  addressModeW: 'clamp-to-edge',
-  magFilter: 'nearest',
-  minFilter: 'nearest',
-  mipmapFilter: 'nearest',
-  lodMinClamp: 0,
-  lodMaxClamp: 32,
-  maxAnisotropy: 1,
-};
-
 export interface sampler {
   [$internal]: true;
   type: 'sampler';
@@ -105,20 +93,20 @@ export interface sampler {
 
 export function sampler(): WgslSampler {
   return {
-    [$internal]: true,
+    [$internal]: {},
     type: 'sampler',
     [$repr]: undefined as unknown as sampler,
   };
 }
 
 export interface comparisonSampler {
-  [$internal]: true;
+  [$internal]: Record<string, never>;
   type: 'sampler_comparison';
 }
 
 export function comparisonSampler(): WgslComparisonSampler {
   return {
-    [$internal]: true,
+    [$internal]: {},
     type: 'sampler_comparison',
     [$repr]: undefined as unknown as comparisonSampler,
   };

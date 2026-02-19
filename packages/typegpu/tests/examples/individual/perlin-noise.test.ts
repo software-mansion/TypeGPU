@@ -33,7 +33,7 @@ describe('perlin noise example', () => {
         seed3(seed);
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -42,16 +42,16 @@ describe('perlin noise example', () => {
       }
 
       fn randOnUnitSphere() -> vec3f {
-        let z = ((2f * item()) - 1f);
+        let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * item());
+        let theta = (6.283185307179586f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
       }
 
       fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3 * vec3f(pos)));
+        randSeed3((1e-3f * vec3f(pos)));
         return randOnUnitSphere();
       }
 
@@ -111,7 +111,7 @@ describe('perlin noise example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
+        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -141,13 +141,13 @@ describe('perlin noise example', () => {
 
       @group(0) @binding(2) var<uniform> sharpness: f32;
 
-      struct mainFragment_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        var uv = (gridSize * input.uv);
-        let n = sample(vec3f(uv, time));
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        var suv = (gridSize * _arg_0.uv);
+        let n = sample(vec3f(suv, time));
         let sharp = exponentialSharpen(n, sharpness);
         let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);

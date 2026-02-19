@@ -29,7 +29,7 @@ describe('slime mold example', () => {
         seed_1(seed);
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -38,8 +38,8 @@ describe('slime mold example', () => {
       }
 
       fn randInUnitCircle() -> vec2f {
-        let radius = sqrt(item());
-        let angle = (item() * 6.283185307179586f);
+        let radius = sqrt(sample());
+        let angle = (sample() * 6.283185307179586f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -98,7 +98,7 @@ describe('slime mold example', () => {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(offsetX, offsetY));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).xyz;
+              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum = (sum + color);
               count = (count + 1f);
             }
@@ -128,7 +128,7 @@ describe('slime mold example', () => {
 
       @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -137,7 +137,7 @@ describe('slime mold example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       struct Params {
@@ -157,7 +157,7 @@ describe('slime mold example', () => {
         var dims = textureDimensions(oldState);
         var dimsf = vec2f(dims);
         var sensorPosInt = vec2u(clamp(sensorPos, vec2f(), (dimsf - vec2f(1))));
-        var color = textureLoad(oldState, sensorPosInt).xyz;
+        var color = textureLoad(oldState, sensorPosInt).rgb;
         return ((color.x + color.y) + color.z);
       }
 
@@ -213,7 +213,7 @@ describe('slime mold example', () => {
           angle += ((random - 0.5f) * 0.1f);
         }
         agentsData[_arg_0.gid.x] = Agent(newPos, angle);
-        var oldState_1 = textureLoad(oldState, vec2u(newPos)).xyz;
+        var oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
         var newState = (oldState_1 + vec3f(1));
         textureStore(newState_1, vec2u(newPos), vec4f(newState, 1f));
       }

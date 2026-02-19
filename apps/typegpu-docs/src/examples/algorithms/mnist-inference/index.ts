@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import {
   ioLayout,
   type LayerData,
@@ -8,6 +6,7 @@ import {
   weightsBiasesLayout,
 } from './data.ts';
 import { downloadLayers } from './helpers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
 
@@ -20,7 +19,7 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
 
-const canvasData = new Array<number>(SIZE ** 2).fill(0);
+const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
 
 // Shaders
 
@@ -92,9 +91,9 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
 });
 
 const pipelines = {
-  default: root['~unstable'].withCompute(defaultCompute).createPipeline(),
+  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].withCompute(subgroupCompute).createPipeline()
+    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 
@@ -314,7 +313,7 @@ function centerImage(data: number[]) {
   const offsetX = Math.round(SIZE / 2 - x);
   const offsetY = Math.round(SIZE / 2 - y);
 
-  const newData = new Array(SIZE * SIZE).fill(0);
+  const newData = Array.from({ length: (SIZE * SIZE) }, () => 0);
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const index = i * SIZE + j;
@@ -328,6 +327,11 @@ function centerImage(data: number[]) {
   return newData;
 }
 
+const interpolate = (start: number, end: number, steps: number) => {
+  const step = (end - start) / steps;
+  return Array.from({ length: steps + 1 }, (_, i) => start + step * i);
+};
+
 async function handleDrawing(x: number, y: number): Promise<void> {
   if (!uiState.lastPos) {
     uiState.lastPos = { x, y };
@@ -338,11 +342,6 @@ async function handleDrawing(x: number, y: number): Promise<void> {
   if (x === uiState.lastPos.x && y === uiState.lastPos.y) {
     return;
   }
-
-  const interpolate = (start: number, end: number, steps: number) => {
-    const step = (end - start) / steps;
-    return Array.from({ length: steps + 1 }, (_, i) => start + step * i);
-  };
 
   const steps = Math.max(
     Math.abs(x - uiState.lastPos.x),
@@ -411,7 +410,7 @@ canvas.addEventListener('touchmove', (event) => {
   handleDrawing(x, y);
 }, { passive: false });
 
-export const controls = {
+export const controls = defineControls({
   Reset: {
     onButtonClick: resetDrawing,
   },
@@ -428,7 +427,7 @@ export const controls = {
         .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

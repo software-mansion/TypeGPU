@@ -1,7 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as p from './params.ts';
 import {
   ModelVertexInput,
@@ -86,6 +84,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
@@ -95,7 +94,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     layout.$.sampler,
     input.textureUV,
   );
-  const textureColor = textureColorWithAlpha.xyz;
+  const textureColor = textureColorWithAlpha.rgb;
 
   const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
@@ -126,8 +125,7 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
 
   let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {
-    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
-      3;
+    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
     const hsv = rgbToHsv(desaturatedColor);
     hsv.y += desaturationFactor / 2;
     hsv.z += desaturationFactor;
@@ -143,5 +141,5 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);
   }
 
-  return d.vec4f(foggedColor.xyz, 1);
+  return d.vec4f(foggedColor, 1);
 });

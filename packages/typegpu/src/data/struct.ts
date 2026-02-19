@@ -1,7 +1,6 @@
 import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import type { AnyData } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
@@ -26,7 +25,7 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
   return INTERNAL_createStruct(props, false);
 }
 
-export function abstruct<TProps extends Record<string, BaseData>>(
+export function abstruct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
   return INTERNAL_createStruct(props, true);
@@ -36,7 +35,7 @@ export function abstruct<TProps extends Record<string, BaseData>>(
 // Implementation
 // --------------
 
-function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
+export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
@@ -54,7 +53,7 @@ function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
     Object.fromEntries(
       Object.entries(props).map(([key, schema]) => [
         key,
-        schemaCallWrapper(schema as AnyData, instanceProps?.[key]),
+        schemaCallWrapper(schema, instanceProps?.[key]),
       ]),
     );
 

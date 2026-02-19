@@ -1,7 +1,6 @@
 import { describe, expect, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
@@ -193,7 +192,7 @@ describe('TgpuRoot', () => {
     const mainVertexUsing = tgpu['~unstable'].vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
-      layout.bound.foo.value;
+      layout.$.foo;
       return {
         pos: d.vec4f(),
       };
@@ -215,10 +214,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexNotUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexNotUsing,
+        fragment: mainFragment,
+      });
 
       root.beginRenderPass(
         {
@@ -242,10 +241,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexUsing,
+        fragment: mainFragment,
+      });
 
       root.beginRenderPass(
         {
@@ -270,11 +269,10 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root
-        .withVertex(mainVertexUsing, {})
-        .withFragment(mainFragment, {})
-        .createPipeline()
-        .with(group);
+      const pipeline = root.createRenderPipeline({
+        vertex: mainVertexUsing,
+        fragment: mainFragment,
+      }).with(group);
 
       root.beginRenderPass(
         {

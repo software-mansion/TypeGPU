@@ -35,7 +35,7 @@ describe('jump flood (voronoi) example', () => {
         seed2(seed);
       }
 
-      fn item() -> f32 {
+      fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
         let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
         seed.x = fract((cos(a) * 136.8168f));
@@ -44,7 +44,7 @@ describe('jump flood (voronoi) example', () => {
       }
 
       fn randFloat01() -> f32 {
-        return item();
+        return sample();
       }
 
       @group(0) @binding(2) var<uniform> seedThresholdUniform: f32;
@@ -57,7 +57,7 @@ describe('jump flood (voronoi) example', () => {
         let randomVal = randFloat01();
         let isSeed = (randomVal >= seedThresholdUniform);
         let paletteColor = palette[u32(floor((randFloat01() * 4f)))];
-        var variation = (vec3f((randFloat01() - 0.5f), (randFloat01() - 0.5f), (randFloat01() - 0.5f)) * 0.15);
+        var variation = (vec3f((randFloat01() - 0.5f), (randFloat01() - 0.5f), (randFloat01() - 0.5f)) * 0.15f);
         var color = select(vec4f(), vec4f(saturate((paletteColor + variation)), 1f), isSeed);
         var coord = select(vec2f(-1), (vec2f(f32(x), f32(y)) / vec2f(size)), isSeed);
         textureStore(writeView, vec2i(i32(x), i32(y)), 0, color);
@@ -118,7 +118,7 @@ describe('jump flood (voronoi) example', () => {
         var dims = textureDimensions(tex);
         var samplePos = (pos + offset);
         let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
-        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1)));
+        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
         var loadedColor = textureLoad(tex, safePos, 0);
         var loadedCoord = textureLoad(tex, safePos, 1).xy;
         return SampleResult(select(loadedColor, vec4f(), outOfBounds), select(loadedCoord, vec2f(-1), outOfBounds));

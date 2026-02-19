@@ -1,22 +1,14 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-});
 
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
@@ -95,7 +87,7 @@ const computeFn = tgpu['~unstable'].computeFn({
         sampler.$,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
-      ).xyz;
+      ).rgb;
     }
   }
 
@@ -158,14 +150,15 @@ const ioBindGroups = [
   }),
 ];
 
-const computePipeline = root['~unstable']
-  .withCompute(computeFn)
-  .createPipeline();
+const computePipeline = root['~unstable'].createComputePipeline({
+  compute: computeFn,
+});
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(renderFragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root['~unstable'].createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: renderFragment,
+  targets: { format: presentationFormat },
+});
 
 function render() {
   settingsUniform.write({
@@ -194,13 +187,13 @@ render();
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   'filter size': {
     initial: 3,
     min: 3,
     max: 41,
     step: 2,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.filterDim = newValue;
       render();
     },
@@ -211,12 +204,12 @@ export const controls = {
     min: 1,
     max: 10,
     step: 1,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.iterations = newValue;
       render();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

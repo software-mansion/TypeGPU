@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
+import tgpu, { d, std } from 'typegpu';
 import {
   CLOUD_AMPLITUDE,
   CLOUD_BRIGHT,
@@ -60,11 +58,11 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
 
         const contrib = std.mul(
           d.vec4f(lit, 1),
-          cloudDensity * (LIGHT_ABSORPTION - accum.w),
+          cloudDensity * (LIGHT_ABSORPTION - accum.a),
         );
         accum = std.add(accum, contrib);
 
-        if (accum.w >= LIGHT_ABSORPTION - 0.001) {
+        if (accum.a >= LIGHT_ABSORPTION - 0.001) {
           break;
         }
       }

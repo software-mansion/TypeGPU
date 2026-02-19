@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
 import { PointLight } from './point-light.ts';
@@ -13,14 +10,13 @@ import {
   VertexData,
   vertexLayout,
 } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({ device, format: presentationFormat });
 
 const mainCamera = new Camera(root);
 mainCamera.position = d.vec3f(5, 5, -5);
@@ -336,7 +332,7 @@ const pipelineMain = root['~unstable']
   .createPipeline();
 
 const pipelinePreview = root['~unstable']
-  .withVertex(fullScreenTriangle)
+  .withVertex(common.fullScreenTriangle)
   .withFragment(previewFragment, { format: presentationFormat })
   .createPipeline();
 
@@ -597,13 +593,13 @@ canvas.addEventListener('touchmove', (e) => {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Light X': {
     initial: 4.5,
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         v,
         pointLight.position.y,
@@ -616,7 +612,7 @@ export const controls = {
     min: 0.5,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         pointLight.position.x,
         v,
@@ -629,7 +625,7 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         pointLight.position.x,
         pointLight.position.y,
@@ -639,13 +635,13 @@ export const controls = {
   },
   'Show Depth Cubemap': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       showDepthPreview = v;
     },
   },
   'Show Distance View': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       showDistanceView = v;
     },
   },
@@ -654,7 +650,7 @@ export const controls = {
     min: 1,
     max: 64,
     step: 1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ pcfSamples: v });
     },
   },
@@ -663,7 +659,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ diskRadius: v });
     },
   },
@@ -672,7 +668,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.0001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ normalBiasBase: v });
     },
   },
@@ -681,11 +677,11 @@ export const controls = {
     min: 0.0,
     max: 0.5,
     step: 0.0005,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ normalBiasSlope: v });
     },
   },
-};
+});
 
 export function onCleanup() {
   BoxGeometry.clearBuffers();

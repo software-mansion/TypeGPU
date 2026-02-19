@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { radiusOf } from './helpers.ts';
 import {
   cameraAccess,
@@ -89,7 +87,7 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
     filteringSamplerSlot.$,
     input.uv,
     input.sphereTextureIndex,
-  ).xyz;
+  ).rgb;
 
   const ambient = textureColor.mul(lightColor).mul(input.ambientLightFactor);
 
@@ -102,5 +100,5 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const litColor = ambient.add(diffuse);
 
-  return d.vec4f(litColor.xyz, 1);
+  return d.vec4f(litColor, 1);
 });

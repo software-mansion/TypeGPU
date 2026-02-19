@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { SIM_N } from './params.ts';
 
 export const renderLayout = tgpu.bindGroupLayout({
@@ -93,5 +91,5 @@ export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
     d.vec2f(distortedUV.x, 1.0 - distortedUV.y),
   );
 
-  return d.vec4f(outputColor.xyz, 1.0);
+  return d.vec4f(outputColor.rgb, 1.0);
 });

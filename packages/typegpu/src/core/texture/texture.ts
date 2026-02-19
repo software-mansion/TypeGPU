@@ -148,7 +148,7 @@ type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   sampleCount?: T['sampleCount'];
 }>;
 
-// biome-ignore lint/suspicious/noExplicitAny: we can't tame the validation otherwise
+// oxlint-disable-next-line typescript/no-explicit-any we can't tame the validation otherwise
 export interface TgpuTexture<TProps extends TextureProps = any>
   extends TgpuNamable {
   readonly [$internal]: TextureInternals;
@@ -203,6 +203,7 @@ export interface TgpuTextureView<
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+  readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
@@ -249,8 +250,6 @@ class TgpuTextureImpl<TProps extends TextureProps>
   usableAsRender = false;
 
   #formatInfo: TextureFormatInfo;
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: wdym, it is used 10 lines below
-  #byteSize: number | 'non-copyable';
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   #texture: GPUTexture | null = null;
@@ -264,13 +263,6 @@ class TgpuTextureImpl<TProps extends TextureProps>
 
     this.#branch = branch;
     this.#formatInfo = getTextureFormatInfo(format);
-    const texelSize = this.#formatInfo.texelSize;
-    this.#byteSize = texelSize === 'non-copyable'
-      ? 'non-copyable'
-      : (props.size[0] as number) *
-        (props.size[1] ?? 1) *
-        (props.size[2] ?? 1) *
-        texelSize;
 
     this[$internal] = {
       unwrap: () => {
@@ -557,6 +549,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
     this.#branch.device.queue.submit([commandEncoder.finish()]);
   }
 
+  toString(): string {
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+  }
+
   get destroyed() {
     return this.#destroyed;
   }
@@ -652,6 +648,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  get size(): number[] {
+    return this.#baseTexture.props.size;
   }
 
   toString() {

@@ -5,15 +5,11 @@
 import { randf } from '@typegpu/noise';
 import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {
-  TransformControls,
-  type TransformControlsMode,
-} from 'three/addons/controls/TransformControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -21,12 +17,7 @@ const scene = new THREE.Scene();
 
 // camera
 
-const camera = new THREE.PerspectiveCamera(
-  25,
-  1,
-  0.1,
-  100,
-);
+const camera = new THREE.PerspectiveCamera(25, 1, 0.1, 100);
 camera.position.set(3, 5, 8);
 
 // ambient light
@@ -100,26 +91,17 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   arrowHelper.scale.setScalar(0.325);
   reference.add(arrowHelper);
 
-  const ring = new THREE.Mesh(
-    helpersRingGeometry,
-    helpersMaterial,
-  );
+  const ring = new THREE.Mesh(helpersRingGeometry, helpersMaterial);
   ring.rotation.x = -Math.PI * 0.5;
   arrowHelper.add(ring);
 
-  const arrow = new THREE.Mesh(
-    helpersArrowGeometry,
-    helpersMaterial,
-  );
+  const arrow = new THREE.Mesh(helpersArrowGeometry, helpersMaterial);
   arrow.position.x = 1;
   arrow.position.z = 0.2;
   arrow.rotation.x = Math.PI * 0.5;
   arrowHelper.add(arrow);
 
-  const attractorControls = new TransformControls(
-    camera,
-    renderer.domElement,
-  );
+  const attractorControls = new TransformControls(camera, renderer.domElement);
 
   attractorControls.mode = 'translate';
   attractorControls.size = 0.5;
@@ -127,19 +109,14 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   attractorControls.enabled = true;
   scene.add(attractorControls.getHelper());
 
-  attractorControls.addEventListener(
-    'dragging-changed',
-    (event) => {
-      orbitControls.enabled = !event.value;
-    },
-  );
+  attractorControls.addEventListener('dragging-changed', (event) => {
+    orbitControls.enabled = !event.value;
+  });
 
   attractorControls.addEventListener('change', () => {
     position.copy(reference.position);
     orientation.copy(
-      new THREE.Vector3(0, 1, 0).applyQuaternion(
-        reference.quaternion,
-      ),
+      new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion),
     );
   });
 
@@ -170,7 +147,7 @@ const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 // typegpu accessors
 
-const comptimeRandom = tgpu['~unstable'].comptime(() => Math.random());
+const seed = Math.random();
 
 const velocityBufferAttributeTA = t3.fromTSL(
   velocityBuffer.node.toAttribute(),
@@ -193,9 +170,9 @@ const sphericalToVec3 = (phi: number, theta: number) => {
 const initCompute = t3.toTSL(() => {
   'use gpu';
   const instanceIndex = t3.instanceIndex.$;
-  randf.seed(instanceIndex / count + comptimeRandom());
+  randf.seed(instanceIndex / count + seed);
 
-  const basePosition = d.vec3f(randf.sample(), randf.sample(), randf.sample())
+  const basePosition = randf.inUnitCube()
     .sub(0.5)
     .mul(d.vec3f(5, 0.2, 5));
   positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
@@ -213,7 +190,7 @@ reset();
 
 const getParticleMassMultiplier = () => {
   'use gpu';
-  randf.seed(t3.instanceIndex.$ / count + comptimeRandom());
+  randf.seed(t3.instanceIndex.$ / count + seed);
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
   const base = 0.25 + randf.sample() * 3 / 4;
   return base;
@@ -324,15 +301,11 @@ async function animate() {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Controls Mode': {
     initial: 'translate',
-    options: [
-      'translate',
-      'rotate',
-      'none',
-    ],
-    onSelectChange: (value: string) => {
+    options: ['translate', 'rotate', 'none'],
+    onSelectChange: (value) => {
       for (const { controls } of attractorsHelpers) {
         if (value === 'none') {
           controls.getHelper().visible = false;
@@ -340,14 +313,14 @@ export const controls = {
         } else {
           controls.getHelper().visible = true;
           controls.enabled = true;
-          controls.setMode(value as TransformControlsMode);
+          controls.setMode(value);
         }
       }
     },
   },
   'Arrow visible': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       for (const { arrow } of attractorsHelpers) {
         arrow.visible = value;
       }
@@ -358,7 +331,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       attractorMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -367,7 +340,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       particleGlobalMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -376,7 +349,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       maxSpeed.node.value = newValue;
     },
   },
@@ -385,7 +358,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       velocityDamping.node.value = newValue;
     },
   },
@@ -394,7 +367,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spinningStrength.node.value = newValue;
     },
   },
@@ -403,7 +376,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       scale.value = newValue;
     },
   },
@@ -412,26 +385,34 @@ export const controls = {
     min: 0,
     max: 20,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       boundHalfExtent.node.value = newValue;
     },
   },
   'Color A': {
-    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(
+      colorA.node.value.r,
+      colorA.node.value.g,
+      colorA.node.value.b,
+    ),
+    onColorChange: (newValue) => {
       colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(
+      colorB.node.value.r,
+      colorB.node.value.g,
+      colorB.node.value.b,
+    ),
+    onColorChange: (newValue) => {
       colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Reset Particles': {
     onButtonClick: reset,
   },
-};
+});
 
 export function onCleanup() {
   observer.disconnect();

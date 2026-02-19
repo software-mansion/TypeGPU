@@ -1,9 +1,9 @@
 import tgpu, {
+  d,
   type SampledFlag,
   type StorageFlag,
   type TgpuTexture,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 
 export const VisualizationParams = d.struct({
   showInside: d.u32,
@@ -21,7 +21,7 @@ export const SampleResult = d.struct({
   outside: d.vec2f,
 });
 
-export const paramsAccessor = tgpu['~unstable'].accessor(VisualizationParams);
+export const paramsAccess = tgpu.accessor(VisualizationParams);
 
 export const distSampleLayout = tgpu.bindGroupLayout({
   distTexture: { texture: d.texture2d() },
