@@ -176,13 +176,13 @@ const sampleSprite = (uv: d.v2f, level: number) => {
   return std.textureSample(spriteView.$, linSampler.$, uv, level).xyz;
 };
 
-const evalFruits = (ndc: d.v2f, activeCount: number) => {
+const evalFruits = (scenePos: d.v2f, activeCount: number) => {
   'use gpu';
   let closestDist = d.f32(2e10);
   let outColor = d.vec3f(0, 0, 0);
   for (let i = d.u32(0); i < activeCount; i++) {
     const circle = circleUniform.$[i];
-    const raw = ndc.sub(circle.center).div(circle.radius * 2);
+    const raw = scenePos.sub(circle.center).div(circle.radius * 2);
     const localPos = rotate2d(raw, -circle.angle);
     const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
     const uv = circleUv(clamped);
@@ -196,19 +196,19 @@ const evalFruits = (ndc: d.v2f, activeCount: number) => {
   return SceneHit({ dist: closestDist, color: outColor });
 };
 
-const evalWalls = (ndc: d.v2f, hit: d.Infer<typeof SceneHit>) => {
+const evalWalls = (scenePos: d.v2f, hit: d.Infer<typeof SceneHit>) => {
   'use gpu';
   let closestDist = hit.dist;
   let outColor = d.vec3f(hit.color);
   for (const rect of rectUniform.$) {
     const dist = sdf.sdRoundedBox2d(
-      ndc.sub(rect.center),
+      scenePos.sub(rect.center),
       rect.size.mul(0.5),
       WALL_ROUNDNESS,
     );
     if (dist < closestDist) {
       closestDist = dist;
-      outColor = d.vec3f(wallColor(ndc.sub(rect.center), dist));
+      outColor = d.vec3f(wallColor(scenePos.sub(rect.center), dist));
     }
   }
   return SceneHit({ dist: closestDist, color: outColor });
@@ -217,13 +217,13 @@ const evalWalls = (ndc: d.v2f, hit: d.Infer<typeof SceneHit>) => {
 const applyGhost = (
   baseColor: d.v3f,
   ghost: d.Infer<typeof SdCircle>,
-  ndc: d.v2f,
+  scenePos: d.v2f,
 ) => {
   'use gpu';
   if (ghost.radius <= MIN_RADIUS) {
     return d.vec3f(baseColor);
   }
-  const raw = ndc.sub(ghost.center).div(ghost.radius * 2);
+  const raw = scenePos.sub(ghost.center).div(ghost.radius * 2);
   const localPos = rotate2d(raw, -ghost.angle);
   const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
   const uv = circleUv(clamped);
@@ -238,13 +238,13 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
-    const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
+    const scenePos = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
     const frame = frameUniform.$;
-    const bgColor = skyColor(uv, ndc, frame.time);
-    const hit = evalWalls(ndc, evalFruits(ndc, frame.activeCount));
+    const bgColor = skyColor(uv, scenePos, frame.time);
+    const hit = evalWalls(scenePos, evalFruits(scenePos, frame.activeCount));
     const alpha = std.clamp(-hit.dist, 0, EDGE_WIDTH) / EDGE_WIDTH;
     const sceneColor = std.mix(bgColor, hit.color, alpha);
-    return d.vec4f(applyGhost(sceneColor, frame.ghostCircle, ndc), 1);
+    return d.vec4f(applyGhost(sceneColor, frame.ghostCircle, scenePos), 1);
   },
   targets: { format: presentationFormat },
 });
@@ -253,8 +253,8 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
 
 canvas.addEventListener('pointermove', (e) => {
   const rect = canvas.getBoundingClientRect();
-  const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  ghostX = clampSpawnX(ndcX, LEVEL_RADII[ghostLevel]);
+  const sceneX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
 });
 
 canvas.addEventListener('click', () => {
