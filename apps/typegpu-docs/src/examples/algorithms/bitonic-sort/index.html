@@ -1,0 +1,48 @@
+<canvas></canvas>
+<div id="sort-overlay" hidden>
+  <div id="sort-spinner"></div>
+  <span id="sort-status"></span>
+</div>
+<style>
+  #sort-overlay {
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    backdrop-filter: blur(8px);
+    background: rgba(23, 23, 36, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  #sort-overlay:not([hidden]) {
+    display: flex;
+  }
+
+  #sort-overlay.visible {
+    opacity: 1;
+  }
+
+  #sort-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #2e295f;
+    border-top-color: #6453d2;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  #sort-status {
+    color: #c3c4f1;
+    font-size: 0.875rem;
+    font-family: 'Aeonik', sans-serif;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
