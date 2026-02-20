@@ -9,14 +9,14 @@ export function connectTargetsToShader(
   fragmentOut: BaseData,
   targets: AnyFragmentTargets,
 ): (GPUColorTargetState | null)[] {
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  let presentationFormat: GPUTextureFormat | undefined;
 
   if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
     return [null];
   }
 
-  const result: GPUColorTargetState[] = [];
   if (isWgslStruct(fragmentOut)) {
+    const result: GPUColorTargetState[] = [];
     for (const key of Object.keys(fragmentOut.propTypes)) {
       const outputValue = fragmentOut.propTypes[key];
 
@@ -30,14 +30,17 @@ export function connectTargetsToShader(
 
       result.push({
         ...matchingTarget,
-        format: matchingTarget?.format ?? presentationFormat,
+        format: matchingTarget?.format ??
+          (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
       });
     }
+    return result;
   }
 
   const singleTarget = targets as TgpuColorTargetState;
   return [{
     ...singleTarget,
-    format: singleTarget?.format ?? presentationFormat,
+    format: singleTarget?.format ??
+      (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
   }];
 }
