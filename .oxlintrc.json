@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["eslint", "typescript", "import", "unicorn", "oxc"],
+  "jsPlugins": ["eslint-plugin-typegpu"],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn"

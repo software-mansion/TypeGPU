@@ -68,6 +68,9 @@ importers:
       dpdm:
         specifier: ^3.14.0
         version: 3.14.0
+      eslint-plugin-typegpu:
+        specifier: workspace:*
+        version: link:packages/eslint-plugin
       jiti:
         specifier: catalog:build
         version: 2.6.1
