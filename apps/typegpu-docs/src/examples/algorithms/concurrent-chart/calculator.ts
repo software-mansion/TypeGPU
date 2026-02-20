@@ -1,7 +1,6 @@
 import { initCache, prefixScan } from '@typegpu/concurrent-scan';
-import * as d from 'typegpu/data';
 import type { TgpuRoot } from 'typegpu';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 type SumResult = {
   success: boolean;
