@@ -169,9 +169,9 @@ describe('gravity example', () => {
             let dist = max((radiusOf(current) + radiusOf((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
             var direction = normalize(((*other).position - current.position));
-            current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
+            current.velocity += ((direction * (gravityForce / current.mass)) * dt);
           }
-          current.position = (current.position + (current.velocity * dt));
+          current.position += (current.velocity * dt);
         }
         outState[currentId] = current;
       }
@@ -294,8 +294,7 @@ describe('gravity example', () => {
         var lightDirection = normalize((lightSource - input.worldPosition));
         let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
-        var litColor = (ambient + diffuse);
-        return vec4f(litColor, 1f);
+        return vec4f((ambient + diffuse), 1f);
       }"
     `);
   });

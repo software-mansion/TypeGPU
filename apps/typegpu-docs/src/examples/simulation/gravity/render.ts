@@ -20,13 +20,11 @@ export const skyBoxVertex = tgpu.vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewPos = std.mul(cameraAccess.$.view, d.vec4f(input.position, 0)).xyz;
+  'use gpu';
+  const viewPos = (cameraAccess.$.view * d.vec4f(input.position, 0)).xyz;
 
   return {
-    pos: std.mul(
-      cameraAccess.$.projection,
-      d.vec4f(viewPos, 1),
-    ),
+    pos: cameraAccess.$.projection * d.vec4f(viewPos, 1),
     texCoord: input.position.xyz,
   };
 });
@@ -51,16 +49,15 @@ export const mainVertex = tgpu.vertexFn({
   },
   out: VertexOutput,
 })((input) => {
+  'use gpu';
   const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
-  const worldPosition = currentBody.position.add(
-    input.position.xyz.mul(radiusOf(currentBody)),
-  );
+  const worldPosition = currentBody.position +
+    input.position.xyz * radiusOf(currentBody);
 
   const camera = cameraAccess.$;
-  const positionOnCanvas = camera.projection
-    .mul(camera.view)
-    .mul(d.vec4f(worldPosition, 1));
+  const positionOnCanvas = camera.projection * camera.view *
+    d.vec4f(worldPosition, 1);
 
   return {
     position: positionOnCanvas,
@@ -77,6 +74,7 @@ export const mainFragment = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   if (input.destroyed === 1) {
     std.discard();
   }
@@ -89,16 +87,14 @@ export const mainFragment = tgpu.fragmentFn({
     input.sphereTextureIndex,
   ).rgb;
 
-  const ambient = textureColor.mul(lightColor).mul(input.ambientLightFactor);
+  const ambient = textureColor * lightColor * input.ambientLightFactor;
 
   const normal = input.normals;
   const lightDirection = std.normalize(
-    lightSourceAccess.$.sub(input.worldPosition),
+    lightSourceAccess.$ - input.worldPosition,
   );
   const cosTheta = std.dot(normal, lightDirection);
-  const diffuse = textureColor.mul(lightColor).mul(std.max(0, cosTheta));
+  const diffuse = textureColor * lightColor * std.max(0, cosTheta);
 
-  const litColor = ambient.add(diffuse);
-
-  return d.vec4f(litColor, 1);
+  return d.vec4f(ambient + diffuse, 1);
 });

@@ -101,7 +101,7 @@ describe('clouds example', () => {
 
       fn sampleDensityCheap(pos: vec3f) -> f32 {
         let noise = (noise3d((pos * 1.4f)) * 1f);
-        return clamp(((noise + 0.7f) - 0.5f), 0f, 1f);
+        return saturate(((noise + 0.7f) - 0.5f));
       }
 
       fn raymarch(rayOrigin: vec3f, rayDir: vec3f, sunDir: vec3f) -> vec4f {
@@ -112,18 +112,18 @@ describe('clouds example', () => {
         let stepSize = (1f / f32(maxSteps));
         var dist = (randFloat01() * stepSize);
         for (var i = 0; (i < maxSteps); i++) {
-          var samplePos = (rayOrigin + (rayDir * (dist * maxDepth)));
+          var samplePos = (rayOrigin + ((rayDir * dist) * maxDepth));
           let cloudDensity = sampleDensity(samplePos);
           if ((cloudDensity > 0f)) {
             var shadowPos = (samplePos + sunDir);
             let shadowDensity = sampleDensityCheap(shadowPos);
-            let shadow = clamp((cloudDensity - shadowDensity), 0f, 1f);
+            let shadow = saturate((cloudDensity - shadowDensity));
             let lightVal = mix(0.3f, 1f, shadow);
-            var light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + (vec3f(1, 0.699999988079071, 0.30000001192092896) * (lightVal * 0.9f)));
+            var light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + ((vec3f(1, 0.699999988079071, 0.30000001192092896) * lightVal) * 0.9f));
             var color = mix(vec3f(1), vec3f(0.20000000298023224), cloudDensity);
             var lit = (color * light);
-            var contrib = (vec4f(lit, 1f) * (cloudDensity * (0.88f - accum.a)));
-            accum = (accum + contrib);
+            var contrib = ((vec4f(lit, 1f) * cloudDensity) * (0.88f - accum.a));
+            accum += contrib;
             if ((accum.a >= 0.879f)) {
               break;
             }
@@ -133,11 +133,11 @@ describe('clouds example', () => {
         return accum;
       }
 
-      struct mainFragment_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         randSeed2((_arg_0.uv * params.time));
         let screenRes = (&resolutionUniform);
         let aspect = ((*screenRes).x / (*screenRes).y);
@@ -147,10 +147,10 @@ describe('clouds example', () => {
         let time = params.time;
         var rayOrigin = vec3f((sin((time * 0.6f)) * 0.5f), ((cos((time * 0.8f)) * 0.5f) - 1f), (time * 1f));
         var rayDir = normalize(vec3f(screenPos.x, screenPos.y, 1f));
-        let sunDot = clamp(dot(rayDir, sunDir), 0f, 1f);
+        let sunDot = saturate(dot(rayDir, sunDir));
         let sunGlow = pow(sunDot, 1.371742112482853f);
-        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * (rayDir.y * 0.35f)));
-        skyCol = (skyCol + (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow));
+        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - ((vec3f(1, 0.699999988079071, 0.4300000071525574) * rayDir.y) * 0.35f));
+        skyCol += (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow);
         var cloudCol = raymarch(rayOrigin, rayDir, sunDir);
         var finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);
         return vec4f(finalCol, 1f);

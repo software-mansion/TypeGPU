@@ -40,7 +40,7 @@ describe('boids example', () => {
       @group(1) @binding(1) var<storage, read_write> nextTrianglePos: array<TriangleData>;
 
       fn simulate(index: u32, _arg_1: u32, _arg_2: u32) {
-        var instanceInfo = currentTrianglePos[index];
+        var self_1 = currentTrianglePos[index];
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
@@ -49,46 +49,34 @@ describe('boids example', () => {
         for (var i = 0u; i < arrayLength((&currentTrianglePos)); i++) {
           let other = (&currentTrianglePos[i]);
           {
-            let dist = distance(instanceInfo.position, (*other).position);
+            let dist = distance(self_1.position, (*other).position);
             if ((dist < paramsBuffer.separationDistance)) {
-              separation = (separation + (instanceInfo.position - (*other).position));
+              separation += (self_1.position - (*other).position);
             }
             if ((dist < paramsBuffer.alignmentDistance)) {
-              alignment = (alignment + (*other).velocity);
+              alignment += (*other).velocity;
               alignmentCount++;
             }
             if ((dist < paramsBuffer.cohesionDistance)) {
-              cohesion = (cohesion + (*other).position);
+              cohesion += (*other).position;
               cohesionCount++;
             }
           }
         }
         if ((alignmentCount > 0i)) {
-          alignment = ((1f / f32(alignmentCount)) * alignment);
+          alignment /= f32(alignmentCount);
         }
         if ((cohesionCount > 0i)) {
-          cohesion = ((1f / f32(cohesionCount)) * cohesion);
-          cohesion = (cohesion - instanceInfo.position);
+          cohesion /= f32(cohesionCount);
+          cohesion -= self_1.position;
         }
-        var velocity = (paramsBuffer.separationStrength * separation);
-        velocity = (velocity + (paramsBuffer.alignmentStrength * alignment));
-        velocity = (velocity + (paramsBuffer.cohesionStrength * cohesion));
-        instanceInfo.velocity = (instanceInfo.velocity + velocity);
-        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0f, 0.01f) * normalize(instanceInfo.velocity));
-        if ((instanceInfo.position.x > 1.03f)) {
-          instanceInfo.position.x = -1.03f;
-        }
-        if ((instanceInfo.position.y > 1.03f)) {
-          instanceInfo.position.y = -1.03f;
-        }
-        if ((instanceInfo.position.x < -1.03f)) {
-          instanceInfo.position.x = 1.03f;
-        }
-        if ((instanceInfo.position.y < -1.03f)) {
-          instanceInfo.position.y = 1.03f;
-        }
-        instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
-        nextTrianglePos[index] = instanceInfo;
+        var velocity = (((paramsBuffer.separationStrength * separation) + (paramsBuffer.alignmentStrength * alignment)) + (paramsBuffer.cohesionStrength * cohesion));
+        self_1.velocity += velocity;
+        self_1.velocity = (clamp(length(self_1.velocity), 0f, 0.01f) * normalize(self_1.velocity));
+        self_1.position += self_1.velocity;
+        const domain = 2.06;
+        self_1.position = ((fract(((self_1.position / domain) + 0.5f)) - 0.5f) * domain);
+        nextTrianglePos[index] = self_1;
       }
 
       struct mainCompute_Input {

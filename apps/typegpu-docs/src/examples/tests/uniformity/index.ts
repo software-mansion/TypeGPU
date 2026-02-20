@@ -21,12 +21,13 @@ const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv = input.uv.add(1).div(2).mul(d.vec2f(canvasRatioUniform.$, 1));
-  const gridedUV = std.floor(uv.mul(gridSizeUniform.$));
+  'use gpu';
+  const uv = (input.uv + 1) / 2 * d.vec2f(canvasRatioUniform.$, 1);
+  const gridedUV = std.floor(uv * gridSizeUniform.$);
 
   randf.seed2(gridedUV);
 
-  return d.vec4f(d.vec3f(randf.sample()), 1.0);
+  return d.vec4f(d.vec3f(randf.sample()), 1);
 });
 
 const pipelineCache = new Map<PRNG, TgpuRenderPipeline<d.Vec4f>>();

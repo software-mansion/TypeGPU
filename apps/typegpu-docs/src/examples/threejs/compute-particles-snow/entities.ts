@@ -47,9 +47,8 @@ export const floor = (() => {
   floor.position.y = 0;
   floor.material.opacityNode = t3.toTSL(() => {
     'use gpu';
-    return std.saturate(
-      std.length(t3.fromTSL(TSL.positionLocal.xz, d.vec2f).$.mul(0.05)),
-    ) - 1;
+    const localPos = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
+    return std.saturate(std.length(localPos.xz * 0.05)) - 1;
   });
   floor.layers.disableAll();
   floor.layers.enable(1);

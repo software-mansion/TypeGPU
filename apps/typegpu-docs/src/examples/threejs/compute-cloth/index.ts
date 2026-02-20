@@ -237,7 +237,7 @@ function setupClothMesh(): THREE.Mesh {
   clothMaterial.colorNode = t3.toTSL(() => {
     'use gpu';
     const uv = t3.uv().$;
-    const pattern = checkerBoard(uv.mul(5));
+    const pattern = checkerBoard(uv * 5);
     return std.mix(patternUniforms.color1.$, patternUniforms.color2.$, pattern);
   });
 
