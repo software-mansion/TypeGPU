@@ -1,4 +1,10 @@
 import { defineConfig } from 'oxlint';
+import typegpu from 'eslint-plugin-typegpu';
+
+const typegpuPreset = typegpu.configs?.recommended;
+const typegpuRules = typegpuPreset && 'rules' in typegpuPreset
+  ? typegpuPreset.rules
+  : {};
 
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
@@ -8,7 +14,7 @@ export default defineConfig({
     suspicious: 'warn',
   },
   rules: {
-    'typegpu/integer-division': 'warn',
+    ...typegpuRules,
     'typescript/no-explicit-any': 'error',
     'typescript/no-non-null-assertion': 'error',
     'eslint/no-shadow': 'off',
