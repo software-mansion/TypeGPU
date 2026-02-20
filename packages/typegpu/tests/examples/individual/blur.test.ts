@@ -62,9 +62,9 @@ describe('blur example', () => {
           }
         }
         workgroupBarrier();
-        for (var r = 0; (r < 4i); r++) {
+        for (var r_1 = 0; (r_1 < 4i); r_1++) {
           for (var c = 0; (c < 4i); c++) {
-            var writeIndex = (baseIndex + vec2i(c, r));
+            var writeIndex = (baseIndex + vec2i(c, r_1));
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
@@ -73,7 +73,7 @@ describe('blur example', () => {
               var acc = vec3f();
               for (var f = 0; (f < (*settings2).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[r][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[r_1][i] * (1f / f32((*settings2).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }

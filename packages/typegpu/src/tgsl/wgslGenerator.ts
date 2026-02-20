@@ -1186,101 +1186,107 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
-      const iterableExpr = this.expression(iterable);
-      const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
-      const iterableSnippet = shouldUnroll
-        ? iterableExpr.value.snippet
-        : iterableExpr;
-      const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
+      try {
+        this.ctx.pushBlockScope();
 
-      if (shouldUnroll && ephemeralIterable) {
-        if (iterableSnippet.value instanceof ArrayExpression) {
-          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+        const iterableExpr = this.expression(iterable);
+        const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
+        const iterableSnippet = shouldUnroll
+          ? iterableExpr.value.snippet
+          : iterableExpr;
+        const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
 
-          const blockified = blockifySingleStatement(body);
-          const iterations = iterableSnippet.value.elements.map((e) =>
-            `${this.ctx.pre}${
-              this.block(blockified, { [`${loopVarName}`]: e })
-            }`
-          );
+        if (shouldUnroll && ephemeralIterable) {
+          if (iterableSnippet.value instanceof ArrayExpression) {
+            const loopVarName = this.ctx.makeNameValid(loopVar[1]);
 
-          return iterations.join('\n');
+            const blockified = blockifySingleStatement(body);
+            const iterations = iterableSnippet.value.elements.map((e) =>
+              `${this.ctx.pre}${
+                this.block(blockified, { [`${loopVarName}`]: e })
+              }`
+            );
+
+            return iterations.join('\n');
+          }
+
+          if (Array.isArray(iterableSnippet.value)) {
+            const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+
+            const blockified = blockifySingleStatement(body);
+            const iterations = iterableSnippet.value.map((e) =>
+              `${this.ctx.pre}${
+                this.block(blockified, { [`${loopVarName}`]: e })
+              }`
+            );
+
+            return iterations.join('\n');
+          }
+
+          throw new WgslTypeError('Cannot unroll. Unsupported iterable.');
         }
 
-        if (Array.isArray(iterableSnippet.value)) {
-          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-
-          const blockified = blockifySingleStatement(body);
-          const iterations = iterableSnippet.value.map((e) =>
-            `${this.ctx.pre}${
-              this.block(blockified, { [`${loopVarName}`]: e })
-            }`
-          );
-
-          return iterations.join('\n');
+        if (shouldUnroll && !ephemeralIterable) {
+          throw new Error('Not implemented');
         }
 
-        throw new WgslTypeError('Cannot unroll. Unsupported iterable.');
+        if (!shouldUnroll && !ephemeralIterable) {
+          const index = this.ctx.makeNameValid('i');
+          const elementSnippet = forOfHelpers.getElementSnippet(
+            iterableSnippet,
+            index,
+          );
+          const elementCountSnippet = forOfHelpers.getElementCountSnippet(
+            this.ctx,
+            iterableSnippet,
+          );
+          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+          const loopVarKind = forOfHelpers.getLoopVarKind(elementSnippet);
+          const elementType = forOfHelpers.getElementType(
+            elementSnippet,
+            iterableSnippet,
+          );
+
+          const forStr =
+            stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+              tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+            }; ${index}++) {`;
+
+          this.ctx.indent();
+
+          const loopVarDeclStr =
+            stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+              tryConvertSnippet(
+                this.ctx,
+                elementSnippet,
+                elementType,
+                false,
+              )
+            };`;
+
+          const loopVarSnippet = snip(
+            loopVarName,
+            elementType,
+            elementSnippet.origin,
+          );
+
+          const bodyStr = `${this.ctx.pre}${
+            this.block(blockifySingleStatement(body), {
+              [loopVar[1]]: loopVarSnippet,
+            })
+          }`;
+
+          this.ctx.dedent();
+
+          return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+        }
+
+        throw new Error(
+          '`for ... of ...` loops only support iterables stored in variables',
+        );
+      } finally {
+        this.ctx.popBlockScope();
       }
-
-      if (shouldUnroll && !ephemeralIterable) {
-        throw new Error('Not implemented');
-      }
-
-      if (!shouldUnroll && !ephemeralIterable) {
-        const index = forOfHelpers.getValidIndexName(this.ctx);
-        const elementSnippet = forOfHelpers.getElementSnippet(
-          iterableSnippet,
-          index,
-        );
-        const elementCountSnippet = forOfHelpers.getElementCountSnippet(
-          this.ctx,
-          iterableSnippet,
-        );
-        const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-        const loopVarKind = forOfHelpers.getLoopVarKind(elementSnippet);
-        const elementType = forOfHelpers.getElementType(
-          elementSnippet,
-          iterableSnippet,
-        );
-
-        const forStr =
-          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-          }; ${index}++) {`;
-
-        this.ctx.indent();
-
-        const loopVarDeclStr =
-          stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
-            tryConvertSnippet(
-              this.ctx,
-              elementSnippet,
-              elementType,
-              false,
-            )
-          };`;
-
-        const loopVarSnippet = snip(
-          loopVarName,
-          elementType,
-          elementSnippet.origin,
-        );
-
-        const bodyStr = `${this.ctx.pre}${
-          this.block(blockifySingleStatement(body), {
-            [loopVar[1]]: loopVarSnippet,
-          })
-        }`;
-
-        this.ctx.dedent();
-
-        return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
-      }
-
-      throw new Error(
-        '`for ... of ...` loops only support iterables stored in variables',
-      );
     }
 
     if (statement[0] === NODE.continue) {
