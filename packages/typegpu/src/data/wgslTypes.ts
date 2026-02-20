@@ -551,7 +551,6 @@ export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
 // #endregion
 
 // #region WGSL Schema Types
-
 /**
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
