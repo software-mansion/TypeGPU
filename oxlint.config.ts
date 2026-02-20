@@ -1,0 +1,71 @@
+import { defineConfig } from 'oxlint';
+
+export default defineConfig({
+  plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
+  jsPlugins: ['eslint-plugin-typegpu'],
+  categories: {
+    correctness: 'warn',
+    suspicious: 'warn',
+  },
+  rules: {
+    'typegpu/integer-division': 'warn',
+    'typescript/no-explicit-any': 'error',
+    'typescript/no-non-null-assertion': 'error',
+    'eslint/no-shadow': 'off',
+    'eslint-plugin-unicorn/prefer-add-event-listener': 'off',
+    'eslint-plugin-import/no-named-as-default': 'off',
+    'eslint-plugin-import/no-named-as-default-member': 'off',
+    'eslint-plugin-import/extensions': [
+      'error',
+      'always',
+      { ignorePackages: true },
+    ],
+  },
+  ignorePatterns: ['**/*.astro'],
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/tests/**'],
+      rules: {
+        'typescript/no-non-null-assertion': 'off',
+        'eslint/no-unused-vars': 'off',
+        'eslint/no-unused-expressions': 'off',
+        'eslint-plugin-unicorn/consistent-function-scoping': 'off',
+        'eslint/no-unsafe-optional-chaining': 'off',
+        'eslint/no-constant-condition': 'off',
+      },
+    },
+  ],
+  settings: {
+    'jsx-a11y': {
+      polymorphicPropName: null,
+      components: {},
+      attributes: {},
+    },
+    next: {
+      rootDir: [],
+    },
+    react: {
+      formComponents: [],
+      linkComponents: [],
+      version: null,
+      componentWrapperFunctions: [],
+    },
+    jsdoc: {
+      ignorePrivate: false,
+      ignoreInternal: false,
+      ignoreReplacesDocs: true,
+      overrideReplacesDocs: true,
+      augmentsExtendsReplacesDocs: false,
+      implementsReplacesDocs: false,
+      exemptDestructuredRootsFromChecks: false,
+      tagNamePreference: {},
+    },
+    vitest: {
+      typecheck: false,
+    },
+  },
+  env: {
+    builtin: true,
+  },
+  globals: {},
+});
