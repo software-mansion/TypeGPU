@@ -205,6 +205,9 @@ importers:
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
+      '@typegpu/concurrent-scan':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-concurrent-scan
       '@typegpu/geometry':
         specifier: workspace:*
         version: link:../../packages/typegpu-geometry
@@ -521,6 +524,28 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-color:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.66
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: catalog:types
+        version: 5.9.3
+      unbuild:
+        specifier: catalog:build
+        version: 3.5.0(typescript@5.9.3)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-concurrent-scan:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
