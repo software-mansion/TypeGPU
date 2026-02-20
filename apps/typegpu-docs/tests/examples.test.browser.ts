@@ -53,7 +53,7 @@ test('executes examples', async () => {
     globalExt.__TYPEGPU_PERF_RECORDS__?.get('resolution') ?? [],
   );
 
-  writeFile(
+  await writeFile(
     `${testArtifactsDirectory}/example-benchmark.json`,
     JSON.stringify(
       {
@@ -84,7 +84,7 @@ test('executes examples', async () => {
     ],
   }).outerHTML;
 
-  writeFile(
+  await writeFile(
     `${testArtifactsDirectory}/example-benchmark.html`,
     `<html><body><style>body { color: black; }</style>${resolveFigure}${compileFigure}</body></html>`,
   );

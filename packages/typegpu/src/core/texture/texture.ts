@@ -223,17 +223,17 @@ export function INTERNAL_createTexture(
   return new TgpuTextureImpl(props, branch);
 }
 
-export function isTexture<T extends TgpuTexture>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'texture' && !!(value as T)[$internal];
+export function isTexture(value: unknown): value is TgpuTexture {
+  return (
+    (value as TgpuTexture)?.resourceType === 'texture' &&
+    !!(value as TgpuTexture)[$internal]
+  );
 }
 
-export function isTextureView<T extends TgpuTextureView>(
-  value: unknown | T,
-): value is T {
+export function isTextureView(value: unknown): value is TgpuTextureView {
   return (
-    (value as T)?.resourceType === 'texture-view' && !!(value as T)[$internal]
+    (value as TgpuTextureView)?.resourceType === 'texture-view' &&
+    !!(value as TgpuTextureView)[$internal]
   );
 }
 
@@ -381,7 +381,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   generateMipmaps(baseMipLevel = 0, mipLevels?: number) {
-    if (this.usableAsRender === false) {
+    if (!this.usableAsRender) {
       throw new Error(
         "generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.",
       );
@@ -493,8 +493,8 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   #writeSingleLayer(source: ExternalImageSource, layer?: number) {
-    const targetWidth = this.props.size[0] as number;
-    const targetHeight = (this.props.size[1] ?? 1) as number;
+    const targetWidth = this.props.size[0];
+    const targetHeight = this.props.size[1] ?? 1;
     const { width: sourceWidth, height: sourceHeight } =
       getImageSourceDimensions(source);
     const needsResampling = sourceWidth !== targetWidth ||

@@ -280,7 +280,7 @@ function initRandom() {
 function reset() {
   currentRunId++;
   initRandom();
-  runFloodAnimated(currentRunId);
+  void runFloodAnimated(currentRunId);
 }
 
 reset();
@@ -301,7 +301,7 @@ export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
-      runFloodAnimated(currentRunId);
+      void runFloodAnimated(currentRunId);
     },
   },
   'Random Seeds': {

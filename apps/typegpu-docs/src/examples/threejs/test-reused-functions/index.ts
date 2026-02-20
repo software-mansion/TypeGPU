@@ -44,7 +44,7 @@ const observer = new ResizeObserver(onResize);
 observer.observe(canvas);
 
 let prevTime: number | undefined;
-renderer.setAnimationLoop((time) => {
+void renderer.setAnimationLoop((time) => {
   const deltaTime = (time - (prevTime ?? time)) * 0.001;
   prevTime = time;
   scene.children.forEach((mesh) => {

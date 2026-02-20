@@ -181,10 +181,8 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.disarrayOf(d.u32, 4)) // true
  * isDisarray(d.vec3f) // false
  */
-export function isDisarray<T extends Disarray>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'disarray';
+export function isDisarray(schema: unknown): schema is Disarray {
+  return isMarkedInternal(schema) && (schema as Disarray)?.type === 'disarray';
 }
 
 /**
@@ -200,16 +198,15 @@ export function isDisarray<T extends Disarray>(
  * isUnstruct(d.unstruct({ a: d.u32 })) // true
  * isUnstruct(d.vec3f) // false
  */
-export function isUnstruct<T extends Unstruct>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'unstruct';
+export function isUnstruct(schema: unknown): schema is Unstruct {
+  return isMarkedInternal(schema) && (schema as Unstruct)?.type === 'unstruct';
 }
 
-export function isLooseDecorated<T extends LooseDecorated>(
-  value: T | unknown,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === 'loose-decorated';
+export function isLooseDecorated(
+  value: unknown,
+): value is LooseDecorated {
+  return isMarkedInternal(value) &&
+    (value as LooseDecorated)?.type === 'loose-decorated';
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {

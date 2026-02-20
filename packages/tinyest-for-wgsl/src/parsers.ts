@@ -436,7 +436,9 @@ export function extractFunctionParts(rootNode: JsNode): {
   );
   if (unsupportedTypes.size > 0) {
     throw new Error(
-      `Unsupported function parameter type(s): ${[...unsupportedTypes]}`,
+      `Unsupported function parameter type(s): ${
+        [...unsupportedTypes].join(', ')
+      }`,
     );
   }
 

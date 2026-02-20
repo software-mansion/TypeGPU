@@ -246,9 +246,7 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
       ).value;
     }
 
-    return ctx.resolve(
-      formatToWGSLType[data.type as keyof typeof formatToWGSLType],
-    ).value;
+    return ctx.resolve(formatToWGSLType[data.type]).value;
   }
 
   if (isIdentityType(data)) {

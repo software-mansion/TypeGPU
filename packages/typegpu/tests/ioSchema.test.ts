@@ -76,7 +76,7 @@ describe('IOLayoutToSchema', () => {
     >().toEqualTypeOf<
       d.WgslStruct<{
         a: d.Decorated<d.Vec4f, [d.Location<5>]>;
-        b: d.Decorated<d.Vec4f, [d.Location<number>]>;
+        b: d.Decorated<d.Vec4f, [d.Location]>;
         pos: d.BuiltinPosition;
       }>
     >();

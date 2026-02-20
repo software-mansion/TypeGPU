@@ -258,6 +258,7 @@ class TgpuFnNode<T> extends THREE.Node {
       const varName = stageData.names.get(dep.var);
       const varValue = dep.node.build(builder);
       // @ts-expect-error: It's there
+      // oxlint-disable-next-line typescript/no-base-to-string
       builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
     }
 

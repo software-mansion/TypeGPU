@@ -50,10 +50,8 @@ export function vertexLayout<TData extends WgslArray | Disarray>(
   return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
 }
 
-export function isVertexLayout<T extends TgpuVertexLayout>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'vertex-layout';
+export function isVertexLayout(value: unknown): value is TgpuVertexLayout {
+  return (value as TgpuVertexLayout)?.resourceType === 'vertex-layout';
 }
 
 // --------------
@@ -89,7 +87,7 @@ function dataToContainedAttribs<
   if (isWgslStruct(data)) {
     let memberOffset = offset;
 
-    const propTypes = data.propTypes as Record<string, BaseData>;
+    const propTypes = data.propTypes;
     return Object.fromEntries(
       Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, alignmentOf(value));
@@ -112,7 +110,7 @@ function dataToContainedAttribs<
   if (isUnstruct(data)) {
     let memberOffset = offset;
 
-    const propTypes = data.propTypes as Record<string, BaseData>;
+    const propTypes = data.propTypes;
     return Object.fromEntries(
       Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));

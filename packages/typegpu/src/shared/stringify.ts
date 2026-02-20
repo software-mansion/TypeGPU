@@ -16,6 +16,7 @@ export function safeStringify(item: unknown): string {
 
 export function niceStringify(item: unknown): string {
   if (isVecInstance(item) || isMatInstance(item)) {
+    // oxlint-disable-next-line typescript/no-base-to-string it's fine
     return item.toString();
   }
 

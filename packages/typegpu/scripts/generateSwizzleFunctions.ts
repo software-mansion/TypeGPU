@@ -36,9 +36,7 @@ function printSwizzlingFor(components: Record<string, number>) {
     ) {
       const implementation =
         `  get ${swizzle}() { return new this.${vecClassName}(${
-          [
-            ...swizzle,
-          ]
+          swizzle.split('')
             .map((s) => `this[${components[s]}]`)
             .join(', ')
         }); }`;

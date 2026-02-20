@@ -723,7 +723,7 @@ export const controls = defineControls({
     ],
     onSelectChange: (value) => {
       if (value === 'Auto') {
-        autoSetQuaility().then((scale) => {
+        void autoSetQuaility().then((scale) => {
           qualityScale = scale;
           handleResize();
         });

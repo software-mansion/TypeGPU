@@ -48,7 +48,7 @@ function ToggleRow({
           checked={value}
           onChange={(e) => {
             setValue(e.target.checked);
-            runWithCatch(() => onChange(e.target.checked));
+            void runWithCatch(() => onChange(e.target.checked));
           }}
         />
       </label>
@@ -85,7 +85,7 @@ function SliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -121,7 +121,7 @@ function VectorSliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -148,7 +148,7 @@ function ColorPickerRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -175,7 +175,7 @@ function TextAreaRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -205,7 +205,7 @@ function SelectRow({
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>

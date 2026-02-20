@@ -208,6 +208,7 @@ const network = createNetwork(await downloadLayers(root));
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-assertion not really unnecessary
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const subgroupsEl = document.getElementById(
   'subgroups-status',
@@ -393,7 +394,7 @@ canvas.addEventListener('mousemove', (event) => {
   const cellSize = canvas.width / SIZE;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
   const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 });
 
 canvas.addEventListener('touchmove', (event) => {
@@ -407,7 +408,7 @@ canvas.addEventListener('touchmove', (event) => {
   const y = Math.floor(
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 }, { passive: false });
 
 export const controls = defineControls({

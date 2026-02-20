@@ -131,7 +131,7 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+  pushSlotBindings(pairs: SlotValuePair[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
@@ -597,7 +597,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
     if (pairs.length === 0) {
       return callback();
     }
@@ -791,7 +791,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(
     item: unknown,
-    schema?: BaseData | UnknownData | undefined,
+    schema?: BaseData | UnknownData,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (

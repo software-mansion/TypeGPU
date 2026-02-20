@@ -62,8 +62,8 @@ export interface TgpuComputePipeline
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
   ): void;
 }
 
@@ -159,7 +159,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
-        [layoutOrBindGroup as TgpuBindGroupLayout, bindGroup as TgpuBindGroup],
+        [layoutOrBindGroup, bindGroup as TgpuBindGroup],
       ]),
     }) as this;
   }
@@ -190,8 +190,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
   ): void {
     const memo = this._core.unwrap();
     const { root } = this._core;
@@ -240,7 +240,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     if (this._priors.performanceCallback) {
-      triggerPerformanceCallback({
+      void triggerPerformanceCallback({
         root,
         priors: this._priors,
       });
@@ -343,7 +343,7 @@ class ComputePipelineCore implements SelfResolvable {
       };
 
       if (PERF?.enabled) {
-        (async () => {
+        void (async () => {
           const start = performance.mark('typegpu:compile-start');
           await device.queue.onSubmittedWorkDone();
           const compileMeasure = performance.measure('typegpu:compiled', {

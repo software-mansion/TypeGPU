@@ -11,8 +11,8 @@ interface SimulationResult<T> {
   value: T;
 
   buffers: Map<TgpuBuffer<BaseData>, unknown>;
-  privateVars: Map<TgpuVar<'private', BaseData>, unknown>[][][];
-  workgroupVars: Map<TgpuVar<'workgroup', BaseData>, unknown>[][][];
+  privateVars: Map<TgpuVar<'private'>, unknown>[][][];
+  workgroupVars: Map<TgpuVar<'workgroup'>, unknown>[][][];
 }
 
 /**

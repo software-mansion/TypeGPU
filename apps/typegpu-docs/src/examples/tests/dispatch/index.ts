@@ -155,7 +155,7 @@ const table = document.querySelector<HTMLDivElement>('.result');
 if (!table) {
   throw new Error('Nowhere to display the results');
 }
-runTests().then((result) => {
+void runTests().then((result) => {
   table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
 });
 

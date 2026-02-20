@@ -24,10 +24,10 @@ export interface TgpuExternalTexture {
   readonly resourceType: 'external-texture';
 }
 
-export function isExternalTexture<T extends TgpuExternalTexture>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'external-texture';
+export function isExternalTexture(
+  value: unknown,
+): value is TgpuExternalTexture {
+  return (value as TgpuExternalTexture)?.resourceType === 'external-texture';
 }
 
 // --------------

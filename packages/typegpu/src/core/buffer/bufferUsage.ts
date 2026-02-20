@@ -82,7 +82,7 @@ export interface TgpuBufferMutable<TData extends BaseData>
 export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & UniformFlag {
-  return !!(buffer as T).usableAsUniform;
+  return !!buffer.usableAsUniform;
 }
 
 // --------------
@@ -223,7 +223,7 @@ class TgpuFixedBufferImpl<
     }
 
     if (mode.type === 'simulate') {
-      mode.buffers.set(this.buffer, value as InferGPU<TData>);
+      mode.buffers.set(this.buffer, value);
       return;
     }
 

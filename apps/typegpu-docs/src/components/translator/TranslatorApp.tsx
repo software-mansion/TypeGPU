@@ -81,7 +81,7 @@ export default function TranslatorApp() {
   useAutoCompile();
 
   useEffect(() => {
-    initialize();
+    void initialize();
   }, [initialize]);
 
   const handleEditorLoaded = () => setEditorLoaded(false);

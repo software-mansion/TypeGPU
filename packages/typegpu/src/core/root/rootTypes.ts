@@ -719,9 +719,9 @@ export interface RenderPass {
    */
   draw(
     vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws indexed primitives.
@@ -733,10 +733,10 @@ export interface RenderPass {
    */
   drawIndexed(
     indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws primitives using parameters read from a {@link GPUBuffer}.
@@ -815,7 +815,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>> | undefined,
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -926,7 +926,7 @@ export interface TgpuRoot extends Unwrapper {
   createQuerySet<T extends GPUQueryType>(
     type: T,
     count: number,
-    rawQuerySet?: GPUQuerySet | undefined,
+    rawQuerySet?: GPUQuerySet,
   ): TgpuQuerySet<T>;
 
   /**

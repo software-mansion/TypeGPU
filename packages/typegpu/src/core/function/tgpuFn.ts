@@ -129,7 +129,7 @@ export function fn<
   Return extends BaseData = Void,
 >(
   argTypesOrCallback: Args | AnyFn,
-  returnType?: Return | undefined,
+  returnType?: Return,
 ): TgpuFnShell<Args, Return> | TgpuGenericFn<AnyFn> {
   if (typeof argTypesOrCallback === 'function') {
     return createGenericFn(argTypesOrCallback, []);
@@ -155,14 +155,14 @@ export function fn<
 }
 
 export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
-  value: unknown | TgpuFn<(...args: Args) => Return>,
+  value: unknown,
 ): value is TgpuFn<(...args: Args) => Return> {
   return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
 }
 
 export function isGenericFn<Callback extends AnyFn>(
-  value: unknown | TgpuGenericFn<Callback>,
+  value: unknown,
 ): value is TgpuGenericFn<Callback> {
   return isMarkedInternal(value) &&
     (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function';

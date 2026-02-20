@@ -3,6 +3,7 @@ import tgpu, {
   type TgpuBindGroup,
   type TgpuComputeFn,
   type TgpuFragmentFn,
+  type TgpuRenderPipeline,
 } from 'typegpu';
 import * as p from './params.ts';
 import {
@@ -375,10 +376,7 @@ function loop() {
     result: { texture: d.WgslTexture2d<d.F32> };
     background: { texture: d.WgslTexture2d<d.F32> };
   }>;
-  let pipeline:
-    | typeof renderPipelineInk
-    | typeof renderPipelineVel
-    | typeof renderPipelineImage;
+  let pipeline: TgpuRenderPipeline<d.Vec4f>;
 
   switch (p.params.displayMode) {
     case 'ink':

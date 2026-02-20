@@ -6,9 +6,7 @@ import type {
   ColorAttachment,
 } from './renderPipeline.ts';
 
-function isColorAttachment(
-  value: unknown | ColorAttachment,
-): value is ColorAttachment {
+function isColorAttachment(value: unknown): value is ColorAttachment {
   return typeof (value as ColorAttachment)?.loadOp === 'string';
 }
 

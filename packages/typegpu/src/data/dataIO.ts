@@ -186,8 +186,8 @@ const dataWriters = {
     alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(output, alignmentOf(property as wgsl.BaseData));
-      writeData(output, property as wgsl.BaseData, value[key]);
+      alignIO(output, alignmentOf(property));
+      writeData(output, property, value[key]);
     }
 
     alignIO(output, alignment);
@@ -431,7 +431,7 @@ const dataWriters = {
   },
 
   unstruct(output, schema: Unstruct, value) {
-    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    const propTypes = schema.propTypes;
     for (const [key, property] of Object.entries(propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);
     }
@@ -631,7 +631,7 @@ const dataReaders = {
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
 
-    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    const propTypes = schema.propTypes;
     for (const [key, property] of Object.entries(propTypes)) {
       alignIO(input, alignmentOf(property));
       result[key] = readData(input, property);
@@ -774,7 +774,7 @@ const dataReaders = {
   unstruct(input, schema: Unstruct) {
     const result = {} as Record<string, unknown>;
 
-    const propTypes = schema.propTypes as Record<string, wgsl.BaseData>;
+    const propTypes = schema.propTypes;
     for (const [key, property] of Object.entries(propTypes)) {
       result[key] = readData(input, property);
     }
