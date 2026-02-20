@@ -948,11 +948,11 @@ class RenderPipelineCore implements SelfResolvable {
       attribs,
     );
 
-    const connectedTargets = connectTargetsToShader(
-      (fragment as TgpuFragmentFn)?.shell?.returnType ??
-        (this.#latestFragmentOut as BaseData),
-      targets,
-    );
+    const fragmentOut = (fragment as TgpuFragmentFn)?.shell?.returnType ??
+      this.#latestFragmentOut;
+    const connectedTargets = fragmentOut
+      ? connectTargetsToShader(fragmentOut, targets)
+      : [null];
 
     const descriptor: GPURenderPipelineDescriptor = {
       layout: device.createPipelineLayout({
