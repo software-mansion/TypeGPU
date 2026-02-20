@@ -7,6 +7,7 @@
     "suspicious": "warn"
   },
   "rules": {
+    "typegpu/integer-division": "warn",
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
     "eslint-plugin-unicorn/prefer-add-event-listener": "off",
