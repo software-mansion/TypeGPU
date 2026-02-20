@@ -55,47 +55,40 @@ const bindGroup = root.createBindGroup(cloudsLayout, {
   sampler,
 });
 
-const mainFragment = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  randf.seed2(uv.mul(cloudsLayout.$.params.time));
-  const screenRes = resolutionUniform.$;
-  const aspect = screenRes.x / screenRes.y;
-
-  let screenPos = std.mul(std.sub(uv, 0.5), 2.0);
-  screenPos = d.vec2f(
-    screenPos.x * std.max(aspect, 1.0),
-    screenPos.y * std.max(1.0 / aspect, 1.0),
-  );
-
-  const sunDir = std.normalize(SUN_DIRECTION);
-  const time = cloudsLayout.$.params.time;
-  const rayOrigin = d.vec3f(
-    std.sin(time * 0.6) * 0.5,
-    std.cos(time * 0.8) * 0.5 - 1,
-    time * WIND_SPEED,
-  );
-  const rayDir = std.normalize(d.vec3f(screenPos.x, screenPos.y, FOV_FACTOR));
-
-  const sunDot = std.clamp(std.dot(rayDir, sunDir), 0.0, 1.0);
-  const sunGlow = std.pow(
-    sunDot,
-    1.0 / (SUN_BRIGHTNESS * SUN_BRIGHTNESS * SUN_BRIGHTNESS),
-  );
-
-  let skyCol = std.sub(SKY_HORIZON, std.mul(SKY_ZENITH_TINT, rayDir.y * 0.35));
-  skyCol = std.add(skyCol, std.mul(SUN_GLOW, sunGlow));
-
-  const cloudCol = raymarch(rayOrigin, rayDir, sunDir);
-  const finalCol = std.add(std.mul(skyCol, 1.1 - cloudCol.a), cloudCol.rgb);
-
-  return d.vec4f(finalCol, 1.0);
-});
-
 const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
-  fragment: mainFragment,
+  fragment: ({ uv }) => {
+    'use gpu';
+    randf.seed2(uv * cloudsLayout.$.params.time);
+    const screenRes = resolutionUniform.$;
+    const aspect = screenRes.x / screenRes.y;
+
+    let screenPos = (uv - 0.5) * 2;
+    screenPos = d.vec2f(
+      screenPos.x * std.max(aspect, 1),
+      screenPos.y * std.max(1 / aspect, 1),
+    );
+
+    const sunDir = std.normalize(SUN_DIRECTION);
+    const time = cloudsLayout.$.params.time;
+    const rayOrigin = d.vec3f(
+      std.sin(time * 0.6) * 0.5,
+      std.cos(time * 0.8) * 0.5 - 1,
+      time * WIND_SPEED,
+    );
+    const rayDir = std.normalize(d.vec3f(screenPos.x, screenPos.y, FOV_FACTOR));
+
+    const sunDot = std.saturate(std.dot(rayDir, sunDir));
+    const sunGlow = sunDot ** (1 / SUN_BRIGHTNESS ** 3);
+
+    let skyCol = SKY_HORIZON - SKY_ZENITH_TINT * rayDir.y * 0.35;
+    skyCol += SUN_GLOW * sunGlow;
+
+    const cloudCol = raymarch(rayOrigin, rayDir, sunDir);
+    const finalCol = skyCol * (1.1 - cloudCol.a) + cloudCol.rgb;
+
+    return d.vec4f(finalCol, 1.0);
+  },
   targets: { format: presentationFormat },
 });
 

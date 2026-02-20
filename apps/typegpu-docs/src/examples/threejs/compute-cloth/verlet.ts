@@ -221,11 +221,10 @@ export class VerletSimulation {
       const vertex0Position = this.vertexPositionBuffer.$[vertexId.x];
       const vertex1Position = this.vertexPositionBuffer.$[vertexId.y];
 
-      const delta = vertex1Position.sub(vertex0Position);
+      const delta = vertex1Position - vertex0Position;
       const dist = std.max(std.length(delta), 0.000001);
-      const force = delta.mul(
-        ((dist - restLength) * this.stiffnessUniform.$ * 0.5) / dist,
-      );
+      const force = delta *
+        ((dist - restLength) * this.stiffnessUniform.$ * 0.5) / dist;
       this.springForceBuffer.$[idx] = d.vec3f(force);
     }).compute(springCount);
 
@@ -257,7 +256,7 @@ export class VerletSimulation {
 
       const position = this.vertexPositionBuffer.$[idx];
       let force = d.vec3f(this.vertexForceBuffer.$[idx]);
-      force = force.mul(this.dampeningUniform.$);
+      force *= this.dampeningUniform.$;
 
       const ptrStart = springPointer;
       const ptrEnd = ptrStart + springCount;
@@ -266,7 +265,7 @@ export class VerletSimulation {
         const springForce = this.springForceBuffer.$[springId];
         const springVertexIds = this.springVertexIdBuffer.$[springId];
         const factor = std.select(-1, 1, springVertexIds.x === idx);
-        force = force.add(springForce.mul(d.f32(factor)));
+        force += springForce * factor;
       }
 
       // gravity
@@ -279,12 +278,10 @@ export class VerletSimulation {
       force.z -= windForce;
 
       // collision with sphere
-      const deltaSphere = position.add(force).sub(spherePositionUniform.$);
+      const deltaSphere = position + force - spherePositionUniform.$;
       const dist = std.length(deltaSphere);
-      const sphereForce = deltaSphere.mul(
-        (std.max(0, sphereRadius - dist) / dist) * sphereUniform.$,
-      );
-      force = force.add(sphereForce);
+      force += deltaSphere * (std.max(0, sphereRadius - dist) / dist) *
+        sphereUniform.$;
 
       this.vertexForceBuffer.$[idx] = d.vec3f(force);
       this.vertexPositionBuffer.$[idx] = this.vertexPositionBuffer.$[idx].add(

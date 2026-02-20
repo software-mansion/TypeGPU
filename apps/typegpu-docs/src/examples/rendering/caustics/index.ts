@@ -22,17 +22,17 @@ const mainVertex = tgpu.vertexFn({
 const tilePattern = (uv: d.v2f): number => {
   'use gpu';
   const tiledUv = std.fract(uv);
-  const proximity = std.abs(std.sub(std.mul(tiledUv, 2), 1));
+  const proximity = std.abs((tiledUv * 2) - 1);
   const maxProximity = std.max(proximity.x, proximity.y);
-  return std.saturate(std.pow(1 - maxProximity, 0.6) * 5);
+  return std.saturate(((1 - maxProximity) ** 0.6) * 5);
 };
 
 const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
   'use gpu';
-  const distortion = perlin3d.sample(d.vec3f(std.mul(uv, 0.5), time * 0.2));
+  const distortion = perlin3d.sample(d.vec3f(uv * 0.5, time * 0.2));
   // Distorting UV coordinates
-  const uv2 = std.add(uv, distortion);
-  const noise = std.abs(perlin3d.sample(d.vec3f(std.mul(uv2, 5), time)));
+  const uv2 = uv + distortion;
+  const noise = std.abs(perlin3d.sample(d.vec3f(uv2 * 5, time)));
   return std.pow(d.vec3f(1 - noise), profile);
 };
 
@@ -65,6 +65,7 @@ const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
+  'use gpu';
   /**
    * A transformation matrix that skews the perspective a bit
    * when applied to UV coordinates
@@ -73,8 +74,8 @@ const mainFragment = tgpu.fragmentFn({
     d.vec2f(std.cos(angle), std.sin(angle)),
     d.vec2f(-std.sin(angle) * 10 + uv.x * 3, std.cos(angle) * 5),
   );
-  const skewedUv = std.mul(skewMat, uv);
-  const tile = tilePattern(std.mul(skewedUv, tileDensity.$));
+  const skewedUv = skewMat * uv;
+  const tile = tilePattern(skewedUv * tileDensity.$);
   const albedo = std.mix(d.vec3f(0.1), d.vec3f(1), tile);
 
   // Transforming coordinates to simulate perspective squash
@@ -83,49 +84,38 @@ const mainFragment = tgpu.fragmentFn({
     std.pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1,
   );
   // Generating two layers of caustics (large scale, and small scale)
-  const c1 = std.mul(
-    caustics(cuv, time.$ * 0.2, /* profile */ d.vec3f(4, 4, 1)),
+  const c1 = caustics(cuv, time.$ * 0.2, /* profile */ d.vec3f(4, 4, 1)) *
     // Tinting
-    d.vec3f(0.4, 0.65, 1),
-  );
-  const c2 = std.mul(
-    caustics(std.mul(cuv, 2), time.$ * 0.4, /* profile */ d.vec3f(16, 1, 4)),
+    d.vec3f(0.4, 0.65, 1);
+  const c2 = caustics(cuv * 2, time.$ * 0.4, /* profile */ d.vec3f(16, 1, 4)) *
     // Tinting
-    d.vec3f(0.18, 0.3, 0.5),
-  );
+    d.vec3f(0.18, 0.3, 0.5);
 
   // -- BLEND --
 
-  const blendCoord = d.vec3f(std.mul(uv, d.vec2f(5, 10)), time.$ * 0.2 + 5);
+  const blendCoord = d.vec3f(uv * d.vec2f(5, 10), time.$ * 0.2 + 5);
   // A smooth blending factor, so that caustics only appear at certain spots
   const blend = std.saturate(perlin3d.sample(blendCoord) + 0.3);
 
   // -- FOG --
 
-  const noFogColor = std.mul(
-    albedo,
-    std.mix(ambientColor, std.add(c1, c2), blend),
-  );
+  const noFogColor = albedo * std.mix(ambientColor, c1 + c2, blend);
   // Fog blending factor, based on the height of the pixels
-  const fog = std.min(std.pow(uv.y, 0.5) * 1.2, 1);
+  const fog = std.min((uv.y ** 0.5) * 1.2, 1);
 
   // -- GOD RAYS --
 
-  const godRayUv = std.mul(std.mul(rotateXY(-0.3), uv), d.vec2f(15, 3));
-  const godRayFactor = std.pow(uv.y, 1);
-  const godRay1 = std.mul(
-    std.add(perlin3d.sample(d.vec3f(godRayUv, time.$ * 0.5)), 1),
+  const godRayUv = rotateXY(-0.3) * uv * d.vec2f(15, 3);
+  const godRayFactor = uv.y;
+  const godRay1 = (perlin3d.sample(d.vec3f(godRayUv, time.$ * 0.5)) + 1) *
     // Tinting
-    std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor),
-  );
-  const godRay2 = std.mul(
-    std.add(perlin3d.sample(d.vec3f(std.mul(godRayUv, 2), time.$ * 0.3)), 1),
+    d.vec3f(0.18, 0.3, 0.5) * godRayFactor;
+  const godRay2 = (perlin3d.sample(d.vec3f(godRayUv * 2, time.$ * 0.3)) + 1) *
     // Tinting
-    std.mul(d.vec3f(0.18, 0.3, 0.5), godRayFactor * 0.4),
-  );
-  const godRays = std.add(godRay1, godRay2);
+    d.vec3f(0.18, 0.3, 0.5) * godRayFactor * 0.4;
+  const godRays = godRay1 + godRay2;
 
-  return d.vec4f(std.add(std.mix(noFogColor, fogColor, fog), godRays), 1);
+  return d.vec4f(std.mix(noFogColor, fogColor, fog) + godRays, 1);
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

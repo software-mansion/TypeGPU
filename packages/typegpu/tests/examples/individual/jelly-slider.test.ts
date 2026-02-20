@@ -383,7 +383,7 @@ describe('jelly-slider example', () => {
         var p_w = point;
         p_w.x = abs(point.x);
         let l = (length(p_w) - radius);
-        let m = length((p_w - (sc * clamp(dot(p_w, sc), 0f, radius))));
+        let m = distance(p_w, (sc * clamp(dot(p_w, sc), 0f, radius)));
         return max(l, (m * sign(((sc.y * p_w.x) - (sc.x * p_w.y)))));
       }
 
@@ -693,7 +693,7 @@ describe('jelly-slider example', () => {
           h = sqrt(h);
           var x = ((vec2f(h, -(h)) - q) * 0.5f);
           var uv = (sign(x) * pow(abs(x), vec2f(0.3333333432674408)));
-          let t = clamp(((uv.x + uv.y) - kx), 0f, 1f);
+          let t = saturate(((uv.x + uv.y) - kx));
           res = dot2((d + ((c + (b * t)) * t)));
         }
         else {

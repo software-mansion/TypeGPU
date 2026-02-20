@@ -94,7 +94,7 @@ describe('stable-fluid example', () => {
         let viscosity = simParams.viscosity;
         let diffuseRate = (viscosity * timeStep);
         let blendFactor = (1f / (4f + diffuseRate));
-        var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (diffuseRate * centerVal)));
+        var diffusedVal = (vec4f(blendFactor) * ((((leftVal + rightVal) + upVal) + downVal) + (centerVal * diffuseRate)));
         textureStore(out, pixelPos, diffusedVal);
       }
 
@@ -215,7 +215,7 @@ describe('stable-fluid example', () => {
         let timeStep = simParams.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity));
         var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - vec2f(0.5)));
-        var normalizedPos = ((clampedPos + vec2f(0.5)) / vec2f(texSize.xy));
+        var normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
         var inkVal = textureSampleLevel(src, linSampler, normalizedPos, 0);
         textureStore(dst, pixelPos, inkVal);
       }

@@ -3,9 +3,7 @@ import {
   cos,
   dot,
   log,
-  mul,
   normalize,
-  pow,
   select,
   sign,
   sin,
@@ -93,12 +91,13 @@ export const randOnUnitCircle: TgpuFn<() => d.Vec2f> = tgpu
 
 export const randInUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
   .fn([], d.vec3f)(() => {
+    'use gpu';
     const u = randomGeneratorSlot.$.sample();
     const v = d.vec3f(randNormal(0, 1), randNormal(0, 1), randNormal(0, 1));
 
     const vNorm = normalize(v);
 
-    return vNorm.mul(pow(u, 0.33));
+    return vNorm * (u ** 0.33);
   });
 
 export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
@@ -114,18 +113,20 @@ export const randOnUnitSphere: TgpuFn<() => d.Vec3f> = tgpu
 
 export const randInUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
   .fn([d.vec3f], d.vec3f)((normal) => {
+    'use gpu';
     const value = randInUnitSphere();
     const alignment = dot(normal, value);
 
-    return mul(sign(alignment), value);
+    return sign(alignment) * value;
   });
 
 export const randOnUnitHemisphere: TgpuFn<(normal: d.Vec3f) => d.Vec3f> = tgpu
   .fn([d.vec3f], d.vec3f)((normal) => {
+    'use gpu';
     const value = randOnUnitSphere();
     const alignment = dot(normal, value);
 
-    return mul(sign(alignment), value);
+    return sign(alignment) * value;
   });
 
 export const randUniformExclusive: TgpuFn<() => d.F32> = tgpu

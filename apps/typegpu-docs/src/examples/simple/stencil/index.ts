@@ -34,10 +34,11 @@ const vertexFn = tgpu.vertexFn({
     uv: d.vec2f,
   },
 })(({ vid }) => {
+  'use gpu';
   const pos = triangleData.vertices.$[vid];
   const uv = triangleData.uvs.$[vid];
 
-  const rotatedPos = rotationUniform.$.mul(pos);
+  const rotatedPos = rotationUniform.$ * pos;
 
   return {
     position: d.vec4f(rotatedPos, 0, 1),
