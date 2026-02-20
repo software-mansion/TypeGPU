@@ -699,11 +699,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     const pass = encoder.beginRenderPass(renderPassDescriptor);
-    pass.setPipeline(memo.pipeline);
 
-    if (internals.priors.stencilReference !== undefined) {
-      pass.setStencilReference(internals.priors.stencilReference);
-    }
+    pass.setPipeline(memo.pipeline);
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
@@ -741,6 +738,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     if (missingVertexLayouts.size > 0) {
       throw new MissingVertexBuffersError(missingVertexLayouts);
+    }
+
+    if (internals.priors.stencilReference !== undefined) {
+      pass.setStencilReference(internals.priors.stencilReference);
     }
 
     return pass;
@@ -825,6 +826,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
+
 }
 
 class RenderPipelineCore implements SelfResolvable {
