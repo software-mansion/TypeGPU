@@ -848,7 +848,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('handles "for ... of ..." internal index variable when "i" is buffer used earlier', ({ root }) => {
+  it('handles "for ... of ..." internal index variable when "i" is the buffer used earlier', ({ root }) => {
     const i = root.createUniform(d.u32, 7);
 
     const f = () => {

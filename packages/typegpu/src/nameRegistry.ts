@@ -459,8 +459,9 @@ abstract class NameRegistryImpl implements NameRegistry {
   }
 
   get #usedBlockScopeNames(): Set<string> | undefined {
-    return this.#scopeStack.findLast((scope) => scope.type === 'blockScope')
-      ?.usedBlockScopeNames;
+    return (this.#scopeStack[this.#scopeStack.length - 1] as
+      | BlockScopeLayer
+      | undefined)?.usedBlockScopeNames;
   }
 
   makeUnique(primer: string | undefined, global: boolean): string {
