@@ -131,9 +131,8 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
-
-type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T]
+  : [T];
 
 /**
  * TODO: Remove in favor of createRenderPipeline's validation
