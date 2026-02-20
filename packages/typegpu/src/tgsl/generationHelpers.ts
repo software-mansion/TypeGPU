@@ -92,6 +92,8 @@ export type GenerationCtx = ResolutionCtx & {
   generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 
   /**
    * Types that are used in `return` statements are
