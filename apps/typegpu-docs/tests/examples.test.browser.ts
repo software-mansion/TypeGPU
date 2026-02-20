@@ -84,7 +84,7 @@ test('executes examples', async () => {
     ],
   }).outerHTML;
 
-  void writeFile(
+  await writeFile(
     `${testArtifactsDirectory}/example-benchmark.html`,
     `<html><body><style>body { color: black; }</style>${resolveFigure}${compileFigure}</body></html>`,
   );
