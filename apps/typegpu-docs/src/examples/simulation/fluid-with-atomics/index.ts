@@ -359,12 +359,7 @@ function resetGameData() {
 
     // render
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
+      .withColorAttachment({ view: context })
       .draw(4, options.size ** 2);
 
     currentStateBuffer.copyFrom(nextState.buffer);
@@ -378,12 +373,7 @@ function resetGameData() {
 
   renderChanges = () => {
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
+      .withColorAttachment({ view: context })
       .with(vertexLayout, squareBuffer)
       .with(vertexInstanceLayout, currentStateBuffer)
       .draw(4, options.size ** 2);

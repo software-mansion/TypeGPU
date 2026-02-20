@@ -217,12 +217,7 @@ export const controls = defineControls({
       });
 
       pipeline
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        })
+        .withColorAttachment({ view: context })
         .draw(3);
     },
   },
@@ -239,12 +234,8 @@ export const controls = defineControls({
 
       pipeline
         .withIndexBuffer(indexBuffer)
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        }).drawIndexed(3);
+        .withColorAttachment({ view: context })
+        .drawIndexed(3);
     },
   },
   'Too many logs': {

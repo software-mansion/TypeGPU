@@ -148,12 +148,7 @@ function draw() {
   `;
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

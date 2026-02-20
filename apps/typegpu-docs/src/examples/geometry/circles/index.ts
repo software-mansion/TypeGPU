@@ -140,11 +140,9 @@ setTimeout(() => {
       ...(multisample
         ? {
           view: msaaTextureView,
-          resolveTarget: context.getCurrentTexture().createView(),
+          resolveTarget: context,
         }
-        : {
-          view: context.getCurrentTexture().createView(),
-        }),
+        : { view: context }),
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
       storeOp: 'store',

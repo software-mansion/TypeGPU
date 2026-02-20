@@ -98,11 +98,7 @@ function frame(timestamp: number) {
   });
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   frameId = requestAnimationFrame(frame);

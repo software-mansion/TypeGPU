@@ -497,11 +497,7 @@ function frame() {
     );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 

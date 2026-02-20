@@ -96,11 +96,7 @@ function frame(timestamp: number) {
       stencilLoadOp: 'load',
       stencilStoreOp: 'store',
     })
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   frameId = requestAnimationFrame(frame);

@@ -245,15 +245,13 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -268,7 +266,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
@@ -276,7 +274,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
         1,
       ],
       loadOp: 'load',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),

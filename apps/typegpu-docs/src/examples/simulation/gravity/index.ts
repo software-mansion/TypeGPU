@@ -150,19 +150,16 @@ function render() {
 
   skyBoxPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(renderSkyBoxVertexLayout, skyBoxVertexBuffer)
     .draw(skyBoxVertices.length);
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       loadOp: 'load',
-      storeOp: 'store',
       clearValue: [0, 1, 0, 1], // background color
     })
     .withDepthStencilAttachment({

@@ -287,15 +287,9 @@ function swap() {
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   distancePipeline
     .with(resources.renderBindGroups[0])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

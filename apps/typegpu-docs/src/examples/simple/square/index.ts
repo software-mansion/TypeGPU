@@ -68,11 +68,7 @@ const pipeline = root
 function render() {
   pipeline
     .with(vertexLayout, colorBuffer)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .drawIndexed(6);
 }
 render();

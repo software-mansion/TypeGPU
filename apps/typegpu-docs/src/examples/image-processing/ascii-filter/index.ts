@@ -211,11 +211,7 @@ function processVideoFrame(
 
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: context.getCurrentTexture().createView(),
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   spinner.style.display = 'none';

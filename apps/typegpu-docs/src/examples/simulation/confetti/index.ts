@@ -204,12 +204,7 @@ onFrame((dt) => {
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    })
+    .withColorAttachment({ view: context })
     .draw(4, PARTICLE_AMOUNT);
 });
 

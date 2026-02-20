@@ -318,14 +318,8 @@ onFrame((deltaTime) => {
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
-  const textureView = context.getCurrentTexture().createView();
   pipeline
-    .withColorAttachment({
-      view: textureView,
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 });
 
