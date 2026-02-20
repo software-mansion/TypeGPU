@@ -181,7 +181,7 @@ const getOrbitingLightPos = (t: number): d.v3f => {
   );
 };
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -194,7 +194,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -234,7 +234,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
   targets: { format: presentationFormat },

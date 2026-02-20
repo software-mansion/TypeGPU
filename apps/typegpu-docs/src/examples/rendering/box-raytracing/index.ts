@@ -153,7 +153,7 @@ const Varying = {
   rayWorldOrigin: d.vec3f,
 };
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, ...Varying },
 })((input) => {
@@ -168,7 +168,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
 });
 
-const fragmentFunction = tgpu['~unstable'].fragmentFn({
+const fragmentFunction = tgpu.fragmentFn({
   in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
@@ -256,7 +256,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
 // pipeline
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   primitive: {
     topology: 'triangle-strip',
   },

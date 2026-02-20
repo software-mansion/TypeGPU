@@ -226,7 +226,7 @@ createDepthAndMsaaTextures();
 
 // Shaders and Pipeline
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: { position: d.vec4f, color: d.vec4f },
   out: { pos: d.builtin.position, color: d.vec4f },
 })((input) => {
@@ -240,12 +240,12 @@ const vertex = tgpu['~unstable'].vertexFn({
   return { pos, color: input.color };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { color: d.vec4f },
   out: d.vec4f,
 })((input) => input.color);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex,
   fragment,
