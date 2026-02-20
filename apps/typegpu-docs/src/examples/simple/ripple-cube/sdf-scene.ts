@@ -1,8 +1,8 @@
 import * as sdf from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 
-export const timeAccess = tgpu['~unstable'].accessor(d.f32);
-export const blendFactorAccess = tgpu['~unstable'].accessor(d.f32);
+export const timeAccess = tgpu.accessor(d.f32);
+export const blendFactorAccess = tgpu.accessor(d.f32);
 
 export const sdfLayout = tgpu.bindGroupLayout({
   sdfTexture: { texture: d.texture3d() },

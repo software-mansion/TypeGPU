@@ -51,7 +51,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 canvas.parentElement?.appendChild(video);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   /**
    * Adapted from the original Shadertoy implementation by movAX13h:

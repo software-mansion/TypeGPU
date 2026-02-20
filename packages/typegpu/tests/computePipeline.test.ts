@@ -12,7 +12,7 @@ import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
-    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [32] })(() => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [32] })(() => {
       // do something
     });
 
@@ -36,7 +36,7 @@ describe('TgpuComputePipeline', () => {
   it('throws an error if bind groups are missing', ({ root }) => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
       layout.$.alpha; // Using an entry of the layout
     });
 
@@ -55,7 +55,7 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('is resolvable', ({ root }) => {
-    const main = tgpu['~unstable']
+    const main = tgpu
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
       });
@@ -72,7 +72,7 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('type checks passed bind groups', ({ root }) => {
-    const main = tgpu['~unstable']
+    const main = tgpu
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
       });
@@ -97,7 +97,7 @@ describe('TgpuComputePipeline', () => {
 
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -118,7 +118,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -139,7 +139,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should replace previous performance callback', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -166,7 +166,7 @@ describe('TgpuComputePipeline', () => {
       //@ts-expect-error
       device.features = new Set();
 
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -187,7 +187,7 @@ describe('TgpuComputePipeline', () => {
 
   describe('Timestamp Writes', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -211,7 +211,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -237,7 +237,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should handle optional timestamp write indices', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -287,7 +287,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -325,7 +325,7 @@ describe('TgpuComputePipeline', () => {
         data: buffer,
       });
 
-      const entryFn = tgpu['~unstable']
+      const entryFn = tgpu
         .computeFn({ workgroupSize: [1] })(() => {
           layout.$.data;
         })
@@ -376,7 +376,7 @@ describe('TgpuComputePipeline', () => {
 
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -419,7 +419,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -465,14 +465,14 @@ describe('TgpuComputePipeline', () => {
       writable: true,
     });
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [1],
     })(({ gid }) => {
       const a = d.arrayOf(d.f32, 3)();
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 
@@ -501,7 +501,7 @@ describe('TgpuComputePipeline', () => {
       writable: true,
     });
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [1],
     })(({ gid }) => {
@@ -517,7 +517,7 @@ describe('TgpuComputePipeline', () => {
       }
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 

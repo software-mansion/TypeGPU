@@ -336,7 +336,7 @@ describe('indents', () => {
       sampler: { sampler: 'filtering', multisampled: true },
     });
 
-    const someVertex = tgpu['~unstable'].vertexFn({
+    const someVertex = tgpu.vertexFn({
       in: {
         vertexIndex: d.builtin.vertexIndex,
         position: d.vec4f,

@@ -82,7 +82,7 @@ const pointOffsets = tgpu.const(
 );
 
 const extendedRippleUniform = root.createUniform(d.u32);
-const sdfPrecalcPipeline = root['~unstable']
+const sdfPrecalcPipeline = root
   .with(timeAccess, timeUniform)
   .with(blendFactorAccess, blendFactorUniform)
   .createGuardedComputePipeline((x, y, z) => {
@@ -160,7 +160,7 @@ const getRayForUV = (uv: d.v2f) => {
   return Ray({ origin: camera.position, direction: d.vec4f(direction, 0) });
 };
 
-const rayMarchPipeline = root['~unstable']
+const rayMarchPipeline = root
   .pipe(perlinCache.inject())
   .with(materialAccess, materialUniform)
   .with(lightsAccess, lightsUniform)
