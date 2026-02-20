@@ -159,8 +159,8 @@ export interface ItemStateStack {
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;
-  pushBlockExternals(externals: Record<string, Snippet>): void;
-  popBlockExternals(): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 }
 
 /**

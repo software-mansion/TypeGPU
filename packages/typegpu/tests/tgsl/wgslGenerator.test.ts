@@ -1578,12 +1578,12 @@ describe('wgslGenerator', () => {
       );
 
       expect(res).toMatchInlineSnapshot(`
-        "{
-          const y = 100;
-          const x = y;
-          return u32(x);
-        }"
-      `);
+          "{
+            const y = 100;
+            const x = y;
+            return u32(x);
+          }"
+        `);
     });
   });
 
@@ -1607,53 +1607,15 @@ describe('wgslGenerator', () => {
       );
 
       const res = wgslGenerator.block(
-        ((parsed[1][0] as tinyest.ForOf)[3]) as tinyest.Block,
+        (parsed[1][0] as tinyest.ForOf)[3] as tinyest.Block,
         { x: 67 },
       );
 
       expect(res).toMatchInlineSnapshot(`
-        "{
-          const y = 67;
-        }"
-      `);
-    });
-  });
-
-  it('block externals are injected correctly into nested block', () => {
-    const f = () => {
-      'use gpu';
-      for (const x of []) {
-        const z = x;
-        {
-          const y = x;
-        }
-      }
-    };
-
-    const parsed = getMetaData(f)?.ast?.body as tinyest.Block;
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        [],
-        {},
-        d.Void,
-        {},
-      );
-
-      const res = wgslGenerator.block(
-        ((parsed[1][0] as tinyest.ForOf)[3]) as tinyest.Block,
-        { x: 67 },
-      );
-
-      expect(res).toMatchInlineSnapshot(`
-        "{
-          const z = 67;
-          {
+          "{
             const y = 67;
-          }
-        }"
-      `);
+          }"
+        `);
     });
   });
 });

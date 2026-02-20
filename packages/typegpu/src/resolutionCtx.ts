@@ -263,7 +263,7 @@ class ItemStateStackImpl implements ItemStateStack {
     throw new Error('No block scope found to define a variable in.');
   }
 
-  pushBlockExternals(externals: Record<string, Snippet>): void {
+  setBlockExternals(externals: Record<string, Snippet>) {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
@@ -273,10 +273,10 @@ class ItemStateStackImpl implements ItemStateStack {
         return;
       }
     }
-    throw new Error('No block scope found to push externals in.');
+    throw new Error('No block scope found to set externals in.');
   }
 
-  popBlockExternals(): void {
+  clearBlockExternals() {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
@@ -284,7 +284,7 @@ class ItemStateStackImpl implements ItemStateStack {
         return;
       }
     }
-    throw new Error('No block scope found to pop overrides from.');
+    throw new Error('No block scope found to clear externals in.');
   }
 }
 
@@ -409,13 +409,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return scope.returnType;
   }
 
-  pushBlockExternals(externals: Record<string, Snippet>) {
-    this._itemStateStack.pushBlockExternals(externals);
-  }
-  popBlockExternals() {
-    this._itemStateStack.popBlockExternals();
-  }
-
   get shelllessRepo() {
     return this.#namespaceInternal.shelllessRepo;
   }
@@ -458,6 +451,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   popBlockScope() {
     this._itemStateStack.pop('blockScope');
+  }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.setBlockExternals(externals);
+  }
+
+  clearBlockExternals() {
+    this._itemStateStack.clearBlockExternals();
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {

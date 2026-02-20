@@ -49,11 +49,11 @@ import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { UnrolledIterable } from '../../src/core/unroll/tgpuUnroll.ts';
-import type { ExternalMap } from '../../src/core/resolve/externals.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
+import type { ExternalMap } from '../../src/core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -213,7 +213,7 @@ class WgslGenerator implements ShaderGenerator {
           [id, value],
         ) => [id, coerceToSnippet(value)]),
       );
-      this.ctx.pushBlockExternals(externals);
+      this.ctx.setBlockExternals(externals);
     }
 
     try {
@@ -1244,13 +1244,6 @@ ${this.ctx.pre}else ${alternate}`;
           iterableSnippet,
         );
 
-        const loopVarSnippet = snip(
-          loopVarName,
-          elementType,
-          elementSnippet.origin,
-        );
-        this.ctx.defineVariable(loopVarName, loopVarSnippet);
-
         const forStr =
           stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
             tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
@@ -1268,8 +1261,16 @@ ${this.ctx.pre}else ${alternate}`;
             )
           };`;
 
+        const loopVarSnippet = snip(
+          loopVarName,
+          elementType,
+          elementSnippet.origin,
+        );
+
         const bodyStr = `${this.ctx.pre}${
-          this.block(blockifySingleStatement(body))
+          this.block(blockifySingleStatement(body), {
+            [loopVar[1]]: loopVarSnippet,
+          })
         }`;
 
         this.ctx.dedent();
