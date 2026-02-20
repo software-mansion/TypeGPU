@@ -558,11 +558,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: catalog:types
-        version: 5.9.3
+        specifier: npm:tsover@^5.9.6
+        version: tsover@5.9.6
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(typescript@5.9.3)
+        version: 3.5.0(tsover@5.9.6)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
