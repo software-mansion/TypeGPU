@@ -218,7 +218,7 @@ const execute = async () => {
     }
   };
 
-  void processFiles({ exitOnError: !watch, inputFiles });
+  await processFiles({ exitOnError: !watch, inputFiles });
 
   if (watch) {
     console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
