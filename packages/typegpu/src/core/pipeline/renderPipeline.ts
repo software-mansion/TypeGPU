@@ -26,7 +26,6 @@ import {
   type U16,
   type U32,
   type v4f,
-  Vec4f,
   Void,
   type WgslArray,
   type WgslStruct,
