@@ -52,7 +52,7 @@ import type { AnyFn } from '../core/function/fnTypes.ts';
 import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
-import { ExternalMap } from '../../src/core/resolve/externals.ts';
+import type { ExternalMap } from '../../src/core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -212,7 +212,7 @@ class WgslGenerator implements ShaderGenerator {
           [id, value],
         ) => [id, coerceToSnippet(value)]),
       );
-      this.ctx.pushBlockExternals(externals);
+      this.ctx.setBlockExternals(externals);
     }
 
     try {

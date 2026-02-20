@@ -263,7 +263,7 @@ class ItemStateStackImpl implements ItemStateStack {
     throw new Error('No block scope found to define a variable in.');
   }
 
-  pushBlockExternals(externals: Record<string, Snippet>) {
+  setBlockExternals(externals: Record<string, Snippet>) {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
@@ -273,10 +273,10 @@ class ItemStateStackImpl implements ItemStateStack {
         return;
       }
     }
-    throw new Error('No block scope found to push externals in.');
+    throw new Error('No block scope found to set externals in.');
   }
 
-  popBlockExternals() {
+  clearBlockExternals() {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
@@ -284,7 +284,7 @@ class ItemStateStackImpl implements ItemStateStack {
         return;
       }
     }
-    throw new Error('No block scope found to pop overrides from.');
+    throw new Error('No block scope found to clear externals in.');
   }
 }
 
@@ -453,12 +453,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.pop('blockScope');
   }
 
-  pushBlockExternals(externals: Record<string, Snippet>) {
-    this._itemStateStack.pushBlockExternals(externals);
+  setBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.setBlockExternals(externals);
   }
 
-  popBlockExternals() {
-    this._itemStateStack.popBlockExternals();
+  clearBlockExternals() {
+    this._itemStateStack.clearBlockExternals();
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
