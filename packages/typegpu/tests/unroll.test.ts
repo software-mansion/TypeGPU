@@ -300,6 +300,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
+  // TODO: is this dangerous??
   it('unrolls array expression of pointers', () => {
     const f = () => {
       'use gpu';
@@ -396,34 +397,40 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('warns when iterable is unknown at compile-time and fallbacks to regular loop', ({ root }) => {
-    const b = root.createUniform(d.arrayOf(d.u32, 7));
-    const acc = tgpu.accessor(d.arrayOf(d.u32, 7), b);
+  it('warns when iterable element count is unknown at compile-time and fallbacks to regular loop', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const layout = tgpu.bindGroupLayout({
+      arr: { storage: d.arrayOf(d.f32) },
+    });
 
     const f = () => {
       'use gpu';
-      let result = d.u32(0);
-      for (const foo of tgpu.unroll(acc.$)) {
-        result += foo;
+      let res = d.f32(0);
+      for (const foo of tgpu.unroll(layout.$.arr)) {
+        res += foo;
       }
-
-      return result;
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> b: array<u32, 7>;
+      "@group(0) @binding(0) var<storage, read> arr: array<f32>;
 
-      fn f() -> u32 {
-        var result = 0u;
-        for (var i = 0u; i < 7; i++) {
-          let foo = b[i];
+      fn f() {
+        var res = 0f;
+        for (var i = 0u; i < arrayLength((&arr)); i++) {
+          let foo = arr[i];
           {
-            result += foo;
+            res += foo;
           }
         }
-        return result;
       }"
     `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Cannot unroll loop. The iterable is unknown at compile-time. Fallback to regular loop.',
+    );
   });
 
   it('warns when number of iteration to unroll is greater than 8', () => {
@@ -475,15 +482,211 @@ describe('tgpu.unroll', () => {
     );
   });
 
-  // TODO
-  //
-  // const arr = [1, 2, 3];
-  // for (const foo of tgpu.unroll(arr)) { // should operate on indices
-  //   result -= foo;
-  // }
+  it('unrolls named iterable of primitives', () => {
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      let res = d.f32(0);
+      for (const foo of tgpu.unroll(arr)) {
+        res += foo;
+      }
 
-  // const v = d.vec2f();
-  // for (const foo of tgpu.unroll(v)) { // should operate on indices
-  //   result *= foo;
-  // }
+      return res;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> f32 {
+        var arr = array<i32, 3>(1, 2, 3);
+        var res = 0f;
+        {
+          res += f32(arr[0u]);
+        }
+        {
+          res += f32(arr[1u]);
+        }
+        {
+          res += f32(arr[2u]);
+        }
+        return res;
+      }"
+    `);
+  });
+
+  it('unrolls named iterable of vectors', () => {
+    const f = () => {
+      'use gpu';
+
+      const v1 = d.vec2f(1);
+      const v2 = d.vec2f(8);
+      const v3 = d.vec2f(2);
+      const arr = d.arrayOf(d.vec2f, 4)([v1, v2, v2, v3]);
+      let res = d.vec2f();
+
+      for (const foo of tgpu.unroll(arr)) {
+        res = res.add(foo);
+        foo.x = 7;
+      }
+
+      return res;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> vec2f {
+        var v1 = vec2f(1);
+        var v2 = vec2f(8);
+        var v3 = vec2f(2);
+        var arr = array<vec2f, 4>(v1, v2, v2, v3);
+        var res = vec2f();
+        {
+          res = (res + arr[0u]);
+          arr[0u].x = 7f;
+        }
+        {
+          res = (res + arr[1u]);
+          arr[1u].x = 7f;
+        }
+        {
+          res = (res + arr[2u]);
+          arr[2u].x = 7f;
+        }
+        {
+          res = (res + arr[3u]);
+          arr[3u].x = 7f;
+        }
+        return res;
+      }"
+    `);
+  });
+
+  it('unrolls named iterable of complex types', () => {
+    const Boid = d.struct({
+      pos: d.vec2i,
+      vel: d.vec2f,
+    });
+
+    const f = () => {
+      'use gpu';
+      const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
+      const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
+      const arr = d.arrayOf(Boid, 2)([b1, b2]);
+      let res = d.vec2f();
+
+      for (const foo of tgpu.unroll(arr)) {
+        res = res.add(foo.vel);
+        foo.pos.x = 7;
+      }
+
+      return res;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2i,
+        vel: vec2f,
+      }
+
+      fn f() -> vec2f {
+        var b1 = Boid(vec2i(1), vec2f(1));
+        var b2 = Boid(vec2i(2), vec2f(2));
+        var arr = array<Boid, 2>(b1, b2);
+        var res = vec2f();
+        {
+          res = (res + arr[0u].vel);
+          arr[0u].pos.x = 7i;
+        }
+        {
+          res = (res + arr[1u].vel);
+          arr[1u].pos.x = 7i;
+        }
+        return res;
+      }"
+    `);
+  });
+
+  it('unrolls buffer iterable', ({ root }) => {
+    const b = root.createUniform(d.arrayOf(d.u32, 7));
+    const acc = tgpu.accessor(d.arrayOf(d.u32, 7), b);
+
+    const f = () => {
+      'use gpu';
+      let result = d.u32(0);
+      for (const foo of tgpu.unroll(acc.$)) {
+        result += foo;
+      }
+
+      return result;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> b: array<u32, 7>;
+
+      fn f() -> u32 {
+        var result = 0u;
+        {
+          result += b[0u];
+        }
+        {
+          result += b[1u];
+        }
+        {
+          result += b[2u];
+        }
+        {
+          result += b[3u];
+        }
+        {
+          result += b[4u];
+        }
+        {
+          result += b[5u];
+        }
+        {
+          result += b[6u];
+        }
+        return result;
+      }"
+    `);
+  });
+
+  it('can be conditinally applied', () => {
+    const unroll = tgpu.accessor(d.bool, true);
+
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      let r = d.f32(0);
+      for (const foo of (unroll.$ ? tgpu.unroll(arr) : arr)) {
+        r += foo;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        var r = 0f;
+        {
+          r += f32(arr[0u]);
+        }
+        {
+          r += f32(arr[1u]);
+        }
+        {
+          r += f32(arr[2u]);
+        }
+      }"
+    `);
+    expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)]))
+      .toMatchInlineSnapshot(`
+        "fn f() {
+          var arr = array<i32, 3>(1, 2, 3);
+          var r = 0f;
+          for (var i = 0u; i < 3; i++) {
+            let foo = arr[i];
+            {
+              r += f32(foo);
+            }
+          }
+        }"
+      `);
+  });
 });

@@ -1188,9 +1188,8 @@ ${this.ctx.pre}else ${alternate}`;
 
       let ctxIndent = false;
 
+      this.ctx.pushBlockScope();
       try {
-        this.ctx.pushBlockScope();
-
         const iterableExpr = this.expression(iterable);
         let shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll
@@ -1202,10 +1201,12 @@ ${this.ctx.pre}else ${alternate}`;
           iterableSnippet,
           shouldUnroll,
         );
+        const originalLoopVarName = loopVar[1];
+        const blockified = blockifySingleStatement(body);
 
         if (
           shouldUnroll &&
-          !isKnownAtComptime(iterableSnippet)
+          (stitch`${elementCountSnippet}`).includes('arrayLength')
         ) {
           console.warn(
             'Cannot unroll loop. The iterable is unknown at compile-time. Fallback to regular loop.',
@@ -1214,8 +1215,9 @@ ${this.ctx.pre}else ${alternate}`;
         }
 
         if (shouldUnroll) {
+          const count = elementCountSnippet.value as number;
           // we know it is a number, because it is known at compile-time
-          if ((elementCountSnippet.value as number) > 8) {
+          if (count > 8) {
             console.warn(
               `Unrolling ${elementCountSnippet.value} iterations exceeds recommended limit of 8. Consider using a smaller array or runtime loop.`,
             );
@@ -1223,60 +1225,51 @@ ${this.ctx.pre}else ${alternate}`;
 
           if (ephemeralIterable) {
             const { value, dataType } = iterableSnippet;
-            if (value instanceof ArrayExpression) {
-              const blockified = blockifySingleStatement(body);
-              const iterations = value.elements.map((e) =>
+
+            const elements = value instanceof ArrayExpression
+              ? value.elements // already snippets
+              : wgsl.isVec(dataType)
+              ? (value as wgsl.AnyVecInstance).map((e) =>
+                snip(e, dataType.primitive, iterableSnippet.origin) // we can give `e` the exact type inferred from vector
+              )
+              : Array.isArray(value)
+              ? value // type inferred later
+              : []; // error already thrown by `getElementCountSnippet`
+
+            return elements
+              .map((e) =>
                 `${this.ctx.pre}${
-                  this.block(blockified, { [`${loopVar[1]}`]: e }) // `e` is already a snippet
+                  this.block(blockified, { [originalLoopVarName]: e })
                 }`
-              );
-
-              return iterations.join('\n');
-            }
-
-            if (wgsl.isVec(dataType)) {
-              const blockified = blockifySingleStatement(body);
-              const iterations = (value as wgsl.AnyVecInstance) // it's ephemeral, it's not a string
-                .map((e) =>
-                  `${this.ctx.pre}${
-                    this.block(blockified, {
-                      [loopVar[1]]: snip( // we can give `e` a type
-                        e,
-                        dataType.primitive,
-                        iterableSnippet.origin,
-                      ),
-                    })
-                  }`
-                );
-
-              return iterations.join('\n');
-            }
-
-            if (Array.isArray(value)) {
-              const blockified = blockifySingleStatement(body);
-
-              const iterations = value.map((e) =>
-                `${this.ctx.pre}${
-                  this.block(blockified, {
-                    [loopVar[1]]: e, // cannot infer `e` type, we will do it later
-                  })
-                }`
-              );
-
-              return iterations.join('\n');
-            }
-
-            // if not any of the above types, then error has been already thrown by `getElementCountSnippet`
+              )
+              .join('\n');
           }
 
-          throw new Error('Not implemented');
+          // iterable stored in a variable, we still can unroll it
+          return Array.from({ length: count }, (_, i) => {
+            const elementSnippet = forOfUtils.getElementSnippet(
+              iterableSnippet,
+              `${i}u`,
+            );
+            return `${this.ctx.pre}${
+              this.block(blockified, {
+                [originalLoopVarName]: elementSnippet,
+              })
+            }`;
+          }).join('\n');
         }
 
-        if (!shouldUnroll && !ephemeralIterable) {
+        if (!ephemeralIterable) {
           const index = this.ctx.makeNameValid('i');
           const elementSnippet = forOfUtils.getElementSnippet(
             iterableSnippet,
             index,
+          );
+          const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+          const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+          const elementType = forOfUtils.getElementType(
+            elementSnippet,
+            iterableSnippet,
           );
 
           const forHeaderStr =
@@ -1286,13 +1279,6 @@ ${this.ctx.pre}else ${alternate}`;
 
           this.ctx.indent();
           ctxIndent = true;
-
-          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-          const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
-          const elementType = forOfUtils.getElementType(
-            elementSnippet,
-            iterableSnippet,
-          );
 
           const loopVarDeclStr =
             stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
@@ -1305,8 +1291,8 @@ ${this.ctx.pre}else ${alternate}`;
             };`;
 
           const bodyStr = `${this.ctx.pre}${
-            this.block(blockifySingleStatement(body), {
-              [loopVar[1]]: snip(
+            this.block(blockified, {
+              [originalLoopVarName]: snip(
                 loopVarName,
                 elementType,
                 elementSnippet.origin,
