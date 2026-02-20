@@ -505,14 +505,10 @@ function makePipelines(
     },
 
     render() {
-      const textureView = context.getCurrentTexture().createView();
-
       renderPipeline
         .withColorAttachment({
-          view: textureView,
+          view: context,
           clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
         })
         .draw(4);
     },

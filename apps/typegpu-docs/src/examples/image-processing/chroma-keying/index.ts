@@ -128,11 +128,7 @@ function processVideoFrame(
 
   renderPipeline
     .with(group)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);

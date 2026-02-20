@@ -271,10 +271,8 @@ function drawObject(
   pipeline
     .withColorAttachment({
       view: msaaTexture,
-      resolveTarget: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
+      resolveTarget: context,
       loadOp: loadOp,
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture,

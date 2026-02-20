@@ -1,10 +1,5 @@
 import { isBuiltin } from '../../data/attributes.ts';
-import {
-  type BaseData,
-  isDecorated,
-  isVoid,
-  isWgslStruct,
-} from '../../data/wgslTypes.ts';
+import { type BaseData, isVoid, isWgslStruct } from '../../data/wgslTypes.ts';
 import type {
   AnyFragmentTargets,
   TgpuColorTargetState,
@@ -16,7 +11,7 @@ export function connectTargetsToShader(
 ): (GPUColorTargetState | null)[] {
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-  if (isVoid(fragmentOut) || isDecorated(fragmentOut)) {
+  if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
     return [null];
   }
 

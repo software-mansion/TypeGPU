@@ -203,11 +203,9 @@ canvas.addEventListener('click', handleClick);
 let frameId: number;
 function render() {
   frameId = requestAnimationFrame(render);
-  pipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  pipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 frameId = requestAnimationFrame(render);
 

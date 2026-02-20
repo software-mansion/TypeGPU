@@ -601,11 +601,7 @@ function render(timestamp: number) {
   );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
 

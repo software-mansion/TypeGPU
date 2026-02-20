@@ -244,11 +244,7 @@ function run(timestamp: number) {
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   animationFrame = requestAnimationFrame(run);

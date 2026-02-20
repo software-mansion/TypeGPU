@@ -259,7 +259,7 @@ function run(timestamp: number) {
 
   postProcessing.runBloom();
 
-  postProcessing.render(context.getCurrentTexture().createView());
+  postProcessing.render(context);
 
   animationFrame = requestAnimationFrame(run);
 }

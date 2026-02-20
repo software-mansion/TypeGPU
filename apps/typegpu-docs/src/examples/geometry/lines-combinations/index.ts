@@ -16,7 +16,7 @@ import {
   startCapSlot,
   uvToLineSegment,
 } from '@typegpu/geometry';
-import tgpu from 'typegpu';
+import tgpu, { type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,
@@ -30,7 +30,6 @@ import {
   vec4f,
 } from 'typegpu/data';
 import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
-import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -372,10 +371,9 @@ const draw = (timeMs: number) => {
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
-    view: context.getCurrentTexture().createView(),
+    view: context,
     clearValue: [1, 1, 1, 1],
     loadOp: 'load',
-    storeOp: 'store',
   };
   pipelines.fill
     .with(uniformsBindGroup)

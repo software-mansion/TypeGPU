@@ -172,11 +172,9 @@ function render() {
       );
   }
 
-  renderPipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  renderPipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 render();
 

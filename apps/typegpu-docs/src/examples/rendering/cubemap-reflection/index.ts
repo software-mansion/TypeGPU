@@ -267,10 +267,8 @@ const pipeline = root.createRenderPipeline({
 function render() {
   cubePipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
     .with(renderBindGroup)
@@ -279,10 +277,9 @@ function render() {
 
   pipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
       loadOp: 'load',
-      storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
     .with(renderBindGroup)

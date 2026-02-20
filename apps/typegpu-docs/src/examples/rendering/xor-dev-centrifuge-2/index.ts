@@ -111,11 +111,7 @@ function draw(timestamp: number) {
   time.write((timestamp * 0.001) % 1000);
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);
