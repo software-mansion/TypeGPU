@@ -1,27 +1,26 @@
 import * as m from 'wgpu-matrix';
 import tgpu, { d, std } from 'typegpu';
-import { Camera, CubeVertex, vertexCubeLayout } from './schemas.ts';
+import { CubeVertex, vertexCubeLayout } from './schemas.ts';
 import { cubeVertices } from './cubeVertices.ts';
+import {
+  Camera,
+  setupFirstPersonCamera,
+} from '../../common/setup-first-person-camera.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const viewPosition = d.vec3f(5, 5, 5);
-const viewTarget = d.vec3f(0, 0, 0);
-const aspectRatio = canvas.clientWidth / canvas.clientHeight;
-const camera = Camera({
-  view: m.mat4.lookAt(viewPosition, viewTarget, d.vec3f(0, 1, 0), d.mat4x4f()),
-  projection: m.mat4.perspective(
-    Math.PI / 4,
-    aspectRatio,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  ),
-});
-const cameraUniform = root.createUniform(Camera, camera);
+const cameraUniform = root.createUniform(Camera);
+const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
+  canvas,
+  { initPos: d.vec3f(5), target: d.vec3f(0.5), speed: d.vec3f(0.01, 0.1, 1) },
+  (camera) => {
+    cameraUniform.writePartial(camera);
+  },
+);
+
 const cubeVertexBuffer = root
   .createBuffer(d.disarrayOf(CubeVertex, 36), cubeVertices)
   .$usage('vertex');
@@ -63,6 +62,7 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
 
 let frameId = requestAnimationFrame(draw);
 function draw() {
+  updatePosition();
   renderPipeline
     .with(vertexCubeLayout, cubeVertexBuffer)
     .withColorAttachment({
@@ -77,5 +77,6 @@ function draw() {
 
 export function onCleanup() {
   root.destroy();
+  cleanupCamera();
   cancelAnimationFrame(frameId);
 }
