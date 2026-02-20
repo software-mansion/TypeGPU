@@ -132,8 +132,8 @@ export function dynamicCacheConfig<Prefix extends string>(
 ): DynamicPerlin2DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin2DLayoutPrefix as Prefix } = options ?? {};
 
-  const sizeAccess = tgpu['~unstable'].accessor(d.vec2u);
-  const memoryAccess = tgpu['~unstable'].accessor(MemorySchema);
+  const sizeAccess = tgpu.accessor(d.vec2u);
+  const memoryAccess = tgpu.accessor(MemorySchema);
 
   const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
     const size = d.vec2i(sizeAccess.$);

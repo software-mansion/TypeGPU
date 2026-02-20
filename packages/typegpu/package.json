@@ -39,7 +39,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -71,7 +71,7 @@
     "arktype": "catalog:",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
-    "tsup": "catalog:build",
+    "tsdown": "catalog:build",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"

@@ -1,7 +1,4 @@
-import { initBuildScript } from '@typegpu/tgpu-dev-cli';
-import { defineConfig } from 'tsup';
-
-const { inDevMode } = initBuildScript();
+import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: [
@@ -16,13 +13,14 @@ export default defineConfig({
     'src/vite.ts',
     'src/webpack.ts',
   ],
+  outputOptions: {
+    exports: 'named',
+  },
+  inlineOnly: ['@babel/types', '@types/estree', 'rollup'],
   outDir: 'dist',
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',
   target: 'es2017',
-  splitting: true,
-  sourcemap: true,
-  minify: !inDevMode,
-  clean: !inDevMode,
+  platform: 'node',
   dts: true,
 });
