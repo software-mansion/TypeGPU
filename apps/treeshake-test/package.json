@@ -18,7 +18,7 @@
     "esbuild": "^0.25.10",
     "ts-loader": "^9.5.4",
     "tsdown": "^0.15.6",
-    "tsx": "^4.19.2",
+    "tsx": "^4.21.0",
     "typescript": "catalog:types",
     "webpack": "^5.102.0",
     "webpack-cli": "^6.0.1"
