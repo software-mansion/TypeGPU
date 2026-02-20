@@ -420,10 +420,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   pushBlockScope() {
+    this.#namespaceInternal.nameRegistry.pushBlockScope();
     this._itemStateStack.pushBlockScope();
   }
 
   popBlockScope() {
+    this.#namespaceInternal.nameRegistry.popBlockScope();
     this._itemStateStack.pop('blockScope');
   }
 
