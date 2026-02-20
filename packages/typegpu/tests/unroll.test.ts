@@ -6,7 +6,7 @@ import tgpu from '../src/index.ts';
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {
     const arr = [1, 2, 3];
-    const x = tgpu['~unstable'].unroll(arr);
+    const x = tgpu.unroll(arr);
 
     expect(x).toBe(arr);
   });
@@ -18,11 +18,11 @@ describe('tgpu.unroll', () => {
 
     const f = () => {
       'use gpu';
-      const a = tgpu['~unstable'].unroll([1, 2, 3]);
+      const a = tgpu.unroll([1, 2, 3]);
 
       const v1 = d.vec2f(7);
-      const v2 = tgpu['~unstable'].unroll(v1); // this should return a pointer
-      const arr = tgpu['~unstable'].unroll(layout.$.arr); // this should return a pointer
+      const v2 = tgpu.unroll(v1); // this should return a pointer
+      const arr = tgpu.unroll(layout.$.arr); // this should return a pointer
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
@@ -41,7 +41,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let res = 0;
-      for (const foo of tgpu['~unstable'].unroll([1, 2, 3])) {
+      for (const foo of tgpu.unroll([1, 2, 3])) {
         res += foo;
       }
       return res;
@@ -68,7 +68,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       const foo = d.vec3f(6);
-      for (const foo of tgpu['~unstable'].unroll([1, 2])) {
+      for (const foo of tgpu.unroll([1, 2])) {
         const boo = foo;
       }
     };
@@ -90,7 +90,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let fooResult = d.f32(0);
-      for (const foo of tgpu['~unstable'].unroll([1, 2])) {
+      for (const foo of tgpu.unroll([1, 2])) {
         const boo = foo;
         {
           const foo = boo;
@@ -137,8 +137,8 @@ describe('tgpu.unroll', () => {
       const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
       const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
       let res = d.vec2f();
-      for (const foo of tgpu['~unstable'].unroll([b1, b2])) {
-        for (const boo of tgpu['~unstable'].unroll([Boid(), Boid()])) {
+      for (const foo of tgpu.unroll([b1, b2])) {
+        for (const boo of tgpu.unroll([Boid(), Boid()])) {
           res = res.add(foo.vel).add(boo.vel);
         }
       }
@@ -183,7 +183,7 @@ describe('tgpu.unroll', () => {
       let res = d.vec2f();
       const v1 = d.vec2f(7);
       const v2 = d.vec2f(3);
-      for (const foo of tgpu['~unstable'].unroll([d.vec2f(v1), d.vec2f(v2)])) {
+      for (const foo of tgpu.unroll([d.vec2f(v1), d.vec2f(v2)])) {
         res = res.add(foo);
         const boo = foo;
         boo.x = 0;
@@ -219,7 +219,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let result = d.u32(0);
-      for (const prop of tgpu['~unstable'].unroll(list)) {
+      for (const prop of tgpu.unroll(list)) {
         result += values[prop];
       }
       return result;
@@ -265,7 +265,7 @@ describe('tgpu.unroll', () => {
         'use gpu';
 
         let p = d.f32(0);
-        for (const key of tgpu['~unstable'].unroll(variantsKey)) {
+        for (const key of tgpu.unroll(variantsKey)) {
           // @ts-expect-error: trust me
           p += weights[key] * variants[key](p);
         }
@@ -306,7 +306,7 @@ describe('tgpu.unroll', () => {
       let res = d.vec2f();
       const v1 = d.vec2f(7);
       const v2 = d.vec2f(3);
-      for (const foo of tgpu['~unstable'].unroll([v1, v2])) {
+      for (const foo of tgpu.unroll([v1, v2])) {
         res = res.add(foo);
         const boo = foo;
         boo.x = 6;
@@ -339,7 +339,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let res = d.u32(0);
-      for (const foo of tgpu['~unstable'].unroll(d.vec4u(1, 2, 3, 4))) {
+      for (const foo of tgpu.unroll(d.vec4u(1, 2, 3, 4))) {
         res += foo;
       }
 
@@ -372,7 +372,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let result = 0;
-      for (const foo of tgpu['~unstable'].unroll(arr)) {
+      for (const foo of tgpu.unroll(arr)) {
         result += foo;
       }
 
@@ -403,7 +403,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       let result = d.u32(0);
-      for (const foo of tgpu['~unstable'].unroll(acc.$)) {
+      for (const foo of tgpu.unroll(acc.$)) {
         result += foo;
       }
 
@@ -433,7 +433,7 @@ describe('tgpu.unroll', () => {
 
     const f = () => {
       'use gpu';
-      for (const foo of tgpu['~unstable'].unroll([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+      for (const foo of tgpu.unroll([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
         continue;
       }
     };
@@ -478,17 +478,12 @@ describe('tgpu.unroll', () => {
   // TODO
   //
   // const arr = [1, 2, 3];
-  // for (const foo of tgpu['~unstable'].unroll(arr)) { // should operate on indices
+  // for (const foo of tgpu.unroll(arr)) { // should operate on indices
   //   result -= foo;
   // }
 
   // const v = d.vec2f();
-  // for (const foo of tgpu['~unstable'].unroll(v)) { // should operate on indices
+  // for (const foo of tgpu.unroll(v)) { // should operate on indices
   //   result *= foo;
-  // }
-
-  // for (const foo of tgpu['~unstable'].unroll([1, 2, 3])) { // should operate on values
-  //   const foo = 1;
-  //   result += d.f32(foo);
   // }
 });

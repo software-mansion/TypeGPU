@@ -43,4 +43,3 @@ export {
   /** @deprecated This feature is now stable, use tgpu.vertexLayout. */
   vertexLayout,
 } from './core/vertexLayout/vertexLayout.ts';
-export { unroll } from './core/unroll/tgpuUnroll.ts';
