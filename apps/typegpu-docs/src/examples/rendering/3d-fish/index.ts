@@ -347,7 +347,7 @@ function updateCameraTarget(cx: number, cy: number) {
   );
 }
 
-async function updateMouseRay(cx: number, cy: number) {
+function updateMouseRay(cx: number, cy: number) {
   const boundingBox = canvas.getBoundingClientRect();
   const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
   const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);
@@ -385,7 +385,7 @@ canvas.addEventListener('mousedown', async (event) => {
   if (event.button === 0) {
     isPressed = true;
   }
-  void updateMouseRay(event.clientX, event.clientY);
+  updateMouseRay(event.clientX, event.clientY);
 });
 
 const mouseUpEventListener = (event: MouseEvent) => {
@@ -411,7 +411,7 @@ const mouseMoveEventListener = (event: MouseEvent) => {
     updateCameraTarget(dx, dy);
   }
 
-  void updateMouseRay(event.clientX, event.clientY);
+  updateMouseRay(event.clientX, event.clientY);
 };
 window.addEventListener('mousemove', mouseMoveEventListener);
 
@@ -425,7 +425,7 @@ canvas.addEventListener(
       previousMouseX = event.touches[0].clientX;
       previousMouseY = event.touches[0].clientY;
     }
-    void updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
     controlsPopup.style.opacity = '0';
   },
   { passive: false },
@@ -440,7 +440,7 @@ const touchMoveEventListener = (event: TouchEvent) => {
 
     updateCameraTarget(dx, dy);
   }
-  void updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+  updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
 };
 window.addEventListener('touchmove', touchMoveEventListener);
 
