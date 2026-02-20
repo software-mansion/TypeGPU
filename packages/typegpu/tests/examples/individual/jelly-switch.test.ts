@@ -337,7 +337,7 @@ describe('jelly switch example', () => {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
-        for (var i = 0; (i < 64i); i++) {
+        for (var i_1 = 0; (i_1 < 64i); i_1++) {
           if ((totalSteps >= 64u)) {
             break;
           }

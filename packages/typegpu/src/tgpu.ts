@@ -14,5 +14,6 @@ export { bindGroupLayout } from './tgpuBindGroupLayout.ts';
 export { computeFn } from './core/function/tgpuComputeFn.ts';
 export { fragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { vertexFn } from './core/function/tgpuVertexFn.ts';
+export { unroll } from './core/unroll/tgpuUnroll.ts';
 
 export * as '~unstable' from './tgpuUnstable.ts';

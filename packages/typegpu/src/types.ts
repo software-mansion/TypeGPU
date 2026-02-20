@@ -124,6 +124,7 @@ export type SlotBindingLayer = {
 export type BlockScopeLayer = {
   type: 'blockScope';
   declarations: Map<string, Snippet>;
+  externals: Map<string, Snippet>;
 };
 
 export type StackLayer =
@@ -158,6 +159,8 @@ export interface ItemStateStack {
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 }
 
 /**
