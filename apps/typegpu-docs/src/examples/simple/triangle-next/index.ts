@@ -11,7 +11,6 @@ const getGradientColor = (ratio: number) => {
 };
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const pos = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(0.0, 0.5),
@@ -37,17 +36,10 @@ const pipeline = root.createRenderPipeline({
     'use gpu';
     return getGradientColor((uv.x + uv.y) / 2);
   },
-  targets: { format: presentationFormat },
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 pipeline
   .withColorAttachment({

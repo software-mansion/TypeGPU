@@ -24,7 +24,6 @@ let speedMultiplier = 1;
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // models and textures
 
@@ -170,7 +169,6 @@ const renderPipeline = root.createRenderPipeline({
   attribs: modelVertexLayout.attrib,
   vertex: vertexShader,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 
   depthStencil: {
     format: 'depth24plus',

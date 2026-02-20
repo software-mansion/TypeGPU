@@ -442,7 +442,6 @@ const fragmentMain = tgpu.fragmentFn({
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
@@ -486,7 +485,6 @@ function makePipelines(
     .createRenderPipeline({
       vertex: vertexMain,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
 
       primitive: { topology: 'triangle-strip' },
     });

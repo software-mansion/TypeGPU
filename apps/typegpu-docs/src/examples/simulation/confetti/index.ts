@@ -18,7 +18,6 @@ const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // data types
 
@@ -146,7 +145,6 @@ const renderPipeline = root
   .createRenderPipeline({
     vertex: mainVert,
     fragment: mainFrag,
-    targets: { format: presentationFormat },
     attribs: {
       tilt: geometryLayout.attrib.tilt,
       angle: geometryLayout.attrib.angle,

@@ -33,7 +33,6 @@ const root = tgpu.initFromDevice({ device });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 let exampleDestroyed = false;
 
 // Geometry & Material Setup
@@ -253,7 +252,6 @@ const cubePipeline = root.createRenderPipeline({
   attribs: cubeVertexLayout.attrib,
   vertex: cubeVertexFn,
   fragment: cubeFragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'front' },
 });
 
@@ -261,7 +259,6 @@ const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: vertexFn,
   fragment: fragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'back' },
 });
 

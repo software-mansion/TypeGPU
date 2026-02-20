@@ -4,9 +4,7 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 canvas.addEventListener('contextmenu', (event) => {
   if (event.target === canvas) {
@@ -340,7 +338,6 @@ function resetGameData() {
       },
       vertex,
       fragment,
-      targets: { format: presentationFormat },
 
       primitive: {
         topology: 'triangle-strip',
