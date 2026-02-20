@@ -12,7 +12,7 @@ import {
   type UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip, Snippet } from '../../data/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,
@@ -26,6 +26,7 @@ import {
   type U16,
   type U32,
   type v4f,
+  Vec4f,
   Void,
   type WgslArray,
   type WgslStruct,
@@ -113,6 +114,19 @@ export type TgpuPrimitiveState =
   | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
     stripIndexFormat?: U32 | U16;
   })
+  | undefined;
+
+export type TgpuColorTargetState =
+  | Omit<GPUColorTargetState, 'format'> & {
+    /**
+     * The {@link GPUTextureFormat} of this color target. The pipeline will only be compatible with
+     * {@link GPURenderPassEncoder}s which use a {@link GPUTextureView} of this format in the
+     * corresponding color attachment.
+     *
+     * @default navigator.gpu.getPreferredCanvasFormat()
+     */
+    format?: GPUTextureFormat | undefined;
+  }
   | undefined;
 
 export interface HasIndexBuffer {
@@ -220,17 +234,17 @@ export type FragmentOutToTargets<T> =
       | Void
       // (shelled) empty object
       | Record<string, never>
-    ? Record<string, never>
+    ? Record<string, never> | undefined
   : T extends
       | { readonly [$internal]: unknown } // a schema
       | number | boolean | AnyVecInstance // an instance
-    ? GPUColorTargetState
+    ? TgpuColorTargetState
   : T extends Record<string, unknown> // a record
   // Stripping all builtin properties
-  ? { [Key in keyof OmitBuiltins<T>]: GPUColorTargetState; }
+  ? { [Key in keyof OmitBuiltins<T>]?: TgpuColorTargetState; } | undefined
   // The widest type is here on purpose. It allows createRenderPipeline
   // to correctly choose the right overload.
-  : GPUColorTargetState | Record<string, GPUColorTargetState>;
+  : TgpuColorTargetState | Record<string, TgpuColorTargetState>;
 
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
@@ -242,9 +256,8 @@ export type FragmentOutToColorAttachment<T> = T extends {
   : Record<string, never>;
 
 export type AnyFragmentTargets =
-  | undefined
-  | GPUColorTargetState
-  | Record<string, GPUColorTargetState>;
+  | TgpuColorTargetState
+  | Record<string, TgpuColorTargetState>;
 
 interface ColorTextureConstraint {
   readonly [$internal]: TextureInternals;
@@ -783,11 +796,14 @@ class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
+  #latestFragmentOut: BaseData | undefined;
+
   constructor(public readonly options: RenderPipelineCoreOptions) {}
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
     const { vertex, fragment, attribs = {} } = this.options.descriptor;
+    this.#latestFragmentOut = undefined;
 
     const locations = matchUpVaryingLocations(
       (vertex as TgpuVertexFn | undefined)?.shell?.out,
@@ -815,16 +831,21 @@ class RenderPipelineCore implements SelfResolvable {
           }
 
           if (fragment) {
+            let fragOut: Snippet;
             if (typeof fragment === 'function') {
               const varyings = Object.fromEntries(
                 Object.entries(vertexOut.propTypes).filter(([, dataType]) =>
                   !isBuiltin(dataType)
                 ),
               );
-              ctx.resolve(new AutoFragmentFn(fragment, varyings, locations));
+              fragOut = ctx.resolve(
+                new AutoFragmentFn(fragment, varyings, locations),
+              );
             } else {
-              ctx.resolve(fragment);
+              fragOut = ctx.resolve(fragment);
             }
+
+            this.#latestFragmentOut = fragOut.dataType as BaseData;
           }
           return snip('', Void, /* origin */ 'runtime');
         }),
@@ -892,10 +913,7 @@ class RenderPipelineCore implements SelfResolvable {
     );
 
     const connectedTargets = fragment && targets
-      ? connectTargetsToShader(
-        (fragment as TgpuFragmentFn | undefined)?.shell?.out,
-        targets,
-      )
+      ? connectTargetsToShader(this.#latestFragmentOut, targets)
       : [null];
 
     const descriptor: GPURenderPipelineDescriptor = {

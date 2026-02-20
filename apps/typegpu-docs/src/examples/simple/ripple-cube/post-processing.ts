@@ -47,7 +47,6 @@ export function createPostProcessingPipelines(
   root: TgpuRoot,
   width: number,
   height: number,
-  presentationFormat: GPUTextureFormat,
   initialBloom: d.Infer<typeof BloomParams>,
 ) {
   const bloomUniform = root.createUniform(BloomParams, initialBloom);
@@ -185,7 +184,6 @@ export function createPostProcessingPipelines(
     .createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
     });
 
   const taaBindGroup = root.createBindGroup(taaResolveLayout, {

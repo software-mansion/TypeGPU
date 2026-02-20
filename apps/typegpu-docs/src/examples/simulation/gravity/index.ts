@@ -43,7 +43,6 @@ import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
@@ -115,7 +114,6 @@ const skyBoxPipeline = root
     attribs: renderSkyBoxVertexLayout.attrib,
     vertex: skyBoxVertex,
     fragment: skyBoxFragment,
-    targets: { format: presentationFormat },
   });
 
 const renderPipeline = root
@@ -126,7 +124,6 @@ const renderPipeline = root
     attribs: renderVertexLayout.attrib,
     vertex: mainVertex,
     fragment: mainFragment,
-    targets: { format: presentationFormat },
 
     primitive: { topology: 'triangle-list', cullMode: 'back' },
     depthStencil: {

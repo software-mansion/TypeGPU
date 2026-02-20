@@ -137,7 +137,6 @@ const vertexMain = tgpu.vertexFn({
   };
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
@@ -151,7 +150,6 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(canvas, {
 const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;

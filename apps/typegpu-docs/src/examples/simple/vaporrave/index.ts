@@ -13,7 +13,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // == BUFFERS ==
 const floorAngleUniform = root.createUniform(d.f32);
@@ -144,7 +143,6 @@ let renderPipeline = root
   .createRenderPipeline({
     vertex: vertexMain,
     fragment: fragmentMain,
-    targets: { format: presentationFormat },
   });
 
 let animationFrame: number;
@@ -229,7 +227,6 @@ export const controls = defineControls({
         .createRenderPipeline({
           vertex: vertexMain,
           fragment: fragmentMain,
-          targets: { format: presentationFormat },
         });
     },
   },

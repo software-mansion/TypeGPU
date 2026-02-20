@@ -66,7 +66,6 @@ navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = tgpu.initFromDevice({ device });
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // resources
 
@@ -162,7 +161,6 @@ const drawWithMaskPipeline = root
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
     fragment: fragmentFn,
-    targets: { format: presentationFormat },
   });
 
 // recalculating mask

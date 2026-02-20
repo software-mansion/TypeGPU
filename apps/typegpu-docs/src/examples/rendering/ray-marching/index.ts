@@ -4,7 +4,6 @@ import tgpu, { d, std } from 'typegpu';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
@@ -237,7 +236,6 @@ const fragmentMain = tgpu.fragmentFn({
 const renderPipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
-  targets: { format: presentationFormat },
 });
 
 let animationFrame: number;

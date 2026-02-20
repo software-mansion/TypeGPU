@@ -344,7 +344,7 @@ export interface WithBinding extends Withable<WithBinding> {
               >
             >,
           ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
-        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
@@ -425,7 +425,7 @@ export interface WithBinding extends Withable<WithBinding> {
               & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
-          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
         }
         | {
           attribs?: TAttribs;
