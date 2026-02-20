@@ -109,6 +109,7 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
+  RenderBundleEncoderPass,
   RenderPass,
   TgpuGuardedComputePipeline,
   TgpuRoot,
@@ -708,13 +709,9 @@ class TgpuRootImpl extends WithBindingImpl
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
-  beginRenderPass(
-    descriptor: GPURenderPassDescriptor,
-    callback: (pass: RenderPass) => void,
-  ): void {
-    const commandEncoder = this.device.createCommandEncoder();
-    const pass = commandEncoder.beginRenderPass(descriptor);
-
+  private createDrawablePassProxy(
+    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  ): RenderBundleEncoderPass {
     const bindGroups = new Map<
       TgpuBindGroupLayout,
       TgpuBindGroup | GPUBindGroup
@@ -731,22 +728,27 @@ class TgpuRootImpl extends WithBindingImpl
     >();
 
     let currentPipeline: TgpuRenderPipeline | undefined;
+    let dirty = true;
 
-    const setupPassBeforeDraw = () => {
+    const applyPipelineState = () => {
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
 
+      if (!dirty) {
+        return;
+      }
+      dirty = false;
+
       const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
 
-      pass.setPipeline(memo.pipeline);
+      encoder.setPipeline(memo.pipeline);
 
       const missingBindGroups = new Set(memo.usedBindGroupLayouts);
       memo.usedBindGroupLayouts.forEach((layout, idx) => {
         if (memo.catchall && idx === memo.catchall[0]) {
-          // Catch-all
-          pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
+          encoder.setBindGroup(idx, this.unwrap(memo.catchall[1]));
           missingBindGroups.delete(layout);
         } else {
           const bindGroup = priors.bindGroupLayoutMap?.get(layout) ??
@@ -754,9 +756,9 @@ class TgpuRootImpl extends WithBindingImpl
           if (bindGroup !== undefined) {
             missingBindGroups.delete(layout);
             if (isBindGroup(bindGroup)) {
-              pass.setBindGroup(idx, this.unwrap(bindGroup));
+              encoder.setBindGroup(idx, this.unwrap(bindGroup));
             } else {
-              pass.setBindGroup(idx, bindGroup);
+              encoder.setBindGroup(idx, bindGroup);
             }
           }
         }
@@ -776,14 +778,14 @@ class TgpuRootImpl extends WithBindingImpl
         if (!opts || !opts.buffer) {
           missingVertexLayouts.add(vertexLayout);
         } else if (isBuffer(opts.buffer)) {
-          pass.setVertexBuffer(
+          encoder.setVertexBuffer(
             idx,
             this.unwrap(opts.buffer),
             opts.offset,
             opts.size,
           );
         } else {
-          pass.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
+          encoder.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
         }
       });
 
@@ -795,6 +797,61 @@ class TgpuRootImpl extends WithBindingImpl
         throw new MissingVertexBuffersError(missingVertexLayouts);
       }
     };
+
+    return {
+      setPipeline(pipeline) {
+        currentPipeline = pipeline;
+        dirty = true;
+      },
+
+      setIndexBuffer: (buffer, indexFormat, offset, size) => {
+        if (isBuffer(buffer)) {
+          encoder.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
+        } else {
+          encoder.setIndexBuffer(buffer, indexFormat, offset, size);
+        }
+      },
+
+      setVertexBuffer(vertexLayout, buffer, offset, size) {
+        vertexBuffers.set(vertexLayout, { buffer, offset, size });
+        dirty = true;
+      },
+
+      setBindGroup(bindGroupLayout, bindGroup) {
+        bindGroups.set(bindGroupLayout, bindGroup);
+        dirty = true;
+      },
+
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        applyPipelineState();
+        encoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      },
+
+      drawIndexed(...args) {
+        applyPipelineState();
+        encoder.drawIndexed(...args);
+      },
+
+      drawIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndirect(...args);
+      },
+
+      drawIndexedIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndexedIndirect(...args);
+      },
+    };
+  }
+
+  beginRenderPass(
+    descriptor: GPURenderPassDescriptor,
+    callback: (pass: RenderPass) => void,
+  ): void {
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
+
+    const proxy = this.createDrawablePassProxy(pass);
 
     callback({
       setViewport(...args) {
@@ -818,49 +875,22 @@ class TgpuRootImpl extends WithBindingImpl
       executeBundles(...args) {
         pass.executeBundles(...args);
       },
-      setPipeline(pipeline) {
-        currentPipeline = pipeline;
-      },
-
-      setIndexBuffer: (buffer, indexFormat, offset, size) => {
-        if (isBuffer(buffer)) {
-          pass.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
-        } else {
-          pass.setIndexBuffer(buffer, indexFormat, offset, size);
-        }
-      },
-
-      setVertexBuffer(vertexLayout, buffer, offset, size) {
-        vertexBuffers.set(vertexLayout, { buffer, offset, size });
-      },
-
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
-      },
-
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        setupPassBeforeDraw();
-        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexed(...args);
-      },
-
-      drawIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndirect(...args);
-      },
-
-      drawIndexedIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexedIndirect(...args);
-      },
+      ...proxy,
     });
 
     pass.end();
     this.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  beginRenderBundleEncoder(
+    descriptor: GPURenderBundleEncoderDescriptor,
+    callback: (pass: RenderBundleEncoderPass) => void,
+  ): GPURenderBundle {
+    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
+
+    callback(this.createDrawablePassProxy(bundleEncoder));
+
+    return bundleEncoder.finish();
   }
 
   flush() {
