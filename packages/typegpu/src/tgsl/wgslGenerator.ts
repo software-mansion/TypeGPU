@@ -38,7 +38,6 @@ import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
-  forOfHelpers,
   type GenerationCtx,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
@@ -54,6 +53,7 @@ import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../../src/core/resolve/externals.ts';
+import * as forOfUtils from './forOfUtils.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1186,6 +1186,8 @@ ${this.ctx.pre}else ${alternate}`;
         );
       }
 
+      let ctxIndent = false;
+
       try {
         this.ctx.pushBlockScope();
 
@@ -1232,27 +1234,29 @@ ${this.ctx.pre}else ${alternate}`;
 
         if (!shouldUnroll && !ephemeralIterable) {
           const index = this.ctx.makeNameValid('i');
-          const elementSnippet = forOfHelpers.getElementSnippet(
+          const elementSnippet = forOfUtils.getElementSnippet(
             iterableSnippet,
             index,
           );
-          const elementCountSnippet = forOfHelpers.getElementCountSnippet(
+          const elementCountSnippet = forOfUtils.getElementCountSnippet(
             this.ctx,
             iterableSnippet,
           );
-          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-          const loopVarKind = forOfHelpers.getLoopVarKind(elementSnippet);
-          const elementType = forOfHelpers.getElementType(
-            elementSnippet,
-            iterableSnippet,
-          );
 
-          const forStr =
+          const forHeaderStr =
             stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
               tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
             }; ${index}++) {`;
 
           this.ctx.indent();
+          ctxIndent = true;
+
+          const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+          const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+          const elementType = forOfUtils.getElementType(
+            elementSnippet,
+            iterableSnippet,
+          );
 
           const loopVarDeclStr =
             stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
@@ -1264,27 +1268,32 @@ ${this.ctx.pre}else ${alternate}`;
               )
             };`;
 
-          const loopVarSnippet = snip(
-            loopVarName,
-            elementType,
-            elementSnippet.origin,
-          );
-
           const bodyStr = `${this.ctx.pre}${
             this.block(blockifySingleStatement(body), {
-              [loopVar[1]]: loopVarSnippet,
+              [loopVar[1]]: snip(
+                loopVarName,
+                elementType,
+                elementSnippet.origin,
+              ),
             })
           }`;
 
           this.ctx.dedent();
+          ctxIndent = false;
 
-          return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+          return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
         }
 
         throw new Error(
-          '`for ... of ...` loops only support iterables stored in variables',
+          `\`for ... of ...\` loops only support iterables stored in variables.
+-----
+You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at compile-time, the loop will be unrolled.
+-----`,
         );
       } finally {
+        if (ctxIndent) {
+          this.ctx.dedent();
+        }
         this.ctx.popBlockScope();
       }
     }

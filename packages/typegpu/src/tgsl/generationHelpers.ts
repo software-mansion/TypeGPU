@@ -27,13 +27,8 @@ import {
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
-import * as wgsl from '../data/wgslTypes.ts';
-import { u32 } from '../data/numeric.ts';
-import { invariant, WgslTypeError } from '../../src/errors.ts';
-import { arrayLength } from '../std/array.ts';
-import { accessIndex } from './accessIndex.ts';
-import { createPtrFromOrigin, implicitFrom } from '../../src/data/ptr.ts';
-import { $gpuCallable, $internal, $resolve } from '../../src/shared/symbols.ts';
+import { WgslTypeError } from '../../src/errors.ts';
+import { $internal, $resolve } from '../../src/shared/symbols.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -196,82 +191,3 @@ export class ArrayExpression implements SelfResolvable {
     );
   }
 }
-
-export const forOfHelpers = {
-  getLoopVarKind(elementSnippet: Snippet) {
-    // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
-    // an implicit pointer to it
-    return elementSnippet.origin === 'constant-tgpu-const-ref'
-      ? 'const'
-      : 'let';
-  },
-  getElementSnippet(iterableSnippet: Snippet, index: string) {
-    const elementSnippet = accessIndex(
-      iterableSnippet,
-      snip(index, u32, 'runtime'),
-    );
-
-    if (!elementSnippet) {
-      throw new WgslTypeError(
-        '`for ... of ...` loops only support array or vector iterables',
-      );
-    }
-
-    return elementSnippet;
-  },
-  getElementType(elementSnippet: Snippet, iterableSnippet: Snippet) {
-    let elementType = elementSnippet.dataType;
-    if (elementType === UnknownData) {
-      throw new WgslTypeError(
-        stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
-      );
-    }
-
-    if (
-      isEphemeralSnippet(elementSnippet) ||
-      elementSnippet.origin === 'constant-tgpu-const-ref' ||
-      elementSnippet.origin === 'runtime-tgpu-const-ref'
-    ) {
-      return elementType;
-    }
-
-    if (!wgsl.isPtr(elementType)) {
-      const ptrType = createPtrFromOrigin(
-        elementSnippet.origin,
-        concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
-      );
-      invariant(
-        ptrType !== undefined,
-        `Creating pointer type from origin ${elementSnippet.origin}`,
-      );
-      elementType = ptrType;
-    }
-
-    return implicitFrom(elementType as wgsl.Ptr);
-  },
-  getElementCountSnippet(ctx: GenerationCtx, iterableSnippet: Snippet) {
-    const iterableDataType = iterableSnippet.dataType;
-
-    if (wgsl.isWgslArray(iterableDataType)) {
-      return iterableDataType.elementCount > 0
-        ? snip(
-          `${iterableDataType.elementCount}`,
-          u32,
-          'constant',
-        )
-        : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]);
-    }
-
-    if (wgsl.isVec(iterableDataType)) {
-      return snip(
-        `${iterableDataType.componentCount}`,
-        u32,
-        'constant',
-      );
-    }
-
-    throw new WgslTypeError(
-      '`for ... of ...` loops only support array or vector iterables',
-    );
-  },
-} as const;
