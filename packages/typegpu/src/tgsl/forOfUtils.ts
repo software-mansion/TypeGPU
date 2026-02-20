@@ -8,7 +8,11 @@ import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { concretize, type GenerationCtx } from './generationHelpers.ts';
+import {
+  ArrayExpression,
+  concretize,
+  type GenerationCtx,
+} from './generationHelpers.ts';
 
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
@@ -68,25 +72,36 @@ export function getElementType(
 export function getElementCountSnippet(
   ctx: GenerationCtx,
   iterableSnippet: Snippet,
+  unroll: boolean = false,
 ) {
-  const iterableDataType = iterableSnippet.dataType;
+  const { value, dataType } = iterableSnippet;
 
-  if (wgsl.isWgslArray(iterableDataType)) {
-    return iterableDataType.elementCount > 0
+  if (wgsl.isWgslArray(dataType)) {
+    return dataType.elementCount > 0
       ? snip(
-        `${iterableDataType.elementCount}`,
+        `${dataType.elementCount}`,
         u32,
         'constant',
       )
       : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]);
   }
 
-  if (wgsl.isVec(iterableDataType)) {
+  if (wgsl.isVec(dataType)) {
     return snip(
-      `${iterableDataType.componentCount}`,
+      `${dataType.componentCount}`,
       u32,
       'constant',
     );
+  }
+
+  if (unroll) {
+    if (Array.isArray(value)) {
+      return snip(`${value.length}`, u32, 'constant');
+    }
+
+    if (value instanceof ArrayExpression) {
+      return snip(`${value.elements.length}`, u32, 'constant');
+    }
   }
 
   throw new WgslTypeError(

@@ -47,7 +47,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { UnrolledIterable } from '../../src/core/unroll/tgpuUnroll.ts';
+import { UnrolledIterable as UnrollableIterable } from '../../src/core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
@@ -1192,43 +1192,83 @@ ${this.ctx.pre}else ${alternate}`;
         this.ctx.pushBlockScope();
 
         const iterableExpr = this.expression(iterable);
-        const shouldUnroll = iterableExpr.value instanceof UnrolledIterable;
+        let shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll
-          ? iterableExpr.value.snippet
+          ? (iterableExpr.value as UnrollableIterable).snippet
           : iterableExpr;
         const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
+        const elementCountSnippet = forOfUtils.getElementCountSnippet(
+          this.ctx,
+          iterableSnippet,
+          shouldUnroll,
+        );
 
-        if (shouldUnroll && ephemeralIterable) {
-          if (iterableSnippet.value instanceof ArrayExpression) {
-            const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-
-            const blockified = blockifySingleStatement(body);
-            const iterations = iterableSnippet.value.elements.map((e) =>
-              `${this.ctx.pre}${
-                this.block(blockified, { [`${loopVarName}`]: e })
-              }`
-            );
-
-            return iterations.join('\n');
-          }
-
-          if (Array.isArray(iterableSnippet.value)) {
-            const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-
-            const blockified = blockifySingleStatement(body);
-            const iterations = iterableSnippet.value.map((e) =>
-              `${this.ctx.pre}${
-                this.block(blockified, { [`${loopVarName}`]: e })
-              }`
-            );
-
-            return iterations.join('\n');
-          }
-
-          throw new WgslTypeError('Cannot unroll. Unsupported iterable.');
+        if (
+          shouldUnroll &&
+          !isKnownAtComptime(iterableSnippet)
+        ) {
+          console.warn(
+            'Cannot unroll loop. The iterable is unknown at compile-time. Fallback to regular loop.',
+          );
+          shouldUnroll = false;
         }
 
-        if (shouldUnroll && !ephemeralIterable) {
+        if (shouldUnroll) {
+          // we know it is a number, because it is known at compile-time
+          if ((elementCountSnippet.value as number) > 8) {
+            console.warn(
+              `Unrolling ${elementCountSnippet.value} iterations exceeds recommended limit of 8. Consider using a smaller array or runtime loop.`,
+            );
+          }
+
+          if (ephemeralIterable) {
+            const { value, dataType } = iterableSnippet;
+            if (value instanceof ArrayExpression) {
+              const blockified = blockifySingleStatement(body);
+              const iterations = value.elements.map((e) =>
+                `${this.ctx.pre}${
+                  this.block(blockified, { [`${loopVar[1]}`]: e }) // `e` is already a snippet
+                }`
+              );
+
+              return iterations.join('\n');
+            }
+
+            if (wgsl.isVec(dataType)) {
+              const blockified = blockifySingleStatement(body);
+              const iterations = (value as wgsl.AnyVecInstance) // it's ephemeral, it's not a string
+                .map((e) =>
+                  `${this.ctx.pre}${
+                    this.block(blockified, {
+                      [loopVar[1]]: snip( // we can give `e` a type
+                        e,
+                        dataType.primitive,
+                        iterableSnippet.origin,
+                      ),
+                    })
+                  }`
+                );
+
+              return iterations.join('\n');
+            }
+
+            if (Array.isArray(value)) {
+              const blockified = blockifySingleStatement(body);
+
+              const iterations = value.map((e) =>
+                `${this.ctx.pre}${
+                  this.block(blockified, {
+                    [loopVar[1]]: e, // cannot infer `e` type, we will do it later
+                  })
+                }`
+              );
+
+              return iterations.join('\n');
+            }
+
+            // if not any of the above types, then error has been already thrown by `getElementCountSnippet`
+          }
+
           throw new Error('Not implemented');
         }
 
@@ -1237,10 +1277,6 @@ ${this.ctx.pre}else ${alternate}`;
           const elementSnippet = forOfUtils.getElementSnippet(
             iterableSnippet,
             index,
-          );
-          const elementCountSnippet = forOfUtils.getElementCountSnippet(
-            this.ctx,
-            iterableSnippet,
           );
 
           const forHeaderStr =

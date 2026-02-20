@@ -1,16 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, vi } from 'vitest';
+import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.ts';
 
 describe('tgpu.unroll', () => {
-  it('called outside shader and outside forOf returns passed iterable', () => {
+  it('called outside the gpu function returns passed iterable', () => {
     const arr = [1, 2, 3];
     const x = tgpu['~unstable'].unroll(arr);
 
     expect(x).toBe(arr);
   });
 
-  it('called inside shader but outside forOf returns passed iterable', () => {
+  it('called inside the gpu function but outside of forOf returns passed iterable', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });
@@ -36,7 +37,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls forOf of array expression of primitives', () => {
+  it('unrolls array expression of primitives', () => {
     const f = () => {
       'use gpu';
       let res = 0;
@@ -63,11 +64,11 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls forOf with variable override', () => {
+  it('unrolls correctly when loop variable is overriding', () => {
     const f = () => {
       'use gpu';
       const foo = d.vec3f(6);
-      for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) { // this foo is in different block layer, it will be found first
+      for (const foo of tgpu['~unstable'].unroll([1, 2])) {
         const boo = foo;
       }
     };
@@ -76,45 +77,23 @@ describe('tgpu.unroll', () => {
       "fn f() {
         var foo = vec3f(6);
         {
-          var boo = vec3f(7);
+          const boo = 1;
         }
         {
-          var boo = vec3f(3);
+          const boo = 2;
         }
       }"
     `);
   });
 
-  it('unrolls forOf with variable from different scope override', () => {
-    const foo = 2;
-
-    const f = () => {
-      'use gpu';
-      for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) { // this foo is in different block layer, it will be found first
-        const boo = foo;
-      }
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() {
-        {
-          var boo = vec3f(7);
-        }
-        {
-          var boo = vec3f(3);
-        }
-      }"
-    `);
-  });
-
-  it('unrolls forOf with variable being overriden', () => {
+  it('unrolls correctly when loop variable is overriden', () => {
     const f = () => {
       'use gpu';
       let fooResult = d.f32(0);
-      for (const foo of tgpu['~unstable'].unroll([d.vec3f(7), d.vec3f(3)])) {
+      for (const foo of tgpu['~unstable'].unroll([1, 2])) {
         const boo = foo;
         {
-          const foo = boo.x; // this foo is in different block layer, it will see the previous foo
+          const foo = boo;
           fooResult += foo;
         }
         const bar = foo;
@@ -127,27 +106,27 @@ describe('tgpu.unroll', () => {
       "fn f() -> f32 {
         var fooResult = 0f;
         {
-          var boo = vec3f(7);
+          const boo = 1;
           {
-            let foo2 = boo.x;
-            fooResult += foo2;
+            const foo2 = boo;
+            fooResult += f32(foo2);
           }
-          var bar = vec3f(7);
+          const bar = 1;
         }
         {
-          var boo = vec3f(3);
+          const boo = 2;
           {
-            let foo2 = boo.x;
-            fooResult += foo2;
+            const foo2 = boo;
+            fooResult += f32(foo2);
           }
-          var bar = vec3f(3);
+          const bar = 2;
         }
         return fooResult;
       }"
     `);
   });
 
-  it('unrolls forOf of array expression of complex types', () => {
+  it('unrolls array expression of complex types', () => {
     const Boid = d.struct({
       pos: d.vec2i,
       vel: d.vec2f,
@@ -155,10 +134,12 @@ describe('tgpu.unroll', () => {
 
     const f = () => {
       'use gpu';
+      const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
+      const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
       let res = d.vec2f();
-      for (const foo of tgpu['~unstable'].unroll([d.vec2f(7), d.vec2f(3)])) {
+      for (const foo of tgpu['~unstable'].unroll([b1, b2])) {
         for (const boo of tgpu['~unstable'].unroll([Boid(), Boid()])) {
-          res = res.add(foo).add(boo.vel);
+          res = res.add(foo.vel).add(boo.vel);
         }
       }
 
@@ -172,21 +153,23 @@ describe('tgpu.unroll', () => {
       }
 
       fn f() -> vec2f {
+        var b1 = Boid(vec2i(1), vec2f(1));
+        var b2 = Boid(vec2i(2), vec2f(2));
         var res = vec2f();
         {
           {
-            res = ((res + vec2f(7)) + Boid().vel);
+            res = ((res + b1.vel) + Boid().vel);
           }
           {
-            res = ((res + vec2f(7)) + Boid().vel);
+            res = ((res + b1.vel) + Boid().vel);
           }
         }
         {
           {
-            res = ((res + vec2f(3)) + Boid().vel);
+            res = ((res + b2.vel) + Boid().vel);
           }
           {
-            res = ((res + vec2f(3)) + Boid().vel);
+            res = ((res + b2.vel) + Boid().vel);
           }
         }
         return res;
@@ -194,7 +177,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls forOf of array expression of copied values', () => {
+  it('unrolls array expression of copies', () => {
     const f = () => {
       'use gpu';
       let res = d.vec2f();
@@ -229,7 +212,161 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls forOf of external comptime iterable', () => {
+  it('unrolls array expression of struct field names - (simple)', () => {
+    const values = { a: 1, b: 2, c: 3 };
+    const list = Object.keys(values) as (keyof typeof values)[];
+
+    const f = () => {
+      'use gpu';
+      let result = d.u32(0);
+      for (const prop of tgpu['~unstable'].unroll(list)) {
+        result += values[prop];
+      }
+      return result;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> u32 {
+        var result = 0u;
+        {
+          result += 1u;
+        }
+        {
+          result += 2u;
+        }
+        {
+          result += 3u;
+        }
+        return result;
+      }"
+    `);
+  });
+
+  it('unrolls array expression of  struct field names - (complex)', () => {
+    const variants = {
+      foo: (x: number) => {
+        'use gpu';
+        return 6 * x;
+      },
+      boo: (x: number) => {
+        'use gpu';
+        return 7 * x;
+      },
+    };
+
+    const Weights = d.struct(Object.fromEntries(
+      Object.keys(variants).map((name) => [`${name}`, d.f32]),
+    ));
+
+    const variantsKey = Object.keys(variants) as (keyof typeof variants)[];
+
+    const computeWeight = tgpu.fn([Weights], d.f32)(
+      (weights: d.Infer<typeof Weights>) => {
+        'use gpu';
+
+        let p = d.f32(0);
+        for (const key of tgpu['~unstable'].unroll(variantsKey)) {
+          // @ts-expect-error: trust me
+          p += weights[key] * variants[key](p);
+        }
+        return p;
+      },
+    );
+
+    expect(tgpu.resolve([computeWeight])).toMatchInlineSnapshot(`
+      "fn foo(x: f32) -> f32 {
+        return (6f * x);
+      }
+
+      fn boo(x: f32) -> f32 {
+        return (7f * x);
+      }
+
+      struct Weights {
+        foo: f32,
+        boo: f32,
+      }
+
+      fn computeWeight(weights: Weights) -> f32 {
+        var p = 0f;
+        {
+          p += (weights.foo * foo(p));
+        }
+        {
+          p += (weights.boo * boo(p));
+        }
+        return p;
+      }"
+    `);
+  });
+
+  it('unrolls array expression of pointers', () => {
+    const f = () => {
+      'use gpu';
+      let res = d.vec2f();
+      const v1 = d.vec2f(7);
+      const v2 = d.vec2f(3);
+      for (const foo of tgpu['~unstable'].unroll([v1, v2])) {
+        res = res.add(foo);
+        const boo = foo;
+        boo.x = 6;
+      }
+
+      return res;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> vec2f {
+        var res = vec2f();
+        var v1 = vec2f(7);
+        var v2 = vec2f(3);
+        {
+          res = (res + v1);
+          let boo = (&v1);
+          (*boo).x = 6f;
+        }
+        {
+          res = (res + v2);
+          let boo = (&v2);
+          (*boo).x = 6f;
+        }
+        return res;
+      }"
+    `);
+  });
+
+  it('unrolls ephemeral vector', () => {
+    const f = () => {
+      'use gpu';
+      let res = d.u32(0);
+      for (const foo of tgpu['~unstable'].unroll(d.vec4u(1, 2, 3, 4))) {
+        res += foo;
+      }
+
+      return res;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> u32 {
+        var res = 0u;
+        {
+          res += 1u;
+        }
+        {
+          res += 2u;
+        }
+        {
+          res += 3u;
+        }
+        {
+          res += 4u;
+        }
+        return res;
+      }"
+    `);
+  });
+
+  it('unrolls external compile-time iterable', () => {
     const arr = [1, 2, 3];
 
     const f = () => {
@@ -259,30 +396,86 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it.skip('throws error when number of iterations is unknown at comptime', () => {
-    const layout = tgpu.bindGroupLayout({
-      arr: { storage: d.arrayOf(d.f32) },
-    });
+  it('warns when iterable is unknown at compile-time and fallbacks to regular loop', ({ root }) => {
+    const b = root.createUniform(d.arrayOf(d.u32, 7));
+    const acc = tgpu.accessor(d.arrayOf(d.u32, 7), b);
 
     const f = () => {
       'use gpu';
-      let res = d.f32(0);
-      for (const foo of tgpu['~unstable'].unroll(layout.$.arr)) {
-        res += foo;
+      let result = d.u32(0);
+      for (const foo of tgpu['~unstable'].unroll(acc.$)) {
+        result += foo;
       }
+
+      return result;
     };
 
-    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:f
-      - fn*:f(): Cannot unroll loop. Number of iterations unknown at compile time]
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> b: array<u32, 7>;
+
+      fn f() -> u32 {
+        var result = 0u;
+        for (var i = 0u; i < 7; i++) {
+          let foo = b[i];
+          {
+            result += foo;
+          }
+        }
+        return result;
+      }"
     `);
   });
 
+  it('warns when number of iteration to unroll is greater than 8', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const f = () => {
+      'use gpu';
+      for (const foo of tgpu['~unstable'].unroll([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+        {
+          continue;
+        }
+      }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Unrolling 9 iterations exceeds recommended limit of 8. Consider using a smaller array or runtime loop.',
+    );
+  });
+
   // TODO
-  //
-  // add basic external, derived, maybe slot and accessor
   //
   // const arr = [1, 2, 3];
   // for (const foo of tgpu['~unstable'].unroll(arr)) { // should operate on indices
@@ -296,11 +489,6 @@ describe('tgpu.unroll', () => {
 
   // for (const foo of tgpu['~unstable'].unroll([1, 2, 3])) { // should operate on values
   //   const foo = 1;
-  //   result += d.f32(foo);
-  // }
-
-  // const foo = 1;
-  // for (const foo of tgpu['~unstable'].unroll([1, 2, 3])) { // should operate on values
   //   result += d.f32(foo);
   // }
 });
