@@ -161,6 +161,18 @@ export interface TgpuRenderPipeline<in Targets = never>
   ): this;
   with(bindGroup: TgpuBindGroup): this;
 
+  /**
+   * Attaches texture views to the pipeline's targets (outputs).
+   *
+   * @example
+   * // Draw 3 vertices onto the context's canvas
+   * pipeline
+   *   .withColorAttachment({ view: context })
+   *   .draw(3)
+   *
+   * @param attachment The object should match the shape
+   * returned by the fragment shader, with values matching the {@link ColorAttachment} type.
+   */
   withColorAttachment(attachment: FragmentOutToColorAttachment<Targets>): this;
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this;
