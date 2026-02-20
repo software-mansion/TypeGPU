@@ -5,8 +5,16 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.mjs",
-      "import": "./dist/index.mjs"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
     }
   },
   "scripts": {
