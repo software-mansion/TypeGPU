@@ -15,7 +15,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
@@ -41,7 +40,6 @@ const pipelines = fragmentShaders.map((fragment) =>
     .createRenderPipeline({
       vertex: mainVertex,
       fragment: fragment,
-      targets: { format: presentationFormat },
     })
 );
 
@@ -58,10 +56,8 @@ function render() {
 
   currentPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(6);
 

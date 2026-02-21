@@ -1,4 +1,4 @@
-import type { TgpuRoot } from 'typegpu';
+import type { ColorAttachment, TgpuRoot } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import { BLUR_RADIUS, TAA_BLEND } from './constants.ts';
@@ -47,7 +47,6 @@ export function createPostProcessingPipelines(
   root: TgpuRoot,
   width: number,
   height: number,
-  presentationFormat: GPUTextureFormat,
   initialBloom: d.Infer<typeof BloomParams>,
 ) {
   const bloomUniform = root.createUniform(BloomParams, initialBloom);
@@ -185,7 +184,6 @@ export function createPostProcessingPipelines(
     .createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
     });
 
   const taaBindGroup = root.createBindGroup(taaResolveLayout, {
@@ -242,14 +240,10 @@ export function createPostProcessingPipelines(
         .with(blurVerticalBindGroup)
         .dispatchThreads(bloomWidth, bloomHeight);
     },
-    render: (targetView: GPUTextureView) => {
+    render: (targetView: ColorAttachment['view']) => {
       renderPipeline
         .with(compositeBindGroup)
-        .withColorAttachment({
-          view: targetView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        })
+        .withColorAttachment({ view: targetView })
         .draw(3);
     },
   };

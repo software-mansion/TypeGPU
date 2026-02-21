@@ -38,8 +38,6 @@ const grain = (color: d.v3f, uv: d.v2f) => {
   );
 };
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(0, 0.8),
   d.vec2f(-0.8, -0.8),
@@ -87,17 +85,10 @@ const pipeline = root
       }
       return std.saturate(d.vec4f(grain(getGradientColor(factor), uv), 1));
     },
-    targets: { format: presentationFormat },
   });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 let frameId: number;
 function frame(timestamp: number) {
@@ -107,11 +98,7 @@ function frame(timestamp: number) {
   });
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   frameId = requestAnimationFrame(frame);

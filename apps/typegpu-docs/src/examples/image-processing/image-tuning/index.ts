@@ -186,10 +186,8 @@ function render() {
   renderPipeline
     .with(group)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(3);
 }

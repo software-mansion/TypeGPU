@@ -11,7 +11,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const cssProbe = document.querySelector('#css-probe') as HTMLDivElement;
 const probePositionText = document.querySelector(
@@ -110,7 +109,6 @@ const uniformsValue = {
 let pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
-  targets: { format: presentationFormat },
 });
 
 function setPipeline({
@@ -127,7 +125,6 @@ function setPipeline({
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: mainFragment,
-      targets: { format: presentationFormat },
     });
 }
 
@@ -151,12 +148,7 @@ function draw() {
   `;
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

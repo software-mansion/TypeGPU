@@ -30,7 +30,6 @@ let frame = 0;
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // structs
 
@@ -263,7 +262,6 @@ const pipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: fragmentFunction,
   targets: {
-    format: presentationFormat,
     blend: {
       color: {
         srcFactor: 'one',
@@ -320,14 +318,8 @@ onFrame((deltaTime) => {
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
-  const textureView = context.getCurrentTexture().createView();
   pipeline
-    .withColorAttachment({
-      view: textureView,
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 });
 

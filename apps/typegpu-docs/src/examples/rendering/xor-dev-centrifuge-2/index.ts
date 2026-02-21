@@ -94,14 +94,12 @@ const vertexMain = tgpu.vertexFn({
   };
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;
@@ -113,11 +111,7 @@ function draw(timestamp: number) {
   time.write((timestamp * 0.001) % 1000);
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);

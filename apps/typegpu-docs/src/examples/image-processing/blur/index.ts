@@ -8,8 +8,6 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
@@ -155,7 +153,6 @@ const computePipeline = root.createComputePipeline({ compute: computeFn });
 const renderPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: renderFragment,
-  targets: { format: presentationFormat },
 });
 
 function render() {
@@ -175,11 +172,9 @@ function render() {
       );
   }
 
-  renderPipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  renderPipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 render();
 

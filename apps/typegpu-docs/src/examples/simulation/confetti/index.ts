@@ -18,7 +18,6 @@ const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // data types
 
@@ -146,7 +145,6 @@ const renderPipeline = root
   .createRenderPipeline({
     vertex: mainVert,
     fragment: mainFrag,
-    targets: { format: presentationFormat },
     attribs: {
       tilt: geometryLayout.attrib.tilt,
       angle: geometryLayout.attrib.angle,
@@ -206,12 +204,7 @@ onFrame((dt) => {
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    })
+    .withColorAttachment({ view: context })
     .draw(4, PARTICLE_AMOUNT);
 });
 

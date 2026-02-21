@@ -262,10 +262,8 @@ function frame() {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);

@@ -5,7 +5,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 
@@ -159,7 +158,6 @@ const fragmentShader = tgpu.fragmentFn({
 const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 });
 
 let isRectangleFixed = false;
@@ -205,11 +203,9 @@ canvas.addEventListener('click', handleClick);
 let frameId: number;
 function render() {
   frameId = requestAnimationFrame(render);
-  pipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  pipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 frameId = requestAnimationFrame(render);
 
