@@ -69,13 +69,13 @@ const computeAccessor = t3.toTSL(() => {
   let velocity = velocities.$[instanceIdx];
 
   velocity.y += gravity.$;
-  position = position.add(velocity);
-  velocity = velocity.mul(friction.$);
+  position += velocity;
+  velocity *= friction.$;
 
   if (position.y < 0) {
     position.y = 0;
     velocity.y = -velocity.y * bounce.$;
-    velocity = velocity.mul(d.vec3f(0.9, 1, 0.9));
+    velocity *= d.vec3f(0.9, 1, 0.9);
   }
 
   positions.$[instanceIdx] = d.vec3f(position);
@@ -85,11 +85,8 @@ const computeAccessor = t3.toTSL(() => {
 const material = new THREE.SpriteNodeMaterial();
 material.colorNode = t3.toTSL(() => {
   'use gpu';
-  return d.vec4f(
-    t3.uv().$.mul(colors.$[t3.instanceIndex.$].xy),
-    0,
-    1,
-  );
+  const iidx = t3.instanceIndex.$;
+  return d.vec4f(t3.uv().$ * colors.$[iidx].xy, 0, 1);
 });
 material.positionNode = positions.node.toAttribute();
 material.scaleNode = size.node;
@@ -124,14 +121,14 @@ const computeHit = t3.toTSL(() => {
   let velocity = velocities.$[instanceIdx];
 
   const dist = std.distance(position, clickPosition.$);
-  const dir = std.normalize(position.sub(clickPosition.$));
+  const dir = std.normalize(position - clickPosition.$);
   const distArea = std.max(0, 3 - dist);
 
   const power = distArea * 0.01;
   randf.seed(d.f32(instanceIdx / amount));
   const relativePower = power * (1.5 * randf.sample() + 0.5);
 
-  velocity = velocity.add(dir.mul(relativePower));
+  velocity += dir * relativePower;
   velocities.$[instanceIdx] = d.vec3f(velocity);
 }).compute(particleCount).setName('Hit Particles TypeGPU');
 

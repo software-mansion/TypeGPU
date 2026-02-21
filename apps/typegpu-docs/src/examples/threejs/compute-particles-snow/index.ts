@@ -61,10 +61,7 @@ collisionPosMaterial.outputNode = TSL.vec4(
   1,
 );
 
-const positionBuffer = t3.instancedArray(
-  maxParticleCount,
-  d.vec3f,
-);
+const positionBuffer = t3.instancedArray(maxParticleCount, d.vec3f);
 const scaleBuffer = t3.instancedArray(maxParticleCount, d.vec3f);
 const staticPositionBuffer = t3.instancedArray(maxParticleCount, d.vec3f);
 const dataBuffer = t3.instancedArray(maxParticleCount, d.vec4f);
@@ -75,8 +72,7 @@ const computeInit = t3.toTSL(() => {
 
   randf.seed(instanceIdx / maxParticleCount);
   const rand = d.vec3f(randf.sample(), randf.sample(), randf.sample());
-  const randPos = rand.mul(d.vec3f(100, 500, 100))
-    .add(d.vec3f(-50, 3, -50));
+  const randPos = rand * d.vec3f(100, 500, 100) + d.vec3f(-50, 3, -50);
 
   positionBuffer.$[instanceIdx] = d.vec3f(randPos);
   scaleBuffer.$[instanceIdx] = d.vec3f(randf.sample() * 0.8 + 0.2);
@@ -133,9 +129,9 @@ function particles(isStatic: boolean = false) {
 
   material.positionNode = t3.toTSL(() => {
     'use gpu';
-    return t3.fromTSL(TSL.positionLocal, d.vec3f).$
-      .mul(scaleBuffer.$[t3.instanceIndex.$])
-      .add(posBuffer.$[t3.instanceIndex.$]);
+    const iidx = t3.instanceIndex.$;
+    const localPos = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
+    return localPos * scaleBuffer.$[iidx] + posBuffer.$[iidx];
   });
 
   const rainParticles = new THREE.Mesh(sphereGeometry, material);

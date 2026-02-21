@@ -22,7 +22,7 @@ export const simulate = (fishIndex: number) => {
     const other = layout.$.currentFishData[i];
     const dist = std.distance(fishData.position, other.position);
     if (dist < layout.$.fishBehavior.separationDist) {
-      separation = separation + fishData.position - other.position;
+      separation += fishData.position - other.position;
     }
     if (dist < layout.$.fishBehavior.alignmentDist) {
       alignment = alignment + other.direction;

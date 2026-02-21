@@ -143,7 +143,7 @@ describe('3d fish example', () => {
           let other = (&currentFishData[i]);
           let dist = distance((*fishData).position, (*other).position);
           if ((dist < fishBehavior.separationDist)) {
-            separation = ((separation + (*fishData).position) - (*other).position);
+            separation += ((*fishData).position - (*other).position);
           }
           if ((dist < fishBehavior.alignmentDist)) {
             alignment = (alignment + (*other).direction);

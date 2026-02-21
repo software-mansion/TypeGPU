@@ -150,7 +150,7 @@ describe('ripple-cube example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -450,7 +450,7 @@ describe('ripple-cube example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {

@@ -35,9 +35,7 @@ const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS + 0.1);
-  const pos = randf.inUnitCircle().mul(resolution.x / 2 - 10).add(
-    resolution.div(2),
-  );
+  const pos = randf.inUnitCircle() * (resolution.x / 2 - 10) + (resolution / 2);
   const angle = std.atan2(
     resolution.y / 2 - pos.y,
     resolution.x / 2 - pos.x,
@@ -73,13 +71,11 @@ const sense = (pos: d.v2f, angle: number, sensorAngleOffset: number) => {
   'use gpu';
   const sensorAngle = angle + sensorAngleOffset;
   const sensorDir = d.vec2f(std.cos(sensorAngle), std.sin(sensorAngle));
-  const sensorPos = pos.add(sensorDir.mul(params.$.sensorDistance));
+  const sensorPos = pos + sensorDir * params.$.sensorDistance;
   const dims = std.textureDimensions(computeLayout.$.oldState);
   const dimsf = d.vec2f(dims);
 
-  const sensorPosInt = d.vec2u(
-    std.clamp(sensorPos, d.vec2f(0), dimsf.sub(d.vec2f(1))),
-  );
+  const sensorPosInt = d.vec2u(std.clamp(sensorPos, d.vec2f(0), dimsf - 1));
   const color = std.textureLoad(computeLayout.$.oldState, sensorPosInt).rgb;
 
   return color.x + color.y + color.z;
@@ -89,6 +85,7 @@ const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [64],
 })(({ gid }) => {
+  'use gpu';
   if (gid.x >= NUM_AGENTS) return;
 
   randf.seed(gid.x / NUM_AGENTS + 0.1);
@@ -122,15 +119,13 @@ const updateAgents = tgpu.computeFn({
   }
 
   const dir = d.vec2f(std.cos(angle), std.sin(angle));
-  let newPos = agent.position.add(
-    dir.mul(params.$.moveSpeed * deltaTime.$),
-  );
+  let newPos = agent.position + dir * params.$.moveSpeed * deltaTime.$;
 
   const dimsf = d.vec2f(dims);
   if (
     newPos.x < 0 || newPos.x > dimsf.x || newPos.y < 0 || newPos.y > dimsf.y
   ) {
-    newPos = std.clamp(newPos, d.vec2f(0), dimsf.sub(d.vec2f(1)));
+    newPos = std.clamp(newPos, d.vec2f(0), dimsf - 1);
 
     if (newPos.x <= 0 || newPos.x >= dimsf.x - 1) {
       angle = Math.PI - angle;
@@ -149,7 +144,7 @@ const updateAgents = tgpu.computeFn({
 
   const oldState =
     std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).rgb;
-  const newState = oldState.add(d.vec3f(1));
+  const newState = oldState + 1;
   std.textureStore(
     computeLayout.$.newState,
     d.vec2u(newPos),
@@ -161,6 +156,7 @@ const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [16, 16],
 })(({ gid }) => {
+  'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
   if (gid.x >= dims.x || gid.y >= dims.y) return;
 
@@ -170,7 +166,7 @@ const blur = tgpu.computeFn({
   // 3x3 blur kernel
   for (let offsetY = -1; offsetY <= 1; offsetY++) {
     for (let offsetX = -1; offsetX <= 1; offsetX++) {
-      const samplePos = d.vec2i(gid.xy).add(d.vec2i(offsetX, offsetY));
+      const samplePos = d.vec2i(gid.xy) + d.vec2i(offsetX, offsetY);
       const dimsi = d.vec2i(dims);
 
       if (
@@ -179,18 +175,14 @@ const blur = tgpu.computeFn({
       ) {
         const color =
           std.textureLoad(computeLayout.$.oldState, d.vec2u(samplePos)).rgb;
-        sum = sum.add(color);
-        count = count + 1;
+        sum += color;
+        count += 1;
       }
     }
   }
 
-  const blurred = sum.div(count);
-  const newColor = std.clamp(
-    blurred.sub(params.$.evaporationRate),
-    d.vec3f(0),
-    d.vec3f(1),
-  );
+  const blurred = sum / count;
+  const newColor = std.saturate(blurred - params.$.evaporationRate);
   std.textureStore(
     computeLayout.$.newState,
     gid.xy,
