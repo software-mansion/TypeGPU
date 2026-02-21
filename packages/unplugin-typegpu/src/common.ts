@@ -323,3 +323,14 @@ export const useGpuDirective = 'use gpu';
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
 export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+
+export const operators = {
+  '+': '__tsover_add',
+  '-': '__tsover_sub',
+  '*': '__tsover_mul',
+  '/': '__tsover_div',
+  '+=': '__tsover_add',
+  '-=': '__tsover_sub',
+  '*=': '__tsover_mul',
+  '/=': '__tsover_div',
+};
