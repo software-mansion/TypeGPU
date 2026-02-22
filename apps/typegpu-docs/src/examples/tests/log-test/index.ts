@@ -15,7 +15,7 @@ const root = await tgpu.init({
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position },
 })((input) => {
@@ -28,7 +28,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -43,28 +43,28 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 export const controls = defineControls({
   'One argument': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(d.u32(321));
       }).dispatchThreads(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(1, d.vec3u(2, 3, 4), 5, 6);
       }).dispatchThreads(),
   },
   'String literals': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(2, 'plus', 3, 'equals', 5);
       }).dispatchThreads(),
   },
   'Two logs': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('First log.');
         console.log('Second log.');
@@ -72,7 +72,7 @@ export const controls = defineControls({
   },
   'Different types': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('--- scalars ---');
         console.log(d.f32(3.14));
@@ -121,7 +121,7 @@ export const controls = defineControls({
       const SimpleArray = d.arrayOf(d.u32, 2);
       const ComplexArray = d.arrayOf(SimpleArray, 3);
 
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
@@ -142,7 +142,7 @@ export const controls = defineControls({
   },
   'Two threads': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline((x) => {
+      root.createGuardedComputePipeline((x) => {
         'use gpu';
         console.log('Log from thread', x);
       }).dispatchThreads(2),
@@ -150,7 +150,7 @@ export const controls = defineControls({
   '100 dispatches': {
     onButtonClick: async () => {
       const indexUniform = root.createUniform(d.u32);
-      const test = root['~unstable'].createGuardedComputePipeline(() => {
+      const test = root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('Log from dispatch', indexUniform.$);
       });
@@ -163,7 +163,7 @@ export const controls = defineControls({
   'Varying size logs': {
     onButtonClick: async () => {
       const logCountUniform = root.createUniform(d.u32);
-      const test = root['~unstable'].createGuardedComputePipeline(() => {
+      const test = root.createGuardedComputePipeline(() => {
         'use gpu';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
           console.log('Log index', i + 1, 'out of', logCountUniform.$);
@@ -177,7 +177,7 @@ export const controls = defineControls({
   },
   'String interpolation': {
     onButtonClick: async () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(
           'The values %d, %f and %s were interpolated in this message.',
@@ -195,7 +195,7 @@ export const controls = defineControls({
   },
   'Different log functionalities': {
     onButtonClick: async () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('This message should be cleared.');
         console.clear();
@@ -213,7 +213,7 @@ export const controls = defineControls({
         alphaMode: 'premultiplied',
       });
 
-      const pipeline = root['~unstable'].createRenderPipeline({
+      const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
         targets: { format: presentationFormat },
@@ -231,7 +231,7 @@ export const controls = defineControls({
   },
   'Draw indexed': {
     onButtonClick: () => {
-      const pipeline = root['~unstable'].createRenderPipeline({
+      const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
         targets: { format: presentationFormat },
@@ -253,7 +253,7 @@ export const controls = defineControls({
   },
   'Too many logs': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline((x) => {
+      root.createGuardedComputePipeline((x) => {
         'use gpu';
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);

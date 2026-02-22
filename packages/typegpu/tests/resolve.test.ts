@@ -75,10 +75,10 @@ describe('tgpu resolve', () => {
     };
     setName(intensity, 'intensity');
 
-    const fragment1 = tgpu['~unstable']
+    const fragment1 = tgpu
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.$, 0, 1));
 
-    const fragment2 = tgpu['~unstable']
+    const fragment2 = tgpu
       .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.$, 0, 0, 1));
 
     const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });

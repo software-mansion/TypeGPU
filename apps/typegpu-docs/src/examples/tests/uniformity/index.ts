@@ -17,7 +17,7 @@ const canvasRatioUniform = root.createUniform(
   canvas.width / canvas.height,
 );
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -35,14 +35,13 @@ let prng: PRNG = c.initialPRNG;
 const redraw = () => {
   let pipeline = pipelineCache.get(prng);
   if (!pipeline) {
-    pipeline = root['~unstable']
+    pipeline = root
       .with(randomGeneratorSlot, getPRNG(prng))
-      .withVertex(common.fullScreenTriangle)
-      .withFragment(
-        fragmentShader,
-        { format: presentationFormat },
-      )
-      .createPipeline();
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: fragmentShader,
+        targets: { format: presentationFormat },
+      });
     pipelineCache.set(prng, pipeline);
   }
 
@@ -79,14 +78,13 @@ export const controls = defineControls({
       c.prngs
         .map((prng) =>
           tgpu.resolve([
-            root['~unstable']
+            root
               .with(randomGeneratorSlot, getPRNG(prng))
-              .withVertex(common.fullScreenTriangle)
-              .withFragment(
-                fragmentShader,
-                { format: presentationFormat },
-              )
-              .createPipeline(),
+              .createRenderPipeline({
+                vertex: common.fullScreenTriangle,
+                fragment: fragmentShader,
+                targets: { format: presentationFormat },
+              }),
           ], { names: namespace })
         )
         .map((r) => root.device.createShaderModule({ code: r }));

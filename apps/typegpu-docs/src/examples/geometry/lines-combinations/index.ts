@@ -101,7 +101,7 @@ const outlineIndexBuffer = root
 
 const testCaseSlot = tgpu.slot(testCases.arms);
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -149,7 +149,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
 
 console.log(tgpu.resolve({ externals: { lineSegmentVariableWidth } }));
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     instanceIndex: interpolate('flat', u32),
     vertexIndex: interpolate('flat', u32),
@@ -218,7 +218,7 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   },
 );
 
-const centerlineVertex = tgpu['~unstable'].vertexFn({
+const centerlineVertex = tgpu.vertexFn({
   in: {
     vertexIndex: builtin.vertexIndex,
   },
@@ -238,7 +238,7 @@ const centerlineVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const outlineFragment = tgpu['~unstable'].fragmentFn({
+const outlineFragment = tgpu.fragmentFn({
   in: {
     _unused: builtin.frontFacing,
   },
@@ -261,7 +261,7 @@ const CIRCLE_MIN_STEP = (2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
 const CIRCLE_MAX_STEP = Math.PI / 8;
 const CIRCLE_DASH_LEN = 0.0025 * Math.PI;
 
-const circlesVertex = tgpu['~unstable'].vertexFn({
+const circlesVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -295,61 +295,57 @@ let startCap = lineCaps.round;
 let endCap = lineCaps.round;
 
 function createPipelines() {
-  const fill = root['~unstable']
+  const fill = root
     .with(joinSlot, join)
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
-    .withVertex(mainVertex, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: mainFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      // primitive: {
+      //   cullMode: 'back',
+      // },
     })
-    .withPrimitive({
-      // cullMode: 'back',
-    })
-    .createPipeline()
     .withIndexBuffer(indexBuffer);
 
-  const outline = root['~unstable']
+  const outline = root
     .with(joinSlot, join)
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
-    .withVertex(mainVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: outlineFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      primitive: {
+        topology: 'line-list',
+      },
     })
-    .withPrimitive({
-      topology: 'line-list',
-    })
-    .createPipeline()
     .withIndexBuffer(outlineIndexBuffer);
 
-  const centerline = root['~unstable']
+  const centerline = root
     .with(testCaseSlot, testCase)
-    .withVertex(centerlineVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
-    })
-    .withPrimitive({
-      topology: 'line-strip',
-    })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: centerlineVertex,
+      fragment: outlineFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      primitive: {
+        topology: 'line-strip',
+      },
+    });
 
-  const circles = root['~unstable']
+  const circles = root
     .with(testCaseSlot, testCase)
-    .withVertex(circlesVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
-    })
-    .withPrimitive({
-      topology: 'line-list',
-    })
-    .createPipeline();
+    .createRenderPipeline({
+      vertex: circlesVertex,
+      fragment: outlineFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      primitive: {
+        topology: 'line-list',
+      },
+    });
 
   return {
     fill,
