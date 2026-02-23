@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { dot, floor, mix } from 'typegpu/std';
 import { randOnUnitSphere, randSeed3 } from '../random.ts';
-import { quinticInterpolation3 } from '../utils.ts';
+import { quinticInterpolation } from '../utils.ts';
 
 export const computeJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
   'use gpu';
@@ -33,7 +33,7 @@ export const sample = tgpu.fn([d.vec3f], d.f32)((pos) => {
   const XYZ = dotProdGrid(pos, minJunction + d.vec3f(1, 1, 1));
 
   const partial = pos - minJunction;
-  const smoothPartial = quinticInterpolation3(partial);
+  const smoothPartial = quinticInterpolation(partial);
 
   // Resolving the z-axis into a xy-slice
   const xy = mix(xyz, xyZ, smoothPartial.z);

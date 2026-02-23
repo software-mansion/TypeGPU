@@ -1,7 +1,7 @@
 import tgpu, { d } from 'typegpu';
 import { dot, floor, fract } from 'typegpu/std';
 import { randOnUnitCircle, randSeed2 } from '../random.ts';
-import { quinticDerivative2, quinticInterpolation2 } from '../utils.ts';
+import { quinticDerivative, quinticInterpolation } from '../utils.ts';
 
 export const computeJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
   'use gpu';
@@ -21,7 +21,7 @@ export const sample = tgpu.fn([d.vec2f], d.f32)((pos) => {
   const i = d.vec2i(floor(pos));
   const f = fract(pos);
 
-  const u = quinticInterpolation2(f);
+  const u = quinticInterpolation(f);
 
   const ga = getJunctionGradientSlot.$(i);
   const gb = getJunctionGradientSlot.$(i + d.vec2i(1, 0));
@@ -50,8 +50,8 @@ export const sampleWithGradient = tgpu.fn([d.vec2f], d.vec3f)((pos) => {
   const i = d.vec2i(floor(pos));
   const f = fract(pos);
 
-  const u = quinticInterpolation2(f);
-  const du = quinticDerivative2(f);
+  const u = quinticInterpolation(f);
+  const du = quinticDerivative(f);
 
   const ga = getJunctionGradientSlot.$(i);
   const gb = getJunctionGradientSlot.$(i + d.vec2i(1, 0));

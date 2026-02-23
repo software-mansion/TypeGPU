@@ -57,7 +57,7 @@ export interface NumberArrayView {
  * These functions are not defined on vectors,
  * but are instead assigned to `VecBase` after both `data` and `std` are initialized.
  */
-export interface vecInfixNotation<T extends AnyNumericVecInstance> {
+export interface vecInfixNotation<T extends vecBase> {
   add(other: T | number): T;
   sub(other: T | number): T;
   mul(other: mBaseForVec<T> | T | number): T;
@@ -79,7 +79,7 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
  * These functions are not defined on matrices,
  * but are instead assigned to `MatBase` after both `data` and `std` are initialized.
  */
-export interface matInfixNotation<T extends AnyMatInstance> {
+export interface matInfixNotation<T extends matBase> {
   add(other: T): T;
   sub(other: T): T;
   mul(other: T | number): T;
@@ -180,6 +180,10 @@ type Swizzle4<T2, T3, T4> =
 type Tuple2<S> = [S, S];
 type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
+
+export interface vecBase extends vecInfixNotation<vecBase> {
+  readonly [$internal]: true;
+}
 
 /**
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
@@ -476,6 +480,10 @@ export type AnyVecInstance =
 
 export type VecKind = AnyVecInstance['kind'];
 
+export interface matBase extends matInfixNotation<matBase> {
+  readonly [$internal]: true;
+}
+
 /**
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
@@ -543,14 +551,15 @@ export interface m4x4f extends mat4x4<v4f>, matInfixNotation<m4x4f> {
 
 export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
-export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
+export type vBaseForMat<T extends matBase> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
-  : v4f;
+  : T extends m4x4f ? v4f
+  : vecBase;
 
-export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+export type mBaseForVec<T extends vecBase> = T extends v2f ? m2x2f
   : T extends v3f ? m3x3f
   : T extends v4f ? m4x4f
-  : never;
+  : matBase;
 
 // #endregion
 
