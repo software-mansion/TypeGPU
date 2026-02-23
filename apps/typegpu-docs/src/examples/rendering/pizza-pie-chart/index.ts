@@ -1,9 +1,9 @@
 import * as sdf from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
-import { Ray } from './types.ts';
+import { Material, Ray } from './types.ts';
 import { perlin2d, perlin3d } from '@typegpu/noise';
-import { mat3x3f } from 'typegpu/data';
+import { shade, SUN } from './pbr.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -23,7 +23,7 @@ const skyColor = d.vec4f(0.7, 0.8, 0.9, 1);
 // Structure to hold both distance and color
 type Shape = d.InferGPU<typeof Shape>;
 const Shape = d.struct({
-  color: d.vec3f,
+  material: Material,
   dist: d.f32,
 });
 
@@ -43,15 +43,27 @@ const smoothShapeUnion = (a: Shape, b: Shape, k: number): Shape => {
 
   // Blend colors based on relative distances and smoothing
   const weight = m + std.select(0, 1 - m, a.dist > b.dist);
-  const color = std.mix(a.color, b.color, weight);
+  const albedo = std.mix(a.material.albedo, b.material.albedo, weight);
+  const ao = std.mix(a.material.ao, b.material.ao, weight);
+  const metallic = std.mix(a.material.metallic, b.material.metallic, weight);
+  const roughness = std.mix(a.material.roughness, b.material.roughness, weight);
 
-  return Shape({ dist, color });
+  return Shape({
+    dist,
+    material: { albedo, ao, metallic, roughness },
+  });
 };
 
 const shapeUnion = (a: Shape, b: Shape) => {
   'use gpu';
+  // deno-fmt-ignore
   return Shape({
-    color: std.select(a.color, b.color, a.dist > b.dist),
+    material: {
+      albedo: std.select(a.material.albedo, b.material.albedo, a.dist > b.dist),
+      ao: std.select(a.material.ao, b.material.ao, a.dist > b.dist),
+      metallic: std.select(a.material.metallic, b.material.metallic, a.dist > b.dist),
+      roughness: std.select(a.material.roughness, b.material.roughness, a.dist > b.dist),
+    },
     dist: std.min(a.dist, b.dist),
   });
 };
@@ -80,6 +92,20 @@ const PIE = {
   stringThickness: 0.002,
 };
 
+const cheeseMaterial = Material({
+  albedo: d.vec3f(1, 0.9, 0.5),
+  ao: 1,
+  metallic: 0.0,
+  roughness: 0.1,
+});
+
+const crustMaterialBase = Material({
+  albedo: d.vec3f(0.35, 0.2, 0.1),
+  ao: 1,
+  metallic: 0.0,
+  roughness: 1,
+});
+
 const sdPizzaCheeseStrings = (p: d.v3f): Shape => {
   'use gpu';
   let dp = rotateXZ(0.5) * p;
@@ -90,7 +116,7 @@ const sdPizzaCheeseStrings = (p: d.v3f): Shape => {
 
   return Shape({
     dist: sdf.opExtrudeY(p, cutLines, 0) - PIE.stringThickness,
-    color: d.vec3f(1, 0.95, 0.7),
+    material: cheeseMaterial,
   });
 };
 
@@ -102,45 +128,15 @@ const sdPizzaCheese = (p: d.v3f, angle: number): Shape => {
     PIE.radius * 0.9,
   ) + PIE.cheeseRoundness;
 
-  let pieBaseSd = sdf.opExtrudeY(
+  const pieBaseSd = sdf.opExtrudeY(
     p - d.vec3f(0, PIE.baseHalfHeight + 0.01, 0),
     pieBase2d,
     PIE.cheeseHalfHeight,
   ) - PIE.cheeseRoundness;
 
-  // const cheeseAngle1 = angle / 2 + 0.4;
-  // const cheeseStrings2d = std.min(
-  //   sdRing(
-  //     p.xz,
-  //     d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
-  //     PIE.radius * 0.3 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
-  //     0.05,
-  //   ),
-  //   sdRing(
-  //     p.xz,
-  //     d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
-  //     PIE.radius * 0.6 + perlin2d.sample(p.xz * 2 + angle) * 0.2,
-  //     0.05,
-  //   ),
-  //   sdf.sdDisk(
-  //     p.xz,
-  //     PIE.radius * 0.2 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
-  //   ),
-  // );
-
-  // pieBaseSd = sdf.opSmoothUnion(
-  //   pieBaseSd,
-  //   sdf.opExtrudeY(
-  //     p - d.vec3f(0, PIE.baseHalfHeight, 0),
-  //     cheeseStrings2d,
-  //     PIE.cheeseHalfHeight * 0.3,
-  //   ),
-  //   0.02,
-  // );
-
   const pieBase = Shape({
     dist: pieBaseSd + perlin3d.sample(p * 5) * 0.01,
-    color: d.vec3f(1, 0.95, 0.7),
+    material: cheeseMaterial,
   });
 
   return pieBase;
@@ -159,19 +155,22 @@ const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
     PIE.radius,
     0.05,
   );
+  const crustMaterial = Material(crustMaterialBase);
+  const crustOffset = perlin3d.sample(p * 10) * 0.02;
+  crustMaterial.albedo *= 1 - crustOffset * 20;
+
   const pieBase = Shape({
     dist: sdf.opExtrudeY(p, pieBase2d, PIE.baseHalfHeight) - PIE.baseRoundness,
-    color: d.vec3f(0),
+    material: crustMaterial,
   });
 
-  const crustOffset = perlin3d.sample(p * 10) * 0.02;
   const crust = Shape({
     dist: sdf.opExtrudeY(
       p - d.vec3f(0, crustOffset, 0),
       crust2d,
       PIE.baseHalfHeight * 5,
     ) - 0.01,
-    color: d.vec3f(0.6, 0.4, 0.3) * (1 - crustOffset * 10),
+    material: crustMaterial,
   });
 
   return smoothShapeUnion(pieBase, crust, 0.1);
@@ -192,7 +191,7 @@ const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
 const getMorphingShape = (p: d.v3f, t: number): Shape => {
   'use gpu';
   // Center position
-  const center = d.vec3f(0, PIE.baseHalfHeight, 0);
+  const center = d.vec3f(0, PIE.baseHalfHeight + 0.1, 0);
   const localP = std.sub(p, center);
 
   const a1 = 3 * Math.PI / 2;
@@ -217,8 +216,6 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
     0.03,
   );
   return shapeUnion(pizzaCrust, pizzaCheese);
-  // return sdPizzaCheeseStrings(stringP);
-  // return sdPizzaCheeseStrings(localP - d.vec3f(0, 0.1, 0));
 };
 
 const getSceneDist = (p: d.v3f): Shape => {
@@ -226,11 +223,16 @@ const getSceneDist = (p: d.v3f): Shape => {
   const shape = getMorphingShape(p, time.$);
   const floor = Shape({
     dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
-    color: std.mix(
-      d.vec3f(1),
-      d.vec3f(0.2),
-      checkerBoard(std.mul(p.xz, 2)),
-    ),
+    material: {
+      albedo: std.mix(
+        d.vec3f(1),
+        d.vec3f(0.8),
+        checkerBoard(std.mul(p.xz, 2)),
+      ),
+      ao: 1,
+      metallic: 0,
+      roughness: 0,
+    },
   });
 
   return shapeUnion(shape, floor);
@@ -241,7 +243,7 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   let dO = d.f32(0);
   const result = Shape({
     dist: d.f32(MAX_DIST),
-    color: d.vec3f(0, 0, 0),
+    material: Material(),
   });
 
   for (let i = 0; i < MAX_STEPS; i++) {
@@ -251,7 +253,7 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
 
     if (dO > MAX_DIST || scene.dist < SURF_DIST) {
       result.dist = dO;
-      result.color = d.vec3f(scene.color);
+      result.material = Material(scene.material);
       break;
     }
   }
@@ -323,30 +325,40 @@ const fragmentMain = tgpu.fragmentFn({
   const n = getNormal(p);
 
   // Lighting with orbiting light
-  const l = std.normalize(d.vec3f(0.5, 1, -0.2));
+
+  const l = std.normalize(SUN.$.position);
   const diff = std.max(std.dot(n, l), 0);
 
   // Soft shadows
-  // const shadowRo = p;
-  // const shadowRd = l;
-  // const shadowDist = 4; // approximate
-  // const shadow = softShadow(shadowRo, shadowRd, 0.02, shadowDist, d.f32(16));
-  const shadow = 1;
+  const shadowRo = p;
+  const shadowRd = l;
+  const shadowDist = 4; // approximate
+  const shadow = softShadow(shadowRo, shadowRd, 0.02, shadowDist, d.f32(16));
+  // const shadow = 1;
 
   // Combine lighting with shadows and color
-  const litColor = march.color.mul(diff);
-  const finalColor = std.mix(
-    std.mul(litColor, 0.5), // Shadow color
-    litColor, // Lit color
-    shadow,
-  );
+  // const litColor = march.color.mul(diff);
+  // const finalColor = std.mix(
+  //   std.mul(litColor, 0.5), // Shadow color
+  //   litColor, // Lit color
+  //   shadow,
+  // );
 
-  return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
+  const v = std.normalize(ray.direction.mul(-1)); // TODO: use unary negation when it becomes available
+  // const material = Material({
+  //   albedo: d.vec3f(0.8, 0.2, 0.1),
+  //   ao: 1,
+  //   metallic: 1,
+  //   roughness: 1,
+  // });
+  const shadedColor = shade(p, n, v, shadow, march.material);
+
+  return std.mix(d.vec4f(shadedColor, 1), skyColor, fog);
 });
 
 const cameraResult = setupOrbitCamera(
   canvas,
-  { initPos: d.vec4f(0.1, 4, 0, 1), maxZoom: 4, minZoom: 1 },
+  { initPos: d.vec4f(0.4, 3, 0, 1), maxZoom: 4, minZoom: 1 },
   (newProps) => cameraUniform.writePartial(newProps),
 );
 
