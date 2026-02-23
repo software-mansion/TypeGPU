@@ -16,11 +16,7 @@ import type {
   Vec3u,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import {
-  invariant,
-  MissingBindGroupsError,
-  MissingVertexBuffersError,
-} from '../../errors.ts';
+import { invariant } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -69,6 +65,10 @@ import {
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
+import {
+  applyBindGroups,
+  applyVertexBuffers,
+} from '../pipeline/applyPipelineState.ts';
 import {
   INTERNAL_createComparisonSampler,
   INTERNAL_createSampler,
@@ -734,68 +734,34 @@ class TgpuRootImpl extends WithBindingImpl
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
-
       if (!dirty) {
         return;
       }
       dirty = false;
-
       const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
-
       encoder.setPipeline(memo.pipeline);
 
-      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
-      memo.usedBindGroupLayouts.forEach((layout, idx) => {
-        if (memo.catchall && idx === memo.catchall[0]) {
-          encoder.setBindGroup(idx, this.unwrap(memo.catchall[1]));
-          missingBindGroups.delete(layout);
-        } else {
-          const bindGroup = priors.bindGroupLayoutMap?.get(layout) ??
-            bindGroups.get(layout);
-          if (bindGroup !== undefined) {
-            missingBindGroups.delete(layout);
-            if (isBindGroup(bindGroup)) {
-              encoder.setBindGroup(idx, this.unwrap(bindGroup));
-            } else {
-              encoder.setBindGroup(idx, bindGroup);
-            }
-          }
-        }
-      });
+      applyBindGroups(
+        encoder,
+        this,
+        memo.usedBindGroupLayouts,
+        memo.catchall,
+        (layout) =>
+          priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout),
+      );
 
-      const missingVertexLayouts = new Set<TgpuVertexLayout>();
-      memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
-        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-        const opts = priorBuffer
-          ? {
-            buffer: priorBuffer,
-            offset: undefined,
-            size: undefined,
-          }
-          : vertexBuffers.get(vertexLayout);
-
-        if (!opts || !opts.buffer) {
-          missingVertexLayouts.add(vertexLayout);
-        } else if (isBuffer(opts.buffer)) {
-          encoder.setVertexBuffer(
-            idx,
-            this.unwrap(opts.buffer),
-            opts.offset,
-            opts.size,
-          );
-        } else {
-          encoder.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
-        }
-      });
-
-      if (missingBindGroups.size > 0) {
-        throw new MissingBindGroupsError(missingBindGroups);
-      }
-
-      if (missingVertexLayouts.size > 0) {
-        throw new MissingVertexBuffersError(missingVertexLayouts);
-      }
+      applyVertexBuffers(
+        encoder,
+        this,
+        memo.usedVertexLayouts,
+        (vertexLayout) => {
+          const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
+          return priorBuffer
+            ? { buffer: priorBuffer, offset: undefined, size: undefined }
+            : vertexBuffers.get(vertexLayout);
+        },
+      );
     };
 
     return {
@@ -806,7 +772,12 @@ class TgpuRootImpl extends WithBindingImpl
 
       setIndexBuffer: (buffer, indexFormat, offset, size) => {
         if (isBuffer(buffer)) {
-          encoder.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
+          encoder.setIndexBuffer(
+            this.unwrap(buffer),
+            indexFormat,
+            offset,
+            size,
+          );
         } else {
           encoder.setIndexBuffer(buffer, indexFormat, offset, size);
         }

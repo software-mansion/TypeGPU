@@ -30,10 +30,6 @@ import {
   type WgslArray,
   type WgslStruct,
 } from '../../data/wgslTypes.ts';
-import {
-  MissingBindGroupsError,
-  MissingVertexBuffersError,
-} from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
@@ -88,7 +84,7 @@ import {
 } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
+import { applyBindGroups, applyVertexBuffers } from './applyPipelineState.ts';
 import {
   isGPUCommandEncoder,
   isGPURenderBundleEncoder,
@@ -744,42 +740,25 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
     const memo = internals.core.unwrap();
     const { root } = internals.core.options;
-
     encoder.setPipeline(memo.pipeline);
 
-    const missingBindGroups = new Set(memo.usedBindGroupLayouts);
+    applyBindGroups(
+      encoder,
+      root,
+      memo.usedBindGroupLayouts,
+      memo.catchall,
+      (layout) => internals.priors.bindGroupLayoutMap?.get(layout),
+    );
 
-    warnIfOverflow(memo.usedBindGroupLayouts, root.device.limits);
-
-    memo.usedBindGroupLayouts.forEach((layout, idx) => {
-      if (memo.catchall && idx === memo.catchall[0]) {
-        encoder.setBindGroup(idx, root.unwrap(memo.catchall[1]));
-        missingBindGroups.delete(layout);
-      } else {
-        const bindGroup = internals.priors.bindGroupLayoutMap?.get(layout);
-        if (bindGroup !== undefined) {
-          missingBindGroups.delete(layout);
-          encoder.setBindGroup(idx, root.unwrap(bindGroup));
-        }
-      }
-    });
-
-    const missingVertexLayouts = new Set(memo.usedVertexLayouts);
-    memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
-      const buffer = internals.priors.vertexLayoutMap?.get(vertexLayout);
-      if (buffer) {
-        missingVertexLayouts.delete(vertexLayout);
-        encoder.setVertexBuffer(idx, root.unwrap(buffer));
-      }
-    });
-
-    if (missingBindGroups.size > 0) {
-      throw new MissingBindGroupsError(missingBindGroups);
-    }
-
-    if (missingVertexLayouts.size > 0) {
-      throw new MissingVertexBuffersError(missingVertexLayouts);
-    }
+    applyVertexBuffers(
+      encoder,
+      root,
+      memo.usedVertexLayouts,
+      (layout) => {
+        const buffer = internals.priors.vertexLayoutMap?.get(layout);
+        return buffer ? { buffer } : undefined;
+      },
+    );
 
     if (
       internals.priors.stencilReference !== undefined &&
