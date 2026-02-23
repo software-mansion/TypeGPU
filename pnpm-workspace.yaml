@@ -11,7 +11,7 @@ catalogs:
     unbuild: ^3.5.0
     jiti: ^2.6.0
   types:
-    typescript: npm:tsover@^5.9.10
+    typescript: npm:tsover@^5.9.11
     '@webgpu/types': ^0.1.66
     '@types/three': '^0.181.0'
   test:

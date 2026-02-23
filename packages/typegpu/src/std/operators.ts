@@ -234,10 +234,10 @@ type ModOverload = {
  * @privateRemarks
  * Both JS and WGSL implementations use truncated definition of modulo
  */
-export const mod: ModOverload = dualImpl({
+export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
-  normalImpl<T extends NumVec | number>(a: T, b: T): T {
+  normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number' && typeof b === 'number') {
       return (a % b) as T; // scalar % scalar
     }
@@ -259,7 +259,7 @@ export const mod: ModOverload = dualImpl({
     throw new Error(
       'Mod called with invalid arguments, expected types: number or vector.',
     );
-  },
+  }) as ModOverload,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
 });
 

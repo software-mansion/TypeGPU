@@ -210,7 +210,7 @@ describe('[BABEL] "use gpu" directive', () => {
         mod: ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a: number, b: number): number => {
           'use gpu';
 
-          return a % b;
+          return __tsover_mod(a, b);
         }, {
           v: 1,
           name: "mod",
@@ -551,7 +551,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
       "const obj = {
                 mod: (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
                   'use gpu';
-                  return a % b;
+                  return __tsover_mod(a, b);
                 }), {
                     v: 1,
                     name: "mod",

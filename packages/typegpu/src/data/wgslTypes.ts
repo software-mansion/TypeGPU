@@ -62,6 +62,7 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
   sub(other: T | number): T;
   mul(other: mBaseForVec<T> | T | number): T;
   div(other: T | number): T;
+  mod(other: T | number): T;
 
   [Operator.plus](lhs: T | number, rhs: T | number): T;
   [Operator.minus](lhs: T | number, rhs: T | number): T;
@@ -70,6 +71,7 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
     rhs: mBaseForVec<T> | T | number,
   ): T;
   [Operator.slash](lhs: T | number, rhs: T | number): T;
+  [Operator.percent](lhs: T | number, rhs: T | number): T;
 }
 
 /**

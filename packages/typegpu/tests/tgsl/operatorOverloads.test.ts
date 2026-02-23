@@ -87,3 +87,26 @@ test('vec3f() /', () => {
     `"vec3f(0.25, 0.5, 0.5)"`,
   );
 });
+
+test('vec3f() %', () => {
+  const main = () => {
+    'use gpu';
+    let result = d.vec3f(11, 27, 31);
+    result %= d.vec3f(2, 10, 3);
+    result %= 5;
+    return result;
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn main() -> vec3f {
+      var result = vec3f(11, 27, 31);
+      result %= vec3f(2, 10, 3);
+      result %= 5;
+      return result;
+    }"
+  `);
+
+  expect(String(main())).toMatchInlineSnapshot(
+    `"vec3f(1, 2, 1)"`,
+  );
+});

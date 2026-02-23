@@ -34,6 +34,7 @@ assignInfixOperator(VecBase, 'add', Operator.plus);
 assignInfixOperator(VecBase, 'sub', Operator.minus);
 assignInfixOperator(VecBase, 'mul', Operator.star);
 assignInfixOperator(VecBase, 'div', Operator.slash);
+assignInfixOperator(VecBase, 'mod', Operator.percent);
 assignInfixOperator(MatBase, 'add', Operator.plus);
 assignInfixOperator(MatBase, 'sub', Operator.minus);
 assignInfixOperator(MatBase, 'mul', Operator.star);
