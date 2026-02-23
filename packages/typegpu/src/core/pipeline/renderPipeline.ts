@@ -923,6 +923,109 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
+
+  drawIndirect(
+    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
+    indirectOffset: GPUSize64 = 0,
+  ): void {
+    const internals = this[$internal];
+    const { root } = internals.core.options;
+    const rawBuffer = isGPUBuffer(indirectBuffer)
+      ? indirectBuffer
+      : root.unwrap(indirectBuffer);
+
+    if (internals.priors.externalRenderEncoder) {
+      if (
+        _lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this
+      ) {
+        this._applyRenderState(internals.priors.externalRenderEncoder);
+        _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
+      }
+      internals.priors.externalRenderEncoder.drawIndirect(
+        rawBuffer,
+        indirectOffset,
+      );
+      return;
+    }
+
+    if (internals.priors.externalEncoder) {
+      const pass = this._createRenderPass(internals.priors.externalEncoder);
+      this._applyRenderState(pass);
+      pass.drawIndirect(rawBuffer, indirectOffset);
+      pass.end();
+      return;
+    }
+
+    const { logResources } = internals.core.unwrap();
+
+    const commandEncoder = root.device.createCommandEncoder();
+    const pass = this._createRenderPass(commandEncoder);
+    this._applyRenderState(pass);
+    pass.drawIndirect(rawBuffer, indirectOffset);
+    pass.end();
+    root.device.queue.submit([commandEncoder.finish()]);
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+    }
+
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({ root, priors: internals.priors });
+    }
+  }
+
+  drawIndexedIndirect(
+    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
+    indirectOffset: GPUSize64 = 0,
+  ): void {
+    const internals = this[$internal];
+    const { root } = internals.core.options;
+    const rawBuffer = isGPUBuffer(indirectBuffer)
+      ? indirectBuffer
+      : root.unwrap(indirectBuffer);
+
+    if (internals.priors.externalRenderEncoder) {
+      if (
+        _lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this
+      ) {
+        this._applyRenderState(internals.priors.externalRenderEncoder);
+        this._setIndexBuffer(internals.priors.externalRenderEncoder);
+        _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
+      }
+      internals.priors.externalRenderEncoder.drawIndexedIndirect(
+        rawBuffer,
+        indirectOffset,
+      );
+      return;
+    }
+
+    if (internals.priors.externalEncoder) {
+      const pass = this._createRenderPass(internals.priors.externalEncoder);
+      this._applyRenderState(pass);
+      this._setIndexBuffer(pass);
+      pass.drawIndexedIndirect(rawBuffer, indirectOffset);
+      pass.end();
+      return;
+    }
+
+    const { logResources } = internals.core.unwrap();
+
+    const commandEncoder = root.device.createCommandEncoder();
+    const pass = this._createRenderPass(commandEncoder);
+    this._applyRenderState(pass);
+    this._setIndexBuffer(pass);
+    pass.drawIndexedIndirect(rawBuffer, indirectOffset);
+    pass.end();
+    root.device.queue.submit([commandEncoder.finish()]);
+
+    if (logResources) {
+      logDataFromGPU(logResources);
+    }
+
+    if (internals.priors.performanceCallback) {
+      triggerPerformanceCallback({ root, priors: internals.priors });
+    }
+  }
 }
 
 class RenderPipelineCore implements SelfResolvable {
