@@ -1140,18 +1140,23 @@ ${this.ctx.pre}else ${alternate}`;
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
 
-      const [initStatement, conditionExpr, updateStatement] = this.ctx
-        .withResetIndentLevel(() => [
-          init ? this.statement(init) : undefined,
-          condition ? this.typedExpression(condition, bool) : undefined,
-          update ? this.statement(update) : undefined,
-        ]);
+      try {
+        this.ctx.pushBlockScope();
+        const [initStatement, conditionExpr, updateStatement] = this.ctx
+          .withResetIndentLevel(() => [
+            init ? this.statement(init) : undefined,
+            condition ? this.typedExpression(condition, bool) : undefined,
+            update ? this.statement(update) : undefined,
+          ]);
 
-      const initStr = initStatement ? initStatement.slice(0, -1) : '';
-      const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
+        const initStr = initStatement ? initStatement.slice(0, -1) : '';
+        const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this.block(blockifySingleStatement(body));
+        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+      } finally {
+        this.ctx.popBlockScope();
+      }
     }
 
     if (statement[0] === NODE.while) {

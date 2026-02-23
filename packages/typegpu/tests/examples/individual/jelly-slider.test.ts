@@ -533,7 +533,7 @@ describe('jelly-slider example', () => {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
-        for (var i_1 = 0; (i_1 < 64i); i_1++) {
+        for (var i = 0; (i < 64i); i++) {
           if ((totalSteps >= 64u)) {
             break;
           }
