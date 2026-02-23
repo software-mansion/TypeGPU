@@ -8,7 +8,6 @@ import { shade, SUN } from './pbr.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
@@ -336,7 +335,7 @@ const getRayForUV = (uv: d.v2f) => {
   const farWorld = camera.viewInverse.mul(
     d.vec4f(farView.xyz.div(farView.w), 1),
   );
-  const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
+  const direction = std.normalize(farWorld.xyz - camera.position.xyz);
   return Ray({ origin: camera.position.xyz, direction });
 };
 
@@ -387,7 +386,6 @@ const renderPipeline = root
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
     fragment: fragmentMain,
-    targets: { format: presentationFormat },
   });
 
 let animationFrame: number;
@@ -396,11 +394,7 @@ function run(timestamp: number) {
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   animationFrame = requestAnimationFrame(run);
