@@ -86,7 +86,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls correctly when loop variable is overriden', () => {
+  it('unrolls correctly when loop variable is overridden', () => {
     const f = () => {
       'use gpu';
       let fooResult = d.f32(0);
@@ -588,7 +588,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('can be conditinally applied', () => {
+  it('can be conditionally applied', () => {
     const unroll = tgpu.accessor(d.bool, true);
 
     const f = () => {
