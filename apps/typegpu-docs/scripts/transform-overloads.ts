@@ -29,6 +29,8 @@ const assignmentOperators = [
   ts.SyntaxKind.SlashEqualsToken,
 ];
 
+const commutativeMethods = ['add', 'mul'];
+
 async function findTypeScriptFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
 
@@ -92,7 +94,7 @@ function getOverloadPattern(
   }
 
   // For non-commutative operators, use the standard library function
-  if (methodName === 'div' || methodName === 'pow') {
+  if (!commutativeMethods.includes(methodName)) {
     return 'std.op(left, right)';
   }
 
