@@ -676,8 +676,6 @@ describe('TgpuComputePipeline', () => {
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
         `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
-
-      warnSpy.mockRestore();
     });
 
     it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {
@@ -692,8 +690,6 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroupsIndirect(buffer);
 
       expect(warnSpy).not.toHaveBeenCalled();
-
-      warnSpy.mockRestore();
     });
   });
 });
