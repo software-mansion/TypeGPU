@@ -39,7 +39,7 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const createRenderPipeline = (
   sharpenFn: (n: number, sharpness: number) => number,
 ) =>
-  root['~unstable']
+  root
     .pipe(perlinCacheConfig.inject(dynamicLayout.$))
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,

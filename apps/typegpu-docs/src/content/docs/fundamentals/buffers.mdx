@@ -338,7 +338,7 @@ const layout = tgpu.bindGroupLayout({
   points: { storage: d.arrayOf(d.vec2i), access: 'mutable' },
 });
 
-const pipeline = root['~unstable'].createGuardedComputePipeline((x) => {
+const pipeline = root.createGuardedComputePipeline((x) => {
   'use gpu';
   // Access and modify the bound buffer via the layout
   layout.$.points[x] = d.vec2i(1, 2);
@@ -374,7 +374,7 @@ const root = await tgpu.init();
 // ---cut---
 const pointsMutable = root.createMutable(d.arrayOf(d.vec2i, 100));
 
-const pipeline = root['~unstable'].createGuardedComputePipeline((x) => {
+const pipeline = root.createGuardedComputePipeline((x) => {
   'use gpu';
   // Access and modify the fixed buffer directly
   pointsMutable.$[x] = d.vec2i();

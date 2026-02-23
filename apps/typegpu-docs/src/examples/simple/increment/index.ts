@@ -6,7 +6,7 @@ const root = await tgpu.init();
 const counter = root.createMutable(d.u32);
 
 // A 0-dimensional compute pipeline
-const incrementPipeline = root['~unstable'].createGuardedComputePipeline(() => {
+const incrementPipeline = root.createGuardedComputePipeline(() => {
   'use gpu';
   counter.$ += 1;
 });

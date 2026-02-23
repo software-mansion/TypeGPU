@@ -40,7 +40,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(n);
     };
 
-    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
+    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(
       () => {
         myLog(5);
         console.log(6);
@@ -65,7 +65,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Ignores console.log in a fragment shader resolved without a pipeline', () => {
-    const fs = tgpu['~unstable']
+    const fs = tgpu
       .fragmentFn({ out: d.vec4f })(() => {
         console.log(d.u32(321));
         return d.vec4f();
@@ -80,17 +80,17 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses a single console.log in a render pipeline', ({ root }) => {
-    const vs = tgpu['~unstable']
+    const vs = tgpu
       .vertexFn({ out: { pos: d.builtin.position } })(() => {
         return { pos: d.vec4f() };
       });
-    const fs = tgpu['~unstable']
+    const fs = tgpu
       .fragmentFn({ out: d.vec4f })(() => {
         console.log(d.u32(321));
         return d.vec4f();
       });
 
-    const pipeline = root['~unstable']
+    const pipeline = root
       .withVertex(vs)
       .withFragment(fs, { format: 'rg8unorm' })
       .createPipeline();
@@ -155,13 +155,13 @@ describe('wgslGenerator with console.log', () => {
       console.log(n);
     };
 
-    const vs = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })(
+    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(
       () => {
         myLog(6);
         return { pos: d.vec4f() };
       },
     );
-    const fs = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+    const fs = tgpu.fragmentFn({ out: d.vec4f })(() => {
       myLog(7);
       return d.vec4f();
     });
@@ -236,14 +236,14 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses a single console.log in a compute pipeline', ({ root }) => {
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
       console.log(d.u32(10));
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -295,7 +295,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses two console.logs in a compute pipeline', ({ root }) => {
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
@@ -303,7 +303,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(d.u32(20));
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({
+    const pipeline = root.createComputePipeline({
       compute: fn,
     });
 
@@ -373,7 +373,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses console.logs with more arguments in a compute pipeline', ({ root }) => {
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
@@ -385,7 +385,7 @@ describe('wgslGenerator with console.log', () => {
       );
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({
+    const pipeline = root.createComputePipeline({
       compute: fn,
     });
 
@@ -452,7 +452,7 @@ describe('wgslGenerator with console.log', () => {
     const ComplexArray = d.arrayOf(SimpleStruct, 3);
     const ComplexStruct = d.struct({ pos: d.vec3f, data: ComplexArray });
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
@@ -467,7 +467,7 @@ describe('wgslGenerator with console.log', () => {
       console.log(complexStruct);
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct SimpleStruct {
@@ -567,7 +567,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Throws when not enough space to serialize console.log', ({ root }) => {
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
@@ -592,7 +592,7 @@ describe('wgslGenerator with console.log', () => {
       );
     });
 
-    const pipeline = root['~unstable'].createComputePipeline({ compute: fn });
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -608,16 +608,14 @@ describe('wgslGenerator with console.log', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => {});
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
     })(() => {
       console.trace();
     });
 
-    const pipeline = root['~unstable']
-      .withCompute(fn)
-      .createPipeline();
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct fn_Input {
