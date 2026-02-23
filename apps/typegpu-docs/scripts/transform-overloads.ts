@@ -18,6 +18,8 @@ const operatorToMethod: Record<string, string> = {
   [ts.SyntaxKind.AsteriskEqualsToken]: 'mul',
   [ts.SyntaxKind.SlashToken]: 'div',
   [ts.SyntaxKind.SlashEqualsToken]: 'div',
+  [ts.SyntaxKind.AsteriskAsteriskToken]: 'pow',
+  [ts.SyntaxKind.AsteriskAsteriskEqualsToken]: 'pow',
 };
 
 const assignmentOperators = [
@@ -57,40 +59,47 @@ async function findTypeScriptFiles(dir: string): Promise<string[]> {
   return files;
 }
 
-function isOverloadedBinary(
-  node: ts.BinaryExpression,
+type Pattern =
+  | 'left.op(right)' // e.g. vec + 2 => vec.add(2)
+  | 'right.op(left)' // e.g. 2 * vec => vec.mul(2)
+  | 'std.op(left, right)'; // e.g. 2 / vec => std.div(2, vec)
+
+function getOverloadPattern(
   checker: ts.TypeChecker,
-): { isOverloaded: boolean; useLeftMethod: boolean } {
+  node: ts.BinaryExpression,
+): Pattern | undefined {
   const methodName = operatorToMethod[node.operatorToken.kind];
   if (!methodName) {
-    return { isOverloaded: false, useLeftMethod: false };
+    // Not overlaoded
+    return undefined;
   }
 
   // Get the types of both operands
   const leftType = checker.getTypeAtLocation(node.left);
   const rightType = checker.getTypeAtLocation(node.right);
 
-  const overloadType = checker.__tsover__getOverloadReturnType(
-    node.left,
-    node.operatorToken.kind,
-    node.right,
-    leftType,
-    rightType,
-  );
-
-  if (!overloadType) {
-    return { isOverloaded: false, useLeftMethod: false };
+  if (
+    !checker.__tsover__couldHaveOverloadedOperators(
+      node.left,
+      node.operatorToken.kind,
+      node.right,
+      leftType,
+      rightType,
+    )
+  ) {
+    // Not overlaoded
+    return undefined;
   }
 
-  // For division, only use left method
-  if (node.operatorToken.kind === ts.SyntaxKind.SlashToken) {
-    return { isOverloaded: true, useLeftMethod: true };
+  // For non-commutative operators, use the standard library function
+  if (methodName === 'div' || methodName === 'pow') {
+    return 'std.op(left, right)';
   }
 
-  // For other operators, prefer left method, fall back to right
+  // Since other supported operators are commutative, prefer left method, fall back to right
   const leftHasMethod = leftType.getProperty(methodName) !== undefined;
 
-  return { isOverloaded: true, useLeftMethod: leftHasMethod };
+  return leftHasMethod ? 'left.op(right)' : 'right.op(left)';
 }
 
 function createProgram(allFiles: string[]): ts.Program {
@@ -141,10 +150,10 @@ function transformFile(
       return;
     }
 
-    const { isOverloaded, useLeftMethod } = isOverloadedBinary(node, checker);
+    const pattern = getOverloadPattern(checker, node);
     const methodName = operatorToMethod[node.operatorToken.kind];
 
-    if (!isOverloaded || !methodName) {
+    if (!pattern || !methodName) {
       return;
     }
 
@@ -160,27 +169,22 @@ function transformFile(
     const leftText = magic.slice(leftStart, leftEnd);
     const rightText = magic.slice(rightStart, rightEnd);
 
-    if (assignmentOperators.includes(node.operatorToken.kind)) {
-      // Transform a += b into a = a.add(b)
-      magic.overwrite(
-        start,
-        end,
-        `${leftText} = ${leftText}.${methodName}(${rightText})`,
-      );
+    let replacement = '';
+    if (pattern === 'std.op(left, right)') {
+      replacement = `std.${methodName}(${leftText}, ${rightText})`;
+    } else if (pattern === 'left.op(right)') {
+      replacement = `${leftText}.${methodName}(${rightText})`;
+    } else if (pattern === 'right.op(left)') {
+      replacement = `${rightText}.${methodName}(${leftText})`;
     } else {
-      if (useLeftMethod) {
-        magic.overwrite(
-          start,
-          end,
-          `${leftText}.${methodName}(${rightText})`,
-        );
-      } else {
-        magic.overwrite(
-          start,
-          end,
-          `${rightText}.${methodName}(${leftText})`,
-        );
-      }
+      throw new Error(`Unsupported pattern: ${pattern}`);
+    }
+
+    if (assignmentOperators.includes(node.operatorToken.kind)) {
+      // E.g. transforms a += b into a = a.add(b)
+      magic.overwrite(start, end, `${leftText} = ${replacement}`);
+    } else {
+      magic.overwrite(start, end, replacement);
     }
   }
 
