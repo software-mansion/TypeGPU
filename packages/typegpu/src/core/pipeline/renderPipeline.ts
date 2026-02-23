@@ -463,6 +463,10 @@ type Memo = {
   fragmentOut: BaseData;
 };
 
+const _lastAppliedRender = new WeakMap<
+  GPURenderPassEncoder | GPURenderBundleEncoder,
+  TgpuRenderPipelineImpl
+>();
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
   public readonly resourceType = 'render-pipeline';
@@ -822,7 +826,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { root } = internals.core.options;
 
     if (internals.priors.externalRenderEncoder) {
-      this._applyRenderState(internals.priors.externalRenderEncoder);
+      if (
+        _lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this
+      ) {
+        this._applyRenderState(internals.priors.externalRenderEncoder);
+        _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
+      }
       internals.priors.externalRenderEncoder.draw(
         vertexCount,
         instanceCount,
@@ -869,8 +878,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { root } = internals.core.options;
 
     if (internals.priors.externalRenderEncoder) {
-      this._applyRenderState(internals.priors.externalRenderEncoder);
-      this._setIndexBuffer(internals.priors.externalRenderEncoder);
+      if (
+        _lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this
+      ) {
+        this._applyRenderState(internals.priors.externalRenderEncoder);
+        this._setIndexBuffer(internals.priors.externalRenderEncoder);
+        _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
+      }
       internals.priors.externalRenderEncoder.drawIndexed(
         indexCount,
         instanceCount,

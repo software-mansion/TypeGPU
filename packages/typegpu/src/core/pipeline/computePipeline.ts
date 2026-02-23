@@ -149,6 +149,11 @@ function validateIndirectBufferSize(
   }
 }
 
+const _lastAppliedCompute = new WeakMap<
+  GPUComputePassEncoder,
+  TgpuComputePipelineImpl
+>();
+
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
@@ -329,7 +334,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const { root } = this._core;
 
     if (this._priors.externalPass) {
-      this._applyComputeState(this._priors.externalPass);
+      if (_lastAppliedCompute.get(this._priors.externalPass) !== this) {
+        this._applyComputeState(this._priors.externalPass);
+        _lastAppliedCompute.set(this._priors.externalPass, this);
+      }
       dispatch(this._priors.externalPass);
       return;
     }
