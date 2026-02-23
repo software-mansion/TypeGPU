@@ -404,11 +404,7 @@ function render(timestamp: number) {
 
   if (showDepthPreview) {
     pipelinePreview
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .draw(3);
     requestAnimationFrame(render);
     return;
@@ -424,10 +420,8 @@ function render(timestamp: number) {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       view: msaaTexture,
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(mainBindGroup)
     .withIndexBuffer(BoxGeometry.indexBuffer)
@@ -442,10 +436,9 @@ function render(timestamp: number) {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       view: msaaTexture,
       loadOp: 'load',
-      storeOp: 'store',
     })
     .with(lightIndicatorBindGroup)
     .withIndexBuffer(BoxGeometry.indexBuffer)

@@ -247,7 +247,6 @@ const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: mainVert,
   fragment: mainFrag,
-  targets: { format: presentationFormat },
 
   primitive: {
     cullMode: 'back',

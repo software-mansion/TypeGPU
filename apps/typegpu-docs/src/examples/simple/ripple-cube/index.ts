@@ -25,7 +25,6 @@ import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const perlinCache = perlin3d.staticCache({
@@ -137,7 +136,6 @@ const postProcessing = createPostProcessingPipelines(
   root,
   width,
   height,
-  presentationFormat,
   initialBloom,
 );
 
@@ -261,7 +259,7 @@ function run(timestamp: number) {
 
   postProcessing.runBloom();
 
-  postProcessing.render(context.getCurrentTexture().createView());
+  postProcessing.render(context);
 
   animationFrame = requestAnimationFrame(run);
 }
