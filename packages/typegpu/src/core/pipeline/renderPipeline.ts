@@ -721,7 +721,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 
@@ -774,7 +774,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 }
@@ -952,7 +952,7 @@ class RenderPipelineCore implements SelfResolvable {
     };
 
     if (PERF?.enabled) {
-      (async () => {
+      void (async () => {
         const start = performance.mark('typegpu:compile-start');
         await device.queue.onSubmittedWorkDone();
         const compileMeasure = performance.measure('typegpu:compiled', {

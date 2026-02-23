@@ -35,7 +35,7 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
     node: T,
     partialValue: InferPartial<T> | undefined,
     offset: number,
-    padding?: number | undefined,
+    padding?: number,
   ) {
     if (partialValue === undefined || partialValue === null) {
       return;

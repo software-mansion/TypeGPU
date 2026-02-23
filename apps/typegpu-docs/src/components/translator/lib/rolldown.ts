@@ -35,6 +35,7 @@ export async function bundle(
     cwd: '/',
     onLog(level, log, logger) {
       if (level === 'warn') {
+        // oxlint-disable-next-line typescript/no-base-to-string
         warnings.push(String(log));
       } else {
         logger(level, log);

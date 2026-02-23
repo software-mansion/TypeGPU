@@ -130,7 +130,7 @@ describe('wgslGenerator', () => {
     ]);
 
     provideCtx(ctx, () => {
-      for (const stmt of (parsedBody as tinyest.Block)[1]) {
+      for (const stmt of parsedBody[1]) {
         const letStatement = stmt as tinyest.Let;
         const [_, name, numLiteral] = letStatement;
         const generatedExpr = wgslGenerator.expression(
