@@ -200,6 +200,16 @@ export interface TgpuRenderPipeline<in Targets = never>
     firstVertex?: number,
     firstInstance?: number,
   ): void;
+
+  drawIndirect(
+    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
+    indirectOffset?: GPUSize64,
+  ): void;
+
+  drawIndexedIndirect(
+    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
+    indirectOffset?: GPUSize64,
+  ): void;
 }
 
 export declare namespace TgpuRenderPipeline {
