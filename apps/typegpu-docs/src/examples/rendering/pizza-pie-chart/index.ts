@@ -106,6 +106,13 @@ const crustMaterialBase = Material({
   roughness: 1,
 });
 
+const pepperoniMaterialBase = Material({
+  albedo: d.vec3f(0.6, 0.1, 0.1),
+  ao: 0.2,
+  metallic: 0.0,
+  roughness: 1,
+});
+
 const sdPizzaCheeseStrings = (p: d.v3f): Shape => {
   'use gpu';
   let dp = rotateXZ(0.5) * p;
@@ -142,6 +149,22 @@ const sdPizzaCheese = (p: d.v3f, angle: number): Shape => {
   return pieBase;
 };
 
+const pepperoniDomain = 0.28;
+const sdPepperoni = (p: d.v3f, cutoutDist: number): Shape => {
+  'use gpu';
+  const wp = std.floor(p.xz / pepperoniDomain);
+  const mp = (std.fract(p.xz / pepperoniDomain) - 0.5) * pepperoniDomain;
+  const off =
+    d.vec2f(perlin2d.sample(wp * 0.5), perlin2d.sample(wp * 0.5 + 2)) *
+    pepperoniDomain * 0.6;
+  const dist2d = std.max(cutoutDist, sdf.sdDisk(mp + off, 0.07));
+
+  return Shape({
+    dist: sdf.opExtrudeY(p, dist2d, 0.006),
+    material: pepperoniMaterialBase,
+  });
+};
+
 const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
   'use gpu';
   const pieBase2d = sdf.sdPie(
@@ -149,6 +172,11 @@ const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
     d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
     PIE.radius,
   ) + PIE.baseRoundness;
+  const toppingsCutout = sdf.sdPie(
+    p.xz - d.vec2f(0, 0.005),
+    d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
+    PIE.radius * 0.8,
+  );
   const crust2d = sdRing(
     p.xz,
     d.vec2f(std.cos(angle / 2 - 0.05), std.sin(angle / 2 - 0.05)),
@@ -173,7 +201,10 @@ const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
     material: crustMaterial,
   });
 
-  return smoothShapeUnion(pieBase, crust, 0.1);
+  return shapeUnion(
+    smoothShapeUnion(pieBase, crust, 0.1),
+    sdPepperoni(p - d.vec3f(0, 0.03, 0), toppingsCutout),
+  );
 };
 
 /**
@@ -327,7 +358,6 @@ const fragmentMain = tgpu.fragmentFn({
   // Lighting with orbiting light
 
   const l = std.normalize(SUN.$.position);
-  const diff = std.max(std.dot(n, l), 0);
 
   // Soft shadows
   const shadowRo = p;
@@ -336,24 +366,11 @@ const fragmentMain = tgpu.fragmentFn({
   const shadow = softShadow(shadowRo, shadowRd, 0.02, shadowDist, d.f32(16));
   // const shadow = 1;
 
-  // Combine lighting with shadows and color
-  // const litColor = march.color.mul(diff);
-  // const finalColor = std.mix(
-  //   std.mul(litColor, 0.5), // Shadow color
-  //   litColor, // Lit color
-  //   shadow,
-  // );
-
   const v = std.normalize(ray.direction.mul(-1)); // TODO: use unary negation when it becomes available
-  // const material = Material({
-  //   albedo: d.vec3f(0.8, 0.2, 0.1),
-  //   ao: 1,
-  //   metallic: 1,
-  //   roughness: 1,
-  // });
   const shadedColor = shade(p, n, v, shadow, march.material);
 
-  return std.mix(d.vec4f(shadedColor, 1), skyColor, fog);
+  const finalColor = std.mix(d.vec4f(shadedColor, 1), skyColor, fog);
+  return finalColor;
 });
 
 const cameraResult = setupOrbitCamera(
