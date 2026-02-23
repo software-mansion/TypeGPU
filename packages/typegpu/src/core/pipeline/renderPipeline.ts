@@ -90,6 +90,11 @@ import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
 import { connectTargetsToShader } from './connectTargetsToShader.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
 import {
+  isGPUCommandEncoder,
+  isGPURenderBundleEncoder,
+  isGPURenderPassEncoder,
+} from './typeGuards.ts';
+import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
   setupTimestampWrites,
@@ -159,6 +164,9 @@ export interface TgpuRenderPipeline<in Targets = never>
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
+  with(encoder: GPUCommandEncoder): this;
+  with(pass: GPURenderPassEncoder): this;
+  with(bundleEncoder: GPURenderBundleEncoder): this;
 
   /**
    * Attaches texture views to the pipeline's targets (outputs).
@@ -176,9 +184,7 @@ export interface TgpuRenderPipeline<in Targets = never>
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this;
 
-  withStencilReference(
-    reference: GPUStencilValue,
-  ): this;
+  withStencilReference(reference: GPUStencilValue): this;
 
   withIndexBuffer(
     buffer: TgpuBuffer<BaseData> & IndexFlag,
@@ -435,11 +441,16 @@ type TgpuRenderPipelinePriors = {
   readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
-      buffer: TgpuBuffer<BaseData> & IndexFlag | GPUBuffer;
+      buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
       indexFormat: GPUIndexFormat;
       offsetBytes?: number | undefined;
       sizeBytes?: number | undefined;
     }
+    | undefined;
+  readonly externalEncoder?: GPUCommandEncoder | undefined;
+  readonly externalRenderEncoder?:
+    | GPURenderPassEncoder
+    | GPURenderBundleEncoder
     | undefined;
 } & TimestampWritesPriors;
 
@@ -486,38 +497,63 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: TgpuBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  with(encoder: GPUCommandEncoder): this;
+  with(pass: GPURenderPassEncoder): this;
+  with(bundleEncoder: GPURenderBundleEncoder): this;
   with(
-    layoutOrBindGroup: TgpuVertexLayout | TgpuBindGroupLayout | TgpuBindGroup,
+    first:
+      | TgpuVertexLayout
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | GPUCommandEncoder
+      | GPURenderPassEncoder
+      | GPURenderBundleEncoder,
     resource?: (TgpuBuffer<BaseData> & VertexFlag) | TgpuBindGroup,
   ): this {
     const internals = this[$internal];
 
-    if (isBindGroup(layoutOrBindGroup)) {
+    if (isGPURenderPassEncoder(first) || isGPURenderBundleEncoder(first)) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        externalRenderEncoder: first,
+        externalEncoder: undefined,
+      }) as this;
+    }
+
+    if (isGPUCommandEncoder(first)) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        externalEncoder: first,
+        externalRenderEncoder: undefined,
+      }) as this;
+    }
+
+    if (isBindGroup(first)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [layoutOrBindGroup.layout, layoutOrBindGroup],
+          [first.layout, first],
         ]),
       }) as this;
     }
 
-    if (isBindGroupLayout(layoutOrBindGroup)) {
+    if (isBindGroupLayout(first)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [layoutOrBindGroup, resource as TgpuBindGroup],
+          [first, resource as TgpuBindGroup],
         ]),
       }) as this;
     }
 
-    if (isVertexLayout(layoutOrBindGroup)) {
+    if (isVertexLayout(first)) {
       return new TgpuRenderPipelineImpl(internals.core, {
         ...internals.priors,
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
-          [layoutOrBindGroup, resource as TgpuBuffer<BaseData> & VertexFlag],
+          [first, resource as TgpuBuffer<BaseData> & VertexFlag],
         ]),
       }) as this;
     }
@@ -569,9 +605,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as this;
   }
 
-  withStencilReference(
-    reference: GPUStencilValue,
-  ): this {
+  withStencilReference(reference: GPUStencilValue): this {
     const internals = this[$internal];
 
     return new TgpuRenderPipelineImpl(internals.core, {
@@ -592,7 +626,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     sizeBytes?: number,
   ): this & HasIndexBuffer;
   withIndexBuffer(
-    buffer: TgpuBuffer<BaseData> & IndexFlag | GPUBuffer,
+    buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer,
     indexFormatOrOffset?: GPUIndexFormat | number,
     offsetElementsOrSizeBytes?: number,
     sizeElementsOrUndefined?: number,
@@ -639,9 +673,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
-  private setupRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
+  private _createRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
-    const memo = internals.core.unwrap();
     const { root, descriptor } = internals.core.options;
 
     const colorAttachments = descriptor.fragment
@@ -698,27 +731,31 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       } as GPURenderPassDepthStencilAttachment;
     }
 
-    const pass = encoder.beginRenderPass(renderPassDescriptor);
+    return encoder.beginRenderPass(renderPassDescriptor);
+  }
 
-    pass.setPipeline(memo.pipeline);
+  private _applyRenderState(
+    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  ): void {
+    const internals = this[$internal];
+    const memo = internals.core.unwrap();
+    const { root } = internals.core.options;
+
+    encoder.setPipeline(memo.pipeline);
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
-    warnIfOverflow(
-      memo.usedBindGroupLayouts,
-      this[$internal].root.device.limits,
-    );
+    warnIfOverflow(memo.usedBindGroupLayouts, root.device.limits);
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
-        // Catch-all
-        pass.setBindGroup(idx, root.unwrap(memo.catchall[1]));
+        encoder.setBindGroup(idx, root.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
         const bindGroup = internals.priors.bindGroupLayoutMap?.get(layout);
         if (bindGroup !== undefined) {
           missingBindGroups.delete(layout);
-          pass.setBindGroup(idx, root.unwrap(bindGroup));
+          encoder.setBindGroup(idx, root.unwrap(bindGroup));
         }
       }
     });
@@ -728,7 +765,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       const buffer = internals.priors.vertexLayoutMap?.get(vertexLayout);
       if (buffer) {
         missingVertexLayouts.delete(vertexLayout);
-        pass.setVertexBuffer(idx, root.unwrap(buffer));
+        encoder.setVertexBuffer(idx, root.unwrap(buffer));
       }
     });
 
@@ -740,11 +777,39 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       throw new MissingVertexBuffersError(missingVertexLayouts);
     }
 
-    if (internals.priors.stencilReference !== undefined) {
-      pass.setStencilReference(internals.priors.stencilReference);
+    if (
+      internals.priors.stencilReference !== undefined &&
+      'setStencilReference' in encoder
+    ) {
+      (encoder as GPURenderPassEncoder).setStencilReference(
+        internals.priors.stencilReference,
+      );
+    }
+  }
+
+  private _setIndexBuffer(
+    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  ): void {
+    const internals = this[$internal];
+    const { root } = internals.core.options;
+
+    if (!internals.priors.indexBuffer) {
+      throw new Error('No index buffer set for this render pipeline.');
     }
 
-    return pass;
+    const { buffer, indexFormat, offsetBytes, sizeBytes } =
+      internals.priors.indexBuffer;
+
+    if (isGPUBuffer(buffer)) {
+      encoder.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
+    } else {
+      encoder.setIndexBuffer(
+        root.unwrap(buffer),
+        indexFormat,
+        offsetBytes,
+        sizeBytes,
+      );
+    }
   }
 
   draw(
@@ -755,14 +820,33 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const internals = this[$internal];
     const { root } = internals.core.options;
+
+    if (internals.priors.externalRenderEncoder) {
+      this._applyRenderState(internals.priors.externalRenderEncoder);
+      internals.priors.externalRenderEncoder.draw(
+        vertexCount,
+        instanceCount,
+        firstVertex,
+        firstInstance,
+      );
+      return;
+    }
+
+    if (internals.priors.externalEncoder) {
+      const pass = this._createRenderPass(internals.priors.externalEncoder);
+      this._applyRenderState(pass);
+      pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      pass.end();
+      return;
+    }
+
     const { logResources } = internals.core.unwrap();
 
     const commandEncoder = root.device.createCommandEncoder();
-    const pass = this.setupRenderPass(commandEncoder);
-
+    const pass = this._createRenderPass(commandEncoder);
+    this._applyRenderState(pass);
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     pass.end();
-
     root.device.queue.submit([commandEncoder.finish()]);
 
     if (logResources) {
@@ -782,30 +866,42 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstInstance?: number,
   ): void {
     const internals = this[$internal];
+    const { root } = internals.core.options;
 
-    if (!internals.priors.indexBuffer) {
-      throw new Error('No index buffer set for this render pipeline.');
+    if (internals.priors.externalRenderEncoder) {
+      this._applyRenderState(internals.priors.externalRenderEncoder);
+      this._setIndexBuffer(internals.priors.externalRenderEncoder);
+      internals.priors.externalRenderEncoder.drawIndexed(
+        indexCount,
+        instanceCount,
+        firstIndex,
+        baseVertex,
+        firstInstance,
+      );
+      return;
+    }
+
+    if (internals.priors.externalEncoder) {
+      const pass = this._createRenderPass(internals.priors.externalEncoder);
+      this._applyRenderState(pass);
+      this._setIndexBuffer(pass);
+      pass.drawIndexed(
+        indexCount,
+        instanceCount,
+        firstIndex,
+        baseVertex,
+        firstInstance,
+      );
+      pass.end();
+      return;
     }
 
     const { logResources } = internals.core.unwrap();
-    const { root } = internals.core.options;
-    const { buffer, indexFormat, offsetBytes, sizeBytes } =
-      internals.priors.indexBuffer;
 
     const commandEncoder = root.device.createCommandEncoder();
-    const pass = this.setupRenderPass(commandEncoder);
-
-    if (isGPUBuffer(buffer)) {
-      pass.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
-    } else {
-      pass.setIndexBuffer(
-        root.unwrap(buffer),
-        indexFormat,
-        offsetBytes,
-        sizeBytes,
-      );
-    }
-
+    const pass = this._createRenderPass(commandEncoder);
+    this._applyRenderState(pass);
+    this._setIndexBuffer(pass);
     pass.drawIndexed(
       indexCount,
       instanceCount,
@@ -813,9 +909,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       baseVertex,
       firstInstance,
     );
-
     pass.end();
-
     root.device.queue.submit([commandEncoder.finish()]);
 
     if (logResources) {
@@ -826,7 +920,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
-
 }
 
 class RenderPipelineCore implements SelfResolvable {
@@ -856,9 +949,9 @@ class RenderPipelineCore implements SelfResolvable {
           let vertexOut: WgslStruct;
           if (typeof vertex === 'function') {
             const defaultAttribData = Object.fromEntries(
-              Object.entries(attribs as Record<string, TgpuVertexAttrib>).map((
-                [key, value],
-              ) => [key, formatToWGSLType[value.format]]),
+              Object.entries(attribs as Record<string, TgpuVertexAttrib>).map(
+                ([key, value]) => [key, formatToWGSLType[value.format]],
+              ),
             );
             vertexOut = ctx.resolve(
               new AutoVertexFn(vertex, defaultAttribData, locations),
@@ -871,8 +964,8 @@ class RenderPipelineCore implements SelfResolvable {
             let fragOut: Snippet;
             if (typeof fragment === 'function') {
               const varyings = Object.fromEntries(
-                Object.entries(vertexOut.propTypes).filter(([, dataType]) =>
-                  !isBuiltin(dataType)
+                Object.entries(vertexOut.propTypes).filter(
+                  ([, dataType]) => !isBuiltin(dataType),
                 ),
               );
               fragOut = ctx.resolve(

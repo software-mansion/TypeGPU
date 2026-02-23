@@ -16,6 +16,8 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import { applyBindGroups } from './applyPipelineState.ts';
+import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -67,6 +69,8 @@ export interface TgpuComputePipeline
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
+  with(encoder: GPUCommandEncoder): this;
+  with(pass: GPUComputePassEncoder): this;
 
   dispatchWorkgroups(
     x: number,
@@ -113,6 +117,8 @@ export function INTERNAL_createComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
+  readonly externalEncoder?: GPUCommandEncoder | undefined;
+  readonly externalPass?: GPUComputePassEncoder | undefined;
 } & TimestampWritesPriors;
 
 type Memo = {
@@ -183,16 +189,38 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
+  with(encoder: GPUCommandEncoder): this;
+  with(pass: GPUComputePassEncoder): this;
   with(
-    layoutOrBindGroup: TgpuBindGroupLayout | TgpuBindGroup,
+    first:
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | GPUCommandEncoder
+      | GPUComputePassEncoder,
     bindGroup?: TgpuBindGroup,
   ): this {
-    if (isBindGroup(layoutOrBindGroup)) {
+    if (isGPUComputePassEncoder(first)) {
+      return new TgpuComputePipelineImpl(this._core, {
+        ...this._priors,
+        externalPass: first,
+        externalEncoder: undefined,
+      }) as this;
+    }
+
+    if (isGPUCommandEncoder(first)) {
+      return new TgpuComputePipelineImpl(this._core, {
+        ...this._priors,
+        externalEncoder: first,
+        externalPass: undefined,
+      }) as this;
+    }
+
+    if (isBindGroup(first)) {
       return new TgpuComputePipelineImpl(this._core, {
         ...this._priors,
         bindGroupLayoutMap: new Map([
           ...(this._priors.bindGroupLayoutMap ?? []),
-          [layoutOrBindGroup.layout, layoutOrBindGroup],
+          [first.layout, first],
         ]),
       }) as this;
     }
@@ -281,11 +309,46 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     );
   }
 
+  private _applyComputeState(pass: GPUComputePassEncoder): void {
+    const memo = this._core.unwrap();
+    const { root } = this._core;
+    pass.setPipeline(memo.pipeline);
+
+    applyBindGroups(
+      pass,
+      root,
+      memo.usedBindGroupLayouts,
+      memo.catchall,
+      (layout) => this._priors.bindGroupLayoutMap?.get(layout),
+    );
+  }
+
   private _executeComputePass(
     dispatch: (pass: GPUComputePassEncoder) => void,
   ): void {
-    const memo = this._core.unwrap();
     const { root } = this._core;
+
+    if (this._priors.externalPass) {
+      this._applyComputeState(this._priors.externalPass);
+      dispatch(this._priors.externalPass);
+      return;
+    }
+
+    if (this._priors.externalEncoder) {
+      const passDescriptor: GPUComputePassDescriptor = {
+        label: getName(this._core) ?? '<unnamed>',
+        ...setupTimestampWrites(this._priors, root),
+      };
+      const pass = this._priors.externalEncoder.beginComputePass(
+        passDescriptor,
+      );
+      this._applyComputeState(pass);
+      dispatch(pass);
+      pass.end();
+      return;
+    }
+
+    const memo = this._core.unwrap();
 
     const passDescriptor: GPUComputePassDescriptor = {
       label: getName(this._core) ?? '<unnamed>',
@@ -294,34 +357,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     const commandEncoder = root.device.createCommandEncoder();
     const pass = commandEncoder.beginComputePass(passDescriptor);
-
-    pass.setPipeline(memo.pipeline);
-
-    const missingBindGroups = new Set(memo.usedBindGroupLayouts);
-
-    warnIfOverflow(
-      memo.usedBindGroupLayouts,
-      this[$internal].root.device.limits,
-    );
-
-    memo.usedBindGroupLayouts.forEach((layout, idx) => {
-      if (memo.catchall && idx === memo.catchall[0]) {
-        // Catch-all
-        pass.setBindGroup(idx, root.unwrap(memo.catchall[1]));
-        missingBindGroups.delete(layout);
-      } else {
-        const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
-        if (bindGroup !== undefined) {
-          missingBindGroups.delete(layout);
-          pass.setBindGroup(idx, root.unwrap(bindGroup));
-        }
-      }
-    });
-
-    if (missingBindGroups.size > 0) {
-      throw new MissingBindGroupsError(missingBindGroups);
-    }
-
+    this._applyComputeState(pass);
     dispatch(pass);
     pass.end();
     root.device.queue.submit([commandEncoder.finish()]);
