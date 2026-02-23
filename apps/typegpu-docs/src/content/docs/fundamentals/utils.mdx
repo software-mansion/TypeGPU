@@ -267,3 +267,59 @@ Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ig
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
 - `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).
+
+## *for...of...* loops
+
+TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  const offsets = [
+    d.vec2i(0, 1),
+    d.vec2i(0, -1),
+    d.vec2i(1, 0),
+    d.vec2i(-1, 0),
+  ];
+
+  for (const offset of offsets) {
+    processNeighbor(cell.add(offset));
+  }
+};
+```
+
+## *tgpu.unroll*
+
+For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll loops at compile time. This eliminates branch prediction overhead and can significantly improve performance.
+
+### Usage
+
+Wrap your iterable with `tgpu.unroll()`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
+      processNeighbor(cell.add(d.vec2i(dx, dy)));
+    }
+  }
+};
+```
+
+:::note
+- There are no constraints on how large a loop can be for unrolling. We will always try to unroll it, and if we can't, you'll receive an error.
+- You cannot use `continue` or `break` inside loop that you intend to unroll later.
+:::
