@@ -99,7 +99,7 @@ const agentsDataBuffers = [0, 1].map(() =>
 );
 
 const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
-root['~unstable'].createGuardedComputePipeline((x) => {
+root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -211,7 +211,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   return SenseResult({ weightedDir, totalWeight });
 };
 
-const updateAgents = tgpu['~unstable'].computeFn({
+const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [AGENT_WORKGROUP_SIZE],
 })(({ gid }) => {
@@ -315,7 +315,7 @@ const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
   ).x
 );
 
-const blur = tgpu['~unstable'].computeFn({
+const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
@@ -361,7 +361,7 @@ const rayBoxIntersection = (
   return RayBoxResult({ tNear, tFar, hit });
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -441,17 +441,15 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
   targets: { format: presentationFormat },
 });
 
-const computePipeline = root['~unstable']
-  .createComputePipeline({ compute: updateAgents });
+const computePipeline = root.createComputePipeline({ compute: updateAgents });
 
-const blurPipeline = root['~unstable']
-  .createComputePipeline({ compute: blur });
+const blurPipeline = root.createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {

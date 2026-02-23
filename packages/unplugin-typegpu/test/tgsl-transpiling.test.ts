@@ -52,25 +52,25 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works for multiple functions, skips wgsl-implemented', () => {
     const code = `\
-        import tgpu from 'typegpu';
+      import tgpu from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+      const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
-        });
+      });
 
-        const b = tgpu.fn([])(() => {
+      const b = tgpu.fn([])(() => {
         const y = 2 + 2;
-        });
+      });
 
-        const cx = 2;
-        const c = tgpu.fn([])(() => cx);
+      const cx = 2;
+      const c = tgpu.fn([])(() => cx);
 
-        const d = tgpu.fn([])('() {}');
+      const d = tgpu.fn([])('() {}');
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const a = tgpu['~unstable'].computeFn({
+      const a = tgpu.computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
@@ -126,22 +126,22 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     const code = `\
         import tgpu from 'typegpu';
 
-        const fun = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const fun = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true;
         });
 
-        const funcWithAs = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const funcWithAs = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true as boolean;
         });
 
-        const funcWithSatisfies = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const funcWithSatisfies = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true satisfies boolean;
         });
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const fun = tgpu['~unstable'].computeFn({
+      const fun = tgpu.computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
@@ -153,7 +153,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           return {};
         }
       }) && $.f)({}));
-      const funcWithAs = tgpu['~unstable'].computeFn({
+      const funcWithAs = tgpu.computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true as boolean;
@@ -165,7 +165,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           return {};
         }
       }) && $.f)({}));
-      const funcWithSatisfies = tgpu['~unstable'].computeFn({
+      const funcWithSatisfies = tgpu.computeFn({
         workgroupSize: [1]
       })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true satisfies boolean;
@@ -272,7 +272,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     const code = `\
         import tgpu from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
+        const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
         });
 
@@ -289,7 +289,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
+      tgpu.computeFn({ workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
               }), {
                     v: 1,
                     name: undefined,

@@ -25,7 +25,7 @@ const uv = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(1.0, 0.0),
 ]);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: ({ $vertexIndex }) => {
     'use gpu';
     return {

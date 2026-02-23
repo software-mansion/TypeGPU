@@ -57,7 +57,7 @@ const VertexOutput = {
   color: d.vec4f,
 };
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
   out: VertexOutput,
 })((input) => {
@@ -82,14 +82,14 @@ const mainVert = tgpu['~unstable'].vertexFn({
   return { position: pos, color };
 }).$name('vertex shader');
 
-const mainFrag = tgpu['~unstable']
+const mainFrag = tgpu
   .fragmentFn({
     in: VertexOutput,
     out: d.vec4f,
   })((input) => input.color)
   .$name('fragment shader');
 
-const mainCompute = tgpu['~unstable'].computeFn({
+const mainCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {

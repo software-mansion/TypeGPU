@@ -100,14 +100,14 @@ const dynamicResourcesBox = {
 };
 
 // Pipelines
-const computeCollisionsPipeline = root['~unstable']
+const computeCollisionsPipeline = root
   .createComputePipeline({ compute: computeCollisionsShader });
 
-const computeGravityPipeline = root['~unstable']
+const computeGravityPipeline = root
   .with(timeAccess, time)
   .createComputePipeline({ compute: computeGravityShader });
 
-const skyBoxPipeline = root['~unstable']
+const skyBoxPipeline = root
   .with(filteringSamplerSlot, sampler)
   .with(cameraAccess, camera)
   .with(skyBoxAccess, skyBox)
@@ -118,7 +118,7 @@ const skyBoxPipeline = root['~unstable']
     targets: { format: presentationFormat },
   });
 
-const renderPipeline = root['~unstable']
+const renderPipeline = root
   .with(filteringSamplerSlot, sampler)
   .with(lightSourceAccess, lightSource)
   .with(cameraAccess, camera)
