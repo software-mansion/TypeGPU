@@ -127,6 +127,38 @@ function createProgram(allFiles: string[]): ts.Program {
   return ts.createProgram(allFiles, compilerOptions, host);
 }
 
+function isStdDeclared(sourceFile: ts.SourceFile): boolean {
+  for (const stmt of sourceFile.statements) {
+    if (!ts.isImportDeclaration(stmt)) {
+      continue;
+    }
+    const moduleSpecifier = stmt.moduleSpecifier;
+    if (!ts.isStringLiteral(moduleSpecifier)) {
+      continue;
+    }
+    const namedBindings = stmt.importClause?.namedBindings;
+    // Case 1: import { std } from 'typegpu'
+    if (
+      moduleSpecifier.text === 'typegpu' &&
+      namedBindings &&
+      ts.isNamedImports(namedBindings) &&
+      namedBindings.elements.some((el) => el.name.text === 'std')
+    ) {
+      return true;
+    }
+    // Case 2: import * as std from 'typegpu/std'
+    if (
+      moduleSpecifier.text === 'typegpu/std' &&
+      namedBindings &&
+      ts.isNamespaceImport(namedBindings) &&
+      namedBindings.name.text === 'std'
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function transformFile(
   sourceFilePath: string,
   program: ts.Program,
@@ -141,6 +173,7 @@ function transformFile(
   const sourceText = sourceFile.text;
   const magic = new MagicString(sourceText);
   let hasChanges = false;
+  let needsStd = false;
 
   function visit(node: ts.Node): void {
     // Visit all children of the node first, then process the node itself
@@ -171,6 +204,7 @@ function transformFile(
 
     let replacement = '';
     if (pattern === 'std.op(left, right)') {
+      needsStd = true;
       replacement = `std.${methodName}(${leftText}, ${rightText})`;
     } else if (pattern === 'left.op(right)') {
       replacement = `${leftText}.${methodName}(${rightText})`;
@@ -189,6 +223,10 @@ function transformFile(
   }
 
   visit(sourceFile);
+
+  if (needsStd && !isStdDeclared(sourceFile)) {
+    magic.prepend("import { std } from 'typegpu';\n");
+  }
 
   return { code: magic.toString(), hasChanges };
 }
