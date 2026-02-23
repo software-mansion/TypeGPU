@@ -71,7 +71,7 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
     slot: TgpuSlot<TData> | TgpuAccessor<TData> | TgpuMutableAccessor<TData>,
     value: TgpuAccessor.In<TData> | TgpuMutableAccessor.In<TData>,
   ): TgpuLazy<T> {
-    return new TgpuLazyImpl(this[$internal].compute, {
+    return new TgpuLazyImpl(this[$internal].compute.bind(this), {
       inner: this[$providing]?.inner ?? this,
       pairs: [...this[$providing]?.pairs ?? [], [
         isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot,

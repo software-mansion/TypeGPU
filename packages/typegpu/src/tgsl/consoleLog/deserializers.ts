@@ -178,7 +178,7 @@ export function deserializeAndStringify(
 export function logDataFromGPU(resources: LogResources) {
   const { indexBuffer, dataBuffer, logIdToMeta, options } = resources;
 
-  dataBuffer.read().then((data) => {
+  void dataBuffer.read().then((data) => {
     data
       .filter((e) => e.id)
       .forEach(({ id, serializedData }) => {
@@ -199,7 +199,7 @@ export function logDataFromGPU(resources: LogResources) {
       });
   });
 
-  indexBuffer.read().then((totalCalls) => {
+  void indexBuffer.read().then((totalCalls) => {
     if (totalCalls > options.logCountLimit) {
       console.warn(
         `Log count limit per dispatch (${options.logCountLimit}) exceeded by ${

@@ -77,5 +77,5 @@ export function comptime<T extends (...args: never[]) => unknown>(
     value: { isComptime: true },
   });
 
-  return impl as TgpuComptime<T>;
+  return impl;
 }

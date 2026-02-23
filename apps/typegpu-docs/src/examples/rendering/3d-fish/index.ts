@@ -346,7 +346,7 @@ function updateCameraTarget(cx: number, cy: number) {
   );
 }
 
-async function updateMouseRay(cx: number, cy: number) {
+function updateMouseRay(cx: number, cy: number) {
   const boundingBox = canvas.getBoundingClientRect();
   const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
   const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);

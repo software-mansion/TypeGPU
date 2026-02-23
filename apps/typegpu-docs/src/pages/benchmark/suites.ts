@@ -27,7 +27,7 @@ export type SuiteSetupOptions = {
 
 // oxlint-disable-next-line typescript/no-explicit-any <sshhhhhh...>
 export type Suite<T extends { bench: Bench } = any> = {
-  setup(options: SuiteSetupOptions): T;
+  setup: (options: SuiteSetupOptions) => T;
   tests: Record<string, (getCtx: () => T) => () => Promise<unknown>>;
 };
 

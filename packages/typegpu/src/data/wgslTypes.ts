@@ -40,6 +40,7 @@ export interface BaseData {
   readonly [$internal]: Record<string, unknown>;
   readonly type: string;
   readonly [$repr]: unknown;
+  toString(): string;
 }
 
 export interface NumberArrayView {
@@ -1588,10 +1589,8 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * isWgslArray(d.disarray(d.u32, 4)) // false
  * isWgslArray(d.vec3f) // false
  */
-export function isWgslArray<T extends WgslArray>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'array';
+export function isWgslArray(schema: unknown): schema is WgslArray {
+  return isMarkedInternal(schema) && (schema as WgslArray)?.type === 'array';
 }
 
 /**
@@ -1606,10 +1605,10 @@ export function isWgslArray<T extends WgslArray>(
  * isWgslStruct(d.unstruct({ a: d.u32 })) // false
  * isWgslStruct(d.vec3f) // false
  */
-export function isWgslStruct<T extends WgslStruct>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'struct';
+export function isWgslStruct(
+  schema: unknown,
+): schema is WgslStruct {
+  return isMarkedInternal(schema) && (schema as WgslStruct)?.type === 'struct';
 }
 
 /**
@@ -1620,8 +1619,8 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtr(d.ptrPrivate(d.f32)) // true
  * isPtr(d.f32) // false
  */
-export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'ptr';
+export function isPtr(schema: unknown): schema is Ptr {
+  return isMarkedInternal(schema) && (schema as Ptr)?.type === 'ptr';
 }
 
 /**
@@ -1631,52 +1630,53 @@ export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
  * isAtomic(d.atomic(d.u32)) // true
  * isAtomic(d.u32) // false
  */
-export function isAtomic<T extends Atomic<U32 | I32>>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'atomic';
+export function isAtomic(schema: unknown): schema is Atomic {
+  return isMarkedInternal(schema) && (schema as Atomic)?.type === 'atomic';
 }
 
-export function isAlignAttrib<T extends Align<number>>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@align';
+export function isAlignAttrib<T extends number>(
+  value: unknown,
+): value is Align<T> {
+  return isMarkedInternal(value) && (value as Align<T>)?.type === '@align';
 }
 
-export function isSizeAttrib<T extends Size<number>>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@size';
+export function isSizeAttrib<T extends number>(
+  value: unknown,
+): value is Size<T> {
+  return isMarkedInternal(value) && (value as Size<T>)?.type === '@size';
 }
 
-export function isLocationAttrib<T extends Location<number>>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@location';
+export function isLocationAttrib<T extends number>(
+  value: unknown,
+): value is Location<T> {
+  return isMarkedInternal(value) &&
+    (value as Location<T>)?.type === '@location';
 }
 
-export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@interpolate';
+export function isInterpolateAttrib<T extends InterpolationType>(
+  value: unknown,
+): value is Interpolate<T> {
+  return isMarkedInternal(value) &&
+    (value as Interpolate<T>)?.type === '@interpolate';
+}
+export function isBuiltinAttrib(
+  value: unknown,
+): value is Builtin<string> {
+  return isMarkedInternal(value) &&
+    (value as Builtin<string>)?.type === '@builtin';
 }
 
-export function isBuiltinAttrib<T extends Builtin<string>>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@builtin';
+export function isInvariantAttrib(
+  value: unknown,
+): value is Invariant {
+  return isMarkedInternal(value) &&
+    (value as Invariant)?.type === '@invariant';
 }
 
-export function isInvariantAttrib<T extends Invariant>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === '@invariant';
-}
-
-export function isDecorated<T extends Decorated>(
-  value: unknown | T,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === 'decorated';
+export function isDecorated(
+  value: unknown,
+): value is Decorated {
+  return isMarkedInternal(value) && (value as Decorated)?.type === 'decorated';
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
