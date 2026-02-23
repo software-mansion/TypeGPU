@@ -234,7 +234,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
-        [layoutOrBindGroup, bindGroup as TgpuBindGroup],
+        [first, bindGroup as TgpuBindGroup],
       ]),
     }) as this;
   }
