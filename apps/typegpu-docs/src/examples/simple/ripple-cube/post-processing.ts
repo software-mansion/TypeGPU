@@ -4,7 +4,7 @@ import { fullScreenTriangle } from 'typegpu/common';
 import { BLUR_RADIUS, TAA_BLEND } from './constants.ts';
 import { BloomParams } from './types.ts';
 
-export const bloomParamsAccess = tgpu['~unstable'].accessor(BloomParams);
+export const bloomParamsAccess = tgpu.accessor(BloomParams);
 
 const taaResolveLayout = tgpu.bindGroupLayout({
   currentTexture: { texture: d.texture2d() },
@@ -65,7 +65,7 @@ export function createPostProcessingPipelines(
     minFilter: 'linear',
   });
 
-  const taaResolve = root['~unstable'].createGuardedComputePipeline((x, y) => {
+  const taaResolve = root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const coord = d.vec2i(d.i32(x), d.i32(y));
     const current = std.textureLoad(
@@ -110,7 +110,7 @@ export function createPostProcessingPipelines(
     );
   });
 
-  const copyToHistory = root['~unstable'].createGuardedComputePipeline(
+  const copyToHistory = root.createGuardedComputePipeline(
     (x, y) => {
       'use gpu';
       const color = std.textureLoad(
@@ -122,7 +122,7 @@ export function createPostProcessingPipelines(
     },
   );
 
-  const extractBright = root['~unstable']
+  const extractBright = root
     .with(bloomParamsAccess, bloomUniform)
     .createGuardedComputePipeline(
       (x, y) => {
@@ -154,7 +154,7 @@ export function createPostProcessingPipelines(
 
   const blurVertical = createBlurPass(root, 'vertical');
 
-  const fragmentMain = tgpu['~unstable'].fragmentFn({
+  const fragmentMain = tgpu.fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
   })(({ uv }) => {
@@ -180,7 +180,7 @@ export function createPostProcessingPipelines(
     return d.vec4f(final, 1);
   });
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .with(bloomParamsAccess, bloomUniform)
     .createRenderPipeline({
       vertex: fullScreenTriangle,
@@ -259,7 +259,7 @@ function createBlurPass(
   root: TgpuRoot,
   direction: 'horizontal' | 'vertical',
 ) {
-  return root['~unstable'].createGuardedComputePipeline((x, y) => {
+  return root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const dimensions = std.textureDimensions(processLayout.$.inputTexture);
     const texelSize = d.vec2f(1).div(d.vec2f(dimensions));

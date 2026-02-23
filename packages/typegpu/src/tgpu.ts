@@ -11,5 +11,8 @@ export { accessor, mutableAccessor } from './core/slot/accessor.ts';
 export { privateVar, workgroupVar } from './core/variable/tgpuVariable.ts';
 export { vertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export { bindGroupLayout } from './tgpuBindGroupLayout.ts';
+export { computeFn } from './core/function/tgpuComputeFn.ts';
+export { fragmentFn } from './core/function/tgpuFragmentFn.ts';
+export { vertexFn } from './core/function/tgpuVertexFn.ts';
 
 export * as '~unstable' from './tgpuUnstable.ts';

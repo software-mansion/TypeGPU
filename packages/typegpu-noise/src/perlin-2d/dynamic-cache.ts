@@ -91,8 +91,9 @@ const DefaultPerlin2DLayoutPrefix = 'perlin2dCache__' as const;
  *   // Plugging the cache into the pipeline
  *   .pipe(cacheConfig.inject(dynamicLayout.$))
  *   // ...
- *   .withFragment(mainFragment)
- *   .createPipeline();
+ *   .createRenderPipeline({
+ *     // ...
+ *   });
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
@@ -169,8 +170,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       .createBuffer(d.vec2u, size)
       .$usage('uniform');
 
-    const computePipeline = root['~unstable']
-      .createGuardedComputePipeline(mainCompute);
+    const computePipeline = root.createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {
       const memory = root
