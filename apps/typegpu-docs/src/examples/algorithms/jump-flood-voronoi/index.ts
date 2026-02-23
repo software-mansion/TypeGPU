@@ -224,15 +224,9 @@ function swap() {
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   voronoiPipeline
     .with(resources.renderBindGroups[sourceIdx])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

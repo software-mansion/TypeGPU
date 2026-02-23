@@ -18,17 +18,12 @@ import type { BrushState } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-  throw new Error('No GPU adapter found');
-}
 const root = await tgpu.init();
 const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const format = navigator.gpu.getPreferredCanvasFormat();
 
 // Helpers
 function createField(name: string) {
@@ -144,7 +139,6 @@ function createRenderPipeline(
   return root.createRenderPipeline({
     vertex: renderFn,
     fragment: fragmentFn,
-    targets: { format },
 
     primitive: {
       topology: 'triangle-strip',
@@ -394,11 +388,7 @@ function loop() {
   }
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBG)
     .draw(3);
 

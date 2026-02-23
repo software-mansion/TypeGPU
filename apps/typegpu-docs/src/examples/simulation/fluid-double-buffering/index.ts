@@ -440,7 +440,6 @@ const fragmentMain = tgpu.fragmentFn({
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
@@ -484,7 +483,6 @@ function makePipelines(
     .createRenderPipeline({
       vertex: vertexMain,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
 
       primitive: { topology: 'triangle-strip' },
     });
@@ -505,14 +503,10 @@ function makePipelines(
     },
 
     render() {
-      const textureView = context.getCurrentTexture().createView();
-
       renderPipeline
         .withColorAttachment({
-          view: textureView,
+          view: context,
           clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
         })
         .draw(4);
     },

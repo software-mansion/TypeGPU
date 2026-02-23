@@ -1789,4 +1789,43 @@ describe('wgslGenerator', () => {
         `);
     });
   });
+
+  it('block externals are respected in nested blocks', () => {
+    const f = () => {
+      'use gpu';
+      let result = d.i32(0);
+      const list = d.arrayOf(d.i32, 3)([1, 2, 3]);
+      for (const elem of list) {
+        {
+          // We use the `elem` in a nested block
+          result += elem;
+        }
+      }
+    };
+
+    const parsed = getMetaData(f)?.ast?.body as tinyest.Block;
+
+    provideCtx(ctx, () => {
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        d.Void,
+        {},
+      );
+
+      const res = wgslGenerator.block(
+        (parsed[1][2] as tinyest.ForOf)[3] as tinyest.Block,
+        { result: snip('result', d.i32, 'function'), elem: 7 },
+      );
+
+      expect(res).toMatchInlineSnapshot(`
+        "{
+          {
+            result += 7i;
+          }
+        }"
+      `);
+    });
+  });
 });
