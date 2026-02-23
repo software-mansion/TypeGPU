@@ -75,7 +75,7 @@ const imageSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -167,10 +167,11 @@ const fragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(finalColor, 1);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(fragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 function render() {
   if (!defaultLUTTexture) {
@@ -185,10 +186,8 @@ function render() {
   renderPipeline
     .with(group)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(3);
 }

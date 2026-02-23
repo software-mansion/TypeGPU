@@ -806,10 +806,8 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
   return background;
 };
 
-const raymarchFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+const raymarchFn = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   randf.seed2(randomUniform.$.mul(uv));
@@ -825,7 +823,7 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(std.tanh(color.rgb.mul(1.3)), 1);
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -836,15 +834,17 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   );
 });
 
-const rayMarchPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(raymarchFn, { format: 'rgba8unorm' })
-  .createPipeline();
+const rayMarchPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: raymarchFn,
+  targets: { format: 'rgba8unorm' },
+});
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 const eventHandler = new EventHandler(canvas);
 let lastTimeStamp = performance.now();
@@ -915,11 +915,7 @@ function render(timestamp: number) {
   );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
@@ -1014,7 +1010,7 @@ export const controls = defineControls({
     ],
     onSelectChange: (value) => {
       if (value === 'Auto') {
-        autoSetQuaility().then((scale) => {
+        void autoSetQuaility().then((scale) => {
           qualityScale = scale;
           handleResize();
         });

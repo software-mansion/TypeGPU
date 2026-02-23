@@ -128,7 +128,7 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
   const FaceBasis = d.struct({ forward: d.vec3f, right: d.vec3f, up: d.vec3f });
   const faceBasisUniform = root.createUniform(FaceBasis);
 
-  const renderFacePipeline = root['~unstable']
+  const renderFacePipeline = root
     .pipe(perlinCache.inject())
     .createGuardedComputePipeline((x, y) => {
       'use gpu';

@@ -98,42 +98,40 @@ function createResources() {
 
 let resources = createResources();
 
-const initializeRandom = root['~unstable'].createGuardedComputePipeline(
-  (x, y) => {
-    'use gpu';
-    const size = std.textureDimensions(initLayout.$.writeView);
-    randf.seed2(d.vec2f(x, y).div(d.vec2f(size)).add(timeUniform.$));
+const initializeRandom = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const size = std.textureDimensions(initLayout.$.writeView);
+  randf.seed2(d.vec2f(x, y).div(d.vec2f(size)).add(timeUniform.$));
 
-    const randomVal = randf.sample();
-    const isSeed = randomVal >= seedThresholdUniform.$;
+  const randomVal = randf.sample();
+  const isSeed = randomVal >= seedThresholdUniform.$;
 
-    const paletteColor = palette.$[d.u32(std.floor(randf.sample() * 4))];
-    const variation = d.vec3f(
-      randf.sample() - 0.5,
-      randf.sample() - 0.5,
-      randf.sample() - 0.5,
-    ).mul(0.15);
+  const paletteColor = palette.$[d.u32(std.floor(randf.sample() * 4))];
+  const variation = d.vec3f(
+    randf.sample() - 0.5,
+    randf.sample() - 0.5,
+    randf.sample() - 0.5,
+  ).mul(0.15);
 
-    const color = std.select(
-      d.vec4f(),
-      d.vec4f(std.saturate(paletteColor.add(variation)), 1),
-      isSeed,
-    );
-    const coord = std.select(
-      d.vec2f(-1),
-      d.vec2f(x, y).div(d.vec2f(size)),
-      isSeed,
-    );
+  const color = std.select(
+    d.vec4f(),
+    d.vec4f(std.saturate(paletteColor.add(variation)), 1),
+    isSeed,
+  );
+  const coord = std.select(
+    d.vec2f(-1),
+    d.vec2f(x, y).div(d.vec2f(size)),
+    isSeed,
+  );
 
-    std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, color);
-    std.textureStore(
-      initLayout.$.writeView,
-      d.vec2i(x, y),
-      1,
-      d.vec4f(coord, 0, 0),
-    );
-  },
-);
+  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, color);
+  std.textureStore(
+    initLayout.$.writeView,
+    d.vec2i(x, y),
+    1,
+    d.vec4f(coord, 0, 0),
+  );
+});
 
 const sampleWithOffset = (
   tex: d.textureStorage2dArray<'rgba16float', 'read-only'>,
@@ -159,7 +157,7 @@ const sampleWithOffset = (
   });
 };
 
-const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const offset = offsetUniform.$;
   const size = std.textureDimensions(pingPongLayout.$.readView);
@@ -201,7 +199,7 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const voronoiFrag = tgpu['~unstable'].fragmentFn({
+const voronoiFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) =>
@@ -212,10 +210,11 @@ const voronoiFrag = tgpu['~unstable'].fragmentFn({
   )
 );
 
-const voronoiPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(voronoiFrag, { format: presentationFormat })
-  .createPipeline();
+const voronoiPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: voronoiFrag,
+  targets: { format: presentationFormat },
+});
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -224,15 +223,9 @@ function swap() {
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   voronoiPipeline
     .with(resources.renderBindGroups[sourceIdx])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 
@@ -280,7 +273,7 @@ function initRandom() {
 function reset() {
   currentRunId++;
   initRandom();
-  runFloodAnimated(currentRunId);
+  void runFloodAnimated(currentRunId);
 }
 
 reset();
@@ -301,7 +294,7 @@ export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
-      runFloodAnimated(currentRunId);
+      void runFloodAnimated(currentRunId);
     },
   },
   'Random Seeds': {

@@ -76,7 +76,7 @@ export class AutoFragmentFn implements SelfResolvable {
   constructor(
     impl: AutoFragmentFnImpl,
     varyings: Record<string, BaseData>,
-    locations?: Record<string, number> | undefined,
+    locations?: Record<string, number>,
   ) {
     // If the implementation is not named, we can fallback to "fragmentFn"
     if (!getName(impl)) {
@@ -124,7 +124,7 @@ export class AutoVertexFn implements SelfResolvable {
   constructor(
     impl: AutoVertexFnImpl,
     attribs: Record<string, BaseData>,
-    locations?: Record<string, number> | undefined,
+    locations?: Record<string, number>,
   ) {
     // If the implementation is not named, we can fallback to "vertexFn"
     if (!getName(impl)) {

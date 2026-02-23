@@ -129,7 +129,7 @@ export class Slider {
 
     this.bbox = [top, right, bottom, left];
 
-    this.#computeBezierPipeline = this.#root['~unstable']
+    this.#computeBezierPipeline = this.#root
       .createGuardedComputePipeline((x, y) => {
         'use gpu';
         const size = std.textureDimensions(bezierWriteView.$);

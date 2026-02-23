@@ -115,11 +115,12 @@ export function accessProp(
     infixKinds.includes((target.dataType as BaseData).type) &&
     propName in infixOperators
   ) {
+    const operator = infixOperators[propName as InfixOperator];
     return snip(
       new InfixDispatch(
         propName,
         target,
-        infixOperators[propName as InfixOperator][$gpuCallable].call,
+        operator[$gpuCallable].call.bind(operator),
       ),
       UnknownData,
       /* origin */ target.origin,

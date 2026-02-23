@@ -377,7 +377,7 @@ const limitedBoxX = () => {
 let boxY = 0.2;
 let leftWallX = 0;
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -390,7 +390,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -442,13 +442,12 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldPipeline = root['~unstable']
+  const initWorldPipeline = root
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline((xu, yu) => {
       'use gpu';
@@ -471,22 +470,21 @@ function makePipelines(
       outputGridSlot.$[index] = d.vec4f(value);
     });
 
-  const simulatePipeline = root['~unstable']
+  const simulatePipeline = root
     .with(inputGridSlot, inputGridReadonly)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(simulate);
 
-  const moveObstaclesPipeline = root['~unstable']
+  const moveObstaclesPipeline = root
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(moveObstacles);
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .with(inputGridSlot, inputGridReadonly)
     .createRenderPipeline({
       vertex: vertexMain,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
 
       primitive: { topology: 'triangle-strip' },
     });
@@ -507,14 +505,10 @@ function makePipelines(
     },
 
     render() {
-      const textureView = context.getCurrentTexture().createView();
-
       renderPipeline
         .withColorAttachment({
-          view: textureView,
+          view: context,
           clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
         })
         .draw(4);
     },

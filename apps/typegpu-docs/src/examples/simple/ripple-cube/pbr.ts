@@ -9,8 +9,8 @@ export const envMapLayout = tgpu.bindGroupLayout({
   envSampler: { sampler: 'filtering' },
 });
 
-export const materialAccess = tgpu['~unstable'].accessor(Material);
-export const lightsAccess = tgpu['~unstable'].accessor(
+export const materialAccess = tgpu.accessor(Material);
+export const lightsAccess = tgpu.accessor(
   d.arrayOf(Light, LIGHT_COUNT),
 );
 

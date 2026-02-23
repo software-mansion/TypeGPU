@@ -24,7 +24,6 @@ let speedMultiplier = 1;
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // models and textures
 
@@ -90,7 +89,7 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsPipeline = root['~unstable']
+const randomizeFishPositionsPipeline = root
   .createGuardedComputePipeline((x) => {
     'use gpu';
     randf.seed2(d.vec2f(x, seedUniform.$));
@@ -166,11 +165,10 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   attribs: modelVertexLayout.attrib,
   vertex: vertexShader,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 
   depthStencil: {
     format: 'depth24plus',
@@ -185,8 +183,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const simulatePipeline = root['~unstable']
-  .createGuardedComputePipeline(simulate);
+const simulatePipeline = root.createGuardedComputePipeline(simulate);
 
 // bind groups
 
@@ -248,15 +245,13 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -271,7 +266,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
@@ -279,7 +274,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
         1,
       ],
       loadOp: 'load',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -347,7 +341,7 @@ function updateCameraTarget(cx: number, cy: number) {
   );
 }
 
-async function updateMouseRay(cx: number, cy: number) {
+function updateMouseRay(cx: number, cy: number) {
   const boundingBox = canvas.getBoundingClientRect();
   const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
   const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);

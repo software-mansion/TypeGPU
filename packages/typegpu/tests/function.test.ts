@@ -101,7 +101,7 @@ describe('tgpu.fn', () => {
 
 describe('tgpu.computeFn', () => {
   it('does not create In struct when the are no arguments', () => {
-    const foo = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+    const foo = tgpu.computeFn({ workgroupSize: [1] })(() => {
       const x = 2;
     });
 
@@ -110,7 +110,7 @@ describe('tgpu.computeFn', () => {
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
-    const foo = tgpu['~unstable'].computeFn({ in: {}, workgroupSize: [1] })(
+    const foo = tgpu.computeFn({ in: {}, workgroupSize: [1] })(
       () => {
         const x = 2;
       },
@@ -123,7 +123,7 @@ describe('tgpu.computeFn', () => {
 
 describe('tgpu.vertexFn', () => {
   it('does not create In struct when the are no arguments', () => {
-    const foo = tgpu['~unstable'].vertexFn({
+    const foo = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => ({
       pos: d.vec4f(),
@@ -134,7 +134,7 @@ describe('tgpu.vertexFn', () => {
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
-    const foo = tgpu['~unstable'].vertexFn({
+    const foo = tgpu.vertexFn({
       in: {},
       out: { pos: d.builtin.position },
     })(() => {
@@ -150,7 +150,7 @@ describe('tgpu.vertexFn', () => {
 
 describe('tgpu.fragmentFn', () => {
   it('does not create Out struct when the are no output parameters', () => {
-    const foo = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
+    const foo = tgpu.fragmentFn({ out: Void })(() => {});
     expect(tgpu.resolve([foo])).not.toContain('struct foo_Out');
   });
 });

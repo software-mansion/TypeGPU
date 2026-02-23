@@ -48,10 +48,9 @@ const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 canvas.parentElement?.appendChild(video);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   /**
    * Adapted from the original Shadertoy implementation by movAX13h:
@@ -156,7 +155,6 @@ const pipeline = root['~unstable'].createRenderPipeline({
     }
     return d.vec4f(resultColor, 1.0);
   },
-  targets: { format: presentationFormat },
 });
 
 if (navigator.mediaDevices.getUserMedia) {
@@ -213,11 +211,7 @@ function processVideoFrame(
 
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: context.getCurrentTexture().createView(),
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   spinner.style.display = 'none';

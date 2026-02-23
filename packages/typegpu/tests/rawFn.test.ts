@@ -118,7 +118,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('adds output struct definition when resolving vertex functions', () => {
-    const vertexFunction = tgpu['~unstable']
+    const vertexFunction = tgpu
       .vertexFn({
         in: { vertexIndex: d.builtin.vertexIndex },
         out: { outPos: d.builtin.position },
@@ -148,7 +148,7 @@ struct vertex_fn_Output {
   });
 
   it('adds output struct definition when resolving fragment functions', () => {
-    const fragmentFunction = tgpu['~unstable']
+    const fragmentFunction = tgpu
       .fragmentFn({
         in: { position: d.builtin.position },
         out: { a: d.vec4f, b: d.builtin.fragDepth },
@@ -172,7 +172,7 @@ struct fragment_Output {
   });
 
   it('properly handles fragment functions with a single output argument', () => {
-    const fragmentFunction = tgpu['~unstable']
+    const fragmentFunction = tgpu
       .fragmentFn({
         in: { position: d.builtin.position },
         out: d.vec4f,
@@ -509,7 +509,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
   it('does not replace supposed input arg types in code', () => {
-    const foo = tgpu['~unstable'].computeFn({
+    const foo = tgpu.computeFn({
       workgroupSize: [1],
       in: {
         gid: d.builtin.globalInvocationId,

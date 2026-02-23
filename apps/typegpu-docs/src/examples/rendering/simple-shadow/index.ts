@@ -147,7 +147,7 @@ const geometries = {
 };
 
 // Shaders
-const shadowVert = tgpu['~unstable'].vertexFn({
+const shadowVert = tgpu.vertexFn({
   in: { position: d.vec4f },
   out: { pos: d.builtin.position },
 })(({ position }) => {
@@ -156,7 +156,7 @@ const shadowVert = tgpu['~unstable'].vertexFn({
   return { pos: clip };
 });
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: {
     position: d.vec4f,
     normal: d.vec4f,
@@ -180,7 +180,7 @@ const mainVert = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: {
     normal: d.vec4f,
     worldPos: d.vec3f,
@@ -243,11 +243,10 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 // Pipelines
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexInfo));
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: mainVert,
   fragment: mainFrag,
-  targets: { format: presentationFormat },
 
   primitive: {
     cullMode: 'back',
@@ -262,7 +261,7 @@ const pipeline = root['~unstable'].createRenderPipeline({
   },
 });
 
-const shadowPipeline = root['~unstable'].createRenderPipeline({
+const shadowPipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: shadowVert,
 

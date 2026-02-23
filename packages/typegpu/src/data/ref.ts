@@ -94,7 +94,7 @@ export const _ref = (() => {
   return impl;
 })();
 
-export function isRef<T>(value: unknown | ref<T>): value is ref<T> {
+export function isRef<T>(value: unknown): value is ref<T> {
   return (value as ref<T>)?.[$internal]?.type === 'ref';
 }
 

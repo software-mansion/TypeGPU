@@ -46,7 +46,7 @@ const color = root.createUniform(d.vec3f);
 const tunnelRadius = 11;
 const moveSpeed = 5;
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -82,7 +82,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 /**
  * A full-screen triangle vertex shader
  */
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -94,14 +94,12 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;
@@ -113,11 +111,7 @@ function draw(timestamp: number) {
   time.write((timestamp * 0.001) % 1000);
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);

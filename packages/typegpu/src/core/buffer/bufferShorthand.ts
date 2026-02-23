@@ -79,7 +79,7 @@ export type TgpuBufferShorthand<TData extends BaseData> =
   | TgpuUniform<TData>;
 
 export function isBufferShorthand<TData extends BaseData>(
-  value: unknown | TgpuBufferShorthand<TData>,
+  value: unknown,
 ): value is TgpuBufferShorthand<TData> {
   return value instanceof TgpuBufferShorthandImpl;
 }

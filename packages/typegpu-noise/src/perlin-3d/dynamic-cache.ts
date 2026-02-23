@@ -91,8 +91,9 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  *   // Plugging the cache into the pipeline
  *   .pipe(perlinCacheConfig.inject(dynamicLayout.$))
  *   // ...
- *   .withFragment(mainFragment)
- *   .createPipeline();
+ *   .createRenderPipeline({
+ *     // ...
+ *   });
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
@@ -170,7 +171,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       .createBuffer(d.vec4u, size)
       .$usage('uniform');
 
-    const computePipeline = root['~unstable']
+    const computePipeline = root
       .createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {

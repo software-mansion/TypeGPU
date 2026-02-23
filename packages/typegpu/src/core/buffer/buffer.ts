@@ -127,6 +127,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
+  toString(): string;
 }
 
 export function INTERNAL_createBuffer<TData extends AnyData>(
@@ -144,22 +145,20 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer<T extends TgpuBuffer<BaseData>>(
-  value: T | unknown,
-): value is T {
-  return (value as T).resourceType === 'buffer';
+export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
+  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
 }
 
 export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & VertexFlag {
-  return !!(buffer as T).usableAsVertex;
+  return !!buffer.usableAsVertex;
 }
 
 export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & IndexFlag {
-  return !!(buffer as T).usableAsIndex;
+  return !!buffer.usableAsIndex;
 }
 
 // --------------
@@ -189,7 +188,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
+    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
     private readonly _disallowedUsages?:
       ('uniform' | 'storage' | 'vertex' | 'index')[],
   ) {

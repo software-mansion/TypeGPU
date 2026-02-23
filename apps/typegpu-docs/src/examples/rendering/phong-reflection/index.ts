@@ -14,7 +14,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // model (https://j5boom.itch.io/utah-teapot-obj)
 const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
@@ -39,7 +38,7 @@ const exampleControlsUniform = root.createUniform(
   p.initialControls,
 );
 
-const vertexShader = tgpu['~unstable'].vertexFn({
+const vertexShader = tgpu.vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
 })((input) => {
@@ -56,7 +55,7 @@ const vertexShader = tgpu['~unstable'].vertexFn({
 });
 
 // see https://gist.github.com/chicio/d983fff6ff304bd55bebd6ff05a2f9dd
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
@@ -95,11 +94,10 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 });
 
 // pipelines
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   attribs: modelVertexLayout.attrib,
   vertex: vertexShader,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 
   depthStencil: {
     format: 'depth24plus',
@@ -119,15 +117,13 @@ let frameId: number;
 function frame() {
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),

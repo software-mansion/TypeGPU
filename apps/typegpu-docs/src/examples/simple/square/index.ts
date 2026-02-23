@@ -2,7 +2,6 @@ import tgpu, { d } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
@@ -25,7 +24,7 @@ const colorBuffer = root
   .$usage('vertex');
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     idx: d.builtin.vertexIndex,
     color: d.vec4f,
@@ -47,7 +46,7 @@ const vertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     color: d.vec4f,
   },
@@ -58,23 +57,18 @@ const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
-const pipeline = root['~unstable']
+const pipeline = root
   .createRenderPipeline({
     attribs: { color: vertexLayout.attrib },
     vertex,
     fragment: mainFragment,
-    targets: { format: presentationFormat },
   })
   .withIndexBuffer(indexBuffer);
 
 function render() {
   pipeline
     .with(vertexLayout, colorBuffer)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .drawIndexed(6);
 }
 render();

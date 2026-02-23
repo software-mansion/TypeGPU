@@ -37,7 +37,7 @@ function createGame() {
       getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
   };
 
-  const computeFn = root['~unstable'].createGuardedComputePipeline((x, y) => {
+  const computeFn = root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const n = countNeighbors(x, y);
     computeLayout.$.next[getIndex(x, y)] = d.u32(
@@ -57,17 +57,18 @@ function createGame() {
   const squareVertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2u), 'vertex');
   const cellsVertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .with(sizeSlot, size)
-    .withVertex(vertexFn, {
-      cell: cellsVertexLayout.attrib,
-      pos: squareVertexLayout.attrib,
-    })
-    .withFragment(fragmentFn, {
-      format: presentationFormat,
-    })
-    .withPrimitive({ topology: 'triangle-strip' })
-    .createPipeline();
+    .createRenderPipeline({
+      attribs: {
+        cell: cellsVertexLayout.attrib,
+        pos: squareVertexLayout.attrib,
+      },
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: presentationFormat },
+      primitive: { topology: 'triangle-strip' },
+    });
 
   const length = size.x * size.y;
   const buffers = [
@@ -97,11 +98,7 @@ function createGame() {
     computeFn.with(bindGroups[swap]).dispatchThreads(size.x, size.y);
 
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .with(cellsVertexLayout, buffers[1 - swap])
       .with(squareVertexLayout, squareBuffer)
       .draw(4, length);

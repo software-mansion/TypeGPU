@@ -16,7 +16,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('generates only one definition when both original and wrapped function are used', () => {
-    const countAccess = tgpu['~unstable'].accessor(d.f32, 2);
+    const countAccess = tgpu.accessor(d.f32, 2);
 
     const getDouble = () => {
       'use gpu';
@@ -46,7 +46,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('works when only the wrapped function is used', () => {
-    const countAccess = tgpu['~unstable'].accessor(d.f32, 0);
+    const countAccess = tgpu.accessor(d.f32, 0);
 
     const getDouble = () => {
       'use gpu';
@@ -72,7 +72,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('does not duplicate the same function', () => {
-    const countAccess = tgpu['~unstable'].accessor(d.f32, 0);
+    const countAccess = tgpu.accessor(d.f32, 0);
 
     const getDouble = () => {
       'use gpu';
@@ -135,7 +135,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('supports .with for accessor bindings on generic functions', () => {
-    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+    const valueAccess = tgpu.accessor(d.f32);
 
     const getValue = () => {
       'use gpu';
@@ -161,7 +161,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('generates one function even when .with is called multiple times with the same arguments', () => {
-    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+    const valueAccess = tgpu.accessor(d.f32);
 
     const getValue = () => {
       'use gpu';
@@ -188,7 +188,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('allows for shellless inline usage', () => {
-    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+    const valueAccess = tgpu.accessor(d.f32);
 
     const getValueGeneric = tgpu.fn(() => {
       'use gpu';
@@ -212,7 +212,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   });
 
   it('shellfull vs shellless', () => {
-    const valueAccess = tgpu['~unstable'].accessor(d.f32);
+    const valueAccess = tgpu.accessor(d.f32);
     const slot = tgpu.slot<number>();
 
     const getValue = tgpu.fn(() => {
@@ -304,7 +304,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       console.log(x + y + z + offsetSlot.$);
     }).with(offsetSlot, 1);
 
-    const pipeline = root['~unstable'].createGuardedComputePipeline(f);
+    const pipeline = root.createGuardedComputePipeline(f);
 
     expect(tgpu.resolve([pipeline.pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;

@@ -35,7 +35,7 @@ scene.add(directionalLight);
 
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 renderer.setClearColor('#000000');
 
 await renderer.init();
@@ -184,7 +184,7 @@ const initCompute = t3.toTSL(() => {
 });
 
 const reset = () => renderer.compute(initCompute.compute(count));
-reset();
+void reset();
 
 // update compute
 
@@ -295,7 +295,7 @@ observer.observe(canvas);
 
 async function animate() {
   orbitControls.update();
-  renderer.compute(updateCompute);
+  void renderer.compute(updateCompute);
   renderer.render(scene, camera);
 }
 

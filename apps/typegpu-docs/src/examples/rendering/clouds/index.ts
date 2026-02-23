@@ -55,7 +55,7 @@ const bindGroup = root.createBindGroup(cloudsLayout, {
   sampler,
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -93,10 +93,11 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(finalCol, 1.0);
 });
 
-const pipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+});
 
 const resizeObserver = new ResizeObserver(() => {
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
@@ -111,10 +112,8 @@ function render() {
   pipeline
     .with(bindGroup)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(6);
 

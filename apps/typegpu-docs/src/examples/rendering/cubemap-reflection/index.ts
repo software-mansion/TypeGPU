@@ -33,7 +33,6 @@ const root = tgpu.initFromDevice({ device });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 let exampleDestroyed = false;
 
 // Geometry & Material Setup
@@ -138,7 +137,7 @@ const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
 
 // Shader Functions
 
-const vertexFn = tgpu['~unstable'].vertexFn({
+const vertexFn = tgpu.vertexFn({
   in: {
     position: d.vec4f,
     normal: d.vec4f,
@@ -157,7 +156,7 @@ const vertexFn = tgpu['~unstable'].vertexFn({
   worldPos: input.position,
 }));
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
+const fragmentFn = tgpu.fragmentFn({
   in: {
     normal: d.vec4f,
     worldPos: d.vec4f,
@@ -217,7 +216,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(finalColor, 1.0);
 });
 
-const cubeVertexFn = tgpu['~unstable'].vertexFn({
+const cubeVertexFn = tgpu.vertexFn({
   in: {
     position: d.vec3f,
     uv: d.vec2f,
@@ -236,7 +235,7 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
   };
 });
 
-const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
+const cubeFragmentFn = tgpu.fragmentFn({
   in: { texCoord: d.vec3f },
   out: d.vec4f,
 })((input) => {
@@ -249,19 +248,17 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
 
 // Pipeline Setup
 
-const cubePipeline = root['~unstable'].createRenderPipeline({
+const cubePipeline = root.createRenderPipeline({
   attribs: cubeVertexLayout.attrib,
   vertex: cubeVertexFn,
   fragment: cubeFragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'front' },
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: vertexFn,
   fragment: fragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'back' },
 });
 
@@ -270,10 +267,8 @@ const pipeline = root['~unstable'].createRenderPipeline({
 function render() {
   cubePipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
     .with(renderBindGroup)
@@ -282,10 +277,9 @@ function render() {
 
   pipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
       loadOp: 'load',
-      storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
     .with(renderBindGroup)

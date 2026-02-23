@@ -18,7 +18,7 @@ const layout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -61,10 +61,11 @@ if (navigator.mediaDevices.getUserMedia) {
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(fragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -127,11 +128,7 @@ function processVideoFrame(
 
   renderPipeline
     .with(group)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);

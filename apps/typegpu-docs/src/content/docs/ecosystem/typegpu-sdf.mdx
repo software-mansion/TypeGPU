@@ -25,7 +25,7 @@ Here is an example of a fragment shader that draws a disk of radius 0.25 on the 
 import tgpu, { d } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {

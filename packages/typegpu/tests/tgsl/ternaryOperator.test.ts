@@ -28,7 +28,7 @@ describe('ternary operator', () => {
 
   it('should work for different comptime known expressions', () => {
     const condition = true;
-    const comptime = tgpu['~unstable'].comptime(() => true);
+    const comptime = tgpu.comptime(() => true);
     const slot = tgpu.slot(true);
     const lazy = tgpu.lazy(() => slot.$);
 

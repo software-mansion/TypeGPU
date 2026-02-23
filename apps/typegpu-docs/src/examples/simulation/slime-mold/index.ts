@@ -32,7 +32,7 @@ const defaultParams = {
 const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].createGuardedComputePipeline((x) => {
+root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS + 0.1);
   const pos = randf.inUnitCircle().mul(resolution.x / 2 - 10).add(
@@ -85,7 +85,7 @@ const sense = (pos: d.v2f, angle: number, sensorAngleOffset: number) => {
   return color.x + color.y + color.z;
 };
 
-const updateAgents = tgpu['~unstable'].computeFn({
+const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [64],
 })(({ gid }) => {
@@ -157,7 +157,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
   );
 });
 
-const blur = tgpu['~unstable'].computeFn({
+const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [16, 16],
 })(({ gid }) => {
@@ -198,7 +198,7 @@ const blur = tgpu['~unstable'].computeFn({
   );
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+const fullScreenTriangle = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -216,25 +216,21 @@ const filteringSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   return std.textureSample(renderLayout.$.state, filteringSampler.$, uv);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
-const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
-
-const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+const computePipeline = root.createComputePipeline({ compute: updateAgents });
+const blurPipeline = root.createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
@@ -272,11 +268,7 @@ function frame(now: number) {
     );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 

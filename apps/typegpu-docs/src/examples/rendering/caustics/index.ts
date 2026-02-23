@@ -2,7 +2,7 @@ import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ vertexIndex }) => {
@@ -61,7 +61,7 @@ const fogColor = d.vec3f(0.05, 0.2, 0.7);
 /** The ambient light color */
 const ambientColor = d.vec3f(0.2, 0.5, 1);
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -128,14 +128,12 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(std.add(std.mix(noFogColor, fogColor, fog), godRays), 1);
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: mainFragment,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;
@@ -146,11 +144,7 @@ function draw(timestamp: number) {
   time.write((timestamp * 0.001) % 1000);
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);

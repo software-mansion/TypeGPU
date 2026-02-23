@@ -1,3 +1,4 @@
+// oxlint-disable typescript/no-unnecessary-type-assertion import.meta.glob is inferred incorrectly by oxlint
 import { entries, fromEntries, map, pipe } from 'remeda';
 
 import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';

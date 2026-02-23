@@ -94,7 +94,7 @@ export function getUniqueName(
   return name;
 }
 
-export function namespace(options?: NamespaceOptions | undefined): Namespace {
+export function namespace(options?: NamespaceOptions): Namespace {
   const { names = 'strict' } = options ?? {};
 
   return new NamespaceImpl(

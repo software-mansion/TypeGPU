@@ -90,7 +90,7 @@ function createPipelineForFormat(format: TestFormat) {
 
   const sampler = filterable ? filteringSampler : nearestSampler;
 
-  const fragmentFunction = tgpu['~unstable'].fragmentFn({
+  const fragmentFunction = tgpu.fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
   })`{
@@ -109,10 +109,11 @@ function createPipelineForFormat(format: TestFormat) {
     channel: channelUniform,
   });
 
-  const pipeline = root['~unstable']
-    .withVertex(common.fullScreenTriangle)
-    .withFragment(fragmentFunction, { format: presentationFormat })
-    .createPipeline();
+  const pipeline = root.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fragmentFunction,
+    targets: { format: presentationFormat },
+  });
 
   return { layout, pipeline };
 }
@@ -135,11 +136,7 @@ function recreateTexture() {
 function render() {
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(render);

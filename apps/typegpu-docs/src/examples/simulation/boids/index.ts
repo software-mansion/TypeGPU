@@ -90,7 +90,7 @@ const VertexOutput = {
   color: d.vec4f,
 };
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
   out: VertexOutput,
 })((input) => {
@@ -106,7 +106,7 @@ const mainVert = tgpu['~unstable'].vertexFn({
   return { position: pos, color };
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => input.color);
@@ -148,16 +148,17 @@ const TriangleDataArray = d.arrayOf(TriangleData);
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
-const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    v: vertexLayout.attrib,
-    center: instanceLayout.attrib.position,
-    velocity: instanceLayout.attrib.velocity,
+const renderPipeline = root
+  .createRenderPipeline({
+    attribs: {
+      v: vertexLayout.attrib,
+      center: instanceLayout.attrib.position,
+      velocity: instanceLayout.attrib.velocity,
+    },
+    vertex: mainVert,
+    fragment: mainFrag,
+    targets: { format: presentationFormat },
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
-  .createPipeline()
   .with(vertexLayout, triangleVertexBuffer);
 
 const layout = tgpu.bindGroupLayout({
@@ -236,8 +237,7 @@ const simulate = (index: number) => {
   layout.$.nextTrianglePos[index] = TriangleData(instanceInfo);
 };
 
-const simulatePipeline = root['~unstable']
-  .createGuardedComputePipeline(simulate);
+const simulatePipeline = root.createGuardedComputePipeline(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(layout, {
@@ -262,10 +262,8 @@ function frame() {
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);

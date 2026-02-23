@@ -45,7 +45,7 @@ export const generateMaskFromOutput = (x: number, y: number) => {
 };
 
 const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec3f, 128), 4));
-export const computeFn = tgpu['~unstable'].computeFn({
+export const computeFn = tgpu.computeFn({
   in: { wid: d.builtin.workgroupId, lid: d.builtin.localInvocationId },
   workgroupSize: [32, 1, 1],
 })(({ wid, lid }) => {

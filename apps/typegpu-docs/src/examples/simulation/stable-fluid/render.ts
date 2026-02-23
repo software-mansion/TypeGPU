@@ -7,7 +7,7 @@ export const renderLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const renderFn = tgpu['~unstable'].vertexFn({
+export const renderFn = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -17,7 +17,7 @@ export const renderFn = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(vertices[input.idx], 0, 1), uv: texCoords[input.idx] };
 });
 
-export const fragmentInkFn = tgpu['~unstable'].fragmentFn({
+export const fragmentInkFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -29,7 +29,7 @@ export const fragmentInkFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(density, density * 0.8, density * 0.5, d.f32(1.0));
 });
 
-export const fragmentVelFn = tgpu['~unstable'].fragmentFn({
+export const fragmentVelFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -48,7 +48,7 @@ export const fragmentVelFn = tgpu['~unstable'].fragmentFn({
   return outColor;
 });
 
-export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
+export const fragmentImageFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {

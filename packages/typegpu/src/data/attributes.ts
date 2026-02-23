@@ -86,8 +86,8 @@ export type AnyAttribute<
 > =
   | Align<number>
   | Size<number>
-  | Location<number>
-  | Interpolate<InterpolationType>
+  | Location
+  | Interpolate
   | Invariant
   | AllowedBuiltins;
 
@@ -328,11 +328,9 @@ export function invariant(
   }) as any;
 }
 
-export function isBuiltin<
-  T extends
-    | Decorated<AnyWgslData, AnyAttribute[]>
-    | LooseDecorated<AnyLooseData, AnyAttribute[]>,
->(value: T | unknown): value is T {
+export function isBuiltin(value: unknown): value is
+  | Decorated<AnyWgslData, AnyAttribute[]>
+  | LooseDecorated<AnyLooseData, AnyAttribute[]> {
   return (
     (isDecorated(value) || isLooseDecorated(value)) &&
     value.attribs.find(isBuiltinAttrib) !== undefined

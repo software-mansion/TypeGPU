@@ -90,7 +90,7 @@ const computePointsFn = (x: number) => {
 };
 
 const createComputePipeline = (exprCode: string) => {
-  return root['~unstable']
+  return root
     .with(
       functionExprSlot,
       tgpu['~unstable'].rawCodeSnippet(exprCode, d.f32, 'runtime'),
@@ -103,7 +103,7 @@ const computePipelines: Array<TgpuGuardedComputePipeline> = initialFunctions
 
 // Render background shader
 
-const backgroundVertex = tgpu['~unstable'].vertexFn({
+const backgroundVertex = tgpu.vertexFn({
   in: { vid: d.builtin.vertexIndex, iid: d.builtin.instanceIndex },
   out: { pos: d.builtin.position },
 })(({ vid, iid }) => {
@@ -135,18 +135,17 @@ const backgroundVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const backgroundFragment = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(
+const backgroundFragment = tgpu.fragmentFn({ out: d.vec4f })(
   () => d.vec4f(0.9, 0.9, 0.9, 1),
 );
 
-const renderBackgroundPipeline = root['~unstable']
-  .withVertex(backgroundVertex)
-  .withFragment(backgroundFragment, { format: presentationFormat })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .withMultisample({ count: 4 })
-  .createPipeline();
+const renderBackgroundPipeline = root.createRenderPipeline({
+  vertex: backgroundVertex,
+  fragment: backgroundFragment,
+  targets: { format: presentationFormat },
+  primitive: { topology: 'triangle-strip' },
+  multisample: { count: 4 },
+});
 
 let msTexture = device.createTexture({
   size: [canvas.width, canvas.height],
@@ -189,7 +188,7 @@ const orthonormalForVertex = (index: number): d.v2f => {
   return std.normalize(avg);
 };
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: { vid: d.builtin.vertexIndex },
   out: { pos: d.builtin.position },
 })(({ vid }) => {
@@ -212,16 +211,17 @@ const vertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({ out: d.vec4f })(() => {
+const fragment = tgpu.fragmentFn({ out: d.vec4f })(() => {
   return renderLayout.$.color;
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertex)
-  .withFragment(fragment, { format: presentationFormat })
-  .withPrimitive({ topology: 'triangle-strip' })
-  .withMultisample({ count: 4 })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex,
+  fragment,
+  targets: { format: presentationFormat },
+  primitive: { topology: 'triangle-strip' },
+  multisample: { count: 4 },
+});
 
 // Draw
 
@@ -259,10 +259,8 @@ function runRenderBackgroundPass() {
   renderBackgroundPipeline
     .withColorAttachment({
       view: msView,
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(4, 2);
 }
@@ -278,10 +276,9 @@ function runRenderPass() {
       .with(renderBindGroup)
       .withColorAttachment({
         view: msView,
-        resolveTarget: context.getCurrentTexture().createView(),
+        resolveTarget: context,
         clearValue: [0.3, 0.3, 0.3, 1],
         loadOp: 'load',
-        storeOp: 'store',
       })
       // call our vertex shader 2 times per point drawn
       .draw(properties.interpolationPoints * 2);

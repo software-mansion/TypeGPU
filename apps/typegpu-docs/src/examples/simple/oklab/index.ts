@@ -11,7 +11,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const cssProbePosition = d.vec2f(0.5, 0.5);
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const cssProbe = document.querySelector('#css-probe') as HTMLDivElement;
 const probePositionText = document.querySelector(
@@ -74,7 +73,7 @@ const patternSlot = tgpu.slot(patternSolid);
 
 // #endregion
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -107,10 +106,9 @@ const uniformsValue = {
   alpha: 0.05,
 };
 
-let pipeline = root['~unstable'].createRenderPipeline({
+let pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
-  targets: { format: presentationFormat },
 });
 
 function setPipeline({
@@ -120,14 +118,13 @@ function setPipeline({
   outOfGamutPattern: typeof patternSlot.$;
   gamutClip: typeof oklabGamutClipSlot.$;
 }) {
-  pipeline = root['~unstable']
+  pipeline = root
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
     .with(oklabGamutClipAlphaAccess, () => uniforms.$.alpha)
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: mainFragment,
-      targets: { format: presentationFormat },
     });
 }
 
@@ -151,12 +148,7 @@ function draw() {
   `;
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

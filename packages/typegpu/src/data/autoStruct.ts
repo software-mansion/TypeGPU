@@ -38,7 +38,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
   constructor(
     validProps: Record<string, BaseData>,
     typeForExtraProps: BaseData | undefined,
-    locations?: Record<string, number> | undefined,
+    locations?: Record<string, number>,
   ) {
     this.#validProps = validProps;
     this.#typeForExtraProps = typeForExtraProps;

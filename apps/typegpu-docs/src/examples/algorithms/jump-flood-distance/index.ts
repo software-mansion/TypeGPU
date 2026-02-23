@@ -151,7 +151,7 @@ const sampleWithOffset = (
   });
 };
 
-const initFromMask = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const initFromMask = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const size = std.textureDimensions(initFromMaskLayout.$.writeView);
   const pos = d.vec2f(x, y);
@@ -175,7 +175,7 @@ const initFromMask = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const offset = offsetUniform.$;
   const size = std.textureDimensions(pingPongLayout.$.readView);
@@ -225,7 +225,7 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const drawSeed = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const brushParams = brushUniform.$;
   const pos = d.vec2f(x, y);
@@ -242,60 +242,54 @@ const drawSeed = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const createDistanceField = root['~unstable'].createGuardedComputePipeline(
-  (x, y) => {
-    'use gpu';
-    const pos = d.vec2f(x, y);
-    const size = std.textureDimensions(pingPongLayout.$.readView);
-    const texel = std.textureLoad(
-      pingPongLayout.$.readView,
-      d.vec2i(x, y),
-    );
+const createDistanceField = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const pos = d.vec2f(x, y);
+  const size = std.textureDimensions(pingPongLayout.$.readView);
+  const texel = std.textureLoad(
+    pingPongLayout.$.readView,
+    d.vec2i(x, y),
+  );
 
-    const insideCoord = texel.xy;
-    const outsideCoord = texel.zw;
+  const insideCoord = texel.xy;
+  const outsideCoord = texel.zw;
 
-    let insideDist = 1e20;
-    let outsideDist = 1e20;
+  let insideDist = 1e20;
+  let outsideDist = 1e20;
 
-    if (insideCoord.x >= 0) {
-      insideDist = std.distance(pos, insideCoord.mul(d.vec2f(size)));
-    }
+  if (insideCoord.x >= 0) {
+    insideDist = std.distance(pos, insideCoord.mul(d.vec2f(size)));
+  }
 
-    if (outsideCoord.x >= 0) {
-      outsideDist = std.distance(pos, outsideCoord.mul(d.vec2f(size)));
-    }
+  if (outsideCoord.x >= 0) {
+    outsideDist = std.distance(pos, outsideCoord.mul(d.vec2f(size)));
+  }
 
-    const signedDist = insideDist - outsideDist;
+  const signedDist = insideDist - outsideDist;
 
-    std.textureStore(
-      distWriteLayout.$.distTexture,
-      d.vec2i(x, y),
-      d.vec4f(signedDist, 0, 0, 0),
-    );
-  },
-);
+  std.textureStore(
+    distWriteLayout.$.distTexture,
+    d.vec2i(x, y),
+    d.vec4f(signedDist, 0, 0, 0),
+  );
+});
 
-const distancePipeline = root['~unstable']
+const distancePipeline = root
   .with(paramsAccess, paramsUniform)
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(distanceFrag, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: distanceFrag,
+    targets: { format: presentationFormat },
+  });
 
 function swap() {
   sourceIdx ^= 1;
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   distancePipeline
     .with(resources.renderBindGroups[0])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

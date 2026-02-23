@@ -127,7 +127,7 @@ export class IcosphereGenerator {
   ) {
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
-    const computeFn = tgpu['~unstable'].computeFn({
+    const computeFn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
@@ -191,9 +191,7 @@ export class IcosphereGenerator {
       }
     });
 
-    this.pipeline = this.root['~unstable'].createComputePipeline({
-      compute: computeFn,
-    });
+    this.pipeline = this.root.createComputePipeline({ compute: computeFn });
   }
 
   createIcosphere(subdivisions: number, smooth: boolean): IcosphereBuffer {

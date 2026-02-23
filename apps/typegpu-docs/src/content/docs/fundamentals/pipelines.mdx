@@ -31,7 +31,7 @@ const root = await tgpu.init();
 
 const presentationFormat = 'rgba8unorm';
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position },
 })((input) => {
@@ -42,27 +42,25 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable']
-  .fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
 
-const mainCompute = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {});
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
 // ---cut---
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: mainFragment,
   targets: { format: presentationFormat },
 });
 
-const computePipeline1 = root['~unstable'].createComputePipeline({
+const computePipeline1 = root.createComputePipeline({
   compute: mainCompute,
 });
 
-const computePipeline2 = root['~unstable']
-  .createGuardedComputePipeline((x, y, z) => {
-    'use gpu';
-    // ...
-  });
+const computePipeline2 = root.createGuardedComputePipeline((x, y, z) => {
+  'use gpu';
+  // ...
+});
 ```
 
 ### createRenderPipeline
@@ -84,7 +82,7 @@ import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 const presentationFormat = 'rgba8unorm';
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex, pos: d.vec2f },
   out: { pos: d.builtin.position },
 })((input) => {
@@ -95,12 +93,11 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable']
-  .fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1));
 // ---cut---
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   attribs: { pos: vertexLayout.attrib },
   vertex: mainVertex,
   fragment: mainFragment,
@@ -132,10 +129,10 @@ as long as there is no conflict between vertex and fragment location values.
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   out: { pos: d.builtin.position },
 })`(...)`;
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })`(...)`;
@@ -143,7 +140,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
 const root = await tgpu.init();
 
 // @errors: 2769
-root['~unstable'].createRenderPipeline({
+root.createRenderPipeline({
   vertex,
   fragment,
   targets: { format: 'bgra8unorm' },
@@ -163,10 +160,10 @@ import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
-const mainCompute = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {});
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
 // ---cut---
-const computePipeline = root['~unstable'].createComputePipeline({
+const computePipeline = root.createComputePipeline({
   compute: mainCompute,
 });
 ```
@@ -188,11 +185,10 @@ const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
 
-const doubleUpPipeline = root['~unstable']
-  .createGuardedComputePipeline((x) => {
-    'use gpu';
-    data.$[x] *= 2;
-  });
+const doubleUpPipeline = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  data.$[x] *= 2;
+});
 
 doubleUpPipeline.dispatchThreads(8);
 doubleUpPipeline.dispatchThreads(8);
@@ -229,7 +225,7 @@ const waterLevelMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.f32, 512), 1024),
 );
 
-root['~unstable'].createGuardedComputePipeline((x, y) => {
+root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   randf.seed2(d.vec2f(x, y).div(1024));
   waterLevelMutable.$[x][y] = 10 + randf.sample();
@@ -254,11 +250,7 @@ tgpu.resolve([innerPipeline]);
 
 ```ts
 renderPipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
+  .withColorAttachment({ view: context })
   .draw(3);
 
 computePipeline.dispatchWorkgroups(16);
@@ -278,7 +270,7 @@ renderPipeline
   .withColorAttachment({
     color: {
       view: msaaTextureView,
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       loadOp: 'clear',
       storeOp: 'store',
     },
@@ -368,7 +360,7 @@ const colorBuffer = root
   ])
   .$usage('vertex');
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     idx: d.builtin.vertexIndex,
     color: d.vec4f,
@@ -385,7 +377,7 @@ const vertex = tgpu['~unstable'].vertexFn({
 });
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     color: d.vec4f,
   },
@@ -396,7 +388,7 @@ const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
-const pipeline = root['~unstable']
+const pipeline = root
   .createRenderPipeline({
     attribs: { color: vertexLayout.attrib },
     vertex,
@@ -440,11 +432,11 @@ import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
-const mainVertex = tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } })`...`;
-const mainFragment = tgpu['~unstable'].fragmentFn({ out: d.vec4f })`...`;
+const mainVertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })`...`;
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })`...`;
 
 // ---cut---
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: mainFragment,
   targets: { format: 'rg8unorm' },

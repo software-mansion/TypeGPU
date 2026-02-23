@@ -25,7 +25,7 @@ const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
 
 const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
-const defaultCompute = tgpu['~unstable'].computeFn({
+const defaultCompute = tgpu.computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
   },
@@ -50,7 +50,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
 });
 
 const workgroupSize = tgpu.const(d.u32, 128);
-const subgroupCompute = tgpu['~unstable'].computeFn({
+const subgroupCompute = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
     wid: d.builtin.workgroupId,
@@ -91,9 +91,9 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
 });
 
 const pipelines = {
-  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
+  default: root.createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
+    ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 
@@ -208,6 +208,7 @@ const network = createNetwork(await downloadLayers(root));
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-assertion not really unnecessary
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const subgroupsEl = document.getElementById(
   'subgroups-status',
@@ -393,7 +394,7 @@ canvas.addEventListener('mousemove', (event) => {
   const cellSize = canvas.width / SIZE;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
   const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 });
 
 canvas.addEventListener('touchmove', (event) => {
@@ -407,7 +408,7 @@ canvas.addEventListener('touchmove', (event) => {
   const y = Math.floor(
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 }, { passive: false });
 
 export const controls = defineControls({

@@ -2,7 +2,7 @@ import type { TgpuComputePipeline, TgpuRoot, TgpuTextureView } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { taaResolveLayout } from './dataTypes.ts';
 
-export const taaResolveFn = tgpu['~unstable'].computeFn({
+export const taaResolveFn = tgpu.computeFn({
   workgroupSize: [16, 16],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -91,10 +91,7 @@ export class TAAResolver {
     this.#width = width;
     this.#height = height;
 
-    this.#pipeline = root['~unstable']
-      .withCompute(taaResolveFn)
-      .createPipeline();
-
+    this.#pipeline = root.createComputePipeline({ compute: taaResolveFn });
     this.#textures = createTaaTextures(root, width, height);
   }
 

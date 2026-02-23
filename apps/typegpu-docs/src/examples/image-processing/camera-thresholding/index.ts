@@ -6,7 +6,7 @@ const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: { uv: d.location(0, d.vec2f) },
   out: d.vec4f,
 })((input) => {
@@ -62,10 +62,11 @@ const sampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(mainFrag, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: mainFrag,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -124,10 +125,8 @@ function processVideoFrame(
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(root.createBindGroup(textureLayout, {
       inputTexture: device.importExternalTexture({ source: video }),

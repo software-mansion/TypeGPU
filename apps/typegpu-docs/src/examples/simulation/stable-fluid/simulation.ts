@@ -26,7 +26,7 @@ export const brushLayout = tgpu.bindGroupLayout({
   inkDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const brushFn = tgpu['~unstable'].computeFn({
+export const brushFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -69,7 +69,7 @@ export const addForcesLayout = tgpu.bindGroupLayout({
   simParams: { uniform: p.ShaderParams },
 });
 
-export const addForcesFn = tgpu['~unstable'].computeFn({
+export const addForcesFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -88,7 +88,7 @@ export const advectLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const advectFn = tgpu['~unstable'].computeFn({
+export const advectFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -132,7 +132,7 @@ export const diffusionLayout = tgpu.bindGroupLayout({
   simParams: { uniform: p.ShaderParams },
 });
 
-export const diffusionFn = tgpu['~unstable'].computeFn({
+export const diffusionFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -170,7 +170,7 @@ export const divergenceLayout = tgpu.bindGroupLayout({
   div: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const divergenceFn = tgpu['~unstable'].computeFn({
+export const divergenceFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -201,7 +201,7 @@ export const pressureLayout = tgpu.bindGroupLayout({
   out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const pressureFn = tgpu['~unstable'].computeFn({
+export const pressureFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -232,7 +232,7 @@ export const projectLayout = tgpu.bindGroupLayout({
   out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const projectFn = tgpu['~unstable'].computeFn({
+export const projectFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -263,7 +263,7 @@ export const advectInkLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const advectInkFn = tgpu['~unstable'].computeFn({
+export const advectInkFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -298,7 +298,7 @@ export const addInkLayout = tgpu.bindGroupLayout({
   add: { texture: d.texture2d(d.f32) },
 });
 
-export const addInkFn = tgpu['~unstable'].computeFn({
+export const addInkFn = tgpu.computeFn({
   workgroupSize: [p.WORKGROUP_SIZE_X, p.WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {

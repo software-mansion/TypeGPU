@@ -8,7 +8,7 @@ import {
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
-export const vertexShader = tgpu['~unstable'].vertexFn({
+export const vertexShader = tgpu.vertexFn({
   in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
 })((input) => {
@@ -80,7 +80,7 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const fragmentShader = tgpu['~unstable'].fragmentFn({
+export const fragmentShader = tgpu.fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {

@@ -23,14 +23,13 @@ TypeGPU offers two ways to employ timestamp queries:
 Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceCallback()` onto a compute or render pipeline:
 
 ```ts
-const pipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline()
+const pipeline = root
+  .createComputePipeline({ compute: computeShader })
   .withPerformanceCallback((start, end) => {
     const durationNs = Number(end - start);
     console.log(`Pipeline execution time: ${durationNs} ns`);
   });
-````
+```
 
 * **Callback signature**
 
@@ -56,9 +55,8 @@ For finer control, create and manage your own `TgpuQuerySet`. You can attach it 
 // Create a query set with two timestamp slots
 const querySet = root.createQuerySet('timestamp', 2);
 
-const pipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline()
+const pipeline = root
+  .createComputePipeline({ compute: computeShader })
   .withTimestampWrites({
     querySet: querySet,
     beginningOfPassWriteIndex: 0,  // Write start time at index 0
@@ -137,9 +135,8 @@ You can use a custom query set and still attach a performance callback. TypeGPU 
 ```ts
 const querySet = root.createQuerySet('timestamp', 36);
 
-const pipeline = root['~unstable']
-  .withCompute(computeShader)
-  .createPipeline()
+const pipeline = root
+  .createComputePipeline({ compute: computeShader })
   .withTimestampWrites({
     querySet: querySet,
     beginningOfPassWriteIndex: 3,   // start at slot 3

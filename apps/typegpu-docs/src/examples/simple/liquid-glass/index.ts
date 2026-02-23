@@ -5,7 +5,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 
@@ -104,7 +103,7 @@ const sampleWithChromaticAberration = (
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -156,10 +155,9 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     .add(normalSample.mul(weights.outside));
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 });
 
 let isRectangleFixed = false;
@@ -205,11 +203,9 @@ canvas.addEventListener('click', handleClick);
 let frameId: number;
 function render() {
   frameId = requestAnimationFrame(render);
-  pipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  pipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 frameId = requestAnimationFrame(render);
 

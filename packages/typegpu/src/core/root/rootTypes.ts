@@ -131,9 +131,8 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
-
-type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T]
+  : [T];
 
 /**
  * TODO: Remove in favor of createRenderPipeline's validation
@@ -252,6 +251,33 @@ export interface Withable<TSelf> {
   ): TSelf;
 }
 
+export interface Withable_Deprecated<TSelf> {
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T extends BaseData>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuAccessor.In<NoInfer<T>>,
+  ): TSelf;
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T extends BaseData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
+  ): TSelf;
+}
+
 export interface Configurable extends Withable<Configurable> {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
@@ -271,6 +297,7 @@ type NormalizeOutput<T> = T extends
   : { [K in keyof OmitBuiltins<T>]: InstanceToSchema<OmitBuiltins<T>[K]> };
 
 export interface WithBinding extends Withable<WithBinding> {
+  /** @deprecated Use `root.createComputePipeline` instead. */
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -316,7 +343,7 @@ export interface WithBinding extends Withable<WithBinding> {
               >
             >,
           ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
-        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
@@ -397,7 +424,7 @@ export interface WithBinding extends Withable<WithBinding> {
               & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
-          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
         }
         | {
           attribs?: TAttribs;
@@ -719,9 +746,9 @@ export interface RenderPass {
    */
   draw(
     vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws indexed primitives.
@@ -733,10 +760,10 @@ export interface RenderPass {
    */
   drawIndexed(
     indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws primitives using parameters read from a {@link GPUBuffer}.
@@ -786,7 +813,7 @@ export type ConfigureContextOptions = {
   format?: GPUTextureFormat;
 } & Omit<GPUCanvasConfiguration, 'device' | 'format'>;
 
-export interface TgpuRoot extends Unwrapper {
+export interface TgpuRoot extends Unwrapper, WithBinding {
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -815,7 +842,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>> | undefined,
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -926,7 +953,7 @@ export interface TgpuRoot extends Unwrapper {
   createQuerySet<T extends GPUQueryType>(
     type: T,
     count: number,
-    rawQuerySet?: GPUQuerySet | undefined,
+    rawQuerySet?: GPUQuerySet,
   ): TgpuQuerySet<T>;
 
   /**
@@ -976,10 +1003,25 @@ export interface TgpuRoot extends Unwrapper {
    */
   destroy(): void;
 
-  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+  '~unstable': Pick<
+    ExperimentalTgpuRoot,
+    | 'beginRenderPass'
+    | 'createComparisonSampler'
+    | 'createGuardedComputePipeline'
+    | 'createSampler'
+    | 'createTexture'
+    | 'flush'
+    | 'nameRegistrySetting'
+    | 'shaderGenerator'
+    | 'pipe'
+    | 'with'
+    | 'withCompute'
+    | 'withVertex'
+  >;
 }
 
-export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
+export interface ExperimentalTgpuRoot
+  extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
   readonly shaderGenerator?:
     | ShaderGenerator
@@ -1035,4 +1077,26 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * which makes this method unnecessary.
    */
   flush(): void;
+
+  /** @deprecated Use `root.createComputePipeline` instead. */
+  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute;
+
+  /** @deprecated This feature is now stable, use `root.createGuardedComputePipeline`. */
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): TgpuGuardedComputePipeline<TArgs>;
+
+  /** @deprecated Use `root.createRenderPipeline` instead. */
+  withVertex<
+    VertexIn extends TgpuVertexFn.In,
+    VertexOut extends TgpuVertexFn.Out,
+  >(
+    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
+  ): WithVertex<VertexOut>;
+
+  /** @deprecated This feature is now stable, use `root.pipe`. */
+  pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
