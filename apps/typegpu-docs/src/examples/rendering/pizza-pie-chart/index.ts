@@ -74,6 +74,24 @@ const PIE = {
   radius: 0.5,
   baseRoundness: 0.01,
   cheeseRoundness: 0.0025,
+
+  stringDomain: 0.06,
+  stringHalfWidth: 0.012,
+  stringThickness: 0.002,
+};
+
+const sdPizzaCheeseStrings = (p: d.v3f): Shape => {
+  'use gpu';
+  let dp = rotateXZ(0.5) * p;
+  dp += perlin2d.sample(p.xz * 10) * 0.05;
+  const mp = (std.fract(dp.xz / PIE.stringDomain) - 0.5) * PIE.stringDomain;
+  const linesSd = std.min(std.abs(mp.x), std.abs(mp.y)) - PIE.stringHalfWidth;
+  const cutLines = std.max(linesSd, sdf.sdDisk(p.xz, PIE.radius * 0.8));
+
+  return Shape({
+    dist: sdf.opExtrudeY(p, cutLines, 0) - PIE.stringThickness,
+    color: d.vec3f(1, 0.95, 0.7),
+  });
 };
 
 const sdPizzaCheese = (p: d.v3f, angle: number): Shape => {
@@ -90,35 +108,35 @@ const sdPizzaCheese = (p: d.v3f, angle: number): Shape => {
     PIE.cheeseHalfHeight,
   ) - PIE.cheeseRoundness;
 
-  const cheeseAngle1 = angle / 2 + 0.4;
-  const cheeseStrings2d = std.min(
-    sdRing(
-      p.xz,
-      d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
-      PIE.radius * 0.3 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
-      0.05,
-    ),
-    sdRing(
-      p.xz,
-      d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
-      PIE.radius * 0.6 + perlin2d.sample(p.xz * 2 + angle) * 0.2,
-      0.05,
-    ),
-    sdf.sdDisk(
-      p.xz,
-      PIE.radius * 0.2 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
-    ),
-  );
+  // const cheeseAngle1 = angle / 2 + 0.4;
+  // const cheeseStrings2d = std.min(
+  //   sdRing(
+  //     p.xz,
+  //     d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
+  //     PIE.radius * 0.3 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
+  //     0.05,
+  //   ),
+  //   sdRing(
+  //     p.xz,
+  //     d.vec2f(std.cos(cheeseAngle1), std.sin(cheeseAngle1)),
+  //     PIE.radius * 0.6 + perlin2d.sample(p.xz * 2 + angle) * 0.2,
+  //     0.05,
+  //   ),
+  //   sdf.sdDisk(
+  //     p.xz,
+  //     PIE.radius * 0.2 + perlin2d.sample(p.xz * 2 + angle + 0.4) * 0.2,
+  //   ),
+  // );
 
-  pieBaseSd = sdf.opSmoothUnion(
-    pieBaseSd,
-    sdf.opExtrudeY(
-      p - d.vec3f(0, PIE.baseHalfHeight, 0),
-      cheeseStrings2d,
-      PIE.cheeseHalfHeight * 0.3,
-    ),
-    0.02,
-  );
+  // pieBaseSd = sdf.opSmoothUnion(
+  //   pieBaseSd,
+  //   sdf.opExtrudeY(
+  //     p - d.vec3f(0, PIE.baseHalfHeight, 0),
+  //     cheeseStrings2d,
+  //     PIE.cheeseHalfHeight * 0.3,
+  //   ),
+  //   0.02,
+  // );
 
   const pieBase = Shape({
     dist: pieBaseSd + perlin3d.sample(p * 5) * 0.01,
@@ -183,13 +201,24 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
     d.vec3f(0, 0, std.abs(std.sin(t * 2)) * 0.1);
   const a2 = Math.PI / 2;
 
+  const pull = d.vec3f(0, 0, std.abs(std.sin(t * 2)) * 0.1);
+
   const pizzaCrust = shapeUnion(sdPizzaCrust(p1, a1), sdPizzaCrust(p2, a2));
-  const pizzaCheese = smoothShapeUnion(
+  let pizzaCheese = smoothShapeUnion(
     sdPizzaCheese(p1, a1),
     sdPizzaCheese(p2, a2),
     0.02,
   );
+  let stringP = d.vec3f(localP);
+  stringP += std.max(0, -std.dot(stringP, pull)) ** 0.75 * pull * 5;
+  pizzaCheese = smoothShapeUnion(
+    pizzaCheese,
+    sdPizzaCheeseStrings(stringP),
+    0.03,
+  );
   return shapeUnion(pizzaCrust, pizzaCheese);
+  // return sdPizzaCheeseStrings(stringP);
+  // return sdPizzaCheeseStrings(localP - d.vec3f(0, 0.1, 0));
 };
 
 const getSceneDist = (p: d.v3f): Shape => {
@@ -298,10 +327,11 @@ const fragmentMain = tgpu.fragmentFn({
   const diff = std.max(std.dot(n, l), 0);
 
   // Soft shadows
-  const shadowRo = p;
-  const shadowRd = l;
-  const shadowDist = 4; // approximate
-  const shadow = softShadow(shadowRo, shadowRd, 0.02, shadowDist, d.f32(16));
+  // const shadowRo = p;
+  // const shadowRd = l;
+  // const shadowDist = 4; // approximate
+  // const shadow = softShadow(shadowRo, shadowRd, 0.02, shadowDist, d.f32(16));
+  const shadow = 1;
 
   // Combine lighting with shadows and color
   const litColor = march.color.mul(diff);
@@ -316,7 +346,7 @@ const fragmentMain = tgpu.fragmentFn({
 
 const cameraResult = setupOrbitCamera(
   canvas,
-  { initPos: d.vec4f(2, 2, 2, 1), maxZoom: 4, minZoom: 1 },
+  { initPos: d.vec4f(0.1, 4, 0, 1), maxZoom: 4, minZoom: 1 },
   (newProps) => cameraUniform.writePartial(newProps),
 );
 
