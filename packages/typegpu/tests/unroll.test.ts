@@ -137,7 +137,7 @@ describe('tgpu.unroll', () => {
       const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
       const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
       let res = d.vec2f();
-      for (const foo of tgpu.unroll([b1, b2])) {
+      for (const foo of tgpu.unroll([Boid(b1), Boid(b2)])) {
         for (const boo of tgpu.unroll([Boid(), Boid()])) {
           res = res.add(foo.vel).add(boo.vel);
         }
@@ -300,8 +300,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  // TODO: is this dangerous??
-  it('unrolls array expression of pointers', () => {
+  it('throws when iterable is array expression of pointers', () => {
     const f = () => {
       'use gpu';
       let res = d.vec2f();
@@ -309,30 +308,21 @@ describe('tgpu.unroll', () => {
       const v2 = d.vec2f(3);
       for (const foo of tgpu.unroll([v1, v2])) {
         res = res.add(foo);
-        const boo = foo;
-        boo.x = 6;
+        foo.x = 6;
       }
 
       return res;
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> vec2f {
-        var res = vec2f();
-        var v1 = vec2f(7);
-        var v2 = vec2f(3);
-        {
-          res = (res + v1);
-          let boo = (&v1);
-          (*boo).x = 6f;
-        }
-        {
-          res = (res + v2);
-          let boo = (&v2);
-          (*boo).x = 6f;
-        }
-        return res;
-      }"
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f()
+      - ArrayExpression: 'v1' reference cannot be used in an array constructor.
+      -----
+      Try 'vec2f(v1)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
+      -----]
     `);
   });
 
@@ -398,10 +388,6 @@ describe('tgpu.unroll', () => {
   });
 
   it('warns when iterable element count is unknown at compile-time and fallbacks to regular loop', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
-
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });
@@ -414,72 +400,12 @@ describe('tgpu.unroll', () => {
       }
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> arr: array<f32>;
-
-      fn f() {
-        var res = 0f;
-        for (var i = 0u; i < arrayLength((&arr)); i++) {
-          let foo = arr[i];
-          {
-            res += foo;
-          }
-        }
-      }"
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Cannot unroll loop. Length of iterable is unknown at compile-time.]
     `);
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Cannot unroll loop. The iterable is unknown at compile-time. Fallback to regular loop.',
-    );
-  });
-
-  it('warns when number of iteration to unroll is greater than 8', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
-
-    const f = () => {
-      'use gpu';
-      for (const foo of tgpu.unroll([1, 2, 3, 4, 5, 6, 7, 8, 9])) {
-        continue;
-      }
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() {
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-        {
-          continue;
-        }
-      }"
-    `);
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Unrolling 9 iterations exceeds recommended limit of 8. Consider using a smaller array or runtime loop.',
-    );
   });
 
   it('unrolls named iterable of primitives', () => {
@@ -688,5 +614,35 @@ describe('tgpu.unroll', () => {
           }
         }"
       `);
+  });
+
+  it('throws when `continue` or `break` is used inside the loop body', () => {
+    const f1 = () => {
+      'use gpu';
+      for (const foo of tgpu.unroll([1, 2])) {
+        continue;
+      }
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1(): Cannot unroll loop containing \`break\` or \`continue\`]
+    `);
+
+    const f2 = () => {
+      'use gpu';
+      for (const foo of tgpu.unroll([1, 2])) {
+        break;
+      }
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2(): Cannot unroll loop containing \`break\` or \`continue\`]
+    `);
   });
 });

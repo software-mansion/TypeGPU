@@ -1210,27 +1210,26 @@ ${this.ctx.pre}else ${alternate}`;
         const originalLoopVarName = loopVar[1];
         const blockified = blockifySingleStatement(body);
 
-        if (
-          shouldUnroll &&
-          (stitch`${elementCountSnippet}`).includes('arrayLength')
-        ) {
-          console.warn(
-            'Cannot unroll loop. The iterable is unknown at compile-time. Fallback to regular loop.',
-          );
-          shouldUnroll = false;
-        }
-
         if (shouldUnroll) {
-          const count = elementCountSnippet.value as number;
-          // we know it is a number, because it is known at compile-time
-          if (count > 8) {
-            console.warn(
-              `Unrolling ${elementCountSnippet.value} iterations exceeds recommended limit of 8. Consider using a smaller array or runtime loop.`,
+          if ((stitch`${elementCountSnippet}`).includes('arrayLength')) {
+            throw new Error(
+              'Cannot unroll loop. Length of iterable is unknown at compile-time.',
             );
+          }
+
+          // we know it is a number, because it is known at compile-time
+          const length = elementCountSnippet.value as number;
+          if (length === 0) {
+            return '';
           }
 
           if (ephemeralIterable) {
             const { value, dataType } = iterableSnippet;
+
+            // when `iterableSnippet.value` is ArrayExpression, we need to resolve it to ensure the array being created is valid
+            if (value instanceof ArrayExpression) {
+              this.ctx.resolve(value);
+            }
 
             const elements = value instanceof ArrayExpression
               ? value.elements // already snippets
@@ -1242,6 +1241,19 @@ ${this.ctx.pre}else ${alternate}`;
               ? value // type inferred later
               : []; // error already thrown by `getElementCountSnippet`
 
+            // TODO: replace it with tinyest traversal
+            const bodyTemplate = this.block(blockified, {
+              [originalLoopVarName]: elements[0],
+            });
+            if (
+              bodyTemplate.includes('break') ||
+              bodyTemplate.includes('continue')
+            ) {
+              throw new WgslTypeError(
+                'Cannot unroll loop containing `break` or `continue`',
+              );
+            }
+
             return elements
               .map((e) =>
                 `${this.ctx.pre}${
@@ -1251,8 +1263,24 @@ ${this.ctx.pre}else ${alternate}`;
               .join('\n');
           }
 
+          // TODO: replace it with tinyest traversal
+          const bodyTemplate = this.block(blockified, {
+            [originalLoopVarName]: forOfUtils.getElementSnippet(
+              iterableSnippet,
+              '0u',
+            ),
+          });
+          if (
+            bodyTemplate.includes('break') ||
+            bodyTemplate.includes('continue')
+          ) {
+            throw new WgslTypeError(
+              'Cannot unroll loop containing `break` or `continue`',
+            );
+          }
+
           // iterable stored in a variable, we still can unroll it
-          return Array.from({ length: count }, (_, i) => {
+          return Array.from({ length }, (_, i) => {
             const elementSnippet = forOfUtils.getElementSnippet(
               iterableSnippet,
               `${i}u`,
