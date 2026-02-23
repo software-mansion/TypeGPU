@@ -86,7 +86,17 @@ describe('clouds example', () => {
         var sum = 0f;
         var amp = 1f;
         var freq = 1.399999976158142f;
-        for (var i = 0; (i < 3i); i++) {
+        {
+          sum += (noise3d((pos * freq)) * amp);
+          amp *= 0.5f;
+          freq *= 2f;
+        }
+        {
+          sum += (noise3d((pos * freq)) * amp);
+          amp *= 0.5f;
+          freq *= 2f;
+        }
+        {
           sum += (noise3d((pos * freq)) * amp);
           amp *= 0.5f;
           freq *= 2f;

@@ -9,7 +9,7 @@ const getNeighbors = tgpu.fn([d.vec2i, d.vec2i], d.arrayOf(d.vec2i, 4))(
       d.vec2i(1, 0),
       d.vec2i(0, 1),
     ];
-    for (let i = 0; i < 4; i++) {
+    for (const i of tgpu.unroll([0, 1, 2, 3])) {
       adjacentOffsets[i] = std.clamp(
         std.add(coords, adjacentOffsets[i]),
         d.vec2i(),

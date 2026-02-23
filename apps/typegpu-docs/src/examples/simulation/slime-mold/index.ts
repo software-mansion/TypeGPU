@@ -168,8 +168,8 @@ const blur = tgpu.computeFn({
   let count = d.f32();
 
   // 3x3 blur kernel
-  for (let offsetY = -1; offsetY <= 1; offsetY++) {
-    for (let offsetX = -1; offsetX <= 1; offsetX++) {
+  for (const offsetY of tgpu.unroll([-1, 0, 1])) {
+    for (const offsetX of tgpu.unroll([-1, 0, 1])) {
       const samplePos = d.vec2i(gid.xy).add(d.vec2i(offsetX, offsetY));
       const dimsi = d.vec2i(dims);
 

@@ -186,8 +186,8 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   let bestInsideDist = 1e20;
   let bestOutsideDist = 1e20;
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  for (const dx of tgpu.unroll([-1, 0, 1])) {
+    for (const dy of tgpu.unroll([-1, 0, 1])) {
       const sample = sampleWithOffset(
         pingPongLayout.$.readView,
         d.vec2i(x, y),

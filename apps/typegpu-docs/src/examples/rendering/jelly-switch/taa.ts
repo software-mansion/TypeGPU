@@ -25,8 +25,8 @@ export const taaResolveFn = tgpu.computeFn({
 
   const dimensions = std.textureDimensions(taaResolveLayout.$.currentTexture);
 
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
+  for (const x of tgpu.unroll([-1, 0, 1])) {
+    for (const y of tgpu.unroll([-1, 0, 1])) {
       const sampleCoord = d.vec2i(gid.xy).add(d.vec2i(x, y));
       const clampedCoord = std.clamp(
         sampleCoord,

@@ -160,11 +160,41 @@ describe('3d fish example', () => {
         if ((cohesionCount > 0i)) {
           cohesion = (((1f / f32(cohesionCount)) * cohesion) - (*fishData).position);
         }
-        for (var i = 0; (i < 3i); i += 1i) {
+        {
           var repulsion = vec3f();
-          repulsion[i] = 1f;
-          let axisAquariumSize = (vec3f(10, 4, 10)[i] / 2f);
-          let axisPosition = (*fishData).position[i];
+          repulsion[0i] = 1f;
+          const axisAquariumSize = 5f;
+          let axisPosition = (*fishData).position[0i];
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str2 = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str2));
+          }
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str2));
+          }
+        }
+        {
+          var repulsion = vec3f();
+          repulsion[1i] = 1f;
+          const axisAquariumSize = 2f;
+          let axisPosition = (*fishData).position[1i];
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str2 = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str2));
+          }
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str2));
+          }
+        }
+        {
+          var repulsion = vec3f();
+          repulsion[2i] = 1f;
+          const axisAquariumSize = 5f;
+          let axisPosition = (*fishData).position[2i];
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
             let str2 = (axisPosition - (axisAquariumSize - distance_1));

@@ -82,14 +82,146 @@ describe('cubemap reflection example', () => {
         var v31 = vec4f(normalize(calculateMidpoint(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         let baseIndexNext = (triangleIndex * 12u);
-        for (var i = 0u; (i < 12u); i++) {
-          let reprojectedVertex = (&newVertices[i]);
-          let triBase = (i - (i % 3u));
+        {
+          let reprojectedVertex = (&newVertices[0i]);
+          let triBase = (0 - (0 % 3));
           var normal = (*reprojectedVertex);
           if ((smoothFlag == 0u)) {
-            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1u)], newVertices[(triBase + 2u)]);
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
           }
-          let outIndex = (baseIndexNext + i);
+          let outIndex = (baseIndexNext + 0u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[1i]);
+          let triBase = (1 - (1 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 1u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[2i]);
+          let triBase = (2 - (2 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 2u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[3i]);
+          let triBase = (3 - (3 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 3u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[4i]);
+          let triBase = (4 - (4 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 4u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[5i]);
+          let triBase = (5 - (5 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 5u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[6i]);
+          let triBase = (6 - (6 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 6u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[7i]);
+          let triBase = (7 - (7 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 7u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[8i]);
+          let triBase = (8 - (8 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 8u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[9i]);
+          let triBase = (9 - (9 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 9u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[10i]);
+          let triBase = (10 - (10 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 10u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        {
+          let reprojectedVertex = (&newVertices[11i]);
+          let triBase = (11 - (11 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 11u);
           let nextVertex = (&(*nextVertices)[outIndex]);
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);

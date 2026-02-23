@@ -160,21 +160,19 @@ const computeVelocity = (x: number, y: number): d.v2f => {
   ];
   let dirChoiceCount = 1;
 
-  for (const offset of neighborOffsets) {
+  for (const offset of tgpu.unroll(neighborOffsets)) {
     const neighborDensity = getCell(x + offset.x, y + offset.y);
     const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-    if (!isValidFlowOut(x + offset.x, y + offset.y)) {
-      continue;
-    }
-
-    if (cost === leastCost) {
-      dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount++;
-    } else if (cost < leastCost) {
-      leastCost = cost;
-      dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount = 1;
+    if (isValidFlowOut(x + offset.x, y + offset.y)) {
+      if (cost === leastCost) {
+        dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount++;
+      } else if (cost < leastCost) {
+        leastCost = cost;
+        dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount = 1;
+      }
     }
   }
 

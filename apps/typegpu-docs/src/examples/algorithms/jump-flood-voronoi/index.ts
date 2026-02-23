@@ -165,22 +165,23 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   let minDist = 1e20;
   let bestSample = SampleResult({ color: d.vec4f(), coord: d.vec2f(-1) });
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
       const sample = sampleWithOffset(
         pingPongLayout.$.readView,
         d.vec2i(x, y),
         d.vec2i(dx * offset, dy * offset),
       );
 
-      if (sample.coord.x < 0) {
-        continue;
-      }
-
-      const dist = std.distance(d.vec2f(x, y), sample.coord.mul(d.vec2f(size)));
-      if (dist < minDist) {
-        minDist = dist;
-        bestSample = SampleResult(sample);
+      if (sample.coord.x >= 0) {
+        const dist = std.distance(
+          d.vec2f(x, y),
+          sample.coord.mul(d.vec2f(size)),
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          bestSample = SampleResult(sample);
+        }
       }
     }
   }

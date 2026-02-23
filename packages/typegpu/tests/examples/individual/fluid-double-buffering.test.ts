@@ -178,22 +178,69 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        for (var i = 0u; i < 4; i++) {
-          let offset = (&neighborOffsets[i]);
-          {
-            var neighborDensity = getCell((x + (*offset).x), (y + (*offset).y));
-            let cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
-            if (!isValidFlowOut((x + (*offset).x), (y + (*offset).y))) {
-              continue;
-            }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
             if ((cost == leastCost)) {
-              dirChoices[dirChoiceCount] = vec2f(f32((*offset).x), f32((*offset).y));
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
               dirChoiceCount++;
             }
             else {
               if ((cost < leastCost)) {
                 leastCost = cost;
-                dirChoices[0i] = vec2f(f32((*offset).x), f32((*offset).y));
+                dirChoices[0i] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
                 dirChoiceCount = 1i;
               }
             }
@@ -358,22 +405,69 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        for (var i = 0u; i < 4; i++) {
-          let offset = (&neighborOffsets[i]);
-          {
-            var neighborDensity = getCell((x + (*offset).x), (y + (*offset).y));
-            let cost = (neighborDensity.z + (f32((*offset).y) * gravityCost));
-            if (!isValidFlowOut((x + (*offset).x), (y + (*offset).y))) {
-              continue;
-            }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
             if ((cost == leastCost)) {
-              dirChoices[dirChoiceCount] = vec2f(f32((*offset).x), f32((*offset).y));
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
               dirChoiceCount++;
             }
             else {
               if ((cost < leastCost)) {
                 leastCost = cost;
-                dirChoices[0i] = vec2f(f32((*offset).x), f32((*offset).y));
+                dirChoices[0i] = vec2f(f32(neighborOffsets[0u].x), f32(neighborOffsets[0u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[1u].x), f32(neighborOffsets[1u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[2u].x), f32(neighborOffsets[2u].y));
+                dirChoiceCount = 1i;
+              }
+            }
+          }
+        }
+        {
+          var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
+          if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
+            if ((cost == leastCost)) {
+              dirChoices[dirChoiceCount] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
+              dirChoiceCount++;
+            }
+            else {
+              if ((cost < leastCost)) {
+                leastCost = cost;
+                dirChoices[0i] = vec2f(f32(neighborOffsets[3u].x), f32(neighborOffsets[3u].y));
                 dirChoiceCount = 1i;
               }
             }
