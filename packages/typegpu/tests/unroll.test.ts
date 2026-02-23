@@ -137,9 +137,10 @@ describe('tgpu.unroll', () => {
       const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
       const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
       let res = d.vec2f();
-      for (const foo of tgpu.unroll([Boid(b1), Boid(b2)])) {
+      for (const foo of tgpu.unroll([b1, b2])) {
         for (const boo of tgpu.unroll([Boid(), Boid()])) {
-          res = res.add(foo.vel).add(boo.vel);
+          const baz = foo;
+          res = res.add(baz.vel).add(boo.vel);
         }
       }
 
@@ -158,18 +159,22 @@ describe('tgpu.unroll', () => {
         var res = vec2f();
         {
           {
-            res = ((res + b1.vel) + Boid().vel);
+            let baz = (&b1);
+            res = ((res + (*baz).vel) + Boid().vel);
           }
           {
-            res = ((res + b1.vel) + Boid().vel);
+            let baz = (&b1);
+            res = ((res + (*baz).vel) + Boid().vel);
           }
         }
         {
           {
-            res = ((res + b2.vel) + Boid().vel);
+            let baz = (&b2);
+            res = ((res + (*baz).vel) + Boid().vel);
           }
           {
-            res = ((res + b2.vel) + Boid().vel);
+            let baz = (&b2);
+            res = ((res + (*baz).vel) + Boid().vel);
           }
         }
         return res;
@@ -242,7 +247,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls array expression of  struct field names - (complex)', () => {
+  it('unrolls array expression of struct field names - (complex)', () => {
     const variants = {
       foo: (x: number) => {
         'use gpu';
@@ -300,29 +305,38 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('throws when iterable is array expression of pointers', () => {
+  it('unrolls array expression of pointers', () => {
     const f = () => {
       'use gpu';
       let res = d.vec2f();
       const v1 = d.vec2f(7);
       const v2 = d.vec2f(3);
       for (const foo of tgpu.unroll([v1, v2])) {
+        const boo = foo;
         res = res.add(foo);
-        foo.x = 6;
+        boo.x = 6;
       }
 
       return res;
     };
 
-    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:f
-      - fn*:f()
-      - ArrayExpression: 'v1' reference cannot be used in an array constructor.
-      -----
-      Try 'vec2f(v1)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
-      -----]
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> vec2f {
+        var res = vec2f();
+        var v1 = vec2f(7);
+        var v2 = vec2f(3);
+        {
+          let boo = (&v1);
+          res = (res + v1);
+          (*boo).x = 6f;
+        }
+        {
+          let boo = (&v2);
+          res = (res + v2);
+          (*boo).x = 6f;
+        }
+        return res;
+      }"
     `);
   });
 
@@ -387,7 +401,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('warns when iterable element count is unknown at compile-time and fallbacks to regular loop', ({ root }) => {
+  it('throws when iterable element count is unknown at compile-time', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });

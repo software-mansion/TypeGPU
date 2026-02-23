@@ -1226,11 +1226,6 @@ ${this.ctx.pre}else ${alternate}`;
           if (ephemeralIterable) {
             const { value, dataType } = iterableSnippet;
 
-            // when `iterableSnippet.value` is ArrayExpression, we need to resolve it to ensure the array being created is valid
-            if (value instanceof ArrayExpression) {
-              this.ctx.resolve(value);
-            }
-
             const elements = value instanceof ArrayExpression
               ? value.elements // already snippets
               : wgsl.isVec(dataType)
