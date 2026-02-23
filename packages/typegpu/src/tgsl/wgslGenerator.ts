@@ -1194,8 +1194,8 @@ ${this.ctx.pre}else ${alternate}`;
 
       let ctxIndent = false;
 
-      this.ctx.pushBlockScope();
       try {
+        this.ctx.pushBlockScope();
         const iterableExpr = this.expression(iterable);
         let shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll
@@ -1241,46 +1241,27 @@ ${this.ctx.pre}else ${alternate}`;
               ? value // type inferred later
               : []; // error already thrown by `getElementCountSnippet`
 
+            const blocks = elements
+              .map((e) =>
+                `${this.ctx.pre}${
+                  this.block(blockified, { [originalLoopVarName]: e })
+                }`
+              );
+
             // TODO: replace it with tinyest traversal
-            const bodyTemplate = this.block(blockified, {
-              [originalLoopVarName]: elements[0],
-            });
             if (
-              bodyTemplate.includes('break') ||
-              bodyTemplate.includes('continue')
+              blocks[0]?.includes('break') || blocks[0]?.includes('continue')
             ) {
               throw new WgslTypeError(
                 'Cannot unroll loop containing `break` or `continue`',
               );
             }
 
-            return elements
-              .map((e) =>
-                `${this.ctx.pre}${
-                  this.block(blockified, { [originalLoopVarName]: e })
-                }`
-              )
-              .join('\n');
-          }
-
-          // TODO: replace it with tinyest traversal
-          const bodyTemplate = this.block(blockified, {
-            [originalLoopVarName]: forOfUtils.getElementSnippet(
-              iterableSnippet,
-              '0u',
-            ),
-          });
-          if (
-            bodyTemplate.includes('break') ||
-            bodyTemplate.includes('continue')
-          ) {
-            throw new WgslTypeError(
-              'Cannot unroll loop containing `break` or `continue`',
-            );
+            return blocks.join('\n');
           }
 
           // iterable stored in a variable, we still can unroll it
-          return Array.from({ length }, (_, i) => {
+          const blocks = Array.from({ length }, (_, i) => {
             const elementSnippet = forOfUtils.getElementSnippet(
               iterableSnippet,
               `${i}u`,
@@ -1290,7 +1271,18 @@ ${this.ctx.pre}else ${alternate}`;
                 [originalLoopVarName]: elementSnippet,
               })
             }`;
-          }).join('\n');
+          });
+
+          // TODO: replace it with tinyest traversal
+          if (
+            blocks[0]?.includes('break') || blocks[0]?.includes('continue')
+          ) {
+            throw new WgslTypeError(
+              'Cannot unroll loop containing `break` or `continue`',
+            );
+          }
+
+          return blocks.join('\n');
         }
 
         if (!ephemeralIterable) {
