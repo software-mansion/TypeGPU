@@ -98,11 +98,7 @@ function createGame() {
     computeFn.with(bindGroups[swap]).dispatchThreads(size.x, size.y);
 
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .with(cellsVertexLayout, buffers[1 - swap])
       .with(squareVertexLayout, squareBuffer)
       .draw(4, length);

@@ -37,24 +37,17 @@ const mainFragment = tgpu.fragmentFn({
 
 const root = await tgpu.init();
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: mainFragment,
-  targets: { format: presentationFormat },
 });
 
 setTimeout(() => {
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }, 100);
 
