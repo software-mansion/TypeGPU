@@ -140,7 +140,7 @@ function wrapInAutoName(
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
-  let useGpuDepth = 0;
+  let inUseGpuScope = false;
 
   return {
     VariableDeclarator(path) {
@@ -150,7 +150,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     AssignmentExpression(path) {
-      if (useGpuDepth > 0) {
+      if (inUseGpuScope) {
         const runtimeFn =
           operators[path.node.operator as keyof typeof operators];
 
@@ -191,7 +191,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
     BinaryExpression: {
       exit(path) {
-        if (useGpuDepth <= 0) {
+        if (!inUseGpuScope) {
           return;
         }
 
@@ -213,13 +213,16 @@ function functionVisitor(ctx: Context): TraverseOptions {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          useGpuDepth++;
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
         }
       },
       exit(path) {
         const node = path.node;
         if (containsUseGpuDirective(node)) {
-          useGpuDepth--;
+          inUseGpuScope = false;
           const parent = path.parentPath.node;
           path.replaceWith(functionToTranspiled(node, parent));
           path.skip();
@@ -231,13 +234,16 @@ function functionVisitor(ctx: Context): TraverseOptions {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          useGpuDepth++;
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
         }
       },
       exit(path) {
         const node = path.node;
         if (containsUseGpuDirective(node)) {
-          useGpuDepth--;
+          inUseGpuScope = false;
           const parent = path.parentPath.node;
           path.replaceWith(functionToTranspiled(node, parent));
           path.skip();
@@ -249,14 +255,17 @@ function functionVisitor(ctx: Context): TraverseOptions {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          useGpuDepth++;
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
         }
       },
       exit(path) {
         const node = (fnNodeToOriginalMap.get(path.node) ??
           path.node) as babel.FunctionDeclaration;
         if (containsUseGpuDirective(node)) {
-          useGpuDepth--;
+          inUseGpuScope = false;
 
           if (!node.id) {
             return;

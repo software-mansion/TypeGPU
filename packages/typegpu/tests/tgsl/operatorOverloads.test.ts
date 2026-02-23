@@ -1,4 +1,4 @@
-import { expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { d, tgpu } from '../../src/index.ts';
 import { test } from '../utils/extendedIt.ts';
 
@@ -109,4 +109,74 @@ test('vec3f() %', () => {
   expect(String(main())).toMatchInlineSnapshot(
     `"vec3f(1, 2, 1)"`,
   );
+});
+
+describe('num op', () => {
+  test('num +', () => {
+    const main = () => {
+      'use gpu';
+      const result = 1 + d.vec3f(1, 2, 3) /* comptime */;
+      return result;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec3f {
+        var result = vec3f(2, 3, 4);
+        return result;
+      }"
+    `);
+
+    expect(String(main())).toMatchInlineSnapshot(`"vec3f(2, 3, 4)"`);
+  });
+
+  test('num -', () => {
+    const main = () => {
+      'use gpu';
+      const result = 1 - d.vec3f(1, 2, 3) /* comptime */;
+      return result;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec3f {
+        var result = vec3f(0, -1, -2);
+        return result;
+      }"
+    `);
+
+    expect(String(main())).toMatchInlineSnapshot(`"vec3f(0, -1, -2)"`);
+  });
+
+  test('num *', () => {
+    const main = () => {
+      'use gpu';
+      const result = 2 * d.vec3f(1, 2, 3) /* comptime */;
+      return result;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec3f {
+        var result = vec3f(2, 4, 6);
+        return result;
+      }"
+    `);
+
+    expect(String(main())).toMatchInlineSnapshot(`"vec3f(2, 4, 6)"`);
+  });
+
+  test('num /', () => {
+    const main = () => {
+      'use gpu';
+      const result = 6 / d.vec3f(2, 3, 6) /* comptime */;
+      return result;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec3f {
+        var result = vec3f(3, 2, 1);
+        return result;
+      }"
+    `);
+
+    expect(String(main())).toMatchInlineSnapshot(`"vec3f(3, 2, 1)"`);
+  });
 });
