@@ -101,6 +101,12 @@ let cubeBuffer = root
 let cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 let renderBundle: GPURenderBundle;
 
+let prepared = pipeline
+  .with(cameraBindGroup)
+  .with(cubeBindGroup)
+  .with(terrainBindGroup)
+  .with(vertexLayout, vertexBuffer);
+
 function generateCubes(count: number) {
   cubeData = [];
 
@@ -128,17 +134,10 @@ function buildBundle(): GPURenderBundle {
     depthStencilFormat: 'depth24plus',
   });
 
-  const prepared = pipeline
-    .with(cameraBindGroup)
-    .with(cubeBindGroup)
-    .with(terrainBindGroup)
-    .with(vertexLayout, vertexBuffer)
-    .with(bundleEncoder);
-
+  const withEncoder = prepared.with(bundleEncoder);
   for (let i = 0; i < cubeCount; i++) {
-    prepared.draw(VERTS_PER_CUBE, 1, 0, i);
+    withEncoder.draw(VERTS_PER_CUBE, 1, 0, i);
   }
-
   return bundleEncoder.finish();
 }
 
@@ -150,9 +149,14 @@ function setCubeCount(count: number) {
   cubeBuffer = root
     .createBuffer(d.arrayOf(Cube, count), cubeData)
     .$usage('storage');
-
   cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 
+  // Rebuild the prepared pipeline since cubeBindGroup changed.
+  prepared = pipeline
+    .with(cameraBindGroup)
+    .with(cubeBindGroup)
+    .with(terrainBindGroup)
+    .with(vertexLayout, vertexBuffer);
   renderBundle = buildBundle();
 }
 
@@ -199,15 +203,9 @@ function frame() {
   if (useBundles) {
     pass.executeBundles([renderBundle]);
   } else {
-    const prepared = pipeline
-      .with(cameraBindGroup)
-      .with(cubeBindGroup)
-      .with(terrainBindGroup)
-      .with(vertexLayout, vertexBuffer)
-      .with(pass);
-
+    const withPass = prepared.with(pass);
     for (let i = 0; i < cubeCount; i++) {
-      prepared.draw(VERTS_PER_CUBE, 1, 0, i);
+      withPass.draw(VERTS_PER_CUBE, 1, 0, i);
     }
   }
 
