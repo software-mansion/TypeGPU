@@ -397,7 +397,7 @@ export const fromTSL = tgpu.comptime(
     let nodeType: string | null = null;
     try { // sometimes it needs information (overrideNodes) from compilation context which is not present
       nodeType = node.getNodeType(sharedBuilder);
-    } catch (e) {
+    } catch {
       console.warn(
         `fromTSL: failed to infer node type via getNodeType; skipping type comparison.`,
       );
