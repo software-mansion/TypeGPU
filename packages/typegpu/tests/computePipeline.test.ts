@@ -9,6 +9,7 @@ import {
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
+import { getOffsetInfoAt } from '../src/data/offsetUtils.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -612,5 +613,83 @@ describe('TgpuComputePipeline', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
     );
+  });
+
+  describe('dispatchWorkgroupsIndirect', () => {
+    // offset calculator for this struct: https://shorturl.at/NQggS
+    const DeepStruct = d.struct({
+      someData: d.arrayOf(d.f32, 13),
+      nested: d.struct({
+        randomData: d.f32,
+        x: d.atomic(d.u32),
+        y: d.u32,
+        innerNested: d.arrayOf(
+          d.struct({
+            xx: d.atomic(d.u32),
+            yy: d.u32,
+            zz: d.u32,
+            myVec: d.vec4u,
+          }),
+          3,
+        ),
+        z: d.u32,
+        additionalData: d.arrayOf(d.u32, 32),
+      }),
+    });
+
+    it('warns when dispatch would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      const PaddedStruct = d.struct({ a: d.u32, b: d.vec3u });
+      const buffer = root.createBuffer(PaddedStruct).$usage('indirect');
+
+      pipeline.dispatchWorkgroupsIndirect(
+        buffer,
+        getOffsetInfoAt(PaddedStruct, (s) => s.a),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        getOffsetInfoAt(DeepStruct, (s) => s.someData[11] as number),
+      );
+
+      expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        getOffsetInfoAt(
+          DeepStruct,
+          (s) => s.nested.innerNested[0]?.yy as number,
+        ),
+      );
+
+      expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu
+        .computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      // vec3u has exactly 12 contiguous bytes - no warning needed
+      const buffer = root.createBuffer(d.vec3u).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });

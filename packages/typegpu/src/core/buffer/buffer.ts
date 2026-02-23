@@ -56,17 +56,24 @@ export interface IndexFlag {
   usableAsIndex: true;
 }
 
+export interface IndirectFlag {
+  usableAsIndirect: true;
+}
+
 /**
  * @deprecated Use VertexFlag instead.
  */
 export type Vertex = VertexFlag;
 
-type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex' | 'index'> =
-  T extends 'uniform' ? UniformFlag
-    : T extends 'storage' ? StorageFlag
-    : T extends 'vertex' ? VertexFlag
-    : T extends 'index' ? IndexFlag
-    : never;
+type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
+
+type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
+  ? UniformFlag
+  : T extends 'storage' ? StorageFlag
+  : T extends 'vertex' ? VertexFlag
+  : T extends 'index' ? IndexFlag
+  : T extends 'indirect' ? IndirectFlag
+  : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
@@ -89,7 +96,9 @@ type InnerValidUsagesFor<T> = {
     | (IsValidStorageSchema<T> extends true ? 'storage' : never)
     | (IsValidUniformSchema<T> extends true ? 'uniform' : never)
     | (IsValidVertexSchema<T> extends true ? 'vertex' : never)
-    | (IsValidIndexSchema<T> extends true ? 'index' : never);
+    | (IsValidIndexSchema<T> extends true ? 'index' : never)
+    // there is no way to check at the type level if a buffer can be used as indirect (size >= 12 bytes)
+    | 'indirect';
 };
 
 export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];
@@ -107,6 +116,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   usableAsStorage: boolean;
   usableAsVertex: boolean;
   usableAsIndex: boolean;
+  usableAsIndirect: boolean;
 
   $usage<
     T extends [
@@ -184,13 +194,13 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   usableAsStorage = false;
   usableAsVertex = false;
   usableAsIndex = false;
+  usableAsIndirect = false;
 
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
     public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
-    private readonly _disallowedUsages?:
-      ('uniform' | 'storage' | 'vertex' | 'index')[],
+    private readonly _disallowedUsages?: UsageLiteral[],
   ) {
     this.#device = root.device;
     if (isGPUBuffer(initialOrBuffer)) {
@@ -236,7 +246,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex' | 'index')[]>(
+  $usage<T extends UsageLiteral[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
@@ -250,10 +260,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       this.flags |= usage === 'storage' ? GPUBufferUsage.STORAGE : 0;
       this.flags |= usage === 'vertex' ? GPUBufferUsage.VERTEX : 0;
       this.flags |= usage === 'index' ? GPUBufferUsage.INDEX : 0;
+      this.flags |= usage === 'indirect' ? GPUBufferUsage.INDIRECT : 0;
       this.usableAsUniform = this.usableAsUniform || usage === 'uniform';
       this.usableAsStorage = this.usableAsStorage || usage === 'storage';
       this.usableAsVertex = this.usableAsVertex || usage === 'vertex';
       this.usableAsIndex = this.usableAsIndex || usage === 'index';
+      this.usableAsIndirect = this.usableAsIndirect || usage === 'indirect';
     }
     return this as this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   }
