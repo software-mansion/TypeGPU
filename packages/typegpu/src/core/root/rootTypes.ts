@@ -860,7 +860,7 @@ export interface RenderPass extends RenderBundleEncoderPass {
    * @param indirectBuffer - Buffer containing the indirect draw parameters.
    * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
    */
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): undefined;
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
   /**
    * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
    * Tightly packed block of **five 32-bit unsigned integer values (20 bytes total)**, given in
@@ -871,7 +871,7 @@ export interface RenderPass extends RenderBundleEncoderPass {
   drawIndexedIndirect(
     indirectBuffer: GPUBuffer,
     indirectOffset: GPUSize64,
-  ): undefined;
+  ): void;
 }
 
 export type ValidateBufferSchema<TData extends BaseData> =

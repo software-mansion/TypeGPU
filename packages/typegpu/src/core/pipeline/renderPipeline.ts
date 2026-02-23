@@ -687,6 +687,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
     const { root, descriptor } = internals.core.options;
 
+    const memo = internals.core.unwrap();
     const colorAttachments = descriptor.fragment
       ? (connectAttachmentToShader(
         (descriptor.fragment as TgpuFragmentFn)?.shell?.returnType ??
