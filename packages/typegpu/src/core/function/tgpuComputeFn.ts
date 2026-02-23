@@ -124,7 +124,7 @@ export function computeFn<
 }
 
 export function isTgpuComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
-  value: unknown | TgpuComputeFn<ComputeIn>,
+  value: unknown,
 ): value is TgpuComputeFn<ComputeIn> {
   return (value as TgpuComputeFn<ComputeIn>)?.shell?.entryPoint === 'compute';
 }

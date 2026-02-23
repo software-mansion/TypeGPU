@@ -60,7 +60,7 @@ const computeInit = t3.toTSL(() => {
   color.y = randf.sample();
   colors.$[instanceIdx] = d.vec3f(color);
 }).compute(particleCount).setName('Init Particles TypeGPU');
-renderer.compute(computeInit);
+void renderer.compute(computeInit);
 
 const computeAccessor = t3.toTSL(() => {
   'use gpu';
@@ -154,7 +154,7 @@ function onMove(event: PointerEvent) {
     clickPosition.node.value.copy(point);
     clickPosition.node.value.y = -1;
 
-    renderer.compute(computeHit);
+    void renderer.compute(computeHit);
   }
 }
 
@@ -189,11 +189,11 @@ resizeObserver.observe(canvas);
 const animate = () => {
   cameraControls.update();
 
-  renderer.compute(computeAccessor);
+  void renderer.compute(computeAccessor);
   renderer.render(scene, camera);
 };
 
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
 export const controls = defineControls({

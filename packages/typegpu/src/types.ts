@@ -139,7 +139,7 @@ export interface ItemStateStack {
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -282,10 +282,10 @@ export interface ResolutionCtx {
     binding: number;
   };
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
 
   pushMode(state: ExecState): void;
-  popMode(expected?: ExecMode | undefined): void;
+  popMode(expected?: ExecMode): void;
 
   /**
    * Unwraps all layers of slot/lazy indirection and returns the concrete value if available.
@@ -303,8 +303,8 @@ export interface ResolutionCtx {
    */
   resolve(
     item: unknown,
-    schema?: BaseData | UnknownData | undefined,
-    exact?: boolean | undefined,
+    schema?: BaseData | UnknownData,
+    exact?: boolean,
   ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
@@ -375,7 +375,7 @@ export function isGPUCallable(value: unknown): value is GPUCallable {
 }
 
 export type WithCast<T = BaseData> = GPUCallable<[v?: Infer<T>]> & {
-  readonly [$cast]: (v?: Infer<T> | undefined) => Infer<T>;
+  readonly [$cast]: (v?: Infer<T>) => Infer<T>;
 };
 
 export function hasCast(value: unknown): value is WithCast {
@@ -416,11 +416,12 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
   );
 }
 
-export function isBufferUsage<
-  T extends
+export function isBufferUsage(value: unknown): value is
+  | TgpuBufferUniform<BaseData>
+  | TgpuBufferReadonly<BaseData>
+  | TgpuBufferMutable<BaseData> {
+  return (value as
     | TgpuBufferUniform<BaseData>
     | TgpuBufferReadonly<BaseData>
-    | TgpuBufferMutable<BaseData>,
->(value: T | unknown): value is T {
-  return (value as T)?.resourceType === 'buffer-usage';
+    | TgpuBufferMutable<BaseData>)?.resourceType === 'buffer-usage';
 }

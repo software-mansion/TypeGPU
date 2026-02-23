@@ -13,7 +13,7 @@ export const extensionEnabled = comptime(
 
     if (
       typeof extensionName !== 'string' ||
-      !(wgslExtensions.includes(extensionName as WgslExtension))
+      !(wgslExtensions.includes(extensionName))
     ) {
       throw new Error(
         `extensionEnabled has to be called with a string literal representing a valid WGSL extension name. Got: '${extensionName}'`,

@@ -20,7 +20,7 @@ import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
 export interface FnCore {
-  applyExternals(newExternals: ExternalMap): void;
+  applyExternals: (newExternals: ExternalMap) => void;
   resolve(
     ctx: ResolutionCtx,
     /**

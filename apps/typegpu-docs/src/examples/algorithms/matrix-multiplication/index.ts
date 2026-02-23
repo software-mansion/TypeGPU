@@ -120,7 +120,7 @@ async function run() {
   printMatrixToHtml(resultTable, multiplicationResult);
 }
 
-run();
+void run();
 
 // #region UI
 
@@ -152,7 +152,7 @@ const paramSettings = {
 export const controls = defineControls({
   Reshuffle: {
     onButtonClick: () => {
-      run();
+      void run();
     },
   },
 
@@ -161,7 +161,7 @@ export const controls = defineControls({
     ...paramSettings,
     onSliderChange: (value) => {
       firstRowCount = value;
-      run();
+      void run();
     },
   },
 
@@ -170,7 +170,7 @@ export const controls = defineControls({
     ...paramSettings,
     onSliderChange: (value) => {
       firstColumnCount = value;
-      run();
+      void run();
     },
   },
 
@@ -179,7 +179,7 @@ export const controls = defineControls({
     ...paramSettings,
     onSliderChange: (value) => {
       secondColumnCount = value;
-      run();
+      void run();
     },
   },
 });

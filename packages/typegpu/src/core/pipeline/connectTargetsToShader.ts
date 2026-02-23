@@ -5,7 +5,7 @@ import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { AnyFragmentTargets } from './renderPipeline.ts';
 
 function isColorTargetState(
-  value: unknown | GPUColorTargetState,
+  value: unknown,
 ): value is GPUColorTargetState {
   return typeof (value as GPUColorTargetState)?.format === 'string';
 }
