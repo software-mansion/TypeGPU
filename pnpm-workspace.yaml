@@ -1,6 +1,6 @@
 packages:
-  - "packages/*"
-  - "apps/*"
+  - 'packages/*'
+  - 'apps/*'
 
 catalog:
   arktype: ^2.1.22
@@ -12,13 +12,13 @@ catalogs:
     jiti: ^2.6.0
   types:
     typescript: npm:tsover@^5.9.10
-    "@webgpu/types": ^0.1.66
-    "@types/three": "^0.181.0"
+    '@webgpu/types': ^0.1.66
+    '@types/three': '^0.181.0'
   test:
     vitest: ^3.2.4
   frontend:
-    "vite-imagetools": ^9.0.0
-    "fuse.js": ^7.1.0
+    'vite-imagetools': ^9.0.0
+    'fuse.js': ^7.1.0
   example:
-    "wgpu-matrix": ^3.4.0
+    'wgpu-matrix': ^3.4.0
     three: ^0.181.0
