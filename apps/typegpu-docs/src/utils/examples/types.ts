@@ -26,6 +26,11 @@ export type ExampleSrcFile = {
    */
   path: string;
   content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
 };
 
 export type ExampleCommonFile = {
@@ -35,6 +40,11 @@ export type ExampleCommonFile = {
    */
   path: string;
   content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
 };
 
 export interface ThumbnailPair {

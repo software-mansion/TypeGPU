@@ -83,7 +83,7 @@ export function createPostProcessingPipelines(
 
     for (let ox = -1; ox <= 1; ox++) {
       for (let oy = -1; oy <= 1; oy++) {
-        const sampleCoord = coord.add(d.vec2i(ox, oy));
+        const sampleCoord = coord + d.vec2i(ox, oy);
         const clampedCoord = std.clamp(
           sampleCoord,
           d.vec2i(0, 0),
@@ -109,45 +109,41 @@ export function createPostProcessingPipelines(
     );
   });
 
-  const copyToHistory = root.createGuardedComputePipeline(
-    (x, y) => {
-      'use gpu';
-      const color = std.textureLoad(
-        processLayout.$.inputTexture,
-        d.vec2i(d.i32(x), d.i32(y)),
-        0,
-      );
-      std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), color);
-    },
-  );
+  const copyToHistory = root.createGuardedComputePipeline((x, y) => {
+    'use gpu';
+    const color = std.textureLoad(
+      processLayout.$.inputTexture,
+      d.vec2i(d.i32(x), d.i32(y)),
+      0,
+    );
+    std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), color);
+  });
 
   const extractBright = root
     .with(bloomParamsAccess, bloomUniform)
-    .createGuardedComputePipeline(
-      (x, y) => {
-        'use gpu';
-        const dimensions = std.textureDimensions(
-          processLayout.$.outputTexture,
-        );
-        const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
-        const color = std.textureSampleLevel(
-          processLayout.$.inputTexture,
-          processLayout.$.sampler,
-          uv,
-          0,
-        );
-        const brightness = std.dot(color.rgb, d.vec3f(0.2126, 0.7152, 0.0722));
-        const threshold = bloomParamsAccess.$.threshold;
-        const bright = std.max(brightness - threshold, 0) /
-          std.max(brightness, 1e-4);
-        const bloomColor = color.rgb.mul(bright);
-        std.textureStore(
-          processLayout.$.outputTexture,
-          d.vec2u(x, y),
-          d.vec4f(bloomColor, 1),
-        );
-      },
-    );
+    .createGuardedComputePipeline((x, y) => {
+      'use gpu';
+      const dimensions = std.textureDimensions(
+        processLayout.$.outputTexture,
+      );
+      const uv = (d.vec2f(x, y) + 0.5) / (d.vec2f(dimensions));
+      const color = std.textureSampleLevel(
+        processLayout.$.inputTexture,
+        processLayout.$.sampler,
+        uv,
+        0,
+      );
+      const brightness = std.dot(color.rgb, d.vec3f(0.2126, 0.7152, 0.0722));
+      const threshold = bloomParamsAccess.$.threshold;
+      const bright = std.max(brightness - threshold, 0) /
+        std.max(brightness, 1e-4);
+      const bloomColor = color.rgb * bright;
+      std.textureStore(
+        processLayout.$.outputTexture,
+        d.vec2u(x, y),
+        d.vec4f(bloomColor, 1),
+      );
+    });
 
   const blurHorizontal = createBlurPass(root, 'horizontal');
 
@@ -157,6 +153,7 @@ export function createPostProcessingPipelines(
     in: { uv: d.vec2f },
     out: d.vec4f,
   })(({ uv }) => {
+    'use gpu';
     const color = std.textureSample(
       compositeLayout.$.colorTexture,
       compositeLayout.$.sampler,
@@ -168,13 +165,11 @@ export function createPostProcessingPipelines(
       uv,
     );
 
-    let final = color.rgb.add(
-      bloomColor.rgb.mul(bloomParamsAccess.$.intensity),
-    );
+    let final = color.rgb + bloomColor.rgb * bloomParamsAccess.$.intensity;
 
-    const centeredUV = uv.sub(0.5).mul(2);
+    const centeredUV = (uv - 0.5) * 2;
     const vignette = 1 - std.dot(centeredUV, centeredUV) * 0.15;
-    final = final.mul(vignette);
+    final *= vignette;
 
     return d.vec4f(final, 1);
   });
@@ -256,8 +251,8 @@ function createBlurPass(
   return root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const dimensions = std.textureDimensions(processLayout.$.inputTexture);
-    const texelSize = d.vec2f(1).div(d.vec2f(dimensions));
-    const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
+    const texelSize = 1 / d.vec2f(dimensions);
+    const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(dimensions);
 
     const offsetDir = direction === 'horizontal'
       ? d.vec2f(1, 0)
@@ -267,25 +262,21 @@ function createBlurPass(
     let totalWeight = d.f32(0);
 
     for (let i = -BLUR_RADIUS; i <= BLUR_RADIUS; i++) {
-      const offset = offsetDir.mul(d.f32(i)).mul(texelSize);
+      const offset = offsetDir * i * texelSize;
       const weight = std.exp(-d.f32(i * i) / (2 * BLUR_RADIUS));
-      result = result.add(
-        std
-          .textureSampleLevel(
-            processLayout.$.inputTexture,
-            processLayout.$.sampler,
-            uv.add(offset),
-            0,
-          )
-          .rgb.mul(weight),
-      );
+      result += std.textureSampleLevel(
+        processLayout.$.inputTexture,
+        processLayout.$.sampler,
+        uv + offset,
+        0,
+      ).rgb * weight;
       totalWeight += weight;
     }
 
     std.textureStore(
       processLayout.$.outputTexture,
       d.vec2u(x, y),
-      d.vec4f(result.div(totalWeight), 1),
+      d.vec4f(result / totalWeight, 1),
     );
   });
 }

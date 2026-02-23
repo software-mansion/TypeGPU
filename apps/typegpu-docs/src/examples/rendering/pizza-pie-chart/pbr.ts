@@ -1,16 +1,13 @@
 import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
-import { LIGHT_COUNT, PI } from './constants.ts';
+import { PI } from './constants.ts';
 
 import { Light, Material } from './types.ts';
 
-export const envMapLayout = tgpu.bindGroupLayout({
-  envMap: { texture: d.textureCube(d.f32) },
-  envSampler: { sampler: 'filtering' },
+export const SUN = tgpu.const(Light, {
+  color: d.vec3f(4),
+  position: d.vec3f(-3, 10, 0),
 });
-
-export const materialAccess = tgpu.accessor(Material);
-export const lightsAccess = tgpu.accessor(d.arrayOf(Light, LIGHT_COUNT));
 
 export const distributionGGX = (ndoth: number, roughness: number): number => {
   'use gpu';
@@ -42,7 +39,7 @@ export const fresnelSchlick = (cosTheta: number, f0: d.v3f): d.v3f => {
   return f0 + (1 - f0) * ((1 - cosTheta) ** 5);
 };
 
-export const evaluateLight = (
+export const evaluateDirectionalLight = (
   p: d.v3f,
   n: d.v3f,
   v: d.v3f,
@@ -51,11 +48,9 @@ export const evaluateLight = (
   f0: d.v3f,
 ): d.v3f => {
   'use gpu';
-  const toLight = light.position - p;
-  const dist = std.length(toLight);
-  const l = std.normalize(toLight);
+  const l = std.normalize(light.position - p);
   const h = std.normalize(v + l);
-  const radiance = light.color / (dist ** 2);
+  const radiance = light.color;
 
   const ndotl = std.max(std.dot(n, l), 0);
   const ndoth = std.max(std.dot(n, h), 0);
@@ -71,15 +66,19 @@ export const evaluateLight = (
   return (kd * material.albedo / PI + specular) * radiance * ndotl;
 };
 
-export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
+export const shade = (
+  p: d.v3f,
+  n: d.v3f,
+  v: d.v3f,
+  shadow: number,
+  material: d.Infer<typeof Material>,
+): d.v3f => {
   'use gpu';
-  const material = materialAccess.$;
   const f0 = std.mix(d.vec3f(0.04), material.albedo, material.metallic);
 
   let lo = d.vec3f(0);
-  for (let i = 0; i < LIGHT_COUNT; i++) {
-    lo += evaluateLight(p, n, v, lightsAccess.$[i], material, f0);
-  }
+  // TODO: Do not clone once passing constant references to functions is okay
+  lo += evaluateDirectionalLight(p, n, v, Light(SUN.$), material, f0);
 
   const reflectDir = std.reflect(v, n);
 
@@ -91,12 +90,9 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
   ) * material.roughness * 0.3;
   const blurredReflectDir = std.normalize(reflectDir + roughOffset);
 
-  const envColor = std.textureSampleLevel(
-    envMapLayout.$.envMap,
-    envMapLayout.$.envSampler,
-    blurredReflectDir,
-    material.roughness * 4,
-  );
+  // TODO: Add proper env color
+  // const envColor = d.vec4f(0, 0, 0, 1);
+  const envColor = d.vec4f(1, 1, 1, 1);
 
   const ndotv = std.max(std.dot(n, v), 0);
 
@@ -115,7 +111,7 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
     .mul(reflectionTint)
     .mul(reflectionStrength);
 
-  const ambient = material.albedo.mul(material.ao * 0.05);
-  const color = ambient.add(lo).add(envContribution);
-  return std.pow(color.div(color.add(1)), d.vec3f(1 / 2.2));
+  const ambient = material.albedo * material.ao * 0.05;
+  const color = ambient + (lo + envContribution) * shadow;
+  return std.pow(color / (color + 1), d.vec3f(1 / 2.2));
 };

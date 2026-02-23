@@ -138,7 +138,7 @@ describe('vaporrave example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -203,7 +203,7 @@ describe('vaporrave example', () => {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay(p);
           var sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
-          glow = ((sphereColorUniform * exp(-(sphereDist.dist))) + glow);
+          glow += (sphereColorUniform * exp(-(sphereDist.dist)));
           distOrigin += scene.dist;
           if ((distOrigin > 19f)) {
             result.dist = 19f;

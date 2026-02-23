@@ -190,7 +190,7 @@ describe('slime mold 3d example', () => {
           var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
           var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
           var sensorPos = (pos + (sensorDir * params.sensorDistance));
-          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
           let weight = textureLoad(oldState, sensorPosInt).x;
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
@@ -263,8 +263,8 @@ describe('slime mold 3d example', () => {
         var direction = normalize((*agent).direction);
         var senseResult = sense3D((*agent).position, direction);
         var targetDirection = select(randOnUnitHemisphere(direction), normalize(senseResult.weightedDir), (senseResult.totalWeight > 0.01f));
-        direction = normalize((direction + (targetDirection * (params.turnSpeed * params.deltaTime))));
-        var newPos = ((*agent).position + (direction * (params.moveSpeed * params.deltaTime)));
+        direction = normalize((direction + ((targetDirection * params.turnSpeed) * params.deltaTime)));
+        var newPos = ((*agent).position + ((direction * params.moveSpeed) * params.deltaTime));
         var center = (dimsf / 2f);
         if (((newPos.x < 0f) || (newPos.x >= dimsf.x))) {
           newPos.x = clamp(newPos.x, 0f, (dimsf.x - 1f));
@@ -343,7 +343,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn rayBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult {
-        var invDir = (vec3f(1) / rayDir);
+        var invDir = (1f / rayDir);
         var t0 = ((boxMin - rayOrigin) * invDir);
         var t1 = ((boxMax - rayOrigin) * invDir);
         var tmin = min(t0, t1);
@@ -418,7 +418,7 @@ describe('slime mold 3d example', () => {
           let density = pow(d0, gamma);
           let alphaSrc = (1f - exp(((-(sigmaT) * density) * stepSize)));
           var contrib = (albedo * alphaSrc);
-          accum = (accum + (contrib * transmittance));
+          accum += (contrib * transmittance);
           transmittance = (transmittance * (1f - alphaSrc));
           i += 1i;
         }
