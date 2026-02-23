@@ -52,7 +52,7 @@ import type { AnyFn } from '../core/function/fnTypes.ts';
 import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
-import type { ExternalMap } from '../../src/core/resolve/externals.ts';
+import type { ExternalMap } from '../core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
