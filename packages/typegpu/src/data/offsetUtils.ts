@@ -312,7 +312,7 @@ export interface PrimitiveOffsetInfo {
  *  position: d.vec3f,
  *  velocity: d.vec3f,
  * });
- * const offsetInfo = getOffsetInfoAt(Boid, (b) => b.velocity.y);
+ * const offsetInfo = d.getOffsetInfoAt(Boid, (b) => b.velocity.y);
  * console.log(offsetInfo.offset); // Byte offset of velocity.y within Boid (here 20 bytes)
  * console.log(offsetInfo.contiguous); // Contiguous bytes available from that offset (here 8 bytes)
  * ```

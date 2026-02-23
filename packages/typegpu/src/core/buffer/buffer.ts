@@ -199,14 +199,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-<<<<<<< feat/indirect
-    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
-    private readonly _disallowedUsages?: UsageLiteral[],
-=======
     public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
-    private readonly _disallowedUsages?:
-      ('uniform' | 'storage' | 'vertex' | 'index')[],
->>>>>>> main
+    private readonly _disallowedUsages?: UsageLiteral[],
   ) {
     this.#device = root.device;
     if (isGPUBuffer(initialOrBuffer)) {

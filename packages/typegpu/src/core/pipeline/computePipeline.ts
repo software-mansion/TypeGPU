@@ -77,7 +77,7 @@ export interface TgpuComputePipeline
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
-   * To get the correct offset within complex data structures, use `getOffsetInfoAt(...)`.
+   * To get the correct offset within complex data structures, use `d.getOffsetInfoAt(...)`.
    *
    * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
    * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `getOffsetInfoAt(...)`.
