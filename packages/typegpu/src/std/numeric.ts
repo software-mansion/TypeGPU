@@ -431,7 +431,7 @@ function cpuDistance<T extends AnyFloatVecInstance | number>(
   }
   return length(
     sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
-  ) as number;
+  );
 }
 
 export const distance = dualImpl({
@@ -702,7 +702,7 @@ export const insertBits = dualImpl<typeof cpuInsertBits>({
     }
     return {
       argTypes: [...uargs, u32, u32],
-      returnType: uargs[0] as BaseData,
+      returnType: uargs[0],
     };
   },
   normalImpl:
@@ -897,13 +897,13 @@ export const mix = dualImpl({
           (e1 as unknown as Vec2f).primitive,
         ]);
       }
-      return { argTypes: [e1, e2, uarg[0] as BaseData], returnType: e1 };
+      return { argTypes: [e1, e2, uarg[0]], returnType: e1 };
     }
     const uargs = unify([e1, e2, e3], anyFloat);
     if (!uargs) {
       throw new SignatureNotSupportedError([e1, e2, e3], anyFloat);
     }
-    return { argTypes: uargs, returnType: uargs[0] as BaseData };
+    return { argTypes: uargs, returnType: uargs[0] };
   },
   normalImpl: cpuMix,
   codegenImpl: (_ctx, [e1, e2, e3]) => stitch`mix(${e1}, ${e2}, ${e3})`,
@@ -1192,13 +1192,13 @@ function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
     return smoothstepScalar(
       edge0 as number,
       edge1 as number,
-      x as number,
+      x,
     ) as T;
   }
   return VectorOps.smoothstep[x.kind](
     edge0 as AnyFloatVecInstance,
     edge1 as AnyFloatVecInstance,
-    x as AnyFloatVecInstance,
+    x,
   ) as T;
 }
 

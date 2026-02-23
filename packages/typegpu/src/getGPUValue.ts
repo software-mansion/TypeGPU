@@ -3,6 +3,6 @@ import type { WithGPUValue } from './types.ts';
 
 export function getGPUValue(
   object: unknown,
-): WithGPUValue<unknown>[typeof $gpuValueOf] | undefined {
+): unknown {
   return (object as WithGPUValue<unknown>)?.[$gpuValueOf];
 }
