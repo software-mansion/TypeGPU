@@ -53,7 +53,7 @@ const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
 ]);
 
 const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(32, 32, 32) });
-const pipeline = root['~unstable']
+const pipeline = root
   .pipe(perlinCache.inject())
   .createRenderPipeline({
     vertex: ({ $vertexIndex }) => {

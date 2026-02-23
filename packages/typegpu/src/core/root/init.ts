@@ -355,7 +355,7 @@ class WithVertexImpl implements WithVertex {
       | 'n/a',
     targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
     invariant(
       targets === undefined || typeof targets !== 'string',
@@ -371,7 +371,7 @@ class WithVertexImpl implements WithVertex {
 
   withPrimitive(
     primitive: TgpuPrimitiveState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       primitive,
@@ -380,7 +380,7 @@ class WithVertexImpl implements WithVertex {
 
   withDepthStencil(
     depthStencil: GPUDepthStencilState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       depthStencil,
@@ -389,7 +389,7 @@ class WithVertexImpl implements WithVertex {
 
   withMultisample(
     multisample: GPUMultisampleState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       multisample,
@@ -460,7 +460,7 @@ class WithFragmentImpl implements WithFragment {
  */
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
-  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+  '~unstable': TgpuRoot['~unstable'];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),

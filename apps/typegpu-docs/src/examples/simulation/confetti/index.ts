@@ -87,7 +87,7 @@ const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   return pos;
 });
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: {
     tilt: d.f32,
     angle: d.f32,
@@ -119,12 +119,12 @@ const mainVert = tgpu['~unstable'].vertexFn({
   aspectRatio,
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 }) /* wgsl */`{ return in.color; }`;
 
-const mainCompute = tgpu['~unstable'].computeFn({
+const mainCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 }) /* wgsl */`{
@@ -142,7 +142,7 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
 // pipelines
 
-const renderPipeline = root['~unstable']
+const renderPipeline = root
   .createRenderPipeline({
     vertex: mainVert,
     fragment: mainFrag,
@@ -161,9 +161,7 @@ const renderPipeline = root['~unstable']
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root['~unstable'].createComputePipeline({
-  compute: mainCompute,
-});
+const computePipeline = root.createComputePipeline({ compute: mainCompute });
 
 // compute and draw
 

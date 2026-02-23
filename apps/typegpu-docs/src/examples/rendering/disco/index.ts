@@ -35,7 +35,7 @@ const fragmentShaders = [
 ];
 
 const pipelines = fragmentShaders.map((fragment) =>
-  root['~unstable']
+  root
     .with(timeAccess, time)
     .with(resolutionAccess, resolutionUniform)
     .createRenderPipeline({

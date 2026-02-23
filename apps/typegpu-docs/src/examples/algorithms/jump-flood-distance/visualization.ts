@@ -17,7 +17,7 @@ const insideGradient = tgpu.const(d.arrayOf(d.vec3f, 5), [
   d.vec3f(0.9, 1.0, 0.95),
 ]);
 
-export const distanceFrag = tgpu['~unstable'].fragmentFn({
+export const distanceFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {

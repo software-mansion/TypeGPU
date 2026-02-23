@@ -339,8 +339,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // oxlint-disable-next-line typescript/no-explicit-any explained above
-  (VecImpl.prototype as any).schema = schema;
+  VecImpl.prototype.schema = schema;
 
   return schema;
 }

@@ -91,7 +91,7 @@ const rayMarch = tgpu.fn(
   return { ray: result, glow };
 });
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -104,7 +104,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -138,7 +138,7 @@ const perlinCache = perlin3d.staticCache({
   size: d.vec3u(7),
 });
 
-let renderPipeline = root['~unstable']
+let renderPipeline = root
   .with(floorPatternSlot, circles)
   .pipe(perlinCache.inject())
   .createRenderPipeline({
@@ -223,7 +223,7 @@ export const controls = defineControls({
     initial: 'circles',
     options: ['grid', 'circles'],
     onSelectChange: (value) => {
-      renderPipeline = root['~unstable']
+      renderPipeline = root
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
         .pipe(perlinCache.inject())
         .createRenderPipeline({

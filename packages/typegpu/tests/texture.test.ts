@@ -746,13 +746,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
   });
 
   describe('Attachment usage', () => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
+    const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position, uv: d.vec2f },
     })(() => {
       return { pos: d.vec4f(0, 0, 0, 1), uv: d.vec2f() };
     });
 
-    const fragmentFn = tgpu['~unstable'].fragmentFn({
+    const fragmentFn = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.vec4f,
     })(({ uv }) => {
@@ -760,7 +760,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
 
     const createRenderPipeline = (root: ExperimentalTgpuRoot) =>
-      root['~unstable']
+      root
         .withVertex(vertexFn)
         .withFragment(fragmentFn, { format: 'rgba8unorm' })
         .createPipeline();

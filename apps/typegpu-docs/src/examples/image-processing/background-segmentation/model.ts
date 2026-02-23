@@ -163,7 +163,7 @@ export async function prepareSession(
   return {
     run: () => session.run(feeds, fetches),
     release: () => {
-      session.release();
+      void session.release();
       modelCache.clear();
     },
   };

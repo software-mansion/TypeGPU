@@ -90,7 +90,7 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsPipeline = root['~unstable']
+const randomizeFishPositionsPipeline = root
   .createGuardedComputePipeline((x) => {
     'use gpu';
     randf.seed2(d.vec2f(x, seedUniform.$));
@@ -166,7 +166,7 @@ randomizeFishPositions();
 
 // pipelines
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   attribs: modelVertexLayout.attrib,
   vertex: vertexShader,
   fragment: fragmentShader,
@@ -185,8 +185,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const simulatePipeline = root['~unstable']
-  .createGuardedComputePipeline(simulate);
+const simulatePipeline = root.createGuardedComputePipeline(simulate);
 
 // bind groups
 
@@ -347,7 +346,7 @@ function updateCameraTarget(cx: number, cy: number) {
   );
 }
 
-async function updateMouseRay(cx: number, cy: number) {
+function updateMouseRay(cx: number, cy: number) {
   const boundingBox = canvas.getBoundingClientRect();
   const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
   const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);

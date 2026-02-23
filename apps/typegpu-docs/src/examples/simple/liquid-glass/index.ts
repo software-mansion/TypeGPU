@@ -104,7 +104,7 @@ const sampleWithChromaticAberration = (
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -156,7 +156,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     .add(normalSample.mul(weights.outside));
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
   targets: { format: presentationFormat },

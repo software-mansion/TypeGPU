@@ -18,17 +18,15 @@ export function createDeepNoopProxy<T extends object>(
     get(obj, prop, receiver) {
       accessedProperties.add(prop);
 
-      // oxlint-disable-next-line typescript/no-explicit-any we testing here
-      return () => createDeepNoopProxy({} as any, accessedProperties);
+      return () => createDeepNoopProxy({}, accessedProperties);
     },
     set() {
       return true; // No-op set
     },
     apply() {
-      // oxlint-disable-next-line typescript/no-explicit-any we testing here
-      return createDeepNoopProxy({} as any, accessedProperties);
+      return createDeepNoopProxy({}, accessedProperties);
     },
-  }) as T;
+  });
 }
 
 export async function testExampleShaderGeneration(
