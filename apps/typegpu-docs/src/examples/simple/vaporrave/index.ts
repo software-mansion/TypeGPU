@@ -13,7 +13,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // == BUFFERS ==
 const floorAngleUniform = root.createUniform(d.f32);
@@ -144,7 +143,6 @@ let renderPipeline = root
   .createRenderPipeline({
     vertex: vertexMain,
     fragment: fragmentMain,
-    targets: { format: presentationFormat },
   });
 
 let animationFrame: number;
@@ -166,11 +164,7 @@ function run(timestamp: number) {
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   animationFrame = requestAnimationFrame(run);
@@ -229,7 +223,6 @@ export const controls = defineControls({
         .createRenderPipeline({
           vertex: vertexMain,
           fragment: fragmentMain,
-          targets: { format: presentationFormat },
         });
     },
   },

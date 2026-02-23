@@ -14,7 +14,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // model (https://j5boom.itch.io/utah-teapot-obj)
 const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
@@ -99,7 +98,6 @@ const renderPipeline = root.createRenderPipeline({
   attribs: modelVertexLayout.attrib,
   vertex: vertexShader,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 
   depthStencil: {
     format: 'depth24plus',
@@ -119,15 +117,13 @@ let frameId: number;
 function frame() {
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),

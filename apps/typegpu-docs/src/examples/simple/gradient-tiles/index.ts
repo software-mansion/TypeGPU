@@ -28,11 +28,7 @@ function draw(spanXValue: number, spanYValue: number) {
   spanUniform.write(d.vec2f(spanXValue, spanYValue));
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 

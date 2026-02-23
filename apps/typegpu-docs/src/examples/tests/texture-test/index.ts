@@ -136,11 +136,7 @@ function recreateTexture() {
 function render() {
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(render);

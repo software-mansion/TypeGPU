@@ -249,7 +249,6 @@ const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex,
   fragment,
-  targets: { format: presentationFormat },
 
   depthStencil: {
     format: 'depth24plus',
@@ -272,10 +271,8 @@ function drawObject(
   pipeline
     .withColorAttachment({
       view: msaaTexture,
-      resolveTarget: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
+      resolveTarget: context,
       loadOp: loadOp,
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture,

@@ -10,7 +10,6 @@ const canFilter = root.enabledFeatures.has('float32-filterable');
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const VOLUME_SIZE = 256;
 const NUM_AGENTS = 800_000;
@@ -444,7 +443,6 @@ const fragmentShader = tgpu.fragmentFn({
 const renderPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 });
 
 const computePipeline = root.createComputePipeline({ compute: updateAgents });
@@ -499,11 +497,7 @@ function frame() {
     );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 

@@ -259,10 +259,8 @@ function runRenderBackgroundPass() {
   renderBackgroundPipeline
     .withColorAttachment({
       view: msView,
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(4, 2);
 }
@@ -278,10 +276,9 @@ function runRenderPass() {
       .with(renderBindGroup)
       .withColorAttachment({
         view: msView,
-        resolveTarget: context.getCurrentTexture().createView(),
+        resolveTarget: context,
         clearValue: [0.3, 0.3, 0.3, 1],
         loadOp: 'load',
-        storeOp: 'store',
       })
       // call our vertex shader 2 times per point drawn
       .draw(properties.interpolationPoints * 2);
