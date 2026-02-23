@@ -138,7 +138,7 @@ const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
 
 // Shader Functions
 
-const vertexFn = tgpu['~unstable'].vertexFn({
+const vertexFn = tgpu.vertexFn({
   in: {
     position: d.vec4f,
     normal: d.vec4f,
@@ -157,7 +157,7 @@ const vertexFn = tgpu['~unstable'].vertexFn({
   worldPos: input.position,
 }));
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
+const fragmentFn = tgpu.fragmentFn({
   in: {
     normal: d.vec4f,
     worldPos: d.vec4f,
@@ -217,7 +217,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(finalColor, 1.0);
 });
 
-const cubeVertexFn = tgpu['~unstable'].vertexFn({
+const cubeVertexFn = tgpu.vertexFn({
   in: {
     position: d.vec3f,
     uv: d.vec2f,
@@ -236,7 +236,7 @@ const cubeVertexFn = tgpu['~unstable'].vertexFn({
   };
 });
 
-const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
+const cubeFragmentFn = tgpu.fragmentFn({
   in: { texCoord: d.vec3f },
   out: d.vec4f,
 })((input) => {
@@ -249,7 +249,7 @@ const cubeFragmentFn = tgpu['~unstable'].fragmentFn({
 
 // Pipeline Setup
 
-const cubePipeline = root['~unstable'].createRenderPipeline({
+const cubePipeline = root.createRenderPipeline({
   attribs: cubeVertexLayout.attrib,
   vertex: cubeVertexFn,
   fragment: cubeFragmentFn,
@@ -257,7 +257,7 @@ const cubePipeline = root['~unstable'].createRenderPipeline({
   primitive: { cullMode: 'front' },
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: vertexFn,
   fragment: fragmentFn,

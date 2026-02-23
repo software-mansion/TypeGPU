@@ -248,7 +248,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   }
 });
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     squareData: d.vec2f,
     currentStateData: d.u32,
@@ -278,7 +278,7 @@ const vertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(x, y, 0, 1), cell };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { cell: d.f32 },
   out: d.vec4f,
 })((input) => {
@@ -321,18 +321,18 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = [];
 
-  const compute = tgpu['~unstable'].computeFn({
+  const compute = tgpu.computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [options.workgroupSize, options.workgroupSize],
   })((input) => {
     decideWaterLevel(input.gid.x, input.gid.y);
   });
 
-  const computePipeline = root['~unstable'].createComputePipeline({
+  const computePipeline = root.createComputePipeline({
     compute,
   });
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .createRenderPipeline({
       attribs: {
         squareData: vertexLayout.attrib,

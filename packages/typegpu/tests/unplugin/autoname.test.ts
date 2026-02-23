@@ -39,13 +39,12 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-    const myPipeline = root['~unstable'].createComputePipeline({
-      compute: tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+    const myPipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
     });
-    const myGuardedPipeline = root['~unstable']
-      .createGuardedComputePipeline(() => {
-        'use gpu';
-      });
+    const myGuardedPipeline = root.createGuardedComputePipeline(() => {
+      'use gpu';
+    });
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -114,13 +113,13 @@ describe('autonaming', () => {
 
   it('names TGPU functions', () => {
     const myFunction = tgpu.fn([])(() => 0);
-    const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+    const myComputeFn = tgpu.computeFn({ workgroupSize: [1] })(
       () => {},
     );
-    const myVertexFn = tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+    const myVertexFn = tgpu.vertexFn({ out: { ret: d.i32 } })(
       () => ({ ret: 0 }),
     );
-    const myFragmentFn = tgpu['~unstable'].fragmentFn({
+    const myFragmentFn = tgpu.fragmentFn({
       in: { position: d.builtin.position },
       out: d.vec4f,
     })(

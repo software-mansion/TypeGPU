@@ -122,11 +122,9 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 
 // pipelines
 
-const prepareModelInputPipeline = root['~unstable']
+const prepareModelInputPipeline = root
   .with(paramsAccess, paramsUniform)
-  .createGuardedComputePipeline(
-    prepareModelInput,
-  );
+  .createGuardedComputePipeline(prepareModelInput);
 
 let currentModelIndex = 0;
 let session = await prepareSession(
@@ -151,19 +149,17 @@ async function switchModel(modelIndex: number) {
   isLoadingModel = false;
 }
 
-const generateMaskFromOutputPipeline = root['~unstable']
-  .createGuardedComputePipeline(
-    generateMaskFromOutput,
-  );
-
-const blurPipelines = [false, true].map((flip) =>
-  root['~unstable']
-    .with(flipAccess, flip)
-    .withCompute(computeFn)
-    .createPipeline()
+const generateMaskFromOutputPipeline = root.createGuardedComputePipeline(
+  generateMaskFromOutput,
 );
 
-const drawWithMaskPipeline = root['~unstable']
+const blurPipelines = [false, true].map((flip) =>
+  root
+    .with(flipAccess, flip)
+    .createComputePipeline({ compute: computeFn })
+);
+
+const drawWithMaskPipeline = root
   .with(paramsAccess, paramsUniform)
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,

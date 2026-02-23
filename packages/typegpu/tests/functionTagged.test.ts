@@ -39,7 +39,7 @@ describe('tagged syntax', () => {
 
   describe('vertex', () => {
     it('parses template literal without arguments', () => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         in: { idx: d.builtin.instanceIndex },
         out: { pos: d.builtin.position },
       })`{ return in.pos; }`.$name('vertexFn');
@@ -58,7 +58,7 @@ describe('tagged syntax', () => {
     });
 
     it('parses template literal with arguments of different types', () => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         in: { idx: d.builtin.instanceIndex },
         out: { pos: d.builtin.position },
       })`{
@@ -85,7 +85,7 @@ describe('tagged syntax', () => {
 
   describe('fragment', () => {
     it('parses template literal without arguments', () => {
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         in: { pos: d.builtin.position },
         out: d.vec4f,
       })`{ return vec4f(); }`;
@@ -100,7 +100,7 @@ describe('tagged syntax', () => {
     });
 
     it('parses template literal with arguments of different types', () => {
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         in: { pos: d.builtin.position },
         out: d.vec4f,
       })`{
@@ -123,7 +123,7 @@ describe('tagged syntax', () => {
 
   describe('compute', () => {
     it('parses template literal without arguments', () => {
-      const computeFn = tgpu['~unstable'].computeFn({
+      const computeFn = tgpu.computeFn({
         in: { gid: d.builtin.globalInvocationId },
         workgroupSize: [1],
       })`{}`;
@@ -138,7 +138,7 @@ describe('tagged syntax', () => {
     });
 
     it('parses template literal with arguments of different types', () => {
-      const computeFn = tgpu['~unstable'].computeFn({
+      const computeFn = tgpu.computeFn({
         in: { gid: d.builtin.globalInvocationId },
         workgroupSize: [1],
       })`{

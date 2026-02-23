@@ -39,9 +39,7 @@ function createField(name: string) {
 }
 
 function createComputePipeline(fn: TgpuComputeFn) {
-  return root['~unstable'].createComputePipeline({
-    compute: fn,
-  });
+  return root.createComputePipeline({ compute: fn });
 }
 
 function toGrid(x: number, y: number): [number, number] {
@@ -143,7 +141,7 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
-  return root['~unstable'].createRenderPipeline({
+  return root.createRenderPipeline({
     vertex: renderFn,
     fragment: fragmentFn,
     targets: { format },

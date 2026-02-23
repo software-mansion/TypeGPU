@@ -617,7 +617,7 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct code for "for ... of ..." statements using lazy and comptime iterables', () => {
-    const comptimeVec = tgpu['~unstable'].comptime(() => d.vec2f(1, 2));
+    const comptimeVec = tgpu.comptime(() => d.vec2f(1, 2));
 
     const main = () => {
       'use gpu';

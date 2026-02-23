@@ -25,7 +25,7 @@ const colorBuffer = root
   .$usage('vertex');
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     idx: d.builtin.vertexIndex,
     color: d.vec4f,
@@ -47,7 +47,7 @@ const vertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     color: d.vec4f,
   },
@@ -58,13 +58,12 @@ const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
-const pipeline = root['~unstable']
-  .createRenderPipeline({
-    attribs: { color: vertexLayout.attrib },
-    vertex,
-    fragment: mainFragment,
-    targets: { format: presentationFormat },
-  })
+const pipeline = root.createRenderPipeline({
+  attribs: { color: vertexLayout.attrib },
+  vertex,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+})
   .withIndexBuffer(indexBuffer);
 
 function render() {

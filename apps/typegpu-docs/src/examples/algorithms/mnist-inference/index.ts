@@ -25,7 +25,7 @@ const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
 
 const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
-const defaultCompute = tgpu['~unstable'].computeFn({
+const defaultCompute = tgpu.computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
   },
@@ -50,7 +50,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
 });
 
 const workgroupSize = tgpu.const(d.u32, 128);
-const subgroupCompute = tgpu['~unstable'].computeFn({
+const subgroupCompute = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
     wid: d.builtin.workgroupId,
@@ -91,9 +91,9 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
 });
 
 const pipelines = {
-  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
+  default: root.createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
+    ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 

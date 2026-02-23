@@ -74,7 +74,7 @@ const patternSlot = tgpu.slot(patternSolid);
 
 // #endregion
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -107,7 +107,7 @@ const uniformsValue = {
   alpha: 0.05,
 };
 
-let pipeline = root['~unstable'].createRenderPipeline({
+let pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
   targets: { format: presentationFormat },
@@ -120,7 +120,7 @@ function setPipeline({
   outOfGamutPattern: typeof patternSlot.$;
   gamutClip: typeof oklabGamutClipSlot.$;
 }) {
-  pipeline = root['~unstable']
+  pipeline = root
     .with(patternSlot, outOfGamutPattern)
     .with(oklabGamutClipSlot, gamutClip)
     .with(oklabGamutClipAlphaAccess, () => uniforms.$.alpha)

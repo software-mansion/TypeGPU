@@ -9,13 +9,22 @@ export {
   /** @deprecated This feature is now stable, use tgpu.comptime. */
   comptime,
 } from './core/function/comptime.ts';
-export { computeFn } from './core/function/tgpuComputeFn.ts';
+export {
+  /** @deprecated This feature is now stable, use tgpu.computeFn. */
+  computeFn,
+} from './core/function/tgpuComputeFn.ts';
 export {
   /** @deprecated This feature is now stable, use tgpu.fn. */
   fn,
 } from './core/function/tgpuFn.ts';
-export { fragmentFn } from './core/function/tgpuFragmentFn.ts';
-export { vertexFn } from './core/function/tgpuVertexFn.ts';
+export {
+  /** @deprecated This feature is now stable, use tgpu.fragmentFn. */
+  fragmentFn,
+} from './core/function/tgpuFragmentFn.ts';
+export {
+  /** @deprecated This feature is now stable, use tgpu.vertexFn. */
+  vertexFn,
+} from './core/function/tgpuVertexFn.ts';
 export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';

@@ -9,7 +9,7 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
 
-const computeRunTests = tgpu['~unstable']
+const computeRunTests = tgpu
   .computeFn({ workgroupSize: [1] })(() => {
     let s = true;
     s = s && logicalExpressionTests();
@@ -25,7 +25,7 @@ const computeRunTests = tgpu['~unstable']
     }
   });
 
-const pipeline = root['~unstable'].createComputePipeline({
+const pipeline = root.createComputePipeline({
   compute: computeRunTests,
 });
 
