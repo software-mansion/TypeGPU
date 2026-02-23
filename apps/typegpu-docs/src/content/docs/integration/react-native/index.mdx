@@ -156,16 +156,10 @@ export function Triangle() {
         'use gpu';
         return d.vec4f(0.114, 0.447, 0.941, 1);
       },
-      targets: { format: presentationFormat },
     });
       
     pipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .draw(3);
 
     context.present();

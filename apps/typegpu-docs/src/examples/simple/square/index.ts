@@ -2,7 +2,6 @@ import tgpu, { d } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
@@ -58,22 +57,18 @@ const indexBuffer = root
   .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
   .$usage('index');
 
-const pipeline = root.createRenderPipeline({
-  attribs: { color: vertexLayout.attrib },
-  vertex,
-  fragment: mainFragment,
-  targets: { format: presentationFormat },
-})
+const pipeline = root
+  .createRenderPipeline({
+    attribs: { color: vertexLayout.attrib },
+    vertex,
+    fragment: mainFragment,
+  })
   .withIndexBuffer(indexBuffer);
 
 function render() {
   pipeline
     .with(vertexLayout, colorBuffer)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .drawIndexed(6);
 }
 render();

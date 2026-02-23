@@ -128,14 +128,12 @@ const mainFragment = tgpu.fragmentFn({
   return d.vec4f(std.add(std.mix(noFogColor, fogColor, fog), godRays), 1);
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root.createRenderPipeline({
   vertex: mainVertex,
   fragment: mainFragment,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;
@@ -146,11 +144,7 @@ function draw(timestamp: number) {
   time.write((timestamp * 0.001) % 1000);
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);

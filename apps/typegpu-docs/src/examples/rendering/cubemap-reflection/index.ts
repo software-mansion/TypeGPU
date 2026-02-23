@@ -33,7 +33,6 @@ const root = tgpu.initFromDevice({ device });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 let exampleDestroyed = false;
 
 // Geometry & Material Setup
@@ -253,7 +252,6 @@ const cubePipeline = root.createRenderPipeline({
   attribs: cubeVertexLayout.attrib,
   vertex: cubeVertexFn,
   fragment: cubeFragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'front' },
 });
 
@@ -261,7 +259,6 @@ const pipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: vertexFn,
   fragment: fragmentFn,
-  targets: { format: presentationFormat },
   primitive: { cullMode: 'back' },
 });
 
@@ -270,10 +267,8 @@ const pipeline = root.createRenderPipeline({
 function render() {
   cubePipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(cubeVertexLayout, cubeVertexBuffer)
     .with(renderBindGroup)
@@ -282,10 +277,9 @@ function render() {
 
   pipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
       loadOp: 'load',
-      storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
     .with(renderBindGroup)

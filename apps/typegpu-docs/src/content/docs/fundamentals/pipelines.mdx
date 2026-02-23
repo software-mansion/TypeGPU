@@ -250,11 +250,7 @@ tgpu.resolve([innerPipeline]);
 
 ```ts
 renderPipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
+  .withColorAttachment({ view: context })
   .draw(3);
 
 computePipeline.dispatchWorkgroups(16);
@@ -274,7 +270,7 @@ renderPipeline
   .withColorAttachment({
     color: {
       view: msaaTextureView,
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       loadOp: 'clear',
       storeOp: 'store',
     },

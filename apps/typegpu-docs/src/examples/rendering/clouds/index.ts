@@ -112,10 +112,8 @@ function render() {
   pipeline
     .with(bindGroup)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(6);
 

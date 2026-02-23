@@ -34,7 +34,6 @@ const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const createRenderPipeline = (
   sharpenFn: (n: number, sharpness: number) => number,
@@ -59,7 +58,6 @@ const createRenderPipeline = (
         const light = d.vec3f(1, 0.3, 0.5);
         return d.vec4f(mix(dark, light, n01), 1);
       },
-      targets: { format: presentationFormat },
     });
 
 const renderPipelines = {
@@ -81,11 +79,7 @@ function draw(timestamp: number) {
 
   renderPipelines[activeSharpenFn]
     .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);

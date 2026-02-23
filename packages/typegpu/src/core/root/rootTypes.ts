@@ -131,9 +131,8 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
-
-type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T]
+  : [T];
 
 /**
  * TODO: Remove in favor of createRenderPipeline's validation
@@ -344,7 +343,7 @@ export interface WithBinding extends Withable<WithBinding> {
               >
             >,
           ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
-        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
@@ -425,7 +424,7 @@ export interface WithBinding extends Withable<WithBinding> {
               & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
-          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
         }
         | {
           attribs?: TAttribs;

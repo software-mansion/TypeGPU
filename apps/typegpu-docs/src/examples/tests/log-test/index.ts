@@ -12,8 +12,8 @@ const root = await tgpu.init({
 });
 
 // setup for render tests
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
@@ -35,8 +35,6 @@ const mainFragment = tgpu.fragmentFn({
   console.log('X:', pos.x, 'Y:', pos.y);
   return d.vec4f(0.769, 0.392, 1.0, 1);
 });
-
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // #region Example controls and cleanup
 
@@ -216,16 +214,10 @@ export const controls = defineControls({
       const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
-        targets: { format: presentationFormat },
       });
 
       pipeline
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        })
+        .withColorAttachment({ view: context })
         .draw(3);
     },
   },
@@ -234,7 +226,6 @@ export const controls = defineControls({
       const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
-        targets: { format: presentationFormat },
       });
 
       const indexBuffer = root
@@ -243,12 +234,8 @@ export const controls = defineControls({
 
       pipeline
         .withIndexBuffer(indexBuffer)
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        }).drawIndexed(3);
+        .withColorAttachment({ view: context })
+        .drawIndexed(3);
     },
   },
   'Too many logs': {

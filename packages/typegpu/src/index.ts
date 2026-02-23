@@ -60,6 +60,7 @@ export type {
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type {
+  ColorAttachment,
   TgpuPrimitiveState,
   TgpuRenderPipeline,
 } from './core/pipeline/renderPipeline.ts';

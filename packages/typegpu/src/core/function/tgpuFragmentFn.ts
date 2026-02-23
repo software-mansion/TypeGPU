@@ -78,7 +78,7 @@ type CleanIO<T> = T extends Record<string, BaseData>
   // a trick to use a non-record type in place of a record parameter
   : Prettify<UndecorateRecord<OmitBuiltins<{ a: T }>>> extends
     { a: infer Result } ? Result
-  : never;
+  : Record<string, never>;
 
 /**
  * Describes a fragment entry function signature (its arguments, return type and targets).
