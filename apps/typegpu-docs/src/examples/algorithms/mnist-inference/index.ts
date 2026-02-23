@@ -19,7 +19,7 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
 
-const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
+const canvasData = Array.from({ length: SIZE ** 2 }, () => 0);
 
 // Shaders
 
@@ -314,7 +314,7 @@ function centerImage(data: number[]) {
   const offsetX = Math.round(SIZE / 2 - x);
   const offsetY = Math.round(SIZE / 2 - y);
 
-  const newData = Array.from({ length: (SIZE * SIZE) }, () => 0);
+  const newData = Array.from({ length: SIZE * SIZE }, () => 0);
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const index = i * SIZE + j;
