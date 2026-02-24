@@ -879,7 +879,7 @@ export type InitOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
@@ -894,7 +894,7 @@ export type InitFromDeviceOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;

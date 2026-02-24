@@ -258,7 +258,7 @@ Sometimes, it may not be clear which bind group layouts were used in a given res
 This may occur especially when using:
 
 - Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
-- TypeGPU functions implemented in TGSL, which generate their externals automatically.
+- TypeGPU functions implemented in JavaScript/TypeScript, which generate their externals automatically.
 
 For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to the resolved code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
 
@@ -290,7 +290,7 @@ console.log(catchall?.[0]); // 0 - the group index of the catchall bind group
 console.log(catchall?.[1]); // the catchall bind group
 ```
 
-An example, where a bind group layout is automatically included via a TGSL function:
+An example, where a bind group layout is automatically included via a TypeScript function:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -299,9 +299,10 @@ const root = await tgpu.init();
 // ---cut---
 const myLayout = tgpu.bindGroupLayout({ count: { uniform: d.u32 } });
 
-const exampleFn = tgpu.fn([])(() => {
+function exampleFn() {
+  'use gpu';
   myLayout.$.count += 1;
-});
+}
 
 const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
   externals: { exampleFn },

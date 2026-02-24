@@ -1,7 +1,7 @@
 /**
  * This is a port of XorDev's "Runner" example using TypeGPU. Most of the shader is
- * written in TGSL (TypeScript + Standard Library), but parts of it are implemented
- * in WGSL to showcase the flexibility of TypeGPU.
+ * written in TypeScript, but parts of it are implemented in WGSL to showcase the
+ * flexibility of TypeGPU.
  *
  * ## Credits
  * XorDev (xordev.com) for the idea and original implementation

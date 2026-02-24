@@ -881,7 +881,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.preUpdate) {
-      throw new Error('Cannot use pre-updates in TGSL.');
+      throw new Error('Cannot use pre-updates in TypeGPU functions.');
     }
 
     assertExhaustive(expression);

@@ -1651,7 +1651,7 @@ describe('wgslGenerator', () => {
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: The only way of accessing matrix elements in TGSL is through the 'columns' property.]
+        - fn:testFn: The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.]
       `);
   });
 
