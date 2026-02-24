@@ -25,6 +25,7 @@ export declare const tgpu: {
   computeFn: typeof import('./core/function/tgpuComputeFn.ts').computeFn;
   fragmentFn: typeof import('./core/function/tgpuFragmentFn.ts').fragmentFn;
   vertexFn: typeof import('./core/function/tgpuVertexFn.ts').vertexFn;
+  unroll: typeof import('./core/unroll/tgpuUnroll.ts').unroll;
 
   '~unstable': typeof import('./tgpuUnstable.ts');
 };
