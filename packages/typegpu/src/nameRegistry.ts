@@ -515,7 +515,7 @@ abstract class NameRegistryImpl implements NameRegistry {
     );
 
     if (functionScopeIndex === -1) {
-      return;
+      throw new Error('Tried to pop function scope when no scope was present.');
     }
 
     this.#scopeStack.splice(functionScopeIndex);
