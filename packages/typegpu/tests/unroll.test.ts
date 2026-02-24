@@ -50,15 +50,15 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
         var res = 0;
-        // unrolled iteration #0, 'foo' is '1'
+        // unrolled iteration #0
         {
           res += 1i;
         }
-        // unrolled iteration #1, 'foo' is '2'
+        // unrolled iteration #1
         {
           res += 2i;
         }
-        // unrolled iteration #2, 'foo' is '3'
+        // unrolled iteration #2
         {
           res += 3i;
         }
@@ -79,11 +79,11 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         var foo = vec3f(6);
-        // unrolled iteration #0, 'foo2' is '1'
+        // unrolled iteration #0
         {
           const boo = 1;
         }
-        // unrolled iteration #1, 'foo2' is '2'
+        // unrolled iteration #1
         {
           const boo = 2;
         }
@@ -110,7 +110,7 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> f32 {
         var fooResult = 0f;
-        // unrolled iteration #0, 'foo' is '1'
+        // unrolled iteration #0
         {
           const boo = 1;
           {
@@ -119,7 +119,7 @@ describe('tgpu.unroll', () => {
           }
           const bar = 1;
         }
-        // unrolled iteration #1, 'foo' is '2'
+        // unrolled iteration #1
         {
           const boo = 2;
           {
@@ -163,13 +163,13 @@ describe('tgpu.unroll', () => {
         var b1 = Boid(vec2i(1), vec2f(1));
         var b2 = Boid(vec2i(2), vec2f(2));
         var res = vec2f();
-        // unrolled iteration #0, 'foo' is 'b1'
+        // unrolled iteration #0
         {
           let boo = (&b1);
           res = (res + b1.vel);
           (*boo).pos = vec2i();
         }
-        // unrolled iteration #1, 'foo' is 'b2'
+        // unrolled iteration #1
         {
           let boo = (&b2);
           res = (res + b2.vel);
@@ -217,15 +217,15 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> u32 {
         var result = 0u;
-        // unrolled iteration #0, 'prop' is 'a'
+        // unrolled iteration #0
         {
           result += 1u;
         }
-        // unrolled iteration #1, 'prop' is 'b'
+        // unrolled iteration #1
         {
           result += 2u;
         }
-        // unrolled iteration #2, 'prop' is 'c'
+        // unrolled iteration #2
         {
           result += 3u;
         }
@@ -281,11 +281,11 @@ describe('tgpu.unroll', () => {
 
       fn computeWeight(weights: Weights) -> f32 {
         var p = 0f;
-        // unrolled iteration #0, 'key' is 'foo'
+        // unrolled iteration #0
         {
           p += (weights.foo * foo(p));
         }
-        // unrolled iteration #1, 'key' is 'boo'
+        // unrolled iteration #1
         {
           p += (weights.boo * boo(p));
         }
@@ -314,13 +314,13 @@ describe('tgpu.unroll', () => {
         var res = vec2f();
         var v1 = vec2f(7);
         var v2 = vec2f(3);
-        // unrolled iteration #0, 'foo' is 'v1'
+        // unrolled iteration #0
         {
           let boo = (&v1);
           res = (res + v1);
           (*boo).x = 6f;
         }
-        // unrolled iteration #1, 'foo' is 'v2'
+        // unrolled iteration #1
         {
           let boo = (&v2);
           res = (res + v2);
@@ -345,19 +345,19 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> u32 {
         var res = 0u;
-        // unrolled iteration #0, 'foo' is '1u'
+        // unrolled iteration #0
         {
           res += 1u;
         }
-        // unrolled iteration #1, 'foo' is '2u'
+        // unrolled iteration #1
         {
           res += 2u;
         }
-        // unrolled iteration #2, 'foo' is '3u'
+        // unrolled iteration #2
         {
           res += 3u;
         }
-        // unrolled iteration #3, 'foo' is '4u'
+        // unrolled iteration #3
         {
           res += 4u;
         }
@@ -384,15 +384,15 @@ describe('tgpu.unroll', () => {
       "fn f() -> i32 {
         var v = vec3f(7);
         var res = 0;
-        // unrolled iteration #0, 'pos' is 'v[0u]'
+        // unrolled iteration #0
         {
           res = i32((f32(res) + v[0u]));
         }
-        // unrolled iteration #1, 'pos' is 'v[1u]'
+        // unrolled iteration #1
         {
           res = i32((f32(res) + v[1u]));
         }
-        // unrolled iteration #2, 'pos' is 'v[2u]'
+        // unrolled iteration #2
         {
           res = i32((f32(res) + v[2u]));
         }
@@ -417,15 +417,15 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
         var result = 0;
-        // unrolled iteration #0, 'foo' is '1'
+        // unrolled iteration #0
         {
           result += 1i;
         }
-        // unrolled iteration #1, 'foo' is '2'
+        // unrolled iteration #1
         {
           result += 2i;
         }
-        // unrolled iteration #2, 'foo' is '3'
+        // unrolled iteration #2
         {
           result += 3i;
         }
@@ -434,7 +434,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('throws when iterable element count is unknown at comptime', () => {
+  it('throws when iterable is unknown at comptime', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });
@@ -471,15 +471,15 @@ describe('tgpu.unroll', () => {
       "fn f() -> f32 {
         var arr = array<i32, 3>(1, 2, 3);
         var res = 0f;
-        // unrolled iteration #0, 'foo' is 'arr[0u]'
+        // unrolled iteration #0
         {
           res += f32(arr[0u]);
         }
-        // unrolled iteration #1, 'foo' is 'arr[1u]'
+        // unrolled iteration #1
         {
           res += f32(arr[1u]);
         }
-        // unrolled iteration #2, 'foo' is 'arr[2u]'
+        // unrolled iteration #2
         {
           res += f32(arr[2u]);
         }
@@ -513,22 +513,22 @@ describe('tgpu.unroll', () => {
         var v3 = vec2f(2);
         var arr = array<vec2f, 4>(v1, v2, v2, v3);
         var res = vec2f();
-        // unrolled iteration #0, 'foo' is 'arr[0u]'
+        // unrolled iteration #0
         {
           res = (res + arr[0u]);
           arr[0u].x = 7f;
         }
-        // unrolled iteration #1, 'foo' is 'arr[1u]'
+        // unrolled iteration #1
         {
           res = (res + arr[1u]);
           arr[1u].x = 7f;
         }
-        // unrolled iteration #2, 'foo' is 'arr[2u]'
+        // unrolled iteration #2
         {
           res = (res + arr[2u]);
           arr[2u].x = 7f;
         }
-        // unrolled iteration #3, 'foo' is 'arr[3u]'
+        // unrolled iteration #3
         {
           res = (res + arr[3u]);
           arr[3u].x = 7f;
@@ -570,12 +570,12 @@ describe('tgpu.unroll', () => {
         var b2 = Boid(vec2i(2), vec2f(2));
         var arr = array<Boid, 2>(b1, b2);
         var res = vec2f();
-        // unrolled iteration #0, 'foo' is 'arr[0u]'
+        // unrolled iteration #0
         {
           res = (res + arr[0u].vel);
           arr[0u].pos.x = 7i;
         }
-        // unrolled iteration #1, 'foo' is 'arr[1u]'
+        // unrolled iteration #1
         {
           res = (res + arr[1u].vel);
           arr[1u].pos.x = 7i;
@@ -604,31 +604,31 @@ describe('tgpu.unroll', () => {
 
       fn f() -> u32 {
         var result = 0u;
-        // unrolled iteration #0, 'foo' is 'b[0u]'
+        // unrolled iteration #0
         {
           result += b[0u];
         }
-        // unrolled iteration #1, 'foo' is 'b[1u]'
+        // unrolled iteration #1
         {
           result += b[1u];
         }
-        // unrolled iteration #2, 'foo' is 'b[2u]'
+        // unrolled iteration #2
         {
           result += b[2u];
         }
-        // unrolled iteration #3, 'foo' is 'b[3u]'
+        // unrolled iteration #3
         {
           result += b[3u];
         }
-        // unrolled iteration #4, 'foo' is 'b[4u]'
+        // unrolled iteration #4
         {
           result += b[4u];
         }
-        // unrolled iteration #5, 'foo' is 'b[5u]'
+        // unrolled iteration #5
         {
           result += b[5u];
         }
-        // unrolled iteration #6, 'foo' is 'b[6u]'
+        // unrolled iteration #6
         {
           result += b[6u];
         }
@@ -653,15 +653,15 @@ describe('tgpu.unroll', () => {
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
         var r = 0f;
-        // unrolled iteration #0, 'foo' is 'arr[0u]'
+        // unrolled iteration #0
         {
           r += f32(arr[0u]);
         }
-        // unrolled iteration #1, 'foo' is 'arr[1u]'
+        // unrolled iteration #1
         {
           r += f32(arr[1u]);
         }
-        // unrolled iteration #2, 'foo' is 'arr[2u]'
+        // unrolled iteration #2
         {
           r += f32(arr[2u]);
         }
@@ -759,7 +759,7 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        // unrolled iteration #0, 'foo' is '1'
+        // unrolled iteration #0
         {
           for (var i2 = 0; (i2 < 2i); i2++) {
             if ((i2 == 1i)) {
@@ -778,7 +778,7 @@ describe('tgpu.unroll', () => {
             }
           }
         }
-        // unrolled iteration #1, 'foo' is '2'
+        // unrolled iteration #1
         {
           for (var i2 = 0; (i2 < 2i); i2++) {
             if ((i2 == 2i)) {
@@ -801,7 +801,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolling flag is set correclty', () => {
+  it('unrolling flag is set correctly', () => {
     const f = () => {
       'use gpu';
       const arr = [1, 2, 3];
@@ -819,6 +819,25 @@ describe('tgpu.unroll', () => {
       - <root>
       - fn*:f
       - fn*:f(): Cannot unroll loop containing \`break\`]
+    `);
+  });
+
+  it('unrolls correctly an empty loop', () => {
+    const arr: number[] = [];
+    const f = () => {
+      'use gpu';
+      let a = 0;
+      for (const foo of tgpu.unroll(arr)) {
+        a += 1;
+      }
+      return a;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        var a = 0;
+        return a;
+      }"
     `);
   });
 });

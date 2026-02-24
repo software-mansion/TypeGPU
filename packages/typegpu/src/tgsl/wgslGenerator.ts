@@ -1260,7 +1260,7 @@ ${this.ctx.pre}else ${alternate}`;
 
           const blocks = elements
             .map((e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}, '${originalLoopVarName}' is '${stitch`${e}`}'\n${this.ctx.pre}${
+              `${this.ctx.pre}// unrolled iteration #${i}\n${this.ctx.pre}${
                 this.block(blockified, { [originalLoopVarName]: e })
               }`
             );

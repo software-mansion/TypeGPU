@@ -93,9 +93,9 @@ describe('slime mold example', () => {
         }
         var sum = vec3f();
         var count = 0f;
-        // unrolled iteration #0, 'offsetY' is '-1'
+        // unrolled iteration #0
         {
-          // unrolled iteration #0, 'offsetX' is '-1'
+          // unrolled iteration #0
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1));
             var dimsi = vec2i(dims);
@@ -105,7 +105,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #1, 'offsetX' is '0'
+          // unrolled iteration #1
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
             var dimsi = vec2i(dims);
@@ -115,7 +115,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #2, 'offsetX' is '1'
+          // unrolled iteration #2
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
             var dimsi = vec2i(dims);
@@ -126,9 +126,9 @@ describe('slime mold example', () => {
             }
           }
         }
-        // unrolled iteration #1, 'offsetY' is '0'
+        // unrolled iteration #1
         {
-          // unrolled iteration #0, 'offsetX' is '-1'
+          // unrolled iteration #0
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
             var dimsi = vec2i(dims);
@@ -138,7 +138,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #1, 'offsetX' is '0'
+          // unrolled iteration #1
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i());
             var dimsi = vec2i(dims);
@@ -148,7 +148,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #2, 'offsetX' is '1'
+          // unrolled iteration #2
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
             var dimsi = vec2i(dims);
@@ -159,9 +159,9 @@ describe('slime mold example', () => {
             }
           }
         }
-        // unrolled iteration #2, 'offsetY' is '1'
+        // unrolled iteration #2
         {
-          // unrolled iteration #0, 'offsetX' is '-1'
+          // unrolled iteration #0
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
             var dimsi = vec2i(dims);
@@ -171,7 +171,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #1, 'offsetX' is '0'
+          // unrolled iteration #1
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
             var dimsi = vec2i(dims);
@@ -181,7 +181,7 @@ describe('slime mold example', () => {
               count = (count + 1f);
             }
           }
-          // unrolled iteration #2, 'offsetX' is '1'
+          // unrolled iteration #2
           {
             var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1));
             var dimsi = vec2i(dims);

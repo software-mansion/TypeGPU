@@ -608,9 +608,9 @@ describe('jelly-slider example', () => {
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         var dimensions = textureDimensions(currentTexture);
-        // unrolled iteration #0, 'x' is '-1'
+        // unrolled iteration #0
         {
-          // unrolled iteration #0, 'y' is '-1'
+          // unrolled iteration #0
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -618,7 +618,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #1, 'y' is '0'
+          // unrolled iteration #1
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -626,7 +626,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #2, 'y' is '1'
+          // unrolled iteration #2
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -635,9 +635,9 @@ describe('jelly-slider example', () => {
             maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        // unrolled iteration #1, 'x' is '0'
+        // unrolled iteration #1
         {
-          // unrolled iteration #0, 'y' is '-1'
+          // unrolled iteration #0
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -645,7 +645,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #1, 'y' is '0'
+          // unrolled iteration #1
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i());
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -653,7 +653,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #2, 'y' is '1'
+          // unrolled iteration #2
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -662,9 +662,9 @@ describe('jelly-slider example', () => {
             maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        // unrolled iteration #2, 'x' is '1'
+        // unrolled iteration #2
         {
-          // unrolled iteration #0, 'y' is '-1'
+          // unrolled iteration #0
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -672,7 +672,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #1, 'y' is '0'
+          // unrolled iteration #1
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
@@ -680,7 +680,7 @@ describe('jelly-slider example', () => {
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
-          // unrolled iteration #2, 'y' is '1'
+          // unrolled iteration #2
           {
             var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));

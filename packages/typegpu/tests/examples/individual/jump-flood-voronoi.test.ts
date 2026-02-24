@@ -131,9 +131,9 @@ describe('jump flood (voronoi) example', () => {
         var size = textureDimensions(readView);
         var minDist = 1e+20;
         var bestSample = SampleResult(vec4f(), vec2f(-1));
-        // unrolled iteration #0, 'dy' is '-1'
+        // unrolled iteration #0
         {
-          // unrolled iteration #0, 'dx' is '-1'
+          // unrolled iteration #0
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -144,7 +144,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #1, 'dx' is '0'
+          // unrolled iteration #1
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -155,7 +155,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #2, 'dx' is '1'
+          // unrolled iteration #2
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -167,9 +167,9 @@ describe('jump flood (voronoi) example', () => {
             }
           }
         }
-        // unrolled iteration #1, 'dy' is '0'
+        // unrolled iteration #1
         {
-          // unrolled iteration #0, 'dx' is '-1'
+          // unrolled iteration #0
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -180,7 +180,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #1, 'dx' is '0'
+          // unrolled iteration #1
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -191,7 +191,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #2, 'dx' is '1'
+          // unrolled iteration #2
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -203,9 +203,9 @@ describe('jump flood (voronoi) example', () => {
             }
           }
         }
-        // unrolled iteration #2, 'dy' is '1'
+        // unrolled iteration #2
         {
-          // unrolled iteration #0, 'dx' is '-1'
+          // unrolled iteration #0
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -216,7 +216,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #1, 'dx' is '0'
+          // unrolled iteration #1
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
             if ((sample.coord.x >= 0f)) {
@@ -227,7 +227,7 @@ describe('jump flood (voronoi) example', () => {
               }
             }
           }
-          // unrolled iteration #2, 'dx' is '1'
+          // unrolled iteration #2
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
             if ((sample.coord.x >= 0f)) {

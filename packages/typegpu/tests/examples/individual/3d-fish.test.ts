@@ -160,7 +160,7 @@ describe('3d fish example', () => {
         if ((cohesionCount > 0i)) {
           cohesion = ((cohesion / f32(cohesionCount)) - (*fishData).position);
         }
-        // unrolled iteration #0, 'i' is '0'
+        // unrolled iteration #0
         {
           var repulsion = vec3f();
           repulsion[0i] = 1f;
@@ -176,7 +176,7 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (repulsion * str2));
           }
         }
-        // unrolled iteration #1, 'i' is '1'
+        // unrolled iteration #1
         {
           var repulsion = vec3f();
           repulsion[1i] = 1f;
@@ -192,7 +192,7 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (repulsion * str2));
           }
         }
-        // unrolled iteration #2, 'i' is '2'
+        // unrolled iteration #2
         {
           var repulsion = vec3f();
           repulsion[2i] = 1f;

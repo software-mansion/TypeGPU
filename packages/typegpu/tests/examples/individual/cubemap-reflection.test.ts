@@ -82,7 +82,7 @@ describe('cubemap reflection example', () => {
         var v31 = vec4f(normalize(calculateMidpoint(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         let baseIndexNext = (triangleIndex * 12u);
-        // unrolled iteration #0, 'i' is '0'
+        // unrolled iteration #0
         {
           let reprojectedVertex = (&newVertices[0i]);
           let triBase = (0 - (0 % 3));
@@ -95,7 +95,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #1, 'i' is '1'
+        // unrolled iteration #1
         {
           let reprojectedVertex = (&newVertices[1i]);
           let triBase = (1 - (1 % 3));
@@ -108,7 +108,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #2, 'i' is '2'
+        // unrolled iteration #2
         {
           let reprojectedVertex = (&newVertices[2i]);
           let triBase = (2 - (2 % 3));
@@ -121,7 +121,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #3, 'i' is '3'
+        // unrolled iteration #3
         {
           let reprojectedVertex = (&newVertices[3i]);
           let triBase = (3 - (3 % 3));
@@ -134,7 +134,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #4, 'i' is '4'
+        // unrolled iteration #4
         {
           let reprojectedVertex = (&newVertices[4i]);
           let triBase = (4 - (4 % 3));
@@ -147,7 +147,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #5, 'i' is '5'
+        // unrolled iteration #5
         {
           let reprojectedVertex = (&newVertices[5i]);
           let triBase = (5 - (5 % 3));
@@ -160,7 +160,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #6, 'i' is '6'
+        // unrolled iteration #6
         {
           let reprojectedVertex = (&newVertices[6i]);
           let triBase = (6 - (6 % 3));
@@ -173,7 +173,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #7, 'i' is '7'
+        // unrolled iteration #7
         {
           let reprojectedVertex = (&newVertices[7i]);
           let triBase = (7 - (7 % 3));
@@ -186,7 +186,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #8, 'i' is '8'
+        // unrolled iteration #8
         {
           let reprojectedVertex = (&newVertices[8i]);
           let triBase = (8 - (8 % 3));
@@ -199,7 +199,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #9, 'i' is '9'
+        // unrolled iteration #9
         {
           let reprojectedVertex = (&newVertices[9i]);
           let triBase = (9 - (9 % 3));
@@ -212,7 +212,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #10, 'i' is '10'
+        // unrolled iteration #10
         {
           let reprojectedVertex = (&newVertices[10i]);
           let triBase = (10 - (10 % 3));
@@ -225,7 +225,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
-        // unrolled iteration #11, 'i' is '11'
+        // unrolled iteration #11
         {
           let reprojectedVertex = (&newVertices[11i]);
           let triBase = (11 - (11 % 3));

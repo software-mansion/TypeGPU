@@ -178,7 +178,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        // unrolled iteration #0, 'offset' is 'neighborOffsets[0u]'
+        // unrolled iteration #0
         {
           var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
@@ -196,7 +196,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #1, 'offset' is 'neighborOffsets[1u]'
+        // unrolled iteration #1
         {
           var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
@@ -214,7 +214,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #2, 'offset' is 'neighborOffsets[2u]'
+        // unrolled iteration #2
         {
           var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
@@ -232,7 +232,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #3, 'offset' is 'neighborOffsets[3u]'
+        // unrolled iteration #3
         {
           var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
@@ -409,7 +409,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
-        // unrolled iteration #0, 'offset' is 'neighborOffsets[0u]'
+        // unrolled iteration #0
         {
           var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
@@ -427,7 +427,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #1, 'offset' is 'neighborOffsets[1u]'
+        // unrolled iteration #1
         {
           var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
@@ -445,7 +445,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #2, 'offset' is 'neighborOffsets[2u]'
+        // unrolled iteration #2
         {
           var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
@@ -463,7 +463,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
-        // unrolled iteration #3, 'offset' is 'neighborOffsets[3u]'
+        // unrolled iteration #3
         {
           var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));

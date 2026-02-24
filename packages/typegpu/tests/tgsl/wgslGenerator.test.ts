@@ -1145,8 +1145,8 @@ describe('wgslGenerator', () => {
       const res = wgslGenerator.expression(
         // deno-fmt-ignore: it's better that way
         (
-            astInfo.ast?.body[1][0] as tinyest.Const
-          )[2] as unknown as tinyest.Expression,
+          astInfo.ast?.body[1][0] as tinyest.Const
+        )[2] as unknown as tinyest.Expression,
       );
 
       expect(d.isWgslArray(res.dataType)).toBe(true);
