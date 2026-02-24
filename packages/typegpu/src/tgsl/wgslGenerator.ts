@@ -1249,6 +1249,15 @@ ${this.ctx.pre}else ${alternate}`;
                 ),
             );
 
+          if (
+            isEphemeralSnippet(elements[0] as Snippet) &&
+            !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
+          ) {
+            throw new WgslTypeError(
+              'Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.',
+            );
+          }
+
           const blocks = elements
             .map((e, i) =>
               `${this.ctx.pre}// unrolled iteration #${i}, '${originalLoopVarName}' is '${stitch`${e}`}'\n${this.ctx.pre}${

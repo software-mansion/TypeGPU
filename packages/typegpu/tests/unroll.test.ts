@@ -145,10 +145,9 @@ describe('tgpu.unroll', () => {
       const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
       let res = d.vec2f();
       for (const foo of tgpu.unroll([b1, b2])) {
-        for (const boo of tgpu.unroll([Boid(), Boid()])) {
-          const baz = foo;
-          res = res.add(baz.vel).add(boo.vel);
-        }
+        const boo = foo;
+        res = res.add(foo.vel);
+        boo.pos = d.vec2i();
       }
 
       return res;
@@ -166,69 +165,39 @@ describe('tgpu.unroll', () => {
         var res = vec2f();
         // unrolled iteration #0, 'foo' is 'b1'
         {
-          // unrolled iteration #0, 'boo' is 'Boid()'
-          {
-            let baz = (&b1);
-            res = ((res + (*baz).vel) + Boid().vel);
-          }
-          // unrolled iteration #1, 'boo' is 'Boid()'
-          {
-            let baz = (&b1);
-            res = ((res + (*baz).vel) + Boid().vel);
-          }
+          let boo = (&b1);
+          res = (res + b1.vel);
+          (*boo).pos = vec2i();
         }
         // unrolled iteration #1, 'foo' is 'b2'
         {
-          // unrolled iteration #0, 'boo' is 'Boid()'
-          {
-            let baz = (&b2);
-            res = ((res + (*baz).vel) + Boid().vel);
-          }
-          // unrolled iteration #1, 'boo' is 'Boid()'
-          {
-            let baz = (&b2);
-            res = ((res + (*baz).vel) + Boid().vel);
-          }
+          let boo = (&b2);
+          res = (res + b2.vel);
+          (*boo).pos = vec2i();
         }
         return res;
       }"
     `);
   });
 
-  it('unrolls array expression of copies', () => {
+  it('throws when iterable elements are ephemeral but not naturally emphemeral', () => {
+    const Boid = d.struct({
+      pos: d.vec2i,
+      vel: d.vec2f,
+    });
+
     const f = () => {
       'use gpu';
-      let res = d.vec2f();
-      const v1 = d.vec2f(7);
-      const v2 = d.vec2f(3);
-      for (const foo of tgpu.unroll([d.vec2f(v1), d.vec2f(v2)])) {
-        res = res.add(foo);
-        const boo = foo;
-        boo.x = 0;
+      for (const foo of tgpu.unroll([Boid()])) {
+        continue;
       }
-
-      return res;
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> vec2f {
-        var res = vec2f();
-        var v1 = vec2f(7);
-        var v2 = vec2f(3);
-        // unrolled iteration #0, 'foo' is 'v1'
-        {
-          res = (res + v1);
-          var boo = v1;
-          boo.x = 0f;
-        }
-        // unrolled iteration #1, 'foo' is 'v2'
-        {
-          res = (res + v2);
-          var boo = v2;
-          boo.x = 0f;
-        }
-        return res;
-      }"
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.]
     `);
   });
 
