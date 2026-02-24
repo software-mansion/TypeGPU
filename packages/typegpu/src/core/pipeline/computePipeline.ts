@@ -30,7 +30,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
 import {
-  getOffsetInfoAt,
+  memoryLayoutOf,
   type PrimitiveOffsetInfo,
 } from '../../data/offsetUtils.ts';
 import {
@@ -77,10 +77,10 @@ export interface TgpuComputePipeline
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
-   * To get the correct offset within complex data structures, use `d.getOffsetInfoAt(...)`.
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
    *
    * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
-   * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `getOffsetInfoAt(...)`.
+   * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
     indirectBuffer: TgpuBuffer<T> & IndirectFlag,
@@ -244,14 +244,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   ): void {
     const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
 
-    let offsetInfo = start ?? getOffsetInfoAt(indirectBuffer.dataType);
+    let offsetInfo = start ?? memoryLayoutOf(indirectBuffer.dataType);
 
     if (typeof offsetInfo === 'number') {
       if (offsetInfo === 0) {
-        offsetInfo = getOffsetInfoAt(indirectBuffer.dataType);
+        offsetInfo = memoryLayoutOf(indirectBuffer.dataType);
       } else {
         console.warn(
-          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use getOffsetInfoAt(...) to include contiguous padding info for safer validation.`,
+          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation.`,
         );
         // When only an offset is provided, assume we have at least 12 bytes contiguous.
         offsetInfo = {
