@@ -450,7 +450,6 @@ describe('wgslGenerator', () => {
       'use gpu';
       const arr = [1, 2, 3];
       for (const foo of arr) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -458,9 +457,7 @@ describe('wgslGenerator', () => {
     const main2 = () => {
       'use gpu';
       const arr = [1, 2, 3];
-      // biome-ignore lint/style/useConst: it's a part of the test
       for (let foo of arr) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -483,7 +480,6 @@ describe('wgslGenerator', () => {
       let res = d.f32();
       for (const foo of arr) {
         res += foo;
-        const i = res; // this is intentional, scoping `i` to a block separate from `arr` index
       }
     };
 
@@ -495,7 +491,6 @@ describe('wgslGenerator', () => {
           let foo = arr[i];
           {
             res += foo;
-            let i = res;
           }
         }
       }"
@@ -521,8 +516,8 @@ describe('wgslGenerator', () => {
         for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
-            for (var i = 0u; i < 3; i++) {
-              let boo = arr[i];
+            for (var i_1 = 0u; i_1 < 3; i_1++) {
+              let boo = arr[i_1];
               {
                 res += (foo * boo);
               }
@@ -552,8 +547,8 @@ describe('wgslGenerator', () => {
         for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
-            for (var i = 0u; i < 3; i++) {
-              let foo2 = arr[i];
+            for (var i_1 = 0u; i_1 < 3; i_1++) {
+              let foo2 = arr[i_1];
               {
                 res += (foo2 * foo2);
               }
@@ -588,7 +583,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('creates correct code for "for ... of ..." statement using runtime size array', ({ root }) => {
+  it('creates correct code for "for ... of ..." statement using runtime size array', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });
@@ -623,13 +618,11 @@ describe('wgslGenerator', () => {
       'use gpu';
       const v1 = lazyV4u.$;
       for (const foo of v1) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
 
       const v2 = comptimeVec();
       for (const foo of v2) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -717,7 +710,6 @@ describe('wgslGenerator', () => {
       'use gpu';
       const testStruct = TestStruct({ arr: [1, 8, 8, 2] });
       for (const foo of testStruct.arr) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -743,7 +735,6 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       for (const foo of [1, 2, 3]) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -765,9 +756,8 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       const testStruct = TestStruct({ x: 1, y: 2 });
-      //@ts-expect-error: let's assume it has an iterator
+      // @ts-expect-error: let's assume it has an iterator
       for (const foo of testStruct) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -784,8 +774,8 @@ describe('wgslGenerator', () => {
     const main = () => {
       'use gpu';
       const arr = [1, 2, 3];
-      // biome-ignore lint/style/useConst: it's a part of the test
       for (let foo of arr) {
+        continue;
       }
     };
 
@@ -794,6 +784,23 @@ describe('wgslGenerator', () => {
       - <root>
       - fn*:main
       - fn*:main(): Only \`for (const ... of ... )\` loops are supported]
+    `);
+  });
+
+  it('throws error when "for ... of ..." loop variable name is not correct in wgsl', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const __foo of arr) {
+        continue;
+      }
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Invalid identifier '__foo'. Choose an identifier without whitespaces or leading underscores.]
     `);
   });
 
@@ -812,7 +819,7 @@ describe('wgslGenerator', () => {
         for (var i = 0u; i < 3; i++) {
           let foo = arr[i];
           {
-            let i = foo;
+            let i_1 = foo;
           }
         }
       }"
@@ -823,7 +830,6 @@ describe('wgslGenerator', () => {
       const i = 7;
       const arr = [1, 2, 3];
       for (const foo of arr) {
-        // biome-ignore lint/complexity/noUselessContinue: it's a part of the test
         continue;
       }
     };
@@ -832,8 +838,8 @@ describe('wgslGenerator', () => {
       "fn f2() {
         const i = 7;
         var arr = array<i32, 3>(1, 2, 3);
-        for (var ii = 0u; ii < 3; ii++) {
-          let foo = arr[ii];
+        for (var i_1 = 0u; i_1 < 3; i_1++) {
+          let foo = arr[i_1];
           {
             continue;
           }
@@ -841,6 +847,138 @@ describe('wgslGenerator', () => {
       }"
     `);
   });
+
+  it('handles "for ... of ..." internal index variable when "i" is the buffer used earlier', ({ root }) => {
+    const i = root.createUniform(d.u32, 7);
+
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3, i.$];
+      for (const foo of arr) {
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> i: u32;
+
+      fn f() {
+        var arr = array<u32, 4>(1u, 2u, 3u, i);
+        for (var i_1 = 0u; i_1 < 4; i_1++) {
+          let foo = arr[i_1];
+          {
+            continue;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('handles "for ... of ..." internal index variable when "i" is the buffer used later', ({ root }) => {
+    const i = root.createUniform(d.u32, 7);
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const foo of arr) {
+        const x = foo + i.$;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> i_1: u32;
+
+      fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3; i++) {
+          let foo = arr[i];
+          {
+            let x = (foo + i32(i_1));
+          }
+        }
+      }"
+    `);
+  });
+
+  it('handles "for ... of ..." internal index variable when "i" is the buffer returned from accessor', ({ root }) => {
+    const i = root.createUniform(d.u32, 7);
+
+    const acc = tgpu.accessor(d.u32, () => i.$);
+
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      for (const foo of arr) {
+        const x = foo + acc.$;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> i_1: u32;
+
+      fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3; i++) {
+          let foo = arr[i];
+          {
+            let x = (foo + i32(i_1));
+          }
+        }
+      }"
+    `);
+  });
+
+  it('handles "for ... of ..." internal index variable when "i" is the loop variable', () => {
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      let res = 0;
+      for (const i of arr) {
+        res += i;
+      }
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        var res = 0;
+        for (var i = 0u; i < 3; i++) {
+          let i_1 = arr[i];
+          {
+            res += i_1;
+          }
+        }
+      }"
+    `);
+  });
+
+  // TODO: enable when we transition to `rolldown`
+  // it('handles "for ... of ..." loop variable name when there is shadowning', ({ root }) => {
+  //   const i = root.createUniform(d.u32, 7);
+
+  //   const f = () => {
+  //     'use gpu';
+  //     const arr = [1, 2, 3, i.$];
+  //     let res = 0;
+  //     for (const i of arr) {
+  //       res += i;
+  //     }
+  //   };
+
+  //   expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+  //     "@group(0) @binding(0) var<uniform> i: u32;
+
+  //     fn f() {
+  //       var arr = array<u32, 4>(1u, 2u, 3u, i);
+  //       var res = 0;
+  //       for (var i_1 = 0u; i_1 < 4; i_1++) {
+  //         let i_2 = arr[i_1];
+  //         {
+  //           res += i32(i_2);
+  //         }
+  //       }
+  //     }"
+  //   `);
+  // });
 
   it('creates correct resources for lazy values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);

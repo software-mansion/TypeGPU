@@ -186,3 +186,50 @@ test('should give new names to functions that collide with builtins', () => {
     }"
   `);
 });
+
+// TODO: enable when we transition to `rolldown`
+// test('should allow duplicate name after block end', () => {
+//   const main = () => {
+//     'use gpu';
+//     for (let i = 0; i < 3; i++) {
+//       const foo = i + 1;
+//     }
+//     const foo = d.u32(7);
+//     return foo;
+//   };
+
+//   expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+//       "fn main() -> u32 {
+//         for (var i = 0; (i < 3i); i++) {
+//           let foo = (i + 1i);
+//         }
+//         const foo = 7u;
+//         return foo;
+//       }"
+//     `);
+// });
+//
+// test('should give declarations new names when they are shadowed', () => {
+//   const main = () => {
+//     'use gpu';
+//     const i = 0;
+//     {
+//       const i = 1;
+//       {
+//         const i = 2;
+//       }
+//     }
+//   };
+
+//   expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+//     "fn main() {
+//       const i = 0;
+//       {
+//         const i_1 = 1;
+//         {
+//           const i_2 = 2;
+//         }
+//       }
+//     }"
+//   `);
+// });
