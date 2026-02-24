@@ -1155,18 +1155,23 @@ ${this.ctx.pre}else ${alternate}`;
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
 
-      const [initStatement, conditionExpr, updateStatement] = this.ctx
-        .withResetIndentLevel(() => [
-          init ? this.statement(init) : undefined,
-          condition ? this.typedExpression(condition, bool) : undefined,
-          update ? this.statement(update) : undefined,
-        ]);
+      try {
+        this.ctx.pushBlockScope();
+        const [initStatement, conditionExpr, updateStatement] = this.ctx
+          .withResetIndentLevel(() => [
+            init ? this.statement(init) : undefined,
+            condition ? this.typedExpression(condition, bool) : undefined,
+            update ? this.statement(update) : undefined,
+          ]);
 
-      const initStr = initStatement ? initStatement.slice(0, -1) : '';
-      const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
+        const initStr = initStatement ? initStatement.slice(0, -1) : '';
+        const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this.block(blockifySingleStatement(body));
+        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+      } finally {
+        this.ctx.popBlockScope();
+      }
     }
 
     if (statement[0] === NODE.while) {
@@ -1187,115 +1192,114 @@ ${this.ctx.pre}else ${alternate}`;
           '`for ... of ...` loops only support iterables stored in variables',
         );
       }
+      try {
+        this.ctx.pushBlockScope();
 
-      // Our index name will be some element from infinite sequence (i, ii, iii, ...).
-      // If user defines `i` and `ii` before `for ... of ...` loop, then our index name will be `iii`.
-      // If user defines `i` inside `for ... of ...` then it will be scoped to a new block,
-      // so we can safely use `i`.
-      let index = 'i'; // it will be valid name, no need to call this.ctx.makeNameValid
-      while (this.ctx.getById(index) !== null) {
-        index += 'i';
-      }
+        const index = this.ctx.makeNameValid('i');
 
-      const elementSnippet = accessIndex(
-        iterableSnippet,
-        snip(index, u32, 'runtime'),
-      );
-
-      if (!elementSnippet) {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
+        const elementSnippet = accessIndex(
+          iterableSnippet,
+          snip(index, u32, 'runtime'),
         );
-      }
+        if (!elementSnippet) {
+          throw new WgslTypeError(
+            '`for ... of ...` loops only support array or vector iterables',
+          );
+        }
 
-      const iterableDataType = iterableSnippet.dataType;
-      let elementCountSnippet: Snippet;
-      let elementType = elementSnippet.dataType;
+        const iterableDataType = iterableSnippet.dataType;
+        let elementCountSnippet: Snippet;
+        let elementType = elementSnippet.dataType;
 
-      if (elementType === UnknownData) {
-        throw new WgslTypeError(
-          stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
-        );
-      }
+        if (elementType === UnknownData) {
+          throw new WgslTypeError(
+            stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+          );
+        }
 
-      if (wgsl.isWgslArray(iterableDataType)) {
-        elementCountSnippet = iterableDataType.elementCount > 0
-          ? snip(
-            `${iterableDataType.elementCount}`,
+        if (wgsl.isWgslArray(iterableDataType)) {
+          elementCountSnippet = iterableDataType.elementCount > 0
+            ? snip(
+              `${iterableDataType.elementCount}`,
+              u32,
+              'constant',
+            )
+            : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
+        } else if (wgsl.isVec(iterableDataType)) {
+          elementCountSnippet = snip(
+            `${Number(iterableDataType.type.match(/\d/))}`,
             u32,
             'constant',
-          )
-          : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
-      } else if (wgsl.isVec(iterableDataType)) {
-        elementCountSnippet = snip(
-          `${Number(iterableDataType.type.match(/\d/))}`,
-          u32,
-          'constant',
-        );
-      } else {
-        throw new WgslTypeError(
-          '`for ... of ...` loops only support array or vector iterables',
-        );
-      }
-
-      if (loopVar[0] !== NODE.const) {
-        throw new WgslTypeError(
-          'Only `for (const ... of ... )` loops are supported',
-        );
-      }
-
-      // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
-      // an implicit pointer to it
-      let loopVarKind = 'let';
-
-      if (!isEphemeralSnippet(elementSnippet)) {
-        if (elementSnippet.origin === 'constant-tgpu-const-ref') {
-          loopVarKind = 'const';
-        } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
-          loopVarKind = 'let';
+          );
         } else {
-          loopVarKind = 'let';
-          if (!wgsl.isPtr(elementType)) {
-            const ptrType = createPtrFromOrigin(
-              elementSnippet.origin,
-              concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
-            );
-            invariant(
-              ptrType !== undefined,
-              `Creating pointer type from origin ${elementSnippet.origin}`,
-            );
-            elementType = ptrType;
-          }
-
-          elementType = implicitFrom(elementType as wgsl.Ptr);
+          throw new WgslTypeError(
+            '`for ... of ...` loops only support array or vector iterables',
+          );
         }
+
+        if (loopVar[0] !== NODE.const) {
+          throw new WgslTypeError(
+            'Only `for (const ... of ... )` loops are supported',
+          );
+        }
+
+        // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
+        // an implicit pointer to it
+        let loopVarKind = 'let';
+        if (!isEphemeralSnippet(elementSnippet)) {
+          if (elementSnippet.origin === 'constant-tgpu-const-ref') {
+            loopVarKind = 'const';
+          } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
+            loopVarKind = 'let';
+          } else {
+            loopVarKind = 'let';
+            if (!wgsl.isPtr(elementType)) {
+              const ptrType = createPtrFromOrigin(
+                elementSnippet.origin,
+                concretize(
+                  elementType as wgsl.AnyWgslData,
+                ) as wgsl.StorableData,
+              );
+              invariant(
+                ptrType !== undefined,
+                `Creating pointer type from origin ${elementSnippet.origin}`,
+              );
+              elementType = ptrType;
+            }
+
+            elementType = implicitFrom(elementType as wgsl.Ptr);
+          }
+        }
+
+        const forStr =
+          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+          }; ${index}++) {`;
+        this.ctx.indent();
+
+        const loopVarName = this.ctx.makeNameValid(loopVar[1]);
+        const loopVarDeclStr =
+          stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+            tryConvertSnippet(
+              this.ctx,
+              elementSnippet,
+              elementType,
+              false,
+            )
+          };`;
+
+        const bodyStr = `${this.ctx.pre}${
+          this.block(blockifySingleStatement(body), {
+            [loopVar[1]]: snip(loopVarName, elementType, elementSnippet.origin),
+          })
+        }`;
+
+        this.ctx.dedent();
+
+        return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+      } finally {
+        this.ctx.popBlockScope();
       }
-
-      const forStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-        tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-      }; ${index}++) {`;
-      this.ctx.indent();
-
-      const loopVarName = this.ctx.makeNameValid(loopVar[1]);
-      const loopVarDeclStr =
-        stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
-          tryConvertSnippet(
-            this.ctx,
-            elementSnippet,
-            elementType,
-            false,
-          )
-        };`;
-
-      const bodyStr = `${this.ctx.pre}${
-        this.block(blockifySingleStatement(body), {
-          [loopVar[1]]: snip(loopVarName, elementType, elementSnippet.origin),
-        })
-      }`;
-
-      this.ctx.dedent();
-
-      return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.continue) {
