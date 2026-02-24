@@ -37,7 +37,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
+import { add, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
@@ -64,6 +64,7 @@ export const infixOperators = {
   sub,
   mul,
   div,
+  mod,
 } as const;
 
 export type InfixOperator = keyof typeof infixOperators;

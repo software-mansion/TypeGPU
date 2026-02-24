@@ -419,7 +419,8 @@ ${this.ctx.pre}}`;
           );
         }
 
-        if (!isEphemeralSnippet(rhsExpr)) {
+        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
+        if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
               this.ctx.resolve(rhsExpr.dataType).value
