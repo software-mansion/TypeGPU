@@ -1,14 +1,12 @@
 import { randf } from '@typegpu/noise';
-import tgpu, {
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuComputeFn,
-  type TgpuTexture,
+import tgpu, { common, d, std } from 'typegpu';
+import type {
+  SampledFlag,
+  StorageFlag,
+  TgpuBindGroup,
+  TgpuComputeFn,
+  TgpuTexture,
 } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import {
   computeLayout,
   displayLayout,
@@ -28,7 +26,6 @@ const root = await tgpu.init({
 const hasTimestamp = root.enabledFeatures.has('timestamp-query');
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 let gameSize = 64;
 const gameSizeUniform = root.createUniform(d.u32, gameSize);
@@ -66,9 +63,9 @@ let displayBindGroups: TgpuBindGroup<typeof displayLayout.entries>[];
 
 let even = 0;
 
-const randomInit = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const randomInit = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
-  randf.seed2(d.vec2f(x, y).div(d.f32(gameSizeUniform.$)).mul(timeUniform.$));
+  randf.seed2(d.vec2f(x, y) / d.f32(gameSizeUniform.$) * timeUniform.$);
   std.textureStore(
     computeLayout.$.next,
     d.vec2u(x, y),
@@ -99,13 +96,11 @@ const getBrushRadius = (radiusNorm: number, gameSize: number) => {
   return std.mix(halfPixelRadius, maxRadius, radiusNorm);
 };
 
-const handleDraw = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const handleDraw = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
-  const uv = d.vec2f(d.f32(x) + 0.5, d.f32(y) + 0.5).div(
-    d.f32(gameSizeUniform.$),
-  );
+  const uv = (d.vec2f(x, y) + 0.5) / d.f32(gameSizeUniform.$);
   const stroke = brushStrokeUniform.$;
-  randf.seed2(d.vec2f(x, y).div(d.f32(gameSizeUniform.$)).mul(timeUniform.$));
+  randf.seed2(d.vec2f(x, y) / d.f32(gameSizeUniform.$) * timeUniform.$);
   if (
     sdLine(uv, stroke.start, stroke.end) <=
       getBrushRadius(stroke.radius, gameSizeAccessor.$)
@@ -125,68 +120,65 @@ const handleDraw = root['~unstable'].createGuardedComputePipeline((x, y) => {
   }
 });
 
-const handleDrawBitpacked = root['~unstable'].createGuardedComputePipeline(
-  (px, py) => {
-    'use gpu';
-    const gs = d.f32(gameSizeUniform.$);
-    const stroke = brushStrokeUniform.$;
+const handleDrawBitpacked = root.createGuardedComputePipeline((px, py) => {
+  'use gpu';
+  const gs = d.f32(gameSizeUniform.$);
+  const stroke = brushStrokeUniform.$;
 
-    // Read current packed value
-    const current = std.textureLoad(
-      computeLayout.$.current,
-      d.vec2u(px, py),
-      d.i32(0),
-    ).x;
+  // Read current packed value
+  const current = std.textureLoad(
+    computeLayout.$.current,
+    d.vec2u(px, py),
+    d.i32(0),
+  ).x;
 
-    // Build mask of affected cells and their new values
-    let affectedMask = d.u32(0);
-    let newValues = d.u32(0);
+  // Build mask of affected cells and their new values
+  let affectedMask = d.u32(0);
+  let newValues = d.u32(0);
 
-    for (let i = 0; i < 32; i++) {
-      const cellX = d.f32(d.u32(px) * d.u32(32) + d.u32(i)) + 0.5;
-      const cellY = d.f32(py) + 0.5;
-      const uv = d.vec2f(cellX, cellY).div(gs);
+  for (let i = 0; i < 32; i++) {
+    const cellX = d.f32(d.u32(px) * d.u32(32) + d.u32(i)) + 0.5;
+    const cellY = d.f32(py) + 0.5;
+    const uv = d.vec2f(cellX, cellY) / gs;
 
-      if (
-        sdLine(uv, stroke.start, stroke.end) <=
-          getBrushRadius(stroke.radius, gs)
-      ) {
-        const bit = d.u32(1) << d.u32(i);
-        affectedMask = affectedMask | bit;
+    if (
+      sdLine(uv, stroke.start, stroke.end) <=
+        getBrushRadius(stroke.radius, gs)
+    ) {
+      const bit = d.u32(1) << d.u32(i);
+      affectedMask = affectedMask | bit;
 
-        if (stroke.mode === d.u32(0)) {
-          // Add mode: set bit
+      if (stroke.mode === d.u32(0)) {
+        // Add mode: set bit
+        newValues = newValues | bit;
+      } else if (stroke.mode === d.u32(2)) {
+        // Random mode
+        randf.seed2(d.vec2f(cellX, cellY) / gs * timeUniform.$);
+        if (randf.sample() > 0.5) {
           newValues = newValues | bit;
-        } else if (stroke.mode === d.u32(2)) {
-          // Random mode
-          randf.seed2(d.vec2f(cellX, cellY).div(gs).mul(timeUniform.$));
-          if (randf.sample() > 0.5) {
-            newValues = newValues | bit;
-          }
         }
-        // Delete mode (1): newValues bit stays 0
       }
+      // Delete mode (1): newValues bit stays 0
     }
+  }
 
-    // Apply: keep unaffected bits from current, use new values for affected bits
-    const result = (current & (affectedMask ^ d.u32(0xFFFFFFFF))) |
-      (newValues & affectedMask);
+  // Apply: keep unaffected bits from current, use new values for affected bits
+  const result = (current & (affectedMask ^ d.u32(0xFFFFFFFF))) |
+    (newValues & affectedMask);
 
-    std.textureStore(
-      computeLayout.$.next,
-      d.vec2u(px, py),
-      d.vec4u(result, 0, 0, 0),
-    );
-  },
-);
+  std.textureStore(
+    computeLayout.$.next,
+    d.vec2u(px, py),
+    d.vec4u(result, 0, 0, 0),
+  );
+});
 
 const perf = { sum: 0, count: 0, window: 120 };
 
 function createPipeline(name: string, compute: TgpuComputeFn) {
-  const base = root['~unstable']
+  const base = root
     .with(gameSizeAccessor, gameSizeUniform)
-    .withCompute(compute)
-    .createPipeline();
+    .createComputePipeline({ compute });
 
   return !hasTimestamp ? base : base
     .withPerformanceCallback((start, end) => {
@@ -214,13 +206,13 @@ const sampleRegular = (sampleUv: d.v2f, gs: number): number => {
   'use gpu';
   return std.textureLoad(
     displayLayout.$.source,
-    d.vec2u(sampleUv.mul(gs)),
+    d.vec2u(sampleUv * gs),
   ).x;
 };
 
 const sampleBitpacked = (sampleUv: d.v2f, gs: number): number => {
   'use gpu';
-  const pixelCoord = sampleUv.mul(gs);
+  const pixelCoord = sampleUv * gs;
   const cellX = d.u32(pixelCoord.x);
   const cellY = d.u32(pixelCoord.y);
   const packedX = cellX / 32;
@@ -238,10 +230,11 @@ const cellSamplerSlot = tgpu.slot<(uv: d.v2f, gs: number) => number>(
 
 const viewModeUniform = root.createUniform(d.u32, 0); // 0 = colorful, 1 = classic
 
-const displayFragment = tgpu['~unstable'].fragmentFn({
+const displayFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
+  'use gpu';
   const zoom = zoomUniform.$;
   const gs = d.f32(gameSizeUniform.$);
 
@@ -261,10 +254,10 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
     uv.y >= minimapMin.y && uv.y <= minimapMax.y;
 
   if (inMinimap) {
-    const localUv = uv.sub(minimapMin).div(minimapSize);
+    const localUv = (uv - minimapMin) / minimapSize;
 
     // Outer border
-    const edgeDist = sdRoundedBox2d(localUv.sub(0.5), d.vec2f(0.5), 0.02);
+    const edgeDist = sdRoundedBox2d(localUv - 0.5, d.vec2f(0.5), 0.02);
     if (edgeDist > -0.02) {
       const alpha = 1.0 - std.smoothstep(0.0, 0.02, edgeDist);
       return d.vec4f(0.5, 0.5, 0.5, alpha);
@@ -273,7 +266,7 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
     // View rectangle highlight
     const viewSize = 1 / zoom.level;
     const dist = sdRoundedBox2d(
-      localUv.sub(clampedCenter),
+      localUv - clampedCenter,
       d.vec2f(viewSize / 2),
       0.01,
     );
@@ -300,7 +293,7 @@ const displayFragment = tgpu['~unstable'].fragmentFn({
 
   let sampleUv = d.vec2f(uv);
   if (zoom.enabled === 1) {
-    sampleUv = uv.sub(0.5).div(zoom.level).add(clampedCenter);
+    sampleUv = (uv - 0.5) / zoom.level + clampedCenter;
   }
 
   const value = cellSamplerSlot.$(sampleUv, gs);
@@ -321,35 +314,32 @@ const [displayPipeline, bitpackedDisplayPipeline] = [
   sampleRegular,
   sampleBitpacked,
 ].map((fn) =>
-  root['~unstable']
+  root
     .with(cellSamplerSlot, fn)
     .createRenderPipeline({
-      vertex: fullScreenTriangle,
+      vertex: common.fullScreenTriangle,
       fragment: displayFragment,
-      targets: { format: presentationFormat },
     })
 );
 
-const bitpackedRandomInit = root['~unstable'].createGuardedComputePipeline(
-  (x, y) => {
-    'use gpu';
-    let packed = d.u32(0);
-    for (let i = 0; i < 32; i++) {
-      randf.seed2(
-        d.vec2f(d.f32(x) * 32 + d.f32(i), d.f32(y))
-          .div(d.f32(gameSizeUniform.$))
-          .mul(timeUniform.$),
-      );
-      packed = packed |
-        (std.select(d.u32(0), d.u32(1), randf.sample() > 0.5) << d.u32(i));
-    }
-    std.textureStore(
-      computeLayout.$.next,
-      d.vec2u(x, y),
-      d.vec4u(packed, 0, 0, 0),
+const bitpackedRandomInit = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  let packed = d.u32(0);
+  for (let i = 0; i < 32; i++) {
+    randf.seed2(
+      d.vec2f(d.f32(x) * 32 + d.f32(i), y) /
+        d.f32(gameSizeUniform.$) *
+        timeUniform.$,
     );
-  },
-);
+    packed = packed |
+      (std.select(d.u32(0), d.u32(1), randf.sample() > 0.5) << d.u32(i));
+  }
+  std.textureStore(
+    computeLayout.$.next,
+    d.vec2u(x, y),
+    d.vec4u(packed, 0, 0, 0),
+  );
+});
 
 let chosenPipeline: 'tiled' | 'naive' | 'bitpacked' = 'tiled';
 
@@ -466,11 +456,7 @@ function frame(timestamp: number) {
     : displayPipeline;
 
   chosenDisplayPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(displayBindGroups[1 - even])
     .draw(3);
 
@@ -482,7 +468,7 @@ requestAnimationFrame(frame);
 
 export const controls = defineControls({
   size: {
-    initial: '64',
+    initial: '1024',
     options: [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((x) =>
       x.toString()
     ),
