@@ -152,6 +152,8 @@ export interface ItemStateStack {
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
   pushBlockScope(): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 
   pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
   pop(): StackLayer | undefined;
