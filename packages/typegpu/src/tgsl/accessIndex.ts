@@ -114,7 +114,7 @@ export function accessIndex(
   // matrix
   if ((target.dataType as BaseData).type in indexableTypeToResult) {
     throw new Error(
-      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+      "The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.",
     );
   }
 

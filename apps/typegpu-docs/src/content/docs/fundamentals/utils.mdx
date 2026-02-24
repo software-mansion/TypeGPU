@@ -262,7 +262,7 @@ Other supported `console` functionalities include `console.debug`, `console.info
 
 There are some limitations (some of which we intend to alleviate in the future):
 
-- `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
+- `console.log` only works when used in TypeGPU functions that are transitively called in a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
