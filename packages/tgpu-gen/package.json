@@ -18,7 +18,7 @@
     "wgsl_reflect": "git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.9.0"
+    "typegpu": "workspace:^0.10.0"
   },
   "files": ["README.md", "LICENSE", "package.json", "**/*.mjs"],
   "devDependencies": {
