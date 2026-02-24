@@ -1228,7 +1228,11 @@ ${this.ctx.pre}else ${alternate}`;
             ? value.elements
             : Array.from(
               { length },
-              (_, i) => forOfUtils.getElementSnippet(iterableSnippet, i),
+              (_, i) =>
+                forOfUtils.getElementSnippet(
+                  iterableSnippet,
+                  snip(i, u32, 'constant'),
+                ),
             );
 
           const blocks = elements
@@ -1262,7 +1266,7 @@ ${this.ctx.pre}else ${alternate}`;
         const index = this.ctx.makeNameValid('i');
         const elementSnippet = forOfUtils.getElementSnippet(
           iterableSnippet,
-          index,
+          snip(index, u32, 'runtime'),
         );
         const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
         const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);

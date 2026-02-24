@@ -177,7 +177,7 @@ const getPerpendicular = (dir: d.v3f) => {
 };
 
 const numSamples = 8;
-const samplesIterations = Array.from({ length: numSamples }).map((_, i) => i);
+const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);

@@ -22,11 +22,11 @@ export function getLoopVarKind(elementSnippet: Snippet) {
 
 export function getElementSnippet(
   iterableSnippet: Snippet,
-  index: string | number,
+  index: Snippet,
 ) {
   const elementSnippet = accessIndex(
     iterableSnippet,
-    snip(index, u32, 'runtime'),
+    index,
   );
 
   if (!elementSnippet) {

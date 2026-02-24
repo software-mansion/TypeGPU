@@ -86,8 +86,7 @@ export const evaluateLight = (
     .mul(ndotl);
 };
 
-const lightCountIterations = Array.from({ length: LIGHT_COUNT })
-  .map((_, i) => i);
+const lightCountIterations = Array.from({ length: LIGHT_COUNT }, (_, i) => i);
 export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
   'use gpu';
   const material = materialAccess.$;
