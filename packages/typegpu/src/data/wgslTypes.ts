@@ -184,8 +184,24 @@ type Tuple2<S> = [S, S];
 type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
 
+/**
+ * A type which every vector is assignable to. In most cases the union v2f | v3f | v4f
+ * is preferred, but when an implementation uses overloaded operators and is generic on the type,
+ * this makes the type checking much more laid back.
+ *
+ * @example
+ * ```ts
+ * export function quinticInterpolation(t: d.v2f): d.v2f;
+ * export function quinticInterpolation(t: d.v3f): d.v3f;
+ * export function quinticInterpolation(t: d.vecBase): d.vecBase {
+ *   'use gpu';
+ *   return t * t * t * (t * (t * 6 - 15) + 10);
+ * }
+ * ```
+ */
 export interface vecBase extends vecInfixNotation<vecBase> {
   readonly [$internal]: true;
+  readonly kind: 'vec2f' | 'vec3f' | 'vec4f';
 }
 
 /**
@@ -483,8 +499,14 @@ export type AnyVecInstance =
 
 export type VecKind = AnyVecInstance['kind'];
 
+/**
+ * A type which every matrix is assignable to. In most cases the union m2x2f | m3x3f | m4x4f
+ * is preferred, but when an implementation uses overloaded operators and is generic on the type,
+ * this makes the type checking much more laid back.
+ */
 export interface matBase extends matInfixNotation<matBase> {
   readonly [$internal]: true;
+  readonly kind: 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 }
 
 /**
