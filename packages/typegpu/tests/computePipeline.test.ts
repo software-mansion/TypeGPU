@@ -9,7 +9,6 @@ import {
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
-import { getOffsetInfoAt } from '../src/data/offsetUtils.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -648,7 +647,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         buffer,
-        getOffsetInfoAt(PaddedStruct, (s) => s.a),
+        d.memoryLayoutOf(PaddedStruct, (s) => s.a),
       );
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
@@ -658,7 +657,7 @@ describe('TgpuComputePipeline', () => {
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        getOffsetInfoAt(DeepStruct, (s) => s.someData[11] as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number),
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
@@ -667,7 +666,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        getOffsetInfoAt(
+        d.memoryLayoutOf(
           DeepStruct,
           (s) => s.nested.innerNested[0]?.yy as number,
         ),
