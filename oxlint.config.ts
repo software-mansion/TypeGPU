@@ -15,6 +15,7 @@ export default defineConfig({
   },
   rules: {
     ...typegpuRules,
+    'typescript/no-unsafe-enum-comparison': 'off',
     'typescript/restrict-template-expressions': 'off',
     'typescript/no-unsafe-type-assertion': 'off',
     'typescript/no-explicit-any': 'error',

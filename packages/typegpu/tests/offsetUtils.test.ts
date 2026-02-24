@@ -33,7 +33,7 @@ describe('getOffsetInfoAt (vectors)', () => {
   });
 
   it('supports numeric component access', () => {
-    const info = getOffsetInfoAt(d.vec3f, (v) => v[1] as number);
+    const info = getOffsetInfoAt(d.vec3f, (v) => v[1]);
 
     expect(info.offset).toBe(4);
     expect(info.contiguous).toBe(8);
@@ -172,7 +172,7 @@ describe('getOffsetInfoAt (edge cases)', () => {
 
     const info = getOffsetInfoAt(
       S,
-      (s) => s.l.vec.z as number,
+      (s) => s.l.vec.z,
     );
 
     expect(info.offset).toBe(8);

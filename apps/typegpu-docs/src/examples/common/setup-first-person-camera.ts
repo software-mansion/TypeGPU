@@ -106,7 +106,7 @@ export function setupFirstPersonCamera(
 
   // mouse events
   canvas.addEventListener('mousedown', () => {
-    canvas.requestPointerLock();
+    void canvas.requestPointerLock();
   });
 
   canvas.addEventListener('mousemove', (event: MouseEvent) => {
