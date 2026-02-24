@@ -1,7 +1,7 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -81,7 +81,7 @@
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "dependencies": {
-    "tinyest": "workspace:~0.2.0",
+    "tinyest": "workspace:~0.3.0",
     "tsover-runtime": "^0.0.5",
     "typed-binary": "^4.3.1"
   }
