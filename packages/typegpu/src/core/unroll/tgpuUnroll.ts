@@ -6,7 +6,6 @@ import {
 } from '../../../src/shared/symbols.ts';
 import { setName } from '../../../src/shared/meta.ts';
 import type { DualFn } from '../../../src/types.ts';
-
 import type { AnyData } from '../../../src/data/dataTypes.ts';
 import {
   type ResolvedSnippet,
@@ -18,9 +17,9 @@ import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
  * generating shader code can check if the value of a snippet is
- * an instance of `UnrolledIterable`, and act accordingly.
+ * an instance of `UnrollableIterable`, and act accordingly.
  */
-export class UnrolledIterable implements SelfResolvable {
+export class UnrollableIterable implements SelfResolvable {
   readonly [$internal] = true;
 
   constructor(public readonly snippet: Snippet) {}
@@ -47,7 +46,7 @@ export const unroll = (() => {
   impl[$internal] = true;
   impl[$gpuCallable] = {
     call(_ctx, [value]) {
-      return snip(new UnrolledIterable(value), value.dataType, value.origin);
+      return snip(new UnrollableIterable(value), value.dataType, value.origin);
     },
   };
 

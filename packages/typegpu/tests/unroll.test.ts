@@ -189,7 +189,7 @@ describe('tgpu.unroll', () => {
     const f = () => {
       'use gpu';
       for (const foo of tgpu.unroll([Boid()])) {
-        continue;
+        const boo = foo;
       }
     };
 
@@ -401,7 +401,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls external compile-time iterable', () => {
+  it('unrolls external comptime iterable', () => {
     const arr = [1, 2, 3];
 
     const f = () => {
@@ -434,7 +434,7 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('throws when iterable element count is unknown at compile-time', () => {
+  it('throws when iterable element count is unknown at comptime', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
     });
@@ -451,7 +451,7 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Cannot unroll loop. Length of iterable is unknown at compile-time.]
+      - fn*:f(): Cannot unroll loop. Length of iterable is unknown at comptime.]
     `);
   });
 

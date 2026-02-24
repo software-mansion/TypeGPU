@@ -775,7 +775,7 @@ describe('wgslGenerator', () => {
       - fn*:main
       - fn*:main(): \`for ... of ...\` loops only support iterables stored in variables.
         -----
-        You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at compile-time, the loop will be unrolled.
+        You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
         -----]
     `);
   });

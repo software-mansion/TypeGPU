@@ -47,7 +47,7 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { UnrolledIterable as UnrollableIterable } from '../../src/core/unroll/tgpuUnroll.ts';
+import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
@@ -1223,9 +1223,9 @@ ${this.ctx.pre}else ${alternate}`;
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
-          if ((stitch`${elementCountSnippet}`).includes('arrayLength')) {
+          if (!isKnownAtComptime(elementCountSnippet)) {
             throw new Error(
-              'Cannot unroll loop. Length of iterable is unknown at compile-time.',
+              'Cannot unroll loop. Length of iterable is unknown at comptime.',
             );
           }
 
@@ -1272,7 +1272,7 @@ ${this.ctx.pre}else ${alternate}`;
           throw new Error(
             `\`for ... of ...\` loops only support iterables stored in variables.
   -----
-  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at compile-time, the loop will be unrolled.
+  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
   -----`,
           );
         }
