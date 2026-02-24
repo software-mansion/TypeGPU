@@ -201,7 +201,19 @@ type Tuple4<S> = [S, S, S, S];
  */
 export interface vecBase extends vecInfixNotation<vecBase> {
   readonly [$internal]: true;
-  readonly kind: 'vec2f' | 'vec3f' | 'vec4f';
+  readonly kind:
+    | 'vec2f'
+    | 'vec3f'
+    | 'vec4f'
+    | 'vec2h'
+    | 'vec3h'
+    | 'vec4h'
+    | 'vec2i'
+    | 'vec3i'
+    | 'vec4i'
+    | 'vec2u'
+    | 'vec3u'
+    | 'vec4u';
 }
 
 /**
