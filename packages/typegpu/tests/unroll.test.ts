@@ -725,7 +725,7 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f1
-      - fn*:f1(): Cannot unroll loop containing \`break\` or \`continue\`]
+      - fn*:f1(): Cannot unroll loop containing \`continue\`]
     `);
 
     const f2 = () => {
@@ -739,7 +739,7 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f2
-      - fn*:f2(): Cannot unroll loop containing \`break\` or \`continue\`]
+      - fn*:f2(): Cannot unroll loop containing \`break\`]
     `);
   });
 
@@ -760,22 +760,96 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Cannot unroll loop containing \`break\` or \`continue\`]
+      - fn*:f(): Cannot unroll loop containing \`continue\`]
     `);
   });
 
-  it.skip('unrolls when `continue` is used in nested loop', () => {
+  it('unrolls when `continue` or `break` is used in nested loop', () => {
     const f = () => {
       'use gpu';
+      const arr = [1, 2, 3];
+
       for (const foo of tgpu.unroll([1, 2])) {
         for (let i = 0; i < 2; i++) {
           if (i === foo) {
             continue;
           }
         }
+        let i = 2;
+        while (i > 2) {
+          i--;
+          break;
+        }
+
+        for (const boo of arr) {
+          continue;
+        }
       }
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        // unrolled iteration #0, 'foo' is '1'
+        {
+          for (var i2 = 0; (i2 < 2i); i2++) {
+            if ((i2 == 1i)) {
+              continue;
+            }
+          }
+          var i = 2;
+          while ((i > 2i)) {
+            i--;
+            break;
+          }
+          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+            let boo = arr[i_1];
+            {
+              continue;
+            }
+          }
+        }
+        // unrolled iteration #1, 'foo' is '2'
+        {
+          for (var i2 = 0; (i2 < 2i); i2++) {
+            if ((i2 == 2i)) {
+              continue;
+            }
+          }
+          var i = 2;
+          while ((i > 2i)) {
+            i--;
+            break;
+          }
+          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+            let boo = arr[i_1];
+            {
+              continue;
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  it('unrolling flag is set correclty', () => {
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+
+      for (const foo of tgpu.unroll([1, 2])) {
+        for (const boo of arr) {
+          continue;
+        }
+        break;
+      }
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Cannot unroll loop containing \`break\`]
+    `);
   });
 });

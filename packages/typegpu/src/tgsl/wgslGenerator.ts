@@ -187,6 +187,8 @@ const binaryOpCodeToCodegen = {
 
 class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
+  // used to detect `continue` and `break` nodes in loop body
+  #unrolling = false;
 
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
@@ -1155,6 +1157,8 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
 
       try {
         this.ctx.pushBlockScope();
@@ -1171,17 +1175,24 @@ ${this.ctx.pre}else ${alternate}`;
         const bodyStr = this.block(blockifySingleStatement(body));
         return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
       } finally {
+        this.#unrolling = prevUnrollingFlag;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.while) {
-      const [_, condition, body] = statement;
-      const condSnippet = this.typedExpression(condition, bool);
-      const conditionStr = this.ctx.resolve(condSnippet.value).value;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
+      try {
+        const [_, condition, body] = statement;
+        const condSnippet = this.typedExpression(condition, bool);
+        const conditionStr = this.ctx.resolve(condSnippet.value).value;
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this.block(blockifySingleStatement(body));
+        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+      } finally {
+        this.#unrolling = prevUnrollingFlag;
+      }
     }
 
     if (statement[0] === NODE.forOf) {
@@ -1194,6 +1205,7 @@ ${this.ctx.pre}else ${alternate}`;
       }
 
       let ctxIndent = false;
+      const prevUnrollingFlag = this.#unrolling;
 
       try {
         this.ctx.pushBlockScope();
@@ -1216,6 +1228,8 @@ ${this.ctx.pre}else ${alternate}`;
               'Cannot unroll loop. Length of iterable is unknown at compile-time.',
             );
           }
+
+          this.#unrolling = true;
 
           const length = elementCountSnippet.value as number;
           if (length === 0) {
@@ -1242,15 +1256,6 @@ ${this.ctx.pre}else ${alternate}`;
               }`
             );
 
-          // TODO: replace it with tinyest traversal
-          if (
-            blocks[0]?.includes('break') || blocks[0]?.includes('continue')
-          ) {
-            throw new WgslTypeError(
-              'Cannot unroll loop containing `break` or `continue`',
-            );
-          }
-
           return blocks.join('\n');
         }
 
@@ -1262,6 +1267,8 @@ ${this.ctx.pre}else ${alternate}`;
   -----`,
           );
         }
+
+        this.#unrolling = false;
 
         const index = this.ctx.makeNameValid('i');
         const elementSnippet = forOfUtils.getElementSnippet(
@@ -1311,15 +1318,26 @@ ${this.ctx.pre}else ${alternate}`;
         if (ctxIndent) {
           this.ctx.dedent();
         }
+        this.#unrolling = prevUnrollingFlag;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.continue) {
+      if (this.#unrolling) {
+        throw new WgslTypeError(
+          'Cannot unroll loop containing `continue`',
+        );
+      }
       return `${this.ctx.pre}continue;`;
     }
 
     if (statement[0] === NODE.break) {
+      if (this.#unrolling) {
+        throw new WgslTypeError(
+          'Cannot unroll loop containing `break`',
+        );
+      }
       return `${this.ctx.pre}break;`;
     }
 
