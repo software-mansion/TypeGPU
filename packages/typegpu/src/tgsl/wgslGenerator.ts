@@ -1283,9 +1283,7 @@ ${this.ctx.pre}else ${alternate}`;
         );
 
         const forHeaderStr =
-          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-          }; ${index}++) {`;
+          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${elementCountSnippet}; ${index}++) {`;
 
         this.ctx.indent();
         ctxIndent = true;

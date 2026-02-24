@@ -516,7 +516,7 @@ describe('wgslGenerator', () => {
         for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1++) {
               let boo = arr[i_1];
               {
                 res += (foo * boo);
@@ -547,7 +547,7 @@ describe('wgslGenerator', () => {
         for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1++) {
               let foo2 = arr[i_1];
               {
                 res += (foo2 * foo2);
@@ -871,7 +871,7 @@ describe('wgslGenerator', () => {
       "fn f2() {
         const i = 7;
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i_1 = 0u; i_1 < 3; i_1++) {
+        for (var i_1 = 0u; i_1 < 3u; i_1++) {
           let foo = arr[i_1];
           {
             continue;
@@ -897,7 +897,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
-        for (var i_1 = 0u; i_1 < 4; i_1++) {
+        for (var i_1 = 0u; i_1 < 4u; i_1++) {
           let foo = arr[i_1];
           {
             continue;
@@ -922,7 +922,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -950,7 +950,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -974,7 +974,7 @@ describe('wgslGenerator', () => {
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
         var res = 0;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let i_1 = arr[i];
           {
             res += i_1;
