@@ -230,7 +230,9 @@ let lastTimestamp = 0;
 let isExtendedRipplesEnabled = false;
 
 function run(timestamp: number) {
-  const deltaTime = (timestamp - lastTimestamp) / 1000;
+  const deltaTime = lastTimestamp === 0
+    ? 0
+    : (timestamp - lastTimestamp) / 1000;
   lastTimestamp = timestamp;
   const maxTime = isExtendedRipplesEnabled ? 62 : 28;
   accumulatedTime = Math.min(
