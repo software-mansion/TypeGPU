@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../src/index.ts';
+import tgpu, { d, std } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 import { getName } from '../src/shared/meta.ts';
 

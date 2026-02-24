@@ -5,7 +5,7 @@ import {
   MissingBindGroupsError,
   tgpu,
   type TgpuComputePipeline,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';

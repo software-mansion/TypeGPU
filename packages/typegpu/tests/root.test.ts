@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {

@@ -10,7 +10,7 @@ import {
   vec4i,
   vec4u,
 } from '../../src/data/vector.ts';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 
 describe('bitcast', () => {
   it('bitcastU32toF32', () => {

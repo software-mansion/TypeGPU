@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {

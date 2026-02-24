@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {
