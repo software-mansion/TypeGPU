@@ -76,6 +76,7 @@ export type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
+  matBase,
   Ptr,
   Size,
   StorableData,
@@ -108,6 +109,7 @@ export type {
   Vec4h,
   Vec4i,
   Vec4u,
+  vecBase,
   WgslArray,
   WgslStruct,
 } from './wgslTypes.ts';

@@ -37,7 +37,7 @@ function applyOp(
   a: number | undefined,
   b: number | undefined,
 ): number {
-  return op.operation(a as number & d.F32, b as number & d.F32) as number;
+  return op.operation(a as number & d.F32, b as number & d.F32);
 }
 
 export function prefixScanJS(arr: number[], op: BinaryOp) {
