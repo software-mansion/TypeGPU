@@ -16,7 +16,6 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { applyBindGroups } from './applyPipelineState.ts';
 import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
