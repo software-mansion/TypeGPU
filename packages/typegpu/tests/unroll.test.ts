@@ -278,7 +278,7 @@ describe('tgpu.unroll', () => {
     };
 
     const Weights = d.struct(Object.fromEntries(
-      Object.keys(variants).map((name) => [`${name}`, d.f32]),
+      Object.keys(variants).map((name) => [name, d.f32]),
     ));
 
     const variantsKey = Object.keys(variants) as (keyof typeof variants)[];

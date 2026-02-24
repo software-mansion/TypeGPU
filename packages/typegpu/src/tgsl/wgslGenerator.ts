@@ -1212,7 +1212,7 @@ ${this.ctx.pre}else ${alternate}`;
         const iterableExpr = this.expression(iterable);
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll
-          ? (iterableExpr.value as UnrollableIterable).snippet
+          ? iterableExpr.value.snippet
           : iterableExpr;
         const elementCountSnippet = forOfUtils.getElementCountSnippet(
           this.ctx,
