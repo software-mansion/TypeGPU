@@ -256,8 +256,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
                   const tmp = counter.$.x;
                   counter.$.x = counter.$.y;
-                  counter.$.y += tmp;
-                  counter.$.z += d.f32(input.num.x);
+                  counter.$.y = __tsover_add(counter.$.y, tmp);
+                  counter.$.z = __tsover_add(counter.$.z, d.f32(input.num.x));
                   }), {
                     v: 1,
                     name: undefined,
@@ -298,6 +298,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }) && $.f)({})));
 
               tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              __tsover_add(2, 2);
               }), {
                     v: 1,
                     name: undefined,
