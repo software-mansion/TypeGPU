@@ -37,7 +37,7 @@ export interface TgpuResolveOptions {
    */
   enableExtensions?: WgslExtension[] | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;

@@ -152,7 +152,6 @@ export default defineConfig({
             {
               label: 'Variables',
               slug: 'fundamentals/variables',
-              badge: { text: 'new' },
             },
             {
               label: 'Data Schemas',
@@ -173,17 +172,14 @@ export default defineConfig({
             {
               label: 'Enabling Features',
               slug: 'fundamentals/enabling-features',
-              badge: { text: 'new' },
             },
             {
               label: 'Timing Your Pipelines',
               slug: 'fundamentals/timestamp-queries',
-              badge: { text: 'new' },
             },
             {
               label: 'Slots',
               slug: 'fundamentals/slots',
-              badge: { text: 'new' },
             },
             {
               label: 'Utilities',
@@ -214,12 +210,10 @@ export default defineConfig({
             {
               label: '@typegpu/three',
               slug: 'ecosystem/typegpu-three',
-              badge: { text: 'new' },
             },
             {
               label: '@typegpu/sdf',
               slug: 'ecosystem/typegpu-sdf',
-              badge: { text: 'new' },
             },
             DEV && {
               label: '@typegpu/color',
@@ -241,7 +235,6 @@ export default defineConfig({
             {
               label: 'React Native',
               slug: 'integration/react-native',
-              badge: { text: 'new' },
             },
             {
               label: 'WESL Interoperability',
@@ -259,7 +252,6 @@ export default defineConfig({
             {
               label: 'Build Plugin',
               slug: 'tooling/unplugin-typegpu',
-              badge: { text: 'new' },
             },
             {
               label: 'Generator CLI',

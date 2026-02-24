@@ -3,10 +3,6 @@ title: Pipelines
 description: A guide on how to use TypeGPU render and compute pipelines.
 ---
 
-:::caution[Experimental]
-Pipelines are an *unstable* feature. The API may be subject to change in the near future.
-:::
-
 :::note[Recommended reading]
 It is assumed that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
@@ -403,6 +399,10 @@ const pipeline = root
 ```
 
 ## Low-level render pipeline execution API
+
+:::caution[Experimental]
+`root.beginRenderPass` is an *unstable* feature. The API may be subject to change in the near future.
+:::
 
 The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per one render pass. It also may be missing some more niche features of the WebGPU API.
 

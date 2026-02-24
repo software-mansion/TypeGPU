@@ -7,7 +7,7 @@ Similarly to bind group layouts, you can think of slots as of typed "holes" in T
 The main differences between slots and bound resources include the following:
 
 - Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
-- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even TypeGPU functions.
+- Slots can contain not only buffers, but also basically any JavaScript value, even TypeGPU functions.
 
 Main use cases for slots include:
 
