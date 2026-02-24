@@ -221,7 +221,7 @@ function animate() {
   scene.overrideMaterial = collisionPosMaterial;
   renderer.setRenderTarget(collisionPosRT);
   renderer.render(scene, collisionCamera);
-  renderer.compute(computeUpdate);
+  void renderer.compute(computeUpdate);
 
   scene.overrideMaterial = null;
   renderer.setRenderTarget(null);
@@ -230,8 +230,8 @@ function animate() {
 }
 
 await renderer.init();
-renderer.compute(computeInit);
-renderer.setAnimationLoop(animate);
+void renderer.compute(computeInit);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
 

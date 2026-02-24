@@ -240,15 +240,14 @@ export class Plotter {
     // if we want to animate the transition between the old and new plots,
     // we need to have the same number of samples,
     // that's why I clamp them instead of filtering
-    const samplesFiltered = samples.map((sample) => ({
-      ...sample,
-      x: std.clamp(sample.x, defaultMinValue, defaultMaxValue),
-    }));
+    const samplesFiltered = samples.map((
+      sample,
+    ) => (std.clamp(sample.x, defaultMinValue, defaultMaxValue)));
 
     const { minSample, maxSample } = samplesFiltered.reduce(
       (acc, sample) => ({
-        minSample: Math.min(acc.minSample, sample.x),
-        maxSample: Math.max(acc.maxSample, sample.x),
+        minSample: Math.min(acc.minSample, sample),
+        maxSample: Math.max(acc.maxSample, sample),
       }),
       {
         minSample: Number.POSITIVE_INFINITY,
@@ -281,7 +280,7 @@ export class Plotter {
       data.ids[i] = i;
       data.binIdsZ[i] = 0;
       data.binIdsX[i] = Math.min(
-        Math.floor((samplesFiltered[i].x - minSample) / binXWidth),
+        Math.floor((samplesFiltered[i] - minSample) / binXWidth),
         optimalBinCount - 1,
       );
       binSizes[data.binIdsX[i]]++;

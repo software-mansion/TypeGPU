@@ -125,10 +125,8 @@ function processVideoFrame(
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(root.createBindGroup(textureLayout, {
       inputTexture: device.importExternalTexture({ source: video }),

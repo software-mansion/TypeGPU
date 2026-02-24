@@ -4,9 +4,7 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 canvas.addEventListener('contextmenu', (event) => {
   if (event.target === canvas) {
@@ -340,7 +338,6 @@ function resetGameData() {
       },
       vertex,
       fragment,
-      targets: { format: presentationFormat },
 
       primitive: {
         topology: 'triangle-strip',
@@ -362,12 +359,7 @@ function resetGameData() {
 
     // render
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
+      .withColorAttachment({ view: context })
       .draw(4, options.size ** 2);
 
     currentStateBuffer.copyFrom(nextState.buffer);
@@ -381,12 +373,7 @@ function resetGameData() {
 
   renderChanges = () => {
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
+      .withColorAttachment({ view: context })
       .with(vertexLayout, squareBuffer)
       .with(vertexInstanceLayout, currentStateBuffer)
       .draw(4, options.size ** 2);

@@ -17,10 +17,11 @@ export interface ConnectAttributesToShaderResult {
   bufferDefinitions: GPUVertexBufferLayout[];
 }
 
-export function isAttribute<
-  T extends TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib,
->(value: unknown | T): value is T {
-  return typeof (value as T)?.format === 'string';
+export function isAttribute(
+  value: unknown,
+): value is TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib {
+  return typeof (value as TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib)
+    ?.format === 'string';
 }
 
 export function connectAttributesToShader(

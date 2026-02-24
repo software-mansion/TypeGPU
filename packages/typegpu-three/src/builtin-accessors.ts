@@ -2,7 +2,7 @@ import * as TSL from 'three/tsl';
 import tgpu, { d } from 'typegpu';
 import { fromTSL } from './typegpu-node.ts';
 
-export const uv = tgpu.comptime((index?: number | undefined) =>
+export const uv = tgpu.comptime((index?: number) =>
   fromTSL(TSL.uv(index), d.vec2f)
 );
 

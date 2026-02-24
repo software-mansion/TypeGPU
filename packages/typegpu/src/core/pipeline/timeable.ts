@@ -161,7 +161,7 @@ export function triggerPerformanceCallback({
   );
   root.device.queue.submit([commandEncoder.finish()]);
 
-  root.device.queue.onSubmittedWorkDone().then(async () => {
+  void root.device.queue.onSubmittedWorkDone().then(async () => {
     if (!querySet.available) {
       return;
     }

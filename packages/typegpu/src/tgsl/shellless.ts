@@ -30,7 +30,7 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
   }
   if (isWgslArray(a) && isWgslArray(b)) {
     return a.elementCount === b.elementCount &&
-      shallowEqualSchemas(a.elementType as BaseData, b.elementType as BaseData);
+      shallowEqualSchemas(a.elementType, b.elementType);
   }
   if (isWgslStruct(a) && isWgslStruct(b)) {
     // Only structs with the same identity are considered equal

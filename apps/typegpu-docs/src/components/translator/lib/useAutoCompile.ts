@@ -33,7 +33,7 @@ export function useAutoCompile() {
 
     const timer = setTimeout(() => {
       console.log('Auto-compiling...');
-      handleCompile();
+      void handleCompile();
     }, 1000);
 
     return () => clearTimeout(timer);

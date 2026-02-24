@@ -60,13 +60,14 @@ if (!device || !adapter) {
 }
 
 // monkey patching ONNX: https://github.com/microsoft/onnxruntime/issues/26107
+// oxlint-disable-next-line typescript/unbound-method we know what we're doing
 const oldRequestAdapter = navigator.gpu.requestAdapter;
+// oxlint-disable-next-line typescript/unbound-method we know what we're doing
 const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = tgpu.initFromDevice({ device });
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // resources
 
@@ -162,7 +163,6 @@ const drawWithMaskPipeline = root
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
     fragment: fragmentFn,
-    targets: { format: presentationFormat },
   });
 
 // recalculating mask
@@ -307,10 +307,8 @@ async function processVideoFrame(
 
   drawWithMaskPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device.importExternalTexture({ source: video }),

@@ -54,13 +54,11 @@ export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
       values
         .map(
           (value) =>
-            `${
-              value.typegpu.type === 'npm'
-                ? `npm-${value.typegpu.version ?? ''}`
-                : value.typegpu.type === 'pr'
-                ? `pr-${value.typegpu.commit ?? ''}`
-                : 'local'
-            }`,
+            value.typegpu.type === 'npm'
+              ? `npm-${value.typegpu.version ?? ''}`
+              : value.typegpu.type === 'pr'
+              ? `pr-${value.typegpu.commit ?? ''}`
+              : 'local',
         )
         .join('_'),
 

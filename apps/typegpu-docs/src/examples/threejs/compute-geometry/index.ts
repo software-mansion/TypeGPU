@@ -181,7 +181,7 @@ if ('ontouchstart' in window) {
 function animate() {
   renderer.render(scene, camera);
 }
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
 export const controls = defineControls({

@@ -19,7 +19,7 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
 
-const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
+const canvasData = Array.from({ length: SIZE ** 2 }, () => 0);
 
 // Shaders
 
@@ -208,6 +208,7 @@ const network = createNetwork(await downloadLayers(root));
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-assertion not really unnecessary
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const subgroupsEl = document.getElementById(
   'subgroups-status',
@@ -313,7 +314,7 @@ function centerImage(data: number[]) {
   const offsetX = Math.round(SIZE / 2 - x);
   const offsetY = Math.round(SIZE / 2 - y);
 
-  const newData = Array.from({ length: (SIZE * SIZE) }, () => 0);
+  const newData = Array.from({ length: SIZE * SIZE }, () => 0);
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const index = i * SIZE + j;
@@ -393,7 +394,7 @@ canvas.addEventListener('mousemove', (event) => {
   const cellSize = canvas.width / SIZE;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
   const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 });
 
 canvas.addEventListener('touchmove', (event) => {
@@ -407,7 +408,7 @@ canvas.addEventListener('touchmove', (event) => {
   const y = Math.floor(
     ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
   );
-  handleDrawing(x, y);
+  void handleDrawing(x, y);
 }, { passive: false });
 
 export const controls = defineControls({

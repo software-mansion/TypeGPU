@@ -3,6 +3,7 @@ import tgpu, {
   type TgpuBindGroup,
   type TgpuComputeFn,
   type TgpuFragmentFn,
+  type TgpuRenderPipeline,
 } from 'typegpu';
 import * as p from './params.ts';
 import {
@@ -17,17 +18,12 @@ import type { BrushState } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-  throw new Error('No GPU adapter found');
-}
 const root = await tgpu.init();
 const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const format = navigator.gpu.getPreferredCanvasFormat();
 
 // Helpers
 function createField(name: string) {
@@ -143,7 +139,6 @@ function createRenderPipeline(
   return root.createRenderPipeline({
     vertex: renderFn,
     fragment: fragmentFn,
-    targets: { format },
 
     primitive: {
       topology: 'triangle-strip',
@@ -373,10 +368,7 @@ function loop() {
     result: { texture: d.WgslTexture2d<d.F32> };
     background: { texture: d.WgslTexture2d<d.F32> };
   }>;
-  let pipeline:
-    | typeof renderPipelineInk
-    | typeof renderPipelineVel
-    | typeof renderPipelineImage;
+  let pipeline: TgpuRenderPipeline<d.Vec4f>;
 
   switch (p.params.displayMode) {
     case 'ink':
@@ -396,11 +388,7 @@ function loop() {
   }
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBG)
     .draw(3);
 

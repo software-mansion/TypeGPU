@@ -14,11 +14,11 @@ import { $gpuCallable } from '../shared/symbols.ts';
 import { vec3f } from '../data/vector.ts';
 import { f32 } from '../data/numeric.ts';
 
-const gpuTranslation4 = translation4[$gpuCallable].call;
-const gpuScaling4 = scaling4[$gpuCallable].call;
-const gpuRotationX4 = rotationX4[$gpuCallable].call;
-const gpuRotationY4 = rotationY4[$gpuCallable].call;
-const gpuRotationZ4 = rotationZ4[$gpuCallable].call;
+const gpuTranslation4 = translation4[$gpuCallable].call.bind(translation4);
+const gpuScaling4 = scaling4[$gpuCallable].call.bind(scaling4);
+const gpuRotationX4 = rotationX4[$gpuCallable].call.bind(rotationX4);
+const gpuRotationY4 = rotationY4[$gpuCallable].call.bind(rotationY4);
+const gpuRotationZ4 = rotationZ4[$gpuCallable].call.bind(rotationZ4);
 
 /**
  * Translates the given 4-by-4 matrix by the given vector.

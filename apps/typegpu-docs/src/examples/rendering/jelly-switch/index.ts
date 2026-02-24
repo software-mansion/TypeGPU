@@ -601,11 +601,7 @@ function render(timestamp: number) {
   );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
@@ -725,7 +721,7 @@ export const controls = defineControls({
     ],
     onSelectChange: (value) => {
       if (value === 'Auto') {
-        autoSetQuaility().then((scale) => {
+        void autoSetQuaility().then((scale) => {
           qualityScale = scale;
           handleResize();
         });

@@ -170,7 +170,7 @@ export function isTgpuVertexFn<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
 >(
-  value: unknown | TgpuVertexFn<VertexIn, VertexOut>,
+  value: unknown,
 ): value is TgpuVertexFn<VertexIn, VertexOut> {
   return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
     'vertex';

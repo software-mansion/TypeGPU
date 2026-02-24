@@ -211,7 +211,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
           const transpiled = functionToTranspiled(
             implementation,
             null,
-          ) as babel.CallExpression;
+          );
 
           path.replaceWith(
             types.callExpression(node.callee, [

@@ -247,10 +247,8 @@ const draw = () => {
   pipelines.fill
     .with(bindGroup)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .drawIndexed(
       lineSegmentIndicesCapLevel1.length,
@@ -269,7 +267,7 @@ const runAnimationFrame = () => {
     draw();
     frameCount++;
     framesInFlight.add(frameIdLocal);
-    device.queue.onSubmittedWorkDone().then(() => {
+    void device.queue.onSubmittedWorkDone().then(() => {
       framesInFlight.delete(frameIdLocal);
     });
   }

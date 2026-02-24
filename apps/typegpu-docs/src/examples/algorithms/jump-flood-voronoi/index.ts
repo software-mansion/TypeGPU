@@ -223,15 +223,9 @@ function swap() {
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   voronoiPipeline
     .with(resources.renderBindGroups[sourceIdx])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 
@@ -279,7 +273,7 @@ function initRandom() {
 function reset() {
   currentRunId++;
   initRandom();
-  runFloodAnimated(currentRunId);
+  void runFloodAnimated(currentRunId);
 }
 
 reset();
@@ -300,7 +294,7 @@ export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
-      runFloodAnimated(currentRunId);
+      void runFloodAnimated(currentRunId);
     },
   },
   'Random Seeds': {

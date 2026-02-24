@@ -12,7 +12,7 @@ import {
   type UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip, Snippet } from '../../data/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,
@@ -115,6 +115,19 @@ export type TgpuPrimitiveState =
   })
   | undefined;
 
+export type TgpuColorTargetState =
+  | Omit<GPUColorTargetState, 'format'> & {
+    /**
+     * The {@link GPUTextureFormat} of this color target. The pipeline will only be compatible with
+     * {@link GPURenderPassEncoder}s which use a {@link GPUTextureView} of this format in the
+     * corresponding color attachment.
+     *
+     * @default navigator.gpu.getPreferredCanvasFormat()
+     */
+    format?: GPUTextureFormat | undefined;
+  }
+  | undefined;
+
 export interface HasIndexBuffer {
   readonly hasIndexBuffer: true;
 
@@ -147,6 +160,18 @@ export interface TgpuRenderPipeline<in Targets = never>
   ): this;
   with(bindGroup: TgpuBindGroup): this;
 
+  /**
+   * Attaches texture views to the pipeline's targets (outputs).
+   *
+   * @example
+   * // Draw 3 vertices onto the context's canvas
+   * pipeline
+   *   .withColorAttachment({ view: context })
+   *   .draw(3)
+   *
+   * @param attachment The object should match the shape
+   * returned by the fragment shader, with values matching the {@link ColorAttachment} type.
+   */
   withColorAttachment(attachment: FragmentOutToColorAttachment<Targets>): this;
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this;
@@ -220,17 +245,17 @@ export type FragmentOutToTargets<T> =
       | Void
       // (shelled) empty object
       | Record<string, never>
-    ? Record<string, never>
+    ? Record<string, never> | undefined
   : T extends
       | { readonly [$internal]: unknown } // a schema
       | number | boolean | AnyVecInstance // an instance
-    ? GPUColorTargetState
+    ? TgpuColorTargetState
   : T extends Record<string, unknown> // a record
   // Stripping all builtin properties
-  ? { [Key in keyof OmitBuiltins<T>]: GPUColorTargetState; }
+  ? { [Key in keyof OmitBuiltins<T>]?: TgpuColorTargetState; } | undefined
   // The widest type is here on purpose. It allows createRenderPipeline
   // to correctly choose the right overload.
-  : GPUColorTargetState | Record<string, GPUColorTargetState>;
+  : TgpuColorTargetState | Record<string, TgpuColorTargetState>;
 
 export type FragmentOutToColorAttachment<T> = T extends {
   readonly [$internal]: unknown;
@@ -242,9 +267,8 @@ export type FragmentOutToColorAttachment<T> = T extends {
   : Record<string, never>;
 
 export type AnyFragmentTargets =
-  | undefined
-  | GPUColorTargetState
-  | Record<string, GPUColorTargetState>;
+  | TgpuColorTargetState
+  | Record<string, TgpuColorTargetState>;
 
 interface ColorTextureConstraint {
   readonly [$internal]: TextureInternals;
@@ -261,7 +285,9 @@ export interface ColorAttachment {
     | (ColorTextureConstraint & RenderFlag)
     | GPUTextureView
     | TgpuTextureView<WgslTexture>
-    | TgpuTextureRenderView;
+    | TgpuTextureRenderView
+    // We call `.getCurrentTexture().createView()` underneath
+    | GPUCanvasContext;
   /**
    * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
    * that will be output to for this color attachment.
@@ -272,7 +298,13 @@ export interface ColorAttachment {
    * output for this color attachment if {@link GPURenderPassColorAttachment#view} is
    * multisampled.
    */
-  resolveTarget?: GPUTextureView;
+  resolveTarget?:
+    | (ColorTextureConstraint & RenderFlag)
+    | GPUTextureView
+    | TgpuTextureView<WgslTexture>
+    | TgpuTextureRenderView
+    // We call `.getCurrentTexture().createView()` underneath
+    | GPUCanvasContext;
   /**
    * Indicates the value to clear {@link GPURenderPassColorAttachment#view} to prior to executing the
    * render pass. If not map/exist|provided, defaults to `{r: 0, g: 0, b: 0, a: 0}`. Ignored
@@ -286,13 +318,17 @@ export interface ColorAttachment {
    * Indicates the load operation to perform on {@link GPURenderPassColorAttachment#view} prior to
    * executing the render pass.
    * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
+   *
+   * @default 'clear'
    */
-  loadOp: GPULoadOp;
+  loadOp?: GPULoadOp | undefined;
   /**
    * The store operation to perform on {@link GPURenderPassColorAttachment#view}
    * after executing the render pass.
+   *
+   * @default 'store'
    */
-  storeOp: GPUStoreOp;
+  storeOp?: GPUStoreOp | undefined;
 }
 
 export type DepthStencilFormat =
@@ -413,6 +449,7 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
+  fragmentOut: BaseData;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -609,21 +646,32 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     const colorAttachments = descriptor.fragment
       ? (connectAttachmentToShader(
-        (descriptor.fragment as TgpuFragmentFn | undefined)?.shell?.out,
+        (descriptor.fragment as TgpuFragmentFn)?.shell?.returnType ??
+          memo.fragmentOut,
         internals.priors.colorAttachment ?? {},
-      ).map((attachment) => {
+      ).map((_attachment) => {
+        const attachment = {
+          loadOp: 'clear',
+          storeOp: 'store',
+          ..._attachment,
+        };
+
         if (isTexture(attachment.view)) {
-          return {
-            ...attachment,
-            view: root.unwrap(attachment.view).createView(),
-          };
+          attachment.view = root.unwrap(attachment.view).createView();
+        } else if (isTextureView(attachment.view)) {
+          attachment.view = root.unwrap(attachment.view);
+        } else if (isGPUCanvasContext(attachment.view)) {
+          attachment.view = attachment.view.getCurrentTexture().createView();
         }
 
-        if (isTextureView(attachment.view)) {
-          return {
-            ...attachment,
-            view: root.unwrap(attachment.view),
-          };
+        if (isTexture(attachment.resolveTarget)) {
+          attachment.resolveTarget = root.unwrap(attachment.resolveTarget)
+            .createView();
+        } else if (isTextureView(attachment.resolveTarget)) {
+          attachment.resolveTarget = root.unwrap(attachment.resolveTarget);
+        } else if (isGPUCanvasContext(attachment.resolveTarget)) {
+          attachment.resolveTarget = attachment.resolveTarget
+            .getCurrentTexture().createView();
         }
 
         return attachment;
@@ -721,7 +769,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 
@@ -774,7 +822,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 }
@@ -783,11 +831,14 @@ class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
+  #latestFragmentOut: BaseData | undefined;
+
   constructor(public readonly options: RenderPipelineCoreOptions) {}
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
     const { vertex, fragment, attribs = {} } = this.options.descriptor;
+    this.#latestFragmentOut = undefined;
 
     const locations = matchUpVaryingLocations(
       (vertex as TgpuVertexFn | undefined)?.shell?.out,
@@ -815,16 +866,21 @@ class RenderPipelineCore implements SelfResolvable {
           }
 
           if (fragment) {
+            let fragOut: Snippet;
             if (typeof fragment === 'function') {
               const varyings = Object.fromEntries(
                 Object.entries(vertexOut.propTypes).filter(([, dataType]) =>
                   !isBuiltin(dataType)
                 ),
               );
-              ctx.resolve(new AutoFragmentFn(fragment, varyings, locations));
+              fragOut = ctx.resolve(
+                new AutoFragmentFn(fragment, varyings, locations),
+              );
             } else {
-              ctx.resolve(fragment);
+              fragOut = ctx.resolve(fragment);
             }
+
+            this.#latestFragmentOut = fragOut.dataType as BaseData;
           }
           return snip('', Void, /* origin */ 'runtime');
         }),
@@ -891,11 +947,10 @@ class RenderPipelineCore implements SelfResolvable {
       attribs,
     );
 
-    const connectedTargets = fragment && targets
-      ? connectTargetsToShader(
-        (fragment as TgpuFragmentFn | undefined)?.shell?.out,
-        targets,
-      )
+    const fragmentOut = (fragment as TgpuFragmentFn)?.shell?.returnType ??
+      this.#latestFragmentOut;
+    const connectedTargets = fragmentOut
+      ? connectTargetsToShader(fragmentOut, targets)
       : [null];
 
     const descriptor: GPURenderPipelineDescriptor = {
@@ -949,10 +1004,11 @@ class RenderPipelineCore implements SelfResolvable {
       catchall,
       logResources,
       usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+      fragmentOut: this.#latestFragmentOut as BaseData,
     };
 
     if (PERF?.enabled) {
-      (async () => {
+      void (async () => {
         const start = performance.mark('typegpu:compile-start');
         await device.queue.onSubmittedWorkDone();
         const compileMeasure = performance.measure('typegpu:compiled', {
@@ -1029,4 +1085,8 @@ export function matchUpVaryingLocations(
   }
 
   return locations;
+}
+
+function isGPUCanvasContext(value: unknown): value is GPUCanvasContext {
+  return typeof (value as GPUCanvasContext)?.getCurrentTexture === 'function';
 }

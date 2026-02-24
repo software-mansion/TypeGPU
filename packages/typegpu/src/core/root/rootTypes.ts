@@ -131,9 +131,8 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
-
-type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T]
+  : [T];
 
 /**
  * TODO: Remove in favor of createRenderPipeline's validation
@@ -344,7 +343,7 @@ export interface WithBinding extends Withable<WithBinding> {
               >
             >,
           ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
-        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
@@ -425,7 +424,7 @@ export interface WithBinding extends Withable<WithBinding> {
               & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
-          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
         }
         | {
           attribs?: TAttribs;
@@ -747,9 +746,9 @@ export interface RenderPass {
    */
   draw(
     vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws indexed primitives.
@@ -761,10 +760,10 @@ export interface RenderPass {
    */
   drawIndexed(
     indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws primitives using parameters read from a {@link GPUBuffer}.
@@ -843,7 +842,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>> | undefined,
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -954,7 +953,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createQuerySet<T extends GPUQueryType>(
     type: T,
     count: number,
-    rawQuerySet?: GPUQuerySet | undefined,
+    rawQuerySet?: GPUQuerySet,
   ): TgpuQuerySet<T>;
 
   /**

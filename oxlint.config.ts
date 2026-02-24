@@ -15,6 +15,8 @@ export default defineConfig({
   },
   rules: {
     ...typegpuRules,
+    'typescript/restrict-template-expressions': 'off',
+    'typescript/no-unsafe-type-assertion': 'off',
     'typescript/no-explicit-any': 'error',
     'typescript/no-non-null-assertion': 'error',
     'eslint/no-shadow': 'off',
@@ -27,11 +29,12 @@ export default defineConfig({
       { ignorePackages: true },
     ],
   },
-  ignorePatterns: ['**/*.astro'],
+  ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [
     {
       files: ['**/*.test.ts', '**/tests/**'],
       rules: {
+        'typescript/unbound-method': 'off',
         'typescript/no-non-null-assertion': 'off',
         'eslint/no-unused-vars': 'off',
         'eslint/no-unused-expressions': 'off',
