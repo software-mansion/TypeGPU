@@ -986,7 +986,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 
@@ -1039,7 +1039,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     if (internals.priors.performanceCallback) {
-      triggerPerformanceCallback({ root, priors: internals.priors });
+      void triggerPerformanceCallback({ root, priors: internals.priors });
     }
   }
 }
