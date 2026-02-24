@@ -129,6 +129,20 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('resolves mod infix operator', () => {
+    const testFn = tgpu.fn([])(() => {
+      const v1 = d.vec4f(11).mod(2);
+      const v2 = d.vec3f(13.5).mod(d.vec3f(1, 2, 10));
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var v1 = vec4f(1);
+        var v2 = vec3f(0.5, 1.5, 3.5);
+      }"
+    `);
+  });
+
   it('resolves add infix operator on uniform vector', ({ root }) => {
     const fooUniform = root.createUniform(d.vec3f);
     const barUniform = root.createUniform(d.vec3f);
