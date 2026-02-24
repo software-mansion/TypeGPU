@@ -58,7 +58,7 @@ export interface NumberArrayView {
  * These functions are not defined on vectors,
  * but are instead assigned to `VecBase` after both `data` and `std` are initialized.
  */
-export interface vecInfixNotation<T extends AnyNumericVecInstance> {
+export interface vecInfixNotation<T extends vecBase> {
   add(other: T | number): T;
   sub(other: T | number): T;
   mul(other: mBaseForVec<T> | T | number): T;
@@ -82,7 +82,7 @@ export interface vecInfixNotation<T extends AnyNumericVecInstance> {
  * These functions are not defined on matrices,
  * but are instead assigned to `MatBase` after both `data` and `std` are initialized.
  */
-export interface matInfixNotation<T extends AnyMatInstance> {
+export interface matInfixNotation<T extends matBase> {
   add(other: T): T;
   sub(other: T): T;
   mul(other: T | number): T;
@@ -183,6 +183,38 @@ type Swizzle4<T2, T3, T4> =
 type Tuple2<S> = [S, S];
 type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
+
+/**
+ * A type which every numeric vector is assignable to. In most cases the union v2f | v3f | v4f | v2h | v3h | v4h | v2i | v3i | v4i | v2u | v3u | v4u
+ * is preferred, but when an implementation uses overloaded operators and is generic on the type,
+ * this makes the type checking much more laid back.
+ *
+ * @example
+ * ```ts
+ * export function quinticInterpolation(t: d.v2f): d.v2f;
+ * export function quinticInterpolation(t: d.v3f): d.v3f;
+ * export function quinticInterpolation(t: d.vecBase): d.vecBase {
+ *   'use gpu';
+ *   return t * t * t * (t * (t * 6 - 15) + 10);
+ * }
+ * ```
+ */
+export interface vecBase extends vecInfixNotation<vecBase> {
+  readonly [$internal]: true;
+  readonly kind:
+    | 'vec2f'
+    | 'vec3f'
+    | 'vec4f'
+    | 'vec2h'
+    | 'vec3h'
+    | 'vec4h'
+    | 'vec2i'
+    | 'vec3i'
+    | 'vec4i'
+    | 'vec2u'
+    | 'vec3u'
+    | 'vec4u';
+}
 
 /**
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
@@ -480,6 +512,16 @@ export type AnyVecInstance =
 export type VecKind = AnyVecInstance['kind'];
 
 /**
+ * A type which every matrix is assignable to. In most cases the union m2x2f | m3x3f | m4x4f
+ * is preferred, but when an implementation uses overloaded operators and is generic on the type,
+ * this makes the type checking much more laid back.
+ */
+export interface matBase extends matInfixNotation<matBase> {
+  readonly [$internal]: true;
+  readonly kind: 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
+}
+
+/**
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
  */
@@ -546,14 +588,15 @@ export interface m4x4f extends mat4x4<v4f>, matInfixNotation<m4x4f> {
 
 export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
-export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f ? v2f
+export type vBaseForMat<T extends matBase> = T extends m2x2f ? v2f
   : T extends m3x3f ? v3f
-  : v4f;
+  : T extends m4x4f ? v4f
+  : vecBase;
 
-export type mBaseForVec<T extends AnyVecInstance> = T extends v2f ? m2x2f
+export type mBaseForVec<T extends vecBase> = T extends v2f ? m2x2f
   : T extends v3f ? m3x3f
   : T extends v4f ? m4x4f
-  : never;
+  : matBase;
 
 // #endregion
 
