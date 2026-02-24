@@ -65,7 +65,7 @@ export interface TgpuComputePipeline
    */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries>,
+    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
@@ -115,7 +115,10 @@ export function INTERNAL_createComputePipeline(
 // --------------
 
 type TgpuComputePipelinePriors = {
-  readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
+  readonly bindGroupLayoutMap?: Map<
+    TgpuBindGroupLayout,
+    TgpuBindGroup | GPUBindGroup
+  >;
   readonly externalEncoder?: GPUCommandEncoder | undefined;
   readonly externalPass?: GPUComputePassEncoder | undefined;
 } & TimestampWritesPriors;
@@ -190,7 +193,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries>,
+    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
@@ -201,7 +204,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       | TgpuBindGroup
       | GPUCommandEncoder
       | GPUComputePassEncoder,
-    bindGroup?: TgpuBindGroup,
+    bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
     if (isGPUComputePassEncoder(first)) {
       return new TgpuComputePipelineImpl(this._core, {
@@ -233,7 +236,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
-        [first, bindGroup as TgpuBindGroup],
+        [first, bindGroup as TgpuBindGroup | GPUBindGroup],
       ]),
     }) as this;
   }

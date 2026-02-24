@@ -149,7 +149,7 @@ export interface TgpuRenderPipeline<in Targets = never>
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: TgpuBuffer<TData> & VertexFlag,
+    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
   ): this;
   /**
    * @deprecated This overload is outdated.
@@ -157,7 +157,7 @@ export interface TgpuRenderPipeline<in Targets = never>
    */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries>,
+    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
@@ -437,10 +437,10 @@ export function INTERNAL_createRenderPipeline(
 
 type TgpuRenderPipelinePriors = {
   readonly vertexLayoutMap?:
-    | Map<TgpuVertexLayout, TgpuBuffer<BaseData> & VertexFlag>
+    | Map<TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer>
     | undefined;
   readonly bindGroupLayoutMap?:
-    | Map<TgpuBindGroupLayout, TgpuBindGroup>
+    | Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
@@ -505,8 +505,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & VertexFlag,
   ): this;
-  with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: TgpuBindGroup): this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: TgpuBindGroup | GPUBindGroup,
+  ): this;
   with(bindGroup: TgpuBindGroup): this;
+  with<TData extends WgslArray | Disarray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: GPUBuffer,
+  ): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPURenderPassEncoder): this;
   with(bundleEncoder: GPURenderBundleEncoder): this;
@@ -518,7 +525,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       | GPUCommandEncoder
       | GPURenderPassEncoder
       | GPURenderBundleEncoder,
-    resource?: (TgpuBuffer<BaseData> & VertexFlag) | TgpuBindGroup,
+    resource?:
+      | (TgpuBuffer<BaseData> & VertexFlag)
+      | TgpuBindGroup
+      | GPUBindGroup
+      | GPUBuffer,
   ): this {
     const internals = this[$internal];
 
@@ -553,7 +564,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         ...internals.priors,
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [first, resource as TgpuBindGroup],
+          [first, resource as TgpuBindGroup | GPUBindGroup],
         ]),
       }) as this;
     }
@@ -563,7 +574,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         ...internals.priors,
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
-          [first, resource as TgpuBuffer<BaseData> & VertexFlag],
+          [first, resource as (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer],
         ]),
       }) as this;
     }
