@@ -94,7 +94,7 @@ describe('ray-marching example', () => {
 
       fn getSceneDist(p: vec3f) -> Shape {
         var shape = getMorphingShape(p, time);
-        var floor_1 = Shape(mix(vec3f(1), vec3f(0.20000000298023224), checkerBoard((p.xz * 2))), sdPlane(p, vec3f(0, 1, 0), 0f));
+        var floor_1 = Shape(mix(vec3f(1), vec3f(0.20000000298023224), checkerBoard((p.xz * 2f))), sdPlane(p, vec3f(0, 1, 0), 0f));
         return shapeUnion(shape, floor_1);
       }
 
@@ -150,7 +150,7 @@ describe('ray-marching example', () => {
       }
 
       @fragment fn fragmentMain(input: fragmentMain_Input) -> @location(0) vec4f {
-        var uv = ((input.uv * 2) - 1);
+        var uv = ((input.uv * 2f) - 1f);
         uv.x *= (resolution.x / resolution.y);
         var ro = vec3f(0, 2, 3);
         var rd = normalize(vec3f(uv.x, uv.y, 1f));
@@ -166,7 +166,7 @@ describe('ray-marching example', () => {
         let shadowDist = length((lightPos - p));
         let shadow = softShadow((*shadowRo), (*shadowRd), 0.1f, shadowDist, 16f);
         var litColor = (march.color * diff);
-        var finalColor = mix((litColor * 0.5), litColor, shadow);
+        var finalColor = mix((litColor * 0.5f), litColor, shadow);
         return mix(vec4f(finalColor, 1f), vec4f(0.699999988079071, 0.800000011920929, 0.8999999761581421, 1), fog);
       }"
     `);

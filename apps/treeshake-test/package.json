@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "typegpu": "workspace:*",
-    "unplugin-typegpu": "^0.9.0"
+    "unplugin-typegpu": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -8,18 +8,12 @@ import {
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // setup
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // model (https://j5boom.itch.io/utah-teapot-obj)
 const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
@@ -44,7 +38,7 @@ const exampleControlsUniform = root.createUniform(
   p.initialControls,
 );
 
-const vertexShader = tgpu['~unstable'].vertexFn({
+const vertexShader = tgpu.vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
 })((input) => {
@@ -61,7 +55,7 @@ const vertexShader = tgpu['~unstable'].vertexFn({
 });
 
 // see https://gist.github.com/chicio/d983fff6ff304bd55bebd6ff05a2f9dd
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
@@ -100,16 +94,17 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
 });
 
 // pipelines
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, modelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
+const renderPipeline = root.createRenderPipeline({
+  attribs: modelVertexLayout.attrib,
+  vertex: vertexShader,
+  fragment: fragmentShader,
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -122,15 +117,13 @@ let frameId: number;
 function frame() {
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [
         p.backgroundColor.x,
         p.backgroundColor.y,
         p.backgroundColor.z,
         1,
       ],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -146,26 +139,26 @@ function frame() {
 frameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   'light color': {
-    initial: [...p.initialControls.lightColor],
-    onColorChange(value: readonly [number, number, number]) {
-      exampleControlsUniform.writePartial({ lightColor: d.vec3f(...value) });
+    initial: p.initialControls.lightColor,
+    onColorChange(value) {
+      exampleControlsUniform.writePartial({ lightColor: value });
     },
   },
   'light direction': {
-    min: [-10, -10, -10],
-    max: [10, 10, 10],
-    initial: [...p.initialControls.lightDirection],
-    step: [0.01, 0.01, 0.01],
-    onVectorSliderChange(v: [number, number, number]) {
-      exampleControlsUniform.writePartial({ lightDirection: d.vec3f(...v) });
+    min: d.vec3f(-10, -10, -10),
+    max: d.vec3f(10, 10, 10),
+    initial: p.initialControls.lightDirection,
+    step: d.vec3f(0.01, 0.01, 0.01),
+    onVectorSliderChange(v) {
+      exampleControlsUniform.writePartial({ lightDirection: v });
     },
   },
   'ambient color': {
-    initial: [...p.initialControls.ambientColor],
-    onColorChange(value: readonly [number, number, number]) {
-      exampleControlsUniform.writePartial({ ambientColor: d.vec3f(...value) });
+    initial: p.initialControls.ambientColor,
+    onColorChange(value) {
+      exampleControlsUniform.writePartial({ ambientColor: value });
     },
   },
   'ambient strength': {
@@ -173,7 +166,7 @@ export const controls = {
     max: 1,
     initial: p.initialControls.ambientStrength,
     step: 0.01,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ ambientStrength: v });
     },
   },
@@ -182,11 +175,11 @@ export const controls = {
     max: 16,
     initial: p.initialControls.specularExponent,
     step: 0.1,
-    onSliderChange(v: number) {
+    onSliderChange(v) {
       exampleControlsUniform.writePartial({ specularExponent: v });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

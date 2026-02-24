@@ -1,7 +1,6 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { Void } from '../../data/wgslTypes.ts';
+import { type BaseData, Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -22,11 +21,8 @@ import {
 } from '../resolve/externals.ts';
 import { stitch } from '../resolve/stitch.ts';
 import {
-  type AccessorIn,
-  type Eventual,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type Providing,
   type SlotValuePair,
   type TgpuAccessor,
@@ -44,6 +40,7 @@ import type {
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
+import type { Withable } from '../root/rootTypes.ts';
 
 // ----------
 // Public API
@@ -53,13 +50,12 @@ import { comptime } from './comptime.ts';
  * Describes a function signature (its arguments and return type)
  */
 type TgpuFnShellHeader<
-  Args extends AnyData[],
-  Return extends AnyData,
+  Args extends BaseData[],
+  Return extends BaseData,
 > = {
   readonly [$internal]: true;
   readonly argTypes: Args;
   readonly returnType: Return;
-  readonly isEntry: false;
 };
 
 /**
@@ -68,8 +64,8 @@ type TgpuFnShellHeader<
  * and passing the implementation (as WGSL string or JS function) as the argument.
  */
 export type TgpuFnShell<
-  Args extends AnyData[],
-  Return extends AnyData,
+  Args extends BaseData[],
+  Return extends BaseData,
 > =
   & TgpuFnShellHeader<Args, Return>
   & (<T extends (...args: InferArgs<Args>) => Infer<Return>>(
@@ -83,52 +79,67 @@ export type TgpuFnShell<
     ...values: unknown[]
   ) => TgpuFn<(...args: Args) => Return>);
 
-interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable {
+interface TgpuFnBase<ImplSchema extends AnyFn>
+  extends TgpuNamable, Withable<TgpuFn<ImplSchema>> {
   [$internal]: {
     implementation: Implementation<ImplSchema>;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
-    Extract<ReturnType<ImplSchema>, AnyData>
+    Extract<ReturnType<ImplSchema>, BaseData>
   >;
   readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
-    accessor: TgpuAccessor<T>,
-    value: AccessorIn<NoInfer<T>>,
-  ): TgpuFn<ImplSchema>;
-  with<T extends AnyData>(
-    accessor: TgpuMutableAccessor<T>,
-    value: MutableAccessorIn<NoInfer<T>>,
-  ): TgpuFn<ImplSchema>;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: the widest type requires `any`
+// oxlint-disable-next-line typescript/no-explicit-any the widest type requires `any`
 export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & DualFn<InferImplSchema<ImplSchema>>
   & TgpuFnBase<ImplSchema>;
 
+/**
+ * A function wrapper that allows providing slot and accessor overrides for shellless functions
+ */
+export interface TgpuGenericFn<T extends AnyFn>
+  extends TgpuNamable, Withable<TgpuGenericFn<T>> {
+  readonly [$internal]: {
+    inner: T;
+  };
+  readonly [$providing]?: Providing | undefined;
+  readonly resourceType: 'generic-function';
+
+  (...args: Parameters<T>): ReturnType<T>;
+}
+
 export function fn<
-  Args extends AnyData[] | [],
+  Args extends BaseData[] | [],
 >(argTypes: Args, returnType?: undefined): TgpuFnShell<Args, Void>;
 
 export function fn<
-  Args extends AnyData[] | [],
-  Return extends AnyData,
+  Args extends BaseData[] | [],
+  Return extends BaseData,
 >(argTypes: Args, returnType: Return): TgpuFnShell<Args, Return>;
 
+export function fn<T extends AnyFn>(inner: T): TgpuGenericFn<T>;
+
 export function fn<
-  Args extends AnyData[] | [],
-  Return extends AnyData = Void,
->(argTypes: Args, returnType?: Return | undefined): TgpuFnShell<Args, Return> {
+  Args extends BaseData[] | [],
+  Return extends BaseData = Void,
+>(
+  argTypesOrCallback: Args | AnyFn,
+  returnType?: Return,
+): TgpuFnShell<Args, Return> | TgpuGenericFn<AnyFn> {
+  if (typeof argTypesOrCallback === 'function') {
+    return createGenericFn(argTypesOrCallback, []);
+  }
+
+  const argTypes = argTypesOrCallback;
   const shell: TgpuFnShellHeader<Args, Return> = {
     [$internal]: true,
     argTypes,
-    returnType: returnType ?? Void as Return,
-    isEntry: false,
+    returnType: returnType ?? Void as unknown as Return,
   };
 
   const call = (
@@ -143,11 +154,18 @@ export function fn<
   return Object.assign(call, shell) as unknown as TgpuFnShell<Args, Return>;
 }
 
-export function isTgpuFn<Args extends AnyData[] | [], Return extends AnyData>(
-  value: unknown | TgpuFn<(...args: Args) => Return>,
+export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
+  value: unknown,
 ): value is TgpuFn<(...args: Args) => Return> {
   return isMarkedInternal(value) &&
     (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function';
+}
+
+export function isGenericFn<Callback extends AnyFn>(
+  value: unknown,
+): value is TgpuGenericFn<Callback> {
+  return isMarkedInternal(value) &&
+    (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function';
 }
 
 // --------------
@@ -161,13 +179,23 @@ function stringifyPair([slot, value]: SlotValuePair): string {
 function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<
     Parameters<ImplSchema>,
-    Extract<ReturnType<ImplSchema>, AnyData>
+    Extract<ReturnType<ImplSchema>, BaseData>
   >,
-  implementation: Implementation<ImplSchema>,
+  _implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
   type This = TgpuFnBase<ImplSchema> & SelfResolvable & {
     [$getNameForward]: FnCore;
   };
+
+  let pairs: SlotValuePair[] = [];
+  // Unwrapping generic functions
+  let implementation: Implementation<ImplSchema>;
+  if (isGenericFn(_implementation)) {
+    pairs = _implementation[$providing]?.pairs ?? [];
+    implementation = _implementation[$internal].inner as typeof implementation;
+  } else {
+    implementation = _implementation;
+  }
 
   const core = createFnCore(implementation as Implementation, '');
 
@@ -227,7 +255,7 @@ function createFn<ImplSchema extends AnyFn>(
           }
 
           const castAndCopiedArgs = args.map((arg, index) =>
-            schemaCallWrapper(shell.argTypes[index] as unknown as AnyData, arg)
+            schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg)
           ) as InferArgs<Parameters<ImplSchema>>;
 
           const result = implementation(...castAndCopiedArgs);
@@ -252,6 +280,9 @@ function createFn<ImplSchema extends AnyFn>(
     },
   });
 
+  if (pairs.length > 0) {
+    return createBoundFunction(fn, pairs);
+  }
   return fn;
 }
 
@@ -314,4 +345,54 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   }
 
   return fn;
+}
+
+function createGenericFn<T extends AnyFn>(
+  inner: T,
+  pairs: SlotValuePair[],
+): TgpuGenericFn<T> {
+  const fnBase = {
+    [$internal]: { inner },
+    resourceType: 'generic-function' as const,
+    [$providing]: pairs.length > 0 ? { inner, pairs } : undefined,
+
+    $name(label: string): TgpuGenericFn<T> {
+      setName(this, label);
+      // Giving `inner` a name if it doesn't have one
+      if (!getName(inner)) {
+        setName(inner, label);
+      }
+      return this as TgpuGenericFn<T>;
+    },
+
+    with(
+      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
+      value: unknown,
+    ): TgpuGenericFn<T> {
+      const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
+      return createGenericFn(inner, [...pairs, [s, value]]);
+    },
+  };
+
+  const call = (...args: Parameters<T>): ReturnType<T> => {
+    return inner(...args) as ReturnType<T>;
+  };
+
+  const genericFn = Object.assign(call, fnBase) as unknown as TgpuGenericFn<T>;
+
+  // Inheriting name from `inner`, if it exists
+  if (getName(inner)) {
+    setName(genericFn, getName(inner));
+  }
+
+  Object.defineProperty(genericFn, 'toString', {
+    value() {
+      const fnLabel = getName(genericFn) ?? '<unnamed>';
+      if (pairs.length > 0) {
+        return `fn*:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
+      }
+      return `fn*:${fnLabel}`;
+    },
+  });
+  return genericFn;
 }

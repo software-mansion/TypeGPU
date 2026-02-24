@@ -1,4 +1,3 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import {
@@ -80,10 +79,10 @@ export interface TgpuFixedBufferUsage<TData extends BaseData>
 export interface TgpuBufferMutable<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
 
-export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & UniformFlag {
-  return !!(buffer as unknown as UniformFlag).usableAsUniform;
+  return !!buffer.usableAsUniform;
 }
 
 // --------------
@@ -97,7 +96,7 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
 };
 
 class TgpuFixedBufferImpl<
-  TData extends AnyWgslData,
+  TData extends BaseData,
   TUsage extends BindableBufferUsage,
 > implements
   TgpuBufferUsage<TData, TUsage>,
@@ -224,7 +223,7 @@ class TgpuFixedBufferImpl<
     }
 
     if (mode.type === 'simulate') {
-      mode.buffers.set(this.buffer, value as InferGPU<TData>);
+      mode.buffers.set(this.buffer, value);
       return;
     }
 
@@ -237,7 +236,7 @@ class TgpuFixedBufferImpl<
 }
 
 export class TgpuLaidOutBufferImpl<
-  TData extends AnyWgslData,
+  TData extends BaseData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable {
   /** Type-token, not available at runtime */
@@ -312,8 +311,8 @@ export class TgpuLaidOutBufferImpl<
 }
 
 const mutableUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'mutable'>
 >();
 
 export function mutable<TData extends AnyWgslData>(
@@ -336,8 +335,8 @@ export function mutable<TData extends AnyWgslData>(
 }
 
 const readonlyUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'readonly'>
 >();
 
 export function readonly<TData extends AnyWgslData>(
@@ -360,8 +359,8 @@ export function readonly<TData extends AnyWgslData>(
 }
 
 const uniformUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'uniform'>
 >();
 
 export function uniform<TData extends AnyWgslData>(

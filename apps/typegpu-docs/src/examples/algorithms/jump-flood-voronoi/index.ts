@@ -1,17 +1,14 @@
 import { randf } from '@typegpu/noise';
 import tgpu, { common, d, std } from 'typegpu';
 import type { SampledFlag, StorageFlag, TgpuTexture } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 let stepDelayMs = 50;
 let seedThreshold = 0.999;
@@ -101,42 +98,40 @@ function createResources() {
 
 let resources = createResources();
 
-const initializeRandom = root['~unstable'].createGuardedComputePipeline(
-  (x, y) => {
-    'use gpu';
-    const size = std.textureDimensions(initLayout.$.writeView);
-    randf.seed2(d.vec2f(x, y).div(d.vec2f(size)).add(timeUniform.$));
+const initializeRandom = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const size = std.textureDimensions(initLayout.$.writeView);
+  randf.seed2(d.vec2f(x, y).div(d.vec2f(size)).add(timeUniform.$));
 
-    const randomVal = randf.sample();
-    const isSeed = randomVal >= seedThresholdUniform.$;
+  const randomVal = randf.sample();
+  const isSeed = randomVal >= seedThresholdUniform.$;
 
-    const paletteColor = palette.$[d.u32(std.floor(randf.sample() * 4))];
-    const variation = d.vec3f(
-      randf.sample() - 0.5,
-      randf.sample() - 0.5,
-      randf.sample() - 0.5,
-    ).mul(0.15);
+  const paletteColor = palette.$[d.u32(std.floor(randf.sample() * 4))];
+  const variation = d.vec3f(
+    randf.sample() - 0.5,
+    randf.sample() - 0.5,
+    randf.sample() - 0.5,
+  ).mul(0.15);
 
-    const color = std.select(
-      d.vec4f(),
-      d.vec4f(std.saturate(paletteColor.add(variation)), 1),
-      isSeed,
-    );
-    const coord = std.select(
-      d.vec2f(-1),
-      d.vec2f(x, y).div(d.vec2f(size)),
-      isSeed,
-    );
+  const color = std.select(
+    d.vec4f(),
+    d.vec4f(std.saturate(paletteColor.add(variation)), 1),
+    isSeed,
+  );
+  const coord = std.select(
+    d.vec2f(-1),
+    d.vec2f(x, y).div(d.vec2f(size)),
+    isSeed,
+  );
 
-    std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, color);
-    std.textureStore(
-      initLayout.$.writeView,
-      d.vec2i(x, y),
-      1,
-      d.vec4f(coord, 0, 0),
-    );
-  },
-);
+  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, color);
+  std.textureStore(
+    initLayout.$.writeView,
+    d.vec2i(x, y),
+    1,
+    d.vec4f(coord, 0, 0),
+  );
+});
 
 const sampleWithOffset = (
   tex: d.textureStorage2dArray<'rgba16float', 'read-only'>,
@@ -162,7 +157,7 @@ const sampleWithOffset = (
   });
 };
 
-const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
+const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const offset = offsetUniform.$;
   const size = std.textureDimensions(pingPongLayout.$.readView);
@@ -170,22 +165,23 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   let minDist = 1e20;
   let bestSample = SampleResult({ color: d.vec4f(), coord: d.vec2f(-1) });
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
       const sample = sampleWithOffset(
         pingPongLayout.$.readView,
         d.vec2i(x, y),
         d.vec2i(dx * offset, dy * offset),
       );
 
-      if (sample.coord.x < 0) {
-        continue;
-      }
-
-      const dist = std.distance(d.vec2f(x, y), sample.coord.mul(d.vec2f(size)));
-      if (dist < minDist) {
-        minDist = dist;
-        bestSample = SampleResult(sample);
+      if (sample.coord.x >= 0) {
+        const dist = std.distance(
+          d.vec2f(x, y),
+          sample.coord.mul(d.vec2f(size)),
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          bestSample = SampleResult(sample);
+        }
       }
     }
   }
@@ -204,7 +200,7 @@ const jumpFlood = root['~unstable'].createGuardedComputePipeline((x, y) => {
   );
 });
 
-const voronoiFrag = tgpu['~unstable'].fragmentFn({
+const voronoiFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) =>
@@ -215,10 +211,11 @@ const voronoiFrag = tgpu['~unstable'].fragmentFn({
   )
 );
 
-const voronoiPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(voronoiFrag, { format: presentationFormat })
-  .createPipeline();
+const voronoiPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: voronoiFrag,
+  targets: { format: presentationFormat },
+});
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -227,15 +224,9 @@ function swap() {
 }
 
 function render() {
-  const colorAttachment = {
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear' as const,
-    storeOp: 'store' as const,
-  };
-
   voronoiPipeline
     .with(resources.renderBindGroups[sourceIdx])
-    .withColorAttachment(colorAttachment)
+    .withColorAttachment({ view: context })
     .draw(3);
 }
 
@@ -283,7 +274,7 @@ function initRandom() {
 function reset() {
   currentRunId++;
   initRandom();
-  runFloodAnimated(currentRunId);
+  void runFloodAnimated(currentRunId);
 }
 
 reset();
@@ -300,11 +291,11 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'Run Algorithm': {
     onButtonClick: () => {
       currentRunId++;
-      runFloodAnimated(currentRunId);
+      void runFloodAnimated(currentRunId);
     },
   },
   'Random Seeds': {
@@ -315,7 +306,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       const density = 10 ** (-5 + 4 * value);
       seedThreshold = 1 - density;
       seedThresholdUniform.write(seedThreshold);
@@ -327,19 +318,19 @@ export const controls = {
     min: 0,
     max: 1000,
     step: 50,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       stepDelayMs = value;
     },
   },
   Range: {
     initial: '100%',
     options: ['100%', '50%', '20%', '10%', '1%'],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       startingRangePercent = Number.parseFloat(value) / 100;
       reset();
     },
   },
-};
+});
 
 export function onCleanup() {
   clearTimeout(resizeTimeout);

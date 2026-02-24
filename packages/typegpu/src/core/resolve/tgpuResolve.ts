@@ -37,7 +37,7 @@ export interface TgpuResolveOptions {
    */
   enableExtensions?: WgslExtension[] | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
@@ -277,5 +277,5 @@ function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
       `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
     );
   }
-  return pipelines[0]?.[$internal].branch;
+  return pipelines[0]?.[$internal].root;
 }

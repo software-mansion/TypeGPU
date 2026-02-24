@@ -1,0 +1,44 @@
+{
+  "name": "@typegpu/concurrent-scan",
+  "type": "module",
+  "version": "0.10.0",
+  "description": "A concurrent scan module.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "linkDirectory": false,
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "unbuild",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "peerDependencies": {
+    "typegpu": "^0.10.0"
+  },
+  "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@webgpu/types": "catalog:types",
+    "unbuild": "catalog:build",
+    "typegpu": "workspace:*",
+    "typescript": "catalog:types",
+    "unplugin-typegpu": "workspace:*"
+  }
+}

@@ -28,7 +28,7 @@ import type {
   v4u,
 } from '../../../src/data/wgslTypes.ts';
 import { isCloseTo, mod } from '../../../src/std/index.ts';
-import tgpu, { d } from '../../../src/index.ts';
+import tgpu, { d } from '../../../src/index.js';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {

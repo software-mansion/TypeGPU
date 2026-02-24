@@ -12,60 +12,78 @@ Roots are responsible for resource allocation and management. Whether you'd like
 with a typed shell or create a brand new buffer, roots are the place to start.
 
 You can create a root using the `tgpu.init` function.
+It requests a GPU device with default requirements. An optional parameter
+can be passed in with special requirements for the GPU device.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+
 const root = await tgpu.init();
 ```
 
-It requests a GPU device with default requirements. An optional parameter
-can be passed in with special requirements for the GPU device. If you already have a device that you want to use,
-you can pass it into `tgpu.initFromDevice` instead.
+If you already have a device that you want to use, you can pass it into `tgpu.initFromDevice` instead.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+
+const adapter = await navigator.gpu.requestAdapter();
+const device = await adapter?.requestDevice() as GPUDevice;
+
+// using a preexisting device 
 const root = tgpu.initFromDevice({ device });
 ```
 
+:::note
 To retrieve the device that is associated with a root, you can use the `root.device` property.
+:::
 
-```ts
-const device = root.device; // => GPUDevice
+## Configuring context
 
+In order to draw on a canvas, you need to create and configure a context that will be later passed to a pipeline. 
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const canvas = {} as HTMLCanvasElement;
+// ---cut---
+const context = canvas.getContext("webgpu") as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 ```
+TypeGPU streamlines this process with `root.configureContext` method.
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const canvas = {} as HTMLCanvasElement;
+// ---cut---
+// format defaults to `navigator.gpu.getPreferredCanvasFormat()`
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+```
 
 ## Creating resources
 
-Every `root.create*` function creates a typed resource.
+Resources independent from the device, such as bind group layouts, functions, variables, TypeGPU slots etc., are created using dedicated `tgpu.*` methods.
 
-| Function | Description |
-| --- | --- |
-| <div className="w-max">`root.createBuffer`</div> | Creates a typed buffer with a given data-type and, optionally, an initial value. More information in [the Buffers chapter](/TypeGPU/fundamentals/buffers). |
+Resources requiring a device, such as bind groups, buffers, samplers, pipelines, etc., are created using `root.create*` methods.
 
-## Unwrapping resources
+For more information, see corresponding chapters.
 
+:::note
 There are times where a typed resource needs to be used by a vanilla WebGPU API. To retrieve the raw
 untyped value of a typed resource, use the `root.unwrap` function.
 
-| Function | Description |
-| --- | --- |
-| `root.unwrap(resource: TgpuBuffer<AnyData>)` | Returns a `GPUBuffer`. |
-| `root.unwrap(resource: TgpuBindGroupLayout)` | Returns a `GPUBindGroupLayout`. |
-| `root.unwrap(resource: TgpuBindGroup)` | Returns a `GPUBindGroup`. |
-| `root.unwrap(resource: TgpuVertexLayout)` | Returns a `GPUVertexBufferLayout`. |
-{/* | `root.unwrap(resource: TgpuTexture)` | Returns a `GPUTexture`. | */}
-{/* | `root.unwrap(resource: TgpuReadonlyTexture \| TgpuWriteonlyTexture \| TgpuMutableTexture \| TgpuSampledTexture)` | Returns a `GPUTextureView`. | */}
-
-:::note
 To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attributes with the appropriate location using `d.location(...)`.
 :::
 
-## Destroying resources
+### Destroying resources
 
-Calling `root.destroy()` will call `device.destroy()` to let the browser know that it can free up all the resources. However, if an existing device is passed in via `tgpu.initFromDevice()`, this method does nothing.
+Calling `root.destroy()` will call `device.destroy()` to let the browser know that it can free up all the resources. 
+
+If the root was created via `tgpu.initFromDevice()`, this method does nothing.
 
 ```ts
 root.destroy(); // <- frees up all the resources

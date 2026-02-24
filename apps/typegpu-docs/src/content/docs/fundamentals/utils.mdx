@@ -3,116 +3,48 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *root.createGuardedComputePipeline*
+## *tgpu.rawCodeSnippet*
 
-The `root.createGuardedComputePipeline` method streamlines running simple computations on the GPU.
-Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range, and returns an object with a `dispatchThreads` method that executes the pipeline.
-Since the pipeline is reused, there’s no additional overhead for subsequent calls.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-const root = await tgpu.init();
-// ---cut---
-const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
-
-const doubleUpPipeline = root['~unstable']
-  .createGuardedComputePipeline((x) => {
-    'use gpu';
-    data.$[x] *= 2;
-  });
-
-doubleUpPipeline.dispatchThreads(8);
-doubleUpPipeline.dispatchThreads(8);
-doubleUpPipeline.dispatchThreads(4);
-
-// the command encoder will queue the read after `doubleUpPipeline`
-console.log(await data.read()); // [0, 8, 16, 24, 16, 20, 24, 28]
-```
-
-:::note
-Remember to mark the callback with the `'use gpu'` directive to let TypeGPU know that this function is TGSL.
-:::
-
-The callback can have up to three arguments (dimensions).
-`createGuardedComputePipeline` can simplify writing a pipeline helping reduce serialization overhead when initializing buffers with data.
-Buffer initialization commonly uses random number generators.
-For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
+When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
+In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
+
 // ---cut---
-import { randf } from '@typegpu/noise';
+// `EXISTING_GLOBAL` is an identifier that we know will be in the
+// final shader bundle, but we cannot
+// refer to it in any other way.
+const existingGlobal = tgpu['~unstable']
+  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
 
-const root = await tgpu.init();
-
-// buffer of 1024x512 floats
-const waterLevelMutable = root.createMutable(
-  d.arrayOf(d.arrayOf(d.f32, 512), 1024),
-);
-
-root['~unstable'].createGuardedComputePipeline((x, y) => {
+const foo = tgpu.fn([], d.f32)(() => {
   'use gpu';
-  randf.seed2(d.vec2f(x, y).div(1024));
-  waterLevelMutable.$[x][y] = 10 + randf.sample();
-}).dispatchThreads(1024, 512);
-// callback will be called for x in range 0..1023 and y in range 0..511
+  return existingGlobal.$ * 22;
+});
 
-// (optional) read values in JS
-console.log(await waterLevelMutable.read());
+const wgsl = tgpu.resolve([foo]);
+// fn foo() -> f32 {
+//   return (EXISTING_GLOBAL * 22f);
+// }
 ```
-
-The result of `createGuardedComputePipeline` can have bind groups bound using the `with` method.
-
-```ts twoslash
-import tgpu, { d, std } from 'typegpu';
-const root = await tgpu.init();
-// ---cut---
-const layout = tgpu.bindGroupLayout({
-  values: { storage: d.arrayOf(d.u32), access: 'mutable' },
-});
-const buffer1 = root
-  .createBuffer(d.arrayOf(d.u32, 3), [1, 2, 3]).$usage('storage');
-const buffer2 = root
-  .createBuffer(d.arrayOf(d.u32, 4), [2, 4, 8, 16]).$usage('storage');
-const bindGroup1 = root.createBindGroup(layout, {
-  values: buffer1,
-});
-const bindGroup2 = root.createBindGroup(layout, {
-  values: buffer2,
-});
-
-const doubleUpPipeline = root['~unstable'].createGuardedComputePipeline((x) => {
-  'use gpu';
-  layout.$.values[x] *= 2;
-});
-
-doubleUpPipeline.with(bindGroup1).dispatchThreads(3);
-doubleUpPipeline.with(bindGroup2).dispatchThreads(4);
-
-console.log(await buffer1.read()); // [2, 4, 6];
-console.log(await buffer2.read()); // [4, 8, 16, 32];
-```
-
-It is recommended NOT to use guarded compute pipelines for:
-
-- More complex compute shaders.
-When using guarded compute pipelines, it is impossible to change workgroup sizes, or effectively utilize workgroup shared memory.
-For such cases, a manually created pipeline would be more suitable.
-
-- Small calls.
-Usually, for small data the shader creation and dispatch is more costly than serialization.
-Small buffers can be more efficiently initialized with the `buffer.write()` method.
 
 :::note
-The default workgroup sizes are:
-
-- `[1, 1, 1]` for 0D dispatches,
-- `[256, 1, 1]` for 1D dispatches,
-- `[16, 16, 1]` for 2D dispatches,
-- `[8, 8, 4]` for 3D dispatches.
-
-The callback is not called if the global invocation id of a thread would exceed the size in any dimension.
+There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
 :::
+
+### Which origin to choose?
+
+The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
+
+Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
+computation is constant (either a reference to a constant, a numeric literal,
+or an operation on constants), then pass `'constant'` as it might lead to better
+optimizations.
+
+If what the expression is a direct reference to an existing value (e.g. a uniform, a
+storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
+`'private'` or `'handle'` depending on the address space of the referred value.
 
 :::tip
 `TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
@@ -266,7 +198,7 @@ import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
-const compute = root['~unstable'].createGuardedComputePipeline(() => {
+const compute = root.createGuardedComputePipeline(() => {
   'use gpu';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);
@@ -303,7 +235,7 @@ const root = await tgpu.init({
 
 /* vertex shader */
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -330,8 +262,64 @@ Other supported `console` functionalities include `console.debug`, `console.info
 
 There are some limitations (some of which we intend to alleviate in the future):
 
-- `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
+- `console.log` only works when used in TypeGPU functions that are transitively called in a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
 - `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).
+
+## *for...of...* loops
+
+TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  const offsets = [
+    d.vec2i(0, 1),
+    d.vec2i(0, -1),
+    d.vec2i(1, 0),
+    d.vec2i(-1, 0),
+  ];
+
+  for (const offset of offsets) {
+    processNeighbor(cell.add(offset));
+  }
+};
+```
+
+## *tgpu.unroll*
+
+For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll loops at compile time. This eliminates branch prediction overhead and can significantly improve performance.
+
+### Usage
+
+Wrap your iterable with `tgpu.unroll()`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
+      processNeighbor(cell.add(d.vec2i(dx, dy)));
+    }
+  }
+};
+```
+
+:::note
+- There are no constraints on how large a loop can be for unrolling. We will always try to unroll it, and if we can't, you'll receive an error.
+- You cannot use `continue` or `break` inside loop that you intend to unroll later.
+:::

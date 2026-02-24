@@ -10,7 +10,7 @@ import {
   VertexOutput,
 } from './schemas.ts';
 
-export const skyBoxVertex = tgpu['~unstable'].vertexFn({
+export const skyBoxVertex = tgpu.vertexFn({
   in: {
     position: d.vec3f,
     uv: d.vec2f,
@@ -31,7 +31,7 @@ export const skyBoxVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
+export const skyBoxFragment = tgpu.fragmentFn({
   in: {
     texCoord: d.vec3f,
   },
@@ -44,7 +44,7 @@ export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
   )
 );
 
-export const mainVertex = tgpu['~unstable'].vertexFn({
+export const mainVertex = tgpu.vertexFn({
   in: {
     ...VertexInput,
     instanceIndex: d.builtin.instanceIndex,
@@ -73,7 +73,7 @@ export const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const mainFragment = tgpu['~unstable'].fragmentFn({
+export const mainFragment = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => {
@@ -87,7 +87,7 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
     filteringSamplerSlot.$,
     input.uv,
     input.sphereTextureIndex,
-  ).xyz;
+  ).rgb;
 
   const ambient = textureColor.mul(lightColor).mul(input.ambientLightFactor);
 
@@ -100,5 +100,5 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
 
   const litColor = ambient.add(diffuse);
 
-  return d.vec4f(litColor.xyz, 1);
+  return d.vec4f(litColor, 1);
 });

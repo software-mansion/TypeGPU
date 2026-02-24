@@ -42,22 +42,19 @@ import {
   SURF_DIST,
 } from './constants.ts';
 import { NumberProvider } from './numbers.ts';
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: {
     optionalFeatures: ['timestamp-query'],
   },
 });
+
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const NUM_POINTS = 17;
 
@@ -445,7 +442,7 @@ const getFakeShadow = (
     );
     const shadowColor = std.mix(
       d.vec3f(0, 0, 0),
-      jellyColor.xyz,
+      jellyColor.rgb,
       jellySaturation,
     );
 
@@ -557,7 +554,7 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       rayDirection,
       distanceFromOrigin,
       std.select(d.f32(), 0.87, blurEnabledUniform.$ === 1),
-    ).xyz;
+    ).rgb;
   }
   return d.vec3f();
 };
@@ -670,8 +667,8 @@ const renderBackground = (
   // Calculate fake bounce lighting
   const jellyColor = jellyColorUniform.$;
   const sqDist = sqLength(hitPosition.sub(d.vec3f(endCapX, 0, 0)));
-  const bounceLight = jellyColor.xyz.mul(1 / (sqDist * 15 + 1) * 0.4);
-  const sideBounceLight = jellyColor.xyz
+  const bounceLight = jellyColor.rgb.mul(1 / (sqDist * 15 + 1) * 0.4);
+  const sideBounceLight = jellyColor.rgb
     .mul(1 / (sqDist * 40 + 1) * 0.3)
     .mul(std.abs(newNormal.z));
 
@@ -684,10 +681,10 @@ const renderBackground = (
     .add(d.vec4f(bounceLight, 0))
     .add(d.vec4f(sideBounceLight, 0));
 
-  const textColor = std.saturate(backgroundColor.xyz.mul(d.vec3f(0.5)));
+  const textColor = std.saturate(backgroundColor.rgb.mul(d.vec3f(0.5)));
 
   return d.vec4f(
-    std.mix(backgroundColor.xyz, textColor, percentageSample.x).mul(
+    std.mix(backgroundColor.rgb, textColor, percentageSample.x).mul(
       1.0 + highlights,
     ),
     1.0,
@@ -778,9 +775,9 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
         const progress = hitInfo.t;
         const jellyColor = jellyColorUniform.$;
 
-        const scatterTint = jellyColor.xyz.mul(1.5);
+        const scatterTint = jellyColor.rgb.mul(1.5);
         const density = d.f32(20.0);
-        const absorb = d.vec3f(1.0).sub(jellyColor.xyz).mul(density);
+        const absorb = d.vec3f(1.0).sub(jellyColor.rgb).mul(density);
 
         const T = beerLambert(absorb.mul(progress ** 2), 0.08);
 
@@ -809,10 +806,8 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
   return background;
 };
 
-const raymarchFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+const raymarchFn = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   randf.seed2(randomUniform.$.mul(uv));
@@ -825,10 +820,10 @@ const raymarchFn = tgpu['~unstable'].fragmentFn({
     ray.direction,
     uv,
   );
-  return d.vec4f(std.tanh(color.xyz.mul(1.3)), 1);
+  return d.vec4f(std.tanh(color.rgb.mul(1.3)), 1);
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -839,15 +834,17 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   );
 });
 
-const rayMarchPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(raymarchFn, { format: 'rgba8unorm' })
-  .createPipeline();
+const rayMarchPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: raymarchFn,
+  targets: { format: 'rgba8unorm' },
+});
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 const eventHandler = new EventHandler(canvas);
 let lastTimeStamp = performance.now();
@@ -918,11 +915,7 @@ function render(timestamp: number) {
   );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
@@ -1004,7 +997,7 @@ async function autoSetQuaility() {
   return resolutionScale;
 }
 
-export const controls = {
+export const controls = defineControls({
   'Quality': {
     initial: 'Auto',
     options: [
@@ -1015,9 +1008,9 @@ export const controls = {
       'High',
       'Ultra',
     ],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       if (value === 'Auto') {
-        autoSetQuaility().then((scale) => {
+        void autoSetQuaility().then((scale) => {
           qualityScale = scale;
           handleResize();
         });
@@ -1041,7 +1034,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
@@ -1051,18 +1044,18 @@ export const controls = {
     },
   },
   'Jelly Color': {
-    initial: [1.0, 0.45, 0.075],
-    onColorChange: (c: [number, number, number]) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+    initial: d.vec3f(1.0, 0.45, 0.075),
+    onColorChange: (c) => {
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Blur': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       blurEnabledUniform.write(d.u32(v));
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);

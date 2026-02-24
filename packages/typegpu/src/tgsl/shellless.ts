@@ -2,10 +2,15 @@ import {
   createShelllessImpl,
   type ShelllessImpl,
 } from '../core/function/shelllessImpl.ts';
-import type { AnyData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
-import { isPtr } from '../data/wgslTypes.ts';
+import {
+  type BaseData,
+  isPtr,
+  isWgslArray,
+  isWgslStruct,
+} from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
@@ -13,19 +18,21 @@ import { concretize } from './generationHelpers.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
-function shallowEqualSchemas(a: AnyData, b: AnyData): boolean {
+function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
   if (a.type !== b.type) return false;
-  if (a.type === 'ptr' && b.type === 'ptr') {
-    return a.access === b.access &&
+  if (isPtr(a) && isPtr(b)) {
+    return (
+      a.access === b.access &&
       a.addressSpace === b.addressSpace &&
       a.implicit === b.implicit &&
-      shallowEqualSchemas(a.inner, b.inner);
+      shallowEqualSchemas(a.inner, b.inner)
+    );
   }
-  if (a.type === 'array' && b.type === 'array') {
+  if (isWgslArray(a) && isWgslArray(b)) {
     return a.elementCount === b.elementCount &&
-      shallowEqualSchemas(a.elementType as AnyData, b.elementType as AnyData);
+      shallowEqualSchemas(a.elementType, b.elementType);
   }
-  if (a.type === 'struct' && b.type === 'struct') {
+  if (isWgslStruct(a) && isWgslStruct(b)) {
     // Only structs with the same identity are considered equal
     return a === b;
   }
@@ -51,7 +58,7 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
       if (s.value instanceof RefOperator) {
-        if (s.dataType.type === 'unknown') {
+        if (s.dataType === UnknownData) {
           throw new WgslTypeError(
             `d.ref() created with primitive types must be stored in a variable before use`,
           );
@@ -59,9 +66,11 @@ export class ShelllessRepository {
         return s.dataType;
       }
 
-      if (s.dataType.type === 'unknown') {
+      if (s.dataType === UnknownData) {
         throw new Error(
-          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)`,
+          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)\n` +
+            `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
+            `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,
         );
       }
 
@@ -71,7 +80,7 @@ export class ShelllessRepository {
         s.origin === 'constant-tgpu-const-ref' ||
         s.origin === 'runtime-tgpu-const-ref'
       ) {
-        // biome-ignore lint/style/noNonNullAssertion: it's there
+        // oxlint-disable-next-line typescript/no-non-null-assertion it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
           `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${
@@ -101,7 +110,7 @@ export class ShelllessRepository {
       const variant = cache.find((v) =>
         v.argTypes.length === argTypes.length &&
         v.argTypes.every((t, i) =>
-          shallowEqualSchemas(t, argTypes[i] as AnyData)
+          shallowEqualSchemas(t, argTypes[i] as BaseData)
         )
       );
       if (variant) {

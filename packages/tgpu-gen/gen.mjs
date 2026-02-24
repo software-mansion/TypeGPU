@@ -462,9 +462,9 @@ function generateTextureVariable(variable) {
 }
 
 /**
- * @param {VariableInfo} variable
+ * @param {VariableInfo} _variable
  */
-function generateExternalTextureVariable(variable) {
+function generateExternalTextureVariable(_variable) {
   return `{
     externalTexture: {},
   }`;

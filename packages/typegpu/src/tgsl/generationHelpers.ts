@@ -1,21 +1,34 @@
-import { type AnyData, UnknownData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isEphemeralSnippet,
+  isSnippet,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyEphemeral,
   isVecInstance,
+  type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import {
   type FunctionScopeLayer,
   getOwnSnippet,
   type ResolutionCtx,
+  type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
+import { stitch } from '../../src/core/resolve/stitch.ts';
+import { WgslTypeError } from '../../src/errors.ts';
+import { $internal, $resolve } from '../../src/shared/symbols.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -34,7 +47,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat, /* origin */ 'constant');
 }
 
-export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
+export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
   if (type.type === 'abstractFloat') {
     return f32;
   }
@@ -46,14 +59,16 @@ export function concretize<T extends AnyData>(type: T): T | F32 | I32 {
   return type;
 }
 
-export function concretizeSnippets(args: Snippet[]): Snippet[] {
-  return args.map((snippet) =>
-    snip(
-      snippet.value,
-      concretize(snippet.dataType as AnyWgslData),
-      /* origin */ snippet.origin,
-    )
+export function concretizeSnippet(snippet: Snippet): Snippet {
+  return snip(
+    snippet.value,
+    concretize(snippet.dataType as AnyWgslData),
+    snippet.origin,
   );
+}
+
+export function concretizeSnippets(args: Snippet[]): Snippet[] {
+  return args.map(concretizeSnippet);
 }
 
 export type GenerationCtx = ResolutionCtx & {
@@ -65,10 +80,10 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: AnyData | undefined;
+  expectedType: (BaseData | BaseData[]) | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: AnyData | undefined;
+  readonly topFunctionReturnType: BaseData | undefined;
 
   indent(): string;
   dedent(): string;
@@ -77,13 +92,15 @@ export type GenerationCtx = ResolutionCtx & {
   generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 
   /**
    * Types that are used in `return` statements are
    * reported using this function, and used to infer
    * the return type of the owning function.
    */
-  reportReturnType(dataType: AnyData): void;
+  reportReturnType(dataType: BaseData): void;
 
   readonly shelllessRepo: ShelllessRepository;
 };
@@ -126,4 +143,51 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   return snip(value, UnknownData, /* origin */ 'constant');
+}
+
+/**
+ * Intermediate representation for WGSL array expressions.
+ * Defers resolution. Stores array elements as snippets so the
+ * generator can access them when needed.
+ */
+export class ArrayExpression implements SelfResolvable {
+  readonly [$internal] = true;
+
+  constructor(
+    public readonly type: WgslArray<AnyWgslData>,
+    public readonly elements: Snippet[],
+  ) {
+  }
+
+  toString(): string {
+    return 'ArrayExpression';
+  }
+
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    for (const elem of this.elements) {
+      // We check if there are no references among the elements
+      if (
+        (elem.origin === 'argument' &&
+          !isNaturallyEphemeral(elem.dataType)) ||
+        !isEphemeralSnippet(elem)
+      ) {
+        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetType =
+          ctx.resolve(concretize(elem.dataType as BaseData)).value;
+        throw new WgslTypeError(
+          `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+        );
+      }
+    }
+
+    const arrayType = `array<${
+      ctx.resolve(this.type.elementType).value
+    }, ${this.elements.length}>`;
+
+    return snip(
+      stitch`${arrayType}(${this.elements})`,
+      this.type,
+      /* origin */ 'runtime',
+    );
+  }
 }

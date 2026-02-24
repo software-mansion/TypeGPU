@@ -5,8 +5,8 @@ import {
   isGPUCallable,
   type ResolutionCtx,
 } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
 import type { Snippet } from './snippet.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 /**
  * A wrapper for `schema(item)` or `schema()` call on JS side.
@@ -15,7 +15,7 @@ import type { Snippet } from './snippet.ts';
  * If the schema is not callable, throws an error.
  * Otherwise, returns `schema(item)` or `schema()`.
  */
-export function schemaCallWrapper<T>(schema: AnyData, item?: T): T {
+export function schemaCallWrapper<T>(schema: BaseData, item?: T): T {
   const callSchema = schema as unknown as ((item?: T) => T);
 
   if (hasCast(callSchema)) {
@@ -39,8 +39,8 @@ export function schemaCallWrapper<T>(schema: AnyData, item?: T): T {
  */
 export function schemaCallWrapperGPU(
   ctx: ResolutionCtx,
-  schema: AnyData,
-  item?: Snippet | undefined,
+  schema: BaseData,
+  item?: Snippet,
 ): Snippet {
   if (!isGPUCallable(schema)) {
     // Not callable

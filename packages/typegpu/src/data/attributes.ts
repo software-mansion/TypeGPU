@@ -22,6 +22,7 @@ import { alignmentOf } from './alignmentOf.ts';
 import {
   type AnyData,
   type AnyLooseData,
+  type IsLooseData,
   isLooseData,
   isLooseDecorated,
   type LooseDecorated,
@@ -43,6 +44,7 @@ import {
   isBuiltinAttrib,
   isDecorated,
   isSizeAttrib,
+  type IsWgslData,
   isWgslData,
   type Location,
   type PerspectiveOrLinearInterpolatableData,
@@ -84,8 +86,8 @@ export type AnyAttribute<
 > =
   | Align<number>
   | Size<number>
-  | Location<number>
-  | Interpolate<InterpolationType>
+  | Location
+  | Interpolate
   | Invariant
   | AllowedBuiltins;
 
@@ -111,9 +113,9 @@ export type ExtractAttributes<T> = T extends {
 export type Decorate<
   TData extends BaseData,
   TAttrib extends AnyAttribute,
-> = TData extends AnyWgslData
+> = IsWgslData<TData> extends true
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : TData extends AnyLooseData
+  : IsLooseData<TData> extends true
     ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : never;
 
@@ -126,22 +128,16 @@ export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
   : ExtractAttributes<T>[number] extends Location ? true
   : false;
 
-export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
-  data: TData,
-  attrib: TAttrib,
+export function attribute(
+  data: BaseData,
+  attrib: AnyAttribute,
 ): Decorated | LooseDecorated {
   if (isDecorated(data)) {
-    return new DecoratedImpl(data.inner, [
-      attrib,
-      ...data.attribs,
-    ]) as Decorated;
+    return new DecoratedImpl(data.inner, [attrib, ...data.attribs]);
   }
 
   if (isLooseDecorated(data)) {
-    return new LooseDecoratedImpl(data.inner, [
-      attrib,
-      ...data.attribs,
-    ]) as LooseDecorated;
+    return new LooseDecoratedImpl(data.inner, [attrib, ...data.attribs]);
   }
 
   if (isLooseData(data)) {
@@ -173,7 +169,7 @@ export function align<TAlign extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@align',
     params: [alignment],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -197,7 +193,7 @@ export function size<TSize extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@size',
     params: [size],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -214,7 +210,7 @@ export function size<TSize extends number, TData extends AnyData>(
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
  */
-export function location<TLocation extends number, TData extends AnyData>(
+export function location<TLocation extends number, TData extends BaseData>(
   location: TLocation,
   data: TData,
 ): Decorate<TData, Location<TLocation>> {
@@ -222,7 +218,7 @@ export function location<TLocation extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@location',
     params: [location],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -285,7 +281,7 @@ export function interpolate<
     [$internal]: true,
     type: '@interpolate',
     params: [interpolationType],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
@@ -328,15 +324,13 @@ export function invariant(
     [$internal]: true,
     type: '@invariant',
     params: [],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
   }) as any;
 }
 
-export function isBuiltin<
-  T extends
-    | Decorated<AnyWgslData, AnyAttribute[]>
-    | LooseDecorated<AnyLooseData, AnyAttribute[]>,
->(value: T | unknown): value is T {
+export function isBuiltin(value: unknown): value is
+  | Decorated<AnyWgslData, AnyAttribute[]>
+  | LooseDecorated<AnyLooseData, AnyAttribute[]> {
   return (
     (isDecorated(value) || isLooseDecorated(value)) &&
     value.attribs.find(isBuiltinAttrib) !== undefined

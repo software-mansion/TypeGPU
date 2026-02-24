@@ -1,3 +1,4 @@
+// oxlint-disable unicorn/no-empty-file
 /*
  * Creative Commons Licence
  * Infinite, 3D Head Scan by Lee Perry-Smith is licensed under a Creative Commons Attribution 3.0 Unported License.

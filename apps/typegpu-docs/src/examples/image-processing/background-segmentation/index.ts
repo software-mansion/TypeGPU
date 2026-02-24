@@ -20,10 +20,11 @@ import {
 } from './schemas.ts';
 import {
   computeFn,
-  drawWithMaskFragment,
+  fragmentFn,
   generateMaskFromOutput,
   prepareModelInput,
 } from './shaders.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Background segmentation uses the u2netp model (https://github.com/xuebinqin/U-2-Net)
 // by Xuebin Qin et al., licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -59,19 +60,14 @@ if (!device || !adapter) {
 }
 
 // monkey patching ONNX: https://github.com/microsoft/onnxruntime/issues/26107
+// oxlint-disable-next-line typescript/unbound-method we know what we're doing
 const oldRequestAdapter = navigator.gpu.requestAdapter;
+// oxlint-disable-next-line typescript/unbound-method we know what we're doing
 const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;
 const root = tgpu.initFromDevice({ device });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // resources
 
@@ -125,11 +121,9 @@ let blurBindGroups: TgpuBindGroup<typeof blurLayout.entries>[];
 
 // pipelines
 
-const prepareModelInputPipeline = root['~unstable']
+const prepareModelInputPipeline = root
   .with(paramsAccess, paramsUniform)
-  .createGuardedComputePipeline(
-    prepareModelInput,
-  );
+  .createGuardedComputePipeline(prepareModelInput);
 
 let currentModelIndex = 0;
 let session = await prepareSession(
@@ -154,23 +148,22 @@ async function switchModel(modelIndex: number) {
   isLoadingModel = false;
 }
 
-const generateMaskFromOutputPipeline = root['~unstable']
-  .createGuardedComputePipeline(
-    generateMaskFromOutput,
-  );
-
-const blurPipelines = [false, true].map((flip) =>
-  root['~unstable']
-    .with(flipAccess, flip)
-    .withCompute(computeFn)
-    .createPipeline()
+const generateMaskFromOutputPipeline = root.createGuardedComputePipeline(
+  generateMaskFromOutput,
 );
 
-const drawWithMaskPipeline = root['~unstable']
+const blurPipelines = [false, true].map((flip) =>
+  root
+    .with(flipAccess, flip)
+    .createComputePipeline({ compute: computeFn })
+);
+
+const drawWithMaskPipeline = root
   .with(paramsAccess, paramsUniform)
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(drawWithMaskFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fragmentFn,
+  });
 
 // recalculating mask
 
@@ -314,10 +307,8 @@ async function processVideoFrame(
 
   drawWithMaskPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(root.createBindGroup(drawWithMaskLayout, {
       inputTexture: device.importExternalTexture({ source: video }),
@@ -333,11 +324,11 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   model: {
     initial: MODELS[0].name,
     options: MODELS.map((m) => m.name),
-    async onSelectChange(value: string) {
+    async onSelectChange(value) {
       const index = MODELS.findIndex((m) => m.name === value);
       if (index !== -1) {
         await switchModel(index);
@@ -347,7 +338,7 @@ export const controls = {
   'blur type': {
     initial: 'mipmaps',
     options: ['mipmaps', 'gaussian'],
-    async onSelectChange(value: string) {
+    async onSelectChange(value) {
       useGaussianBlur = value === 'gaussian';
       paramsUniform.writePartial({ useGaussian: useGaussianBlur ? 1 : 0 });
     },
@@ -357,21 +348,21 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       blurStrength = newValue;
       paramsUniform.writePartial({ sampleBias: blurStrength });
     },
   },
   'square crop': {
     initial: useSquareCrop,
-    onToggleChange(value: boolean) {
+    onToggleChange(value) {
       useSquareCrop = value;
       if (lastFrameSize) {
         updateCropBounds(lastFrameSize.width / lastFrameSize.height);
       }
     },
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

@@ -1,6 +1,6 @@
 import tgpu, { d } from 'typegpu';
 
-export const mainVertex = tgpu['~unstable'].vertexFn({
+export const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 })(({ vertexIndex }) => {

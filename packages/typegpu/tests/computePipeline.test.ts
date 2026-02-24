@@ -5,20 +5,20 @@ import {
   MissingBindGroupsError,
   tgpu,
   type TgpuComputePipeline,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
-    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [32] })(() => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [32] })(() => {
       // do something
     });
 
-    const computePipeline = root
-      .withCompute(entryFn)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: entryFn,
+    });
 
     expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
 
@@ -36,11 +36,13 @@ describe('TgpuComputePipeline', () => {
   it('throws an error if bind groups are missing', ({ root }) => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
       layout.$.alpha; // Using an entry of the layout
     });
 
-    const pipeline = root.withCompute(entryFn).createPipeline();
+    const pipeline = root.createComputePipeline({
+      compute: entryFn,
+    });
 
     expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(
       new MissingBindGroupsError([layout]),
@@ -53,14 +55,14 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('is resolvable', ({ root }) => {
-    const main = tgpu['~unstable']
+    const main = tgpu
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
       });
 
-    const computePipeline = root
-      .withCompute(main)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: main,
+    });
 
     expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(32) fn main() {
@@ -70,13 +72,13 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('type checks passed bind groups', ({ root }) => {
-    const main = tgpu['~unstable']
+    const main = tgpu
       .computeFn({ workgroupSize: [32] })(() => {
         // do something
       });
-    const computePipeline = root
-      .withCompute(main)
-      .createPipeline();
+    const computePipeline = root.createComputePipeline({
+      compute: main,
+    });
 
     const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
     const bindGroup1 = root.createBindGroup(layout1, {
@@ -95,14 +97,13 @@ describe('TgpuComputePipeline', () => {
 
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
       const callback = vi.fn();
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       expect(pipeline).toBeDefined();
@@ -117,14 +118,13 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
       const callback = vi.fn();
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       const timestampWrites = pipeline[$internal].priors.timestampWrites;
@@ -139,7 +139,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should replace previous performance callback', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -147,8 +147,7 @@ describe('TgpuComputePipeline', () => {
       const callback2 = vi.fn();
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback1)
         .withPerformanceCallback(callback2);
 
@@ -167,7 +166,7 @@ describe('TgpuComputePipeline', () => {
       //@ts-expect-error
       device.features = new Set();
 
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -175,8 +174,7 @@ describe('TgpuComputePipeline', () => {
 
       expect(() => {
         root
-          .withCompute(entryFn)
-          .createPipeline()
+          .createComputePipeline({ compute: entryFn })
           .withPerformanceCallback(callback);
       }).toThrow(
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
@@ -189,15 +187,14 @@ describe('TgpuComputePipeline', () => {
 
   describe('Timestamp Writes', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
@@ -214,7 +211,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -224,8 +221,7 @@ describe('TgpuComputePipeline', () => {
       });
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet: rawQuerySet,
           beginningOfPassWriteIndex: 2,
@@ -241,31 +237,28 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should handle optional timestamp write indices', ({ root }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline1 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
         });
 
       const pipeline2 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           endOfPassWriteIndex: 1,
         });
 
       const pipeline3 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
         });
@@ -294,15 +287,14 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 1,
@@ -333,7 +325,7 @@ describe('TgpuComputePipeline', () => {
         data: buffer,
       });
 
-      const entryFn = tgpu['~unstable']
+      const entryFn = tgpu
         .computeFn({ workgroupSize: [1] })(() => {
           layout.$.data;
         })
@@ -342,8 +334,8 @@ describe('TgpuComputePipeline', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline().withTimestampWrites({
+        .createComputePipeline({ compute: entryFn })
+        .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
           endOfPassWriteIndex: 1,
@@ -351,8 +343,7 @@ describe('TgpuComputePipeline', () => {
         .with(bindGroup);
 
       const pipeline2 = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .with(bindGroup)
         .withTimestampWrites({
           querySet,
@@ -385,7 +376,7 @@ describe('TgpuComputePipeline', () => {
 
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -393,8 +384,7 @@ describe('TgpuComputePipeline', () => {
       const callback = vi.fn();
 
       const pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 3,
@@ -429,7 +419,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({ root, commandEncoder }) => {
-      const entryFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
 
@@ -437,8 +427,7 @@ describe('TgpuComputePipeline', () => {
       const callback = vi.fn();
 
       let pipeline = root
-        .withCompute(entryFn)
-        .createPipeline()
+        .createComputePipeline({ compute: entryFn })
         .withPerformanceCallback(callback);
 
       const autoQuerySet = pipeline[$internal].priors.timestampWrites?.querySet;
@@ -476,14 +465,14 @@ describe('TgpuComputePipeline', () => {
       writable: true,
     });
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [1],
     })(({ gid }) => {
       const a = d.arrayOf(d.f32, 3)();
     });
 
-    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 
@@ -512,7 +501,7 @@ describe('TgpuComputePipeline', () => {
       writable: true,
     });
 
-    const fn = tgpu['~unstable'].computeFn({
+    const fn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [1],
     })(({ gid }) => {
@@ -528,7 +517,7 @@ describe('TgpuComputePipeline', () => {
       }
     });
 
-    const pipeline = root['~unstable'].withCompute(fn).createPipeline();
+    const pipeline = root.createComputePipeline({ compute: fn });
 
     pipeline.dispatchWorkgroups(1);
 
@@ -553,8 +542,153 @@ describe('TgpuComputePipeline', () => {
         {
           a[1i] = 1h;
         }
-
       }"
     `);
+  });
+
+  it('warns when buffer limits are exceeded', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const uniform1 = root.createUniform(d.u32);
+    const uniform2 = root.createUniform(d.u32);
+    const uniform3 = root.createUniform(d.u32);
+    const uniform4 = root.createUniform(d.u32);
+    const uniform5 = root.createUniform(d.u32);
+    const uniform6 = root.createUniform(d.u32);
+    const uniform7 = root.createUniform(d.u32);
+    const uniform8 = root.createUniform(d.u32);
+    const uniform9 = root.createUniform(d.u32);
+    const uniform10 = root.createUniform(d.u32);
+    const uniform11 = root.createUniform(d.u32);
+    const uniform12 = root.createUniform(d.u32);
+    const uniform13 = root.createUniform(d.u32);
+
+    const readonly1 = root.createReadonly(d.u32);
+    const readonly2 = root.createReadonly(d.u32);
+    const readonly3 = root.createReadonly(d.u32);
+    const readonly4 = root.createReadonly(d.u32);
+    const readonly5 = root.createReadonly(d.u32);
+    const readonly6 = root.createReadonly(d.u32);
+    const readonly7 = root.createReadonly(d.u32);
+    const readonly8 = root.createReadonly(d.u32);
+    const readonly9 = root.createReadonly(d.u32);
+
+    const pipeline = root.createGuardedComputePipeline(() => {
+      'use gpu';
+      let a = d.u32();
+      a = uniform1.$;
+      a = uniform2.$;
+      a = uniform3.$;
+      a = uniform4.$;
+      a = uniform5.$;
+      a = uniform6.$;
+      a = uniform7.$;
+      a = uniform8.$;
+      a = uniform9.$;
+      a = uniform10.$;
+      a = uniform11.$;
+      a = uniform12.$;
+      a = uniform13.$;
+      a = readonly1.$;
+      a = readonly2.$;
+      a = readonly3.$;
+      a = readonly4.$;
+      a = readonly5.$;
+      a = readonly6.$;
+      a = readonly7.$;
+      a = readonly8.$;
+      a = readonly9.$;
+    });
+
+    pipeline.dispatchThreads();
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+1. Grouping some of the uniforms into one using 'd.struct',
+2. Increasing the limit when requesting a device or creating a root.`,
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
+    );
+  });
+
+  describe('dispatchWorkgroupsIndirect', () => {
+    // offset calculator for this struct: https://shorturl.at/NQggS
+    const DeepStruct = d.struct({
+      someData: d.arrayOf(d.f32, 13),
+      nested: d.struct({
+        randomData: d.f32,
+        x: d.atomic(d.u32),
+        y: d.u32,
+        innerNested: d.arrayOf(
+          d.struct({
+            xx: d.atomic(d.u32),
+            yy: d.u32,
+            zz: d.u32,
+            myVec: d.vec4u,
+          }),
+          3,
+        ),
+        z: d.u32,
+        additionalData: d.arrayOf(d.u32, 32),
+      }),
+    });
+
+    it('warns when dispatch would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      const PaddedStruct = d.struct({ a: d.u32, b: d.vec3u });
+      const buffer = root.createBuffer(PaddedStruct).$usage('indirect');
+
+      pipeline.dispatchWorkgroupsIndirect(
+        buffer,
+        d.memoryLayoutOf(PaddedStruct, (s) => s.a),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number),
+      );
+
+      expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+
+      pipeline.dispatchWorkgroupsIndirect(
+        deepBuffer,
+        d.memoryLayoutOf(
+          DeepStruct,
+          (s) => s.nested.innerNested[0]?.yy as number,
+        ),
+      );
+
+      expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu
+        .computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      // vec3u has exactly 12 contiguous bytes - no warning needed
+      const buffer = root.createBuffer(d.vec3u).$usage('indirect');
+      pipeline.dispatchWorkgroupsIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });

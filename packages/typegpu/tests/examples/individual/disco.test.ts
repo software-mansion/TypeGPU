@@ -36,7 +36,7 @@ describe('disco example', () => {
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       fn aspectCorrected(uv: vec2f) -> vec2f {
-        var v = ((uv - 0.5) * 2);
+        var v = ((uv - 0.5f) * 2f);
         let aspect = (resolutionUniform.x / resolutionUniform.y);
         if ((aspect > 1f)) {
           v.x *= aspect;
@@ -54,7 +54,7 @@ describe('disco example', () => {
         var b = vec3f(0.18000000715255737, 0.41999998688697815, 0.4000000059604645);
         var c = vec3f(0.18000000715255737, 0.47999998927116394, 0.4099999964237213);
         var e = vec3f(0.3499999940395355, 0.12999999523162842, 0.3199999928474426);
-        var expr = cos((6.28318 * ((c * t) + e)));
+        var expr = cos((6.28318f * ((c * t) + e)));
         return (a + (b * expr));
       }
 
@@ -71,12 +71,12 @@ describe('disco example', () => {
         var aspectUv = originalUv;
         var accumulatedColor = vec3f();
         for (var iteration = 0; (iteration < 3i); iteration++) {
-          aspectUv = (fract((aspectUv * -0.9)) - 0.5);
+          aspectUv = (fract((aspectUv * -0.9f)) - 0.5f);
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 0.5f)));
           var paletteColor = palette((length(originalUv) + (time * 0.9f)));
           radialLength = (sin(((radialLength * 8f) + time)) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.1, radialLength);
+          radialLength = smoothstep(0f, 0.1f, radialLength);
           radialLength = (0.1f / radialLength);
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
         }
@@ -100,12 +100,12 @@ describe('disco example', () => {
           let rotatedY = ((aspectUv.x * sinBaseAngle) + (aspectUv.y * cosBaseAngle));
           aspectUv = vec2f(rotatedX, rotatedY);
           aspectUv = (aspectUv * (1.15f + (iterationF32 * 0.05f)));
-          aspectUv = (fract((aspectUv * (1.2f * sin(((time * 0.9f) + (iterationF32 * 0.3f)))))) - 0.5);
+          aspectUv = (fract((aspectUv * (1.2f * sin(((time * 0.9f) + (iterationF32 * 0.3f)))))) - 0.5f);
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 1.6f)));
           var paletteColor = palette(((length(originalUv) + (time * 0.8f)) + (iterationF32 * 0.05f)));
           radialLength = (sin(((radialLength * 7f) + (time * 0.9f))) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.11, radialLength);
+          radialLength = smoothstep(0f, 0.11f, radialLength);
           radialLength = (0.055f / (radialLength + 1e-5f));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
         }
@@ -118,7 +118,7 @@ describe('disco example', () => {
 
       @fragment fn mainFragment4(_arg_0: mainFragment4_Input) -> @location(0) vec4f {
         var aspectUv = aspectCorrected(_arg_0.uv);
-        var mirroredUv = ((vec2f(abs((fract((aspectUv.x * 1.2f)) - 0.5f)), abs((fract((aspectUv.y * 1.2f)) - 0.5f))) * 2) - 1);
+        var mirroredUv = ((vec2f(abs((fract((aspectUv.x * 1.2f)) - 0.5f)), abs((fract((aspectUv.y * 1.2f)) - 0.5f))) * 2f) - 1f);
         aspectUv = mirroredUv;
         var originalUv = aspectUv;
         var accumulatedColor = vec3f();
@@ -131,11 +131,11 @@ describe('disco example', () => {
           let rotatedX = ((aspectUv.x * cosAngle) - (aspectUv.y * sinAngle));
           let rotatedY = ((aspectUv.x * sinAngle) + (aspectUv.y * cosAngle));
           aspectUv = (vec2f(rotatedX, rotatedY) * (1.1f + (iterationF32 * 0.07f)));
-          aspectUv = (fract((aspectUv * (1.25f + (iterationF32 * 0.15f)))) - 0.5);
+          aspectUv = (fract((aspectUv * (1.25f + (iterationF32 * 0.15f)))) - 0.5f);
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * (1.3f + (iterationF32 * 0.06f)))));
           radialLength = (sin(((radialLength * (7.2f + (iterationF32 * 0.8f))) + (time_1 * (1.1f + (iterationF32 * 0.2f))))) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.105, radialLength);
+          radialLength = smoothstep(0f, 0.105f, radialLength);
           radialLength = ((0.058f + (iterationF32 * 6e-3f)) / (radialLength + 1e-5f));
           var paletteColor = palette(((length(originalUv) + (time_1 * 0.65f)) + (iterationF32 * 0.045f)));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
@@ -160,12 +160,12 @@ describe('disco example', () => {
           let rotatedX = ((aspectUv.x * cosAngle) - (aspectUv.y * sinAngle));
           let rotatedY = ((aspectUv.x * sinAngle) + (aspectUv.y * cosAngle));
           aspectUv = (vec2f(rotatedX, rotatedY) * (-0.85f - (iterationF32 * 0.07f)));
-          aspectUv = (fract(aspectUv) - 0.5);
+          aspectUv = (fract(aspectUv) - 0.5f);
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * (0.4f + (iterationF32 * 0.1f)))));
           var paletteColor = palette(((length(originalUv) + (time * 0.9f)) + (iterationF32 * 0.08f)));
           radialLength = (sin(((radialLength * (6f + iterationF32)) + time)) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.1, radialLength);
+          radialLength = smoothstep(0f, 0.1f, radialLength);
           radialLength = ((0.085f + (iterationF32 * 5e-3f)) / (radialLength + 1e-5f));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
         }
@@ -189,11 +189,11 @@ describe('disco example', () => {
           let rotatedX = ((aspectUv.x * cosAngle) - (aspectUv.y * sinAngle));
           let rotatedY = ((aspectUv.x * sinAngle) + (aspectUv.y * cosAngle));
           aspectUv = (vec2f(rotatedX, rotatedY) * (1.08f + (iterationF32 * 0.04f)));
-          var warpedUv = (fract((aspectUv * (1.3f + (iterationF32 * 0.2f)))) - 0.5);
+          var warpedUv = (fract((aspectUv * (1.3f + (iterationF32 * 0.2f)))) - 0.5f);
           var radialLength = (length(warpedUv) * exp((-(length(originalUv)) * (1.4f + (iterationF32 * 0.05f)))));
           radialLength = (sin(((radialLength * (7f + (iterationF32 * 0.7f))) + (time_1 * (0.9f + (iterationF32 * 0.15f))))) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.1, radialLength);
+          radialLength = smoothstep(0f, 0.1f, radialLength);
           radialLength = ((0.05f + (iterationF32 * 5e-3f)) / (radialLength + 1e-5f));
           var paletteColor = palette(((length(originalUv) + (time_1 * 0.7f)) + (iterationF32 * 0.04f)));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
@@ -207,7 +207,7 @@ describe('disco example', () => {
 
       @fragment fn mainFragment7(_arg_0: mainFragment7_Input) -> @location(0) vec4f {
         var aspectUv = aspectCorrected(_arg_0.uv);
-        aspectUv = (vec2f(abs((fract((aspectUv.x * 1.5f)) - 0.5f)), abs((fract((aspectUv.y * 1.5f)) - 0.5f))) * 2);
+        aspectUv = (vec2f(abs((fract((aspectUv.x * 1.5f)) - 0.5f)), abs((fract((aspectUv.y * 1.5f)) - 0.5f))) * 2f);
         var originalUv = aspectUv;
         var accumulatedColor = vec3f();
         let time_1 = time;
@@ -225,7 +225,7 @@ describe('disco example', () => {
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * (1.2f + (iterationF32 * 0.08f)))));
           radialLength = (sin(((radialLength * (7.5f + iterationF32)) + (time_1 * (1f + (iterationF32 * 0.1f))))) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.11, radialLength);
+          radialLength = smoothstep(0f, 0.11f, radialLength);
           radialLength = ((0.06f + (iterationF32 * 5e-3f)) / (radialLength + 1e-5f));
           var paletteColor = palette(((length(originalUv) + (time_1 * 0.75f)) + (iterationF32 * 0.05f)));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
@@ -251,7 +251,7 @@ describe('disco example', () => {
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       fn aspectCorrected(uv: vec2f) -> vec2f {
-        var v = ((uv - 0.5) * 2);
+        var v = ((uv - 0.5f) * 2f);
         let aspect = (resolutionUniform.x / resolutionUniform.y);
         if ((aspect > 1f)) {
           v.x *= aspect;
@@ -269,7 +269,7 @@ describe('disco example', () => {
         var b = vec3f(0.18000000715255737, 0.41999998688697815, 0.4000000059604645);
         var c = vec3f(0.18000000715255737, 0.47999998927116394, 0.4099999964237213);
         var e = vec3f(0.3499999940395355, 0.12999999523162842, 0.3199999928474426);
-        var expr = cos((6.28318 * ((c * t) + e)));
+        var expr = cos((6.28318f * ((c * t) + e)));
         return (a + (b * expr));
       }
 
@@ -286,11 +286,11 @@ describe('disco example', () => {
         var aspectUv = originalUv;
         var accumulatedColor = vec3f();
         for (var iteration = 0; (iteration < 5i); iteration++) {
-          aspectUv = (fract((aspectUv * (1.3f * sin(time)))) - 0.5);
+          aspectUv = (fract((aspectUv * (1.3f * sin(time)))) - 0.5f);
           var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
           radialLength = (sin(((radialLength * 8f) + time)) / 8f);
           radialLength = abs(radialLength);
-          radialLength = smoothstep(0, 0.1, radialLength);
+          radialLength = smoothstep(0f, 0.1f, radialLength);
           radialLength = (0.06f / radialLength);
           var paletteColor = palette((length(originalUv) + (time * 0.9f)));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);

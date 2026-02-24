@@ -6,17 +6,81 @@ import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type BaseData,
   isFloat32VecInstance,
+  isMat,
   isMatInstance,
-  isNumericSchema,
+  isVec,
   isVecInstance,
   type mBaseForVec,
   type vBaseForMat,
 } from '../data/wgslTypes.ts';
+import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
+
+const getPrimitive = (t: BaseData): BaseData =>
+  'primitive' in t ? (t.primitive as BaseData) : t;
+
+const makeBinarySignature = (opts?: {
+  matVecProduct?: boolean;
+  noMat?: boolean;
+  restrict?: BaseData[];
+}) =>
+(lhs: BaseData, rhs: BaseData) => {
+  const { restrict } = opts ?? {};
+  const fail = (msg: string): never => {
+    if (restrict) {
+      throw new SignatureNotSupportedError([lhs, rhs], restrict);
+    }
+    throw new Error(
+      `Cannot apply operator to ${lhs.type} and ${rhs.type}: ${msg}`,
+    );
+  };
+
+  if (opts?.noMat && (isMat(lhs) || isMat(rhs))) {
+    return fail('matrices not supported');
+  }
+  const lhsC = isVec(lhs) || isMat(lhs);
+  const rhsC = isVec(rhs) || isMat(rhs);
+
+  if (!lhsC && !rhsC) {
+    // scalar × scalar
+    const unified = unify([lhs, rhs], restrict);
+    if (!unified) return fail('incompatible scalar types');
+    return { argTypes: unified, returnType: unified[0] };
+  }
+
+  if (lhsC && rhsC) {
+    // vec × mat or mat × vec
+    if (opts?.matVecProduct && isVec(lhs) !== isVec(rhs)) {
+      return { argTypes: [lhs, rhs], returnType: isVec(lhs) ? lhs : rhs };
+    }
+    // composite × composite (same kind)
+    if (lhs.type !== rhs.type) return fail('operands must have the same type');
+    return { argTypes: [lhs, rhs], returnType: lhs };
+  }
+
+  // scalar × composite
+  const [scalar, composite] = lhsC ? [rhs, lhs] : [lhs, rhs];
+  const unified = unify([scalar], [getPrimitive(composite)]);
+  if (!unified) {
+    return fail(`scalar not convertible to ${getPrimitive(composite).type}`);
+  }
+  return {
+    argTypes: lhsC ? [lhs, unified[0]] : [unified[0], rhs],
+    returnType: composite,
+  };
+};
+
+const binaryArithmeticSignature = makeBinarySignature();
+const binaryMulSignature = makeBinarySignature({ matVecProduct: true });
+const binaryDivSignature = makeBinarySignature({
+  noMat: true,
+  restrict: [f32, f16, abstractFloat],
+});
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
 function cpuAdd<T extends NumVec>(lhs: number, rhs: T): T; // mixed addition
@@ -52,13 +116,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 
 export const add = dualImpl({
   name: 'add',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return {
-      argTypes: uargs,
-      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
-    };
-  },
+  signature: binaryArithmeticSignature,
   normalImpl: cpuAdd,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} + ${rhs})`,
 });
@@ -82,13 +140,7 @@ function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 
 export const sub = dualImpl({
   name: 'sub',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return {
-      argTypes: uargs,
-      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
-    };
-  },
+  signature: binaryArithmeticSignature,
   normalImpl: cpuSub,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} - ${rhs})`,
 });
@@ -136,25 +188,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
 
 export const mul = dualImpl({
   name: 'mul',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    const returnType = isNumericSchema(uargs[0])
-      // Scalar * Scalar/Vector/Matrix
-      ? uargs[1]
-      : isNumericSchema(uargs[1])
-      // Vector/Matrix * Scalar
-      ? uargs[0]
-      : uargs[0].type.startsWith('vec')
-      // Vector * Vector/Matrix
-      ? uargs[0]
-      : uargs[1].type.startsWith('vec')
-      // Matrix * Vector
-      ? uargs[1]
-      // Matrix * Matrix
-      : uargs[0];
-
-    return ({ argTypes: uargs, returnType });
-  },
+  signature: binaryMulSignature,
   normalImpl: cpuMul,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} * ${rhs})`,
 });
@@ -183,13 +217,7 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
 
 export const div = dualImpl({
   name: 'div',
-  signature: (...args) => {
-    const uargs = unify(args, [f32, f16, abstractFloat]) ?? args;
-    return ({
-      argTypes: uargs,
-      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
-    });
-  },
+  signature: binaryDivSignature,
   normalImpl: cpuDiv,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} / ${rhs})`,
   ignoreImplicitCastWarning: true,
@@ -206,16 +234,10 @@ type ModOverload = {
  * @privateRemarks
  * Both JS and WGSL implementations use truncated definition of modulo
  */
-export const mod: ModOverload = dualImpl({
+export const mod = dualImpl({
   name: 'mod',
-  signature: (...args) => {
-    const uargs = unify(args) ?? args;
-    return {
-      argTypes: uargs,
-      returnType: isNumericSchema(uargs[0]) ? uargs[1] : uargs[0],
-    };
-  },
-  normalImpl<T extends NumVec | number>(a: T, b: T): T {
+  signature: binaryDivSignature,
+  normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     if (typeof a === 'number' && typeof b === 'number') {
       return (a % b) as T; // scalar % scalar
     }
@@ -237,7 +259,7 @@ export const mod: ModOverload = dualImpl({
     throw new Error(
       'Mod called with invalid arguments, expected types: number or vector.',
     );
-  },
+  }) as ModOverload,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
 });
 

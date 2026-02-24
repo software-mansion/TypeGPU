@@ -40,32 +40,6 @@ function ExamplePage() {
       return <RedirectToFlagship />;
     }
 
-    // if (currentExample === PLAYGROUND_KEY) {
-    //   setCurrentExample(
-    //     `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
-    //   );
-    // }
-
-    // if (currentExample.startsWith(PLAYGROUND_KEY)) {
-    //   return (
-    //     <ExampleView
-    //       key={PLAYGROUND_KEY}
-    //       example={{
-    //         key: PLAYGROUND_KEY,
-    //         code:
-    //           decompressFromEncodedURIComponent(
-    //             currentExample.slice(PLAYGROUND_KEY.length),
-    //           ) ?? '',
-    //         metadata: {
-    //           title: 'Playground',
-    //           category: '',
-    //         },
-    //       }}
-    //       isPlayground={true}
-    //     />
-    //   );
-    // }
-
     if (currentExample in examples) {
       return (
         <ExampleView

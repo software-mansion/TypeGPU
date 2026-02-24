@@ -17,7 +17,7 @@ import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
-  isDerived,
+  isLazy,
   isProviding,
   isSlot,
   type SlotValuePair,
@@ -27,7 +27,7 @@ import {
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
-import type { AnyData, UnknownData } from './data/dataTypes.ts';
+import { type AnyData, UnknownData } from './data/dataTypes.ts';
 import type {
   MapValueToSnippet,
   ResolvedSnippet,
@@ -83,12 +83,12 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
   functionType: 'normal' | TgpuShaderStage;
-  argTypes: AnyData[];
+  argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: BaseData | undefined;
   body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
@@ -109,11 +109,11 @@ export type FunctionScopeLayer = {
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
    */
-  returnType: AnyData | undefined;
+  returnType: BaseData | undefined;
   /**
    * All types used in `return` statements.
    */
-  reportedReturnTypes: Set<AnyData>;
+  reportedReturnTypes: Set<BaseData>;
 };
 
 export type SlotBindingLayer = {
@@ -124,6 +124,7 @@ export type SlotBindingLayer = {
 export type BlockScopeLayer = {
   type: 'blockScope';
   declarations: Map<string, Snippet>;
+  externals: Map<string, Snippet>;
 };
 
 export type StackLayer =
@@ -138,7 +139,7 @@ export interface ItemStateStack {
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
   pushItem(): void;
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
     args: Snippet[],
@@ -147,10 +148,12 @@ export interface ItemStateStack {
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: AnyData | undefined,
+    returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer;
   pushBlockScope(): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 
   pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
   pop(): StackLayer | undefined;
@@ -161,7 +164,7 @@ export interface ItemStateStack {
 }
 
 /**
- * # What are execution modes/states? 🤷‍♂️
+ * # What are execution modes/states? 🤷
  * They're used to control how each TypeGPU resource reacts
  * to actions upon them.
  *
@@ -170,7 +173,7 @@ export interface ItemStateStack {
  * by code either:
  * - Not wrapped inside any of our execution-altering APIs
  * like tgpu.resolve or tgpu.simulate.
- * - Inside tgpu.derived definitions, where we're taking a break
+ * - Inside tgpu.lazy definitions, where we're taking a break
  *   from codegen/simulation to create resources on-demand.
  *
  * ```ts
@@ -226,7 +229,7 @@ export class SimulationState {
   readonly type = 'simulate' as const;
 
   constructor(
-    readonly buffers: Map<TgpuBuffer<AnyData>, unknown>,
+    readonly buffers: Map<TgpuBuffer<BaseData>, unknown>,
     readonly vars: {
       private: Map<TgpuVar, unknown>;
       workgroup: Map<TgpuVar, unknown>;
@@ -238,6 +241,12 @@ export type ExecState =
   | NormalState
   | CodegenState
   | SimulationState;
+
+export type ShaderStage =
+  | 'vertex'
+  | 'fragment'
+  | 'compute'
+  | undefined;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
@@ -273,13 +282,13 @@ export interface ResolutionCtx {
     binding: number;
   };
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
 
   pushMode(state: ExecState): void;
-  popMode(expected?: ExecMode | undefined): void;
+  popMode(expected?: ExecMode): void;
 
   /**
-   * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
+   * Unwraps all layers of slot/lazy indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
@@ -294,14 +303,14 @@ export interface ResolutionCtx {
    */
   resolve(
     item: unknown,
-    schema?: AnyData | UnknownData | undefined,
-    exact?: boolean | undefined,
+    schema?: BaseData | UnknownData,
+    exact?: boolean,
   ): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
-    returnType: AnyData;
+    returnType: BaseData;
   };
 
   withVaryingLocations<T>(
@@ -355,7 +364,7 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
     strictSignature?:
-      | { argTypes: AnyData[]; returnType: AnyData }
+      | { argTypes: (BaseData | BaseData[])[]; returnType: BaseData }
       | undefined;
     call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
   };
@@ -365,8 +374,8 @@ export function isGPUCallable(value: unknown): value is GPUCallable {
   return !!(value as GPUCallable)?.[$gpuCallable];
 }
 
-export type WithCast<T = AnyData> = GPUCallable<[v?: Infer<T>]> & {
-  readonly [$cast]: (v?: Infer<T> | undefined) => Infer<T>;
+export type WithCast<T = BaseData> = GPUCallable<[v?: Infer<T>]> & {
+  readonly [$cast]: (v?: Infer<T>) => Infer<T>;
 };
 
 export function hasCast(value: unknown): value is WithCast {
@@ -378,7 +387,7 @@ export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
 
 export function isKnownAtComptime(snippet: Snippet): boolean {
   return (typeof snippet.value !== 'string' ||
-    snippet.dataType.type === 'unknown') &&
+    snippet.dataType === UnknownData) &&
     getOwnSnippet(snippet.value) === undefined;
 }
 
@@ -390,7 +399,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
-    isDerived(value) ||
+    isLazy(value) ||
     isProviding(value)
   );
 }
@@ -407,11 +416,12 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
   );
 }
 
-export function isBufferUsage<
-  T extends
+export function isBufferUsage(value: unknown): value is
+  | TgpuBufferUniform<BaseData>
+  | TgpuBufferReadonly<BaseData>
+  | TgpuBufferMutable<BaseData> {
+  return (value as
     | TgpuBufferUniform<BaseData>
     | TgpuBufferReadonly<BaseData>
-    | TgpuBufferMutable<BaseData>,
->(value: T | unknown): value is T {
-  return (value as T)?.resourceType === 'buffer-usage';
+    | TgpuBufferMutable<BaseData>)?.resourceType === 'buffer-usage';
 }

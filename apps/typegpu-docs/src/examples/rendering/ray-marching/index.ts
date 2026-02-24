@@ -1,17 +1,9 @@
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
@@ -188,7 +180,7 @@ const getOrbitingLightPos = (t: number): d.v3f => {
   );
 };
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -201,7 +193,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -241,10 +233,10 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: vertexMain,
+  fragment: fragmentMain,
+});
 
 let animationFrame: number;
 function run(timestamp: number) {
@@ -252,11 +244,7 @@ function run(timestamp: number) {
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   animationFrame = requestAnimationFrame(run);

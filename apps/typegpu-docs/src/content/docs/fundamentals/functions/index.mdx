@@ -63,10 +63,8 @@ const wgsl = tgpu.resolve([main]);
 //    ^?
 
 // #3) Executed on the GPU (generates WGSL underneath)
-root['~unstable']
-  .createGuardedComputePipeline(main)
-  .dispatchThreads();
-````
+root.createGuardedComputePipeline(main).dispatchThreads();
+```
 
 The contents of the `wgsl` variable would contain the following:
 
@@ -81,10 +79,10 @@ fn main() -> vec2f {
 }
 
 // ...
-````
+```
 
 You can already notice a few things about TypeGPU functions:
-- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers.
+- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers (and on vectors/matrices thanks to [`tsover`](https://software-mansion-labs.github.io/tsover/)).
 - TS types are properly inferred, feel free to hover over the variables to see their types.
 - The generated code closely matches your source code.
 
@@ -257,7 +255,7 @@ const settings = {
   speed: 1,
 };
 
-const pipeline = root['~unstable'].createGuardedComputePipeline(() => {
+const pipeline = root.createGuardedComputePipeline(() => {
   'use gpu';
   const speed = settings.speed;
   // ^ generates: var speed = 1;
@@ -288,19 +286,22 @@ descriptive error either at build time or at runtime (when compiling the shader)
 Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be supported in the context of shaders, **rather to allow for shaders to be written in JavaScript**. This distinction means we won't support every JavaScript feature, only those that make sense in the context of graphics programming.
 :::
 
-* **Calling other functions** --
-Only functions marked with `'use gpu'` can be called from within a shader. An exception to that rule is [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
-of shaders in a familiar way.
-
 * **Operators** --
-JavaScript does not support operator overloading.
-This means that, while you can still use operators for numbers,
-you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices, or use a fluent interface (*abc.mul(xyz), ...*)
+We support using regular operators on vectors and matrices with full type inference thanks to [tsover](https://software-mansion-labs.github.io/tsover/).
+Without it, you can still use operators for numbers,
+but for vectors and matrices you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*), or use a fluent interface (*abc.mul(xyz), ...*)
 
-* **Math.\*** --
-Utility functions on the `Math` object can't automatically run on the GPU, but can usually be swapped with functions exported from `typegpu/std`.
-Additionally, if you're able to pull the call to `Math.*` out of the function, you can store the result in a constant and use it in the function
-no problem.
+* **Calling other functions** --
+Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
+of shaders in a familiar way, as well as most `Math` functions.
+
+:::caution
+Calling `Math` functions such as `Math.sin` inside TypeGPU functions should be avoided.
+- not all `Math` functions are supported,
+- using `Math` functions may lead to unexpected type conversions.
+
+All supported `Math` functions fall back to their `std` equivalents, and it is advised to use `std` directly.
+:::
 
 ### Standard library
 
@@ -439,23 +440,15 @@ Writing shader code in JavaScript has a few significant advantages.
 It allows defining utilities once and using them both on the GPU and CPU,
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer experience.
 
-However, there are cases where WGSL might be more suitable.
-Since JavaScript doesn't support operator overloading, functions including complex matrix or vector operations can be more readable in WGSL.
-Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet.
-
-Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
+However, there are cases where WGSL might be more suitable. Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet. Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
 
 ## Entry functions
 
-:::caution[Experimental]
-Entry functions are an *unstable* feature. The API may be subject to change in the near future.
-:::
-
 Instead of annotating a `TgpuFn` with attributes, entry functions are defined using dedicated shell constructors:
 
-- `tgpu['~unstable'].computeFn`,
-- `tgpu['~unstable'].vertexFn`,
-- `tgpu['~unstable'].fragmentFn`.
+- `tgpu.computeFn`,
+- `tgpu.vertexFn`,
+- `tgpu.fragmentFn`.
 
 ### Entry point function I/O
 
@@ -507,7 +500,7 @@ const deltaTime = root.createUniform(d.f32);
 const time = root.createMutable(d.f32);
 const particleDataStorage = particleDataBuffer.as('mutable');
 // ---cut---
-const mainCompute = tgpu['~unstable'].computeFn({
+const mainCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 }) /* wgsl */`{
@@ -558,7 +551,7 @@ import tgpu, { d } from 'typegpu';
 
 const getGradientColor = tgpu.fn([d.f32], d.vec4f)``;
 // ---cut---
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 }) /* wgsl */`{
@@ -577,7 +570,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
     return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`;
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 }) /* wgsl */`{
@@ -643,28 +636,23 @@ const root = await tgpu.init();
 
 const getGradientColor = tgpu.fn([d.f32], d.vec4f)/* wgsl */``;
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 })``;
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })``;
 // ---cut---
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root.createRenderPipeline({
+  vertex: mainVertex,
+  fragment: mainFragment,
+});
 
 pipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    clearValue: [0, 0, 0, 0],
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
+  .withColorAttachment({ view: context })
   .draw(3);
 ```
 

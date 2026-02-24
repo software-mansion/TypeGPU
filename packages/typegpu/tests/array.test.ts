@@ -2,7 +2,7 @@ import { attest } from '@ark/attest';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
-import { d, tgpu } from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
@@ -139,6 +139,24 @@ describe('array', () => {
     );
   });
 
+  it('throws when invalid number of arguments during code generation', () => {
+    const ArraySchema = d.arrayOf(d.u32, 2);
+
+    const f = () => {
+      'use gpu';
+      // @ts-expect-error
+      const arr = ArraySchema([1, 1], [6, 7]);
+      return;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Array schemas should always be called with at most 1 argument]
+    `);
+  });
+
   it('can be called to create a default value', () => {
     const ArraySchema = d.arrayOf(d.vec3f, 2);
 
@@ -187,16 +205,28 @@ describe('array', () => {
   it('generates correct code when array clone is used', () => {
     const ArraySchema = d.arrayOf(d.u32, 1);
 
-    const testFn = tgpu.fn([])(() => {
+    const f = (arr: d.Infer<typeof ArraySchema>) => {
+      'use gpu';
+      const clone = ArraySchema(arr);
+    };
+
+    const testFn = () => {
+      'use gpu';
       const myArray = ArraySchema([d.u32(10)]);
       const myClone = ArraySchema(myArray);
+      f(myArray);
       return;
-    });
+    };
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn() {
+      "fn f(arr: array<u32, 1>) {
+        var clone = arr;
+      }
+
+      fn testFn() {
         var myArray = array<u32, 1>(10u);
         var myClone = myArray;
+        f(myArray);
         return;
       }"
     `);
@@ -215,6 +245,65 @@ describe('array', () => {
       "fn testFn() {
         var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
         var myClone = myArrays[0i];
+        return;
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with ephemeral element type clone is used', () => {
+    const f = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 2)([6, 7]);
+      return;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var arr = array<f32, 2>(6f, 7f);
+        return;
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with reference element type clone is used', () => {
+    const f = (v: d.v4f) => {
+      'use gpu';
+      const v2 = d.vec4f(3);
+      const v3 = v2;
+      const arr = d.arrayOf(d.vec4f, 3)([v, v2, v3]);
+    };
+
+    const main = tgpu.fn([])(() => {
+      const v1 = d.vec4f(7);
+      f(v1);
+      return;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn f(v: vec4f) {
+        var v2 = vec4f(3);
+        let v3 = (&v2);
+        var arr = array<vec4f, 3>(v, v2, (*v3));
+      }
+
+      fn main() {
+        var v1 = vec4f(7);
+        f(v1);
+        return;
+      }"
+    `);
+  });
+
+  it('generates correct code when array expression with mixed element types clone is used', () => {
+    const f = () => {
+      'use gpu';
+      const arr = d.arrayOf(d.f32, 3)([5, 6.7, 8.0]);
+      return;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var arr = array<f32, 3>(5f, 6.7f, 8f);
         return;
       }"
     `);
@@ -305,18 +394,16 @@ describe('array', () => {
     `);
   });
 
-  it('can be immediately-invoked and initialized in TGSL in combination with slots and derived', () => {
+  it('can be immediately-invoked and initialized in TGSL in combination with slots and lazy', () => {
     const arraySizeSlot = tgpu.slot(4);
-    const derivedArraySizeSlot = tgpu['~unstable'].derived(() =>
-      arraySizeSlot.$ * 2
-    );
-    const derivedInitializer = tgpu['~unstable'].derived(
-      () => [...Array(derivedArraySizeSlot.$).keys()],
+    const lazyArraySizeSlot = tgpu.lazy(() => arraySizeSlot.$ * 2);
+    const lazyInitializer = tgpu.lazy(
+      () => [...Array(lazyArraySizeSlot.$).keys()],
     );
 
     const foo = tgpu.fn([])(() => {
-      const result = d.arrayOf(d.f32, derivedArraySizeSlot.$)(
-        derivedInitializer.$,
+      const result = d.arrayOf(d.f32, lazyArraySizeSlot.$)(
+        lazyInitializer.$,
       );
     });
 
@@ -336,7 +423,8 @@ describe('array', () => {
     expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:foo: 'myVec' reference cannot be used in an array constructor.
+      - fn:foo
+      - ArrayExpression: 'myVec' reference cannot be used in an array constructor.
       -----
       Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
       -----]
@@ -351,7 +439,8 @@ describe('array', () => {
     expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:foo: 'myVec' reference cannot be used in an array constructor.
+      - fn:foo
+      - ArrayExpression: 'myVec' reference cannot be used in an array constructor.
       -----
       Try 'vec2f(myVec)' or 'arrayOf(vec2f, count)([...])' to copy the value instead.
       -----]

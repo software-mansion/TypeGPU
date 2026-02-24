@@ -212,7 +212,7 @@ describe('oklab example', () => {
       }
 
       fn linearToSrgb(linear: vec3f) -> vec3f {
-        return select((12.92 * linear), ((1.055 * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
+        return select((12.92f * linear), ((1.055f * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
       }
 
       fn oklabToRgb(lab: vec3f) -> vec3f {
@@ -228,7 +228,7 @@ describe('oklab example', () => {
       }
 
       @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        var uv = ((input.uv - 0.5) * vec2f(2, -2));
+        var uv = ((input.uv - 0.5f) * vec2f(2, -2));
         let hue = uniforms.hue;
         var pos = scaleView(uv);
         var yzDir = vec2f(cos(hue), sin(hue));

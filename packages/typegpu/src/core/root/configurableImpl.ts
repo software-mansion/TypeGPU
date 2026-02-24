@@ -1,10 +1,8 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 import {
-  type AccessorIn,
   isAccessor,
   isMutableAccessor,
-  type MutableAccessorIn,
   type TgpuAccessor,
   type TgpuMutableAccessor,
   type TgpuSlot,
@@ -14,9 +12,9 @@ import type { Configurable } from './rootTypes.ts';
 export class ConfigurableImpl implements Configurable {
   constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}
 
-  with<T extends AnyData>(
+  with<T extends BaseData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
-    value: AccessorIn<T> | MutableAccessorIn<T> | Infer<T>,
+    value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T> | Infer<T>,
   ): Configurable {
     return new ConfigurableImpl([
       ...this.bindings,

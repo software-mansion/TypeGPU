@@ -7,11 +7,11 @@
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
     "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
-    "fix": "biome lint --write . && deno fmt",
+    "fix": "oxlint --fix && deno fmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
     "test:types": "pnpm run -r --parallel test:types",
-    "test:style": "biome lint . && deno fmt --check",
+    "test:style": "oxlint --max-warnings=0 --type-aware && deno fmt --check",
     "test:unit-and-attest": "vitest run --project=!browser",
     "test:unit": "ATTEST_skipTypes=1 vitest run --project=!browser",
     "test:unit:watch": "ATTEST_skipTypes=1 vitest --project=!browser",
@@ -22,7 +22,7 @@
     "changes": "tgpu-dev-cli changes"
   },
   "engines": {
-    "node": ">=12.20.0"
+    "node": ">=24.0.0"
   },
   "repository": {
     "type": "git",
@@ -38,15 +38,16 @@
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "@biomejs/biome": "^2.2.5",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@vitest/browser": "^3.2.4",
     "@vitest/coverage-v8": "3.1.2",
     "@webgpu/types": "catalog:types",
     "dpdm": "^3.14.0",
+    "eslint-plugin-typegpu": "workspace:*",
     "jiti": "catalog:build",
-    "pkg-pr-new": "^0.0.41",
-    "tsup": "catalog:build",
+    "oxlint": "^1.49.0",
+    "oxlint-tsgolint": "^0.12.1",
+    "pkg-pr-new": "^0.0.62",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "vite-imagetools": "catalog:frontend",
@@ -55,7 +56,6 @@
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@biomejs/biome",
       "@rolldown/browser",
       "@tailwindcss/oxide",
       "canvas",
@@ -65,6 +65,7 @@
     ],
     "overrides": {
       "rollup": "4.34.8",
+      "typescript": "catalog:types",
       "three": "catalog:example"
     }
   }

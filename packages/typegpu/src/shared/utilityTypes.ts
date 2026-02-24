@@ -5,7 +5,7 @@ export type Default<T, TDefault> = unknown extends T ? TDefault
 export type SwapNever<T, Replacement> = [T] extends [never] ? Replacement : T;
 
 export type UnionToIntersection<U> =
-  // biome-ignore lint/suspicious/noExplicitAny: <had to be done>
+  // oxlint-disable-next-line typescript/no-explicit-any <had to be done>
   (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I
     : never;
 
@@ -59,6 +59,11 @@ export type NullableToOptional<T> =
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
+
+/**
+ * Source: https://code.lol/post/programming/higher-kinded-types/
+ */
+export type Assume<T, U> = T extends U ? T : U;
 
 /**
  * Any typed array

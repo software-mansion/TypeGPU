@@ -3,12 +3,13 @@ import type {
   AnyVertexOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin.ts';
+import type { UndecorateRecord } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type {
+  BaseData,
   Decorated,
   Interpolate,
   Location,
-  WgslStruct,
 } from '../../data/wgslTypes.ts';
 import {
   getName,
@@ -17,7 +18,9 @@ import {
   type TgpuNamable,
 } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
+import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type {
   BaseIOData,
@@ -32,11 +35,11 @@ import { stripTemplate } from './templateUtils.ts';
 // Public API
 // ----------
 
-export type VertexInConstrained = IORecord<
+type VertexInConstrained = IORecord<
   BaseIOData | Decorated<BaseIOData, Location[]> | AnyVertexInputBuiltin
 >;
 
-export type VertexOutConstrained = IORecord<
+type VertexOutConstrained = IORecord<
   | BaseIOData
   | Decorated<BaseIOData, (Location | Interpolate)[]>
   | AnyVertexOutputBuiltin
@@ -46,51 +49,66 @@ export type VertexOutConstrained = IORecord<
  * Describes a vertex entry function signature (its arguments, return type and attributes)
  */
 type TgpuVertexFnShellHeader<
-  VertexIn extends VertexInConstrained,
-  VertexOut extends VertexOutConstrained,
+  VertexIn extends TgpuVertexFn.In,
+  VertexOut extends TgpuVertexFn.Out,
 > = {
   readonly in: VertexIn | undefined;
   readonly out: VertexOut;
   readonly argTypes: [IOLayoutToSchema<VertexIn>] | [];
-  readonly isEntry: true;
+  readonly entryPoint: 'vertex';
 };
+
+type CleanIO<T> = T extends Record<string, BaseData>
+  ? Prettify<UndecorateRecord<OmitBuiltins<T>>>
+  : Prettify<UndecorateRecord<OmitBuiltins<{ a: T }>>> extends
+    { a: infer Result } ? Result
+  : never;
 
 /**
  * Describes a vertex entry function signature (its arguments, return type and attributes).
  * Allows creating tgpu vertex functions by calling this shell
  * and passing the implementation (as WGSL string or JS function) as the argument.
  */
-export type TgpuVertexFnShell<
-  VertexIn extends VertexInConstrained,
-  VertexOut extends VertexOutConstrained,
-> =
-  & TgpuVertexFnShellHeader<VertexIn, VertexOut>
-  & ((
+export interface TgpuVertexFnShell<
+  // We force the variance to be covariant, since shells are just containers of
+  // schemas that coincidentally can be called to create a vertex function.
+  // @ts-expect-error: We override the variance
+  out TIn extends TgpuVertexFn.In,
+  // @ts-expect-error: We override the variance
+  out TOut extends TgpuVertexFn.Out,
+> extends TgpuVertexFnShellHeader<TIn, TOut> {
+  (
     implementation: (
-      input: InferIO<VertexIn>,
-      out: WgslStruct<VertexOut>,
-    ) => InferIO<VertexOut>,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-  & ((
+      input: InferIO<TIn>,
+      out: IOLayoutToSchema<TOut>,
+    ) => InferIO<TOut>,
+  ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
+  (
     implementation: string,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>)
-  & ((
+  ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
+  (
     strings: TemplateStringsArray,
     ...values: unknown[]
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
+  ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
+}
 
 export interface TgpuVertexFn<
-  VertexIn extends VertexInConstrained = VertexInConstrained,
-  VertexOut extends VertexOutConstrained = VertexOutConstrained,
+  // @ts-expect-error: We override the variance
+  in VertexIn extends TgpuVertexFn.In = Record<string, never>,
+  out VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
 > extends TgpuNamable {
   readonly [$internal]: true;
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+export declare namespace TgpuVertexFn {
+  type In = BaseData | Record<string, BaseData>;
+  type Out = Record<string, BaseData>;
+}
+
 export function vertexFn<VertexOut extends VertexOutConstrained>(options: {
   out: VertexOut;
-  // biome-ignore lint/complexity/noBannedTypes: it's fine
 }): TgpuVertexFnShell<{}, VertexOut>;
 
 export function vertexFn<
@@ -134,7 +152,7 @@ export function vertexFn<
     argTypes: options.in && Object.keys(options.in).length !== 0
       ? [createIoSchema(options.in)]
       : [],
-    isEntry: true,
+    entryPoint: 'vertex',
   };
 
   const call = (
@@ -142,7 +160,20 @@ export function vertexFn<
     ...values: unknown[]
   ) => createVertexFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(call, shell) as TgpuVertexFnShell<VertexIn, VertexOut>;
+  return Object.assign(call, shell) as unknown as TgpuVertexFnShell<
+    VertexIn,
+    VertexOut
+  >;
+}
+
+export function isTgpuVertexFn<
+  VertexIn extends VertexInConstrained,
+  VertexOut extends VertexOutConstrained,
+>(
+  value: unknown,
+): value is TgpuVertexFn<VertexIn, VertexOut> {
+  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
+    'vertex';
 }
 
 // --------------
@@ -195,11 +226,12 @@ function createVertexFn(
         core.applyExternals({ Out: outputWithLocation });
       }
 
-      return core.resolve(
-        ctx,
-        shell.argTypes,
-        outputWithLocation,
-      );
+      return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+        core.resolve(
+          ctx,
+          shell.argTypes,
+          outputWithLocation,
+        ));
     },
 
     toString() {

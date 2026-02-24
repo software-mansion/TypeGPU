@@ -73,21 +73,21 @@ describe('image tuning example', () => {
       }
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
-        var color = textureSample(imageView, imageSampler, _arg_0.uv).xyz;
+        var color = textureSample(imageView, imageSampler, _arg_0.uv).rgb;
         let inputLuminance = dot(color, vec3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464));
         var normColor = saturate(((color - lut.min) / (lut.max - lut.min)));
-        var lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0).xyz, bool(lut.enabled));
+        var lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0).rgb, bool(lut.enabled));
         var lutColorNormalized = saturate(lutColor);
         let exposureBiased = (adjustments.exposure * 0.25f);
         var exposureColor = clamp((lutColorNormalized * pow(2f, exposureBiased)), vec3f(), vec3f(2));
         let exposureLuminance = clamp((inputLuminance * pow(2f, exposureBiased)), 0f, 2f);
-        var contrastColor = (((exposureColor - 0.5) * adjustments.contrast) + 0.5);
+        var contrastColor = (((exposureColor - 0.5f) * adjustments.contrast) + 0.5f);
         let contrastLuminance = (((exposureLuminance - 0.5f) * adjustments.contrast) + 0.5f);
         let contrastColorLuminance = dot(contrastColor, vec3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464));
         let highlightShift = (adjustments.highlights - 1f);
         let highlightBiased = select((highlightShift * 0.25f), highlightShift, (adjustments.highlights >= 1f));
         let highlightFactor = (1f + ((highlightBiased * 0.5f) * contrastColorLuminance));
-        let highlightWeight = smoothstep(0.5, 1, contrastColorLuminance);
+        let highlightWeight = smoothstep(0.5f, 1f, contrastColorLuminance);
         let highlightLuminanceAdjust = (contrastLuminance * highlightFactor);
         let highlightLuminance = mix(contrastLuminance, saturate(highlightLuminanceAdjust), highlightWeight);
         var highlightColor = mix(contrastColor, saturate((contrastColor * highlightFactor)), highlightWeight);

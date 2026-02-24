@@ -61,17 +61,6 @@ function patternToIdFilter(pattern: StringOrRegExp): PluginFilter {
   };
 }
 
-function patternToCodeFilter(pattern: StringOrRegExp): PluginFilter {
-  if (pattern instanceof RegExp) {
-    return (code: string) => {
-      const result = pattern.test(code);
-      pattern.lastIndex = 0;
-      return result;
-    };
-  }
-  return (code: string) => code.includes(pattern);
-}
-
 function createFilter(
   exclude: PluginFilter[] | undefined,
   include: PluginFilter[] | undefined,
@@ -118,42 +107,9 @@ function createIdFilter(
   return createFilter(excludeFilter, includeFilter);
 }
 
-function createCodeFilter(
-  filter: StringFilter | undefined,
-): PluginFilter | undefined {
-  if (!filter) return;
-  const { exclude, include } = normalizeFilter(filter);
-  const excludeFilter = exclude?.map(patternToCodeFilter);
-  const includeFilter = include?.map(patternToCodeFilter);
-  return createFilter(excludeFilter, includeFilter);
-}
-
 export function createFilterForId(
   filter: StringFilter | undefined,
 ): PluginFilter | undefined {
   const filterFunction = createIdFilter(filter);
   return filterFunction ? (id) => !!filterFunction(id) : undefined;
-}
-
-function createFilterForTransform(
-  idFilter: StringFilter | undefined,
-  codeFilter: StringFilter | undefined,
-): TransformHookFilter | undefined {
-  if (!idFilter && !codeFilter) return;
-  const idFilterFunction = createIdFilter(idFilter);
-  const codeFilterFunction = createCodeFilter(codeFilter);
-  return (id, code) => {
-    let fallback = true;
-    if (idFilterFunction) {
-      fallback &&= idFilterFunction(id);
-    }
-    if (!fallback) {
-      return false;
-    }
-
-    if (codeFilterFunction) {
-      fallback &&= codeFilterFunction(code);
-    }
-    return fallback;
-  };
 }

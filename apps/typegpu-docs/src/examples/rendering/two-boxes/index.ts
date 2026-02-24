@@ -11,17 +11,10 @@ import * as m from 'wgpu-matrix';
 // Initialization
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const helpInfo = document.getElementById('help') as HTMLDivElement;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Data Structures
 
@@ -233,7 +226,7 @@ createDepthAndMsaaTextures();
 
 // Shaders and Pipeline
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: { position: d.vec4f, color: d.vec4f },
   out: { pos: d.builtin.position, color: d.vec4f },
 })((input) => {
@@ -247,23 +240,25 @@ const vertex = tgpu['~unstable'].vertexFn({
   return { pos, color: input.color };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { color: d.vec4f },
   out: d.vec4f,
 })((input) => input.color);
 
-const pipeline = root['~unstable']
-  .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex,
+  fragment,
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .createPipeline();
+  },
+});
 
 // Render Loop
 
@@ -276,10 +271,8 @@ function drawObject(
   pipeline
     .withColorAttachment({
       view: msaaTexture,
-      resolveTarget: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
+      resolveTarget: context,
       loadOp: loadOp,
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture,

@@ -75,13 +75,13 @@ const colorSlot = tgpu.slot(vec4f(1, 0, 0, 1));
 We give accessors *camelCase* names with the `Access` suffix.
 
 ```ts
-const colorAccess = tgpu['~unstable'].accessor(vec4f);
+const colorAccess = tgpu.accessor(vec4f);
 ```
 
-## Derived
+## Lazy
 
-We give derived values *camelCase* names, without any special prefix or suffix.
+We give lazy values *camelCase* names, without any special prefix or suffix.
 
 ```ts
-const lighterColor = tgpu['~unstable'].derived(() => add(color.$, vec4f(0.2, 0.2, 0.2, 0)));
+const lighterColor = tgpu.lazy(() => add(color.$, vec4f(0.2, 0.2, 0.2, 0)));
 ```

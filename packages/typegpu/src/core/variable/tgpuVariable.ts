@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import { type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -24,7 +24,7 @@ export type VariableScope = 'private' | 'workgroup';
 
 export interface TgpuVar<
   TScope extends VariableScope = VariableScope,
-  TDataType extends AnyData = AnyData,
+  TDataType extends BaseData = BaseData,
 > extends TgpuNamable {
   readonly resourceType: 'var';
   readonly [$gpuValueOf]: InferGPU<TDataType>;
@@ -67,9 +67,7 @@ export function workgroupVar<TDataType extends AnyData>(
   return new TgpuVarImpl('workgroup', dataType);
 }
 
-export function isVariable<T extends TgpuVar>(
-  value: T | unknown,
-): value is T {
+export function isVariable(value: unknown): value is TgpuVar {
   return value instanceof TgpuVarImpl;
 }
 
@@ -77,7 +75,7 @@ export function isVariable<T extends TgpuVar>(
 // Implementation
 // --------------
 
-class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
+class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
   implements TgpuVar<TScope, TDataType>, SelfResolvable {
   readonly [$internal] = {};
   readonly resourceType: 'var';
@@ -88,7 +86,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyData>
   constructor(
     scope: TScope,
     dataType: TDataType,
-    initialValue?: InferGPU<TDataType> | undefined,
+    initialValue?: InferGPU<TDataType>,
   ) {
     this.resourceType = 'var';
     this.#scope = scope;

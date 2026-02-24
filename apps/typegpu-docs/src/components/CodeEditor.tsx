@@ -84,7 +84,7 @@ const createCodeEditorComponent = (
     >
       <Editor
         defaultLanguage={language}
-        value={file.content}
+        value={file.tsnotoverContent ?? file.content}
         path={path}
         beforeMount={beforeMount}
         onMount={onMount}

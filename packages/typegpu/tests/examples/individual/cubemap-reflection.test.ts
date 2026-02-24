@@ -45,7 +45,7 @@ describe('cubemap reflection example', () => {
       }
 
       fn calculateMidpoint(v1: vec4f, v2: vec4f) -> vec4f {
-        return vec4f((0.5 * (v1.xyz + v2.xyz)), 1f);
+        return vec4f((0.5f * (v1.xyz + v2.xyz)), 1f);
       }
 
       fn getAverageNormal(v1: vec4f, v2: vec4f, v3: vec4f) -> vec4f {
@@ -82,14 +82,158 @@ describe('cubemap reflection example', () => {
         var v31 = vec4f(normalize(calculateMidpoint(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         let baseIndexNext = (triangleIndex * 12u);
-        for (var i = 0u; (i < 12u); i++) {
-          let reprojectedVertex = (&newVertices[i]);
-          let triBase = (i - (i % 3u));
+        // unrolled iteration #0
+        {
+          let reprojectedVertex = (&newVertices[0i]);
+          let triBase = (0 - (0 % 3));
           var normal = (*reprojectedVertex);
           if ((smoothFlag == 0u)) {
-            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1u)], newVertices[(triBase + 2u)]);
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
           }
-          let outIndex = (baseIndexNext + i);
+          let outIndex = (baseIndexNext + 0u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #1
+        {
+          let reprojectedVertex = (&newVertices[1i]);
+          let triBase = (1 - (1 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 1u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #2
+        {
+          let reprojectedVertex = (&newVertices[2i]);
+          let triBase = (2 - (2 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 2u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #3
+        {
+          let reprojectedVertex = (&newVertices[3i]);
+          let triBase = (3 - (3 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 3u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #4
+        {
+          let reprojectedVertex = (&newVertices[4i]);
+          let triBase = (4 - (4 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 4u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #5
+        {
+          let reprojectedVertex = (&newVertices[5i]);
+          let triBase = (5 - (5 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 5u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #6
+        {
+          let reprojectedVertex = (&newVertices[6i]);
+          let triBase = (6 - (6 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 6u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #7
+        {
+          let reprojectedVertex = (&newVertices[7i]);
+          let triBase = (7 - (7 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 7u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #8
+        {
+          let reprojectedVertex = (&newVertices[8i]);
+          let triBase = (8 - (8 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 8u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #9
+        {
+          let reprojectedVertex = (&newVertices[9i]);
+          let triBase = (9 - (9 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 9u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #10
+        {
+          let reprojectedVertex = (&newVertices[10i]);
+          let triBase = (10 - (10 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 10u);
+          let nextVertex = (&(*nextVertices)[outIndex]);
+          (*nextVertex).position = packVec2u((*reprojectedVertex));
+          (*nextVertex).normal = packVec2u(normal);
+        }
+        // unrolled iteration #11
+        {
+          let reprojectedVertex = (&newVertices[11i]);
+          let triBase = (11 - (11 % 3));
+          var normal = (*reprojectedVertex);
+          if ((smoothFlag == 0u)) {
+            normal = getAverageNormal(newVertices[triBase], newVertices[(triBase + 1i)], newVertices[(triBase + 2i)]);
+          }
+          let outIndex = (baseIndexNext + 11u);
           let nextVertex = (&(*nextVertices)[outIndex]);
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
@@ -194,7 +338,7 @@ describe('cubemap reflection example', () => {
         var reflectionVector = reflect(-(viewDirection), normalizedNormal);
         var environmentColor = textureSample(cubemap, texSampler, reflectionVector);
         var directLighting = (ambientLight + (diffuseLight + specularLight));
-        var finalColor = mix(directLighting, environmentColor.xyz, material.reflectivity);
+        var finalColor = mix(directLighting, environmentColor.rgb, material.reflectivity);
         return vec4f(finalColor, 1f);
       }"
     `);

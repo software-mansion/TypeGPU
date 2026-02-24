@@ -1,15 +1,17 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData, UnknownData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
+  type BaseData,
   type F16,
   type F32,
   type I32,
   isMat,
+  isPtr,
   isVec,
   type Ptr,
   type U32,
@@ -17,13 +19,14 @@ import {
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
+import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
 type ConversionRankInfo =
-  | { rank: number; action: 'cast'; targetType: AnyData }
+  | { rank: number; action: 'cast'; targetType: BaseData }
   | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
@@ -32,8 +35,8 @@ const INFINITE_RANK: ConversionRankInfo = {
 };
 
 function getAutoConversionRank(
-  src: AnyData,
-  dest: AnyData,
+  src: BaseData,
+  dest: BaseData,
 ): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
@@ -55,11 +58,19 @@ function getAutoConversionRank(
     if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
   }
 
-  if (isVec(trueSrc) && isVec(trueDst)) {
+  if (
+    isVec(trueSrc) && isVec(trueDst) &&
+    // Same length vectors
+    trueSrc.type[3] === trueDst.type[3]
+  ) {
     return getAutoConversionRank(trueSrc.primitive, trueDst.primitive);
   }
 
-  if (isMat(trueSrc) && isMat(trueDst)) {
+  if (
+    isMat(trueSrc) && isMat(trueDst) &&
+    // Same dimensions
+    trueSrc.type[3] === trueDst.type[3]
+  ) {
     // Matrix conversion rank depends only on component type (always f32 for now)
     return { rank: 0, action: 'none' };
   }
@@ -68,14 +79,14 @@ function getAutoConversionRank(
 }
 
 function getImplicitConversionRank(
-  src: AnyData,
-  dest: AnyData,
+  src: BaseData,
+  dest: BaseData,
 ): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
   if (
-    trueSrc.type === 'ptr' &&
+    isPtr(trueSrc) &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
     getAutoConversionRank(trueSrc.inner, trueDst).rank <
@@ -85,7 +96,7 @@ function getImplicitConversionRank(
   }
 
   if (
-    trueDst.type === 'ptr' &&
+    isPtr(trueDst) &&
     getAutoConversionRank(trueSrc, trueDst.inner).rank <
       Number.POSITIVE_INFINITY
   ) {
@@ -131,8 +142,8 @@ function getImplicitConversionRank(
 }
 
 function getConversionRank(
-  src: AnyData,
-  dest: AnyData,
+  src: BaseData,
+  dest: BaseData,
   allowImplicit: boolean,
 ): ConversionRankInfo {
   const autoRank = getAutoConversionRank(src, dest);
@@ -152,18 +163,18 @@ export type ConversionResultAction = {
 };
 
 export type ConversionResult = {
-  targetType: AnyData;
+  targetType: BaseData;
   actions: ConversionResultAction[];
   hasImplicitConversions?: boolean;
 };
 
 function findBestType(
-  types: AnyData[],
-  uniqueTypes: AnyData[],
+  types: BaseData[],
+  uniqueTypes: BaseData[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
   let bestResult:
-    | { type: AnyData; details: ConversionRankInfo[]; sum: number }
+    | { type: BaseData; details: ConversionRankInfo[]; sum: number }
     | undefined;
 
   for (const targetType of uniqueTypes) {
@@ -206,8 +217,8 @@ function findBestType(
 }
 
 export function getBestConversion(
-  types: AnyData[],
-  targetTypes?: AnyData[],
+  types: BaseData[],
+  targetTypes?: BaseData[],
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
@@ -232,7 +243,7 @@ function applyActionToSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
   action: ConversionResultAction,
-  targetType: AnyData,
+  targetType: BaseData,
 ): Snippet {
   if (action.action === 'none') {
     return snip(
@@ -262,33 +273,33 @@ function applyActionToSnippet(
   }
 }
 
-export function unify<T extends (AnyData | UnknownData)[]>(
+export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
-  restrictTo?: AnyData[] | undefined,
-): { [K in keyof T]: AnyWgslData } | undefined {
-  if (inTypes.some((type) => type.type === 'unknown')) {
+  restrictTo?: BaseData[],
+): { [K in keyof T]: BaseData } | undefined {
+  if (inTypes.some((type) => type === UnknownData)) {
     return undefined;
   }
 
-  const conversion = getBestConversion(inTypes as AnyData[], restrictTo);
+  const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
   if (!conversion) {
     return undefined;
   }
 
-  return inTypes.map(() => conversion.targetType) as {
-    [K in keyof T]: AnyWgslData;
-  };
+  return inTypes.map((type) =>
+    isVec(type) || isMat(type) ? type : conversion.targetType
+  ) as { [K in keyof T]: BaseData };
 }
 
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,
-  restrictTo?: AnyData[] | undefined,
+  restrictTo?: BaseData[],
   verbose = true,
 ): T | undefined {
   const types = values.map((value) => value.dataType);
 
-  if (types.some((type) => type.type === 'unknown')) {
+  if (types.some((type) => type === UnknownData)) {
     return undefined;
   }
 
@@ -298,7 +309,7 @@ export function convertToCommonType<T extends Snippet[]>(
     );
   }
 
-  const conversion = getBestConversion(types as AnyData[], restrictTo);
+  const conversion = getBestConversion(types as BaseData[], restrictTo);
   if (!conversion) {
     return undefined;
   }
@@ -307,7 +318,7 @@ export function convertToCommonType<T extends Snippet[]>(
     console.warn(
       `Implicit conversions from [\n${
         values
-          .map((v) => `  ${v.value}: ${v.dataType.type}`)
+          .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
           .join(
             ',\n',
           )
@@ -326,38 +337,40 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
-  targetDataType: AnyData,
+  targetDataTypes: BaseData | BaseData[],
   verbose = true,
 ): Snippet {
-  if (targetDataType === snippet.dataType) {
-    return snip(snippet.value, targetDataType, snippet.origin);
+  const targets = Array.isArray(targetDataTypes)
+    ? targetDataTypes
+    : [targetDataTypes];
+
+  const { value, dataType, origin } = snippet;
+
+  if (targets.length === 1) {
+    const target = targets[0] as AnyWgslData;
+
+    if (target === dataType) {
+      return snip(value, target, origin);
+    }
+
+    if (dataType === UnknownData) {
+      // Commit unknown to the expected type.
+      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+    }
   }
 
-  if (snippet.dataType.type === 'unknown') {
-    // This is it, it's now or never. We expect a specific type, and we're going to get it
-    return snip(
-      stitch`${snip(snippet.value, targetDataType, snippet.origin)}`,
-      targetDataType,
-      snippet.origin,
-    );
+  const converted = convertToCommonType(ctx, [snippet], targets, verbose);
+  if (converted) {
+    return converted[0] as Snippet;
   }
 
-  const converted = convertToCommonType(
-    ctx,
-    [snippet],
-    [targetDataType],
-    verbose,
+  throw new WgslTypeError(
+    `Cannot convert value of type '${
+      String(
+        dataType,
+      )
+    }' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );
-
-  if (!converted) {
-    throw new WgslTypeError(
-      `Cannot convert value of type '${
-        String(snippet.dataType)
-      }' to type '${targetDataType.type}'`,
-    );
-  }
-
-  return converted[0] as Snippet;
 }
 
 export function convertStructValues(

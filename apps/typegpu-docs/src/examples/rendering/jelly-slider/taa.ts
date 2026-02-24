@@ -2,7 +2,7 @@ import type { TgpuComputePipeline, TgpuRoot, TgpuTextureView } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { taaResolveLayout } from './dataTypes.ts';
 
-export const taaResolveFn = tgpu['~unstable'].computeFn({
+export const taaResolveFn = tgpu.computeFn({
   workgroupSize: [16, 16],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -25,8 +25,8 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
 
   const dimensions = std.textureDimensions(taaResolveLayout.$.currentTexture);
 
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
+  for (const x of tgpu.unroll([-1, 0, 1])) {
+    for (const y of tgpu.unroll([-1, 0, 1])) {
       const sampleCoord = d.vec2i(gid.xy).add(d.vec2i(x, y));
       const clampedCoord = std.clamp(
         sampleCoord,
@@ -40,12 +40,12 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
         0,
       );
 
-      minColor = std.min(minColor, neighborColor.xyz);
-      maxColor = std.max(maxColor, neighborColor.xyz);
+      minColor = std.min(minColor, neighborColor.rgb);
+      maxColor = std.max(maxColor, neighborColor.rgb);
     }
   }
 
-  const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
+  const historyColorClamped = std.clamp(historyColor.rgb, minColor, maxColor);
 
   const uv = d.vec2f(gid.xy).div(d.vec2f(dimensions.xy));
 
@@ -81,7 +81,7 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
   const blendFactor = std.mix(d.f32(0.9), d.f32(0.7), inTextRegion);
 
   const resolvedColor = d.vec4f(
-    std.mix(currentColor.xyz, historyColorClamped, blendFactor),
+    std.mix(currentColor.rgb, historyColorClamped, blendFactor),
     1.0,
   );
 
@@ -122,9 +122,7 @@ export class TAAResolver {
     this.#width = width;
     this.#height = height;
 
-    this.#pipeline = root['~unstable']
-      .withCompute(taaResolveFn)
-      .createPipeline();
+    this.#pipeline = root.createComputePipeline({ compute: taaResolveFn });
 
     this.#textures = createTaaTextures(root, width, height);
   }

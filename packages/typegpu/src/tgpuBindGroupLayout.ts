@@ -38,7 +38,6 @@ import {
   NotSampledError,
   type SampledFlag,
 } from './core/texture/usageExtension.ts';
-import type { AnyData } from './data/dataTypes.ts';
 import { f32, i32, u32 } from './data/numeric.ts';
 import {
   type StorageTextureDimension,
@@ -94,11 +93,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData;
+  uniform: BaseData;
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  storage: BaseData | ((arrayLength: number) => BaseData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -287,7 +286,7 @@ type UnwrapRuntimeConstructorInner<
 > = T extends (_: number) => BaseData ? ReturnType<T> : T;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyData | ((_: number) => AnyData),
+  T extends BaseData | ((_: number) => BaseData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 interface BindGroupLayoutInternals<
@@ -371,7 +370,6 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       | TgpuSampler
       | GPUSampler
       | TgpuComparisonSampler
-      | GPUSampler
       | TgpuTexture
       | GPUTextureView
       | GPUExternalTexture
@@ -468,16 +466,17 @@ export function bindGroupLayout<
   >;
 }
 
-export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
-  value: T | unknown,
-): value is T {
-  return !!value && (value as T).resourceType === 'bind-group-layout';
+export function isBindGroupLayout(
+  value: unknown,
+): value is TgpuBindGroupLayout {
+  return !!value &&
+    (value as TgpuBindGroupLayout).resourceType === 'bind-group-layout';
 }
 
-export function isBindGroup<T extends TgpuBindGroup>(
-  value: T | unknown,
-): value is T {
-  return !!value && (value as T).resourceType === 'bind-group';
+export function isBindGroup(
+  value: unknown,
+): value is TgpuBindGroup {
+  return !!value && (value as TgpuBindGroup).resourceType === 'bind-group';
 }
 
 /**
@@ -542,7 +541,7 @@ class TgpuBindGroupLayoutImpl<
       const membership: LayoutMembership = { layout: this, key, idx };
 
       if ('uniform' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl(
           'uniform',
           entry.uniform,
@@ -555,7 +554,7 @@ class TgpuBindGroupLayoutImpl<
           ? entry.storage
           : entry.storage(0);
 
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl(
           entry.access ?? 'readonly',
           dataType,
@@ -564,7 +563,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('texture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.texture,
           membership,
@@ -572,7 +571,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storageTexture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.storageTexture,
           membership,
@@ -580,7 +579,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('externalTexture' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuExternalTextureImpl(
           entry.externalTexture,
           membership,
@@ -588,7 +587,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('sampler' in entry) {
-        // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
         (bound[key] as any) = new TgpuLaidOutSamplerImpl(
           entry.sampler === 'comparison'
             ? wgslComparisonSampler()
@@ -599,7 +598,7 @@ class TgpuBindGroupLayoutImpl<
 
       Object.defineProperty(this.value, key, {
         get: () => {
-          // biome-ignore lint/suspicious/noExplicitAny: no need for type magic
+          // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
           return (bound[key] as any).value;
         },
       });

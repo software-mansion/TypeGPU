@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: it's useful for array access */
-import { describe, expect } from 'vitest';
-import { d, std, tgpu } from '../src/index.ts';
+import { describe, expect, expectTypeOf } from 'vitest';
+import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 const RED = d.vec3f(1, 0, 0);
@@ -11,7 +10,7 @@ const BoidArray = d.arrayOf(Boid);
 
 describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
+    const colorAccess = tgpu.accessor(d.vec3f);
 
     const red = tgpu.fn([], d.vec3f)('() { return RED; }').$uses({ RED });
 
@@ -27,7 +26,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to invocation of provided shellless callback', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, () => {
+    const colorAccess = tgpu.accessor(d.vec3f, () => {
       'use gpu';
       return d.vec3f(1, 2, 3);
     });
@@ -49,9 +48,9 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to result of a comptime callback', () => {
-    const colorAccess = tgpu['~unstable'].accessor(
+    const colorAccess = tgpu.accessor(
       d.vec3f,
-      tgpu['~unstable'].comptime(() => d.vec3f(1, 2, 3)),
+      tgpu.comptime(() => d.vec3f(1, 2, 3)),
     );
 
     const getColor = () => {
@@ -67,7 +66,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to provided buffer usage', ({ root }) => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
+    const colorAccess = tgpu.accessor(d.vec3f);
 
     const redUniform = root
       .createBuffer(d.vec3f, RED)
@@ -86,8 +85,8 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to resolved form of provided JS value', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
-    const multiplierAccess = tgpu['~unstable'].accessor(d.f32);
+    const colorAccess = tgpu.accessor(d.vec3f);
+    const multiplierAccess = tgpu.accessor(d.f32);
 
     const getColor = tgpu.fn(
       [],
@@ -103,7 +102,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to default value if no value provided', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, RED); // red by default
+    const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess });
@@ -114,7 +113,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, RED); // red by default
+    const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess });
@@ -133,7 +132,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('throws error when no default nor value provided', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f).$name('color');
+    const colorAccess = tgpu.accessor(d.vec3f).$name('color');
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess });
@@ -153,11 +152,11 @@ describe('tgpu.accessor', () => {
       .$usage('uniform')
       .as('uniform');
 
-    const colorValueAccess = tgpu['~unstable'].accessor(d.vec3f, RED);
-    const colorUsageAccess = tgpu['~unstable'].accessor(d.vec3f, redUniform);
+    const colorValueAccess = tgpu.accessor(d.vec3f, RED);
+    const colorUsageAccess = tgpu.accessor(d.vec3f, redUniform);
 
     const getColor = tgpu.fn([], d.vec3f)(() => RED);
-    const colorAccessorFn = tgpu['~unstable'].accessor(d.vec3f, getColor);
+    const colorAccessorFn = tgpu.accessor(d.vec3f, getColor);
 
     const main = tgpu.fn([])(() => {
       const color = colorValueAccess.$;
@@ -189,7 +188,7 @@ describe('tgpu.accessor', () => {
 
   it('retains type information', () => {
     // Typed as f32, but literal could be automatically inferred as an i32
-    const fooAccess = tgpu['~unstable'].accessor(d.f32, 1);
+    const fooAccess = tgpu.accessor(d.f32, 1);
 
     const main = tgpu.fn([])(() => {
       const foo = fooAccess.$;
@@ -214,7 +213,7 @@ describe('tgpu.accessor', () => {
       image: { storage: ImageData, access: 'readonly' },
     });
 
-    const imageAccess = tgpu['~unstable'].accessor(
+    const imageAccess = tgpu.accessor(
       ImageData,
       // The default value for the accessor, but can be swapped the
       // same way a slot can
@@ -255,7 +254,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('can provide a variable', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
+    const colorAccess = tgpu.accessor(d.vec3f);
 
     const getColor = tgpu.fn([], d.vec3f)(() => {
       'use gpu';
@@ -295,7 +294,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('can provide a constant', () => {
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f);
+    const colorAccess = tgpu.accessor(d.vec3f);
 
     const getColor = tgpu.fn([], d.vec3f)(() => {
       'use gpu';
@@ -337,7 +336,7 @@ describe('tgpu.accessor', () => {
       two: { storage: ImageStruct, access: 'mutable' },
     });
 
-    const imageSlot = tgpu['~unstable'].accessor(
+    const imageSlot = tgpu.accessor(
       ImageStruct,
       () => layout.$.one,
     );
@@ -378,7 +377,7 @@ describe('tgpu.accessor', () => {
   it('can provide a deep reference to a nested data structure', ({ root }) => {
     const boids = root.createReadonly(BoidArray(100));
 
-    const anyBoidPosAccess = tgpu['~unstable'].accessor(
+    const anyBoidPosAccess = tgpu.accessor(
       d.vec3f,
       // Arbitrarily giving access to the first boid's position
       () => boids.$[0]!.pos,
@@ -405,10 +404,7 @@ describe('tgpu.accessor', () => {
   it('can provide a mutable reference (non-primitive)', ({ root }) => {
     const boids = root.createMutable(BoidArray(100));
 
-    const boidAccess = tgpu['~unstable'].mutableAccessor(
-      Boid,
-      () => boids.$[0]!,
-    );
+    const boidAccess = tgpu.mutableAccessor(Boid, () => boids.$[0]!);
 
     const main = () => {
       'use gpu';
@@ -434,10 +430,7 @@ describe('tgpu.accessor', () => {
     });
     const ctx = root.createMutable(Ctx);
 
-    const counterAccess = tgpu['~unstable'].mutableAccessor(
-      d.f32,
-      () => ctx.$.counter,
-    );
+    const counterAccess = tgpu.mutableAccessor(d.f32, () => ctx.$.counter);
 
     const main = () => {
       'use gpu';
@@ -465,7 +458,7 @@ describe('tgpu.accessor', () => {
 
     const storageView = texture.createView(d.textureStorage2d('rgba8unorm'));
 
-    const textureAccess = tgpu['~unstable'].accessor(
+    const textureAccess = tgpu.accessor(
       d.textureStorage2d('rgba8unorm'),
       storageView,
     );
@@ -495,7 +488,7 @@ describe('tgpu.accessor', () => {
     });
 
     const pixelIdx = tgpu.slot(0);
-    const pixelAccess = tgpu['~unstable'].accessor(
+    const pixelAccess = tgpu.accessor(
       d.f32,
       () => layout.$.image.pixels[pixelIdx.$]!.x,
     );
@@ -514,6 +507,31 @@ describe('tgpu.accessor', () => {
 
       fn main() {
         let hello = image.pixels[4].x;
+      }"
+    `);
+  });
+
+  it('allows for arbitrarily nested access functions', ({ root }) => {
+    const counterMutable = root.createMutable(d.u32);
+
+    const counterAccess = tgpu.accessor(
+      d.u32,
+      () => () => () => counterMutable.$,
+    );
+
+    const main = () => {
+      'use gpu';
+      return counterAccess.$ / 2;
+    };
+
+    expectTypeOf(counterAccess).toEqualTypeOf<TgpuAccessor<d.U32>>();
+    expectTypeOf<typeof counterAccess.$>().toEqualTypeOf<number>();
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> counterMutable: u32;
+
+      fn main() -> f32 {
+        return (f32(counterMutable) / 2f);
       }"
     `);
   });

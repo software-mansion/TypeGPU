@@ -28,9 +28,7 @@ describe('vaporrave example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample() -> f32 {
@@ -51,7 +49,7 @@ describe('vaporrave example', () => {
       }
 
       fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3 * vec3f(pos)));
+        randSeed3((1e-3f * vec3f(pos)));
         return randOnUnitSphere();
       }
 
@@ -99,7 +97,7 @@ describe('vaporrave example', () => {
 
       fn circles(uv: vec2f, angle: f32) -> vec3f {
         var uvRotated = (rotateXY(angle) * vec2f(uv.x, (uv.y - 12f)));
-        var uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2));
+        var uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2f));
         var diff2 = pow((vec2f(0.5) - uvNormalized), vec2f(2));
         let distO = pow((diff2.x + diff2.y), 0.5f);
         return mix(vec3f(), vec3f(0.9200000166893005, 0.20999999344348907, 0.9599999785423279), exp((-5f * distO)));
@@ -140,7 +138,7 @@ describe('vaporrave example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
+        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -227,7 +225,7 @@ describe('vaporrave example', () => {
       }
 
       @fragment fn fragmentMain(input: fragmentMain_Input) -> @location(0) vec4f {
-        var uv = ((input.uv * 2) - 1);
+        var uv = ((input.uv * 2f) - 1f);
         uv.x *= (resolutionUniform.x / resolutionUniform.y);
         var ro = vec3f(0, 2, -1);
         var rd = normalize(vec3f(uv.x, uv.y, 1f));

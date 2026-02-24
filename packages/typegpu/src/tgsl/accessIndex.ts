@@ -1,8 +1,8 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import {
-  type AnyData,
   isDisarray,
   MatrixColumnsAccess,
+  UnknownData,
 } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
 import {
@@ -13,12 +13,15 @@ import {
 } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import {
+  type BaseData,
   isNaturallyEphemeral,
   isPtr,
   isVec,
   isWgslArray,
+  isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
+import { accessProp } from './accessProp.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
 const indexableTypeToResult = {
@@ -37,7 +40,7 @@ export function accessIndex(
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
-    const elementType = target.dataType.elementType as AnyData;
+    const elementType = target.dataType.elementType;
     const isElementNatEph = isNaturallyEphemeral(elementType);
     const isTargetEphemeral = isEphemeralSnippet(target);
     const isIndexConstant = index.origin === 'constant';
@@ -67,7 +70,7 @@ export function accessIndex(
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        // oxlint-disable-next-line typescript/no-explicit-any it's fine, it's there
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
@@ -79,7 +82,7 @@ export function accessIndex(
   if (isVec(target.dataType)) {
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
+        // oxlint-disable-next-line typescript/no-explicit-any it's fine, it's there
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
@@ -99,7 +102,8 @@ export function accessIndex(
   // matrix.columns
   if (target.value instanceof MatrixColumnsAccess) {
     const propType = indexableTypeToResult[
-      target.value.matrix.dataType.type as keyof typeof indexableTypeToResult
+      (target.value.matrix.dataType as BaseData)
+        .type as keyof typeof indexableTypeToResult
     ];
 
     return snip(
@@ -110,21 +114,28 @@ export function accessIndex(
   }
 
   // matrix
-  if (target.dataType.type in indexableTypeToResult) {
+  if ((target.dataType as BaseData).type in indexableTypeToResult) {
     throw new Error(
-      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+      "The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.",
     );
   }
 
   if (
     (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
-    target.dataType.type === 'unknown'
+    target.dataType === UnknownData
   ) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
-      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
+      // oxlint-disable-next-line typescript/no-explicit-any we're inspecting the value, and it could be any value
       (target.value as any)[index.value as number],
     );
+  }
+
+  if (
+    isWgslStruct(target.dataType) && isKnownAtComptime(index) &&
+    typeof index.value === 'string'
+  ) {
+    return accessProp(target, index.value);
   }
 
   return undefined;

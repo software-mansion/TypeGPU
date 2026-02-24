@@ -84,7 +84,7 @@ using a set of `randf.seedN` functions, where `N` is the number of components ou
 import tgpu, { d } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].fragmentFn({
+const main = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -148,7 +148,7 @@ import tgpu, { d } from 'typegpu';
 // ---cut---
 import { perlin2d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].fragmentFn({
+const main = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -169,7 +169,7 @@ import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 import { perlin3d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
 });
@@ -177,12 +177,11 @@ const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
 // ---cut---
 const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
 
-const pipeline = root['~unstable']
+const pipeline = root
   // Plugging the cache into the pipeline
   .pipe(cache.inject())
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 ```
 Or in WebGPU:
 ```ts twoslash
@@ -225,7 +224,7 @@ complex setup.
 import tgpu, { d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
 });
@@ -236,12 +235,11 @@ const cacheConfig = perlin3d.dynamicCacheConfig();
 // Holds all resources the perlin cache needs access to
 const dynamicLayout = tgpu.bindGroupLayout({ ...cacheConfig.layout });
 
-const pipeline = root['~unstable']
+const pipeline = root
   // Plugging the cache into the pipeline
   .pipe(cacheConfig.inject(dynamicLayout.$))
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 
 // Instantiating the cache with an initial size.
 const cache = cacheConfig.instance(root, d.vec3u(10, 10, 1));
@@ -274,7 +272,7 @@ import { randf } from '@typegpu/noise';
 const root = await tgpu.init();
 
 const b = root.createMutable(d.f32);
-const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const f = tgpu.computeFn({ workgroupSize: [1] })(() => {
   b.$ = randf.sample();
 });
 // ---cut---
@@ -306,8 +304,7 @@ const LCG: StatefulGenerator = (() => {
   };
 })();
 
-const pipeline = root['~unstable']
+const pipeline = root
   .with(randomGeneratorSlot, LCG)
-  .withCompute(f)
-  .createPipeline();
+  .createComputePipeline({ compute: f });
 ```

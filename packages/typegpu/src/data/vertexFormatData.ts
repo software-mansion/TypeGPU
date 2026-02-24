@@ -1,6 +1,10 @@
-import { $cast, $gpuCallable, isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $cast,
+  $gpuCallable,
+  $internal,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
 import type {
   $invalidSchemaReason,
   $repr,
@@ -19,13 +23,31 @@ import {
   vec4i,
   vec4u,
 } from './vector.ts';
-import type { BaseData } from './wgslTypes.ts';
 import type { WithCast } from '../types.ts';
 import {
   schemaCallWrapper,
   schemaCallWrapperGPU,
 } from './schemaCallWrapper.ts';
 import type { Snippet } from './snippet.ts';
+import type {
+  BaseData,
+  F16,
+  F32,
+  I32,
+  U32,
+  Vec2f,
+  Vec2h,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3h,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4h,
+  Vec4i,
+  Vec4u,
+} from './wgslTypes.ts';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
@@ -63,7 +85,7 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   }
 
   [$cast](
-    v?: Infer<FormatToWGSLType<T>> | undefined,
+    v?: Infer<FormatToWGSLType<T>>,
   ): Infer<FormatToWGSLType<T>> {
     return schemaCallWrapper(formatToWGSLType[this.type], v);
   }
@@ -285,9 +307,56 @@ export type PackedData =
   | unorm10_10_10_2
   | unorm8x4_bgra;
 
-export function isPackedData(
-  value: unknown,
-): value is PackedData {
-  return isMarkedInternal(value) &&
-    packedFormats.has((value as PackedData)?.type);
+export function isPackedData(value: unknown): value is PackedData {
+  return (
+    isMarkedInternal(value) && packedFormats.has((value as PackedData)?.type)
+  );
 }
+
+type U32Data = U32 | Vec2u | Vec3u | Vec4u;
+type I32Data = I32 | Vec2i | Vec3i | Vec4i;
+type FloatData = F32 | Vec2f | Vec3f | Vec4f | F16 | Vec2h | Vec3h | Vec4h;
+
+export type FormatToAcceptedData = {
+  uint8: U32Data;
+  uint8x2: U32Data;
+  uint8x4: U32Data;
+  sint8: I32Data;
+  sint8x2: I32Data;
+  sint8x4: I32Data;
+  unorm8: FloatData;
+  unorm8x2: FloatData;
+  unorm8x4: FloatData;
+  snorm8: FloatData;
+  snorm8x2: FloatData;
+  snorm8x4: FloatData;
+  uint16: U32Data;
+  uint16x2: U32Data;
+  uint16x4: U32Data;
+  sint16: I32Data;
+  sint16x2: I32Data;
+  sint16x4: I32Data;
+  unorm16: FloatData;
+  unorm16x2: FloatData;
+  unorm16x4: FloatData;
+  snorm16: FloatData;
+  snorm16x2: FloatData;
+  snorm16x4: FloatData;
+  float16: FloatData;
+  float16x2: FloatData;
+  float16x4: FloatData;
+  float32: FloatData;
+  float32x2: FloatData;
+  float32x3: FloatData;
+  float32x4: FloatData;
+  uint32: U32Data;
+  uint32x2: U32Data;
+  uint32x3: U32Data;
+  uint32x4: U32Data;
+  sint32: I32Data;
+  sint32x2: I32Data;
+  sint32x3: I32Data;
+  sint32x4: I32Data;
+  'unorm10-10-10-2': FloatData;
+  'unorm8x4-bgra': FloatData;
+};

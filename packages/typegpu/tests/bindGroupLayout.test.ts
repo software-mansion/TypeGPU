@@ -6,7 +6,7 @@ import {
   type TgpuBuffer,
   type TgpuTextureView,
   type UniformFlag,
-} from '../src/index.ts';
+} from '../src/index.js';
 import {
   type ExtractBindGroupInputFromLayout,
   MissingBindingError,
@@ -16,6 +16,7 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
+// oxlint-disable-next-line import/no-unassigned-import imported for side effects
 import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
@@ -181,7 +182,7 @@ describe('TgpuBindGroupLayout', () => {
     const getFirst = () => {
       'use gpu';
       const boids = layout.$.boids;
-      // biome-ignore lint/style/noNonNullAssertion: it's definitely there
+      // oxlint-disable-next-line typescript/no-non-null-assertion it's definitely there
       return Boid(boids[0]!);
     };
 

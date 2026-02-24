@@ -16,6 +16,7 @@ import {
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import type {
   AnyWgslData,
+  BaseData,
   Bool,
   F16,
   F32,
@@ -104,7 +105,7 @@ type IdentityType =
   | Mat4x4f
   | WgslExternalTexture;
 
-function isIdentityType(data: AnyWgslData): data is IdentityType {
+function isIdentityType(data: BaseData): data is IdentityType {
   return identityTypes.includes(data.type);
 }
 
@@ -118,7 +119,7 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
  */
 function resolveStructProperty(
   ctx: ResolutionCtx,
-  [key, property]: [string, AnyData],
+  [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${
     ctx.resolve(property).value

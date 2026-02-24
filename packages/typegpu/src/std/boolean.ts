@@ -1,6 +1,5 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { bool, f32 } from '../data/numeric.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
@@ -13,6 +12,7 @@ import {
   type AnyVec3Instance,
   type AnyVecInstance,
   type AnyWgslData,
+  type BaseData,
   isVecInstance,
   type v2b,
   type v3b,
@@ -21,7 +21,7 @@ import {
 import { unify } from '../tgsl/conversion.ts';
 import { sub } from './operators.ts';
 
-function correspondingBooleanVectorSchema(dataType: AnyData) {
+function correspondingBooleanVectorSchema(dataType: BaseData) {
   if (dataType.type.includes('2')) {
     return vec2b;
   }
