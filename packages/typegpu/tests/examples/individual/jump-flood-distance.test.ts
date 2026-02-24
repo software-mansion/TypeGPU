@@ -80,7 +80,9 @@ describe('jump flood (distance) example', () => {
         var bestOutsideCoord = vec2f(-1);
         var bestInsideDist = 1e+20;
         var bestOutsideDist = 1e+20;
+        // unrolled iteration #0, 'dx' is '-1'
         {
+          // unrolled iteration #0, 'dy' is '-1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -98,6 +100,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #1, 'dy' is '0'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -115,6 +118,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #2, 'dy' is '1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -133,7 +137,9 @@ describe('jump flood (distance) example', () => {
             }
           }
         }
+        // unrolled iteration #1, 'dx' is '0'
         {
+          // unrolled iteration #0, 'dy' is '-1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -151,6 +157,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #1, 'dy' is '0'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -168,6 +175,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #2, 'dy' is '1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -186,7 +194,9 @@ describe('jump flood (distance) example', () => {
             }
           }
         }
+        // unrolled iteration #2, 'dx' is '1'
         {
+          // unrolled iteration #0, 'dy' is '-1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -204,6 +214,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #1, 'dy' is '0'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
@@ -221,6 +232,7 @@ describe('jump flood (distance) example', () => {
               }
             }
           }
+          // unrolled iteration #2, 'dy' is '1'
           {
             var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {

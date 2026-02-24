@@ -1198,11 +1198,10 @@ ${this.ctx.pre}else ${alternate}`;
       try {
         this.ctx.pushBlockScope();
         const iterableExpr = this.expression(iterable);
-        let shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
+        const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll
           ? (iterableExpr.value as UnrollableIterable).snippet
           : iterableExpr;
-        const ephemeralIterable = isEphemeralSnippet(iterableSnippet);
         const elementCountSnippet = forOfUtils.getElementCountSnippet(
           this.ctx,
           iterableSnippet,
@@ -1218,56 +1217,26 @@ ${this.ctx.pre}else ${alternate}`;
             );
           }
 
-          // we know it is a number, because it is known at compile-time
           const length = elementCountSnippet.value as number;
           if (length === 0) {
             return '';
           }
 
-          if (ephemeralIterable) {
-            const { value, dataType } = iterableSnippet;
+          const { value } = iterableSnippet;
 
-            const elements = value instanceof ArrayExpression
-              ? value.elements // already snippets
-              : wgsl.isVec(dataType)
-              ? (value as wgsl.AnyVecInstance).map((e) =>
-                snip(e, dataType.primitive, iterableSnippet.origin) // we can give `e` the exact type inferred from vector
-              )
-              : Array.isArray(value)
-              ? value // type inferred later
-              : []; // error already thrown by `getElementCountSnippet`
-
-            const blocks = elements
-              .map((e) =>
-                `${this.ctx.pre}${
-                  this.block(blockified, { [originalLoopVarName]: e })
-                }`
-              );
-
-            // TODO: replace it with tinyest traversal
-            if (
-              blocks[0]?.includes('break') || blocks[0]?.includes('continue')
-            ) {
-              throw new WgslTypeError(
-                'Cannot unroll loop containing `break` or `continue`',
-              );
-            }
-
-            return blocks.join('\n');
-          }
-
-          // iterable stored in a variable, we still can unroll it
-          const blocks = Array.from({ length }, (_, i) => {
-            const elementSnippet = forOfUtils.getElementSnippet(
-              iterableSnippet,
-              `${i}u`,
+          const elements = value instanceof ArrayExpression
+            ? value.elements
+            : Array.from(
+              { length },
+              (_, i) => forOfUtils.getElementSnippet(iterableSnippet, i),
             );
-            return `${this.ctx.pre}${
-              this.block(blockified, {
-                [originalLoopVarName]: elementSnippet,
-              })
-            }`;
-          });
+
+          const blocks = elements
+            .map((e, i) =>
+              `${this.ctx.pre}// unrolled iteration #${i}, '${originalLoopVarName}' is '${stitch`${e}`}'\n${this.ctx.pre}${
+                this.block(blockified, { [originalLoopVarName]: e })
+              }`
+            );
 
           // TODO: replace it with tinyest traversal
           if (
@@ -1281,59 +1250,59 @@ ${this.ctx.pre}else ${alternate}`;
           return blocks.join('\n');
         }
 
-        if (!ephemeralIterable) {
-          const index = this.ctx.makeNameValid('i');
-          const elementSnippet = forOfUtils.getElementSnippet(
-            iterableSnippet,
-            index,
+        if (isEphemeralSnippet(iterableSnippet)) {
+          throw new Error(
+            `\`for ... of ...\` loops only support iterables stored in variables.
+  -----
+  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at compile-time, the loop will be unrolled.
+  -----`,
           );
-          const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
-          const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
-          const elementType = forOfUtils.getElementType(
-            elementSnippet,
-            iterableSnippet,
-          );
-
-          const forHeaderStr =
-            stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-              tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-            }; ${index}++) {`;
-
-          this.ctx.indent();
-          ctxIndent = true;
-
-          const loopVarDeclStr =
-            stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
-              tryConvertSnippet(
-                this.ctx,
-                elementSnippet,
-                elementType,
-                false,
-              )
-            };`;
-
-          const bodyStr = `${this.ctx.pre}${
-            this.block(blockified, {
-              [originalLoopVarName]: snip(
-                loopVarName,
-                elementType,
-                elementSnippet.origin,
-              ),
-            })
-          }`;
-
-          this.ctx.dedent();
-          ctxIndent = false;
-
-          return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
         }
 
-        throw new Error(
-          `\`for ... of ...\` loops only support iterables stored in variables.
------
-You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at compile-time, the loop will be unrolled.
------`,
+        const index = this.ctx.makeNameValid('i');
+        const elementSnippet = forOfUtils.getElementSnippet(
+          iterableSnippet,
+          index,
         );
+        const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+        const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+        const elementType = forOfUtils.getElementType(
+          elementSnippet,
+          iterableSnippet,
+        );
+
+        const forHeaderStr =
+          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
+            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
+          }; ${index}++) {`;
+
+        this.ctx.indent();
+        ctxIndent = true;
+
+        const loopVarDeclStr =
+          stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
+            tryConvertSnippet(
+              this.ctx,
+              elementSnippet,
+              elementType,
+              false,
+            )
+          };`;
+
+        const bodyStr = `${this.ctx.pre}${
+          this.block(blockified, {
+            [originalLoopVarName]: snip(
+              loopVarName,
+              elementType,
+              elementSnippet.origin,
+            ),
+          })
+        }`;
+
+        this.ctx.dedent();
+        ctxIndent = false;
+
+        return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
       } finally {
         if (ctxIndent) {
           this.ctx.dedent();

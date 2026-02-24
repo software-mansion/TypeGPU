@@ -52,7 +52,9 @@ describe('blur example', () => {
         let filterOffset = i32((f32(((*settings2).filterDim - 1i)) / 2f));
         var dims = vec2i(textureDimensions(inTexture));
         var baseIndex = (vec2i(((_arg_0.wid.xy * vec2u((*settings2).blockDim, 4u)) + (_arg_0.lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
+        // unrolled iteration #0, 'r' is '0'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var loadIndex = (baseIndex + vec2i());
             if ((flip != 0u)) {
@@ -60,6 +62,7 @@ describe('blur example', () => {
             }
             tileData[0i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var loadIndex = (baseIndex + vec2i(1, 0));
             if ((flip != 0u)) {
@@ -67,6 +70,7 @@ describe('blur example', () => {
             }
             tileData[0i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var loadIndex = (baseIndex + vec2i(2, 0));
             if ((flip != 0u)) {
@@ -74,6 +78,7 @@ describe('blur example', () => {
             }
             tileData[0i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var loadIndex = (baseIndex + vec2i(3, 0));
             if ((flip != 0u)) {
@@ -82,7 +87,9 @@ describe('blur example', () => {
             tileData[0i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
+        // unrolled iteration #1, 'r' is '1'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var loadIndex = (baseIndex + vec2i(0, 1));
             if ((flip != 0u)) {
@@ -90,6 +97,7 @@ describe('blur example', () => {
             }
             tileData[1i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var loadIndex = (baseIndex + vec2i(1));
             if ((flip != 0u)) {
@@ -97,6 +105,7 @@ describe('blur example', () => {
             }
             tileData[1i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var loadIndex = (baseIndex + vec2i(2, 1));
             if ((flip != 0u)) {
@@ -104,6 +113,7 @@ describe('blur example', () => {
             }
             tileData[1i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var loadIndex = (baseIndex + vec2i(3, 1));
             if ((flip != 0u)) {
@@ -112,7 +122,9 @@ describe('blur example', () => {
             tileData[1i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
+        // unrolled iteration #2, 'r' is '2'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var loadIndex = (baseIndex + vec2i(0, 2));
             if ((flip != 0u)) {
@@ -120,6 +132,7 @@ describe('blur example', () => {
             }
             tileData[2i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var loadIndex = (baseIndex + vec2i(1, 2));
             if ((flip != 0u)) {
@@ -127,6 +140,7 @@ describe('blur example', () => {
             }
             tileData[2i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var loadIndex = (baseIndex + vec2i(2));
             if ((flip != 0u)) {
@@ -134,6 +148,7 @@ describe('blur example', () => {
             }
             tileData[2i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var loadIndex = (baseIndex + vec2i(3, 2));
             if ((flip != 0u)) {
@@ -142,7 +157,9 @@ describe('blur example', () => {
             tileData[2i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
+        // unrolled iteration #3, 'r' is '3'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var loadIndex = (baseIndex + vec2i(0, 3));
             if ((flip != 0u)) {
@@ -150,6 +167,7 @@ describe('blur example', () => {
             }
             tileData[3i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var loadIndex = (baseIndex + vec2i(1, 3));
             if ((flip != 0u)) {
@@ -157,6 +175,7 @@ describe('blur example', () => {
             }
             tileData[3i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var loadIndex = (baseIndex + vec2i(2, 3));
             if ((flip != 0u)) {
@@ -164,6 +183,7 @@ describe('blur example', () => {
             }
             tileData[3i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var loadIndex = (baseIndex + vec2i(3));
             if ((flip != 0u)) {
@@ -173,7 +193,9 @@ describe('blur example', () => {
           }
         }
         workgroupBarrier();
+        // unrolled iteration #0, 'r' is '0'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var writeIndex = (baseIndex + vec2i());
             if ((flip != 0u)) {
@@ -189,6 +211,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var writeIndex = (baseIndex + vec2i(1, 0));
             if ((flip != 0u)) {
@@ -204,6 +227,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var writeIndex = (baseIndex + vec2i(2, 0));
             if ((flip != 0u)) {
@@ -219,6 +243,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var writeIndex = (baseIndex + vec2i(3, 0));
             if ((flip != 0u)) {
@@ -235,7 +260,9 @@ describe('blur example', () => {
             }
           }
         }
+        // unrolled iteration #1, 'r' is '1'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var writeIndex = (baseIndex + vec2i(0, 1));
             if ((flip != 0u)) {
@@ -251,6 +278,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var writeIndex = (baseIndex + vec2i(1));
             if ((flip != 0u)) {
@@ -266,6 +294,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var writeIndex = (baseIndex + vec2i(2, 1));
             if ((flip != 0u)) {
@@ -281,6 +310,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var writeIndex = (baseIndex + vec2i(3, 1));
             if ((flip != 0u)) {
@@ -297,7 +327,9 @@ describe('blur example', () => {
             }
           }
         }
+        // unrolled iteration #2, 'r' is '2'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var writeIndex = (baseIndex + vec2i(0, 2));
             if ((flip != 0u)) {
@@ -313,6 +345,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var writeIndex = (baseIndex + vec2i(1, 2));
             if ((flip != 0u)) {
@@ -328,6 +361,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var writeIndex = (baseIndex + vec2i(2));
             if ((flip != 0u)) {
@@ -343,6 +377,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var writeIndex = (baseIndex + vec2i(3, 2));
             if ((flip != 0u)) {
@@ -359,7 +394,9 @@ describe('blur example', () => {
             }
           }
         }
+        // unrolled iteration #3, 'r' is '3'
         {
+          // unrolled iteration #0, 'c' is '0'
           {
             var writeIndex = (baseIndex + vec2i(0, 3));
             if ((flip != 0u)) {
@@ -375,6 +412,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #1, 'c' is '1'
           {
             var writeIndex = (baseIndex + vec2i(1, 3));
             if ((flip != 0u)) {
@@ -390,6 +428,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #2, 'c' is '2'
           {
             var writeIndex = (baseIndex + vec2i(2, 3));
             if ((flip != 0u)) {
@@ -405,6 +444,7 @@ describe('blur example', () => {
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
           }
+          // unrolled iteration #3, 'c' is '3'
           {
             var writeIndex = (baseIndex + vec2i(3));
             if ((flip != 0u)) {

@@ -478,9 +478,11 @@ describe('ripple-cube example', () => {
         let material = (&materialUniform);
         var f0 = mix(vec3f(0.03999999910593033), (*material).albedo, (*material).metallic);
         var lo = vec3f();
+        // unrolled iteration #0, 'i' is '0'
         {
           lo = (lo + evaluateLight(p, n, v, lightsUniform[0i], (*material), f0));
         }
+        // unrolled iteration #1, 'i' is '1'
         {
           lo = (lo + evaluateLight(p, n, v, lightsUniform[1i], (*material), f0));
         }
@@ -562,7 +564,9 @@ describe('ripple-cube example', () => {
         var historyColor = textureLoad(historyTexture, coord, 0);
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
+        // unrolled iteration #0, 'ox' is '-1'
         {
+          // unrolled iteration #0, 'oy' is '-1'
           {
             var sampleCoord = (coord + vec2i(-1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -570,6 +574,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #1, 'oy' is '0'
           {
             var sampleCoord = (coord + vec2i(-1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -577,6 +582,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #2, 'oy' is '1'
           {
             var sampleCoord = (coord + vec2i(-1, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -585,7 +591,9 @@ describe('ripple-cube example', () => {
             maxColor = max(maxColor, neighbor);
           }
         }
+        // unrolled iteration #1, 'ox' is '0'
         {
+          // unrolled iteration #0, 'oy' is '-1'
           {
             var sampleCoord = (coord + vec2i(0, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -593,6 +601,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #1, 'oy' is '0'
           {
             var sampleCoord = (coord + vec2i());
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -600,6 +609,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #2, 'oy' is '1'
           {
             var sampleCoord = (coord + vec2i(0, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -608,7 +618,9 @@ describe('ripple-cube example', () => {
             maxColor = max(maxColor, neighbor);
           }
         }
+        // unrolled iteration #2, 'ox' is '1'
         {
+          // unrolled iteration #0, 'oy' is '-1'
           {
             var sampleCoord = (coord + vec2i(1, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -616,6 +628,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #1, 'oy' is '0'
           {
             var sampleCoord = (coord + vec2i(1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
@@ -623,6 +636,7 @@ describe('ripple-cube example', () => {
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
+          // unrolled iteration #2, 'oy' is '1'
           {
             var sampleCoord = (coord + vec2i(1));
             var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));

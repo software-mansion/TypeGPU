@@ -20,7 +20,10 @@ export function getLoopVarKind(elementSnippet: Snippet) {
   return elementSnippet.origin === 'constant-tgpu-const-ref' ? 'const' : 'let';
 }
 
-export function getElementSnippet(iterableSnippet: Snippet, index: string) {
+export function getElementSnippet(
+  iterableSnippet: Snippet,
+  index: string | number,
+) {
   const elementSnippet = accessIndex(
     iterableSnippet,
     snip(index, u32, 'runtime'),
@@ -79,7 +82,7 @@ export function getElementCountSnippet(
   if (wgsl.isWgslArray(dataType)) {
     return dataType.elementCount > 0
       ? snip(
-        `${dataType.elementCount}`,
+        dataType.elementCount,
         u32,
         'constant',
       )
@@ -88,7 +91,7 @@ export function getElementCountSnippet(
 
   if (wgsl.isVec(dataType)) {
     return snip(
-      `${dataType.componentCount}`,
+      dataType.componentCount,
       u32,
       'constant',
     );
@@ -96,11 +99,11 @@ export function getElementCountSnippet(
 
   if (unroll) {
     if (Array.isArray(value)) {
-      return snip(`${value.length}`, u32, 'constant');
+      return snip(value.length, u32, 'constant');
     }
 
     if (value instanceof ArrayExpression) {
-      return snip(`${value.elements.length}`, u32, 'constant');
+      return snip(value.elements.length, u32, 'constant');
     }
   }
 

@@ -36,7 +36,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -131,7 +131,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -178,6 +178,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
+        // unrolled iteration #0, 'offset' is 'neighborOffsets[0u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
@@ -195,6 +196,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #1, 'offset' is 'neighborOffsets[1u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
@@ -212,6 +214,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #2, 'offset' is 'neighborOffsets[2u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
@@ -229,6 +232,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #3, 'offset' is 'neighborOffsets[3u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
@@ -358,7 +362,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -405,6 +409,7 @@ describe('fluid double buffering example', () => {
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
+        // unrolled iteration #0, 'offset' is 'neighborOffsets[0u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
@@ -422,6 +427,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #1, 'offset' is 'neighborOffsets[1u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
@@ -439,6 +445,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #2, 'offset' is 'neighborOffsets[2u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
@@ -456,6 +463,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // unrolled iteration #3, 'offset' is 'neighborOffsets[3u]'
         {
           var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
@@ -578,7 +586,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {

@@ -72,7 +72,7 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
   },
 );
 
-const iterations = Array.from({ length: FBM_OCTAVES });
+const iterations = Array.from({ length: FBM_OCTAVES }, (_, i) => i);
 const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
   let sum = d.f32();
   let amp = d.f32(CLOUD_AMPLITUDE);
