@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {

@@ -18,7 +18,7 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { frexp } from '../src/std/numeric.ts';

@@ -1,12 +1,4 @@
-/**
- * @module typegpu
- */
-
 // NOTE: This is a barrel file, internal files should not import things from this file
-
-import * as tgpu from './tgpu.ts';
-export * as tgpu from './tgpu.ts';
-export default tgpu;
 
 export * as d from './data/index.ts';
 export * as std from './std/index.ts';

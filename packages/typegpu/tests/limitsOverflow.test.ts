@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from './utils/extendedIt.ts';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { warnIfOverflow } from '../src/core/pipeline/limitsOverflow.ts';
 
 describe('warnIfOverflow', () => {

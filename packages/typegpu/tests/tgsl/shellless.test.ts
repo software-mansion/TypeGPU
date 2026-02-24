@@ -7,7 +7,7 @@ import tgpu, {
   type TgpuSlot,
   type TgpuTextureView,
   type TgpuUniform,
-} from '../../src/index.ts';
+} from '../../src/index.js';
 import { it } from '../utils/extendedIt.ts';
 
 describe('shellless', () => {

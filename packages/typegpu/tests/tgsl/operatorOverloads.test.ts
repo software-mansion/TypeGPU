@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { d, tgpu } from '../../src/index.ts';
+import { d, tgpu } from '../../src/index.js';
 import { test } from '../utils/extendedIt.ts';
 
 test('vec3f() +', () => {

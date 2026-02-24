@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import tgpu, { d } from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 describe('rawCodeSnippet', () => {
   it('should throw a descriptive error when called in JS', () => {

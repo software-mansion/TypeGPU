@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d } from '../src/index.ts';
+import { d } from '../src/index.js';
 import { sizeOf } from '../src/data/sizeOf.ts';
 
 describe('d.memoryLayoutOf (default)', () => {

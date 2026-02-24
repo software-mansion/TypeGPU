@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 
 import { readData, writeData } from '../src/data/dataIO.ts';
 import { isCloseTo } from '../src/std/index.ts';

@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 
 describe('ternary operator', () => {
   it('should resolve to one of the branches', () => {

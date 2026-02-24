@@ -1,7 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.ts';
+import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
 import type {
   IsValidBufferSchema,

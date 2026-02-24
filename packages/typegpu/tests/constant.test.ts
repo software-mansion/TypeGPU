@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d, tgpu } from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 
 const Boid = d.struct({
   pos: d.vec3f,
