@@ -120,8 +120,15 @@ const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
 
 ### Operators
 
-As you may know, it is currently impossible to overload operators in JavaScript.
-For that reason, TypeGPU provides `std` functions imitating those.
+For performing math operations on vectors and matrices, you can either use the standard JavaScript operators like
+`+`, `-`, `*`, `/` and `%` when inside functions marked with `'use gpu'`, use functions provided on the `std` namespace,
+or `.add`, `.sub`, `.mul`, `.div` and `.mod` functions on the values themselves.
+
+:::note
+Use of `tsover` is required for operator overloading support, [refer to their documentation on how to set it up in your project](https://software-mansion-labs.github.io/tsover/docs).
+
+When operating on scalars, you can still use `+`, `<=`, `!` etc., whether you adopt `tsover` or not.
+:::
 
 ```ts twoslash
 import { d, std } from 'typegpu';
@@ -129,6 +136,12 @@ import { d, std } from 'typegpu';
 const vec1 = d.vec3f(1, 2, 3);
 const vec2 = std.add(vec1, 3); // d.vec3f(4, 5, 6)
 //    ^?
+
+function foo() {
+  'use gpu';
+  const vec1 = d.vec3f(1, 2, 3) * 2; // d.vec3f(2, 4, 6)
+  //    ^?
+}
 
 const mat = d.mat3x3f(
   2, 0, 0,
@@ -148,9 +161,6 @@ Currently, implemented operators include:
 - arithmetic operators `add`, `sub`, `mul`, `div`, `mod`, `neg`,
 - comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
 - logical operators `not`, `and`, `or`.
-
-When operating on scalars, you can still use `+`, `<=`, `!` etc.,
-the purpose of these `std` functions is to enable working on vectors and matrices.
 
 For arithmetic operators, you can also use the infix notation.
 
