@@ -82,7 +82,7 @@ dirLight.position.set(-7, 10, 0);
 scene.add(dirLight);
 scene.add(new THREE.AmbientLight(0x444444));
 
-renderer.setAnimationLoop(() => {
+void renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 

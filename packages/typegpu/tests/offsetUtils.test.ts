@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { d } from '../src/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
-import { getOffsetInfoAt } from '../src/data/offsetUtils.ts';
 
-describe('getOffsetInfoAt (default)', () => {
+describe('d.memoryLayoutOf (default)', () => {
   it('returns offset 0 and full contiguous size for a scalar', () => {
-    const info = getOffsetInfoAt(d.u32);
+    const info = d.memoryLayoutOf(d.u32);
 
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(sizeOf(d.u32));
@@ -17,34 +16,34 @@ describe('getOffsetInfoAt (default)', () => {
       b: d.vec3f,
     });
 
-    const info = getOffsetInfoAt(Schema);
+    const info = d.memoryLayoutOf(Schema);
 
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
   });
 });
 
-describe('getOffsetInfoAt (vectors)', () => {
+describe('d.memoryLayoutOf (vectors)', () => {
   it('computes component offsets and remaining contiguous bytes', () => {
-    const info = getOffsetInfoAt(d.vec4u, (v) => v.z);
+    const info = d.memoryLayoutOf(d.vec4u, (v) => v.z);
 
     expect(info.offset).toBe(8);
     expect(info.contiguous).toBe(8);
   });
 
   it('supports numeric component access', () => {
-    const info = getOffsetInfoAt(d.vec3f, (v) => v[1] as number);
+    const info = d.memoryLayoutOf(d.vec3f, (v) => v[1]);
 
     expect(info.offset).toBe(4);
     expect(info.contiguous).toBe(8);
   });
 });
 
-describe('getOffsetInfoAt (arrays)', () => {
+describe('d.memoryLayoutOf (arrays)', () => {
   it('computes offsets for array elements without padding', () => {
     const Schema = d.arrayOf(d.u32, 6);
 
-    const info = getOffsetInfoAt(Schema, (a) => a[3] as number);
+    const info = d.memoryLayoutOf(Schema, (a) => a[3] as number);
 
     expect(info.offset).toBe(12);
     expect(info.contiguous).toBe(12);
@@ -53,14 +52,14 @@ describe('getOffsetInfoAt (arrays)', () => {
   it('limits contiguous bytes to element size when array stride has padding', () => {
     const Schema = d.arrayOf(d.vec3u, 3);
 
-    const info = getOffsetInfoAt(Schema, (a) => a[1]?.x as number);
+    const info = d.memoryLayoutOf(Schema, (a) => a[1]?.x as number);
 
     expect(info.offset).toBe(16);
     expect(info.contiguous).toBe(12);
   });
 });
 
-describe('getOffsetInfoAt (struct runs)', () => {
+describe('d.memoryLayoutOf (struct runs)', () => {
   it('returns contiguous bytes within a packed run', () => {
     const Schema = d.struct({
       a: d.u32,
@@ -68,7 +67,7 @@ describe('getOffsetInfoAt (struct runs)', () => {
       c: d.u32,
     });
 
-    const info = getOffsetInfoAt(Schema, (s) => s.b);
+    const info = d.memoryLayoutOf(Schema, (s) => s.b);
 
     expect(info.offset).toBe(4);
     expect(info.contiguous).toBe(8);
@@ -80,14 +79,14 @@ describe('getOffsetInfoAt (struct runs)', () => {
       b: d.vec3u,
     });
 
-    const info = getOffsetInfoAt(Schema, (s) => s.a);
+    const info = d.memoryLayoutOf(Schema, (s) => s.a);
 
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
   });
 });
 
-describe('getOffsetInfoAt (nested layouts)', () => {
+describe('d.memoryLayoutOf (nested layouts)', () => {
   // offset calculator for this struct: https://shorturl.at/NQggS
   const DeepStruct = d.struct({
     someData: d.arrayOf(d.f32, 13),
@@ -110,7 +109,7 @@ describe('getOffsetInfoAt (nested layouts)', () => {
   });
 
   it('tracks offsets and contiguous bytes within nested arrays', () => {
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       DeepStruct,
       (s) => s.someData[11] as number,
     );
@@ -120,7 +119,7 @@ describe('getOffsetInfoAt (nested layouts)', () => {
   });
 
   it('tracks offsets for nested structs inside arrays', () => {
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       DeepStruct,
       (s) => s.nested.innerNested[1]?.myVec.x as number,
     );
@@ -130,7 +129,7 @@ describe('getOffsetInfoAt (nested layouts)', () => {
   });
 
   it('tracks offsets inside a later struct run', () => {
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       DeepStruct,
       (s) => s.nested.additionalData[1] as number,
     );
@@ -140,7 +139,7 @@ describe('getOffsetInfoAt (nested layouts)', () => {
   });
 });
 
-describe('getOffsetInfoAt (edge cases)', () => {
+describe('d.memoryLayoutOf (edge cases)', () => {
   it('tracks offsets between array elements', () => {
     const E = d.struct({
       x: d.u32,
@@ -151,7 +150,7 @@ describe('getOffsetInfoAt (edge cases)', () => {
       arr: d.arrayOf(E, 3),
     });
 
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       S,
       (s) => s.arr[1]?.vec.x as number,
     );
@@ -170,9 +169,9 @@ describe('getOffsetInfoAt (edge cases)', () => {
       r: I,
     });
 
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       S,
-      (s) => s.l.vec.z as number,
+      (s) => s.l.vec.z,
     );
 
     expect(info.offset).toBe(8);
@@ -191,7 +190,7 @@ describe('getOffsetInfoAt (edge cases)', () => {
       arr: d.arrayOf(E, 4),
     });
 
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       S,
       (s) => s.arr[1]?.x.x as number,
     );
@@ -210,7 +209,7 @@ describe('getOffsetInfoAt (edge cases)', () => {
       s: I,
     });
 
-    const info = getOffsetInfoAt(
+    const info = d.memoryLayoutOf(
       S,
       (s) => s.arr[0]?.y as number,
     );
