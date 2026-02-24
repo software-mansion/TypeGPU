@@ -72,7 +72,7 @@ async function runBenchmarks() {
   drawCharts();
 }
 
-runBenchmarks();
+void runBenchmarks();
 
 // #region Example controls & Cleanup
 
