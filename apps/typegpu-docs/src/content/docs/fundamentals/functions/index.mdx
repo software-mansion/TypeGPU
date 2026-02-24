@@ -82,7 +82,7 @@ fn main() -> vec2f {
 ```
 
 You can already notice a few things about TypeGPU functions:
-- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers.
+- Using operators like `+`, `-`, `*`, `/`, etc. is perfectly valid on numbers (and on vectors/matrices thanks to [`tsover`](https://software-mansion-labs.github.io/tsover/)).
 - TS types are properly inferred, feel free to hover over the variables to see their types.
 - The generated code closely matches your source code.
 
@@ -287,9 +287,9 @@ Our aim with TypeGPU functions is not to allow arbitrary JavaScript to be suppor
 :::
 
 * **Operators** --
-JavaScript does not support operator overloading.
-This means that, while you can still use operators for numbers,
-you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*) for operations involving vectors and matrices, or use a fluent interface (*abc.mul(xyz), ...*)
+We support using regular operators on vectors and matrices with full type inference thanks to [tsover](https://software-mansion-labs.github.io/tsover/).
+Without it, you can still use operators for numbers,
+but for vectors and matrices you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*), or use a fluent interface (*abc.mul(xyz), ...*)
 
 * **Calling other functions** --
 Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
@@ -440,11 +440,7 @@ Writing shader code in JavaScript has a few significant advantages.
 It allows defining utilities once and using them both on the GPU and CPU,
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer experience.
 
-However, there are cases where WGSL might be more suitable.
-Since JavaScript doesn't support operator overloading, functions including complex matrix or vector operations can be more readable in WGSL.
-Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet.
-
-Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
+However, there are cases where WGSL might be more suitable. Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet. Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
 
 ## Entry functions
 

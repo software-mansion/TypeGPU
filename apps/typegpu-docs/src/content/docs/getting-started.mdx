@@ -63,6 +63,20 @@ Then add the following to your `tsconfig.json`:
 TypeGPU features related to writing shaders in JavaScript/TypeScript rely on an [additional build tool that hooks into existing bundlers called unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu). Make sure to set it up as well if you plan on using these features.
 :::
 
+:::tip
+For overloaded operator support in JavaScript/TypeScript shaders, [setup `tsover` in your project](https://software-mansion-labs.github.io/tsover/docs).
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut-before---
+function foo() {
+  'use gpu';
+  const value = d.vec3f() * 20 - 0.5;
+  //    ^?
+}
+```
+:::
+
 ## Live Examples
 
 Our [live examples](/TypeGPU/examples) showcase many use-cases of TypeGPU. Feel free to check them out! You can also open each of them on StackBlitz in order to edit the code and see the preview update live, or to bootstrap your own project.
