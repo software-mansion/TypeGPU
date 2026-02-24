@@ -156,11 +156,14 @@ const comparison = std.le(d.vec3f(2, 3, 4), d.vec3f(3)); // d.vec3b(true, true, 
 //    ^?
 ```
 
-Currently, implemented operators include:
+Currently, implemented `std` operations include:
 
 - arithmetic operators `add`, `sub`, `mul`, `div`, `mod`, `neg`,
 - comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
 - logical operators `not`, `and`, `or`.
+
+Vectors currently overload the binary `+`, `-`, `*`, `/` and `%` operators, while matrices
+overload `+`, `-` and  `*`.
 
 For arithmetic operators, you can also use the infix notation.
 

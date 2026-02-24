@@ -440,11 +440,7 @@ Writing shader code in JavaScript has a few significant advantages.
 It allows defining utilities once and using them both on the GPU and CPU,
 as well as enables complete syntax highlighting and autocomplete in TypeGPU function definitions, leading to a better developer experience.
 
-However, there are cases where WGSL might be more suitable.
-Since JavaScript doesn't support operator overloading, functions including complex matrix or vector operations can be more readable in WGSL.
-Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet.
-
-Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
+However, there are cases where WGSL might be more suitable. Writing WGSL becomes a necessity whenever TypeGPU does not yet support some feature or standard library function yet. Luckily, you don't have to choose one or the other for the entire project. It is possible to mix and match WGSL and JavaScript at every step of the way, so you're not locked into one or the other.
 
 ## Entry functions
 
