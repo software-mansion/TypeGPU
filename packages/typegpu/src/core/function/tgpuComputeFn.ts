@@ -58,7 +58,7 @@ export type TgpuComputeFnShell<
   ) => TgpuComputeFn<ComputeIn>);
 
 export interface TgpuComputeFn<
-  // oxlint-disable-next-line typescript/no-explicit-any to allow assigning any compute fn to TgpuComputeFn (non-generic) type
+  // oxlint-disable-next-line typescript/no-explicit-any -- to allow assigning any compute fn to TgpuComputeFn (non-generic) type
   ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
   readonly [$internal]: true;

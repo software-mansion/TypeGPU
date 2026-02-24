@@ -14,7 +14,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   operator: InfixOperator,
   operatorSymbol: symbol,
 ) {
-  // oxlint-disable-next-line typescript/no-explicit-any anything is possible
+  // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
   const proto = object.prototype as any;
   const opImpl = infixOperators[operator] as (
     lhs: unknown,

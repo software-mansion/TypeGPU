@@ -9,7 +9,7 @@ import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {
-    // oxlint-disable-next-line typescript-eslint/no-implied-eval no-new
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval -- no-new
     new Function('return true');
     return true;
   } catch {

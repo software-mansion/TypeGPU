@@ -68,7 +68,7 @@ const computeLayout = tgpu.bindGroupLayout({
 
 const functionExprSlot = tgpu.slot<TgpuRawCodeSnippet<d.F32>>();
 
-// oxlint-disable-next-line no-unused-vars it is used in wgsl
+// oxlint-disable-next-line no-unused-vars -- it is used in wgsl
 const interpolatedFunction = (x: number) => {
   'use gpu';
   return functionExprSlot.$;

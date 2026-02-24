@@ -87,16 +87,16 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
             const wj = Math.floor(j / workgroupSize[1]);
             const wk = Math.floor(k / workgroupSize[2]);
             return new SimulationState(buffers, {
-              // oxlint-disable-next-line typescript/no-non-null-assertion it's there, trust me
+              // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
               private: privateVars[i]![j]![k]!,
-              // oxlint-disable-next-line typescript/no-non-null-assertion it's there, trust me
+              // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
               workgroup: workgroupVars[wi]![wj]![wk]!,
             });
           }),
       ),
   );
 
-  // oxlint-disable-next-line typescript/no-non-null-assertion it's there, trust me
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
   ctx.pushMode(simStates[0]![0]![0]!);
   try {
     const value = provideCtx(ctx, callback);

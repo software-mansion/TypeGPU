@@ -10,7 +10,7 @@ const bench = new Bench({
   name: 'discriminated union',
   time: 100,
   async setup() {
-    // oxlint-disable-next-line typescript/no-explicit-any making sure GC has no impact on the results
+    // oxlint-disable-next-line typescript/no-explicit-any -- making sure GC has no impact on the results
     (globalThis as any).gc();
   },
 });

@@ -208,7 +208,7 @@ const network = createNetwork(await downloadLayers(root));
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-assertion not really unnecessary
+// oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- not really unnecessary
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const subgroupsEl = document.getElementById(
   'subgroups-status',

@@ -169,7 +169,7 @@ export function align<TAlign extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@align',
     params: [alignment],
-    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -193,7 +193,7 @@ export function size<TSize extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@size',
     params: [size],
-    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -218,7 +218,7 @@ export function location<TLocation extends number, TData extends BaseData>(
     [$internal]: true,
     type: '@location',
     params: [location],
-    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -281,7 +281,7 @@ export function interpolate<
     [$internal]: true,
     type: '@interpolate',
     params: [interpolationType],
-    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -324,7 +324,7 @@ export function invariant(
     [$internal]: true,
     type: '@invariant',
     params: [],
-    // oxlint-disable-next-line typescript/no-explicit-any <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 

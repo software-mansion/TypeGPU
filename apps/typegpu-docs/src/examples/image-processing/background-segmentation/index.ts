@@ -60,9 +60,9 @@ if (!device || !adapter) {
 }
 
 // monkey patching ONNX: https://github.com/microsoft/onnxruntime/issues/26107
-// oxlint-disable-next-line typescript/unbound-method we know what we're doing
+// oxlint-disable-next-line typescript/unbound-method -- we know what we're doing
 const oldRequestAdapter = navigator.gpu.requestAdapter;
-// oxlint-disable-next-line typescript/unbound-method we know what we're doing
+// oxlint-disable-next-line typescript/unbound-method -- we know what we're doing
 const oldRequestDevice = adapter.requestDevice;
 navigator.gpu.requestAdapter = async () => adapter;
 adapter.requestDevice = async () => device;

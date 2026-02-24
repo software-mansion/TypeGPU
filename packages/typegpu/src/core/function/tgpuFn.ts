@@ -94,7 +94,7 @@ interface TgpuFnBase<ImplSchema extends AnyFn>
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
-// oxlint-disable-next-line typescript/no-explicit-any the widest type requires `any`
+// oxlint-disable-next-line typescript/no-explicit-any -- the widest type requires `any`
 export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> =
   & DualFn<InferImplSchema<ImplSchema>>
   & TgpuFnBase<ImplSchema>;

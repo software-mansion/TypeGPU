@@ -123,7 +123,7 @@ describe('TgpuQuerySet', () => {
     const querySet = root.createQuerySet('occlusion', 1);
     querySet.resolve();
 
-    // oxlint-disable-next-line typescript/no-explicit-any <we testing here>
+    // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
     (querySet as any)._available = false;
 
     expect(() => querySet.resolve()).toThrow(

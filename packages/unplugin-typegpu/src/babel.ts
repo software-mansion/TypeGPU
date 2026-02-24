@@ -326,9 +326,9 @@ export default function () {
   return {
     visitor: {
       Program(path, state) {
-        // oxlint-disable-next-line typescript/no-explicit-any <oh babel babel...>
+        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
         const options = defu((state as any).opts as Options, defaultOptions);
-        // oxlint-disable-next-line typescript/no-explicit-any <oh babel babel...>
+        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
         const id: string | undefined = (state as any).filename;
 
         const filter = createFilterForId(options);

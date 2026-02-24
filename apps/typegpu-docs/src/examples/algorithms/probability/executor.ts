@@ -104,7 +104,7 @@ export class Executor {
       this.#pipelineCache.set(distribution, pipeline);
     }
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion just checked it above
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- just checked it above
     return this.#pipelineCache.get(distribution)!;
   }
 

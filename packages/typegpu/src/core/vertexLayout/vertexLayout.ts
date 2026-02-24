@@ -136,7 +136,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format: data.type as VertexFormat,
         offset,
-        // oxlint-disable-next-line typescript/no-explicit-any <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any -- too many type shenanigans
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
@@ -149,7 +149,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format,
         offset,
-        // oxlint-disable-next-line typescript/no-explicit-any <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any -- too many type shenanigans
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
   }

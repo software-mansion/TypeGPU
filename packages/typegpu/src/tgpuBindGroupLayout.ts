@@ -541,7 +541,7 @@ class TgpuBindGroupLayoutImpl<
       const membership: LayoutMembership = { layout: this, key, idx };
 
       if ('uniform' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl(
           'uniform',
           entry.uniform,
@@ -554,7 +554,7 @@ class TgpuBindGroupLayoutImpl<
           ? entry.storage
           : entry.storage(0);
 
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl(
           entry.access ?? 'readonly',
           dataType,
@@ -563,7 +563,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('texture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.texture,
           membership,
@@ -571,7 +571,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storageTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(
           entry.storageTexture,
           membership,
@@ -579,7 +579,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('externalTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuExternalTextureImpl(
           entry.externalTexture,
           membership,
@@ -587,7 +587,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('sampler' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutSamplerImpl(
           entry.sampler === 'comparison'
             ? wgslComparisonSampler()
@@ -598,7 +598,7 @@ class TgpuBindGroupLayoutImpl<
 
       Object.defineProperty(this.value, key, {
         get: () => {
-          // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+          // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
           return (bound[key] as any).value;
         },
       });

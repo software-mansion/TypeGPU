@@ -83,7 +83,7 @@ describe('div', () => {
       });
 
       it('const u32 / const u32', () => {
-        // oxlint-disable-next-line typegpu/integer-division it's a test
+        // oxlint-disable-next-line typegpu/integer-division -- it's a test
         const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.u32(2));
         expect(foo()).toBe(0.5);
         expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
@@ -94,7 +94,7 @@ describe('div', () => {
       });
 
       it('const i32 / const i32', () => {
-        // oxlint-disable-next-line typegpu/integer-division it's a test
+        // oxlint-disable-next-line typegpu/integer-division -- it's a test
         const foo = tgpu.fn([], d.f32)(() => d.i32(1) / d.i32(2));
         expect(foo()).toBe(0.5);
         expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
@@ -135,7 +135,7 @@ describe('div', () => {
       });
 
       it('const f32 / const i32', () => {
-        // oxlint-disable-next-line typegpu/integer-division it's a test
+        // oxlint-disable-next-line typegpu/integer-division -- it's a test
         const foo = tgpu.fn([], d.f32)(() => d.f32(1.0) / d.i32(2.0));
         expect(foo()).toBe(0.5);
         expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
@@ -146,7 +146,7 @@ describe('div', () => {
       });
 
       it('const u32 / const i32', () => {
-        // oxlint-disable-next-line typegpu/integer-division it's a test
+        // oxlint-disable-next-line typegpu/integer-division -- it's a test
         const foo = tgpu.fn([], d.f32)(() => d.u32(1) / d.i32(2));
         expect(foo()).toBe(0.5);
         expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`

@@ -186,7 +186,7 @@ export function createFnCore(
         applyExternals(
           externalMap,
           {
-            // oxlint-disable-next-line typescript/no-non-null-assertion entry functions cannot be shellless
+            // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
             [maybeSecondArg.name]: undecorate(returnType!),
           },
         );
