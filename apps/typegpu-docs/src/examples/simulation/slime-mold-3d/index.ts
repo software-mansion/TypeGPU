@@ -176,6 +176,8 @@ const getPerpendicular = (dir: d.v3f) => {
   return std.normalize(std.cross(dir, axis));
 };
 
+const numSamples = 8;
+const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -187,8 +189,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  const numSamples = 8;
-  for (let i = 0; i < numSamples; i++) {
+  for (const i of tgpu.unroll(samplesIterations)) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1.mul(std.cos(theta)).add(perp2.mul(std.sin(theta)));

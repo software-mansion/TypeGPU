@@ -73,8 +73,8 @@ const computeFn = tgpu.computeFn({
   ).sub(d.vec2i(filterOffset, 0));
 
   // Load a tile of pixels into shared memory
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (const r of tgpu.unroll([0, 1, 2, 3])) {
+    for (const c of tgpu.unroll([0, 1, 2, 3])) {
       let loadIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         loadIndex = loadIndex.yx;
@@ -92,8 +92,8 @@ const computeFn = tgpu.computeFn({
   std.workgroupBarrier();
 
   // Apply the horizontal blur filter and write to the output texture
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (const r of tgpu.unroll([0, 1, 2, 3])) {
+    for (const c of tgpu.unroll([0, 1, 2, 3])) {
       let writeIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         writeIndex = writeIndex.yx;

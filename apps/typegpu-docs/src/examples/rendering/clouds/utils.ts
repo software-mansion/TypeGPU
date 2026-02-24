@@ -72,12 +72,13 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
   },
 );
 
+const iterations = Array.from({ length: FBM_OCTAVES }, (_, i) => i);
 const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
   let sum = d.f32();
   let amp = d.f32(CLOUD_AMPLITUDE);
   let freq = d.f32(CLOUD_FREQUENCY);
 
-  for (let i = 0; i < FBM_OCTAVES; i++) {
+  for (const _i of tgpu.unroll(iterations)) {
     sum += noise3d(std.mul(pos, freq)) * amp;
     amp *= FBM_PERSISTENCE;
     freq *= FBM_LACUNARITY;

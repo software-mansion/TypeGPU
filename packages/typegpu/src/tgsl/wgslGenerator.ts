@@ -47,12 +47,13 @@ import type { ShaderGenerator } from './shaderGenerator.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
-import { arrayLength } from '../std/array.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
+import * as forOfUtils from './forOfUtils.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -186,6 +187,8 @@ const binaryOpCodeToCodegen = {
 
 class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
+  // used to detect `continue` and `break` nodes in loop body
+  #unrolling = false;
 
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
@@ -1154,6 +1157,8 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
 
       try {
         this.ctx.pushBlockScope();
@@ -1170,114 +1175,128 @@ ${this.ctx.pre}else ${alternate}`;
         const bodyStr = this.block(blockifySingleStatement(body));
         return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
       } finally {
+        this.#unrolling = prevUnrollingFlag;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.while) {
-      const [_, condition, body] = statement;
-      const condSnippet = this.typedExpression(condition, bool);
-      const conditionStr = this.ctx.resolve(condSnippet.value).value;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
+      try {
+        const [_, condition, body] = statement;
+        const condSnippet = this.typedExpression(condition, bool);
+        const conditionStr = this.ctx.resolve(condSnippet.value).value;
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this.block(blockifySingleStatement(body));
+        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+      } finally {
+        this.#unrolling = prevUnrollingFlag;
+      }
     }
 
     if (statement[0] === NODE.forOf) {
       const [_, loopVar, iterable, body] = statement;
-      const iterableSnippet = this.expression(iterable);
 
-      if (isEphemeralSnippet(iterableSnippet)) {
-        throw new Error(
-          '`for ... of ...` loops only support iterables stored in variables',
+      if (loopVar[0] !== NODE.const) {
+        throw new WgslTypeError(
+          'Only `for (const ... of ... )` loops are supported',
         );
       }
+
+      let ctxIndent = false;
+      const prevUnrollingFlag = this.#unrolling;
+
       try {
         this.ctx.pushBlockScope();
+        const iterableExpr = this.expression(iterable);
+        const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
+        const iterableSnippet = shouldUnroll
+          ? iterableExpr.value.snippet
+          : iterableExpr;
+        const elementCountSnippet = forOfUtils.getElementCountSnippet(
+          this.ctx,
+          iterableSnippet,
+          shouldUnroll,
+        );
+        const originalLoopVarName = loopVar[1];
+        const blockified = blockifySingleStatement(body);
+
+        if (shouldUnroll) {
+          if (!isKnownAtComptime(elementCountSnippet)) {
+            throw new Error(
+              'Cannot unroll loop. Length of iterable is unknown at comptime.',
+            );
+          }
+
+          this.#unrolling = true;
+
+          const length = elementCountSnippet.value as number;
+          if (length === 0) {
+            return '';
+          }
+
+          const { value } = iterableSnippet;
+
+          const elements = value instanceof ArrayExpression
+            ? value.elements
+            : Array.from(
+              { length },
+              (_, i) =>
+                forOfUtils.getElementSnippet(
+                  iterableSnippet,
+                  snip(i, u32, 'constant'),
+                ),
+            );
+
+          if (
+            isEphemeralSnippet(elements[0] as Snippet) &&
+            !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
+          ) {
+            throw new WgslTypeError(
+              'Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.',
+            );
+          }
+
+          const blocks = elements
+            .map((e, i) =>
+              `${this.ctx.pre}// unrolled iteration #${i}\n${this.ctx.pre}${
+                this.block(blockified, { [originalLoopVarName]: e })
+              }`
+            );
+
+          return blocks.join('\n');
+        }
+
+        if (isEphemeralSnippet(iterableSnippet)) {
+          throw new Error(
+            `\`for ... of ...\` loops only support iterables stored in variables.
+  -----
+  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
+  -----`,
+          );
+        }
+
+        this.#unrolling = false;
 
         const index = this.ctx.makeNameValid('i');
-
-        const elementSnippet = accessIndex(
+        const elementSnippet = forOfUtils.getElementSnippet(
           iterableSnippet,
           snip(index, u32, 'runtime'),
         );
-        if (!elementSnippet) {
-          throw new WgslTypeError(
-            '`for ... of ...` loops only support array or vector iterables',
-          );
-        }
+        const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+        const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+        const elementType = forOfUtils.getElementType(
+          elementSnippet,
+          iterableSnippet,
+        );
 
-        const iterableDataType = iterableSnippet.dataType;
-        let elementCountSnippet: Snippet;
-        let elementType = elementSnippet.dataType;
+        const forHeaderStr =
+          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${elementCountSnippet}; ${index}++) {`;
 
-        if (elementType === UnknownData) {
-          throw new WgslTypeError(
-            stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
-          );
-        }
-
-        if (wgsl.isWgslArray(iterableDataType)) {
-          elementCountSnippet = iterableDataType.elementCount > 0
-            ? snip(
-              `${iterableDataType.elementCount}`,
-              u32,
-              'constant',
-            )
-            : arrayLength[$gpuCallable].call(this.ctx, [iterableSnippet]);
-        } else if (wgsl.isVec(iterableDataType)) {
-          elementCountSnippet = snip(
-            `${Number(iterableDataType.type.match(/\d/))}`,
-            u32,
-            'constant',
-          );
-        } else {
-          throw new WgslTypeError(
-            '`for ... of ...` loops only support array or vector iterables',
-          );
-        }
-
-        if (loopVar[0] !== NODE.const) {
-          throw new WgslTypeError(
-            'Only `for (const ... of ... )` loops are supported',
-          );
-        }
-
-        // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
-        // an implicit pointer to it
-        let loopVarKind = 'let';
-        if (!isEphemeralSnippet(elementSnippet)) {
-          if (elementSnippet.origin === 'constant-tgpu-const-ref') {
-            loopVarKind = 'const';
-          } else if (elementSnippet.origin === 'runtime-tgpu-const-ref') {
-            loopVarKind = 'let';
-          } else {
-            loopVarKind = 'let';
-            if (!wgsl.isPtr(elementType)) {
-              const ptrType = createPtrFromOrigin(
-                elementSnippet.origin,
-                concretize(
-                  elementType as wgsl.AnyWgslData,
-                ) as wgsl.StorableData,
-              );
-              invariant(
-                ptrType !== undefined,
-                `Creating pointer type from origin ${elementSnippet.origin}`,
-              );
-              elementType = ptrType;
-            }
-
-            elementType = implicitFrom(elementType as wgsl.Ptr);
-          }
-        }
-
-        const forStr =
-          stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${
-            tryConvertSnippet(this.ctx, elementCountSnippet, u32, false)
-          }; ${index}++) {`;
         this.ctx.indent();
+        ctxIndent = true;
 
-        const loopVarName = this.ctx.makeNameValid(loopVar[1]);
         const loopVarDeclStr =
           stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${
             tryConvertSnippet(
@@ -1289,24 +1308,43 @@ ${this.ctx.pre}else ${alternate}`;
           };`;
 
         const bodyStr = `${this.ctx.pre}${
-          this.block(blockifySingleStatement(body), {
-            [loopVar[1]]: snip(loopVarName, elementType, elementSnippet.origin),
+          this.block(blockified, {
+            [originalLoopVarName]: snip(
+              loopVarName,
+              elementType,
+              elementSnippet.origin,
+            ),
           })
         }`;
 
         this.ctx.dedent();
+        ctxIndent = false;
 
-        return stitch`${forStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+        return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
       } finally {
+        if (ctxIndent) {
+          this.ctx.dedent();
+        }
+        this.#unrolling = prevUnrollingFlag;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.continue) {
+      if (this.#unrolling) {
+        throw new WgslTypeError(
+          'Cannot unroll loop containing `continue`',
+        );
+      }
       return `${this.ctx.pre}continue;`;
     }
 
     if (statement[0] === NODE.break) {
+      if (this.#unrolling) {
+        throw new WgslTypeError(
+          'Cannot unroll loop containing `break`',
+        );
+      }
       return `${this.ctx.pre}break;`;
     }
 

@@ -81,8 +81,8 @@ export function createPostProcessingPipelines(
     let minColor = d.vec3f(9999);
     let maxColor = d.vec3f(-9999);
 
-    for (let ox = -1; ox <= 1; ox++) {
-      for (let oy = -1; oy <= 1; oy++) {
+    for (const ox of tgpu.unroll([-1, 0, 1])) {
+      for (const oy of tgpu.unroll([-1, 0, 1])) {
         const sampleCoord = coord.add(d.vec2i(ox, oy));
         const clampedCoord = std.clamp(
           sampleCoord,

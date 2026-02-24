@@ -487,7 +487,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             res += foo;
@@ -513,10 +513,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1++) {
               let boo = arr[i_1];
               {
                 res += (foo * boo);
@@ -544,10 +544,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1++) {
               let foo2 = arr[i_1];
               {
                 res += (foo2 * foo2);
@@ -573,7 +573,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
         var res = 0;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = (&arr[i]);
           {
             res += i32((*foo).x);
@@ -630,19 +630,49 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         var v1 = vec4u(44, 88, 132, 176);
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let foo = v1[i];
           {
             continue;
           }
         }
         var v2 = vec2f(1, 2);
-        for (var i = 0u; i < 2; i++) {
+        for (var i = 0u; i < 2u; i++) {
           let foo = v2[i];
           {
             continue;
           }
         }
+      }"
+    `);
+  });
+
+  it('creates correct code for "for ... of ..." statements using buffer iterable', ({ root }) => {
+    const b = root.createUniform(d.arrayOf(d.u32, 7));
+    const acc = tgpu.accessor(d.arrayOf(d.u32, 7), b);
+
+    const f = () => {
+      'use gpu';
+      let result = d.u32(0);
+      for (const foo of acc.$) {
+        result += foo;
+      }
+
+      return result;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> b: array<u32, 7>;
+
+      fn f() -> u32 {
+        var result = 0u;
+        for (var i = 0u; i < 7u; i++) {
+          let foo = b[i];
+          {
+            result += foo;
+          }
+        }
+        return result;
       }"
     `);
   });
@@ -679,19 +709,19 @@ describe('wgslGenerator', () => {
         var res1 = 0f;
         var res2 = 0u;
         var res3 = false;
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let foo = v1[i];
           {
             res1 += foo;
           }
         }
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = v2[i];
           {
             res2 *= foo;
           }
         }
-        for (var i = 0u; i < 2; i++) {
+        for (var i = 0u; i < 2u; i++) {
           let foo = v3[i];
           {
             res3 = (foo != res3);
@@ -721,7 +751,7 @@ describe('wgslGenerator', () => {
 
       fn main() {
         var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
-        for (var i = 0u; i < 4; i++) {
+        for (var i = 0u; i < 4u; i++) {
           let foo = testStruct.arr[i];
           {
             continue;
@@ -743,7 +773,10 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): \`for ... of ...\` loops only support iterables stored in variables]
+      - fn*:main(): \`for ... of ...\` loops only support iterables stored in variables.
+        -----
+        You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
+        -----]
     `);
   });
 
@@ -816,7 +849,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([f1])).toMatchInlineSnapshot(`
       "fn f1() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             let i_1 = foo;
@@ -838,7 +871,7 @@ describe('wgslGenerator', () => {
       "fn f2() {
         const i = 7;
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i_1 = 0u; i_1 < 3; i_1++) {
+        for (var i_1 = 0u; i_1 < 3u; i_1++) {
           let foo = arr[i_1];
           {
             continue;
@@ -864,7 +897,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
-        for (var i_1 = 0u; i_1 < 4; i_1++) {
+        for (var i_1 = 0u; i_1 < 4u; i_1++) {
           let foo = arr[i_1];
           {
             continue;
@@ -889,7 +922,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -917,7 +950,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -941,7 +974,7 @@ describe('wgslGenerator', () => {
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
         var res = 0;
-        for (var i = 0u; i < 3; i++) {
+        for (var i = 0u; i < 3u; i++) {
           let i_1 = arr[i];
           {
             res += i_1;
@@ -1079,11 +1112,11 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn() -> u32 {
-        var arr = array<u32, 3>(1u, 2u, 3u);
-        return arr[1i];
-      }"
-    `);
+        "fn testFn() -> u32 {
+          var arr = array<u32, 3>(1u, 2u, 3u);
+          return arr[1i];
+        }"
+      `);
 
     const astInfo = getMetaData(
       testFn[$internal].implementation as (...args: unknown[]) => unknown,
