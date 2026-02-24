@@ -185,7 +185,7 @@ type Tuple3<S> = [S, S, S];
 type Tuple4<S> = [S, S, S, S];
 
 /**
- * A type which every vector is assignable to. In most cases the union v2f | v3f | v4f
+ * A type which every numeric vector is assignable to. In most cases the union v2f | v3f | v4f | v2h | v3h | v4h | v2i | v3i | v4i | v2u | v3u | v4u
  * is preferred, but when an implementation uses overloaded operators and is generic on the type,
  * this makes the type checking much more laid back.
  *
