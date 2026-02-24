@@ -5,12 +5,20 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
     }
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "test": "vitest"
   },
@@ -27,6 +35,7 @@
     "@types/node": "^25.0.10",
     "@typescript-eslint/rule-tester": "^8.53.1",
     "eslint": "^9.39.2",
+    "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
   }

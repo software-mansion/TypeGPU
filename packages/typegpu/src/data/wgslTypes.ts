@@ -1,3 +1,4 @@
+// oxlint-disable-next-line no-unused-vars it is used
 import type { Operator } from 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {

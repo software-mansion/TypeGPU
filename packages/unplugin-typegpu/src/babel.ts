@@ -161,7 +161,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
               path.node.left,
               types.callExpression(types.identifier(runtimeFn), [
                 path.node.left as babel.Expression,
-                path.node.right as babel.Expression,
+                path.node.right,
               ]),
             ),
           );
@@ -202,7 +202,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
           path.replaceWith(
             types.callExpression(types.identifier(runtimeFn), [
               path.node.left as babel.Expression,
-              path.node.right as babel.Expression,
+              path.node.right,
             ]),
           );
         }
@@ -306,7 +306,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
             const transpiled = functionToTranspiled(
               implementation,
               null,
-            ) as babel.CallExpression;
+            );
 
             path.replaceWith(
               types.callExpression(node.callee, [
