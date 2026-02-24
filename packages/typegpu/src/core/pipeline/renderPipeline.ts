@@ -12,7 +12,11 @@ import {
   type UndecorateRecord,
 } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip, Snippet } from '../../data/snippet.ts';
+import {
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../../data/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,

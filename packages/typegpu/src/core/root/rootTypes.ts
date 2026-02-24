@@ -1094,6 +1094,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   '~unstable': Pick<
     ExperimentalTgpuRoot,
     | 'beginRenderPass'
+    | 'beginRenderBundleEncoder'
     | 'createComparisonSampler'
     | 'createGuardedComputePipeline'
     | 'createSampler'
