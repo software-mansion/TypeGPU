@@ -1,9 +1,8 @@
 import { describe } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
-import * as d from '../../src/data/index.ts';
 import { snip } from '../../src/data/snippet.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 describe('Member Access', () => {
   const Boid = d.struct({

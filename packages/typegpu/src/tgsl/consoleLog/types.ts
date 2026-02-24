@@ -43,7 +43,7 @@ export interface LogMeta {
 }
 
 /**
- * The resources required for logging within the TGSL console.
+ * The resources required for logging via console.log within TypeGPU functions.
  *
  * @property indexBuffer - A buffer used for indexing log entries. Needs to be cleared after each dispatch/draw.
  * @property dataBuffer - A buffer containing an array of serialized log call data.

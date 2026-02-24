@@ -162,7 +162,7 @@ describe('point light shadow example', () => {
       }
 
       @vertex fn vertexLightIndicator(_arg_0: vertexLightIndicator_Input) -> vertexLightIndicator_Output {
-        var worldPos = ((_arg_0.position * 0.15) + lightPosition);
+        var worldPos = ((_arg_0.position * 0.15f) + lightPosition);
         var pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
         return vertexLightIndicator_Output(pos);
       }

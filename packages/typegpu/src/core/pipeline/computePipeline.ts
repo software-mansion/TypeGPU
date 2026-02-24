@@ -1,10 +1,14 @@
+import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { MissingBindGroupsError } from '../../errors.ts';
 import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
+
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import {
   isBindGroup,
@@ -19,10 +23,16 @@ import {
   wgslExtensions,
   wgslExtensionToFeatureName,
 } from '../../wgslExtensions.ts';
+import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
+import { warnIfOverflow } from './limitsOverflow.ts';
+import {
+  memoryLayoutOf,
+  type PrimitiveOffsetInfo,
+} from '../../data/offsetUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -31,11 +41,12 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
+import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
-  readonly branch: ExperimentalTgpuRoot;
+  readonly root: ExperimentalTgpuRoot;
 }
 
 // ----------
@@ -59,18 +70,39 @@ export interface TgpuComputePipeline
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
   ): void;
+
+  /**
+   * Dispatches compute workgroups using parameters read from a buffer.
+   * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
+   * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    start?: PrimitiveOffsetInfo | number,
+  ): void;
+}
+
+export declare namespace TgpuComputePipeline {
+  export type Descriptor<
+    Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>,
+  > = {
+    compute: TgpuComputeFn<Input>;
+  };
 }
 
 export function INTERNAL_createComputePipeline(
   branch: ExperimentalTgpuRoot,
   slotBindings: [TgpuSlot<unknown>, unknown][],
-  entryFn: TgpuComputeFn,
+  descriptor: TgpuComputePipeline.Descriptor,
 ) {
   return new TgpuComputePipelineImpl(
-    new ComputePipelineCore(branch, slotBindings, entryFn),
+    new ComputePipelineCore(branch, slotBindings, descriptor),
     {},
   );
 }
@@ -90,6 +122,27 @@ type Memo = {
   logResources: LogResources | undefined;
 };
 
+function validateIndirectBufferSize(
+  bufferSize: number,
+  offset: number,
+  requiredBytes: number,
+  operation: string,
+): void {
+  if (offset + requiredBytes > bufferSize) {
+    throw new Error(
+      `Buffer too small for ${operation}. ` +
+        `Required: ${requiredBytes} bytes at offset ${offset}, ` +
+        `but buffer is only ${bufferSize} bytes.`,
+    );
+  }
+
+  if (offset % 4 !== 0) {
+    throw new Error(
+      `Indirect buffer offset must be a multiple of 4. Got: ${offset}`,
+    );
+  }
+}
+
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
   public readonly resourceType = 'compute-pipeline';
@@ -106,8 +159,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       get priors() {
         return _priors;
       },
-      get branch() {
-        return _core.branch;
+      get root() {
+        return _core.root;
       },
     };
     this[$getNameForward] = _core;
@@ -148,7 +201,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       ...this._priors,
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
-        [layoutOrBindGroup as TgpuBindGroupLayout, bindGroup as TgpuBindGroup],
+        [layoutOrBindGroup, bindGroup as TgpuBindGroup],
       ]),
     }) as this;
   }
@@ -159,7 +212,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const newPriors = createWithPerformanceCallback(
       this._priors,
       callback,
-      this._core.branch,
+      this._core.root,
     );
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
@@ -172,41 +225,95 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const newPriors = createWithTimestampWrites(
       this._priors,
       options,
-      this._core.branch,
+      this._core.root,
     );
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
   dispatchWorkgroups(
     x: number,
-    y?: number | undefined,
-    z?: number | undefined,
+    y?: number,
+    z?: number,
+  ): void {
+    this._executeComputePass((pass) => pass.dispatchWorkgroups(x, y, z));
+  }
+
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    start?: PrimitiveOffsetInfo | number,
+  ): void {
+    const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
+
+    let offsetInfo = start ?? memoryLayoutOf(indirectBuffer.dataType);
+
+    if (typeof offsetInfo === 'number') {
+      if (offsetInfo === 0) {
+        offsetInfo = memoryLayoutOf(indirectBuffer.dataType);
+      } else {
+        console.warn(
+          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation.`,
+        );
+        // When only an offset is provided, assume we have at least 12 bytes contiguous.
+        offsetInfo = {
+          offset: offsetInfo,
+          contiguous: DISPATCH_SIZE,
+        };
+      }
+    }
+
+    const { offset, contiguous } = offsetInfo;
+
+    validateIndirectBufferSize(
+      sizeOf(indirectBuffer.dataType),
+      offset,
+      DISPATCH_SIZE,
+      'dispatchWorkgroupsIndirect',
+    );
+
+    if (contiguous < DISPATCH_SIZE) {
+      console.warn(
+        `dispatchWorkgroupsIndirect: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. Dispatch requires ${DISPATCH_SIZE} bytes (3 x u32). Reading across padding may result in undefined behavior.`,
+      );
+    }
+
+    this._executeComputePass((pass) =>
+      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset)
+    );
+  }
+
+  private _executeComputePass(
+    dispatch: (pass: GPUComputePassEncoder) => void,
   ): void {
     const memo = this._core.unwrap();
-    const { branch } = this._core;
+    const { root } = this._core;
 
     const passDescriptor: GPUComputePassDescriptor = {
       label: getName(this._core) ?? '<unnamed>',
-      ...setupTimestampWrites(this._priors, branch),
+      ...setupTimestampWrites(this._priors, root),
     };
 
-    const commandEncoder = branch.device.createCommandEncoder();
+    const commandEncoder = root.device.createCommandEncoder();
     const pass = commandEncoder.beginComputePass(passDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
+    warnIfOverflow(
+      memo.usedBindGroupLayouts,
+      this[$internal].root.device.limits,
+    );
+
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
-        pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
+        pass.setBindGroup(idx, root.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
         const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
         if (bindGroup !== undefined) {
           missingBindGroups.delete(layout);
-          pass.setBindGroup(idx, branch.unwrap(bindGroup));
+          pass.setBindGroup(idx, root.unwrap(bindGroup));
         }
       }
     });
@@ -215,17 +322,17 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       throw new MissingBindGroupsError(missingBindGroups);
     }
 
-    pass.dispatchWorkgroups(x, y, z);
+    dispatch(pass);
     pass.end();
-    branch.device.queue.submit([commandEncoder.finish()]);
+    root.device.queue.submit([commandEncoder.finish()]);
 
     if (memo.logResources) {
       logDataFromGPU(memo.logResources);
     }
 
     if (this._priors.performanceCallback) {
-      triggerPerformanceCallback({
-        root: branch,
+      void triggerPerformanceCallback({
+        root,
         priors: this._priors,
       });
     }
@@ -241,15 +348,21 @@ class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
+  #slotBindings: [TgpuSlot<unknown>, unknown][];
+  #descriptor: TgpuComputePipeline.Descriptor;
+
   constructor(
-    public readonly branch: ExperimentalTgpuRoot,
-    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
-    private readonly _entryFn: TgpuComputeFn,
-  ) {}
+    public readonly root: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    descriptor: TgpuComputePipeline.Descriptor,
+  ) {
+    this.#slotBindings = slotBindings;
+    this.#descriptor = descriptor;
+  }
 
   [$resolve](ctx: ResolutionCtx) {
-    return ctx.withSlots(this._slotBindings, () => {
-      ctx.resolve(this._entryFn);
+    return ctx.withSlots(this.#slotBindings, () => {
+      ctx.resolve(this.#descriptor.compute);
       return snip('', Void, /* origin */ 'runtime');
     });
   }
@@ -260,23 +373,23 @@ class ComputePipelineCore implements SelfResolvable {
 
   public unwrap(): Memo {
     if (this._memo === undefined) {
-      const device = this.branch.device;
+      const device = this.root.device;
       const enableExtensions = wgslExtensions.filter((extension) =>
-        this.branch.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension])
       );
 
       // Resolving code
       let resolutionResult: ResolutionResult;
 
       let resolveMeasure: PerformanceMeasure | undefined;
-      const ns = namespace({ names: this.branch.nameRegistrySetting });
+      const ns = namespace({ names: this.root.nameRegistrySetting });
       if (PERF?.enabled) {
         const resolveStart = performance.mark('typegpu:resolution:start');
         resolutionResult = resolve(this, {
           namespace: ns,
           enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
-          root: this.branch,
+          shaderGenerator: this.root.shaderGenerator,
+          root: this.root,
         });
         resolveMeasure = performance.measure('typegpu:resolution', {
           start: resolveStart.name,
@@ -285,8 +398,8 @@ class ComputePipelineCore implements SelfResolvable {
         resolutionResult = resolve(this, {
           namespace: ns,
           enableExtensions,
-          shaderGenerator: this.branch.shaderGenerator,
-          root: this.branch,
+          shaderGenerator: this.root.shaderGenerator,
+          root: this.root,
         });
       }
 
@@ -310,7 +423,7 @@ class ComputePipelineCore implements SelfResolvable {
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: usedBindGroupLayouts.map((l) =>
-              this.branch.unwrap(l)
+              this.root.unwrap(l)
             ),
           }),
           compute: { module },
@@ -321,7 +434,7 @@ class ComputePipelineCore implements SelfResolvable {
       };
 
       if (PERF?.enabled) {
-        (async () => {
+        void (async () => {
           const start = performance.mark('typegpu:compile-start');
           await device.queue.onSubmittedWorkDone();
           const compileMeasure = performance.measure('typegpu:compiled', {

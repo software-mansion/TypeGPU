@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { randf } from '@typegpu/noise';
+import tgpu, { d, std } from 'typegpu';
 import {
   CLOUD_AMPLITUDE,
   CLOUD_BRIGHT,
@@ -60,11 +58,11 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
 
         const contrib = std.mul(
           d.vec4f(lit, 1),
-          cloudDensity * (LIGHT_ABSORPTION - accum.w),
+          cloudDensity * (LIGHT_ABSORPTION - accum.a),
         );
         accum = std.add(accum, contrib);
 
-        if (accum.w >= LIGHT_ABSORPTION - 0.001) {
+        if (accum.a >= LIGHT_ABSORPTION - 0.001) {
           break;
         }
       }
@@ -74,12 +72,13 @@ export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
   },
 );
 
+const iterations = Array.from({ length: FBM_OCTAVES }, (_, i) => i);
 const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
   let sum = d.f32();
   let amp = d.f32(CLOUD_AMPLITUDE);
   let freq = d.f32(CLOUD_FREQUENCY);
 
-  for (let i = 0; i < FBM_OCTAVES; i++) {
+  for (const _i of tgpu.unroll(iterations)) {
     sum += noise3d(std.mul(pos, freq)) * amp;
     amp *= FBM_PERSISTENCE;
     freq *= FBM_LACUNARITY;

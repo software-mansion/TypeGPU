@@ -1,9 +1,11 @@
+import { d } from 'typegpu';
+
 function hexToRgb(hex: string) {
-  return [
+  return d.vec3f(
     Number.parseInt(hex.slice(1, 3), 16) / 255,
     Number.parseInt(hex.slice(3, 5), 16) / 255,
     Number.parseInt(hex.slice(5, 7), 16) / 255,
-  ] as const;
+  );
 }
 
 function componentToHex(c: number) {
@@ -19,8 +21,8 @@ type Props = {
   /**
    * RGB 0-1
    */
-  value: readonly [number, number, number];
-  onChange: (value: readonly [number, number, number]) => void;
+  value: d.v3f;
+  onChange: (value: d.v3f) => void;
 };
 
 export function ColorPicker({ value, onChange }: Props) {

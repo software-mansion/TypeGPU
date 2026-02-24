@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
@@ -21,31 +20,28 @@ export const simulate = (fishIndex: number) => {
     }
 
     const other = layout.$.currentFishData[i];
-    const dist = std.length(fishData.position.sub(other.position));
+    const dist = std.distance(fishData.position, other.position);
     if (dist < layout.$.fishBehavior.separationDist) {
-      separation = separation.add(fishData.position.sub(other.position));
+      separation = separation + fishData.position - other.position;
     }
     if (dist < layout.$.fishBehavior.alignmentDist) {
-      alignment = alignment.add(other.direction);
+      alignment = alignment + other.direction;
       alignmentCount = alignmentCount + 1;
     }
     if (dist < layout.$.fishBehavior.cohesionDist) {
-      cohesion = cohesion.add(other.position);
+      cohesion = cohesion + other.position;
       cohesionCount = cohesionCount + 1;
     }
   }
   if (alignmentCount > 0) {
-    alignment = alignment.mul(1 / d.f32(alignmentCount));
+    alignment = alignment / alignmentCount;
   }
   if (cohesionCount > 0) {
-    cohesion = std.sub(
-      std.mul(1 / d.f32(cohesionCount), cohesion),
-      fishData.position,
-    );
+    cohesion = cohesion / cohesionCount - fishData.position;
   }
-  for (let i = 0; i < 3; i += 1) {
+  for (const i of tgpu.unroll([0, 1, 2])) {
     const repulsion = d.vec3f();
-    repulsion[i] = 1.0;
+    repulsion[i] = 1;
 
     const axisAquariumSize = p.aquariumSize[i] / 2;
     const axisPosition = fishData.position[i];
@@ -53,52 +49,34 @@ export const simulate = (fishIndex: number) => {
 
     if (axisPosition > axisAquariumSize - distance) {
       const str = axisPosition - (axisAquariumSize - distance);
-      wallRepulsion = wallRepulsion.sub(repulsion.mul(str));
+      wallRepulsion = wallRepulsion - (repulsion * str);
     }
 
     if (axisPosition < -axisAquariumSize + distance) {
       const str = -axisAquariumSize + distance - axisPosition;
-      wallRepulsion = wallRepulsion.add(repulsion.mul(str));
+      wallRepulsion = wallRepulsion + (repulsion * str);
     }
   }
 
-  if (layout.$.mouseRay.activated === 1) {
-    const proj = projectPointOnLine(
-      fishData.position,
-      layout.$.mouseRay.line,
-    );
-    const diff = fishData.position.sub(proj);
-    const limit = p.fishMouseRayRepulsionDistance;
-    const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
-    rayRepulsion = std.normalize(diff).mul(str);
-  }
+  const proj = projectPointOnLine(fishData.position, layout.$.mouseRay);
+  const diff = fishData.position - proj;
+  const limit = p.fishMouseRayRepulsionDistance;
+  const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
+  rayRepulsion = std.normalize(diff) * str;
 
   let direction = d.vec3f(fishData.direction);
 
-  direction = direction.add(
-    separation.mul(layout.$.fishBehavior.separationStr),
-  );
-  direction = direction.add(
-    alignment.mul(layout.$.fishBehavior.alignmentStr),
-  );
-  direction = direction.add(
-    cohesion.mul(layout.$.fishBehavior.cohesionStr),
-  );
-  direction = direction.add(
-    wallRepulsion.mul(p.fishWallRepulsionStrength),
-  );
-  direction = direction.add(
-    rayRepulsion.mul(p.fishMouseRayRepulsionStrength),
-  );
-  direction = std.normalize(direction).mul(
-    std.clamp(std.length(fishData.direction), 0, 0.01),
-  );
+  direction += separation * layout.$.fishBehavior.separationStr;
+  direction += alignment * layout.$.fishBehavior.alignmentStr;
+  direction += cohesion * layout.$.fishBehavior.cohesionStr;
+  direction += wallRepulsion * p.fishWallRepulsionStrength;
+  direction += rayRepulsion * p.fishMouseRayRepulsionStrength;
+  direction = std.normalize(direction) *
+    (std.clamp(std.length(fishData.direction), 0, 0.01));
 
-  const translation = direction.mul(
-    d.f32(std.min(999, layout.$.timePassed)) / 8,
-  );
+  const translation = direction * (std.min(999, layout.$.timePassed) / 8);
 
   const nextFishData = layout.$.nextFishData[fishIndex];
-  nextFishData.position = fishData.position.add(translation);
+  nextFishData.position = fishData.position + translation;
   nextFishData.direction = d.vec3f(direction);
 };

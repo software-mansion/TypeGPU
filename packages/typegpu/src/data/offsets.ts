@@ -4,7 +4,7 @@ import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import { isUnstruct, type Unstruct } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
-import type { BaseData, WgslStruct } from './wgslTypes.ts';
+import type { WgslStruct } from './wgslTypes.ts';
 
 export interface OffsetInfo {
   offset: number;
@@ -17,16 +17,18 @@ const cachedOffsets = new WeakMap<
   Record<string, OffsetInfo>
 >();
 
-export function offsetsForProps<T extends Record<string, BaseData>>(
-  struct: WgslStruct<T> | Unstruct<T>,
-): Record<keyof T, OffsetInfo> {
+export function offsetsForProps<T extends WgslStruct | Unstruct>(
+  struct: T,
+): Record<keyof T['propTypes'], OffsetInfo> {
+  type Key = keyof T['propTypes'];
+
   const cached = cachedOffsets.get(struct);
   if (cached) {
-    return cached as Record<keyof T, OffsetInfo>;
+    return cached as Record<Key, OffsetInfo>;
   }
 
   const measurer = new Measurer();
-  const offsets = {} as Record<keyof T, OffsetInfo>;
+  const offsets = {} as Record<Key, OffsetInfo>;
   let lastEntry: OffsetInfo | undefined;
 
   for (const key in struct.propTypes) {
@@ -47,7 +49,7 @@ export function offsetsForProps<T extends Record<string, BaseData>>(
     }
 
     const propSize = sizeOf(prop);
-    offsets[key] = { offset: measurer.size, size: propSize };
+    offsets[key as Key] = { offset: measurer.size, size: propSize };
     lastEntry = offsets[key];
     measurer.add(propSize);
   }
@@ -57,12 +59,6 @@ export function offsetsForProps<T extends Record<string, BaseData>>(
       measurer.size;
   }
 
-  cachedOffsets.set(
-    struct as
-      | WgslStruct<Record<string, BaseData>>
-      | Unstruct<Record<string, BaseData>>,
-    offsets,
-  );
-
+  cachedOffsets.set(struct, offsets);
   return offsets;
 }

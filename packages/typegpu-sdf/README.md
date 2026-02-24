@@ -9,11 +9,10 @@
 A set of signed distance functions and utilities for use in WebGPU/TypeGPU apps.
 
 ```ts
-import tgpu from 'typegpu';
+import tgpu, { d } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
-import * as d from 'typegpu/data';
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {

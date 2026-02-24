@@ -1,9 +1,9 @@
 import tgpu, {
+  d,
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuBuffer,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -39,17 +39,12 @@ import {
   Time,
   timeAccess,
 } from './schemas.ts';
-import { Camera, setupOrbitCamera } from './setup-orbit-camera.ts';
+import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const root = await tgpu.init();
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // static resources (created on the example load)
 
@@ -104,36 +99,39 @@ const dynamicResourcesBox = {
 };
 
 // Pipelines
-const computeCollisionsPipeline = root['~unstable']
-  .withCompute(computeCollisionsShader)
-  .createPipeline();
+const computeCollisionsPipeline = root
+  .createComputePipeline({ compute: computeCollisionsShader });
 
-const computeGravityPipeline = root['~unstable']
+const computeGravityPipeline = root
   .with(timeAccess, time)
-  .withCompute(computeGravityShader)
-  .createPipeline();
+  .createComputePipeline({ compute: computeGravityShader });
 
-const skyBoxPipeline = root['~unstable']
+const skyBoxPipeline = root
   .with(filteringSamplerSlot, sampler)
   .with(cameraAccess, camera)
   .with(skyBoxAccess, skyBox)
-  .withVertex(skyBoxVertex, renderSkyBoxVertexLayout.attrib)
-  .withFragment(skyBoxFragment, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    attribs: renderSkyBoxVertexLayout.attrib,
+    vertex: skyBoxVertex,
+    fragment: skyBoxFragment,
+  });
 
-const renderPipeline = root['~unstable']
+const renderPipeline = root
   .with(filteringSamplerSlot, sampler)
   .with(lightSourceAccess, lightSource)
   .with(cameraAccess, camera)
-  .withVertex(mainVertex, renderVertexLayout.attrib)
-  .withFragment(mainFragment, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
-  .createPipeline();
+  .createRenderPipeline({
+    attribs: renderVertexLayout.attrib,
+    vertex: mainVertex,
+    fragment: mainFragment,
+
+    primitive: { topology: 'triangle-list', cullMode: 'back' },
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -152,19 +150,16 @@ function render() {
 
   skyBoxPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(renderSkyBoxVertexLayout, skyBoxVertexBuffer)
     .draw(skyBoxVertices.length);
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       loadOp: 'load',
-      storeOp: 'store',
       clearValue: [0, 1, 0, 1], // background color
     })
     .withDepthStencilAttachment({
@@ -262,7 +257,7 @@ async function loadPreset(preset: Preset): Promise<DynamicResources> {
 
 // #region Camera controls
 
-export const controls = {
+export const controls = defineControls({
   preset: {
     initial: initialPreset,
     options: presets,
@@ -282,7 +277,7 @@ export const controls = {
       time.writePartial({ multiplier: 2 ** newValue });
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();

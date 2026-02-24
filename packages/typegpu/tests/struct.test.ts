@@ -18,7 +18,8 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
+import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { frexp } from '../src/std/numeric.ts';
 
@@ -390,6 +391,29 @@ describe('struct', () => {
       );
   });
 
+  it('throws when invalid number of arguments during code generation', () => {
+    const Boid = struct({
+      pos: vec2f,
+      vel: vec2f,
+    });
+
+    const f = () => {
+      'use gpu';
+      const b1 = Boid({ pos: vec2f(6), vel: vec2f(7) });
+
+      // @ts-expect-error
+      const b2 = Boid(b1, b1);
+      return;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Struct schemas should always be called with at most 1 argument]
+    `);
+  });
+
   it('allows builtin names as struct props', () => {
     const myStruct = struct({
       min: u32,
@@ -403,6 +427,37 @@ describe('struct', () => {
         subgroupAdd: i32,
       }"
     `);
+  });
+});
+
+describe('WgslStruct', () => {
+  it('default struct has sane properties (not any or never)', () => {
+    const foo = d.struct({}) as d.WgslStruct;
+
+    expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
+    expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.BaseData>>();
+  });
+
+  it('accepts every struct by default', () => {
+    const foo = (_aStruct: d.WgslStruct) => {
+      // Does something with the struct...
+    };
+
+    foo(d.struct({}));
+    foo(d.struct({ a: d.f32 }));
+  });
+
+  it('accepts structs with more properties', () => {
+    const foo = (_aStruct: d.WgslStruct<{ a: d.F32 }>) => {
+      // Does something with the struct...
+    };
+
+    // @ts-expect-error: It doesn't have the 'a' property
+    (() => foo(d.struct({})));
+    // Exact match
+    foo(d.struct({ a: d.f32 }));
+    // Extra properties
+    foo(d.struct({ a: d.f32, b: d.u32 }));
   });
 });
 

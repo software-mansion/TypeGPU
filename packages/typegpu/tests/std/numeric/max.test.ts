@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../../../src/index.ts';
-import * as d from '../../../src/data/index.ts';
-import * as std from '../../../src/std/index.ts';
+import tgpu, { d, std } from '../../../src/index.js';
 
 describe('max', () => {
   it('acts as identity when called with one argument', () => {

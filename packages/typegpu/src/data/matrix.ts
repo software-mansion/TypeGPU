@@ -1,14 +1,15 @@
 import { comptime } from '../core/function/comptime.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SelfResolvable } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
 import { f32 } from './numeric.ts';
 import { type ResolvedSnippet, snip } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
+  type BaseData,
   isVec,
   type m2x2f,
   type m3x3f,
@@ -64,7 +65,7 @@ function createMatSchema<
 >(
   options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
-  const construct = dualImpl({
+  const construct = callableSchema({
     name: options.type,
     normalImpl: (...args: (number | ColumnType)[]): ValueType => {
       const elements: number[] = [];
@@ -94,16 +95,17 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    ignoreImplicitCastWarning: true,
     signature: (...args) => ({
       argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
-      returnType: schema as unknown as AnyData,
+      returnType: schema as unknown as BaseData,
     }),
-    codegenImpl: (...args) => stitch`${options.type}(${args})`,
+    codegenImpl: (_ctx, args) => stitch`${options.type}(${args})`,
   });
 
   const schema = Object.assign(construct, {
+    [$internal]: {},
     type: options.type,
+    primitive: f32,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,
@@ -117,8 +119,7 @@ function createMatSchema<
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
-  (options.MatImpl.prototype as any).schema = schema;
+  options.MatImpl.prototype.schema = schema;
 
   return schema;
 }
@@ -604,7 +605,7 @@ export const translation4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
 });
 
@@ -626,7 +627,7 @@ export const scaling4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
 });
 
@@ -648,7 +649,7 @@ export const rotationX4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -670,7 +671,7 @@ export const rotationY4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -692,7 +693,7 @@ export const rotationZ4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
 });
 

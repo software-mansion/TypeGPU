@@ -1,5 +1,5 @@
-import tgpu, { type SampledFlag, type TgpuTexture } from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 type LUTData = {
   title: string;
@@ -24,90 +24,154 @@ const Adjustments = d.struct({
   saturation: d.f32,
 });
 
-let defaultLUTTexture:
-  & TgpuTexture<{ size: [1, 1, 1]; format: 'rgba16float'; dimension: '3d' }>
-  & SampledFlag;
-let currentLUTTexture:
-  & TgpuTexture<
-    { size: [number, number, number]; format: 'rgba16float'; dimension: '3d' }
-  >
-  & SampledFlag;
-let imageTexture:
-  & TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }>
-  & SampledFlag;
-
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
+// Fetching resources
+const response = await fetch('/TypeGPU/assets/image-tuning/tiger.png');
+const imageBitmap = await createImageBitmap(await response.blob());
+
+const imageTexture = root['~unstable']
+  .createTexture({
+    size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+  })
+  .$usage('sampled', 'render');
+
+imageTexture.write(imageBitmap);
+
+const imageView = imageTexture.createView(d.texture2d(d.f32));
+
+const defaultLUTTexture = root['~unstable']
+  .createTexture({
+    size: [1, 1, 1] as [number, number, number],
+    format: 'rgba16float',
+    dimension: '3d',
+  })
+  .$usage('sampled');
+
+let currentLUTTexture = defaultLUTTexture;
+
+const layout = tgpu.bindGroupLayout({
+  currentLUTTexture: { texture: d.texture3d(d.f32) },
 });
 
-const lutParamsBuffer = root.createBuffer(LUTParams).$usage('uniform');
-const adjustmentsBuffer = root.createBuffer(Adjustments).$usage('uniform');
+const lut = root.createUniform(LUTParams);
+const adjustments = root.createUniform(Adjustments);
 
-const shaderCode = /* wgsl */ `
-@vertex
-fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
-  const vertices = array<vec2f, 4>(
-    vec2f(-1.0, -1.0), // Bottom-left
-    vec2f(-1.0,  1.0), // Top-left
-    vec2f( 1.0, -1.0), // Bottom-right
-    vec2f( 1.0,  1.0)  // Top-right
+const lutSampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge',
+  addressModeW: 'clamp-to-edge',
+});
+
+const imageSampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const fragment = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const color = std.textureSample(imageView.$, imageSampler.$, uv).rgb;
+  const inputLuminance = std.dot(color, d.vec3f(0.299, 0.587, 0.114));
+  const normColor = std.saturate(
+    std.div(color.sub(lut.$.min), lut.$.max.sub(lut.$.min)),
   );
 
-  let pos = vertices[index];
-  var output: VertexOutput;
-  output.position = vec4f(pos, 0.0, 1.0);
+  const lutColor = std.select(
+    color,
+    std.textureSampleLevel(
+      layout.$.currentLUTTexture,
+      lutSampler.$,
+      normColor,
+      0,
+    ).rgb,
+    d.bool(lut.$.enabled),
+  );
+  const lutColorNormalized = std.saturate(lutColor);
 
-  output.uv = vec2f((pos.x + 1.0) * 0.5, 1.0 - (pos.y + 1.0) * 0.5);
-  return output;
-}
+  const exposureBiased = adjustments.$.exposure * 0.25;
+  const exposureColor = std.clamp(
+    lutColorNormalized.mul(2 ** exposureBiased),
+    d.vec3f(0),
+    d.vec3f(2),
+  );
+  const exposureLuminance = std.clamp(
+    inputLuminance * (2 ** exposureBiased),
+    0,
+    2,
+  );
 
-@fragment
-fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  let color = textureSample(inTexture, inSampler, uv).rgb;
-  let inputLuminance = dot(color, vec3f(0.299, 0.587, 0.114));
-  let normColor = clamp((color - lut.min) / (lut.max - lut.min), vec3f(0.0), vec3f(1.0));
+  const contrastColor = (exposureColor.sub(0.5))
+    .mul(adjustments.$.contrast)
+    .add(0.5);
 
-  let lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0.0).rgb, bool(lut.enabled));
-  let lutColorNormalized = clamp(lutColor, vec3f(0.0), vec3f(1.0));
+  const contrastLuminance = (exposureLuminance - 0.5) * adjustments.$.contrast +
+    0.5;
 
-  let exposureBiased = adjustments.exposure * 0.25;
-  let exposureColor = clamp(lutColorNormalized * pow(2.0, exposureBiased), vec3f(0.0), vec3f(2.0));
-  let exposureLuminance = clamp(inputLuminance * pow(2.0, exposureBiased), 0.0, 2.0);
+  const contrastColorLuminance = std.dot(
+    contrastColor,
+    d.vec3f(0.299, 0.587, 0.114),
+  );
 
-  let contrastColor = (exposureColor - vec3f(0.5)) * adjustments.contrast + vec3f(0.5);
-  let contrastLuminance = (exposureLuminance - 0.5) * adjustments.contrast + 0.5;
-  let contrastColorLuminance = dot(contrastColor, vec3f(0.299, 0.587, 0.114));
+  const highlightShift = adjustments.$.highlights - 1;
+  const highlightBiased = std.select(
+    highlightShift * 0.25,
+    highlightShift,
+    adjustments.$.highlights >= 1,
+  );
+  const highlightFactor = 1 + highlightBiased * 0.5 * contrastColorLuminance;
+  const highlightWeight = std.smoothstep(0.5, 1.0, contrastColorLuminance);
+  const highlightLuminanceAdjust = contrastLuminance * highlightFactor;
+  const highlightLuminance = std.mix(
+    contrastLuminance,
+    std.saturate(highlightLuminanceAdjust),
+    highlightWeight,
+  );
+  const highlightColor = std.mix(
+    contrastColor,
+    std.saturate(contrastColor.mul(highlightFactor)),
+    highlightWeight,
+  );
 
-  let highlightShift = adjustments.highlights - 1.0;
-  let highlightBiased = select(highlightShift * 0.25, highlightShift, adjustments.highlights >= 1.0);
-  let highlightFactor = 1.0 + highlightBiased * 0.5 * contrastColorLuminance;
-  let highlightWeight = smoothstep(0.5, 1.0, contrastColorLuminance);
-  let highlightLuminanceAdjust = contrastLuminance * highlightFactor;
-  let highlightLuminance = mix(contrastLuminance, clamp(highlightLuminanceAdjust, 0.0, 1.0), highlightWeight);
-  let highlightColor = mix(contrastColor, clamp(contrastColor * highlightFactor, vec3f(0.0), vec3f(1.0)), highlightWeight);
+  const shadowWeight = 1 - contrastColorLuminance;
+  const shadowAdjust = std.pow(
+    highlightColor,
+    d.vec3f(1 / adjustments.$.shadows),
+  );
+  const shadowLuminanceAdjust = highlightLuminance **
+    (1 / adjustments.$.shadows);
 
-  let shadowWeight = 1.0 - contrastColorLuminance;
-  let shadowAdjust = pow(highlightColor, vec3f(1.0 / adjustments.shadows));
-  let shadowLuminanceAdjust = pow(highlightLuminance, 1.0 / adjustments.shadows);
+  const toneColor = std.mix(highlightColor, shadowAdjust, shadowWeight);
+  const toneLuminance = std.mix(
+    highlightLuminance,
+    shadowLuminanceAdjust,
+    shadowWeight,
+  );
 
-  let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
-  let toneLuminance = mix(highlightLuminance, shadowLuminanceAdjust, shadowWeight);
+  const finalToneColor = std.saturate(toneColor);
+  const grayscaleColor = d.vec3f(toneLuminance);
+  const finalColor = std.mix(
+    grayscaleColor,
+    finalToneColor,
+    adjustments.$.saturation,
+  );
 
-  let finalToneColor = clamp(toneColor, vec3f(0.0), vec3f(1.0));
-  let grayscaleColor = vec3f(toneLuminance);
-  let finalColor = mix(grayscaleColor, finalToneColor, adjustments.saturation);
+  return d.vec4f(finalColor, 1);
+});
 
-  return vec4f(finalColor, 1.0);
-}
-`;
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 function render() {
   if (!defaultLUTTexture) {
@@ -115,122 +179,17 @@ function render() {
     return;
   }
 
-  const uniformLayout = tgpu.bindGroupLayout({
-    currentLUTTexture: { texture: d.texture3d(d.f32) },
-    lutSampler: { sampler: 'filtering' },
-    lut: { uniform: LUTParams },
-    adjustments: { uniform: Adjustments },
-  });
-
-  const renderLayout = tgpu.bindGroupLayout({
-    inTexture: { texture: d.texture2d(d.f32) },
-    inSampler: { sampler: 'filtering' },
-  });
-
-  const lutSampler = device.createSampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-    addressModeW: 'clamp-to-edge',
-  });
-
-  const imageSampler = device.createSampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-
-  const uniformBindGroup = root.createBindGroup(uniformLayout, {
+  const group = root.createBindGroup(layout, {
     currentLUTTexture: currentLUTTexture.createView(d.texture3d(d.f32)),
-    lutSampler,
-    lut: lutParamsBuffer,
-    adjustments: adjustmentsBuffer,
   });
 
-  const renderBindGroup = root.createBindGroup(renderLayout, {
-    inTexture: imageTexture.createView(d.texture2d(d.f32)),
-    inSampler: imageSampler,
-  });
-
-  const shaderModule = device.createShaderModule({
-    code: tgpu.resolve({
-      template: shaderCode,
-      externals: {
-        VertexOutput: d.struct({
-          position: d.builtin.position,
-          uv: d.location(0, d.vec2f),
-        }),
-        ...uniformLayout.bound,
-        ...renderLayout.bound,
-      },
-    }),
-  });
-
-  const renderPipeline = device.createRenderPipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [root.unwrap(uniformLayout), root.unwrap(renderLayout)],
-    }),
-    vertex: { module: shaderModule },
-    fragment: {
-      module: shaderModule,
-      targets: [{ format: presentationFormat }],
-    },
-    primitive: {
-      topology: 'triangle-strip',
-    },
-  });
-
-  const renderPassDescriptor: GPURenderPassDescriptor = {
-    colorAttachments: [{
-      view: context.getCurrentTexture().createView(),
+  renderPipeline
+    .with(group)
+    .withColorAttachment({
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
-    }],
-  };
-
-  const encoder = device.createCommandEncoder();
-  const pass = encoder.beginRenderPass(renderPassDescriptor);
-  pass.setPipeline(renderPipeline);
-  pass.setBindGroup(0, root.unwrap(uniformBindGroup));
-  pass.setBindGroup(1, root.unwrap(renderBindGroup));
-  pass.draw(4);
-  pass.end();
-
-  device.queue.submit([encoder.finish()]);
-}
-
-async function init() {
-  const response = await fetch('/TypeGPU/assets/image-tuning/tiger.png');
-  const imageBitmap = await createImageBitmap(await response.blob());
-  const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
-
-  imageTexture = root['~unstable']
-    .createTexture({
-      size: [srcWidth, srcHeight],
-      format: 'rgba8unorm',
     })
-    .$usage('sampled', 'render');
-
-  device.queue.copyExternalImageToTexture(
-    { source: imageBitmap },
-    { texture: root.unwrap(imageTexture) },
-    [srcWidth, srcHeight],
-  );
-
-  defaultLUTTexture = root['~unstable']
-    .createTexture({
-      size: [1, 1, 1],
-      format: 'rgba16float',
-      dimension: '3d',
-    })
-    .$usage('sampled');
-
-  currentLUTTexture = defaultLUTTexture;
-
-  lutParamsBuffer.writePartial({ enabled: 0 });
-
-  render();
+    .draw(3);
 }
 
 // #region Fetch and Parse LUT
@@ -292,7 +251,7 @@ async function updateLUT(file: string) {
     throw new Error(`${file} is corrupted`);
   }
 
-  lutParamsBuffer.write({
+  lut.write({
     size: parsed.size,
     min: d.vec3f(parsed.domain[0][0], parsed.domain[0][1], parsed.domain[0][2]),
     max: d.vec3f(parsed.domain[1][0], parsed.domain[1][1], parsed.domain[1][2]),
@@ -344,15 +303,16 @@ const LUTFiles = {
     'https://raw.githubusercontent.com/aras-p/smol-cube/refs/heads/main/tests/luts/tinyglade-Sam_Kolder.cube',
 };
 
-export const controls = {
+export const controls = defineControls({
   'color grading': {
+    initial: 'None',
     options: Object.keys(LUTFiles),
-    onSelectChange: async (selected: keyof typeof LUTFiles) => {
+    onSelectChange: async (selected) => {
       if (selected === 'None') {
         currentLUTTexture = defaultLUTTexture;
-        lutParamsBuffer.writePartial({ enabled: 0 });
+        lut.writePartial({ enabled: 0 });
       } else {
-        await updateLUT(LUTFiles[selected]);
+        await updateLUT(LUTFiles[selected as keyof typeof LUTFiles]);
       }
       render();
     },
@@ -362,8 +322,8 @@ export const controls = {
     min: -2.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
-      adjustmentsBuffer.writePartial({ exposure: value });
+    onSliderChange(value) {
+      adjustments.writePartial({ exposure: value });
       render();
     },
   },
@@ -372,8 +332,8 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
-      adjustmentsBuffer.writePartial({ contrast: value });
+    onSliderChange(value) {
+      adjustments.writePartial({ contrast: value });
       render();
     },
   },
@@ -382,8 +342,8 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
-      adjustmentsBuffer.writePartial({ highlights: value });
+    onSliderChange(value) {
+      adjustments.writePartial({ highlights: value });
       render();
     },
   },
@@ -392,8 +352,8 @@ export const controls = {
     min: 0.1,
     max: 1.9,
     step: 0.1,
-    onSliderChange(value: number) {
-      adjustmentsBuffer.writePartial({ shadows: value });
+    onSliderChange(value) {
+      adjustments.writePartial({ shadows: value });
       render();
     },
   },
@@ -402,12 +362,12 @@ export const controls = {
     min: 0.0,
     max: 2.0,
     step: 0.1,
-    onSliderChange(value: number) {
-      adjustmentsBuffer.writePartial({ saturation: value });
+    onSliderChange(value) {
+      adjustments.writePartial({ saturation: value });
       render();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
@@ -415,5 +375,4 @@ export function onCleanup() {
 
 // #endregion
 
-// Initialize Application
-init();
+render();

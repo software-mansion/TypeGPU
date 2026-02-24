@@ -113,7 +113,7 @@ for (const controls of Object.values(example)) {
         select.innerHTML = params.options
           .map((option) => `<option value="${option}">${option}</option>`)
           .join('');
-        select.value = params.initial ?? params.options[0];
+        select.value = params.initial;
 
         select.addEventListener('change', () => {
           params.onSelectChange(select.value);
@@ -129,9 +129,7 @@ for (const controls of Object.values(example)) {
         sliderContainer.style.flexDirection = 'column';
         sliderContainer.style.gap = '0.2rem';
 
-        const currentValues = params.initial
-          ? [...params.initial]
-          : [...params.min];
+        const currentValues = params.initial;
         const length = params.min.length;
         const labels = ['x', 'y', 'z', 'w'];
 
@@ -212,18 +210,18 @@ for (const controls of Object.values(example)) {
 
 type SelectControlParam = {
   onSelectChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
   options: string[];
 };
 
 type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;
-  initial?: boolean;
+  initial: boolean;
 };
 
 type SliderControlParam = {
   onSliderChange: (newValue: number) => void;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -231,7 +229,7 @@ type SliderControlParam = {
 
 type VectorSliderControlParam = {
   onVectorSliderChange: (newValue: number[]) => void;
-  initial?: number[];
+  initial: number[];
   min: number[];
   max: number[];
   step: number[];
@@ -239,7 +237,7 @@ type VectorSliderControlParam = {
 
 type ColorPickerControlParam = {
   onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial?: readonly [number, number, number];
+  initial: readonly [number, number, number];
 };
 
 type ButtonControlParam = {
@@ -248,7 +246,7 @@ type ButtonControlParam = {
 
 type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
 };
 
 type ExampleControlParam =

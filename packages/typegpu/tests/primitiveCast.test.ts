@@ -6,7 +6,7 @@ describe('u32', () => {
     expect(u32(10)).toBe(10);
     expect(u32(10.5)).toBe(10);
     expect(u32(-10)).toBe(4294967286);
-    expect(u32(-10.5)).toBe(4294967286);
+    expect(u32(-10.5)).toBe(0);
     expect(u32(4294967295)).toBe(4294967295);
     expect(u32(4294967296)).toBe(0);
     expect(u32(4294967297)).toBe(1);

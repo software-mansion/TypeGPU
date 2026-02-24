@@ -1,22 +1,15 @@
-import tgpu, { type TgpuRenderPipeline } from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
+import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
 import { getPRNG, type PRNG } from './prngs.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const gridSizeUniform = root.createUniform(d.f32, c.initialGridSize);
 const canvasRatioUniform = root.createUniform(
@@ -24,7 +17,7 @@ const canvasRatioUniform = root.createUniform(
   canvas.width / canvas.height,
 );
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -36,38 +29,33 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(d.vec3f(randf.sample()), 1.0);
 });
 
-const pipelineCache = new Map<PRNG, TgpuRenderPipeline>();
+const pipelineCache = new Map<PRNG, TgpuRenderPipeline<d.Vec4f>>();
 let prng: PRNG = c.initialPRNG;
 
 const redraw = () => {
   let pipeline = pipelineCache.get(prng);
   if (!pipeline) {
-    pipeline = root['~unstable']
+    pipeline = root
       .with(randomGeneratorSlot, getPRNG(prng))
-      .withVertex(fullScreenTriangle)
-      .withFragment(
-        fragmentShader,
-        { format: presentationFormat },
-      )
-      .createPipeline();
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: fragmentShader,
+        targets: { format: presentationFormat },
+      });
     pipelineCache.set(prng, pipeline);
   }
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 };
 
 // #region Example controls & Cleanup
-export const controls = {
+export const controls = defineControls({
   'PRNG': {
     initial: c.initialPRNG,
     options: c.prngs,
-    onSelectChange: (value: PRNG) => {
+    onSelectChange: (value) => {
       prng = value;
       redraw();
     },
@@ -75,7 +63,7 @@ export const controls = {
   'Grid Size': {
     initial: c.initialGridSize,
     options: c.gridSizes,
-    onSelectChange: (value: number) => {
+    onSelectChange: (value) => {
       gridSizeUniform.write(value);
       redraw();
     },
@@ -86,20 +74,19 @@ export const controls = {
       c.prngs
         .map((prng) =>
           tgpu.resolve([
-            root['~unstable']
+            root
               .with(randomGeneratorSlot, getPRNG(prng))
-              .withVertex(fullScreenTriangle)
-              .withFragment(
-                fragmentShader,
-                { format: presentationFormat },
-              )
-              .createPipeline(),
+              .createRenderPipeline({
+                vertex: common.fullScreenTriangle,
+                fragment: fragmentShader,
+                targets: { format: presentationFormat },
+              }),
           ], { names: namespace })
         )
         .map((r) => root.device.createShaderModule({ code: r }));
     },
   },
-};
+});
 
 const resizeObserver = new ResizeObserver(() => {
   canvasRatioUniform.write(canvas.width / canvas.height);

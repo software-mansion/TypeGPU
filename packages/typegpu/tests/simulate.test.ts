@@ -1,6 +1,5 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('tgpu.simulate()', () => {

@@ -6,7 +6,10 @@ import Editor, {
 import type { editor } from 'monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
-import type { ExampleSrcFile } from '../utils/examples/types.ts';
+import type {
+  ExampleCommonFile,
+  ExampleSrcFile,
+} from '../utils/examples/types.ts';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
 
 function handleEditorWillMount(monaco: Monaco) {
@@ -56,7 +59,7 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 }
 
 type Props = {
-  file: ExampleSrcFile;
+  file: ExampleSrcFile | ExampleCommonFile;
   shown: boolean;
 };
 
@@ -68,6 +71,11 @@ const createCodeEditorComponent = (
 (props: Props) => {
   const { file, shown } = props;
 
+  // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
+  const path = 'common' in file
+    ? `common/${file.path}`
+    : `${file.exampleKey.replace('--', '/')}/${file.path}`;
+
   return (
     <div
       className={shown
@@ -76,8 +84,8 @@ const createCodeEditorComponent = (
     >
       <Editor
         defaultLanguage={language}
-        value={file.content}
-        path={file.path}
+        value={file.tsnotoverContent ?? file.content}
+        path={path}
         beforeMount={beforeMount}
         onMount={onMount}
         options={{

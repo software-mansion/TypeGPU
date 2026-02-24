@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
+import tgpu, { d } from 'typegpu';
 import { BPETER, LCG, randf, type StatefulGenerator } from '@typegpu/noise';
-import * as d from 'typegpu/data';
-
 import { Distribution, Generator, PlotType, type PRNG } from './types.ts';
 import * as c from './constants.ts';
 

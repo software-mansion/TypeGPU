@@ -1,53 +1,45 @@
-import cs from 'classnames';
-import { useAtom, useAtomValue } from 'jotai';
+import { useSetAtom } from 'jotai';
 import type { ReactNode } from 'react';
 import { useId, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom.ts';
 import {
+  codeEditorShownAtom,
+  experimentalExamplesShownAtom,
   menuShownAtom,
-  menuShownMobileAtom,
-} from '../utils/examples/menuShownAtom.ts';
+} from '../utils/examples/exampleViewStateAtoms.ts';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 import { Button } from './design/Button.tsx';
 import { Toggle } from './design/Toggle.tsx';
-import { experimentalExamplesShownAtom } from '../utils/examples/showExperimentalExamplesAtom.ts';
+import { useHydratedAtom } from '../utils/useHydrated.ts';
 
 interface ExampleLayoutProps {
   children?: ReactNode | undefined;
 }
 
 export function ExampleLayout(props: ExampleLayoutProps) {
-  const menuShown = useAtomValue(menuShownAtom);
-  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [codeShownMobile, setCodeShownMobile] = useAtom(
-    codeEditorShownMobileAtom,
-  );
+  const [menuShown, setMenuShown] = useHydratedAtom(menuShownAtom, false);
+  const [codeShown, setCodeShown] = useHydratedAtom(codeEditorShownAtom, false);
 
   return (
     <>
       <div className='absolute top-4 left-4 z-50 flex gap-2 text-sm md:hidden'>
-        {menuShownMobile
-          ? null
-          : (
-            <Button onClick={() => setMenuShownMobile(true)}>
-              <img src={HamburgerSvg.src} alt='menu' className='-m-2 h-6 w-6' />
-            </Button>
-          )}
+        {!menuShown && (
+          <Button onClick={() => setMenuShown(true)}>
+            <img src={HamburgerSvg.src} alt='menu' className='-m-2 h-6 w-6' />
+          </Button>
+        )}
 
-        <Button
-          onClick={() =>
-            setCodeShownMobile((codeShownMobile) => !codeShownMobile)}
-        >
-          {codeShownMobile ? 'Preview' : 'Code'}
+        <Button onClick={() => setCodeShown((prev) => !prev)}>
+          {/* Applying the actual label only after the component has been hydrated */}
+          {codeShown ? 'Preview' : 'Code'}
         </Button>
       </div>
 
       <div className='box-border flex h-dvh gap-4 bg-tameplum-50 p-4'>
-        {menuShown || menuShownMobile ? <SideMenu /> : null}
+        {menuShown && <SideMenu />}
         {props.children}
       </div>
     </>
@@ -55,24 +47,16 @@ export function ExampleLayout(props: ExampleLayoutProps) {
 }
 
 function SideMenu() {
-  const menuShown = useAtomValue(menuShownAtom);
-  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [experimentalShowing, setExperimentalShowing] = useAtom(
+  const setMenuShown = useSetAtom(menuShownAtom);
+  const [experimentalShowing, setExperimentalShowing] = useHydratedAtom(
     experimentalExamplesShownAtom,
+    true,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
 
   return (
-    <aside
-      className={cs(
-        menuShown ? '' : 'md:hidden',
-        menuShownMobile
-          ? 'absolute inset-0 z-50 w-full md:static'
-          : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:w-75 md:rounded-2xl',
-      )}
-    >
+    <aside className='absolute inset-0 z-50 box-border flex w-full flex-col bg-white md:static md:w-75 md:rounded-2xl'>
       <header className='p-5'>
         <div className='grid place-items-center'>
           <a
@@ -87,11 +71,9 @@ function SideMenu() {
           </a>
         </div>
         <div className='absolute top-5 right-5 md:hidden'>
-          {menuShownMobile && (
-            <Button onClick={() => setMenuShownMobile(false)}>
-              <img src={CrossSvg.src} alt='Close menu' className='h-3 w-3' />
-            </Button>
-          )}
+          <Button onClick={() => setMenuShown(false)}>
+            <img src={CrossSvg.src} alt='Close menu' className='h-3 w-3' />
+          </Button>
         </div>
       </header>
 
@@ -115,7 +97,7 @@ function SideMenu() {
         </section>
 
         <SearchableExampleList
-          excludeTags={[experimentalShowing ? [] : ['experimental']].flat()}
+          excludeTags={experimentalShowing ? [] : ['experimental']}
           scrollContainerRef={scrollRef}
         />
       </div>

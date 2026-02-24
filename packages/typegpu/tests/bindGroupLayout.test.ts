@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, {
+import {
+  d,
+  tgpu,
   type TgpuBindGroupLayout,
   type TgpuBuffer,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
   type TgpuTextureView,
   type UniformFlag,
-} from '../src/index.ts';
-import { getName } from '../src/shared/meta.ts';
+} from '../src/index.js';
 import {
   type ExtractBindGroupInputFromLayout,
   MissingBindingError,
@@ -19,6 +16,7 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
 import { it } from './utils/extendedIt.ts';
+// oxlint-disable-next-line import/no-unassigned-import imported for side effects
 import './utils/webgpuGlobals.ts';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
@@ -27,60 +25,6 @@ const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
   GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
-  it('names bound elements', () => {
-    const layout = tgpu.bindGroupLayout({
-      uniBuffer: { uniform: d.vec3f },
-      stoBuffer: { storage: d.vec3f },
-      defTexture: { texture: d.textureDepth2d() },
-      stoTexture: {
-        storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
-      },
-      extTexture: { externalTexture: d.textureExternal() },
-      compSampler: { sampler: 'comparison' },
-      filtSampler: { sampler: 'filtering' },
-    });
-
-    expect(getName(layout.bound.uniBuffer)).toBe('uniBuffer');
-    expect(getName(layout.bound.stoBuffer)).toBe('stoBuffer');
-    expect(getName(layout.bound.defTexture)).toBe('defTexture');
-    expect(getName(layout.bound.stoTexture)).toBe('stoTexture');
-    expect(getName(layout.bound.extTexture)).toBe('extTexture');
-    expect(getName(layout.bound.compSampler)).toBe('compSampler');
-    expect(getName(layout.bound.filtSampler)).toBe('filtSampler');
-  });
-
-  it('infers the bound type of a uniform entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      position: { uniform: d.vec3f },
-    });
-
-    const { position } = layout.bound;
-
-    expectTypeOf(position).toEqualTypeOf<TgpuBufferUniform<d.Vec3f>>();
-  });
-
-  it('infers the bound type of a readonly storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      a: { storage: d.vec3f },
-      b: { storage: d.vec3f, access: 'readonly' },
-    });
-
-    const { a, b } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferReadonly<d.Vec3f>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<d.Vec3f>>();
-  });
-
-  it('infers the bound type of a mutable storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
-      a: { storage: d.vec3f, access: 'mutable' },
-    });
-
-    const { a } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<d.Vec3f>>();
-  });
-
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
     const layout = tgpu.bindGroupLayout({
       a: {
@@ -107,10 +51,8 @@ describe('TgpuBindGroupLayout', () => {
       }>
     >();
 
-    const { a, b } = layout.bound;
-
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<d.WgslArray<d.U32>>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<d.WgslArray<d.Vec3f>>>();
+    expectTypeOf<typeof layout.$.a>().toEqualTypeOf<number[]>();
+    expectTypeOf<typeof layout.$.b>().toEqualTypeOf<d.v3f[]>();
 
     const aBuffer = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
     const bBuffer = root.createBuffer(d.arrayOf(d.vec3f, 4)).$usage('storage');
@@ -217,10 +159,8 @@ describe('TgpuBindGroupLayout', () => {
       fooTexture: { texture: d.texture1d(d.f32) },
     });
 
-    const fooTexture = layout.bound.fooTexture;
-
-    const main = tgpu.fn([])`() { textureLoad(fooTexture); }`
-      .$uses({ fooTexture });
+    const main = tgpu.fn([])`() { textureLoad(layout.$.fooTexture); }`
+      .$uses({ layout });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
@@ -242,7 +182,7 @@ describe('TgpuBindGroupLayout', () => {
     const getFirst = () => {
       'use gpu';
       const boids = layout.$.boids;
-      // biome-ignore lint/style/noNonNullAssertion: it's definitely there
+      // oxlint-disable-next-line typescript/no-non-null-assertion it's definitely there
       return Boid(boids[0]!);
     };
 

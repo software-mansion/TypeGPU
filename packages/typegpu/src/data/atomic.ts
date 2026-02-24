@@ -34,7 +34,7 @@ export function atomic<TSchema extends U32 | I32>(
 // --------------
 
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
-  public readonly [$internal] = true;
+  public readonly [$internal] = {};
   public readonly type = 'atomic';
 
   // Type-tokens, not available at runtime

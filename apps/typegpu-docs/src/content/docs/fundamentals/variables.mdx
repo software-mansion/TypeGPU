@@ -11,14 +11,13 @@ For example, in the code snippet below, the external `counter` is automatically 
 In this case, the group and index match the automatically generated "catchall" bind group, used for fixed, "bindless" resources.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
 const counter = root.createMutable(d.vec3f, d.vec3f(0, 1, 0));
 
-const increment = tgpu['~unstable'].computeFn({
+const increment = tgpu.computeFn({
   in: { num: d.builtin.numWorkgroups },
   workgroupSize: [1],
 })((input) => {
@@ -28,7 +27,7 @@ const increment = tgpu['~unstable'].computeFn({
   counter.$.z += d.f32(input.num.x);
 });
 
-const pipeline = root['~unstable'].withCompute(increment).createPipeline();
+const pipeline = root.createComputePipeline({ compute: increment });
 
 console.log(tgpu.resolve([pipeline]));
 ```
@@ -54,8 +53,7 @@ struct increment_Input {
 For variables of `private` and `workgroup` address spaces, TypeGPU provides `tgpu.privateVar()` and `tgpu.workgroupVar()` constructor functions.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -67,7 +65,7 @@ const getNext = () => {
   return [42, 418, 23][threadCounter.$];
 };
 
-const myComputeFn = tgpu['~unstable'].computeFn({
+const myComputeFn = tgpu.computeFn({
   workgroupSize: [64],
 })(() => {
   const a = getNext();
@@ -84,8 +82,7 @@ In JS, a `const` is a reference that cannot be reassigned, while in WGSL, it mea
 Therefore, to use the WGSL `const`, TypeGPU provides `tgpu.const()`, an interface analogous to `tgpu.privateVar()` and `tgpu.workgroupVar()`, with the only difference being that the previously optional init value is now required.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const Boid = d.struct({
   pos: d.vec3f,

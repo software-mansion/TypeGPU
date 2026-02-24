@@ -20,6 +20,7 @@ import {
 } from 'typegpu/data';
 import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   adapter: {
@@ -29,14 +30,9 @@ const root = await tgpu.init({
 const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const Uniforms = struct({
   stepSize: f32,
@@ -109,7 +105,7 @@ const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
 });
 
 const WORKGROUP_SIZE = 64;
-const advectCompute = tgpu['~unstable'].computeFn({
+const advectCompute = tgpu.computeFn({
   in: { globalInvocationId: builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ globalInvocationId }) => {
@@ -129,7 +125,7 @@ const advectCompute = tgpu['~unstable'].computeFn({
 
 const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -191,7 +187,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     position: vec2f,
     trailPosition: f32,
@@ -218,20 +214,17 @@ const alphaBlend: GPUBlendState = {
 };
 
 function createPipelines() {
-  const advect = root['~unstable']
-    .withCompute(advectCompute)
-    .createPipeline();
+  const advect = root.createComputePipeline({ compute: advectCompute });
 
-  const fill = root['~unstable']
+  const fill = root
     .with(joinSlot, lineJoins.round)
     .with(startCapSlot, lineCaps.arrow)
     .with(endCapSlot, lineCaps.butt)
-    .withVertex(mainVertex, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: mainFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
     })
-    .createPipeline()
     .withIndexBuffer(indexBuffer);
 
   return {
@@ -246,18 +239,16 @@ const draw = () => {
   uniformsBuffer.writePartial({ frameCount });
 
   pipelines.advect
-    .with(bindGroupLayoutWritable, bindGroupWritable)
+    .with(bindGroupWritable)
     .dispatchWorkgroups(
       Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE),
     );
 
   pipelines.fill
-    .with(bindGroupLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .drawIndexed(
       lineSegmentIndicesCapLevel1.length,
@@ -276,7 +267,7 @@ const runAnimationFrame = () => {
     draw();
     frameCount++;
     framesInFlight.add(frameIdLocal);
-    device.queue.onSubmittedWorkDone().then(() => {
+    void device.queue.onSubmittedWorkDone().then(() => {
       framesInFlight.delete(frameIdLocal);
     });
   }
@@ -284,14 +275,14 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-export const controls = {
+export const controls = defineControls({
   'Play': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       play = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

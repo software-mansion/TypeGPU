@@ -5,6 +5,7 @@ import {
   resolve as resolveImpl,
 } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
+import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslExtension } from '../../wgslExtensions.ts';
@@ -36,7 +37,7 @@ export interface TgpuResolveOptions {
    */
   enableExtensions?: WgslExtension[] | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
@@ -240,8 +241,16 @@ function resolveFromArray(
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: <we just resolve>
-      items.forEach((item) => ctx.resolve(item));
+      for (const item of items) {
+        // Support for: tgpu.resolve([layout])
+        if (isBindGroupLayout(item)) {
+          for (const binding of Object.values(item[$internal].bound)) {
+            ctx.resolve(binding);
+          }
+        } else {
+          ctx.resolve(item);
+        }
+      }
       return snip('', Void, 'runtime');
     },
     toString: () => '<root>',
@@ -268,5 +277,5 @@ function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
       `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
     );
   }
-  return pipelines[0]?.[$internal].branch;
+  return pipelines[0]?.[$internal].root;
 }

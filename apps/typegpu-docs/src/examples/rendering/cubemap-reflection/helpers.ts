@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 export const unpackVec2u = (packed: d.v2u): d.v4f => {
   'use gpu';

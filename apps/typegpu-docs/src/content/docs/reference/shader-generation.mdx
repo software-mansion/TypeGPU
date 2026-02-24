@@ -16,7 +16,7 @@ We found that we don't always have enough information to do both phases as a bui
 For example, the type of a struct could only be known at runtime, or could be imported from another file, which complicates static analysis:
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 declare const getUserSettings: () => Promise<{ halfPrecision: boolean }>;
 // ---cut---

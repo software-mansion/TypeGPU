@@ -59,7 +59,7 @@ describe('jump flood (voronoi) example', () => {
         let randomVal = randFloat01();
         let isSeed = (randomVal >= seedThresholdUniform);
         let paletteColor = palette[u32(floor((randFloat01() * 4f)))];
-        var variation = (vec3f((randFloat01() - 0.5f), (randFloat01() - 0.5f), (randFloat01() - 0.5f)) * 0.15);
+        var variation = (vec3f((randFloat01() - 0.5f), (randFloat01() - 0.5f), (randFloat01() - 0.5f)) * 0.15f);
         var color = select(vec4f(), vec4f(saturate((paletteColor + variation)), 1f), isSeed);
         var coord = select(vec2f(-1), (vec2f(f32(x), f32(y)) / vec2f(size)), isSeed);
         textureStore(writeView, vec2i(i32(x), i32(y)), 0, color);
@@ -120,7 +120,7 @@ describe('jump flood (voronoi) example', () => {
         var dims = textureDimensions(tex);
         var samplePos = (pos + offset);
         let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
-        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1)));
+        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
         var loadedColor = textureLoad(tex, safePos, 0);
         var loadedCoord = textureLoad(tex, safePos, 1).xy;
         return SampleResult(select(loadedColor, vec4f(), outOfBounds), select(loadedCoord, vec2f(-1), outOfBounds));
@@ -133,16 +133,111 @@ describe('jump flood (voronoi) example', () => {
         var size = textureDimensions(readView);
         var minDist = 1e+20;
         var bestSample = SampleResult(vec4f(), vec2f(-1));
-        for (var dy = -1; (dy <= 1i); dy++) {
-          for (var dx = -1; (dx <= 1i); dx++) {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((dx * offset), (dy * offset)));
-            if ((sample.coord.x < 0f)) {
-              continue;
+        // unrolled iteration #0
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
             }
-            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-            if ((dist < minDist)) {
-              minDist = dist;
-              bestSample = sample;
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+        }
+        // unrolled iteration #1
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+        }
+        // unrolled iteration #2
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
+            if ((sample.coord.x >= 0f)) {
+              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+              if ((dist < minDist)) {
+                minDist = dist;
+                bestSample = sample;
+              }
             }
           }
         }

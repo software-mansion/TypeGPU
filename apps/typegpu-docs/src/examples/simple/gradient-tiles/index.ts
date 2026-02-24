@@ -1,140 +1,51 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-
-const Span = d.struct({
-  x: d.u32,
-  y: d.u32,
-});
-
-// A description of what data our shader program
-// needs from the outside.
-const layout = tgpu
-  .bindGroupLayout({
-    span: { uniform: Span },
-  })
-  .$idx(0);
-
-const shaderCode = tgpu.resolve({
-  template: /* wgsl */ `
-    struct VertexOutput {
-      @builtin(position) pos: vec4f,
-      @location(0) uv: vec2f,
-    }
-
-    @vertex
-    fn main_vertex(
-      @builtin(vertex_index) vertexIndex: u32,
-    ) -> VertexOutput {
-      var pos = array<vec2f, 4>(
-        vec2(1, 1), // top-right
-        vec2(-1, 1), // top-left
-        vec2(1, -1), // bottom-right
-        vec2(-1, -1) // bottom-left
-      );
-      var out: VertexOutput;
-      out.pos = vec4f(pos[vertexIndex], 0.0, 1.0);
-      out.uv = (pos[vertexIndex] + 1) * 0.5;
-      return out;
-    }
-
-    @fragment
-    fn main_fragment(
-      @location(0) uv: vec2f,
-    ) -> @location(0) vec4f {
-      let red = floor(uv.x * f32(_EXT_.span.x)) / f32(_EXT_.span.x);
-      let green = floor(uv.y * f32(_EXT_.span.y)) / f32(_EXT_.span.y);
-      return vec4(red, green, 0.5, 1.0);
-    }
-  `,
-  externals: {
-    // Linking the shader template with our layout
-    _EXT_: { span: layout.bound.span },
-  },
-});
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
+const spanUniform = root.createUniform(d.vec2f);
+
+const fragment = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})(({ uv }) => {
+  const red = std.floor(uv.x * spanUniform.$.x) / spanUniform.$.x;
+  const green = std.floor(uv.y * spanUniform.$.y) / spanUniform.$.y;
+  return d.vec4f(red, green, 0.5, 1.0);
 });
 
-const shaderModule = device.createShaderModule({ code: shaderCode });
-
-const pipeline = device.createRenderPipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(layout)],
-  }),
-  vertex: {
-    module: shaderModule,
-  },
-  fragment: {
-    module: shaderModule,
-    targets: [
-      {
-        format: presentationFormat,
-      },
-    ],
-  },
-  primitive: {
-    topology: 'triangle-strip',
-  },
+const pipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
 });
 
-const spanBuffer = root.createBuffer(Span, { x: 10, y: 10 }).$usage('uniform');
-
-const bindGroup = root.createBindGroup(layout, {
-  span: spanBuffer,
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 function draw(spanXValue: number, spanYValue: number) {
-  const textureView = context.getCurrentTexture().createView();
-  const renderPassDescriptor: GPURenderPassDescriptor = {
-    colorAttachments: [
-      {
-        view: textureView,
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  };
+  spanUniform.write(d.vec2f(spanXValue, spanYValue));
 
-  spanBuffer.write({ x: spanXValue, y: spanYValue });
-
-  const commandEncoder = device.createCommandEncoder();
-  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, root.unwrap(bindGroup));
-  passEncoder.draw(4);
-  passEncoder.end();
-
-  device.queue.submit([commandEncoder.finish()]);
+  pipeline
+    .withColorAttachment({ view: context })
+    .draw(3);
 }
 
 let spanX = 10;
 let spanY = 10;
 
-// deferring to wait for canvas to init
-setTimeout(() => {
-  draw(spanX, spanY);
-}, 100);
+draw(spanX, spanY);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'x span ↔️': {
-    initial: spanY,
+    initial: spanX,
     min: 0,
     max: 20,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spanX = newValue;
       draw(spanX, spanY);
     },
@@ -145,12 +56,12 @@ export const controls = {
     min: 0,
     max: 20,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spanY = newValue;
       draw(spanX, spanY);
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

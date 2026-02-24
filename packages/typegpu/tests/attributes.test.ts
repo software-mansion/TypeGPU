@@ -1,6 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 
 describe('attributes', () => {
   it('adds attributes in the correct order', () => {

@@ -1,7 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { distSampleLayout, paramsAccessor } from './types.ts';
+import tgpu, { d, std } from 'typegpu';
+import { distSampleLayout, paramsAccess } from './types.ts';
 
 const outsideGradient = tgpu.const(d.arrayOf(d.vec3f, 5), [
   d.vec3f(0.05, 0.05, 0.15),
@@ -19,7 +17,7 @@ const insideGradient = tgpu.const(d.arrayOf(d.vec3f, 5), [
   d.vec3f(0.9, 1.0, 0.95),
 ]);
 
-export const distanceFrag = tgpu['~unstable'].fragmentFn({
+export const distanceFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -31,10 +29,10 @@ export const distanceFrag = tgpu['~unstable'].fragmentFn({
     uv,
   ).x;
 
-  if (paramsAccessor.$.showInside === 0 && dist < 0) {
+  if (paramsAccess.$.showInside === 0 && dist < 0) {
     dist = 0;
   }
-  if (paramsAccessor.$.showOutside === 0 && dist > 0) {
+  if (paramsAccess.$.showOutside === 0 && dist > 0) {
     dist = 0;
   }
 

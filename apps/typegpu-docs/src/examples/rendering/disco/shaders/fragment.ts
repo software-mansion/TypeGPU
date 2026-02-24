@@ -1,8 +1,6 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { palette } from '../utils.ts';
+import tgpu, { d, std } from 'typegpu';
 import { resolutionAccess, timeAccess } from '../consts.ts';
+import { palette } from '../utils.ts';
 
 const aspectCorrected = (uv: d.v2f): d.v2f => {
   'use gpu';
@@ -22,7 +20,7 @@ const accumulate = tgpu.fn(
 )((acc, col, weight) => acc.add(col.mul(weight)));
 
 // Variation1
-export const mainFragment1 = tgpu['~unstable'].fragmentFn({
+export const mainFragment1 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -50,7 +48,7 @@ export const mainFragment1 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation2
-export const mainFragment2 = tgpu['~unstable'].fragmentFn({
+export const mainFragment2 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -77,7 +75,7 @@ export const mainFragment2 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation3
-export const mainFragment3 = tgpu['~unstable'].fragmentFn({
+export const mainFragment3 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -120,7 +118,7 @@ export const mainFragment3 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation4
-export const mainFragment4 = tgpu['~unstable'].fragmentFn({
+export const mainFragment4 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -167,7 +165,7 @@ export const mainFragment4 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation5
-export const mainFragment5 = tgpu['~unstable'].fragmentFn({
+export const mainFragment5 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -203,7 +201,7 @@ export const mainFragment5 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation6
-export const mainFragment6 = tgpu['~unstable'].fragmentFn({
+export const mainFragment6 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -241,7 +239,7 @@ export const mainFragment6 = tgpu['~unstable'].fragmentFn({
 });
 
 // Variation7
-export const mainFragment7 = tgpu['~unstable'].fragmentFn({
+export const mainFragment7 = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {

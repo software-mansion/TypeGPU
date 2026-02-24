@@ -5,14 +5,11 @@
 import { randf } from '@typegpu/noise';
 import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {
-  TransformControls,
-  type TransformControlsMode,
-} from 'three/addons/controls/TransformControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -38,7 +35,7 @@ scene.add(directionalLight);
 
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 renderer.setClearColor('#000000');
 
 await renderer.init();
@@ -187,7 +184,7 @@ const initCompute = t3.toTSL(() => {
 });
 
 const reset = () => renderer.compute(initCompute.compute(count));
-reset();
+void reset();
 
 // update compute
 
@@ -298,21 +295,17 @@ observer.observe(canvas);
 
 async function animate() {
   orbitControls.update();
-  renderer.compute(updateCompute);
+  void renderer.compute(updateCompute);
   renderer.render(scene, camera);
 }
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Controls Mode': {
     initial: 'translate',
-    options: [
-      'translate',
-      'rotate',
-      'none',
-    ],
-    onSelectChange: (value: string) => {
+    options: ['translate', 'rotate', 'none'],
+    onSelectChange: (value) => {
       for (const { controls } of attractorsHelpers) {
         if (value === 'none') {
           controls.getHelper().visible = false;
@@ -320,14 +313,14 @@ export const controls = {
         } else {
           controls.getHelper().visible = true;
           controls.enabled = true;
-          controls.setMode(value as TransformControlsMode);
+          controls.setMode(value);
         }
       }
     },
   },
   'Arrow visible': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       for (const { arrow } of attractorsHelpers) {
         arrow.visible = value;
       }
@@ -338,7 +331,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       attractorMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -347,7 +340,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       particleGlobalMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -356,7 +349,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       maxSpeed.node.value = newValue;
     },
   },
@@ -365,7 +358,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       velocityDamping.node.value = newValue;
     },
   },
@@ -374,7 +367,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spinningStrength.node.value = newValue;
     },
   },
@@ -383,7 +376,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       scale.value = newValue;
     },
   },
@@ -392,26 +385,34 @@ export const controls = {
     min: 0,
     max: 20,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       boundHalfExtent.node.value = newValue;
     },
   },
   'Color A': {
-    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(
+      colorA.node.value.r,
+      colorA.node.value.g,
+      colorA.node.value.b,
+    ),
+    onColorChange: (newValue) => {
       colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(
+      colorB.node.value.r,
+      colorB.node.value.g,
+      colorB.node.value.b,
+    ),
+    onColorChange: (newValue) => {
       colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Reset Particles': {
     onButtonClick: reset,
   },
-};
+});
 
 export function onCleanup() {
   observer.disconnect();

@@ -1,7 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import * as p from './params.ts';
 import {
   ModelVertexInput,
@@ -10,10 +8,11 @@ import {
 } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
-export const vertexShader = tgpu['~unstable'].vertexFn({
+export const vertexShader = tgpu.vertexFn({
   in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
   out: ModelVertexOutput,
 })((input) => {
+  'use gpu';
   // rotate the model so that it aligns with model's direction of movement
   // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
   const currentModelData = layout.$.modelData[input.instanceIndex];
@@ -44,32 +43,18 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   const yawMatrix = d.mat4x4f.rotationY(yaw);
   const translationMatrix = d.mat4x4f.translation(currentModelData.position);
 
-  const worldPosition = std.mul(
-    translationMatrix,
-    std.mul(
-      yawMatrix,
-      std.mul(
-        pitchMatrix,
-        std.mul(
-          scaleMatrix,
-          d.vec4f(wavedVertex.position, 1),
-        ),
-      ),
-    ),
-  );
+  const worldPosition = translationMatrix * yawMatrix * pitchMatrix *
+    scaleMatrix * d.vec4f(wavedVertex.position, 1);
 
   // calculate where the normal vector points to
   const worldNormal = std.normalize(
-    std.mul(yawMatrix, std.mul(pitchMatrix, d.vec4f(wavedVertex.normal, 1)))
-      .xyz,
+    (yawMatrix * pitchMatrix * d.vec4f(wavedVertex.normal, 1)).xyz,
   );
 
   // project the world position into the camera
   const worldPositionUniform = worldPosition;
-  const canvasPosition = std.mul(
-    layout.$.camera.projection,
-    std.mul(layout.$.camera.view, worldPositionUniform),
-  );
+  const canvasPosition = layout.$.camera.projection * layout.$.camera.view *
+    worldPositionUniform;
 
   return {
     canvasPosition: canvasPosition,
@@ -82,10 +67,11 @@ export const vertexShader = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const fragmentShader = tgpu['~unstable'].fragmentFn({
+export const fragmentShader = tgpu.fragmentFn({
   in: ModelVertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   // shade the fragment in Phong reflection model
   // https://en.wikipedia.org/wiki/Phong_reflection_model
   // then apply sea fog and sea desaturation
@@ -95,39 +81,34 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     layout.$.sampler,
     input.textureUV,
   );
-  const textureColor = textureColorWithAlpha.xyz;
-
-  const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
+  const textureColor = textureColorWithAlpha.rgb;
+  const ambient = 0.5 * textureColor * p.lightColor;
 
   const cosTheta = std.dot(input.worldNormal, p.lightDirection);
-  const diffuse = std.mul(
-    std.max(0, cosTheta),
-    std.mul(textureColor, p.lightColor),
-  );
+  const diffuse = std.max(0, cosTheta) * textureColor * p.lightColor;
 
   const viewSource = std.normalize(
-    std.sub(layout.$.camera.position.xyz, input.worldPosition),
+    layout.$.camera.position.xyz - input.worldPosition,
   );
   const reflectSource = std.normalize(
-    std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
+    std.reflect(-1 * p.lightDirection, input.worldNormal),
   );
   const specularStrength = std.pow(
     std.max(0, std.dot(viewSource, reflectSource)),
     16,
   );
-  const specular = std.mul(specularStrength, p.lightColor);
+  const specular = specularStrength * p.lightColor;
 
-  const lightedColor = std.add(ambient, std.add(diffuse, specular));
+  const lightedColor = ambient + diffuse + specular;
 
   // apply desaturation
   const distanceFromCamera = std.length(
-    std.sub(layout.$.camera.position.xyz, input.worldPosition),
+    layout.$.camera.position.xyz - input.worldPosition,
   );
 
   let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {
-    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) /
-      3;
+    const desaturationFactor = -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
     const hsv = rgbToHsv(desaturatedColor);
     hsv.y += desaturationFactor / 2;
     hsv.z += desaturationFactor;
@@ -143,5 +124,5 @@ export const fragmentShader = tgpu['~unstable'].fragmentFn({
     foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);
   }
 
-  return d.vec4f(foggedColor.xyz, 1);
+  return d.vec4f(foggedColor, 1);
 });

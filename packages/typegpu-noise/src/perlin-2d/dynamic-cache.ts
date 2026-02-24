@@ -1,10 +1,10 @@
 import tgpu, {
   type Configurable,
   type StorageFlag,
+  type TgpuAccessor,
   type TgpuBuffer,
   type TgpuFn,
   type TgpuRoot,
-  type TgpuSlot,
   type UniformFlag,
 } from 'typegpu';
 import * as d from 'typegpu/data';
@@ -27,10 +27,13 @@ type Layout<Prefix extends string> = Prettify<
   }>
 >;
 
+type SizeIn = TgpuAccessor.In<d.Vec2u>;
+type MemoryIn = TgpuAccessor.In<typeof MemorySchema>;
+
 type LayoutValue<Prefix extends string> = Prettify<
   PrefixKeys<Prefix, {
-    readonly size: d.v2u;
-    readonly memory: d.v2f[];
+    readonly size: SizeIn;
+    readonly memory: MemoryIn;
   }>
 >;
 
@@ -43,7 +46,6 @@ type Bindings<Prefix extends string> = Prettify<
 
 export interface DynamicPerlin2DCacheConfig<Prefix extends string> {
   readonly layout: Layout<Prefix>;
-  readonly valuesSlot: TgpuSlot<LayoutValue<Prefix>>;
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec2i) => d.Vec2f>;
 
   instance(
@@ -89,8 +91,9 @@ const DefaultPerlin2DLayoutPrefix = 'perlin2dCache__' as const;
  *   // Plugging the cache into the pipeline
  *   .pipe(cacheConfig.inject(dynamicLayout.$))
  *   // ...
- *   .withFragment(mainFragment)
- *   .createPipeline();
+ *   .createRenderPipeline({
+ *     // ...
+ *   });
  *
  * const frame = () => {
  *   // A bind group to fulfill the resource needs of the cache
@@ -130,29 +133,15 @@ export function dynamicCacheConfig<Prefix extends string>(
 ): DynamicPerlin2DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin2DLayoutPrefix as Prefix } = options ?? {};
 
-  const valuesSlot = tgpu.slot<LayoutValue<Prefix>>();
-
-  const cleanValuesSlot = tgpu['~unstable'].derived(() => {
-    return {
-      get size() {
-        return (valuesSlot.$ as Record<`${Prefix}size`, d.v2u>)[
-          `${prefix}size`
-        ] as d.v2u;
-      },
-      get memory() {
-        return (valuesSlot.$ as Record<`${Prefix}memory`, d.v2f[]>)[
-          `${prefix}memory`
-        ] as d.v2f[];
-      },
-    };
-  });
+  const sizeAccess = tgpu.accessor(d.vec2u);
+  const memoryAccess = tgpu.accessor(MemorySchema);
 
   const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
-    const size = d.vec2i(cleanValuesSlot.value.size);
+    const size = d.vec2i(sizeAccess.$);
     const x = (pos.x % size.x + size.x) % size.x;
     const y = (pos.y % size.y + size.y) % size.y;
 
-    return cleanValuesSlot.value.memory[x + y * size.x] as d.v2f;
+    return memoryAccess.$[x + y * size.x] as d.v2f;
   });
 
   const computeLayout = tgpu.bindGroupLayout({
@@ -181,8 +170,7 @@ export function dynamicCacheConfig<Prefix extends string>(
       .createBuffer(d.vec2u, size)
       .$usage('uniform');
 
-    const computePipeline = root['~unstable']
-      .createGuardedComputePipeline(mainCompute);
+    const computePipeline = root.createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {
       const memory = root
@@ -239,13 +227,13 @@ export function dynamicCacheConfig<Prefix extends string>(
       [`${prefix}size`]: { uniform: d.vec2u },
       [`${prefix}memory`]: { storage: MemorySchema, access: 'readonly' },
     } as Layout<Prefix>,
-    valuesSlot,
     getJunctionGradient,
     instance,
 
     inject: (layoutValue) => (cfg) =>
       cfg
         .with(getJunctionGradientSlot, getJunctionGradient)
-        .with(valuesSlot, layoutValue),
+        .with(sizeAccess, () => layoutValue[`${prefix}size`] as SizeIn)
+        .with(memoryAccess, () => layoutValue[`${prefix}memory`] as MemoryIn),
   };
 }

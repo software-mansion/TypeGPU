@@ -1,16 +1,17 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { type RefObject, useEffect, useRef, useState } from 'react';
-import {
-  codeEditorShownAtom,
-  codeEditorShownMobileAtom,
-} from '../utils/examples/codeEditorShownAtom.ts';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
+import { codeEditorShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example } from '../utils/examples/types.ts';
+import type {
+  Example,
+  ExampleCommonFile,
+  ExampleSrcFile,
+} from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
@@ -20,6 +21,7 @@ import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
 
 type Props = {
   example: Example;
+  common: ExampleCommonFile[];
   isPlayground?: boolean;
 };
 
@@ -30,7 +32,6 @@ function useExample(
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reload example on html change
   useEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
@@ -66,16 +67,16 @@ function useExample(
   }, [setSnackbarText, setExampleControlParams]);
 }
 
-export function ExampleView({ example }: Props) {
-  const { tsFiles, tsImport, htmlFile } = example;
+export function ExampleView({ example, common }: Props) {
+  const { tsFiles: srcFiles, tsImport, htmlFile } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
 
-  const codeEditorShowing = useAtomValue(codeEditorShownAtom);
-  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
+  const codeEditorShown = useAtomValue(codeEditorShownAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  const tsFiles = filterRelevantTsFiles(srcFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const editorTabsList = [
     'index.ts',
@@ -90,30 +91,28 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlFile.content;
   }, [htmlFile]);
 
-  useExample(tsImport, setSnackbarText); // live example
+  useExample(tsImport, setSnackbarText);
   useResizableCanvas(exampleHtmlRef);
 
   return (
     <>
-      {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
+      {snackbarText && isGPUSupported && <Snackbar text={snackbarText} />}
 
       <div className='flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]'>
         <div
           className={cs(
             'grid flex-1 gap-4 overflow-auto',
-            codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
+            codeEditorShown ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
           {isGPUSupported
             ? (
               <div
-                style={{
-                  scrollbarGutter: 'stable both-edges',
-                }}
+                style={{ scrollbarGutter: 'stable both-edges' }}
                 className={cs(
                   'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly gap-4 overflow-auto md:flex-row',
-                  codeEditorShowing
-                    ? 'md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
+                  codeEditorShown
+                    ? 'max-md:hidden md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
                     : '',
                 )}
               >
@@ -122,67 +121,55 @@ export function ExampleView({ example }: Props) {
             )
             : <GPUUnsupportedPanel />}
 
-          {codeEditorShowing || codeEditorMobileShowing
-            ? (
-              <div
-                className={cs(
-                  codeEditorShowing && !codeEditorMobileShowing
-                    ? 'hidden md:block'
-                    : '',
-                  !codeEditorShowing && codeEditorMobileShowing
-                    ? 'md:hidden'
-                    : '',
-                  'absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full',
-                )}
-              >
-                <div className='absolute inset-0 flex flex-col justify-between'>
-                  <div className='h-12 pt-16 md:pt-0'>
-                    <div className='flex h-full overflow-x-auto border-gray-300'>
-                      {editorTabsList.map((fileName) => (
-                        <button
-                          key={fileName}
-                          type='button'
-                          onClick={() => setCurrentFilePath(fileName)}
-                          className={cs(
-                            'text-nowrap rounded-t-lg rounded-b-none px-4 text-sm',
-                            currentFilePath === fileName
-                              ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                              : 'border-2 border-tameplum-100 bg-white hover:bg-tameplum-20',
-                          )}
-                        >
-                          {fileName}
-                        </button>
-                      ))}
-                    </div>
+          {codeEditorShown && (
+            <div className='absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full'>
+              <div className='absolute inset-0 flex flex-col justify-between'>
+                <div className='h-12 pt-16 md:pt-0'>
+                  <div className='flex h-full overflow-x-auto border-gray-300'>
+                    {editorTabsList.map((fileName) => (
+                      <button
+                        key={fileName}
+                        type='button'
+                        onClick={() => setCurrentFilePath(fileName)}
+                        className={cs(
+                          'text-nowrap rounded-t-lg rounded-b-none px-4 text-sm',
+                          currentFilePath === fileName
+                            ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                            : 'border-2 border-tameplum-100 bg-white hover:bg-tameplum-20',
+                        )}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <HtmlCodeEditor
-                    shown={currentFilePath === 'index.html'}
-                    file={htmlFile}
+                <HtmlCodeEditor
+                  shown={currentFilePath === 'index.html'}
+                  file={htmlFile}
+                />
+
+                {tsFiles.map((file) => (
+                  <TsCodeEditor
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    file={file}
                   />
-
-                  {tsFiles.map((file) => (
-                    <TsCodeEditor
-                      key={file.path}
-                      shown={file.path === currentFilePath}
-                      file={file}
-                    />
-                  ))}
-                </div>
-
-                <div className='absolute right-0 z-5 md:top-15 md:right-8'>
-                  <Button onClick={() => openInStackBlitz(example)}>
-                    <span className='font-bold'>Edit on</span>
-                    <img
-                      src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
-                      alt='stackblitz logo'
-                      className='h-4'
-                    />
-                  </Button>
-                </div>
+                ))}
               </div>
-            )
-            : null}
+
+              <div className='absolute right-0 z-5 md:top-15 md:right-8'>
+                <Button onClick={() => openInStackBlitz(example, common)}>
+                  <span className='font-bold'>Edit on</span>
+                  <img
+                    src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
+                    alt='stackblitz logo'
+                    className='h-4'
+                  />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <ControlPanel />
       </div>
@@ -217,7 +204,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
 
     for (const canvas of canvases ?? []) {
       if ('width' in canvas.attributes || 'height' in canvas.attributes) {
-        continue; // custom canvas, not replacing with resizable
+        continue;
       }
 
       const newCanvas = document.createElement('canvas');
@@ -289,4 +276,28 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       }
     };
   }, [exampleHtmlRef]);
+}
+
+/**
+ * NOTE: this function only filters common files used in src files.
+ * Common files used in other common files will not be included.
+ */
+function filterRelevantTsFiles(
+  srcFiles: ExampleSrcFile[],
+  commonFiles: ExampleCommonFile[],
+) {
+  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
+    ...srcFiles,
+  ];
+
+  for (const common of commonFiles) {
+    for (const src of srcFiles) {
+      if (src.content.includes(`common/${common.path}`)) {
+        tsFiles.push(common);
+        break;
+      }
+    }
+  }
+
+  return tsFiles;
 }

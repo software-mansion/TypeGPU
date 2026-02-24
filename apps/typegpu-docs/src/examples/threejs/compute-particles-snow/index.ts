@@ -7,8 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js';
 
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
 import * as e from './entities.ts';
@@ -222,7 +221,7 @@ function animate() {
   scene.overrideMaterial = collisionPosMaterial;
   renderer.setRenderTarget(collisionPosRT);
   renderer.render(scene, collisionCamera);
-  renderer.compute(computeUpdate);
+  void renderer.compute(computeUpdate);
 
   scene.overrideMaterial = null;
   renderer.setRenderTarget(null);
@@ -231,8 +230,8 @@ function animate() {
 }
 
 await renderer.init();
-renderer.compute(computeInit);
-renderer.setAnimationLoop(animate);
+void renderer.compute(computeInit);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
 

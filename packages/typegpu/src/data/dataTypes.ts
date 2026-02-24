@@ -29,6 +29,8 @@ import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { ResolutionCtx } from '../types.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -38,7 +40,7 @@ import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
+export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   extends wgsl.BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -66,8 +68,11 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData>
  * via `d.align` function.
  */
 export interface Unstruct<
-  // biome-ignore lint/suspicious/noExplicitAny: the widest type that works with both covariance and contravariance
-  TProps extends Record<string, wgsl.BaseData> = any,
+  // @ts-expect-error: Override variance, as we want unstructs to behave like objects
+  out TProps extends Record<string, wgsl.BaseData> = Record<
+    string,
+    wgsl.BaseData
+  >,
 > extends wgsl.BaseData, TgpuNamable {
   (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
   (): Prettify<InferRecord<TProps>>;
@@ -93,8 +98,8 @@ export interface Unstruct<
 export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
-  TInner extends wgsl.BaseData = wgsl.BaseData,
-  TAttribs extends unknown[] = unknown[],
+  out TInner extends wgsl.BaseData = wgsl.BaseData,
+  out TAttribs extends unknown[] = unknown[],
 > extends wgsl.BaseData {
   readonly type: 'loose-decorated';
   readonly inner: TInner;
@@ -128,16 +133,16 @@ export type UndecorateRecord<T extends Record<string, unknown>> = {
  * Runtime function to extract the inner data type from decorated types.
  * If the data is not decorated, returns the data as-is.
  */
-export function undecorate(data: AnyData): AnyData {
-  if (data.type === 'decorated' || data.type === 'loose-decorated') {
-    return data.inner as AnyData;
+export function undecorate(data: BaseData): BaseData {
+  if (wgsl.isDecorated(data) || isLooseDecorated(data)) {
+    return data.inner;
   }
   return data;
 }
 
-export function unptr(data: AnyData | UnknownData): AnyData | UnknownData {
-  if (data.type === 'ptr') {
-    return data.inner as AnyData;
+export function unptr(data: BaseData | UnknownData): BaseData | UnknownData {
+  if (wgsl.isPtr(data)) {
+    return data.inner;
   }
   return data;
 }
@@ -150,6 +155,9 @@ const looseTypeLiterals = [
 ] as const;
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
+export type IsLooseData<T> = T extends { readonly type: LooseTypeLiteral }
+  ? true
+  : false;
 
 export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
@@ -173,10 +181,8 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.disarrayOf(d.u32, 4)) // true
  * isDisarray(d.vec3f) // false
  */
-export function isDisarray<T extends Disarray>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'disarray';
+export function isDisarray(schema: unknown): schema is Disarray {
+  return isMarkedInternal(schema) && (schema as Disarray)?.type === 'disarray';
 }
 
 /**
@@ -192,16 +198,15 @@ export function isDisarray<T extends Disarray>(
  * isUnstruct(d.unstruct({ a: d.u32 })) // true
  * isUnstruct(d.vec3f) // false
  */
-export function isUnstruct<T extends Unstruct>(
-  schema: T | unknown,
-): schema is T {
-  return isMarkedInternal(schema) && (schema as T)?.type === 'unstruct';
+export function isUnstruct(schema: unknown): schema is Unstruct {
+  return isMarkedInternal(schema) && (schema as Unstruct)?.type === 'unstruct';
 }
 
-export function isLooseDecorated<T extends LooseDecorated>(
-  value: T | unknown,
-): value is T {
-  return isMarkedInternal(value) && (value as T)?.type === 'loose-decorated';
+export function isLooseDecorated(
+  value: unknown,
+): value is LooseDecorated {
+  return isMarkedInternal(value) &&
+    (value as LooseDecorated)?.type === 'loose-decorated';
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
@@ -239,22 +244,17 @@ export type AnyConcreteData = Exclude<
   | WgslComparisonSampler
 >;
 
-export interface UnknownData {
-  readonly type: 'unknown';
-}
-
-export const UnknownData = {
-  type: 'unknown' as const,
-  toString() {
-    return 'unknown';
-  },
-} as UnknownData;
+export const UnknownData = Symbol('UNKNOWN');
+export type UnknownData = typeof UnknownData;
 
 export class InfixDispatch {
   constructor(
     readonly name: string,
     readonly lhs: Snippet,
-    readonly operator: (lhs: Snippet, rhs: Snippet) => Snippet,
+    readonly operator: (
+      ctx: ResolutionCtx,
+      args: [lhs: Snippet, rhs: Snippet],
+    ) => Snippet,
   ) {}
 }
 

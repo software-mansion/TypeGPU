@@ -107,9 +107,20 @@ describe('liquid-glass example', () => {
 
       fn sampleWithChromaticAberration(tex: texture_2d<f32>, sampler2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
-        for (var i = 0; (i < 3i); i++) {
-          var channelOffset = (dir * ((f32(i) - 1f) * offset));
-          samples[i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).xyz;
+        // unrolled iteration #0
+        {
+          var channelOffset = (dir * (-1f * offset));
+          samples[0i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
+        }
+        // unrolled iteration #1
+        {
+          var channelOffset = (dir * (0f * offset));
+          samples[1i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
+        }
+        // unrolled iteration #2
+        {
+          var channelOffset = (dir * (1f * offset));
+          samples[2i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
         }
         return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
       }
@@ -139,7 +150,7 @@ describe('liquid-glass example', () => {
         var refractedSample = sampleWithChromaticAberration(sampledView, sampler_1, (_arg_0.uv + (dir * (paramsUniform.refractionStrength * normalizedDist))), (paramsUniform.chromaticStrength * normalizedDist), dir, (paramsUniform.blur * paramsUniform.edgeBlurMultiplier));
         var normalSample = textureSampleLevel(sampledView, sampler_1, _arg_0.uv, 0);
         var tint = TintParams(paramsUniform.tintColor, paramsUniform.tintStrength);
-        var tintedBlur = applyTint(blurSample.xyz, tint);
+        var tintedBlur = applyTint(blurSample.rgb, tint);
         var tintedRing = applyTint(refractedSample, tint);
         return (((tintedBlur * weights.inside) + (tintedRing * weights.ring)) + (normalSample * weights.outside));
       }"

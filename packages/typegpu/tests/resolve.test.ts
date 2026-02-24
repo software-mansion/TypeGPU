@@ -1,6 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { setName } from '../src/shared/meta.ts';
 import {
   $gpuValueOf,
@@ -70,17 +69,17 @@ describe('tgpu resolve', () => {
         return snip(name, d.f32, /* origin */ 'runtime');
       },
 
-      get value(): number {
+      get $(): number {
         return this[$gpuValueOf];
       },
     };
     setName(intensity, 'intensity');
 
-    const fragment1 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.value, 0, 1));
+    const fragment1 = tgpu
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.$, 0, 1));
 
-    const fragment2 = tgpu['~unstable']
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.value, 0, 0, 1));
+    const fragment2 = tgpu
+      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.$, 0, 0, 1));
 
     const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });
 
@@ -306,7 +305,7 @@ fn main() {
     const resolved = tgpu.resolve({
       template: `
       fn main () {
-        let c = functions.getColor() * layout.bound.intensity;
+        let c = functions.getColor() * layout.$.intensity;
       }`,
       externals: {
         layout,
@@ -345,7 +344,7 @@ fn main() {
     const resolved = tgpu.resolve({
       template: `
       fn main () {
-        let c = functions.getColor() * layout.bound.intensity;
+        let c = functions.getColor() * layout.$.intensity;
         let i = function.getWater();
       }`,
       externals: {

@@ -1,56 +1,46 @@
 import { isBuiltin } from '../../data/attributes.ts';
-import { isData } from '../../data/dataTypes.ts';
-import { isVoid } from '../../data/wgslTypes.ts';
-import type { FragmentOutConstrained } from '../function/tgpuFragmentFn.ts';
-import type { AnyFragmentTargets } from './renderPipeline.ts';
-
-function isColorTargetState(
-  value: unknown | GPUColorTargetState,
-): value is GPUColorTargetState {
-  return typeof (value as GPUColorTargetState)?.format === 'string';
-}
+import { type BaseData, isVoid, isWgslStruct } from '../../data/wgslTypes.ts';
+import type {
+  AnyFragmentTargets,
+  TgpuColorTargetState,
+} from './renderPipeline.ts';
 
 export function connectTargetsToShader(
-  shaderOutputLayout: FragmentOutConstrained,
+  fragmentOut: BaseData,
   targets: AnyFragmentTargets,
-): GPUColorTargetState[] {
-  if (isData(shaderOutputLayout)) {
-    if (isVoid(shaderOutputLayout)) {
-      return [];
-    }
-    if (shaderOutputLayout.type === 'decorated') {
-      return [];
-    }
+): (GPUColorTargetState | null)[] {
+  let presentationFormat: GPUTextureFormat | undefined;
 
-    if (!isColorTargetState(targets)) {
-      throw new Error(
-        'Expected a single color target configuration, not a record.',
-      );
-    }
-
-    return [targets];
+  if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
+    return [null];
   }
 
-  const result: GPUColorTargetState[] = [];
-  for (const key of Object.keys(shaderOutputLayout)) {
-    const outputValue = (shaderOutputLayout as Record<string, unknown>)[key];
+  if (isWgslStruct(fragmentOut)) {
+    const result: GPUColorTargetState[] = [];
+    for (const key of Object.keys(fragmentOut.propTypes)) {
+      const outputValue = fragmentOut.propTypes[key];
 
-    if (isBuiltin(outputValue)) {
-      continue;
+      if (isBuiltin(outputValue)) {
+        continue;
+      }
+
+      const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[
+        key
+      ];
+
+      result.push({
+        ...matchingTarget,
+        format: matchingTarget?.format ??
+          (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
+      });
     }
-
-    const matchingTarget = (targets as Record<string, GPUColorTargetState>)[
-      key
-    ];
-
-    if (!matchingTarget) {
-      throw new Error(
-        `A color target by the name of '${key}' was not provided to the shader.`,
-      );
-    }
-
-    result.push(matchingTarget);
+    return result;
   }
 
-  return result;
+  const singleTarget = targets as TgpuColorTargetState;
+  return [{
+    ...singleTarget,
+    format: singleTarget?.format ??
+      (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
+  }];
 }

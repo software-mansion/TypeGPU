@@ -1,4 +1,3 @@
-import type { AnyData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import {
@@ -43,6 +42,9 @@ export interface TgpuBufferUsage<
   readonly [$repr]: Infer<TData>;
 
   readonly [$gpuValueOf]: InferGPU<TData>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   value: InferGPU<TData>;
   $: InferGPU<TData>;
 
@@ -53,12 +55,18 @@ export interface TgpuBufferUsage<
 
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
 }
@@ -71,10 +79,10 @@ export interface TgpuFixedBufferUsage<TData extends BaseData>
 export interface TgpuBufferMutable<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
 
-export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
   buffer: T,
 ): buffer is T & UniformFlag {
-  return !!(buffer as unknown as UniformFlag).usableAsUniform;
+  return !!buffer.usableAsUniform;
 }
 
 // --------------
@@ -88,7 +96,7 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
 };
 
 class TgpuFixedBufferImpl<
-  TData extends AnyWgslData,
+  TData extends BaseData,
   TUsage extends BindableBufferUsage,
 > implements
   TgpuBufferUsage<TData, TUsage>,
@@ -169,7 +177,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.read()`',
+          : '.$ is inaccessible during normal JS execution. Try `.read()`',
       );
     }
 
@@ -204,7 +212,7 @@ class TgpuFixedBufferImpl<
           ? `Cannot access ${
             String(this.buffer)
           }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ and .value are inaccessible during normal JS execution. Try `.write()`',
+          : '.$ is inaccessible during normal JS execution. Try `.write()`',
       );
     }
 
@@ -215,7 +223,7 @@ class TgpuFixedBufferImpl<
     }
 
     if (mode.type === 'simulate') {
-      mode.buffers.set(this.buffer, value as InferGPU<TData>);
+      mode.buffers.set(this.buffer, value);
       return;
     }
 
@@ -248,21 +256,20 @@ export class TgpuLaidOutBufferImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const dataType = this.dataType as unknown as AnyData;
     const id = ctx.getUniqueName(this);
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(dataType).value
+        ctx.resolve(this.dataType).value
       };`,
     );
 
     return snip(
       id,
-      dataType,
-      isNaturallyEphemeral(dataType) ? 'runtime' : this.usage,
+      this.dataType,
+      isNaturallyEphemeral(this.dataType) ? 'runtime' : this.usage,
     );
   }
 
@@ -271,7 +278,7 @@ export class TgpuLaidOutBufferImpl<
   }
 
   get [$gpuValueOf](): InferGPU<TData> {
-    const schema = this.dataType as AnyData;
+    const schema = this.dataType;
     const usage = this.usage;
 
     return new Proxy({
@@ -304,8 +311,8 @@ export class TgpuLaidOutBufferImpl<
 }
 
 const mutableUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'mutable'>
 >();
 
 export function mutable<TData extends AnyWgslData>(
@@ -328,8 +335,8 @@ export function mutable<TData extends AnyWgslData>(
 }
 
 const readonlyUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'readonly'>
 >();
 
 export function readonly<TData extends AnyWgslData>(
@@ -352,8 +359,8 @@ export function readonly<TData extends AnyWgslData>(
 }
 
 const uniformUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
+  TgpuBuffer<BaseData>,
+  TgpuFixedBufferImpl<BaseData, 'uniform'>
 >();
 
 export function uniform<TData extends AnyWgslData>(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from '../../../src/index.ts';
+import tgpu, { d } from '../../../src/index.js';
 import {
   vec2b,
   vec2f,
@@ -17,7 +17,6 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
-import * as d from '../../../src/data/index.ts';
 import { select } from '../../../src/std/boolean.ts';
 
 describe('select', () => {

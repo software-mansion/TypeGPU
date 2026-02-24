@@ -1,5 +1,5 @@
 {
   "title": "Boids",
   "category": "simulation",
-  "tags": ["compute", "instancing", "double buffering"]
+  "tags": ["experimental", "compute", "instancing", "double buffering"]
 }

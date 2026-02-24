@@ -13,7 +13,7 @@ TypeGPU does this automatically during buffer writes and reads.
 :::
 
 The primary usage for data schemas is to define buffer and function signatures.
-Schemas can also be called in JS or TGSL to create instances of the types they represent.
+Schemas can also be called to create instances of the types they represent.
 
 TypeGPU provides data schemas for scalar, vector and matrix types, as well as constructors for struct and array schemas.
 
@@ -23,10 +23,10 @@ TypeGPU provides data schemas for scalar, vector and matrix types, as well as co
 
 For scalar WGSL types `f32`, `u32`, `i32`, `f16` and `bool`, TypeGPU provides `d.f32`, `d.u32`, `d.i32`, `d.f16` and `d.bool` schemas respectively.
 Schemas can be called to cast a value to a given type.
-This works both in TGSL, and in plain JavaScript.
+This works both inside and outside 'use gpu' functions.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 d.u32(31.1); // 31
 d.u32(-1); // 4294967295
@@ -36,17 +36,17 @@ d.bool(0.01); // true
 ```
 
 :::caution
-On JavaScript side, the type of any number remains a number regardless of any casts.
+In JavaScript, the type of any number remains a number regardless of casts.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const myUnsignedInt = d.u32(1);
 //    ^?
 const result = d.u32(3)/d.u32(2); // 1.5
 ```
 
-For the WGSL and JS functions to return consistent results, during WGSL resolution TypeGPU wraps all divisions in `f32` casts.
+To achieve consistent behavior of 'use gpu' functions in JS and on the GPU, TypeGPU wraps all divisions in `f32` casts implicitly.
 :::
 
 For each of the scalar types, there is a vector schema of 2, 3 and 4 elements of that type.
@@ -55,7 +55,7 @@ For vector WGSL types `vec2f`, `vec2u`, `vec2i`, `vec2h` and `vec2<bool>`, TypeG
 Just like scalar schemas, vector schemas can be called to create values of corresponding types.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const v1 = d.vec3f(1, 2, 3); // a vector of three elements [1, 2, 3]
 //    ^?
@@ -68,7 +68,7 @@ const v4 = d.vec4f(0, v3, 3); // a vector of four elements [0, 1, 2, 3]
 Be mindful not to confuse the schema (e.g. `d.vec2f`), a schema instance (`d.vec2f()`), the schema type (`d.Vec2f`), and the instance type (`d.v2f`).
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const VectorSchema = d.vec2f;
 //    ^?
@@ -83,7 +83,7 @@ For matrix WGSL types `mat2x2f`, `mat3x3f` and `mat4x4f`, TypeGPU provides `d.ma
 Matrices of other sizes, as well as matrices of `f16`, are currently not supported by TypeGPU.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const mat1 = d.mat2x2f(); // empty matrix
 //    ^?
@@ -106,10 +106,10 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 
 :::caution
 For `wgpu-matrix` integration, matrix instances implement array access.
-Matrix array access is not supported in TGSL.
+Matrix array access is not supported in 'use gpu' functions.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const mat = d.mat2x2f(1.1, 2.2, 3.3, 4.4);
 const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
@@ -120,16 +120,28 @@ const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
 
 ### Operators
 
-As you may know, it is currently impossible to overload operators in JavaScript.
-For that reason, TypeGPU provides `std` functions imitating those.
+For performing math operations on vectors and matrices, you can either use the standard JavaScript operators like
+`+`, `-`, `*`, `/` and `%` when inside functions marked with `'use gpu'`, use functions provided on the `std` namespace,
+or `.add`, `.sub`, `.mul`, `.div` and `.mod` functions on the values themselves.
+
+:::note
+Use of `tsover` is required for operator overloading support, [refer to their documentation on how to set it up in your project](https://software-mansion-labs.github.io/tsover/docs).
+
+When operating on scalars, you can still use `+`, `<=`, `!` etc., whether you adopt `tsover` or not.
+:::
 
 ```ts twoslash
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 const vec1 = d.vec3f(1, 2, 3);
 const vec2 = std.add(vec1, 3); // d.vec3f(4, 5, 6)
 //    ^?
+
+function foo() {
+  'use gpu';
+  const vec1 = d.vec3f(1, 2, 3) * 2; // d.vec3f(2, 4, 6)
+  //    ^?
+}
 
 const mat = d.mat3x3f(
   2, 0, 0,
@@ -144,19 +156,19 @@ const comparison = std.le(d.vec3f(2, 3, 4), d.vec3f(3)); // d.vec3b(true, true, 
 //    ^?
 ```
 
-Currently, implemented operators include:
+Currently, implemented `std` operations include:
 
 - arithmetic operators `add`, `sub`, `mul`, `div`, `mod`, `neg`,
 - comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
 - logical operators `not`, `and`, `or`.
 
-When operating on scalars, you can still use `+`, `<=`, `!` etc.,
-the purpose of these `std` functions is to enable working on vectors and matrices.
+Vectors currently overload the binary `+`, `-`, `*`, `/` and `%` operators, while matrices
+overload `+`, `-` and  `*`.
 
 For arithmetic operators, you can also use the infix notation.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const v1 = d.vec2f(1, 2);
 const v2 = d.vec2f(3, 4);
@@ -174,7 +186,7 @@ Infix operators return completely new objects, they don't modify in-place.
 Here is an example of defining a custom compound data type using the `d.struct` function.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 const Circle = d.struct({
   centerPos: d.vec3i,
@@ -194,7 +206,7 @@ When reading from or writing data to the GPU, the type of the JavaScript value i
 ```ts twoslash
 // @errors: 2740 2322 2339 2345
 
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 const Circle = d.struct({
   centerPos: d.vec3i,
@@ -223,7 +235,7 @@ Struct schemas also allow for default value creation and code autocompletion.
 
 ```ts twoslash
 // @noErrors
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 const Boid = d.struct({
   position: d.vec3u,
@@ -247,7 +259,7 @@ const boid = Boid({
 Structs can also be nested.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 //---cut---
 const FishState = d.struct({
   pos: d.vec3f,
@@ -270,8 +282,7 @@ You cannot use nested structs in [vertex layouts](/TypeGPU/fundamentals/vertex-l
 If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
 
 ```ts twoslash
-import * as d from 'typegpu/data';
-import { sizeOf, alignmentOf } from 'typegpu/data';
+import { d } from 'typegpu';
 
 const Circle = d.struct({
   centerPos: d.vec3i,
@@ -287,7 +298,7 @@ type Circle = d.Infer<typeof Circle>;
 Defined data structures automatically measure and hold information about their memory layout parameters.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 const Circle = d.struct({
   centerPos: d.vec3i,
@@ -305,7 +316,7 @@ Struct schemas adjust the padding and alignment automatically, so that they comp
 It is also possible to override default byte alignment and size for particular fields via the `d.align` and `d.size` functions.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const Boid = d.struct({
   position: d.align(32, d.vec3u), // Aligned to multiples of 32 bytes
@@ -320,7 +331,7 @@ const Boid = d.struct({
 To define arrays of known constant length, use the `d.arrayOf` function with the schema representing the element type and with the length of the array.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const MyArray = d.arrayOf(d.f32, 4);
 
@@ -333,7 +344,7 @@ const myInitializedArray = MyArray([1, 0, 0.5, 20]);
 You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use the schema to declare WGSL [runtime-sized arrays](/TypeGPU/fundamentals/bind-groups#runtime-sized-example).
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 // ---cut---
 const ArrayPartialSchema = d.arrayOf(d.f32);
@@ -350,9 +361,7 @@ Texture schemas serve two main purposes:
  - providing argument types for user defined functions
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const texture = root['~unstable'].createTexture({
@@ -400,7 +409,7 @@ Sampled texture schemas are created using one of the following constructors:
 The `sampleType` parameter can be `d.f32`, `d.i32`, or `d.u32`, determining how the texture data will be interpreted. If omitted, it defaults to `d.f32`.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const tex1 = d.texture2d(d.f32); // float texture (default)
 //    ^?
@@ -423,7 +432,7 @@ For depth comparison operations, TypeGPU provides specialized depth texture sche
 - **`d.textureDepthCubeArray()`** - A cube array depth texture
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const depthTex = d.textureDepth2d();
 //    ^?
@@ -441,7 +450,7 @@ Storage texture schemas are created using dimension-specific constructors, with 
 The `format` parameter specifies the texture format (e.g., `'rgba8unorm'`, `'rgba16float'`, `'r32float'`), and the `access` parameter can be `'write-only'`, `'read-only'`, or `'read-write'`. If `access` is omitted, it defaults to `'write-only'`.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const storageTex1 = d.textureStorage2d('rgba8unorm');
 //    ^?
@@ -458,25 +467,24 @@ const storageTex3 = d.textureStorage3d('r32float', 'read-write');
 To create a schema corresponding to an atomic data type, wrap `d.i32` or `d.u32` with `d.atomic`.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const AtomicI32 = d.atomic(d.i32);
 //    ^?
 ```
 
 :::tip
-The `std` module provides functions for manipulating atomic data in TGSL.
+The `std` module provides functions for manipulating atomic data in 'use gpu' functions.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 // ---cut---
 const count = tgpu.workgroupVar(d.atomic(d.u32));
 
-const incrementAndGet = tgpu.fn([], d.u32)(() => {
+function incrementAndGet() {
+  'use gpu';
   return std.atomicAdd(count.$, 1);
-});
+}
 ```
 
 :::
@@ -488,7 +496,7 @@ To create a schema corresponding to a pointer data type, wrap the inner schema w
 For address spaces `function`, `private`, `workgroup`, `storage` and `uniform`, use `d.ptrFn`, `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage` and `d.ptrUniform` respectively.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 const vecPtrFn = d.ptrFn(d.vec3f);
 //    ^?
@@ -507,20 +515,19 @@ This extension is enabled automatically when available.
 ## Copy constructors
 
 One of the biggest differences between JavaScript and WGSL is the existence of value/reference types.
-Let's take a look at a simple TGSL function and the WGSL code it resolves to.
+Let's take a look at a simple TypeGPU function and the WGSL code it resolves to.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
-// TGSL
 const MyStruct = d.struct({ n: d.u32 });
 
-const myFn = tgpu.fn([])(() => {
+function myFn() {
+  'use gpu';
   const s1 = MyStruct({ n: 0 });
   const s2 = s1;
   s2.n = 1; // s1 is modified
-});
+}
 ```
 
 ```wgsl
@@ -531,29 +538,30 @@ struct MyStruct {
 
 fn myFn(){
   var s1 = MyStruct(0);
-  var s2 = s1;
+  let s2 = &s1;
+  (*s2).n = 1; // s1 is modified
+}
+```
+
+In JavaScript, `s2` is a reference to `s1` and therefore `s1` is modified when `s2` is modified.
+On the WGSL side, we make `s2` a reference to `s1` and modifying `s2.n` is translated to modifying `(*s2).n`.
+
+Schemas can be used to create deep copies of values.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const MyStruct = d.struct({ n: d.u32 });
+
+function myFn() {
+  'use gpu';
+  const s1 = MyStruct({ n: 0 });
+  const s2 = MyStruct(s1); // deep copy of s1
   s2.n = 1; // s1 is not modified
 }
 ```
 
-On the JS side, s2 is a reference to s1 and therefore s1 is modified when s2 is modified.
-On the WGSL side, the assignment operator copies the value of s1, and thus s1 is not modified later on.
-
-To help with this issue, schema calls can be used as "copy constructors", that copy the value on the JS side, and disappear on the WGSL side:
-
-```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-// ---cut---
-// TGSL
-const MyStruct = d.struct({ n: d.u32 });
-
-const myFn = tgpu.fn([])(() => {
-  const s1 = MyStruct({ n: 0 });
-  const s2 = MyStruct(s1); // deep copy of s1
-  s2.n = 1; // s1 is not modified
-});
-```
+The TypeGPU shader generator understands this and generates a simple assignment, which copies the value of `s1` into `s2`.
 
 ```wgsl
 // WGSL

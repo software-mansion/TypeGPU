@@ -1,5 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 
 export const palette = (t: number): d.v3f => {
   'use gpu';

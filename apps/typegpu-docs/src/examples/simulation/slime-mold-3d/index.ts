@@ -1,25 +1,15 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: { optionalFeatures: ['float32-filterable'] },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
-const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const VOLUME_SIZE = 256;
 const NUM_AGENTS = 800_000;
@@ -108,7 +98,7 @@ const agentsDataBuffers = [0, 1].map(() =>
 );
 
 const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
-root['~unstable'].createGuardedComputePipeline((x) => {
+root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
   const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
@@ -186,6 +176,8 @@ const getPerpendicular = (dir: d.v3f) => {
   return std.normalize(std.cross(dir, axis));
 };
 
+const numSamples = 8;
+const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -197,8 +189,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  const numSamples = 8;
-  for (let i = 0; i < numSamples; i++) {
+  for (const i of tgpu.unroll(samplesIterations)) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1.mul(std.cos(theta)).add(perp2.mul(std.sin(theta)));
@@ -220,7 +211,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   return SenseResult({ weightedDir, totalWeight });
 };
 
-const updateAgents = tgpu['~unstable'].computeFn({
+const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [AGENT_WORKGROUP_SIZE],
 })(({ gid }) => {
@@ -324,7 +315,7 @@ const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
   ).x
 );
 
-const blur = tgpu['~unstable'].computeFn({
+const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
@@ -370,7 +361,7 @@ const rayBoxIntersection = (
   return RayBoxResult({ tNear, tFar, hit });
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -450,18 +441,14 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentShader,
+});
 
-const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
+const computePipeline = root.createComputePipeline({ compute: updateAgents });
 
-const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+const blurPipeline = root.createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
@@ -511,11 +498,7 @@ function frame() {
     );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 
@@ -608,13 +591,13 @@ canvas.addEventListener('touchcancel', (e) => {
   isDragging = false;
 }, { passive: false });
 
-export const controls = {
+export const controls = defineControls({
   'Move Speed': {
     initial: DEFAULT_MOVE_SPEED,
     min: 0,
     max: 100,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ moveSpeed: newValue });
     },
   },
@@ -623,7 +606,7 @@ export const controls = {
     min: 0,
     max: 3.14,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorAngle: newValue });
     },
   },
@@ -632,7 +615,7 @@ export const controls = {
     min: 1,
     max: 50,
     step: 0.5,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorDistance: newValue });
     },
   },
@@ -641,7 +624,7 @@ export const controls = {
     min: 0,
     max: 100,
     step: 0.1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ turnSpeed: newValue });
     },
   },
@@ -650,11 +633,11 @@ export const controls = {
     min: 0,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ evaporationRate: newValue });
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

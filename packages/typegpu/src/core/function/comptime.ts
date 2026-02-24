@@ -1,16 +1,26 @@
-import type { DualFn } from '../../data/dualFn.ts';
-import type { MapValueToSnippet } from '../../data/snippet.ts';
 import { WgslTypeError } from '../../errors.ts';
-import { getResolutionCtx } from '../../execMode.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import {
+  $getNameForward,
+  $gpuCallable,
+  $internal,
+} from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { isKnownAtComptime, NormalState } from '../../types.ts';
+import { type DualFn, isKnownAtComptime } from '../../types.ts';
 
-export type TgpuComptime<T extends (...args: never[]) => unknown> =
+type AnyFn = (...args: never[]) => unknown;
+
+export type TgpuComptime<T extends AnyFn = AnyFn> =
   & DualFn<T>
   & TgpuNamable
-  & { [$getNameForward]: unknown };
+  & {
+    [$getNameForward]: unknown;
+    [$internal]: { isComptime: true };
+  };
+
+export function isComptimeFn(value: unknown): value is TgpuComptime {
+  return !!(value as TgpuComptime)?.[$internal]?.isComptime;
+}
 
 /**
  * Creates a version of `func` that can called safely in a TypeGPU function to
@@ -22,12 +32,16 @@ export type TgpuComptime<T extends (...args: never[]) => unknown> =
  *
  * @example
  * ```ts
- * const injectRand01 = tgpu['~unstable']
- *   .comptime(() => Math.random());
+ * const color = tgpu.comptime((int: number) => {
+ *   const r = (int >> 16) & 0xff;
+ *   const g = (int >> 8) & 0xff;
+ *   const b = int & 0xff;
+ *   return d.vec3f(r / 255, g / 255, b / 255);
+ * });
  *
- * const getColor = (diffuse: d.v3f) => {
+ * const material = (diffuse: d.v3f): d.v3f => {
  *   'use gpu';
- *   const albedo = hsvToRgb(injectRand01(), 1, 0.5);
+ *   const albedo = color(0xff00ff);
  *   return albedo.mul(diffuse);
  * };
  * ```
@@ -35,48 +49,33 @@ export type TgpuComptime<T extends (...args: never[]) => unknown> =
 export function comptime<T extends (...args: never[]) => unknown>(
   func: T,
 ): TgpuComptime<T> {
-  const gpuImpl = (...args: MapValueToSnippet<Parameters<T>>) => {
-    const argSnippets = args as MapValueToSnippet<Parameters<T>>;
-
-    if (!argSnippets.every((s) => isKnownAtComptime(s))) {
-      throw new WgslTypeError(
-        `Called comptime function with runtime-known values: ${
-          argSnippets.filter((s) => !isKnownAtComptime(s)).map((s) =>
-            `'${s.value}'`
-          ).join(', ')
-        }`,
-      );
-    }
-
-    return coerceToSnippet(func(...argSnippets.map((s) => s.value) as never[]));
-  };
-
   const impl = ((...args: Parameters<T>) => {
-    const ctx = getResolutionCtx();
-    if (ctx?.mode.type === 'codegen') {
-      ctx.pushMode(new NormalState());
-      try {
-        return gpuImpl(...args as MapValueToSnippet<Parameters<T>>);
-      } finally {
-        ctx.popMode('normal');
-      }
-    }
     return func(...args);
   }) as TgpuComptime<T>;
 
   impl.toString = () => 'comptime';
   impl[$getNameForward] = func;
+  impl[$gpuCallable] = {
+    call(_ctx, args) {
+      if (!args.every((s) => isKnownAtComptime(s))) {
+        throw new WgslTypeError(
+          `Called comptime function with runtime-known values: ${
+            args.filter((s) => !isKnownAtComptime(s)).map((s) => `'${s.value}'`)
+              .join(', ')
+          }`,
+        );
+      }
+
+      return coerceToSnippet(func(...args.map((s) => s.value) as never[]));
+    },
+  };
   impl.$name = (label: string) => {
     setName(func, label);
     return impl;
   };
   Object.defineProperty(impl, $internal, {
-    value: {
-      jsImpl: func,
-      gpuImpl,
-      argConversionHint: 'keep',
-    },
+    value: { isComptime: true },
   });
 
-  return impl as TgpuComptime<T>;
+  return impl;
 }

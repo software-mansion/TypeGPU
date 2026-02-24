@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {
@@ -13,19 +11,13 @@ import {
   VertexInfo,
   VisParams,
 } from './schema.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // WebGPU setup
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Utility functions
 function makeLightViewProj(
@@ -155,7 +147,7 @@ const geometries = {
 };
 
 // Shaders
-const shadowVert = tgpu['~unstable'].vertexFn({
+const shadowVert = tgpu.vertexFn({
   in: { position: d.vec4f },
   out: { pos: d.builtin.position },
 })(({ position }) => {
@@ -164,7 +156,7 @@ const shadowVert = tgpu['~unstable'].vertexFn({
   return { pos: clip };
 });
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: {
     position: d.vec4f,
     normal: d.vec4f,
@@ -188,7 +180,7 @@ const mainVert = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: {
     normal: d.vec4f,
     worldPos: d.vec3f,
@@ -251,36 +243,40 @@ const mainFrag = tgpu['~unstable'].fragmentFn({
 // Pipelines
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexInfo));
 
-const pipeline = root['~unstable']
-  .withVertex(mainVert, vertexLayout.attrib)
-  .withFragment(mainFrag, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: mainVert,
+  fragment: mainFrag,
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
-const shadowPipeline = root['~unstable']
-  .withVertex(shadowVert, vertexLayout.attrib)
-  .withDepthStencil({
+const shadowPipeline = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: shadowVert,
+
+  primitive: {
+    cullMode: 'back',
+  },
+  depthStencil: {
     format: 'depth32float',
     depthWriteEnabled: true,
     depthCompare: 'less',
     depthBias: 1,
     depthBiasSlopeScale: 4,
     depthBiasClamp: 0,
-  })
-  .withPrimitive({
-    cullMode: 'back',
-  })
-  .createPipeline();
+  },
+});
 
 function updateLightDirection(dir: d.v3f) {
   currentLightDirection = dir;
@@ -371,7 +367,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-export const controls = {
+export const controls = defineControls({
   'camera X': {
     initial: -4.9,
     min: -10,
@@ -436,16 +432,16 @@ export const controls = {
     },
   },
   'shadow map size': {
-    initial: '2048',
-    options: ['512', '1024', '2048', '4096', '8192'],
-    onSelectChange: (value: string) => {
-      currentShadowMapSize = Number.parseInt(value);
+    initial: 2048,
+    options: [512, 1024, 2048, 4096, 8192],
+    onSelectChange: (value) => {
+      currentShadowMapSize = value;
       shadowTextures = createShadowTextures(currentShadowMapSize);
     },
   },
   'shadow map filtering': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       pcf = value;
       shadowTextures = createShadowTextures(
         currentShadowMapSize,
@@ -457,7 +453,7 @@ export const controls = {
   'display mode': {
     initial: 'color',
     options: ['color', 'shadow', 'light depth', 'inverse shadow'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       paramsUniform.write({
         shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
         lightDepth: value === 'light depth' ? 1 : 0,
@@ -472,7 +468,7 @@ export const controls = {
       );
     },
   },
-};
+});
 
 export function onCleanup() {
   if (frameId !== null) {

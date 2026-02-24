@@ -1,7 +1,6 @@
 import * as t3 from '@typegpu/three';
 import * as THREE from 'three/webgpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import { triNoise3D } from './triNoise.ts';
 
 export type Vertex = {

@@ -1,9 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 
-// Library entrypoints
-import { tgpu } from '../../src/index.ts';
-import * as d from '../../src/data/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 describe('codeGen', () => {
   describe('vectors', () => {

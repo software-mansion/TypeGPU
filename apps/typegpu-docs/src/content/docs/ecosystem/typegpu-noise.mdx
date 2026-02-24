@@ -10,7 +10,7 @@ It also features a [Perlin noise](#perlin-noise) implementation, which is useful
 effects, terrains, and other procedural elements.
 
 :::note
-Threads do not share the generator's `State`. As a result, unless you change the seed in each thread, each thread will produce the same sequence of sampled values.
+Threads do not share the generator's `State`. As a result, unless you change the seed in each thread to a different value, each of them will produce the same sequence of sampled values.
 :::
 
 ## Use with either TypeGPU or WebGPU
@@ -24,8 +24,7 @@ Calling utility functions from [TypeGPU functions](/TypeGPU/fundamentals/functio
 In the example below, resolving `randomVec2f` into a shader will include the code for `randf.sample` and all of its dependencies.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import { randf } from '@typegpu/noise';
 
@@ -47,7 +46,7 @@ The resolution mechanism handles deduplication out of the box, as well as omits 
 so only one definition of `sample` will be included in the final shader.
 
 ```ts twoslash
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 // ---cut---
 import { randf } from '@typegpu/noise';
 // `typegpu` is necessary to inject library code into your custom shader
@@ -82,11 +81,10 @@ Each call to `randf.sample` returns the next random float in the sequence, allow
 using a set of `randf.seedN` functions, where `N` is the number of components our seed has.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].fragmentFn({
+const main = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -146,12 +144,11 @@ The package exports an implementation for both 2D and 3D Perlin noise, `perlin2d
 Using it is as simple as calling the `.sample` function with the desired coordinates, and it returns a value in the range `[-1, 1]`.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 import { perlin2d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].fragmentFn({
+const main = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -168,12 +165,11 @@ To improve performance, you can precompute the gradients using either a *Static*
 A static cache presumes that the domain of the noise function is fixed, and cannot change between shader invocations.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 import { perlin3d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
 });
@@ -181,17 +177,16 @@ const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
 // ---cut---
 const cache = perlin3d.staticCache({ root, size: d.vec3u(10, 10, 1) });
 
-const pipeline = root['~unstable']
+const pipeline = root
   // Plugging the cache into the pipeline
   .pipe(cache.inject())
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 ```
 Or in WebGPU:
 ```ts twoslash
 /// <reference types="@webgpu/types" />
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 declare const device: GPUDevice;
 import tgpu from 'typegpu';
@@ -226,11 +221,10 @@ without having to recompile the shader, you have to use a dynamic cache. With it
 complex setup.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 
-const main = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
   const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
   const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
 });
@@ -241,12 +235,11 @@ const cacheConfig = perlin3d.dynamicCacheConfig();
 // Holds all resources the perlin cache needs access to
 const dynamicLayout = tgpu.bindGroupLayout({ ...cacheConfig.layout });
 
-const pipeline = root['~unstable']
+const pipeline = root
   // Plugging the cache into the pipeline
   .pipe(cacheConfig.inject(dynamicLayout.$))
   // ...
-  .withCompute(main)
-  .createPipeline();
+  .createComputePipeline({ compute: main });
 
 // Instantiating the cache with an initial size.
 const cache = cacheConfig.instance(root, d.vec3u(10, 10, 1));
@@ -273,15 +266,13 @@ The package provides convenient way to change PRNG as needed.
 You can easily implement your own PRNG and plug it into the pipeline.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
-import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 
 const b = root.createMutable(d.f32);
-const f = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {
+const f = tgpu.computeFn({ workgroupSize: [1] })(() => {
   b.$ = randf.sample();
 });
 // ---cut---
@@ -313,8 +304,7 @@ const LCG: StatefulGenerator = (() => {
   };
 })();
 
-const pipeline = root['~unstable']
+const pipeline = root
   .with(randomGeneratorSlot, LCG)
-  .withCompute(f)
-  .createPipeline();
+  .createComputePipeline({ compute: f });
 ```

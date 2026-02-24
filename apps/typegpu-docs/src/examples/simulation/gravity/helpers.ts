@@ -1,7 +1,6 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
-import type { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, type TgpuRoot } from 'typegpu';
 import { sphereTextureNames } from './enums.ts';
 import {
   type CelestialBody,
@@ -145,7 +144,7 @@ export async function loadSphereTextures(root: TgpuRoot) {
     .$usage('sampled', 'render');
 
   const planets = await Promise.all(
-    sphereTextureNames.map(async (name, i) => {
+    sphereTextureNames.map(async (name) => {
       const url = `/TypeGPU/assets/gravity/textures/${name}.jpg`;
       const response = await fetch(url);
       const blob = await response.blob();

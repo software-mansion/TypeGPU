@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import tgpu, { d } from '../../../src/index.js';
 import {
   mat2x2f,
   mat3x3f,
@@ -305,6 +306,23 @@ describe('mul', () => {
     const m = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
     const expected = vec4f(190, 486, 782, 1078);
     expect(mul(v, m)).toStrictEqual(expected);
+  });
+});
+
+describe('mul (codegen)', () => {
+  it('coerces scalar to fit vector', () => {
+    const foo = () => {
+      'use gpu';
+      const a = d.u32(2);
+      return d.vec2f(2, 3).mul(a);
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec2f {
+        const a = 2u;
+        return (vec2f(2, 3) * f32(a));
+      }"
+    `);
   });
 });
 

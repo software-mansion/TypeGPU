@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { collisionBehaviors } from './enums.ts';
 import { radiusOf } from './helpers.ts';
 import { CelestialBody, computeLayout, timeAccess } from './schemas.ts';
@@ -23,7 +21,7 @@ const isSmaller = tgpu.fn([d.u32, d.u32], d.bool)((currentId, otherId) => {
   return false;
 });
 
-export const computeCollisionsShader = tgpu['~unstable'].computeFn({
+export const computeCollisionsShader = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {
@@ -97,7 +95,7 @@ export const computeCollisionsShader = tgpu['~unstable'].computeFn({
   computeLayout.$.outState[currentId] = CelestialBody(current);
 });
 
-export const computeGravityShader = tgpu['~unstable'].computeFn({
+export const computeGravityShader = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {

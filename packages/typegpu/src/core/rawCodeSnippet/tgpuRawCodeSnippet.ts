@@ -1,5 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
@@ -24,7 +25,7 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
  * Extra declaration that will be included in final WGSL code
  * when resolving objects that use it.
  */
-export interface TgpuRawCodeSnippet<TDataType extends AnyData> {
+export interface TgpuRawCodeSnippet<TDataType extends BaseData> {
   $: InferGPU<TDataType>;
   value: InferGPU<TDataType>;
   readonly [$gpuValueOf]: InferGPU<TDataType>;
@@ -92,7 +93,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
 // Implementation
 // --------------
 
-class TgpuRawCodeSnippetImpl<TDataType extends AnyData>
+class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   implements TgpuRawCodeSnippet<TDataType>, SelfResolvable {
   readonly [$internal]: true;
   readonly dataType: TDataType;

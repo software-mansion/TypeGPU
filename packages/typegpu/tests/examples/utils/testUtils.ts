@@ -18,17 +18,15 @@ export function createDeepNoopProxy<T extends object>(
     get(obj, prop, receiver) {
       accessedProperties.add(prop);
 
-      // biome-ignore lint/suspicious/noExplicitAny: we testing here
-      return () => createDeepNoopProxy({} as any, accessedProperties);
+      return () => createDeepNoopProxy({}, accessedProperties);
     },
     set() {
       return true; // No-op set
     },
     apply() {
-      // biome-ignore lint/suspicious/noExplicitAny: we testing here
-      return createDeepNoopProxy({} as any, accessedProperties);
+      return createDeepNoopProxy({}, accessedProperties);
     },
-  }) as T;
+  });
 }
 
 export async function testExampleShaderGeneration(
@@ -50,7 +48,7 @@ export async function testExampleShaderGeneration(
 }
 
 export function extractShaderCodes(
-  // biome-ignore lint/suspicious/noExplicitAny: we testing here
+  // oxlint-disable-next-line typescript/no-explicit-any we testing here
   device: any,
   expectedCalls?: number,
 ): string {
@@ -66,7 +64,7 @@ export function extractShaderCodes(
 }
 
 export async function waitForExpectedCalls(
-  // biome-ignore lint/suspicious/noExplicitAny: it's a mock
+  // oxlint-disable-next-line typescript/no-explicit-any it's a mock
   device: any,
   expectedCalls: number,
 ): Promise<void> {

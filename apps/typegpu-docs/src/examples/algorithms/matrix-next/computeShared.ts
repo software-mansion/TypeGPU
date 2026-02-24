@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { TILE_SIZE, WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';
 
@@ -17,7 +15,7 @@ const getTileIndex = tgpu.fn([d.u32, d.u32], d.u32)((row, col) => {
   return col + row * TILE_SIZE;
 });
 
-export const computeSharedMemory = tgpu['~unstable'].computeFn({
+export const computeSharedMemory = tgpu.computeFn({
   workgroupSize: WORKGROUP_SIZE,
   in: {
     gid: d.builtin.globalInvocationId,
@@ -53,7 +51,7 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
       );
       valueA = computeLayout.$.firstMatrix[indexA];
     }
-    tileA.value[tileIdx] = valueA;
+    tileA.$[tileIdx] = valueA;
 
     const matrixBRow = tileIndex * TILE_SIZE + localRow;
     let valueB = 0;
@@ -69,7 +67,7 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
       );
       valueB = computeLayout.$.secondMatrix[indexB];
     }
-    tileB.value[tileIdx] = valueB;
+    tileB.$[tileIdx] = valueB;
 
     std.workgroupBarrier();
 
@@ -79,8 +77,8 @@ export const computeSharedMemory = tgpu['~unstable'].computeFn({
     );
 
     for (let k = d.u32(0); k < effectiveTileSize; k++) {
-      const tileA_element = tileA.value[getTileIndex(localRow, k)];
-      const tileB_element = tileB.value[getTileIndex(k, localCol)];
+      const tileA_element = tileA.$[getTileIndex(localRow, k)];
+      const tileB_element = tileB.$[getTileIndex(k, localCol)];
       accumulatedResult += tileA_element * tileB_element;
     }
 

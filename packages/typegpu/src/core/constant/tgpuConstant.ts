@@ -1,8 +1,6 @@
+import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import {
-  type AnyWgslData,
-  isNaturallyEphemeral,
-} from '../../data/wgslTypes.ts';
+import { type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -26,9 +24,13 @@ type DeepReadonly<T> = T extends { [$internal]: unknown } ? T
     ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : T;
 
-export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
+export interface TgpuConst<TDataType extends BaseData = BaseData>
   extends TgpuNamable {
+  readonly resourceType: 'const';
   readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  /**
+   * @deprecated Use `.$` instead, works the same way.
+   */
   readonly value: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 
@@ -41,7 +43,7 @@ export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
 /**
  * Creates a module constant with specified value.
  */
-export function constant<TDataType extends AnyWgslData>(
+export function constant<TDataType extends AnyData>(
   dataType: TDataType,
   value: InferGPU<TDataType>,
 ): TgpuConst<TDataType> {
@@ -58,7 +60,7 @@ function deepFreeze<T extends object>(object: T): T {
 
   // Freeze properties before freezing self
   for (const name of propNames) {
-    // biome-ignore lint/suspicious/noExplicitAny: chill TypeScript
+    // oxlint-disable-next-line typescript/no-explicit-any chill TypeScript
     const value = (object as any)[name];
 
     if ((value && typeof value === 'object') || typeof value === 'function') {
@@ -69,15 +71,17 @@ function deepFreeze<T extends object>(object: T): T {
   return Object.freeze(object);
 }
 
-class TgpuConstImpl<TDataType extends AnyWgslData>
+class TgpuConstImpl<TDataType extends BaseData>
   implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
+  readonly resourceType: 'const';
   readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
   constructor(
     public readonly dataType: TDataType,
     value: InferGPU<TDataType>,
   ) {
+    this.resourceType = 'const';
     this.#value = value && typeof value === 'object'
       ? deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>
       : value as DeepReadonly<InferGPU<TDataType>>;

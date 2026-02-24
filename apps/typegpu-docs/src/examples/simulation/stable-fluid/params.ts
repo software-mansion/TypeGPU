@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import type { SimulationParams } from './types.ts';
 
 export const N = 2048;

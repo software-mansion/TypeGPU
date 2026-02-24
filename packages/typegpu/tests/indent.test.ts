@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 
 describe('indents', () => {
   it('should indent sanely', () => {
@@ -336,7 +336,7 @@ describe('indents', () => {
       sampler: { sampler: 'filtering', multisampled: true },
     });
 
-    const someVertex = tgpu['~unstable'].vertexFn({
+    const someVertex = tgpu.vertexFn({
       in: {
         vertexIndex: d.builtin.vertexIndex,
         position: d.vec4f,
@@ -348,7 +348,7 @@ describe('indents', () => {
       },
     })((input) => {
       const uniBoid = layout.$.boids;
-      for (let i = d.u32(); i < std.floor(std.sin(123)); i++) {
+      for (let i = d.u32(); i < std.floor(std.sin(Math.PI / 2)); i++) {
         const sampled = std.textureSample(
           layout.$.sampled,
           layout.$.sampler,
@@ -404,7 +404,7 @@ describe('indents', () => {
 
       @vertex fn someVertex(input: someVertex_Input) -> someVertex_Output {
         let uniBoid = (&boids);
-        for (var i = 0u; (i < -1u); i++) {
+        for (var i = 0u; (i < 1u); i++) {
           var sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
           var someVal = textureLoad(smoothRender, vec2i(), 0);
           if (((someVal.x + sampled_1.x) > 0.5f)) {

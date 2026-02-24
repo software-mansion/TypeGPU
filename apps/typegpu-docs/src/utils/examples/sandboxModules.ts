@@ -1,6 +1,8 @@
+// oxlint-disable typescript/no-unnecessary-type-assertion import.meta.glob is inferred incorrectly by oxlint
 import { entries, fromEntries, map, pipe } from 'remeda';
 
 import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';
+// oxlint-disable-next-line import/default
 import dtsWgpuMatrix from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
 
 interface SandboxModuleDefinition {
@@ -141,6 +143,10 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/color': {
     import: { reroute: 'typegpu-color/src/index.ts' },
     typeDef: { reroute: 'typegpu-color/src/index.ts' },
+  },
+  '@typegpu/concurrent-scan': {
+    import: { reroute: 'typegpu-concurrent-scan/src/index.ts' },
+    typeDef: { reroute: 'typegpu-concurrent-scan/src/index.ts' },
   },
   '@typegpu/three': {
     typeDef: { reroute: 'typegpu-three/src/index.ts' },

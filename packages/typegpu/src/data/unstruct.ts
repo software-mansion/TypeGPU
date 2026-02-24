@@ -2,7 +2,6 @@ import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AnyData, Unstruct } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
-import type { BaseData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -26,7 +25,7 @@ import type { BaseData } from './wgslTypes.ts';
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
  * each entry describing one struct member.
  */
-export function unstruct<TProps extends Record<string, BaseData>>(
+export function unstruct<TProps extends Record<string, AnyData>>(
   properties: TProps,
 ): Unstruct<TProps> {
   // In the schema call, create and return a deep copy
@@ -35,7 +34,7 @@ export function unstruct<TProps extends Record<string, BaseData>>(
     Object.fromEntries(
       Object.entries(properties).map(([key, schema]) => [
         key,
-        schemaCallWrapper(schema as AnyData, instanceProps?.[key]),
+        schemaCallWrapper(schema, instanceProps?.[key]),
       ]),
     );
   Object.setPrototypeOf(unstructSchema, UnstructImpl);

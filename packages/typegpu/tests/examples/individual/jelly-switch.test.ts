@@ -120,13 +120,6 @@ describe('jelly switch example', () => {
 
       @group(0) @binding(2) var<uniform> stateUniform: SwitchState;
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(3) var<uniform> lightUniform: DirectionalLight;
-
       fn opRotateAxisAngle(p: vec3f, axis: vec3f, angle: f32) -> vec3f {
         return (mix((axis * dot(p, axis)), p, cos(angle)) + (cross(p, axis) * sin(angle)));
       }
@@ -184,11 +177,18 @@ describe('jelly switch example', () => {
         return getApproxNormal(position, 1e-4f);
       }
 
-      @group(0) @binding(4) var<uniform> jellyColorUniform: vec4f;
+      @group(0) @binding(3) var<uniform> jellyColorUniform: vec4f;
 
       fn sqLength(a: vec3f) -> f32 {
         return dot(a, a);
       }
+
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(4) var<uniform> lightUniform: DirectionalLight;
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
         if ((position.y < -0.03f)) {
@@ -212,7 +212,7 @@ describe('jelly switch example', () => {
         var specular = (lightUniform.color * (specularFactor * 0.6f));
         var baseColor = vec3f(0.8999999761581421);
         var directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
-        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6);
+        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
         var finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
       }
@@ -253,22 +253,16 @@ describe('jelly switch example', () => {
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32) -> vec4f {
         let state = (&stateUniform);
         var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var offsetX = 0f;
-        var offsetZ = 0.05000000074505806f;
-        let lightDir = (&lightUniform.direction);
-        const causticScale = 0.2;
-        offsetX -= ((*lightDir).x * causticScale);
-        offsetZ += ((*lightDir).z * causticScale);
         var newNormal = getNormal(hitPosition);
         let switchX = (((*state).progress - 0.5f) * 0.4f);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(switchX, 0f, 0f)));
-        var bounceLight = ((*jellyColor).xyz * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
-        var sideBounceLight = (((*jellyColor).xyz * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
-        let emission = ((smoothstep(0.7, 1, (*state).progress) * 2f) + 0.7f);
+        var bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
+        var sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
+        let emission = ((smoothstep(0.7f, 1f, (*state).progress) * 2f) + 0.7f);
         var litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
         var backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
-        return vec4f(backgroundColor.xyz, 1f);
+        return vec4f(backgroundColor.rgb, 1f);
       }
 
       struct BoundingBox {
@@ -368,13 +362,13 @@ describe('jelly switch example', () => {
             var refractedColor = vec3f();
             if ((k > 0f)) {
               var refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
-              var p = (hitPosition + (refrDir * 2e-3));
-              var exitPos = (p + (refrDir * 2e-3));
+              var p = (hitPosition + (refrDir * 2e-3f));
+              var exitPos = (p + (refrDir * 2e-3f));
               var env = rayMarchNoJelly(exitPos, refrDir);
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).xyz * 1.5);
+              var scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              var absorb = ((vec3f(1) - (*jellyColor).xyz) * density);
+              var absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
               let state = (&stateUniform);
               let progress = (saturate(mix(1f, 0.6f, ((hitPosition.y * 1.6666666004392863f) + 0.25f))) * (*state).progress);
               var T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
@@ -403,7 +397,7 @@ describe('jelly switch example', () => {
         var ray = getRay(ndc);
         var color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
         let exposure = select(1.5, 2., (darkModeUniform == 1u));
-        return vec4f(tanh((color.xyz * exposure)), 1f);
+        return vec4f(tanh((color.rgb * exposure)), 1f);
       }
 
       @group(0) @binding(0) var currentTexture: texture_2d<f32>;
@@ -422,18 +416,90 @@ describe('jelly switch example', () => {
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         var dimensions = textureDimensions(currentTexture);
-        for (var x = -1; (x <= 1i); x++) {
-          for (var y = -1; (y <= 1i); y++) {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(x, y));
+        // unrolled iteration #0
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.xyz);
-            maxColor = max(maxColor, neighborColor.xyz);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        var historyColorClamped = clamp(historyColor.xyz, minColor, maxColor);
+        // unrolled iteration #1
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i());
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        // unrolled iteration #2
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         const blendFactor = 0.8999999761581421f;
-        var resolvedColor = vec4f(mix(currentColor.xyz, historyColorClamped, blendFactor), 1f);
+        var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(_arg_0.gid.x, _arg_0.gid.y), resolvedColor);
       }
 

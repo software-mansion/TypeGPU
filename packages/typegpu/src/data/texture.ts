@@ -388,7 +388,7 @@ function createTexture<TProps extends WgslTextureProps>(
     : ['float', 'unfilterable-float'];
 
   return {
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as WgslTexture<TProps>,
     type,
     bindingSampleType: sampleTypes,
@@ -401,7 +401,7 @@ function createStorageTexture<TProps extends WgslStorageTextureProps>(
   props: TProps,
 ): WgslStorageTexture<TProps> {
   return {
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as WgslStorageTexture<TProps>,
     type,
     ...props,
@@ -801,7 +801,7 @@ export interface textureExternal {
 export function textureExternal() {
   const key = 'texture_external';
   return getOrCreate(key, () => ({
-    [$internal]: true,
+    [$internal]: {},
     [$repr]: undefined as unknown as textureExternal,
     type: 'texture_external',
     dimension: '2d',

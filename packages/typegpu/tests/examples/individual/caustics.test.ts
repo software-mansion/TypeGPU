@@ -36,7 +36,7 @@ describe('caustics example', () => {
 
       fn tilePattern(uv: vec2f) -> f32 {
         var tiledUv = fract(uv);
-        var proximity = abs(((tiledUv * 2) - 1));
+        var proximity = abs(((tiledUv * 2f) - 1f));
         let maxProximity = max(proximity.x, proximity.y);
         return saturate((pow((1f - maxProximity), 0.6f) * 5f));
       }
@@ -73,7 +73,7 @@ describe('caustics example', () => {
       }
 
       fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3 * vec3f(pos)));
+        randSeed3((1e-3f * vec3f(pos)));
         return randOnUnitSphere();
       }
 
@@ -84,7 +84,7 @@ describe('caustics example', () => {
       }
 
       fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6) - 15)) + 10));
+        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -109,9 +109,9 @@ describe('caustics example', () => {
       }
 
       fn caustics(uv: vec2f, time2: f32, profile: vec3f) -> vec3f {
-        let distortion = sample(vec3f((uv * 0.5), (time2 * 0.2f)));
+        let distortion = sample(vec3f((uv * 0.5f), (time2 * 0.2f)));
         var uv2 = (uv + distortion);
-        let noise = abs(sample(vec3f((uv2 * 5), time2)));
+        let noise = abs(sample(vec3f((uv2 * 5f), time2)));
         return pow(vec3f((1f - noise)), profile);
       }
 
@@ -130,7 +130,7 @@ describe('caustics example', () => {
         var albedo = mix(vec3f(0.10000000149011612), vec3f(1), tile);
         var cuv = vec2f(((_arg_0.uv.x * (pow((_arg_0.uv.y * 1.5f), 3f) + 0.1f)) * 5f), (pow((((_arg_0.uv.y * 1.5f) + 0.1f) * 1.5f), 3f) * 1f));
         var c1 = (caustics(cuv, (time * 0.2f), vec3f(4, 4, 1)) * vec3f(0.4000000059604645, 0.6499999761581421, 1));
-        var c2 = (caustics((cuv * 2), (time * 0.4f), vec3f(16, 1, 4)) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5));
+        var c2 = (caustics((cuv * 2f), (time * 0.4f), vec3f(16, 1, 4)) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5));
         var blendCoord = vec3f((_arg_0.uv * vec2f(5, 10)), ((time * 0.2f) + 5f));
         let blend = saturate((sample(blendCoord) + 0.3f));
         var noFogColor = (albedo * mix(vec3f(0.20000000298023224, 0.5, 1), (c1 + c2), blend));
@@ -138,7 +138,7 @@ describe('caustics example', () => {
         var godRayUv = ((rotateXY(-0.3f) * _arg_0.uv) * vec2f(15, 3));
         let godRayFactor = pow(_arg_0.uv.y, 1f);
         var godRay1 = ((sample(vec3f(godRayUv, (time * 0.5f))) + 1f) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * godRayFactor));
-        var godRay2 = ((sample(vec3f((godRayUv * 2), (time * 0.3f))) + 1f) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * (godRayFactor * 0.4f)));
+        var godRay2 = ((sample(vec3f((godRayUv * 2f), (time * 0.3f))) + 1f) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * (godRayFactor * 0.4f)));
         var godRays = (godRay1 + godRay2);
         return vec4f((mix(noFogColor, vec3f(0.05000000074505806, 0.20000000298023224, 0.699999988079071), fog) + godRays), 1f);
       }"

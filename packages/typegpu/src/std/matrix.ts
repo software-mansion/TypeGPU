@@ -10,26 +10,15 @@ import {
 import type { m4x4f, v3f } from '../data/wgslTypes.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { mul } from './operators.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
 import { vec3f } from '../data/vector.ts';
 import { f32 } from '../data/numeric.ts';
 
-const cpuMul = mul[$internal].jsImpl;
-
-const cpuTranslation4 = translation4[$internal].jsImpl;
-const gpuTranslation4 = translation4[$internal].gpuImpl;
-
-const cpuScaling4 = scaling4[$internal].jsImpl;
-const gpuScaling4 = scaling4[$internal].gpuImpl;
-
-const cpuRotationX4 = rotationX4[$internal].jsImpl;
-const gpuRotationX4 = rotationX4[$internal].gpuImpl;
-
-const cpuRotationY4 = rotationY4[$internal].jsImpl;
-const gpuRotationY4 = rotationY4[$internal].gpuImpl;
-
-const cpuRotationZ4 = rotationZ4[$internal].jsImpl;
-const gpuRotationZ4 = rotationZ4[$internal].gpuImpl;
+const gpuTranslation4 = translation4[$gpuCallable].call.bind(translation4);
+const gpuScaling4 = scaling4[$gpuCallable].call.bind(scaling4);
+const gpuRotationX4 = rotationX4[$gpuCallable].call.bind(rotationX4);
+const gpuRotationY4 = rotationY4[$gpuCallable].call.bind(rotationY4);
+const gpuRotationZ4 = rotationZ4[$gpuCallable].call.bind(rotationZ4);
 
 /**
  * Translates the given 4-by-4 matrix by the given vector.
@@ -39,11 +28,10 @@ const gpuRotationZ4 = rotationZ4[$internal].gpuImpl;
  */
 export const translate4 = dualImpl({
   name: 'translate4',
-  normalImpl: (matrix: m4x4f, vector: v3f) =>
-    cpuMul(cpuTranslation4(vector), matrix),
+  normalImpl: (matrix: m4x4f, vector: v3f) => mul(translation4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
-  codegenImpl: (matrix, vector) =>
-    stitch`(${gpuTranslation4(vector)} * ${matrix})`,
+  codegenImpl: (ctx, [matrix, vector]) =>
+    stitch`(${gpuTranslation4(ctx, [vector])} * ${matrix})`,
 });
 
 /**
@@ -54,11 +42,10 @@ export const translate4 = dualImpl({
  */
 export const scale4 = dualImpl({
   name: 'scale4',
-  normalImpl: (matrix: m4x4f, vector: v3f) =>
-    cpuMul(cpuScaling4(vector), matrix),
+  normalImpl: (matrix: m4x4f, vector: v3f) => mul(scaling4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
-  codegenImpl: (matrix, vector) =>
-    stitch`(${(gpuScaling4(vector))} * ${matrix})`,
+  codegenImpl: (ctx, [matrix, vector]) =>
+    stitch`(${(gpuScaling4(ctx, [vector]))} * ${matrix})`,
 });
 
 const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
@@ -71,11 +58,10 @@ const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
  */
 export const rotateX4 = dualImpl({
   name: 'rotateX4',
-  normalImpl: (matrix: m4x4f, angle: number) =>
-    cpuMul(cpuRotationX4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationX4(angle), matrix),
   signature: rotateSignature,
-  codegenImpl: (matrix, angle) =>
-    stitch`(${(gpuRotationX4(angle))} * ${matrix})`,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationX4(ctx, [angle]))} * ${matrix})`,
 });
 
 /**
@@ -86,11 +72,10 @@ export const rotateX4 = dualImpl({
  */
 export const rotateY4 = dualImpl({
   name: 'rotateY4',
-  normalImpl: (matrix: m4x4f, angle: number) =>
-    cpuMul(cpuRotationY4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationY4(angle), matrix),
   signature: rotateSignature,
-  codegenImpl: (matrix, angle) =>
-    stitch`(${(gpuRotationY4(angle))} * ${matrix})`,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationY4(ctx, [angle]))} * ${matrix})`,
 });
 
 /**
@@ -101,9 +86,8 @@ export const rotateY4 = dualImpl({
  */
 export const rotateZ4 = dualImpl({
   name: 'rotateZ4',
-  normalImpl: (matrix: m4x4f, angle: number) =>
-    cpuMul(cpuRotationZ4(angle), matrix),
+  normalImpl: (matrix: m4x4f, angle: number) => mul(rotationZ4(angle), matrix),
   signature: rotateSignature,
-  codegenImpl: (matrix, angle) =>
-    stitch`(${(gpuRotationZ4(angle))} * ${matrix})`,
+  codegenImpl: (ctx, [matrix, angle]) =>
+    stitch`(${(gpuRotationZ4(ctx, [angle]))} * ${matrix})`,
 });

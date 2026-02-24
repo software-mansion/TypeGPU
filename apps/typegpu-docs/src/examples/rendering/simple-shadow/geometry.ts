@@ -5,7 +5,7 @@ import type {
   TgpuRoot,
   VertexFlag,
 } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import {
   bindGroupLayout,

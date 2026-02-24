@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { add, dot, floor, fract, mul, sub } from 'typegpu/std';
 import { randOnUnitCircle, randSeed2 } from '../random.ts';
 import { quinticDerivative2, quinticInterpolation2 } from '../utils.ts';

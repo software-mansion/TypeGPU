@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 export const Camera = d.struct({
   view: d.mat4x4f,

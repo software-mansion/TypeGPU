@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import * as std from '../../src/std/index.ts';
-import * as d from '../../src/data/index.ts';
 import {
   vec2f,
   vec2i,
@@ -12,7 +10,7 @@ import {
   vec4i,
   vec4u,
 } from '../../src/data/vector.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 
 describe('bitcast', () => {
   it('bitcastU32toF32', () => {

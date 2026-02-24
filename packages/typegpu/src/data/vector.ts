@@ -1,7 +1,6 @@
-import { dualImpl } from '../core/function/dualImpl.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { $repr } from '../shared/symbols.ts';
-import type { AnyData } from './dataTypes.ts';
+import { $internal, $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
   Vec2bImpl,
@@ -23,6 +22,7 @@ import {
 } from './vectorImpl.ts';
 import type {
   AnyVecInstance,
+  BaseData,
   Bool,
   F16,
   F32,
@@ -275,6 +275,7 @@ export const vecTypeToConstructor = {
 
 type VecSchemaBase<TValue> = {
   readonly type: string;
+  readonly componentCount: 2 | 3 | 4;
   readonly [$repr]: TValue;
 };
 
@@ -282,10 +283,11 @@ function makeVecSchema<TValue, S extends number | boolean>(
   VecImpl: new (...args: S[]) => VecBase<S>,
   primitive: F32 | F16 | I32 | U32 | Bool,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
-  const { kind: type, length: componentCount } = new VecImpl();
+  const { kind: type, length } = new VecImpl();
+  const componentCount = length as 2 | 3 | 4;
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
-    const values = new Array(args.length);
+    const values: S[] = Array.from({ length: args.length });
 
     let j = 0;
     for (const arg of args) {
@@ -293,7 +295,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
         values[j++] = arg;
       } else {
         for (let c = 0; c < arg.length; ++c) {
-          values[j++] = arg[c];
+          values[j++] = arg[c] as S;
         }
       }
     }
@@ -307,16 +309,17 @@ function makeVecSchema<TValue, S extends number | boolean>(
     );
   };
 
-  const construct = dualImpl({
+  const construct = callableSchema({
     name: type,
     signature: (...args) => ({
       argTypes: args.map((arg) => isVec(arg) ? arg : primitive),
-      returnType: schema as AnyData,
+      returnType: schema as unknown as BaseData,
     }),
     normalImpl: cpuConstruct,
-    ignoreImplicitCastWarning: true,
-    codegenImpl: (...args) => {
-      if (args.length === 1 && args[0]?.dataType === schema) {
+    codegenImpl: (_ctx, args) => {
+      if (
+        args.length === 1 && args[0]?.dataType === schema as unknown as BaseData
+      ) {
         // Already typed as the schema
         return stitch`${args[0]}`;
       }
@@ -327,15 +330,16 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const schema:
     & VecSchemaBase<TValue>
     & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+      [$internal]: {},
       type,
       primitive,
+      componentCount,
       [$repr]: undefined as TValue,
     });
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
-  (VecImpl.prototype as any).schema = schema;
+  VecImpl.prototype.schema = schema;
 
   return schema;
 }

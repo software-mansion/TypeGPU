@@ -5,7 +5,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with default import named not tgpu', () => {
     const code = `\
       import hello from 'typegpu';
-      
+
       const increment = hello.fn([])(() => {
         const x = 2+2;
       });
@@ -29,7 +29,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with aliased tgpu import', () => {
     const code = `\
       import { tgpu as t } from 'typegpu';
-      
+
       const increment = t.fn([])(() => {
         const x = 2+2;
       });
@@ -53,7 +53,7 @@ describe('[BABEL] tgpu alias gathering', () => {
   it('works with namespace import', () => {
     const code = `\
       import * as t from 'typegpu';
-      
+
       const increment = t.tgpu.fn([])(() => {
         const x = 2+2;
       });
@@ -79,7 +79,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
   it('works with default import named not tgpu', async () => {
     const code = `\
       import hello from 'typegpu';
-      
+
       const increment = hello.fn([])(() => {
       });
     `;
@@ -101,7 +101,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
   it('works with aliased tgpu import', async () => {
     const code = `\
       import { tgpu as t } from 'typegpu';
-      
+
       const increment = t.fn([])(() => {
       });
     `;
@@ -125,7 +125,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     // TODO: Oh ohh, this breaks for some reason :(
     const code = `\
       import * as t from 'typegpu';
-      
+
       const increment = t.tgpu.fn([])(() => {
       });
     `;

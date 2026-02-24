@@ -132,7 +132,7 @@ describe('simple shadow example', () => {
         var R = reflect(-(L), N);
         var lp4 = (lightSpaceUniform.viewProj * vec4f(_arg_0.worldPos, 1f));
         var ndc = (lp4.xyz / lp4.w);
-        var uv = ((ndc.xy * 0.5) + 0.5);
+        var uv = ((ndc.xy * 0.5f) + 0.5f);
         uv = vec2f(uv.x, (1f - uv.y));
         let currentDepth = ndc.z;
         let inBounds = (all((uv >= vec2f())) && all((uv <= vec2f(1))));

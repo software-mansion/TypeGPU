@@ -2,37 +2,42 @@
  * @module typegpu/data
  */
 
+// NOTE: This is a barrel file, internal files should not import things from this file
+
+import { Operator } from 'tsover-runtime';
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
-import { $internal } from '../shared/symbols.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   object: T,
   operator: InfixOperator,
+  operatorSymbol: symbol,
 ) {
-  type Instance = InstanceType<T>;
-
-  const proto = object.prototype as {
-    [K in InfixOperator]?: (this: Instance, other: unknown) => unknown;
-  };
-  const opImpl = infixOperators[operator][$internal].jsImpl as (
-    lhs: Instance,
+  // oxlint-disable-next-line typescript/no-explicit-any anything is possible
+  const proto = object.prototype as any;
+  const opImpl = infixOperators[operator] as (
+    lhs: unknown,
     rhs: unknown,
   ) => unknown;
 
-  proto[operator] = function (this: Instance, other: unknown): unknown {
+  proto[operator] = function (this: unknown, other: unknown): unknown {
     return opImpl(this, other);
+  };
+
+  proto[operatorSymbol] = (lhs: unknown, rhs: unknown): unknown => {
+    return opImpl(lhs, rhs);
   };
 }
 
-assignInfixOperator(VecBase, 'add');
-assignInfixOperator(VecBase, 'sub');
-assignInfixOperator(VecBase, 'mul');
-assignInfixOperator(VecBase, 'div');
-assignInfixOperator(MatBase, 'add');
-assignInfixOperator(MatBase, 'sub');
-assignInfixOperator(MatBase, 'mul');
+assignInfixOperator(VecBase, 'add', Operator.plus);
+assignInfixOperator(VecBase, 'sub', Operator.minus);
+assignInfixOperator(VecBase, 'mul', Operator.star);
+assignInfixOperator(VecBase, 'div', Operator.slash);
+assignInfixOperator(VecBase, 'mod', Operator.percent);
+assignInfixOperator(MatBase, 'add', Operator.plus);
+assignInfixOperator(MatBase, 'sub', Operator.minus);
+assignInfixOperator(MatBase, 'mul', Operator.star);
 
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
@@ -71,6 +76,7 @@ export type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
+  matBase,
   Ptr,
   Size,
   StorableData,
@@ -103,6 +109,7 @@ export type {
   Vec4h,
   Vec4i,
   Vec4u,
+  vecBase,
   WgslArray,
   WgslStruct,
 } from './wgslTypes.ts';
@@ -190,7 +197,7 @@ export { unstruct } from './unstruct.ts';
 export { mat2x2f, mat3x3f, mat4x4f, matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
-export { ref } from './ref.ts';
+export { _ref as ref } from './ref.ts';
 export {
   align,
   type AnyAttribute,
@@ -210,6 +217,11 @@ export {
   isUnstruct,
 } from './dataTypes.ts';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
+export { PUBLIC_isContiguous as isContiguous } from './isContiguous.ts';
+export {
+  PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix,
+} from './getLongestContiguousPrefix.ts';
+export { memoryLayoutOf } from './offsetUtils.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';
 export { deepEqual } from './deepEqual.ts';

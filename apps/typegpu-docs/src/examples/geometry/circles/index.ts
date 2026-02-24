@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as s from 'typegpu/std';
-
 import { circle, circleVertexCount } from '@typegpu/geometry';
+import tgpu, { d, std as s } from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -89,7 +86,7 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   circles,
 });
 
-const mainVertexMaxArea = tgpu['~unstable'].vertexFn({
+const mainVertexMaxArea = tgpu.vertexFn({
   in: {
     instanceIndex: d.builtin.instanceIndex,
     vertexIndex: d.builtin.vertexIndex,
@@ -110,7 +107,7 @@ const mainVertexMaxArea = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     uv: d.vec2f,
     instanceIndex: d.interpolate('flat', d.u32),
@@ -129,24 +126,23 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   );
 });
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertexMaxArea, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .withMultisample({ count: multisample ? 4 : 1 })
-  .createPipeline();
+const pipeline = root.createRenderPipeline({
+  vertex: mainVertexMaxArea,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+  multisample: { count: multisample ? 4 : 1 },
+});
 
 setTimeout(() => {
   pipeline
-    .with(bindGroupLayout, uniformsBindGroup)
+    .with(uniformsBindGroup)
     .withColorAttachment({
       ...(multisample
         ? {
           view: msaaTextureView,
-          resolveTarget: context.getCurrentTexture().createView(),
+          resolveTarget: context,
         }
-        : {
-          view: context.getCurrentTexture().createView(),
-        }),
+        : { view: context }),
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
       storeOp: 'store',

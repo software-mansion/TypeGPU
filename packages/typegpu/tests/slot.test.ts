@@ -1,8 +1,7 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d, std } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
+import { getName } from '../src/shared/meta.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -274,7 +273,7 @@ describe('tgpu.slot', () => {
     `);
   });
 
-  it('allows access to value in tgsl functions through the .value property ', ({ root }) => {
+  it('allows access to value in tgsl functions through the .$ property ', ({ root }) => {
     const vectorSlot = tgpu.slot(d.vec3f(1, 2, 3));
     const Boid = d.struct({
       pos: d.vec3f,
@@ -287,19 +286,19 @@ describe('tgpu.slot', () => {
     const uniformSlotSlot = tgpu.slot(uniformSlot);
 
     const getColor = tgpu.fn([], d.vec3f)(() => d.vec3f(1, 2, 3));
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, getColor);
+    const colorAccess = tgpu.accessor(d.vec3f, getColor);
     const colorAccessSlot = tgpu.slot(colorAccess);
 
     const func = tgpu.fn([])(() => {
-      const pos = vectorSlot.value;
-      const posX = vectorSlot.value.x;
-      const vel = uniformSlot.value.vel;
-      const velX = uniformSlot.value.vel.x;
+      const pos = vectorSlot.$;
+      const posX = vectorSlot.$.x;
+      const vel = uniformSlot.$.vel;
+      const velX = uniformSlot.$.vel.x;
 
-      const vel_ = uniformSlotSlot.value.vel;
-      const velX_ = uniformSlotSlot.value.vel.x;
+      const vel_ = uniformSlotSlot.$.vel;
+      const velX_ = uniformSlotSlot.$.vel.x;
 
-      const color = colorAccessSlot.value;
+      const color = colorAccessSlot.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -346,7 +345,6 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
-
         return color;
       }"
     `);
@@ -360,6 +358,81 @@ describe('tgpu.slot', () => {
           color = pow(color, vec3f(0.4545454680919647));
         }
         return color;
+      }"
+    `);
+  });
+
+  it('includes slot bindings in toString', () => {
+    const firstSlot = tgpu.slot<number>();
+    const secondSlot = tgpu.slot<number>();
+    const thirdSlot = tgpu.slot<number>();
+
+    const getSize = tgpu.fn([], d.f32)(() =>
+      firstSlot.$ + secondSlot.$ + thirdSlot.$
+    )
+      .with(firstSlot, 1)
+      .with(secondSlot, 2)
+      .with(thirdSlot, 3);
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[firstSlot=1, secondSlot=2, thirdSlot=3]"`,
+    );
+  });
+
+  it('safe stringifies in toString', () => {
+    const slot = tgpu.slot<d.v4f>();
+
+    const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
+      .with(slot, d.vec4f(1, 2, 3, 4));
+
+    expect(getSize.toString()).toMatchInlineSnapshot(
+      `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
+    );
+  });
+
+  it('sets names only for bound functions', () => {
+    const colorSlot = tgpu.slot<d.v3f>();
+
+    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
+    const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
+
+    expect(getName(getColor)).toBe('colorFn');
+    expect(getName(getRed)).toBe('redFn');
+    expect(getName(getBlue)).toBe('blueFn');
+  });
+
+  it('uses bound name for code generation', () => {
+    const colorSlot = tgpu.slot<d.v3f>(d.vec3f(0, 0, 0));
+
+    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
+    const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
+
+    const main = () => {
+      'use gpu';
+      getColor();
+      getRed();
+      getBlue();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn colorFn() -> vec3f {
+        return vec3f();
+      }
+
+      fn redFn() -> vec3f {
+        return vec3f(1, 0, 0);
+      }
+
+      fn blueFn() -> vec3f {
+        return vec3f(0, 0, 1);
+      }
+
+      fn main() {
+        colorFn();
+        redFn();
+        blueFn();
       }"
     `);
   });

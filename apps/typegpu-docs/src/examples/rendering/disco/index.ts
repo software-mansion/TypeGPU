@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
   mainFragment1,
@@ -11,18 +10,11 @@ import {
   mainFragment7,
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
-const device = root.device;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
@@ -42,12 +34,13 @@ const fragmentShaders = [
 ];
 
 const pipelines = fragmentShaders.map((fragment) =>
-  root['~unstable']
+  root
     .with(timeAccess, time)
     .with(resolutionAccess, resolutionUniform)
-    .withVertex(mainVertex, {})
-    .withFragment(fragment, { format: presentationFormat })
-    .createPipeline()
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: fragment,
+    })
 );
 
 let currentPipeline = pipelines[0];
@@ -63,10 +56,8 @@ function render() {
 
   currentPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(6);
 
@@ -80,7 +71,7 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   Pattern: {
     initial: 'pattern1',
     options: [
@@ -92,7 +83,7 @@ export const controls = {
       'pattern6',
       'pattern7',
     ],
-    onSelectChange(value: string) {
+    onSelectChange(value) {
       const patternIndex = {
         pattern1: 0,
         pattern2: 1,
@@ -117,4 +108,4 @@ export const controls = {
       );
     },
   },
-};
+});

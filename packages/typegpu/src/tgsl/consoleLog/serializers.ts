@@ -2,6 +2,7 @@ import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
 import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
@@ -25,6 +26,7 @@ import {
 import {
   type AnyWgslData,
   type Atomic,
+  type BaseData,
   isWgslArray,
   isWgslStruct,
   type U32,
@@ -196,7 +198,7 @@ for (const [name, serializer] of Object.entries(serializerMap)) {
 // Helpers
 // -------
 
-function generateHeader(argTypes: AnyWgslData[]): string {
+function generateHeader(argTypes: BaseData[]): string {
   return `(${argTypes.map((_, i) => `_arg_${i}`).join(', ')})`;
 }
 
@@ -208,11 +210,11 @@ function generateHeader(argTypes: AnyWgslData[]): string {
  * @param dataType - The WGSL data type descriptor to return a serializer for
  * @param dataBuffer - A buffer to store serialized log call data (a necessary external for the returned function)
  */
-function getSerializer<T extends AnyWgslData>(
+function getSerializer<T extends BaseData>(
   dataType: T,
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
 ): TgpuFn<(args_0: T) => Void> {
-  const maybeSerializer = serializerMap[dataType.type];
+  const maybeSerializer = serializerMap[dataType.type as AnyWgslData['type']];
   if (maybeSerializer) {
     return (maybeSerializer as TgpuFn<(args_0: T) => Void>).with(
       dataBufferSlot,
@@ -221,7 +223,7 @@ function getSerializer<T extends AnyWgslData>(
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
-    const propTypes = Object.values(dataType.propTypes) as AnyWgslData[];
+    const propTypes = Object.values(dataType.propTypes);
     const propsSerializer = createCompoundSerializer(propTypes, dataBuffer);
     return fn([dataType])`(arg) {\n  propsSerializer(${
       props.map((prop) => `arg.${prop}`).join(', ')
@@ -251,12 +253,12 @@ function getSerializer<T extends AnyWgslData>(
  * @param dataBuffer - A buffer to store serialized log call data (a necessary external for the returned function)
  */
 function createCompoundSerializer(
-  dataTypes: AnyWgslData[],
+  dataTypes: BaseData[],
   dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>,
 ) {
   const usedSerializers: Record<string, unknown> = {};
 
-  const shell = fn(dataTypes);
+  const shell = fn(dataTypes as AnyData[]);
   const header = generateHeader(dataTypes);
   const body = dataTypes.map((arg, i) => {
     usedSerializers[`serializer${i}`] = getSerializer(arg, dataBuffer);

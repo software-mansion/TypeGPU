@@ -1,4 +1,8 @@
-import tgpu from 'typegpu';
+import {
+  randf,
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -10,12 +14,7 @@ import type {
   TgpuRoot,
   TgpuSlot,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import {
-  randf,
-  randomGeneratorSlot,
-  type StatefulGenerator,
-} from '@typegpu/noise';
+import tgpu, { d } from 'typegpu';
 
 export class Executor {
   // don't exceed max workgroup grid X dimension size
@@ -60,7 +59,7 @@ export class Executor {
     });
     this.#bindGroupLayout = bindGroupLayoutTempAlias;
 
-    this.#dataMoreWorkersFunc = tgpu['~unstable'].computeFn({
+    this.#dataMoreWorkersFunc = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [64],
     })((input) => {
@@ -121,11 +120,10 @@ export class Executor {
   ): TgpuComputePipeline {
     let pipeline = this.#pipelineCache.get(distribution)?.get(generator);
     if (!pipeline) {
-      pipeline = this.#root['~unstable']
+      pipeline = this.#root
         .with(randomGeneratorSlot, generator)
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-        .createPipeline();
+        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCacheSet(distribution, generator, pipeline);
     }
 

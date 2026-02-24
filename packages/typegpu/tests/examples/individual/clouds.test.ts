@@ -76,9 +76,9 @@ describe('clouds example', () => {
       fn noise3d(pos: vec3f) -> f32 {
         var idx = floor(pos);
         var frac = fract(pos);
-        var smooth_1 = ((frac * frac) * (3 - (2 * frac)));
-        var texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256));
-        var texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256));
+        var smooth_1 = ((frac * frac) * (3f - (2f * frac)));
+        var texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256f));
+        var texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256f));
         let val0 = textureSampleLevel(noiseTexture, sampler_1, texCoord0, 0).x;
         let val1 = textureSampleLevel(noiseTexture, sampler_1, texCoord1, 0).x;
         return ((mix(val0, val1, smooth_1.z) * 2f) - 1f);
@@ -88,7 +88,20 @@ describe('clouds example', () => {
         var sum = 0f;
         var amp = 1f;
         var freq = 1.399999976158142f;
-        for (var i = 0; (i < 3i); i++) {
+        // unrolled iteration #0
+        {
+          sum += (noise3d((pos * freq)) * amp);
+          amp *= 0.5f;
+          freq *= 2f;
+        }
+        // unrolled iteration #1
+        {
+          sum += (noise3d((pos * freq)) * amp);
+          amp *= 0.5f;
+          freq *= 2f;
+        }
+        // unrolled iteration #2
+        {
           sum += (noise3d((pos * freq)) * amp);
           amp *= 0.5f;
           freq *= 2f;
@@ -102,7 +115,7 @@ describe('clouds example', () => {
       }
 
       fn sampleDensityCheap(pos: vec3f) -> f32 {
-        let noise = (noise3d((pos * 1.4)) * 1f);
+        let noise = (noise3d((pos * 1.4f)) * 1f);
         return clamp(((noise + 0.7f) - 0.5f), 0f, 1f);
       }
 
@@ -124,9 +137,9 @@ describe('clouds example', () => {
             var light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + (vec3f(1, 0.699999988079071, 0.30000001192092896) * (lightVal * 0.9f)));
             var color = mix(vec3f(1), vec3f(0.20000000298023224), cloudDensity);
             var lit = (color * light);
-            var contrib = (vec4f(lit, 1f) * (cloudDensity * (0.88f - accum.w)));
+            var contrib = (vec4f(lit, 1f) * (cloudDensity * (0.88f - accum.a)));
             accum = (accum + contrib);
-            if ((accum.w >= 0.879f)) {
+            if ((accum.a >= 0.879f)) {
               break;
             }
           }
@@ -143,7 +156,7 @@ describe('clouds example', () => {
         randSeed2((_arg_0.uv * params.time));
         let screenRes = (&resolutionUniform);
         let aspect = ((*screenRes).x / (*screenRes).y);
-        var screenPos = ((_arg_0.uv - 0.5) * 2);
+        var screenPos = ((_arg_0.uv - 0.5f) * 2f);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
         var sunDir = vec3f(1, 0, 0);
         let time = params.time;
@@ -154,7 +167,7 @@ describe('clouds example', () => {
         var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * (rayDir.y * 0.35f)));
         skyCol = (skyCol + (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow));
         var cloudCol = raymarch(rayOrigin, rayDir, sunDir);
-        var finalCol = ((skyCol * (1.1f - cloudCol.w)) + cloudCol.xyz);
+        var finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);
         return vec4f(finalCol, 1f);
       }"
     `);

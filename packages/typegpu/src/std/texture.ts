@@ -6,10 +6,11 @@ import {
   type WgslTexture,
 } from '../data/texture.ts';
 import type { TexelData } from '../core/texture/texture.ts';
-import { dualImpl } from '../core/function/dualImpl.ts';
-import { f32, u32 } from '../data/numeric.ts';
+import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
+import { f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
+  type BaseData,
   type v2f,
   type v2i,
   type v2u,
@@ -37,6 +38,7 @@ import type {
   textureDepth2d,
   textureDepth2dArray,
   textureDepthCube,
+  textureDepthCubeArray,
   textureExternal,
   textureMultisampled2d,
   textureStorage1d,
@@ -45,7 +47,6 @@ import type {
   textureStorage3d,
 } from '../data/texture.ts';
 
-import type { AnyData } from '../data/dataTypes.ts';
 import type { comparisonSampler, sampler } from '../data/sampler.ts';
 
 function sampleCpu<T extends texture1d>(
@@ -109,7 +110,7 @@ function sampleCpu(
   _offsetOrArrayIndex?: v2i | v3i | number,
   _maybeOffset?: v2i | v3i,
 ): v4f | number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -117,11 +118,11 @@ function sampleCpu(
 export const textureSample = dualImpl({
   name: 'textureSample',
   normalImpl: sampleCpu,
-  codegenImpl: (...args) => stitch`textureSample(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSample(${args})`,
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
-      argTypes: args as AnyData[],
+      argTypes: args as BaseData[],
       returnType: isDepth ? f32 : vec4f,
     };
   },
@@ -170,7 +171,7 @@ function sampleBiasCpu(
   _biasOrOffset?: number | v2i | v3i,
   _maybeOffset?: v2i | v3i,
 ): v4f {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling with bias relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -178,9 +179,9 @@ function sampleBiasCpu(
 export const textureSampleBias = dualImpl({
   name: 'textureSampleBias',
   normalImpl: sampleBiasCpu,
-  codegenImpl: (...args) => stitch`textureSampleBias(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleBias(${args})`,
   signature: (...args) => ({
-    argTypes: args as AnyData[],
+    argTypes: args as BaseData[],
     returnType: vec4f,
   }),
 });
@@ -288,7 +289,7 @@ function sampleLevelCpu(
   _offsetOrArrayIndex?: v2i | v3i | number,
   _maybeOffset?: v2i | v3i,
 ): v4f | number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -296,7 +297,7 @@ function sampleLevelCpu(
 export const textureSampleLevel = dualImpl({
   name: 'textureSampleLevel',
   normalImpl: sampleLevelCpu,
-  codegenImpl: (...args) => stitch`textureSampleLevel(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleLevel(${args})`,
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
@@ -363,7 +364,7 @@ function textureLoadCpu(
   _coords: number | v2i | v2u | v3i | v3u,
   _levelOrArrayIndex?: number,
 ): TexelData {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -371,7 +372,7 @@ function textureLoadCpu(
 export const textureLoad = dualImpl({
   name: 'textureLoad',
   normalImpl: textureLoadCpu,
-  codegenImpl: (...args) => stitch`textureLoad(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureLoad(${args})`,
   signature: (...args) => {
     const texture = args[0] as WgslTexture | WgslStorageTexture;
     if (isWgslTexture(texture)) {
@@ -424,7 +425,7 @@ function textureStoreCpu(
   _arrayIndexOrValue?: number | TexelData,
   _maybeValue?: TexelData,
 ): void {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -432,7 +433,7 @@ function textureStoreCpu(
 export const textureStore = dualImpl({
   name: 'textureStore',
   normalImpl: textureStoreCpu,
-  codegenImpl: (...args) => stitch`textureStore(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
   signature: (...args) => ({ argTypes: args, returnType: Void }),
 });
 
@@ -471,7 +472,7 @@ function textureDimensionsCpu(
   _texture: WgslTexture | WgslStorageTexture | WgslExternalTexture,
   _level?: number,
 ): number | v2u | v3u {
-  throw new Error(
+  throw new MissingCpuImplError(
     '`textureDimensions` relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -479,7 +480,7 @@ function textureDimensionsCpu(
 export const textureDimensions = dualImpl({
   name: 'textureDimensions',
   normalImpl: textureDimensionsCpu,
-  codegenImpl: (...args) => stitch`textureDimensions(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureDimensions(${args})`,
   signature: (...args) => {
     const dim = (
       args[0] as WgslTexture | WgslStorageTexture | WgslExternalTexture
@@ -499,6 +500,136 @@ export const textureDimensions = dualImpl({
     return {
       argTypes: args,
       returnType: vec2u,
+    };
+  },
+});
+
+type Gather2dArgs<T extends texture2d = texture2d> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  offset?: v2i,
+];
+type Gather2dArrayArgs<T extends texture2dArray = texture2dArray> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  offset?: v2i,
+];
+type GatherCubeArgs<T extends textureCube = textureCube> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+];
+type GatherCubeArrayArgs<T extends textureCubeArray = textureCubeArray> = [
+  component: number,
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  arrayIndex: number,
+];
+type GatherDepth2dArgs = [
+  texture: textureDepth2d,
+  sampler: sampler,
+  coords: v2f,
+  offset?: v2i,
+];
+type GatherDepth2dArrayArgs = [
+  texture: textureDepth2dArray,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  offset?: v2i,
+];
+type GatherDepthCubeArgs = [
+  texture: textureDepthCube,
+  sampler: sampler,
+  coords: v3f,
+];
+type GatherDepthCubeArrayArgs = [
+  texture: textureDepthCubeArray,
+  sampler: sampler,
+  coords: v3f,
+  arrayIndex: number,
+];
+
+type TextureGatherCpuArgs =
+  | Gather2dArgs
+  | Gather2dArrayArgs
+  | GatherCubeArgs
+  | GatherCubeArrayArgs
+  | GatherDepth2dArgs
+  | GatherDepth2dArrayArgs
+  | GatherDepthCubeArgs
+  | GatherDepthCubeArrayArgs;
+
+type TextureGatherCpuFn = {
+  <T extends texture2d>(
+    ...args: Gather2dArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends texture2dArray>(
+    ...args: Gather2dArrayArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends textureCube>(
+    ...args: GatherCubeArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  <T extends textureCubeArray>(
+    ...args: GatherCubeArrayArgs<T>
+  ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+  (...args: GatherDepth2dArgs): v4f;
+  (...args: GatherDepth2dArrayArgs): v4f;
+  (...args: GatherDepthCubeArgs): v4f;
+  (...args: GatherDepthCubeArrayArgs): v4f;
+};
+
+export const textureGatherCpu: TextureGatherCpuFn = (
+  ..._args: TextureGatherCpuArgs
+): v4f => {
+  throw new Error(
+    'Texture gather relies on GPU resources and cannot be executed outside of a draw call',
+  );
+};
+
+const sampleTypeToVecType = {
+  f32: vec4f,
+  i32: vec4i,
+  u32: vec4u,
+};
+
+export const textureGather = dualImpl({
+  name: 'textureGather',
+  normalImpl: textureGatherCpu,
+  codegenImpl: (_ctx, args) => stitch`textureGather(${args})`,
+  signature: (...args) => {
+    if (args[0].type.startsWith('texture')) {
+      const [texture, sampler, coords, _, ...rest] = args;
+
+      const isArrayTexture = texture.type === 'texture_depth_2d_array' ||
+        texture.type === 'texture_depth_cube_array';
+
+      const argTypes = isArrayTexture
+        ? [texture, sampler, coords, [u32, i32], ...rest]
+        : args as BaseData[];
+
+      return { argTypes: argTypes as BaseData[], returnType: vec4f };
+    }
+
+    const [_, texture, sampler, coords, ...rest] = args;
+
+    const isArrayTexture = texture.type === 'texture_2d_array' ||
+      texture.type === 'texture_cube_array';
+
+    const argTypes = isArrayTexture
+      ? [[u32, i32], texture, sampler, coords, [u32, i32], ...rest]
+      : [[u32, i32], texture, sampler, coords, ...rest];
+
+    return {
+      argTypes: argTypes as BaseData[],
+      returnType: sampleTypeToVecType[(texture as WgslTexture).sampleType.type],
     };
   },
 });
@@ -537,7 +668,7 @@ function textureSampleCompareCpu<T extends textureDepthCube>(
   coords: v3f,
   depthRef: number,
 ): number;
-function textureSampleCompareCpu<T extends textureCubeArray>(
+function textureSampleCompareCpu<T extends textureDepthCubeArray>(
   texture: T,
   sampler: comparisonSampler,
   coords: v3f,
@@ -552,7 +683,7 @@ function textureSampleCompareCpu(
   _depthRefOrOffset?: number | v2i,
   _maybeOffset?: v2i,
 ): number {
-  throw new Error(
+  throw new MissingCpuImplError(
     'Texture comparison sampling relies on GPU resources and cannot be executed outside of a draw call',
   );
 }
@@ -560,7 +691,71 @@ function textureSampleCompareCpu(
 export const textureSampleCompare = dualImpl({
   name: 'textureSampleCompare',
   normalImpl: textureSampleCompareCpu,
-  codegenImpl: (...args) => stitch`textureSampleCompare(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleCompare(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: f32,
+  }),
+});
+
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+  offset: v2i,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCube>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu<T extends textureDepthCubeArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  arrayIndex: number,
+  depthRef: number,
+): number;
+function textureSampleCompareLevelCpu(
+  _texture: WgslTexture,
+  _sampler: comparisonSampler,
+  _coords: v2f | v3f,
+  _depthRefOrArrayIndex: number,
+  _depthRefOrOffset?: number | v2i,
+  _maybeOffset?: v2i,
+): number {
+  throw new MissingCpuImplError(
+    'Texture comparison sampling with level relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureSampleCompareLevel = dualImpl({
+  name: 'textureSampleCompareLevel',
+  normalImpl: textureSampleCompareLevelCpu,
+  codegenImpl: (ctx, args) => stitch`textureSampleCompareLevel(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: f32,
@@ -569,8 +764,8 @@ export const textureSampleCompare = dualImpl({
 
 function textureSampleBaseClampToEdgeCpu<
   T extends texture2d | textureExternal,
->(texture: T, sampler: sampler, coords: v2f): v4f {
-  throw new Error(
+>(_texture: T, _sampler: sampler, _coords: v2f): v4f {
+  throw new MissingCpuImplError(
     'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
   );
 }
@@ -578,7 +773,7 @@ function textureSampleBaseClampToEdgeCpu<
 export const textureSampleBaseClampToEdge = dualImpl({
   name: 'textureSampleBaseClampToEdge',
   normalImpl: textureSampleBaseClampToEdgeCpu,
-  codegenImpl: (...args) => stitch`textureSampleBaseClampToEdge(${args})`,
+  codegenImpl: (_ctx, args) => stitch`textureSampleBaseClampToEdge(${args})`,
   signature: (...args) => ({
     argTypes: args,
     returnType: vec4f,

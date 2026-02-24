@@ -5,6 +5,7 @@ import { Executor } from './executor.ts';
 import type { Distribution, Generator } from './types.ts';
 import * as c from './constants.ts';
 import { getCameraPosition, getGenerator, getPRNG } from './helpers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -56,7 +57,7 @@ canvas.addEventListener('touchend', () => {
 
 plotter.resetView(getCameraPosition(currentDistribution));
 
-export const controls = {
+export const controls = defineControls({
   'Reset Camera': {
     onButtonClick: () => {
       plotter.resetView(getCameraPosition(currentDistribution));
@@ -92,7 +93,7 @@ export const controls = {
   'Distribution': {
     initial: c.initialDistribution,
     options: c.distributions,
-    async onSelectChange(value: Distribution) {
+    async onSelectChange(value) {
       if (currentDistribution === value) {
         return;
       }
@@ -109,7 +110,7 @@ export const controls = {
   'Number of samples': {
     initial: c.initialNumSamples,
     options: c.numSamplesOptions,
-    async onSelectChange(value: number) {
+    async onSelectChange(value) {
       executor.count = value;
       await replot(
         currentDistribution,
@@ -132,11 +133,10 @@ export const controls = {
       }
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
   plotter.destroy();
 }
-
 // #endregion

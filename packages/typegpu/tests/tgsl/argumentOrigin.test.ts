@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import * as d from '../../src/data/index.ts';
 import { it } from '../utils/extendedIt.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 describe('function argument origin tracking', () => {
   it('should fail on mutation of primitive arguments', () => {

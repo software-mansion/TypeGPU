@@ -5,9 +5,9 @@ import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as t3 from '@typegpu/three';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
@@ -60,7 +60,7 @@ const computeInit = t3.toTSL(() => {
   color.y = randf.sample();
   colors.$[instanceIdx] = d.vec3f(color);
 }).compute(particleCount).setName('Init Particles TypeGPU');
-renderer.compute(computeInit);
+void renderer.compute(computeInit);
 
 const computeAccessor = t3.toTSL(() => {
   'use gpu';
@@ -154,7 +154,7 @@ function onMove(event: PointerEvent) {
     clickPosition.node.value.copy(point);
     clickPosition.node.value.y = -1;
 
-    renderer.compute(computeHit);
+    void renderer.compute(computeHit);
   }
 }
 
@@ -189,20 +189,20 @@ resizeObserver.observe(canvas);
 const animate = () => {
   cameraControls.update();
 
-  renderer.compute(computeAccessor);
+  void renderer.compute(computeAccessor);
   renderer.render(scene, camera);
 };
 
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   'gravity': {
     initial: -0.00098,
     min: -0.00098,
     max: 0,
     step: 0.0001,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       gravity.node.value = value;
     },
   },
@@ -211,7 +211,7 @@ export const controls = {
     min: 0.1,
     max: 2,
     step: 0.02,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       bounce.node.value = value;
     },
   },
@@ -220,7 +220,7 @@ export const controls = {
     min: 0.5,
     max: 0.99,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       friction.node.value = value;
     },
   },
@@ -229,11 +229,11 @@ export const controls = {
     min: 0.05,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       size.node.value = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   renderer.dispose();

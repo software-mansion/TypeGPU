@@ -1,6 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src/index.ts';
-import * as d from '../src/data/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('tgpu.namespace', () => {

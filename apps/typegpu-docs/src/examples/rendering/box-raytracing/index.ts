@@ -1,6 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import {
   add,
   discard,
@@ -13,6 +12,7 @@ import {
   sub,
 } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 // init canvas and values
 
@@ -27,17 +27,9 @@ let cameraDistance = 16;
 
 let frame = 0;
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // structs
 
@@ -160,7 +152,7 @@ const Varying = {
   rayWorldOrigin: d.vec3f,
 };
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, ...Varying },
 })((input) => {
@@ -175,7 +167,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
 });
 
-const fragmentFunction = tgpu['~unstable'].fragmentFn({
+const fragmentFunction = tgpu.fragmentFn({
   in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
@@ -263,10 +255,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
 // pipeline
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertex, {})
-  .withFragment(fragmentFunction, {
-    format: presentationFormat,
+const pipeline = root.createRenderPipeline({
+  primitive: {
+    topology: 'triangle-strip',
+  },
+  vertex: mainVertex,
+  fragment: fragmentFunction,
+  targets: {
     blend: {
       color: {
         srcFactor: 'one',
@@ -279,11 +274,8 @@ const pipeline = root['~unstable']
         operation: 'add',
       },
     },
-  })
-  .withPrimitive({
-    topology: 'triangle-strip',
-  })
-  .createPipeline();
+  },
+});
 
 // UI
 
@@ -326,25 +318,19 @@ onFrame((deltaTime) => {
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
-  const textureView = context.getCurrentTexture().createView();
   pipeline
-    .withColorAttachment({
-      view: textureView,
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 });
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'rotation speed': {
     initial: rotationSpeed,
     min: 0,
     max: 5,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       rotationSpeed = value;
     },
   },
@@ -353,7 +339,7 @@ export const controls = {
     initial: cameraDistance,
     min: 10,
     max: 100,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       cameraDistance = value;
     },
   },
@@ -362,7 +348,7 @@ export const controls = {
     initial: 1,
     min: 0.1,
     max: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       uniforms.writePartial({
         boxSize: value,
       });
@@ -373,13 +359,13 @@ export const controls = {
     initial: 2,
     min: 0.2,
     max: 2,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       uniforms.writePartial({
         materialDensity: value,
       });
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

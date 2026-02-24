@@ -1,8 +1,13 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import type { AnyData } from '../data/dataTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
-import { type atomicI32, type atomicU32, Void } from '../data/wgslTypes.ts';
+import {
+  type atomicI32,
+  type atomicU32,
+  type BaseData,
+  isAtomic,
+  Void,
+} from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
@@ -34,16 +39,16 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   name: 'atomicLoad',
   normalImpl: atomicNormalError,
   signature: (a) => {
-    if (a.type !== 'atomic') {
+    if (!isAtomic(a)) {
       throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
     }
     return { argTypes: [a], returnType: a.inner };
   },
-  codegenImpl: (a) => stitch`atomicLoad(&${a})`,
+  codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
 });
 
-const atomicActionSignature = (a: AnyData, param: AnyData) => {
-  if (a.type !== 'atomic') {
+const atomicActionSignature = (a: BaseData) => {
+  if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
   return {
@@ -52,8 +57,8 @@ const atomicActionSignature = (a: AnyData, param: AnyData) => {
   };
 };
 
-const atomicOpSignature = (a: AnyData, param: AnyData) => {
-  if (a.type !== 'atomic') {
+const atomicOpSignature = (a: BaseData) => {
+  if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
   const paramType = a.inner.type === 'u32' ? u32 : i32;
@@ -69,7 +74,7 @@ export const atomicStore = dualImpl<
   name: 'atomicStore',
   normalImpl: atomicNormalError,
   signature: atomicActionSignature,
-  codegenImpl: (a, value) => stitch`atomicStore(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicStore(&${a}, ${value})`,
 });
 
 export const atomicAdd = dualImpl<
@@ -78,7 +83,7 @@ export const atomicAdd = dualImpl<
   name: 'atomicAdd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicAdd(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicAdd(&${a}, ${value})`,
 });
 
 export const atomicSub = dualImpl<
@@ -87,7 +92,7 @@ export const atomicSub = dualImpl<
   name: 'atomicSub',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicSub(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicSub(&${a}, ${value})`,
 });
 
 export const atomicMax = dualImpl<
@@ -96,7 +101,7 @@ export const atomicMax = dualImpl<
   name: 'atomicMax',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicMax(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicMax(&${a}, ${value})`,
 });
 
 export const atomicMin = dualImpl<
@@ -105,7 +110,7 @@ export const atomicMin = dualImpl<
   name: 'atomicMin',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicMin(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicMin(&${a}, ${value})`,
 });
 
 export const atomicAnd = dualImpl<
@@ -114,7 +119,7 @@ export const atomicAnd = dualImpl<
   name: 'atomicAnd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicAnd(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicAnd(&${a}, ${value})`,
 });
 
 export const atomicOr = dualImpl<
@@ -123,7 +128,7 @@ export const atomicOr = dualImpl<
   name: 'atomicOr',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicOr(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicOr(&${a}, ${value})`,
 });
 
 export const atomicXor = dualImpl<
@@ -132,5 +137,5 @@ export const atomicXor = dualImpl<
   name: 'atomicXor',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (a, value) => stitch`atomicXor(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicXor(&${a}, ${value})`,
 });

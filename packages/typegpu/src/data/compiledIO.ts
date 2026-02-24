@@ -9,6 +9,7 @@ import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval no-new
     new Function('return true');
     return true;
   } catch {
@@ -196,13 +197,16 @@ export function buildWriter(
   }
 
   if (wgsl.isVec(node)) {
+    if (wgsl.isVecBool(node)) {
+      throw new Error('Compiled writers do not support boolean vectors');
+    }
+
     const primitive = typeToPrimitive[node.type];
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
     const components = ['x', 'y', 'z', 'w'];
-    const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < node.componentCount; i++) {
       code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${
         components[i]
       }, littleEndian);\n`;
@@ -247,13 +251,7 @@ export function buildWriter(
     ];
     const writeFunc = primitiveToWriteFunction[primitive];
     const wgslType = formatToWGSLType[formatName];
-    const componentCount = wgsl.isVec4(wgslType)
-      ? 4
-      : wgsl.isVec3(wgslType)
-      ? 3
-      : wgsl.isVec2(wgslType)
-      ? 2
-      : 1;
+    const componentCount = wgsl.isVec(wgslType) ? wgslType.componentCount : 1;
     const componentSize = primitive === 'u8' || primitive === 'i8'
       ? 1
       : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
@@ -319,6 +317,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   try {
     const body = buildWriter(schema, 'offset', 'value', 0);
 
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval
     const fn = new Function(
       'output',
       'offset',
@@ -328,7 +327,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     ) as (
       output: DataView,
       offset: number,
-      value: Infer<T> | unknown,
+      value: unknown,
       littleEndian?: boolean,
     ) => void;
 

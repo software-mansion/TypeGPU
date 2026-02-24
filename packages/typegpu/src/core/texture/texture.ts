@@ -148,7 +148,7 @@ type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   sampleCount?: T['sampleCount'];
 }>;
 
-// biome-ignore lint/suspicious/noExplicitAny: we can't tame the validation otherwise
+// oxlint-disable-next-line typescript/no-explicit-any we can't tame the validation otherwise
 export interface TgpuTexture<TProps extends TextureProps = any>
   extends TgpuNamable {
   readonly [$internal]: TextureInternals;
@@ -203,6 +203,7 @@ export interface TgpuTextureView<
   readonly [$internal]: TextureViewInternals;
   readonly resourceType: 'texture-view';
   readonly schema: TSchema;
+  readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
@@ -222,17 +223,17 @@ export function INTERNAL_createTexture(
   return new TgpuTextureImpl(props, branch);
 }
 
-export function isTexture<T extends TgpuTexture>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'texture' && !!(value as T)[$internal];
+export function isTexture(value: unknown): value is TgpuTexture {
+  return (
+    (value as TgpuTexture)?.resourceType === 'texture' &&
+    !!(value as TgpuTexture)[$internal]
+  );
 }
 
-export function isTextureView<T extends TgpuTextureView>(
-  value: unknown | T,
-): value is T {
+export function isTextureView(value: unknown): value is TgpuTextureView {
   return (
-    (value as T)?.resourceType === 'texture-view' && !!(value as T)[$internal]
+    (value as TgpuTextureView)?.resourceType === 'texture-view' &&
+    !!(value as TgpuTextureView)[$internal]
   );
 }
 
@@ -249,8 +250,6 @@ class TgpuTextureImpl<TProps extends TextureProps>
   usableAsRender = false;
 
   #formatInfo: TextureFormatInfo;
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: wdym, it is used 10 lines below
-  #byteSize: number | 'non-copyable';
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   #texture: GPUTexture | null = null;
@@ -264,13 +263,6 @@ class TgpuTextureImpl<TProps extends TextureProps>
 
     this.#branch = branch;
     this.#formatInfo = getTextureFormatInfo(format);
-    const texelSize = this.#formatInfo.texelSize;
-    this.#byteSize = texelSize === 'non-copyable'
-      ? 'non-copyable'
-      : (props.size[0] as number) *
-        (props.size[1] ?? 1) *
-        (props.size[2] ?? 1) *
-        texelSize;
 
     this[$internal] = {
       unwrap: () => {
@@ -389,7 +381,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   generateMipmaps(baseMipLevel = 0, mipLevels?: number) {
-    if (this.usableAsRender === false) {
+    if (!this.usableAsRender) {
       throw new Error(
         "generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.",
       );
@@ -501,8 +493,8 @@ class TgpuTextureImpl<TProps extends TextureProps>
   }
 
   #writeSingleLayer(source: ExternalImageSource, layer?: number) {
-    const targetWidth = this.props.size[0] as number;
-    const targetHeight = (this.props.size[1] ?? 1) as number;
+    const targetWidth = this.props.size[0];
+    const targetHeight = this.props.size[1] ?? 1;
     const { width: sourceWidth, height: sourceHeight } =
       getImageSourceDimensions(source);
     const needsResampling = sourceWidth !== targetWidth ||
@@ -555,6 +547,10 @@ class TgpuTextureImpl<TProps extends TextureProps>
       source.props.size,
     );
     this.#branch.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  toString(): string {
+    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 
   get destroyed() {
@@ -652,6 +648,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   get value(): Infer<T> {
     return this.$;
+  }
+
+  get size(): number[] {
+    return this.#baseTexture.props.size;
   }
 
   toString() {

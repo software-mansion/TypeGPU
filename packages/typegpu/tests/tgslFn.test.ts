@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
-import * as d from '../src/data/index.ts';
-import { tgpu, type TgpuFn, type TgpuSlot } from '../src/index.ts';
+import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -125,7 +124,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -170,7 +169,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves vertexFn with empty in', () => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
+    const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => ({ pos: d.vec4f() }));
 
@@ -187,7 +186,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('throws when vertexFn with empty out', () => {
     expect(() =>
-      tgpu['~unstable'].vertexFn({
+      tgpu.vertexFn({
         in: { vi: builtin.vertexIndex },
         out: {},
       })
@@ -197,7 +196,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows destructuring the input argument in vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -235,7 +234,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows access to output struct as second argument in vertexFn', () => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         in: {
           vi: builtin.vertexIndex,
@@ -281,7 +280,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves computeFn', () => {
-    const computeFn = tgpu['~unstable']
+    const computeFn = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -308,7 +307,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows destructuring the input argument in computeFn', () => {
-    const computeFn = tgpu['~unstable']
+    const computeFn = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -335,22 +334,20 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('rejects invalid arguments for computeFn', () => {
-    const u = tgpu['~unstable'];
-
     // @ts-expect-error
-    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(
+    tgpu.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(
       () => {},
     );
 
     // @ts-expect-error
-    u.computeFn({
+    tgpu.computeFn({
       in: { gid: builtin.globalInvocationId, random: d.f32 },
       workgroupSize: [24],
     })(() => {});
   });
 
   it('resolves fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         in: {
           pos: builtin.position,
@@ -401,7 +398,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows accessing the output struct as second argument in fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         in: {
           pos: builtin.position,
@@ -450,7 +447,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows accessing fragment output even when it is not a struct', () => {
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         in: {
           pos: builtin.position,
@@ -478,7 +475,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows destructuring the input argument in fragmentFn', () => {
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         in: {
           pos: builtin.position,
@@ -527,7 +524,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves fragmentFn with a single output', () => {
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({ in: { pos: builtin.position }, out: d.vec4f })((input) => {
         return input.pos;
       });
@@ -588,7 +585,7 @@ describe('TGSL tgpu.fn function', () => {
       };
     });
 
-    const fn2 = tgpu['~unstable']
+    const fn2 = tgpu
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
@@ -970,7 +967,7 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
-  it('throws when it detects a cyclic dependency (when using derived)', () => {
+  it('throws when it detects a cyclic dependency (when using lazy)', () => {
     let one: TgpuFn;
 
     const flagSlot = tgpu.slot(false);
@@ -978,14 +975,14 @@ describe('tgsl fn when using plugin', () => {
     const mainFn = tgpu.fn([], d.f32)(() => 1000);
     const fallbackFn = tgpu.fn([], d.f32)(() => one());
 
-    const derivedFn = tgpu['~unstable'].derived(() => {
+    const lazyFn = tgpu.lazy(() => {
       if (flagSlot.$) {
         return fnSlot.$;
       }
       return fallbackFn;
     }).with(fnSlot, mainFn);
 
-    one = tgpu.fn([], d.f32)(() => derivedFn.$() + 2);
+    one = tgpu.fn([], d.f32)(() => lazyFn.$() + 2);
 
     expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -1004,6 +1001,35 @@ describe('tgsl fn when using plugin', () => {
 
       fn one() -> f32 {
         return (mainFn() + 2f);
+      }"
+    `);
+  });
+
+  it('allows .with to be called at comptime', () => {
+    const multiplierSlot = tgpu.slot(1);
+    const scale = tgpu.fn([d.f32], d.f32)((v) => {
+      'use gpu';
+      return v * multiplierSlot.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      scale(2);
+      scale.with(multiplierSlot, 2)(2);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 1f);
+      }
+
+      fn scale_1(v: f32) -> f32 {
+        return (v * 2f);
+      }
+
+      fn main() {
+        scale(2f);
+        scale_1(2f);
       }"
     `);
   });

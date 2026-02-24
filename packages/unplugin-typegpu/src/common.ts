@@ -126,19 +126,59 @@ export function isShellImplementationCall(
   );
 }
 
+/**
+ * Extracts a name and expression from nodes that contain a label and an expression,
+ * such as VariableDeclarator or PropertyDefinition.
+ * Returns a tuple of [name, expression] if found, otherwise undefined.
+ *
+ * @example
+ * extractLabelledExpression(node`let name = tgpu.bindGroupLayout({});`)
+ * // ["name", node`tgpu.bindGroupLayout({})`]
+ */
+function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
+  node: T,
+): [string, ExpressionFor<T>] | undefined {
+  if (
+    node.type === 'VariableDeclarator' &&
+    node.id.type === 'Identifier' &&
+    node.init
+  ) {
+    // let id = init;
+    return [node.id.name, node.init as ExpressionFor<T>];
+  } else if (node.type === 'AssignmentExpression') {
+    // left = right;
+    const maybeName = tryFindIdentifier(node.left);
+    if (maybeName) {
+      return [maybeName, node.right as ExpressionFor<T>];
+    }
+  } else if (
+    (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier'
+  ) {
+    // const a = { key: value }
+    return [node.key.name, node.value as ExpressionFor<T>];
+  } else if (
+    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
+    node.value &&
+    node.key.type === 'Identifier'
+  ) {
+    // class Class {
+    //	 key = value;
+    // }
+    return [node.key.name, node.value as ExpressionFor<T>];
+  }
+}
+
 export function getFunctionName(
   node: acorn.AnyNode | babel.Node,
   parent: acorn.AnyNode | babel.Node | null,
 ): string | undefined {
-  if (
-    parent?.type === 'VariableDeclarator' && parent.id.type === 'Identifier'
-  ) {
-    return parent.id.name;
-  }
-  return node.type === 'FunctionDeclaration' ||
-      node.type === 'FunctionExpression'
-    ? node.id?.name
-    : undefined;
+  const maybeName = parent ? extractLabelledExpression(parent)?.[0] : undefined;
+  return maybeName ??
+    (node.type === 'FunctionDeclaration' ||
+        node.type === 'FunctionExpression'
+      ? node.id?.name
+      : undefined);
 }
 
 const resourceConstructors: string[] = [
@@ -159,7 +199,9 @@ const resourceConstructors: string[] = [
   'createUniform',
   'createQuerySet',
   'createPipeline',
+  'createComputePipeline',
   'createGuardedComputePipeline',
+  'createRenderPipeline',
   'createTexture',
   'createSampler',
   'createComparisonSampler',
@@ -268,34 +310,12 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
     return;
   }
 
-  if (
-    node.type === 'VariableDeclarator' &&
-    node.id.type === 'Identifier' &&
-    node.init &&
-    containsResourceConstructorCall(node.init, ctx)
-  ) {
-    namingCallback(node.init as ExpressionFor<T>, node.id.name);
-  } else if (
-    node.type === 'AssignmentExpression' &&
-    containsResourceConstructorCall(node.right, ctx)
-  ) {
-    const maybeName = tryFindIdentifier(node.left);
-    if (maybeName) {
-      namingCallback(node.right as ExpressionFor<T>, maybeName);
+  const labelledExpression = extractLabelledExpression(node);
+  if (labelledExpression) {
+    const [label, expression] = labelledExpression;
+    if (containsResourceConstructorCall(expression, ctx)) {
+      namingCallback(expression, label);
     }
-  } else if (
-    (node.type === 'Property' || node.type === 'ObjectProperty') &&
-    node.key.type === 'Identifier' &&
-    containsResourceConstructorCall(node.value, ctx)
-  ) {
-    namingCallback(node.value as ExpressionFor<T>, node.key.name);
-  } else if (
-    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
-    node.value &&
-    node.key.type === 'Identifier' &&
-    containsResourceConstructorCall(node.value, ctx)
-  ) {
-    namingCallback(node.value as ExpressionFor<T>, node.key.name);
   }
 }
 
@@ -303,3 +323,16 @@ export const useGpuDirective = 'use gpu';
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
 export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+
+export const operators = {
+  '+': '__tsover_add',
+  '-': '__tsover_sub',
+  '*': '__tsover_mul',
+  '/': '__tsover_div',
+  '%': '__tsover_mod',
+  '+=': '__tsover_add',
+  '-=': '__tsover_sub',
+  '*=': '__tsover_mul',
+  '/=': '__tsover_div',
+  '%=': '__tsover_mod',
+};

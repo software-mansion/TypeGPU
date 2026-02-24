@@ -12,61 +12,61 @@ export const dpdx = dualImpl<DerivativeSignature>({
   name: 'dpdx',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdx(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdx(${value})`,
 });
 
 export const dpdxCoarse = dualImpl<DerivativeSignature>({
   name: 'dpdxCoarse',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdxCoarse(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdxCoarse(${value})`,
 });
 
 export const dpdxFine = dualImpl<DerivativeSignature>({
   name: 'dpdxFine',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdxFine(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdxFine(${value})`,
 });
 
 export const dpdy = dualImpl<DerivativeSignature>({
   name: 'dpdy',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdy(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdy(${value})`,
 });
 
 export const dpdyCoarse = dualImpl<DerivativeSignature>({
   name: 'dpdyCoarse',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdyCoarse(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdyCoarse(${value})`,
 });
 
 export const dpdyFine = dualImpl<DerivativeSignature>({
   name: 'dpdyFine',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`dpdyFine(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`dpdyFine(${value})`,
 });
 
 export const fwidth = dualImpl<DerivativeSignature>({
   name: 'fwidth',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`fwidth(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`fwidth(${value})`,
 });
 
 export const fwidthCoarse = dualImpl<DerivativeSignature>({
   name: 'fwidthCoarse',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`fwidthCoarse(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`fwidthCoarse(${value})`,
 });
 
 export const fwidthFine = dualImpl<DerivativeSignature>({
   name: 'fwidthFine',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (value) => stitch`fwidthFine(${value})`,
+  codegenImpl: (_ctx, [value]) => stitch`fwidthFine(${value})`,
 });

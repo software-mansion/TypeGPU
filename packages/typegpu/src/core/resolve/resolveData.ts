@@ -105,7 +105,7 @@ type IdentityType =
   | Mat4x4f
   | WgslExternalTexture;
 
-function isIdentityType(data: AnyWgslData): data is IdentityType {
+function isIdentityType(data: BaseData): data is IdentityType {
   return identityTypes.includes(data.type);
 }
 
@@ -122,7 +122,7 @@ function resolveStructProperty(
   [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property as AnyWgslData).value
+    ctx.resolve(property).value
   },\n`;
 }
 
@@ -142,7 +142,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(struct.propTypes as Record<string, BaseData>)
+    Object.entries(struct.propTypes)
       .map((prop) => resolveStructProperty(ctx, prop))
       .join('')
   }\
@@ -172,7 +172,7 @@ function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${
-    Object.entries(unstruct.propTypes as Record<string, BaseData>)
+    Object.entries(unstruct.propTypes)
       .map((prop) =>
         isAttribute(prop[1])
           ? resolveStructProperty(ctx, [

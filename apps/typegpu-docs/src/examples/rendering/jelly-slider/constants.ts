@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 // Rendering constants
 export const MAX_STEPS = 64;
