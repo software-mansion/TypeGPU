@@ -109,9 +109,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       @group(0) @binding(2) var<storage, read> gridBetaBuffer: array<vec4f, 1048576>;
@@ -342,9 +340,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       @group(0) @binding(2) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
