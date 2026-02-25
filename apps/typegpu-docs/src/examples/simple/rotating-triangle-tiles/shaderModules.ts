@@ -18,35 +18,6 @@ import {
   stepRotationAccess,
 } from './buffers.ts';
 
-//clear background color
-const backgroundVertex = tgpu['~unstable'].vertexFn({
-  in: {
-    vertexIndex: d.builtin.vertexIndex,
-  },
-  out: { outPos: d.builtin.position },
-})(({ vertexIndex }) => {
-  const positions = [
-    d.vec2f(1, -1),
-    d.vec2f(-1, 1),
-    d.vec2f(-1, -1),
-    d.vec2f(1, 1),
-    d.vec2f(-1, 1),
-    d.vec2f(1, -1),
-  ];
-
-  return {
-    outPos: d.vec4f(positions[vertexIndex], 0, 1),
-  };
-});
-
-const backgroundFragment = tgpu['~unstable'].fragmentFn({
-  out: d.vec4f,
-})(() => {
-  const color = d.vec4f(shiftedColorsAccess.$[0]);
-
-  return color;
-});
-
 const MidgroundVertexOutput = {
   outPos: d.builtin.position,
   maskP0: d.interpolate('flat', d.vec2f),
@@ -55,6 +26,7 @@ const MidgroundVertexOutput = {
   vertexClipPos: d.vec2f,
 };
 
+/** draws middle triangle expanding to fill in the full base triangle */
 const midgroundVertex = tgpu['~unstable'].vertexFn({
   in: {
     vertexIndex: d.builtin.vertexIndex,
@@ -142,7 +114,7 @@ const midgroundFragment = tgpu['~unstable'].fragmentFn({
   return color;
 });
 
-// smallest triangle
+/** the smallest triangle that appears from nothing and goes to half the size of the base triangle*/
 const foregroundVertex = tgpu['~unstable'].vertexFn({
   in: {
     vertexIndex: d.builtin.vertexIndex,
@@ -188,8 +160,6 @@ const foregroundFragment = tgpu['~unstable'].fragmentFn({
 });
 
 export {
-  backgroundFragment,
-  backgroundVertex,
   foregroundFragment,
   foregroundVertex,
   midgroundFragment,

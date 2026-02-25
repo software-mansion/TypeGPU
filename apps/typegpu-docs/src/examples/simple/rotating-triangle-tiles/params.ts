@@ -7,12 +7,19 @@ const INITIAL_STEP_ROTATION = 60;
 const INITIAL_MIDDLE_SQUARE_SCALE = 2;
 const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
-const cubicBezierControlPoints: [number, number, number, number] = [
+let cubicBezierControlPoints: [number, number, number, number] = [
   0.18,
   0.7,
   0.68,
   1.03,
 ];
+
+function updateCubicBezierControlPoints(points: number[]) {
+  if (points.length !== 4) {
+    return;
+  }
+  cubicBezierControlPoints = points as [number, number, number, number];
+}
 
 function getCubicBezierControlPoints() {
   return cubicBezierControlPoints;
@@ -26,6 +33,9 @@ function getCubicBezierControlPointsString() {
 
 function parseControlPoints(value: string) {
   const points = value.split(',');
+  if (points.length !== 4) {
+    throw Error('There should be 4 control points!');
+  }
   return points.map((point, index) => parseOneControlPoint(point, index));
 }
 
@@ -88,13 +98,6 @@ function updateStepRotation(
   );
 }
 
-const GridParams = d.struct({
-  tileDensity: d.f32,
-  userScale: d.f32,
-  trianglesPerRow: d.u32,
-  triangleCount: d.u32,
-});
-
 let gridParams = createGridParams(INIT_TILE_DENSITY);
 
 function getGridParams() {
@@ -134,7 +137,6 @@ export {
   getCubicBezierControlPoints,
   getCubicBezierControlPointsString,
   getGridParams,
-  GridParams,
   INIT_TILE_DENSITY,
   INITIAL_MIDDLE_SQUARE_SCALE,
   INITIAL_STEP_ROTATION,
@@ -142,6 +144,7 @@ export {
   ROTATION_OPTIONS,
   updateAnimationDuration,
   updateAspectRatio,
+  updateCubicBezierControlPoints,
   updateGridParams,
   updateStepRotation,
 };

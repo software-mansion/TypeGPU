@@ -23,9 +23,10 @@ const instanceInfoLayout = tgpu.bindGroupLayout({
 function createBuffers(root: TgpuRoot) {
   const animationProgressUniform = root.createUniform(d.f32);
 
-  const shiftedColorsBuffer = root.createReadonly(d.arrayOf(d.vec4f, 3), [
-    ...colors,
-  ]);
+  const shiftedColorsUniform = root.createUniform(
+    d.arrayOf(d.vec4f, 3),
+    colors,
+  );
 
   let instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
 
@@ -34,13 +35,13 @@ function createBuffers(root: TgpuRoot) {
   }
 
   function createInstanceInfoBufferAndBindGroup() {
-    const instanceInfoBuffer = root.createReadonly(
+    const instanceInfoReadonly = root.createReadonly(
       InstanceInfoArray(getGridParams().triangleCount),
       createInstanceInfoArray(),
     );
 
     const instanceInfoBindGroup = root.createBindGroup(instanceInfoLayout, {
-      instanceInfo: instanceInfoBuffer.buffer,
+      instanceInfo: instanceInfoReadonly.buffer,
     });
 
     return instanceInfoBindGroup;
@@ -50,27 +51,27 @@ function createBuffers(root: TgpuRoot) {
     instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
   }
 
-  const scaleBuffer = root.createUniform(d.f32, getGridParams().tileDensity);
-  const aspectRatioBuffer = root.createUniform(d.f32, 1);
+  const scaleUniform = root.createUniform(d.f32, getGridParams().tileDensity);
+  const aspectRatioUniform = root.createUniform(d.f32, 1);
 
-  const stepRotationBuffer = root.createUniform(d.f32, INITIAL_STEP_ROTATION);
+  const stepRotationUniform = root.createUniform(d.f32, INITIAL_STEP_ROTATION);
 
-  const middleSquareScaleBuffer = root.createUniform(
+  const middleSquareScaleUniform = root.createUniform(
     d.f32,
     INITIAL_MIDDLE_SQUARE_SCALE,
   );
 
-  const drawOverNeighborsBuffer = root.createUniform(d.u32, 0);
+  const drawOverNeighborsUniform = root.createUniform(d.u32, 0);
 
   return {
     animationProgressUniform,
-    aspectRatioBuffer,
-    drawOverNeighborsBuffer,
+    aspectRatioUniform,
+    drawOverNeighborsUniform,
     getInstanceInfoBindGroup,
-    middleSquareScaleBuffer,
-    scaleBuffer,
-    shiftedColorsBuffer,
-    stepRotationBuffer,
+    middleSquareScaleUniform,
+    scaleUniform,
+    shiftedColorsUniform,
+    stepRotationUniform,
     updateInstanceInfoBufferAndBindGroup,
   };
 }
