@@ -57,10 +57,7 @@ export const vertexFn = tgpu.vertexFn({
   const worldPos = cube.model * d.vec4f(input.position, 1);
 
   const cubeCenter = cube.model.columns[3];
-  const noiseCoord = d.vec2f(
-    cubeCenter.x * params.noiseScale,
-    cubeCenter.z * params.noiseScale,
-  );
+  const noiseCoord = cubeCenter.xz * params.noiseScale;
   const height = fbm(noiseCoord) * params.terrainHeight;
 
   const displaced = d.vec4f(worldPos.x, worldPos.y + height, worldPos.z, 1);
