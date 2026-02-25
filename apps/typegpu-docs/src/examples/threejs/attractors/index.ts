@@ -172,14 +172,12 @@ const initCompute = t3.toTSL(() => {
   const instanceIndex = t3.instanceIndex.$;
   randf.seed(instanceIndex / count + seed);
 
-  const basePosition = randf.inUnitCube()
-    .sub(0.5)
-    .mul(d.vec3f(5, 0.2, 5));
+  const basePosition = (randf.inUnitCube() - 0.5) * d.vec3f(5, 0.2, 5);
   positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
 
   const phi = randf.sample() * 2 * Math.PI;
   const theta = randf.sample() * 2;
-  const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
+  const baseVelocity = sphericalToVec3(phi, theta) * 0.05;
   velocityBuffer.$[instanceIndex] = d.vec3f(baseVelocity);
 });
 
@@ -214,7 +212,7 @@ const update = t3.toTSL(() => {
     const attractorPosition = attractorsPositions.$[i].xyz;
     const attractorRotationAxis = attractorsRotationAxes.$[i].xyz;
 
-    const toAttractor = attractorPosition.sub(position);
+    const toAttractor = attractorPosition - position;
     const distance = std.length(toAttractor);
     const direction = std.normalize(toAttractor);
 
@@ -223,33 +221,31 @@ const update = t3.toTSL(() => {
       getParticleMass() *
       gravityConstant /
       (distance ** 2);
-    const gravityForce = direction.mul(gravityStrength);
-    force = force.add(gravityForce);
+    const gravityForce = direction * gravityStrength;
+    force += gravityForce;
 
     // spinning
-    const spinningForce = attractorRotationAxis
-      .mul(gravityStrength)
-      .mul(spinningStrength.$);
+    const spinningForce = attractorRotationAxis * gravityStrength *
+      spinningStrength.$;
     const spinningVelocity = std.cross(spinningForce, toAttractor);
-    force = force.add(spinningVelocity);
+    force += spinningVelocity;
   }
 
   // velocity
-  velocity = velocity.add(force.mul(delta));
+  velocity += force * delta;
   const speed = std.length(velocity);
   if (speed > maxSpeed.$) {
-    velocity = std.normalize(velocity).mul(maxSpeed.$);
+    velocity = std.normalize(velocity) * maxSpeed.$;
   }
-  velocity = velocity.mul(1 - velocityDamping.$);
+  velocity *= 1 - velocityDamping.$;
 
   // position
-  position = position.add(velocity.mul(delta));
+  position += velocity * delta;
 
   // box loop
   const halfHalfExtent = boundHalfExtent.$ / 2;
-  position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtent.$)
-    .sub(halfHalfExtent);
+  position = std.mod(position + halfHalfExtent, boundHalfExtent.$) -
+    halfHalfExtent;
 
   positionBuffer.$[t3.instanceIndex.$] = d.vec3f(position);
   velocityBuffer.$[t3.instanceIndex.$] = d.vec3f(velocity);

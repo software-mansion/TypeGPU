@@ -203,7 +203,7 @@ describe('vaporrave example', () => {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay(p);
           var sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
-          glow = ((sphereColorUniform * exp(-(sphereDist.dist))) + glow);
+          glow += (sphereColorUniform * exp(-(sphereDist.dist)));
           distOrigin += scene.dist;
           if ((distOrigin > 19f)) {
             result.dist = 19f;
@@ -230,7 +230,7 @@ describe('vaporrave example', () => {
         var ro = vec3f(0, 2, -1);
         var rd = normalize(vec3f(uv.x, uv.y, 1f));
         var march = rayMarch(ro, rd);
-        let y = (((rd * march.ray.dist) + ro).y - 2f);
+        let y = (((rd.y * march.ray.dist) + ro.y) - 2f);
         var sky = mix(vec4f(0.10000000149011612, 0, 0.20000000298023224, 1), vec4f(0.2800000011920929, 0, 0.5400000214576721, 1), (y / 19f));
         let fog = min((march.ray.dist / 19f), 1f);
         return mix(mix(vec4f(march.ray.color, 1f), sky, fog), vec4f(march.glow, 1f), glowIntensityUniform);
