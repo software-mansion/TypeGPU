@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import { f32, vec3f } from 'typegpu/data';
-import { abs, add, dot, length, max, min, saturate, sub } from 'typegpu/std';
+import { abs, distance, dot, length, max, min, saturate } from 'typegpu/std';
 
 /**
  * Signed distance function for a sphere
@@ -23,7 +23,8 @@ export const sdBox3d = tgpu.fn(
   [vec3f, vec3f],
   f32,
 )((point, size) => {
-  const d = sub(abs(point), size);
+  'use gpu';
+  const d = abs(point) - size;
   return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0);
 });
 
@@ -37,7 +38,8 @@ export const sdRoundedBox3d = tgpu.fn(
   [vec3f, vec3f, f32],
   f32,
 )((point, size, cornerRadius) => {
-  const d = add(sub(abs(point), size), vec3f(cornerRadius));
+  'use gpu';
+  const d = abs(point) - size + vec3f(cornerRadius);
   return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0) - cornerRadius;
 });
 
@@ -51,8 +53,9 @@ export const sdBoxFrame3d = tgpu.fn(
   [vec3f, vec3f, f32],
   f32,
 )((point, size, thickness) => {
-  const p1 = sub(abs(point), size);
-  const q = sub(abs(add(p1, thickness)), vec3f(thickness));
+  'use gpu';
+  const p1 = abs(point) - size;
+  const q = abs(p1 + thickness) - vec3f(thickness);
 
   // Calculate three possible distances for each main axis being the outer one
   const d1 = length(max(vec3f(p1.x, q.y, q.z), vec3f(0))) + min(max(p1.x, max(q.y, q.z)), 0);
@@ -75,10 +78,11 @@ export const sdLine3d = tgpu.fn(
   [vec3f, vec3f, vec3f],
   f32,
 )((point, A, B) => {
-  const pa = sub(point, A);
-  const ba = sub(B, A);
+  'use gpu';
+  const pa = point - A;
+  const ba = B - A;
   const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
-  return length(sub(pa, ba.mul(h)));
+  return distance(pa, ba * h);
 });
 
 /**
@@ -105,8 +109,9 @@ export const sdCapsule = tgpu.fn(
   [vec3f, vec3f, vec3f, f32],
   f32,
 )((point, A, B, radius) => {
-  const pa = sub(point, A);
-  const ba = sub(B, A);
+  'use gpu';
+  const pa = point - A;
+  const ba = B - A;
   const h = saturate(dot(pa, ba) / dot(ba, ba));
-  return length(sub(pa, ba.mul(h))) - radius;
+  return distance(pa, ba * h) - radius;
 });
