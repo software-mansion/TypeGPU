@@ -1,3 +1,6 @@
+// We import tsover-runtime, then use Symbol.* types, because tsdown strips the imported `Operator`
+// type no matter what. Seems like a bug in tsdown.
+// oxlint-disable-next-line no-unassigned-import
 import 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
