@@ -65,7 +65,11 @@ export interface TgpuComputePipeline
    */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
@@ -193,7 +197,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;

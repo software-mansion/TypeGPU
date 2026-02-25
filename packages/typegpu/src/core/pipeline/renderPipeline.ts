@@ -161,7 +161,11 @@ export interface TgpuRenderPipeline<in Targets = never>
    */
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
@@ -511,7 +515,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): this;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup | GPUBindGroup,
+    bindGroup: TgpuBindGroup,
+  ): this;
+  with(
+    bindGroupLayout: TgpuBindGroupLayout,
+    bindGroup: GPUBindGroup,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
   with<TData extends WgslArray | Disarray>(
