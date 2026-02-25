@@ -176,7 +176,7 @@
     "unplugin": "^2.3.5"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.10.0"
+    "typegpu": "workspace:^0.10.1"
   },
   "devDependencies": {
     "@babel/template": "^7.27.2",
