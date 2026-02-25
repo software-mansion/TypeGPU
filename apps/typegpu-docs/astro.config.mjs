@@ -86,7 +86,7 @@ export default defineConfig({
         }),
         starlightTypeDoc({
           entryPoints: [
-            '../../packages/typegpu/src/index.ts',
+            '../../packages/typegpu/src/index.d.ts',
             '../../packages/typegpu/src/data/index.ts',
             '../../packages/typegpu/src/std/index.ts',
           ],
