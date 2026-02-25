@@ -54,6 +54,7 @@ function dtsFileToModule(
 const allPackagesSrcFiles = pipe(
   entries(
     import.meta.glob([
+      '../../../../../packages/*/src/**/*.js',
       '../../../../../packages/*/src/**/*.ts',
       '../../../../../packages/*/package.json',
     ], {
