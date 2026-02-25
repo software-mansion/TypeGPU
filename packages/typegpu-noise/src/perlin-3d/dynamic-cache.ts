@@ -10,52 +10,53 @@ import tgpu, {
 import * as d from 'typegpu/data';
 import { allEq } from 'typegpu/std';
 import type { PrefixKeys, Prettify } from '../utils.ts';
-import {
-  computeJunctionGradient,
-  getJunctionGradientSlot,
-} from './algorithm.ts';
+import { computeJunctionGradient, getJunctionGradientSlot } from './algorithm.ts';
 
 const MemorySchema = d.arrayOf(d.vec3f);
 
 type Layout<Prefix extends string> = Prettify<
-  PrefixKeys<Prefix, {
-    readonly size: { uniform: d.Vec4u };
-    readonly memory: {
-      storage: typeof MemorySchema;
-      access: 'readonly';
-    };
-  }>
+  PrefixKeys<
+    Prefix,
+    {
+      readonly size: { uniform: d.Vec4u };
+      readonly memory: {
+        storage: typeof MemorySchema;
+        access: 'readonly';
+      };
+    }
+  >
 >;
 
 type SizeIn = TgpuAccessor.In<d.Vec4u>;
 type MemoryIn = TgpuAccessor.In<typeof MemorySchema>;
 
 type LayoutValue<Prefix extends string> = Prettify<
-  PrefixKeys<Prefix, {
-    readonly size: SizeIn;
-    readonly memory: MemoryIn;
-  }>
+  PrefixKeys<
+    Prefix,
+    {
+      readonly size: SizeIn;
+      readonly memory: MemoryIn;
+    }
+  >
 >;
 
 type Bindings<Prefix extends string> = Prettify<
-  PrefixKeys<Prefix, {
-    size: TgpuBuffer<d.Vec4u> & UniformFlag;
-    memory: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
-  }>
+  PrefixKeys<
+    Prefix,
+    {
+      size: TgpuBuffer<d.Vec4u> & UniformFlag;
+      memory: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
+    }
+  >
 >;
 
 export interface DynamicPerlin3DCacheConfig<Prefix extends string> {
   readonly layout: Layout<Prefix>;
   readonly getJunctionGradient: TgpuFn<(pos: d.Vec3i) => d.Vec3f>;
 
-  instance(
-    root: TgpuRoot,
-    initialSize: d.v3u,
-  ): DynamicPerlin3DCache<Prefix>;
+  instance(root: TgpuRoot, initialSize: d.v3u): DynamicPerlin3DCache<Prefix>;
 
-  inject(
-    layoutValue: LayoutValue<Prefix>,
-  ): (cfg: Configurable) => Configurable;
+  inject(layoutValue: LayoutValue<Prefix>): (cfg: Configurable) => Configurable;
 }
 
 export interface DynamicPerlin3DCache<Prefix extends string> {
@@ -106,41 +107,40 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  * };
  * ```
  */
-export function dynamicCacheConfig(
-  options?: {
-    /**
-     * A string of characters that gets prepended to every
-     * resource this cache operates on
-     * @default 'perlin3dCache__'
-     */
-    prefix?: undefined;
-  },
-): DynamicPerlin3DCacheConfig<typeof DefaultPerlin3DLayoutPrefix>;
+export function dynamicCacheConfig(options?: {
+  /**
+   * A string of characters that gets prepended to every
+   * resource this cache operates on
+   * @default 'perlin3dCache__'
+   */
+  prefix?: undefined;
+}): DynamicPerlin3DCacheConfig<typeof DefaultPerlin3DLayoutPrefix>;
 
-export function dynamicCacheConfig<Prefix extends string>(
-  options?: {
-    /**
-     * A string of characters that gets prepended to every
-     * resource this cache operates on
-     * @default 'perlin3dCache__'
-     */
-    prefix: Prefix;
-  },
-): DynamicPerlin3DCacheConfig<Prefix>;
+export function dynamicCacheConfig<Prefix extends string>(options?: {
+  /**
+   * A string of characters that gets prepended to every
+   * resource this cache operates on
+   * @default 'perlin3dCache__'
+   */
+  prefix: Prefix;
+}): DynamicPerlin3DCacheConfig<Prefix>;
 
-export function dynamicCacheConfig<Prefix extends string>(
-  options?: { prefix?: Prefix | undefined },
-): DynamicPerlin3DCacheConfig<Prefix> {
+export function dynamicCacheConfig<Prefix extends string>(options?: {
+  prefix?: Prefix | undefined;
+}): DynamicPerlin3DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin3DLayoutPrefix as Prefix } = options ?? {};
 
   const sizeAccess = tgpu.accessor(d.vec4u);
   const memoryAccess = tgpu.accessor(MemorySchema);
 
-  const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
+  const getJunctionGradient = tgpu.fn(
+    [d.vec3i],
+    d.vec3f,
+  )((pos) => {
     const size = d.vec3i(sizeAccess.$.xyz);
-    const x = (pos.x % size.x + size.x) % size.x;
-    const y = (pos.y % size.y + size.y) % size.y;
-    const z = (pos.z % size.z + size.z) % size.z;
+    const x = ((pos.x % size.x) + size.x) % size.x;
+    const y = ((pos.y % size.y) + size.y) % size.y;
+    const z = ((pos.z % size.z) + size.z) % size.z;
 
     return memoryAccess.$[x + y * size.x + z * size.x * size.y] as d.v3f;
   });
@@ -153,26 +153,18 @@ export function dynamicCacheConfig<Prefix extends string>(
   const mainCompute = (x: number, y: number, z: number) => {
     'use gpu';
     const size = computeLayout.$.size;
-    const idx = x +
-      y * size.x +
-      z * size.x * size.y;
+    const idx = x + y * size.x + z * size.x * size.y;
 
     computeLayout.$.memory[idx] = computeJunctionGradient(d.vec3i(x, y, z));
   };
 
-  const instance = (
-    root: TgpuRoot,
-    initialSize: d.v3u,
-  ): DynamicPerlin3DCache<Prefix> => {
+  const instance = (root: TgpuRoot, initialSize: d.v3u): DynamicPerlin3DCache<Prefix> => {
     let dirty = false;
     let size = d.vec4u(initialSize, 0);
 
-    const sizeBuffer = root
-      .createBuffer(d.vec4u, size)
-      .$usage('uniform');
+    const sizeBuffer = root.createBuffer(d.vec4u, size).$usage('uniform');
 
-    const computePipeline = root
-      .createGuardedComputePipeline(mainCompute);
+    const computePipeline = root.createGuardedComputePipeline(mainCompute);
 
     const createMemory = () => {
       const memory = root
@@ -184,9 +176,7 @@ export function dynamicCacheConfig<Prefix extends string>(
         memory,
       });
 
-      computePipeline
-        .with(computeBindGroup)
-        .dispatchThreads(size.x, size.y, size.z);
+      computePipeline.with(computeBindGroup).dispatchThreads(size.x, size.y, size.z);
 
       return memory;
     };

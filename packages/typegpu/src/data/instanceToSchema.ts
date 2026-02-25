@@ -51,12 +51,16 @@ type KindToSchemaMap = {
 /**
  * Inverse operation to d.Infer<T>
  */
-export type InstanceToSchema<T> = T extends number ? U32 | U16 | I32 | F32 | F16
-  : T extends boolean ? Bool
-  : T extends undefined ? Void
-  : T extends {
-    readonly [$internal]: unknown;
-    readonly kind: infer TKind extends keyof KindToSchemaMap;
-  } ? KindToSchemaMap[TKind]
-  // Leave it be
-  : T;
+export type InstanceToSchema<T> = T extends number
+  ? U32 | U16 | I32 | F32 | F16
+  : T extends boolean
+    ? Bool
+    : T extends undefined
+      ? Void
+      : T extends {
+            readonly [$internal]: unknown;
+            readonly kind: infer TKind extends keyof KindToSchemaMap;
+          }
+        ? KindToSchemaMap[TKind]
+        : // Leave it be
+          T;

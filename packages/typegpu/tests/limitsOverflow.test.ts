@@ -11,9 +11,7 @@ describe('warnIfOverflow', () => {
   } as GPUSupportedLimits;
 
   it('does not warn when no limits are exceeded', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const layout = tgpu.bindGroupLayout({
       uniform1: { uniform: d.f32 },
@@ -27,9 +25,7 @@ describe('warnIfOverflow', () => {
   });
 
   it('warns for uniforms', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const layout = tgpu.bindGroupLayout({
       uniform1: { uniform: d.f32 },
@@ -47,9 +43,7 @@ describe('warnIfOverflow', () => {
   });
 
   it('warns for storages', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const layout = tgpu.bindGroupLayout({
       storage1: { storage: d.f32 },
@@ -64,9 +58,7 @@ describe('warnIfOverflow', () => {
   });
 
   it('warns when resources are split among layouts', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const layout1 = tgpu.bindGroupLayout({
       uniform1: { uniform: d.f32 },

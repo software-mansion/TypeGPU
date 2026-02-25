@@ -13,7 +13,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-renderer.setClearColor(0X000000);
+renderer.setClearColor(0x000000);
 await renderer.init();
 
 const particleCount = 200000;
@@ -25,12 +25,7 @@ const friction = t3.uniform(0.99, d.f32);
 const size = t3.uniform(0.12, d.f32);
 const clickPosition = t3.uniform(new THREE.Vector3(), d.vec3f);
 
-const camera = new THREE.PerspectiveCamera(
-  50,
-  canvas.clientWidth / canvas.clientHeight,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
 camera.position.set(0, 10, 20);
 
 const scene = new THREE.Scene();
@@ -42,45 +37,51 @@ const separation = 0.2;
 const amount = Math.sqrt(particleCount);
 const offset = amount / 2;
 
-const computeInit = t3.toTSL(() => {
-  'use gpu';
-  const instanceIdx = t3.instanceIndex.$;
-  const position = positions.$[instanceIdx];
-  const color = colors.$[instanceIdx];
+const computeInit = t3
+  .toTSL(() => {
+    'use gpu';
+    const instanceIdx = t3.instanceIndex.$;
+    const position = positions.$[instanceIdx];
+    const color = colors.$[instanceIdx];
 
-  const x = instanceIdx % d.u32(amount);
-  const z = instanceIdx / amount;
+    const x = instanceIdx % d.u32(amount);
+    const z = instanceIdx / amount;
 
-  position.x = (offset - d.f32(x)) * separation;
-  position.z = (offset - d.f32(z)) * separation;
-  positions.$[instanceIdx] = d.vec3f(position);
+    position.x = (offset - d.f32(x)) * separation;
+    position.z = (offset - d.f32(z)) * separation;
+    positions.$[instanceIdx] = d.vec3f(position);
 
-  randf.seed(d.f32(instanceIdx / amount));
-  color.x = randf.sample();
-  color.y = randf.sample();
-  colors.$[instanceIdx] = d.vec3f(color);
-}).compute(particleCount).setName('Init Particles TypeGPU');
+    randf.seed(d.f32(instanceIdx / amount));
+    color.x = randf.sample();
+    color.y = randf.sample();
+    colors.$[instanceIdx] = d.vec3f(color);
+  })
+  .compute(particleCount)
+  .setName('Init Particles TypeGPU');
 void renderer.compute(computeInit);
 
-const computeAccessor = t3.toTSL(() => {
-  'use gpu';
-  const instanceIdx = t3.instanceIndex.$;
-  let position = positions.$[instanceIdx];
-  let velocity = velocities.$[instanceIdx];
+const computeAccessor = t3
+  .toTSL(() => {
+    'use gpu';
+    const instanceIdx = t3.instanceIndex.$;
+    let position = positions.$[instanceIdx];
+    let velocity = velocities.$[instanceIdx];
 
-  velocity.y += gravity.$;
-  position += velocity;
-  velocity *= friction.$;
+    velocity.y += gravity.$;
+    position += velocity;
+    velocity *= friction.$;
 
-  if (position.y < 0) {
-    position.y = 0;
-    velocity.y = -velocity.y * bounce.$;
-    velocity *= d.vec3f(0.9, 1, 0.9);
-  }
+    if (position.y < 0) {
+      position.y = 0;
+      velocity.y = -velocity.y * bounce.$;
+      velocity *= d.vec3f(0.9, 1, 0.9);
+    }
 
-  positions.$[instanceIdx] = d.vec3f(position);
-  velocities.$[instanceIdx] = d.vec3f(velocity);
-}).compute(particleCount).setName('Update Particles TypeGPU');
+    positions.$[instanceIdx] = d.vec3f(position);
+    velocities.$[instanceIdx] = d.vec3f(velocity);
+  })
+  .compute(particleCount)
+  .setName('Update Particles TypeGPU');
 
 const material = new THREE.SpriteNodeMaterial();
 material.colorNode = t3.toTSL(() => {
@@ -105,32 +106,32 @@ scene.add(helper);
 const geometry = new THREE.PlaneGeometry(200, 200);
 geometry.rotateX(-Math.PI / 2);
 
-const plane = new THREE.Mesh(
-  geometry,
-  new THREE.MeshBasicMaterial({ visible: false }),
-);
+const plane = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
 scene.add(plane);
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-const computeHit = t3.toTSL(() => {
-  'use gpu';
-  const instanceIdx = t3.instanceIndex.$;
-  const position = positions.$[instanceIdx];
-  let velocity = velocities.$[instanceIdx];
+const computeHit = t3
+  .toTSL(() => {
+    'use gpu';
+    const instanceIdx = t3.instanceIndex.$;
+    const position = positions.$[instanceIdx];
+    let velocity = velocities.$[instanceIdx];
 
-  const dist = std.distance(position, clickPosition.$);
-  const dir = std.normalize(position - clickPosition.$);
-  const distArea = std.max(0, 3 - dist);
+    const dist = std.distance(position, clickPosition.$);
+    const dir = std.normalize(position - clickPosition.$);
+    const distArea = std.max(0, 3 - dist);
 
-  const power = distArea * 0.01;
-  randf.seed(d.f32(instanceIdx / amount));
-  const relativePower = power * (1.5 * randf.sample() + 0.5);
+    const power = distArea * 0.01;
+    randf.seed(d.f32(instanceIdx / amount));
+    const relativePower = power * (1.5 * randf.sample() + 0.5);
 
-  velocity += dir * relativePower;
-  velocities.$[instanceIdx] = d.vec3f(velocity);
-}).compute(particleCount).setName('Hit Particles TypeGPU');
+    velocity += dir * relativePower;
+    velocities.$[instanceIdx] = d.vec3f(velocity);
+  })
+  .compute(particleCount)
+  .setName('Hit Particles TypeGPU');
 
 function onMove(event: PointerEvent) {
   if (isOrbitControlsActive) return;
@@ -194,7 +195,7 @@ void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
 export const controls = defineControls({
-  'gravity': {
+  gravity: {
     initial: -0.00098,
     min: -0.00098,
     max: 0,
@@ -203,7 +204,7 @@ export const controls = defineControls({
       gravity.node.value = value;
     },
   },
-  'bounce': {
+  bounce: {
     initial: 0.8,
     min: 0.1,
     max: 2,
@@ -212,7 +213,7 @@ export const controls = defineControls({
       bounce.node.value = value;
     },
   },
-  'friction': {
+  friction: {
     initial: 0.99,
     min: 0.5,
     max: 0.99,
@@ -221,7 +222,7 @@ export const controls = defineControls({
       friction.node.value = value;
     },
   },
-  'size': {
+  size: {
     initial: 0.12,
     min: 0.05,
     max: 0.5,

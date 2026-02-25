@@ -5,24 +5,24 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import {
-  mockCreateImageBitmap,
-  mockImageLoading,
-} from '../utils/commonMocks.ts';
+import { mockCreateImageBitmap, mockImageLoading } from '../utils/commonMocks.ts';
 
 describe('image tuning example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'image-processing',
-      name: 'image-tuning',
-      setupMocks: () => {
-        mockImageLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'image-processing',
+        name: 'image-tuning',
+        setupMocks: () => {
+          mockImageLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 1,
       },
-      expectedCalls: 1,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {

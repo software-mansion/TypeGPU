@@ -22,16 +22,13 @@ export const computeSimple = tgpu.computeFn({
   let result = 0;
 
   for (let k = d.u32(0); k < computeLayout.$.dimensions.firstColumnCount; k++) {
-    const aValue = computeLayout.$.firstMatrix[
-      getIndex(row, k, computeLayout.$.dimensions.firstColumnCount)
-    ];
-    const bValue = computeLayout.$.secondMatrix[
-      getIndex(k, col, computeLayout.$.dimensions.secondColumnCount)
-    ];
+    const aValue =
+      computeLayout.$.firstMatrix[getIndex(row, k, computeLayout.$.dimensions.firstColumnCount)];
+    const bValue =
+      computeLayout.$.secondMatrix[getIndex(k, col, computeLayout.$.dimensions.secondColumnCount)];
     result += aValue * bValue;
   }
 
-  computeLayout.$.resultMatrix[
-    getIndex(row, col, computeLayout.$.dimensions.secondColumnCount)
-  ] = result;
+  computeLayout.$.resultMatrix[getIndex(row, col, computeLayout.$.dimensions.secondColumnCount)] =
+    result;
 });

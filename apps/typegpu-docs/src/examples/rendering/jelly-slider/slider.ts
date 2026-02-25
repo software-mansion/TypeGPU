@@ -26,13 +26,12 @@ export class Slider {
   pointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   controlPointsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   normalsBuffer: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
-  bezierTexture:
-    & TgpuTexture<{
-      size: typeof BEZIER_TEXTURE_SIZE;
-      format: 'rgba16float';
-    }>
-    & SampledFlag
-    & StorageFlag;
+  bezierTexture: TgpuTexture<{
+    size: typeof BEZIER_TEXTURE_SIZE;
+    format: 'rgba16float';
+  }> &
+    SampledFlag &
+    StorageFlag;
   endCapUniform: TgpuUniform<d.Vec4f>;
 
   readonly n: number;
@@ -53,13 +52,7 @@ export class Slider {
   bendingExponent = 1.2;
   archEdgeDeadzone = 0.01;
 
-  constructor(
-    root: TgpuRoot,
-    start: d.v2f,
-    end: d.v2f,
-    numPoints: number,
-    yOffset = 0,
-  ) {
+  constructor(root: TgpuRoot, start: d.v2f, end: d.v2f, numPoints: number, yOffset = 0) {
     this.#root = root;
     this.n = Math.max(2, numPoints | 0);
     this.anchor = start;
@@ -129,85 +122,67 @@ export class Slider {
 
     this.bbox = [top, right, bottom, left];
 
-    this.#computeBezierPipeline = this.#root
-      .createGuardedComputePipeline((x, y) => {
-        'use gpu';
-        const size = std.textureDimensions(bezierWriteView.$);
-        const pixelUV = d.vec2f(x, y).add(0.5).div(d.vec2f(size));
+    this.#computeBezierPipeline = this.#root.createGuardedComputePipeline((x, y) => {
+      'use gpu';
+      const size = std.textureDimensions(bezierWriteView.$);
+      const pixelUV = d.vec2f(x, y).add(0.5).div(d.vec2f(size));
 
-        const sliderPos = d.vec2f(
-          left + pixelUV.x * (right - left),
-          top - pixelUV.y * (top - bottom),
-        );
+      const sliderPos = d.vec2f(
+        left + pixelUV.x * (right - left),
+        top - pixelUV.y * (top - bottom),
+      );
 
-        let minDist = d.f32(1e10);
-        let closestSegment = d.i32(0);
-        let closestT = d.f32(0);
+      let minDist = d.f32(1e10);
+      let closestSegment = d.i32(0);
+      let closestT = d.f32(0);
 
-        const epsilon = d.f32(0.03);
-        const xOffset = d.vec2f(epsilon, 0.0);
-        const yOffset = d.vec2f(0.0, epsilon);
+      const epsilon = d.f32(0.03);
+      const xOffset = d.vec2f(epsilon, 0.0);
+      const yOffset = d.vec2f(0.0, epsilon);
 
-        let xPlusDist = d.f32(1e10);
-        let xMinusDist = d.f32(1e10);
-        let yPlusDist = d.f32(1e10);
-        let yMinusDist = d.f32(1e10);
+      let xPlusDist = d.f32(1e10);
+      let xMinusDist = d.f32(1e10);
+      let yPlusDist = d.f32(1e10);
+      let yMinusDist = d.f32(1e10);
 
-        for (let i = 0; i < pointsView.$.length - 1; i++) {
-          const A = pointsView.$[i];
-          const B = pointsView.$[i + 1];
-          const C = controlPointsView.$[i];
+      for (let i = 0; i < pointsView.$.length - 1; i++) {
+        const A = pointsView.$[i];
+        const B = pointsView.$[i + 1];
+        const C = controlPointsView.$[i];
 
-          const dist = sdBezier(sliderPos, A, C, B);
-          if (dist < minDist) {
-            minDist = dist;
-            closestSegment = i;
+        const dist = sdBezier(sliderPos, A, C, B);
+        if (dist < minDist) {
+          minDist = dist;
+          closestSegment = i;
 
-            const AB = B.sub(A);
-            const AP = sliderPos.sub(A);
-            const ABLength = std.length(AB);
+          const AB = B.sub(A);
+          const AP = sliderPos.sub(A);
+          const ABLength = std.length(AB);
 
-            if (ABLength > 0.0) {
-              closestT = std.clamp(
-                std.dot(AP, AB) / (ABLength * ABLength),
-                0.0,
-                1.0,
-              );
-            } else {
-              closestT = 0.0;
-            }
+          if (ABLength > 0.0) {
+            closestT = std.clamp(std.dot(AP, AB) / (ABLength * ABLength), 0.0, 1.0);
+          } else {
+            closestT = 0.0;
           }
-
-          xPlusDist = std.min(
-            xPlusDist,
-            sdBezier(sliderPos.add(xOffset), A, C, B),
-          );
-          xMinusDist = std.min(
-            xMinusDist,
-            sdBezier(sliderPos.sub(xOffset), A, C, B),
-          );
-          yPlusDist = std.min(
-            yPlusDist,
-            sdBezier(sliderPos.add(yOffset), A, C, B),
-          );
-          yMinusDist = std.min(
-            yMinusDist,
-            sdBezier(sliderPos.sub(yOffset), A, C, B),
-          );
         }
 
-        const overallProgress = (d.f32(closestSegment) + closestT) /
-          d.f32(pointsView.$.length - 1);
+        xPlusDist = std.min(xPlusDist, sdBezier(sliderPos.add(xOffset), A, C, B));
+        xMinusDist = std.min(xMinusDist, sdBezier(sliderPos.sub(xOffset), A, C, B));
+        yPlusDist = std.min(yPlusDist, sdBezier(sliderPos.add(yOffset), A, C, B));
+        yMinusDist = std.min(yMinusDist, sdBezier(sliderPos.sub(yOffset), A, C, B));
+      }
 
-        const normalX = (xPlusDist - xMinusDist) / (2.0 * epsilon);
-        const normalY = (yPlusDist - yMinusDist) / (2.0 * epsilon);
+      const overallProgress = (d.f32(closestSegment) + closestT) / d.f32(pointsView.$.length - 1);
 
-        std.textureStore(
-          bezierWriteView.$,
-          d.vec2u(x, y),
-          d.vec4f(minDist, overallProgress, normalX, normalY),
-        );
-      });
+      const normalX = (xPlusDist - xMinusDist) / (2.0 * epsilon);
+      const normalY = (yPlusDist - yMinusDist) / (2.0 * epsilon);
+
+      std.textureStore(
+        bezierWriteView.$,
+        d.vec2u(x, y),
+        d.vec4f(minDist, overallProgress, normalX, normalY),
+      );
+    });
   }
 
   setDragX(x: number) {
@@ -263,8 +238,7 @@ export class Slider {
       if (compression > 0) {
         const t = i / (this.n - 1);
         const edge = this.archEdgeDeadzone;
-        const window = std.smoothstep(edge, 1 - edge, t) *
-          std.smoothstep(edge, 1 - edge, 1 - t);
+        const window = std.smoothstep(edge, 1 - edge, t) * std.smoothstep(edge, 1 - edge, 1 - t);
         const profile = Math.sin(Math.PI * t) * window;
         ay = this.archStrength * profile * compression;
       }
@@ -299,18 +273,10 @@ export class Slider {
       if (this.endFlatCount > 0) {
         const count = Math.min(this.endFlatCount, this.n - 2);
         for (let i = 1; i <= count; i++) {
-          this.#projectLineY(
-            i,
-            this.baseY + this.#yOffset,
-            this.endFlatStiffness,
-          );
+          this.#projectLineY(i, this.baseY + this.#yOffset, this.endFlatStiffness);
         }
         for (let i = this.n - 1 - count; i < this.n - 1; i++) {
-          this.#projectLineY(
-            i,
-            this.baseY + this.#yOffset,
-            this.endFlatStiffness,
-          );
+          this.#projectLineY(i, this.baseY + this.#yOffset, this.endFlatStiffness);
         }
       }
 
@@ -336,14 +302,8 @@ export class Slider {
     const c1 = (w1 / wsum) * k;
     const c2 = (w2 / wsum) * k;
 
-    this.#pos[i] = d.vec2f(
-      this.#pos[i].x + dx * diff * c1,
-      this.#pos[i].y + dy * diff * c1,
-    );
-    this.#pos[j] = d.vec2f(
-      this.#pos[j].x - dx * diff * c2,
-      this.#pos[j].y - dy * diff * c2,
-    );
+    this.#pos[i] = d.vec2f(this.#pos[i].x + dx * diff * c1, this.#pos[i].y + dy * diff * c1);
+    this.#pos[j] = d.vec2f(this.#pos[j].x - dx * diff * c2, this.#pos[j].y - dy * diff * c2);
   }
 
   #projectLineY(i: number, yTarget: number, k: number) {
@@ -446,8 +406,6 @@ export class Slider {
     const len = this.#pos.length;
     const secondLast = this.#pos[len - 2];
     const last = this.#pos[len - 1];
-    this.endCapUniform.write(
-      d.vec4f(secondLast.x, secondLast.y, last.x, last.y),
-    );
+    this.endCapUniform.write(d.vec4f(secondLast.x, secondLast.y, last.x, last.y));
   }
 }

@@ -1,20 +1,13 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import tgpu from 'typegpu';
-import {
-  computeLayout,
-  gameSizeAccessor,
-  golNextState,
-  TILE_SIZE,
-} from './common.ts';
+import { computeLayout, gameSizeAccessor, golNextState, TILE_SIZE } from './common.ts';
 
 const HALO = 1;
 const SHARED_SIZE = TILE_SIZE + 2 * HALO;
 const GATHER_SIZE = SHARED_SIZE / 2;
 
-const sharedTile = tgpu.workgroupVar(
-  d.arrayOf(d.u32, SHARED_SIZE * SHARED_SIZE),
-);
+const sharedTile = tgpu.workgroupVar(d.arrayOf(d.u32, SHARED_SIZE * SHARED_SIZE));
 
 const tileIdx = (x: number, y: number) => {
   'use gpu';
@@ -28,7 +21,7 @@ const readTile = (x: number, y: number): number => {
 
 const countNeighborsInTile = (x: number, y: number): number => {
   'use gpu';
-  // deno-fmt-ignore <I think it's easier to read like that>
+  // oxfmt-ignore
   return readTile(x - 1, y - 1) + readTile(x, y - 1) + readTile(x + 1, y - 1) +
          readTile(x - 1, y)                                + readTile(x + 1, y) +
          readTile(x - 1, y + 1) + readTile(x, y + 1) + readTile(x + 1, y + 1);
@@ -62,12 +55,7 @@ export const tiledCompute = tgpu['~unstable'].computeFn({
     const uv = tileOrigin.add(d.vec2f(sx + 1, sy + 1)).mul(texelSize);
 
     // textureGather at UV returns: .w=(-1,-1), .z=(0,-1), .x=(-1,0), .y=(0,0) relative to UV
-    const g = std.textureGather(
-      0,
-      computeLayout.$.current,
-      computeLayout.$.sampler,
-      uv,
-    );
+    const g = std.textureGather(0, computeLayout.$.current, computeLayout.$.sampler, uv);
 
     // Store the 2x2 block into shared memory
     sharedTile.$[tileIdx(sx, sy)] = d.u32(g.w);
@@ -85,9 +73,5 @@ export const tiledCompute = tgpu['~unstable'].computeFn({
   const neighbors = countNeighborsInTile(lx, ly);
   const nextAlive = golNextState(current !== 0, neighbors);
 
-  std.textureStore(
-    computeLayout.$.next,
-    gid.xy,
-    d.vec4u(std.select(0, 1, nextAlive), 0, 0, 0),
-  );
+  std.textureStore(computeLayout.$.next, gid.xy, d.vec4u(std.select(0, 1, nextAlive), 0, 0, 0));
 });

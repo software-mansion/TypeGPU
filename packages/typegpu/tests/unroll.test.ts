@@ -246,24 +246,25 @@ describe('tgpu.unroll', () => {
       },
     };
 
-    const Weights = d.struct(Object.fromEntries(
-      Object.keys(variants).map((name) => [name, d.f32]),
-    ));
+    const Weights = d.struct(
+      Object.fromEntries(Object.keys(variants).map((name) => [name, d.f32])),
+    );
 
     const variantsKey = Object.keys(variants) as (keyof typeof variants)[];
 
-    const computeWeight = tgpu.fn([Weights], d.f32)(
-      (weights: d.Infer<typeof Weights>) => {
-        'use gpu';
+    const computeWeight = tgpu.fn(
+      [Weights],
+      d.f32,
+    )((weights: d.Infer<typeof Weights>) => {
+      'use gpu';
 
-        let p = d.f32(0);
-        for (const key of tgpu.unroll(variantsKey)) {
-          // @ts-expect-error: trust me
-          p += weights[key] * variants[key](p);
-        }
-        return p;
-      },
-    );
+      let p = d.f32(0);
+      for (const key of tgpu.unroll(variantsKey)) {
+        // @ts-expect-error: trust me
+        p += weights[key] * variants[key](p);
+      }
+      return p;
+    });
 
     expect(tgpu.resolve([computeWeight])).toMatchInlineSnapshot(`
       "fn foo(x: f32) -> f32 {
@@ -644,7 +645,7 @@ describe('tgpu.unroll', () => {
       'use gpu';
       const arr = [1, 2, 3];
       let r = d.f32(0);
-      for (const foo of (unroll.$ ? tgpu.unroll(arr) : arr)) {
+      for (const foo of unroll.$ ? tgpu.unroll(arr) : arr) {
         r += foo;
       }
     };
@@ -667,8 +668,7 @@ describe('tgpu.unroll', () => {
         }
       }"
     `);
-    expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)])).toMatchInlineSnapshot(`
         "fn f() {
           var arr = array<i32, 3>(1, 2, 3);
           var r = 0f;

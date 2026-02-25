@@ -7,7 +7,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
     const mainFragment = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.vec4f,
-    }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
+    }) /* wgsl */ `{ return vec4f(in.uv[0]); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -22,7 +22,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
     const mainFragment = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.location(1, d.vec4f),
-    }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
+    }) /* wgsl */ `{ return vec4f(in.uv[0]); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -39,7 +39,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       out: {
         primary: d.location(1, d.vec4f),
       },
-    }) /* wgsl */`{ return Out(vec4f(in.uv[0])); }`;
+    }) /* wgsl */ `{ return Out(vec4f(in.uv[0])); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -58,7 +58,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
     const mainCompute = tgpu.computeFn({
       in: { index: d.builtin.globalInvocationId },
       workgroupSize: [1],
-    }) /* wgsl */`{ let x = in.index; }`;
+    }) /* wgsl */ `{ let x = in.index; }`;
 
     expect(tgpu.resolve([mainCompute])).toMatchInlineSnapshot(`
       "struct mainCompute_Input {

@@ -39,9 +39,7 @@ const unpack = (n: number | undefined) => unpack2x16float(n ?? 0);
 // ----------------
 
 type DeserializerMap = {
-  [K in AnyWgslData['type']]?: (
-    data: Uint32Array,
-  ) => Infer<Extract<AnyWgslData, { type: K }>>;
+  [K in AnyWgslData['type']]?: (data: Uint32Array) => Infer<Extract<AnyWgslData, { type: K }>>;
 };
 
 const deserializerMap: DeserializerMap = {
@@ -76,17 +74,16 @@ const deserializerMap: DeserializerMap = {
   'vec2<bool>': (d: Uint32Array) => vec2b(!!d[0], !!d[1]),
   'vec3<bool>': (d: Uint32Array) => vec3b(!!d[0], !!d[1], !!d[2]),
   'vec4<bool>': (d: Uint32Array) => vec4b(!!d[0], !!d[1], !!d[2], !!d[3]),
-  mat2x2f: (d: Uint32Array) =>
-    mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
+  mat2x2f: (d: Uint32Array) => mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
   mat3x3f: (d: Uint32Array) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat3x3f(
       toF(d[0]), toF(d[1]), toF(d[2]),
       toF(d[4]), toF(d[5]), toF(d[6]),
       toF(d[8]), toF(d[9]), toF(d[10]),
     ),
   mat4x4f: (d: Uint32Array) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       toF(d[0]),  toF(d[1]),  toF(d[2]),  toF(d[3]),
       toF(d[4]),  toF(d[5]),  toF(d[6]),  toF(d[7]),
@@ -105,12 +102,8 @@ const deserializerMap: DeserializerMap = {
  * @param data - The binary data as a Uint32Array to be deserialized
  * @param dataType - The WGSL data type specification that determines how to interpret the binary data
  */
-function deserialize(
-  data: Uint32Array,
-  dataType: BaseData,
-): unknown {
-  const maybeDeserializer =
-    deserializerMap[dataType.type as AnyWgslData['type']];
+function deserialize(data: Uint32Array, dataType: BaseData): unknown {
+  const maybeDeserializer = deserializerMap[dataType.type as AnyWgslData['type']];
   if (maybeDeserializer) {
     return maybeDeserializer(data);
   }
@@ -118,9 +111,7 @@ function deserialize(
     const props = Object.keys(dataType.propTypes);
     const propTypes = Object.values(dataType.propTypes);
     const decodedProps = deserializeCompound(data, propTypes);
-    return Object.fromEntries(
-      props.map((key, index) => [key, decodedProps[index]]),
-    );
+    return Object.fromEntries(props.map((key, index) => [key, decodedProps[index]]));
   }
   if (isWgslArray(dataType)) {
     const elementType = dataType.elementType as AnyWgslData;
@@ -142,10 +133,7 @@ function deserialize(
  * @param data - The Uint32Array buffer containing the serialized data
  * @param dataTypes - The WGSL data type specification that determines how to interpret the binary data, or string literals
  */
-function deserializeCompound(
-  data: Uint32Array,
-  dataTypes: (BaseData | string)[],
-): unknown[] {
+function deserializeCompound(data: Uint32Array, dataTypes: (BaseData | string)[]): unknown[] {
   let index = 0;
   return dataTypes.map((info) => {
     if (!isWgslData(info)) {
@@ -162,8 +150,7 @@ export function deserializeAndStringify(
   serializedData: Uint32Array,
   argTypes: (AnyWgslData | string)[],
 ): string[] {
-  return deserializeCompound(serializedData, argTypes)
-    .map(niceStringify);
+  return deserializeCompound(serializedData, argTypes).map(niceStringify);
 }
 
 /**
@@ -183,10 +170,7 @@ export function logDataFromGPU(resources: LogResources) {
       .filter((e) => e.id)
       .forEach(({ id, serializedData }) => {
         const { argTypes, op } = logIdToMeta.get(id) as LogMeta;
-        const results = deserializeAndStringify(
-          new Uint32Array(serializedData),
-          argTypes,
-        );
+        const results = deserializeAndStringify(new Uint32Array(serializedData), argTypes);
         if (results.length === 0) {
           results.push('');
         }

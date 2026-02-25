@@ -1,15 +1,7 @@
-import {
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $resolve,
-} from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import {
-  textureExternal,
-  type WgslExternalTexture,
-} from '../../data/texture.ts';
+import { textureExternal, type WgslExternalTexture } from '../../data/texture.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -24,9 +16,7 @@ export interface TgpuExternalTexture {
   readonly resourceType: 'external-texture';
 }
 
-export function isExternalTexture(
-  value: unknown,
-): value is TgpuExternalTexture {
+export function isExternalTexture(value: unknown): value is TgpuExternalTexture {
   return (value as TgpuExternalTexture)?.resourceType === 'external-texture';
 }
 
@@ -34,8 +24,7 @@ export function isExternalTexture(
 // Implementation
 // --------------
 
-export class TgpuExternalTextureImpl
-  implements TgpuExternalTexture, SelfResolvable {
+export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolvable {
   readonly resourceType = 'external-texture';
   readonly [$internal] = true;
   readonly #membership: LayoutMembership;

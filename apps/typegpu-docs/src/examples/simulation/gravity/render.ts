@@ -35,11 +35,7 @@ export const skyBoxFragment = tgpu.fragmentFn({
   },
   out: d.vec4f,
 })((input) =>
-  std.textureSample(
-    skyBoxAccess.$,
-    filteringSamplerSlot.$,
-    std.normalize(input.texCoord),
-  )
+  std.textureSample(skyBoxAccess.$, filteringSamplerSlot.$, std.normalize(input.texCoord)),
 );
 
 export const mainVertex = tgpu.vertexFn({
@@ -52,12 +48,10 @@ export const mainVertex = tgpu.vertexFn({
   'use gpu';
   const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
-  const worldPosition = currentBody.position +
-    input.position.xyz * radiusOf(currentBody);
+  const worldPosition = currentBody.position + input.position.xyz * radiusOf(currentBody);
 
   const camera = cameraAccess.$;
-  const positionOnCanvas = camera.projection * camera.view *
-    d.vec4f(worldPosition, 1);
+  const positionOnCanvas = camera.projection * camera.view * d.vec4f(worldPosition, 1);
 
   return {
     position: positionOnCanvas,
@@ -90,9 +84,7 @@ export const mainFragment = tgpu.fragmentFn({
   const ambient = textureColor * lightColor * input.ambientLightFactor;
 
   const normal = input.normals;
-  const lightDirection = std.normalize(
-    lightSourceAccess.$ - input.worldPosition,
-  );
+  const lightDirection = std.normalize(lightSourceAccess.$ - input.worldPosition);
   const cosTheta = std.dot(normal, lightDirection);
   const diffuse = textureColor * lightColor * std.max(0, cosTheta);
 

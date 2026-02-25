@@ -11,12 +11,15 @@ describe('clouds example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'clouds',
-      expectedCalls: 1,
-      setupMocks: mockResizeObserver,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'clouds',
+        expectedCalls: 1,
+        setupMocks: mockResizeObserver,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {

@@ -6,13 +6,7 @@ import tgpu, {
   type TgpuRenderPipeline,
 } from 'typegpu';
 import * as p from './params.ts';
-import {
-  fragmentImageFn,
-  fragmentInkFn,
-  fragmentVelFn,
-  renderFn,
-  renderLayout,
-} from './render.ts';
+import { fragmentImageFn, fragmentInkFn, fragmentVelFn, renderFn, renderLayout } from './render.ts';
 import * as c from './simulation.ts';
 import type { BrushState } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -133,9 +127,7 @@ const advectInkPipeline = createComputePipeline(c.advectInkFn);
 const addInkPipeline = createComputePipeline(c.addInkFn);
 
 // Create render pipelines
-function createRenderPipeline(
-  fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
-) {
+function createRenderPipeline(fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>) {
   return root.createRenderPipeline({
     vertex: renderFn,
     fragment: fragmentFn,
@@ -161,9 +153,7 @@ const dispatchY = Math.ceil(p.SIM_N / p.WORKGROUP_SIZE_Y);
 // Create bind groups
 const brushBindGroup = root.createBindGroup(c.brushLayout, {
   brushParams: brushParamBuffer,
-  forceDst: forceTex.createView(
-    d.textureStorage2d('rgba16float', 'write-only'),
-  ),
+  forceDst: forceTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
   inkDst: newInkTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
 });
 
@@ -173,9 +163,7 @@ const addInkBindGroups = [0, 1].map((i) => {
   return root.createBindGroup(c.addInkLayout, {
     src: inkTex[srcIdx].createView(d.texture2d(d.f32)),
     add: newInkTex.createView(d.texture2d(d.f32)),
-    dst: inkTex[dstIdx].createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    dst: inkTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
   });
 });
 
@@ -185,9 +173,7 @@ const addForceBindGroups = [0, 1].map((i) => {
   return root.createBindGroup(c.addForcesLayout, {
     src: velTex[srcIdx].createView(d.texture2d(d.f32)),
     force: forceTex.createView(d.texture2d(d.f32)),
-    dst: velTex[dstIdx].createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    dst: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
     simParams: simParamBuffer,
   });
 });
@@ -197,9 +183,7 @@ const advectBindGroups = [0, 1].map((i) => {
   const dstIdx = i;
   return root.createBindGroup(c.advectLayout, {
     src: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    dst: velTex[dstIdx].createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    dst: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
     simParams: simParamBuffer,
     linSampler,
   });
@@ -210,9 +194,7 @@ const diffusionBindGroups = [0, 1].map((i) => {
   const dstIdx = 1 - i;
   return root.createBindGroup(c.diffusionLayout, {
     in: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    out: velTex[dstIdx].createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    out: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
     simParams: simParamBuffer,
   });
 });
@@ -221,9 +203,7 @@ const divergenceBindGroups = [0, 1].map((i) => {
   const srcIdx = i;
   return root.createBindGroup(c.divergenceLayout, {
     vel: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    div: divergenceTex.createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    div: divergenceTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
   });
 });
 
@@ -233,9 +213,7 @@ const pressureBindGroups = [0, 1].map((i) => {
   return root.createBindGroup(c.pressureLayout, {
     x: pressureTex[srcIdx].createView(d.texture2d(d.f32)),
     b: divergenceTex.createView(d.texture2d(d.f32)),
-    out: pressureTex[dstIdx].createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
+    out: pressureTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
   });
 });
 
@@ -247,11 +225,9 @@ const projectBindGroups = [0, 1].map((velIdx) =>
     return root.createBindGroup(c.projectLayout, {
       vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
       p: pressureTex[srcPIdx].createView(d.texture2d(d.f32)),
-      out: velTex[dstVelIdx].createView(
-        d.textureStorage2d('rgba16float', 'write-only'),
-      ),
+      out: velTex[dstVelIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
     });
-  })
+  }),
 );
 
 const advectInkBindGroups = [0, 1].map((velIdx) =>
@@ -262,13 +238,11 @@ const advectInkBindGroups = [0, 1].map((velIdx) =>
     return root.createBindGroup(c.advectInkLayout, {
       vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
       src: inkTex[srcInkIdx].createView(d.texture2d(d.f32)),
-      dst: inkTex[dstInkIdx].createView(
-        d.textureStorage2d('rgba16float', 'write-only'),
-      ),
+      dst: inkTex[dstInkIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
       simParams: simParamBuffer,
       linSampler,
     });
-  })
+  }),
 );
 
 const renderBindGroups = {
@@ -311,9 +285,7 @@ function loop() {
       delta: d.vec2f(...brushState.delta),
     });
 
-    brushPipeline
-      .with(brushBindGroup)
-      .dispatchWorkgroups(dispatchX, dispatchY);
+    brushPipeline.with(brushBindGroup).dispatchWorkgroups(dispatchX, dispatchY);
 
     addInkPipeline
       .with(addInkBindGroups[inkBuffer.currentIndex])
@@ -351,16 +323,12 @@ function loop() {
   }
 
   projectPipeline
-    .with(
-      projectBindGroups[velBuffer.currentIndex][pressureBuffer.currentIndex],
-    )
+    .with(projectBindGroups[velBuffer.currentIndex][pressureBuffer.currentIndex])
     .dispatchWorkgroups(dispatchX, dispatchY);
   velBuffer.swap();
 
   advectInkPipeline
-    .with(
-      advectInkBindGroups[velBuffer.currentIndex][inkBuffer.currentIndex],
-    )
+    .with(advectInkBindGroups[velBuffer.currentIndex][inkBuffer.currentIndex])
     .dispatchWorkgroups(dispatchX, dispatchY);
   inkBuffer.swap();
 
@@ -387,10 +355,7 @@ function loop() {
       throw new Error('Invalid display mode');
   }
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .with(renderBG)
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).with(renderBG).draw(3);
 
   requestAnimationFrame(loop);
 }
@@ -408,18 +373,22 @@ canvas.addEventListener('mousedown', (e) => {
     isDown: true,
   };
 });
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const x = (touch.clientX - rect.left) * devicePixelRatio;
-  const y = (touch.clientY - rect.top) * devicePixelRatio;
-  brushState = {
-    pos: toGrid(x, y),
-    delta: [0, 0],
-    isDown: true,
-  };
-}, { passive: false });
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * devicePixelRatio;
+    const y = (touch.clientY - rect.top) * devicePixelRatio;
+    brushState = {
+      pos: toGrid(x, y),
+      delta: [0, 0],
+      isDown: true,
+    };
+  },
+  { passive: false },
+);
 
 const mouseUpEventListener = () => {
   brushState.isDown = false;
@@ -438,16 +407,20 @@ canvas.addEventListener('mousemove', (e) => {
   brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
   brushState.pos = [newX, newY];
 });
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const x = (touch.clientX - rect.left) * devicePixelRatio;
-  const y = (touch.clientY - rect.top) * devicePixelRatio;
-  const [newX, newY] = toGrid(x, y);
-  brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-  brushState.pos = [newX, newY];
-}, { passive: false });
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * devicePixelRatio;
+    const y = (touch.clientY - rect.top) * devicePixelRatio;
+    const [newX, newY] = toGrid(x, y);
+    brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
+    brushState.pos = [newX, newY];
+  },
+  { passive: false },
+);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');

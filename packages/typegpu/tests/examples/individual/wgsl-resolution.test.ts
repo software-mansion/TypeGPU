@@ -10,10 +10,13 @@ describe('wgsl resolution example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    await runExampleTest({
-      category: 'tests',
-      name: 'wgsl-resolution',
-    }, device);
+    await runExampleTest(
+      {
+        category: 'tests',
+        name: 'wgsl-resolution',
+      },
+      device,
+    );
 
     const wgslElement = document.querySelector('.wgsl') as HTMLDivElement;
 

@@ -3,20 +3,29 @@
   "version": "0.10.0",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
-    "rollup-plugin",
-    "unplugin",
     "babel-plugin",
-    "vite-plugin",
-    "typegpu",
     "gpgpu",
+    "rollup-plugin",
+    "shaders",
+    "typegpu",
+    "typescript",
+    "unplugin",
+    "vite-plugin",
     "webgpu",
     "wgpu",
-    "wgsl",
-    "typescript",
-    "shaders"
+    "wgsl"
   ],
+  "homepage": "https://typegpu.com",
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+  },
   "type": "module",
+  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
@@ -33,9 +42,6 @@
   },
   "publishConfig": {
     "directory": "dist",
-    "linkDirectory": false,
-    "main": "./dist/index.mjs",
-    "types": "./dist/index.d.mts",
     "exports": {
       "./package.json": "./package.json",
       ".": {
@@ -148,17 +154,11 @@
           "default": "./dist/webpack.cjs"
         }
       }
-    }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
   },
-  "sideEffects": false,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
-  },
-  "bugs": {
-    "url": "https://github.com/software-mansion/TypeGPU/issues"
-  },
-  "homepage": "https://typegpu.com",
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
@@ -175,9 +175,6 @@
     "tinyest-for-wgsl": "workspace:~0.3.0",
     "unplugin": "^2.3.5"
   },
-  "peerDependencies": {
-    "typegpu": "workspace:^0.10.1"
-  },
   "devDependencies": {
     "@babel/template": "^7.27.2",
     "@babel/types": "^7.26.5",
@@ -193,5 +190,8 @@
     "rollup": "~4.37.0",
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
+  },
+  "peerDependencies": {
+    "typegpu": "workspace:^0.10.1"
   }
 }

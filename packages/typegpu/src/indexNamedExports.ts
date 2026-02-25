@@ -13,18 +13,10 @@ export {
   ResolutionError,
 } from './errors.ts';
 export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
-export {
-  isAccessor,
-  isLazy,
-  isMutableAccessor,
-  isSlot,
-} from './core/slot/slotTypes.ts';
+export { isAccessor, isLazy, isMutableAccessor, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
-export {
-  isUsableAsRender,
-  isUsableAsSampled,
-} from './core/texture/usageExtension.ts';
+export { isUsableAsRender, isUsableAsSampled } from './core/texture/usageExtension.ts';
 export { isUsableAsStorage } from './extension.ts';
 export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
@@ -71,11 +63,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type {
-  TgpuMutable,
-  TgpuReadonly,
-  TgpuUniform,
-} from './core/buffer/bufferShorthand.ts';
+export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferShorthand.ts';
 export type {
   Eventual,
   TgpuAccessor,
@@ -114,24 +102,11 @@ export type {
   TgpuLayoutTexture,
   TgpuLayoutUniform,
 } from './tgpuBindGroupLayout.ts';
-export type {
-  TgpuFn,
-  TgpuFnShell,
-  TgpuGenericFn,
-} from './core/function/tgpuFn.ts';
+export type { TgpuFn, TgpuFnShell, TgpuGenericFn } from './core/function/tgpuFn.ts';
 export type { TgpuComptime } from './core/function/comptime.ts';
-export type {
-  TgpuVertexFn,
-  TgpuVertexFnShell,
-} from './core/function/tgpuVertexFn.ts';
-export type {
-  TgpuFragmentFn,
-  TgpuFragmentFnShell,
-} from './core/function/tgpuFragmentFn.ts';
-export type {
-  TgpuComputeFn,
-  TgpuComputeFnShell,
-} from './core/function/tgpuComputeFn.ts';
+export type { TgpuVertexFn, TgpuVertexFnShell } from './core/function/tgpuVertexFn.ts';
+export type { TgpuFragmentFn, TgpuFragmentFnShell } from './core/function/tgpuFragmentFn.ts';
+export type { TgpuComputeFn, TgpuComputeFnShell } from './core/function/tgpuComputeFn.ts';
 export type {
   AutoFragmentIn,
   AutoFragmentOut,

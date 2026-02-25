@@ -50,15 +50,11 @@ const propertiesUniform = root.createUniform(Properties, properties);
 // these buffers are recreated with a different size on interpolationPoints change
 function createLineVerticesBuffers() {
   const Schema = d.arrayOf(d.vec2f, properties.interpolationPoints);
-  return initialFunctions.map(() =>
-    root.createBuffer(Schema).$usage('storage')
-  );
+  return initialFunctions.map(() => root.createBuffer(Schema).$usage('storage'));
 }
 let lineVerticesBuffers = createLineVerticesBuffers();
 
-const drawColorBuffers = initialFunctions.map((data) =>
-  root.createUniform(d.vec4f, data.color)
-);
+const drawColorBuffers = initialFunctions.map((data) => root.createUniform(d.vec4f, data.color));
 
 // Compute shader
 
@@ -80,26 +76,21 @@ const computePointsFn = (x: number) => {
   const start = properties.transformation.mul(d.vec4f(-1, 0, 0, 1)).x;
   const end = properties.transformation.mul(d.vec4f(1, 0, 0, 1)).x;
 
-  const pointX = start +
-    (end - start) / (d.f32(properties.interpolationPoints) - 1) * d.f32(x);
+  const pointX = start + ((end - start) / (d.f32(properties.interpolationPoints) - 1)) * d.f32(x);
   const pointY = interpolatedFunction(pointX);
-  const result = properties.inverseTransformation.mul(
-    d.vec4f(pointX, pointY, 0, 1),
-  );
+  const result = properties.inverseTransformation.mul(d.vec4f(pointX, pointY, 0, 1));
   computeLayout.$.lineVertices[x] = result.xy;
 };
 
 const createComputePipeline = (exprCode: string) => {
   return root
-    .with(
-      functionExprSlot,
-      tgpu['~unstable'].rawCodeSnippet(exprCode, d.f32, 'runtime'),
-    )
+    .with(functionExprSlot, tgpu['~unstable'].rawCodeSnippet(exprCode, d.f32, 'runtime'))
     .createGuardedComputePipeline(computePointsFn);
 };
 
-const computePipelines: Array<TgpuGuardedComputePipeline> = initialFunctions
-  .map((functionData, _) => createComputePipeline(functionData.code));
+const computePipelines: Array<TgpuGuardedComputePipeline> = initialFunctions.map(
+  (functionData, _) => createComputePipeline(functionData.code),
+);
 
 // Render background shader
 
@@ -125,19 +116,14 @@ const backgroundVertex = tgpu.vertexFn({
 
   return {
     pos: d.vec4f(
-      currentPoint.x +
-        d.f32(iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005 /
-          canvasRatio,
-      currentPoint.y +
-        d.f32(1 - iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005,
+      currentPoint.x + (d.f32(iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005) / canvasRatio,
+      currentPoint.y + d.f32(1 - iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005,
       currentPoint.zw,
     ),
   };
 });
 
-const backgroundFragment = tgpu.fragmentFn({ out: d.vec4f })(
-  () => d.vec4f(0.9, 0.9, 0.9, 1),
-);
+const backgroundFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(0.9, 0.9, 0.9, 1));
 
 const renderBackgroundPipeline = root.createRenderPipeline({
   vertex: backgroundVertex,
@@ -197,9 +183,7 @@ const vertex = tgpu.vertexFn({
 
   const currentVertex = vid / 2;
   const orthonormal = orthonormalForVertex(currentVertex);
-  const offset = orthonormal.mul(properties.lineWidth).mul(
-    std.select(d.f32(-1), 1, vid % 2 === 0),
-  );
+  const offset = orthonormal.mul(properties.lineWidth).mul(std.select(d.f32(-1), 1, vid % 2 === 0));
 
   const leftBot = properties.transformation.mul(d.vec4f(-1, -1, 0, 1));
   const rightTop = properties.transformation.mul(d.vec4f(1, 1, 0, 1));
@@ -250,9 +234,7 @@ function runComputePass(functionNumber: number) {
     lineVertices: lineVerticesBuffers[functionNumber],
   });
 
-  computePipeline
-    .with(bindGroup)
-    .dispatchThreads(properties.interpolationPoints);
+  computePipeline.with(bindGroup).dispatchThreads(properties.interpolationPoints);
 }
 
 function runRenderBackgroundPass() {
@@ -312,10 +294,7 @@ async function tryRecreateComputePipeline(
 }
 
 function queuePropertiesBufferUpdate() {
-  properties.inverseTransformation = mat4.inverse(
-    properties.transformation,
-    d.mat4x4f(),
-  );
+  properties.inverseTransformation = mat4.inverse(properties.transformation, d.mat4x4f());
   propertiesUniform.write(properties);
 }
 
@@ -334,17 +313,11 @@ const mouseMoveEventListener = (event: MouseEvent) => {
   }
   const currentPos = [event.clientX, event.clientY];
   const translation = [
-    (-(currentPos[0] - lastPos[0]) / canvas.width) *
-    2.0 * window.devicePixelRatio,
-    ((currentPos[1] - lastPos[1]) / canvas.height) *
-    2.0 * window.devicePixelRatio,
+    (-(currentPos[0] - lastPos[0]) / canvas.width) * 2.0 * window.devicePixelRatio,
+    ((currentPos[1] - lastPos[1]) / canvas.height) * 2.0 * window.devicePixelRatio,
     0.0,
   ];
-  mat4.translate(
-    properties.transformation,
-    translation,
-    properties.transformation,
-  );
+  mat4.translate(properties.transformation, translation, properties.transformation);
 
   lastPos = currentPos;
 };
@@ -355,27 +328,31 @@ const mouseUpEventListener = () => {
 };
 window.addEventListener('mouseup', mouseUpEventListener);
 
-canvas.addEventListener('wheel', (event) => {
-  event.preventDefault();
+canvas.addEventListener(
+  'wheel',
+  (event) => {
+    event.preventDefault();
 
-  const delta = Math.abs(event.deltaY) / 1000.0 + 1;
-  const scale = event.deltaY > 0 ? delta : 1 / delta;
+    const delta = Math.abs(event.deltaY) / 1000.0 + 1;
+    const scale = event.deltaY > 0 ? delta : 1 / delta;
 
-  mat4.scale(
-    properties.transformation,
-    [scale, scale, 1],
-    properties.transformation,
-  );
-}, { passive: false });
+    mat4.scale(properties.transformation, [scale, scale, 1], properties.transformation);
+  },
+  { passive: false },
+);
 
 // Touch interaction
 
-canvas.addEventListener('touchstart', (event) => {
-  event.preventDefault();
-  if (event.touches.length === 1) {
-    lastPos = [event.touches[0].clientX, event.touches[0].clientY];
-  }
-}, { passive: false });
+canvas.addEventListener(
+  'touchstart',
+  (event) => {
+    event.preventDefault();
+    if (event.touches.length === 1) {
+      lastPos = [event.touches[0].clientX, event.touches[0].clientY];
+    }
+  },
+  { passive: false },
+);
 
 const touchMoveEventListener = (event: TouchEvent) => {
   if (lastPos === null || event.touches.length !== 1) {
@@ -388,11 +365,7 @@ const touchMoveEventListener = (event: TouchEvent) => {
     ((currentPos[1] - lastPos[1]) / canvas.height) * s,
     0.0,
   ];
-  mat4.translate(
-    properties.transformation,
-    translation,
-    properties.transformation,
-  );
+  mat4.translate(properties.transformation, translation, properties.transformation);
 
   lastPos = currentPos;
 };
@@ -408,13 +381,9 @@ window.addEventListener('touchend', touchEndEventListener);
 const resizeObserver = new ResizeObserver(() => {
   const leftBot = properties.transformation.mul(d.vec4f(-1, -1, 0, 1));
   const rightTop = properties.transformation.mul(d.vec4f(1, 1, 0, 1));
-  const currentCanvasRatio = (rightTop.x - leftBot.x) /
-    (rightTop.y - leftBot.y);
+  const currentCanvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
   const desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
-  const rescaleMatrix = mat4.scaling(
-    [desiredCanvasRatio / currentCanvasRatio, 1, 1],
-    d.mat4x4f(),
-  );
+  const rescaleMatrix = mat4.scaling([desiredCanvasRatio / currentCanvasRatio, 1, 1], d.mat4x4f());
   properties.transformation = std.mul(properties.transformation, rescaleMatrix);
 
   msTexture.destroy();

@@ -11,7 +11,6 @@
  */
 
 import tgpu, { d } from 'typegpu';
-// deno-fmt-ignore: just a list of standard functions
 import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -118,9 +117,7 @@ function draw(timestamp: number) {
     time: (timestamp * 0.001) % 1000,
   });
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }

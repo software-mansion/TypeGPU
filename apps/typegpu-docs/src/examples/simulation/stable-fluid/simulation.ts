@@ -3,18 +3,9 @@ import * as p from './params.ts';
 
 const getNeighbors = (coords: d.v2i, bounds: d.v2i): d.v2i[] => {
   'use gpu';
-  const adjacentOffsets = [
-    d.vec2i(-1, 0),
-    d.vec2i(0, -1),
-    d.vec2i(1, 0),
-    d.vec2i(0, 1),
-  ];
+  const adjacentOffsets = [d.vec2i(-1, 0), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(0, 1)];
   for (const i of tgpu.unroll([0, 1, 2, 3])) {
-    adjacentOffsets[i] = std.clamp(
-      coords + adjacentOffsets[i],
-      d.vec2i(),
-      bounds - d.vec2i(1),
-    );
+    adjacentOffsets[i] = std.clamp(coords + adjacentOffsets[i], d.vec2i(), bounds - d.vec2i(1));
   }
   return adjacentOffsets;
 };
@@ -47,16 +38,8 @@ export const brushFn = tgpu.computeFn({
     inkAmount = brushSettings.inkAmount * brushWeight;
   }
 
-  std.textureStore(
-    brushLayout.$.forceDst,
-    pixelPos,
-    d.vec4f(forceVec, 0.0, 1.0),
-  );
-  std.textureStore(
-    brushLayout.$.inkDst,
-    pixelPos,
-    d.vec4f(inkAmount, 0.0, 0.0, 1.0),
-  );
+  std.textureStore(brushLayout.$.forceDst, pixelPos, d.vec4f(forceVec, 0.0, 1.0));
+  std.textureStore(brushLayout.$.inkDst, pixelPos, d.vec4f(inkAmount, 0.0, 0.0, 1.0));
 });
 
 export const addForcesLayout = tgpu.bindGroupLayout({
@@ -95,8 +78,10 @@ export const advectFn = tgpu.computeFn({
   const pixelPos = input.gid.xy;
 
   if (
-    pixelPos.x >= texSize.x - 1 || pixelPos.y >= texSize.y - 1 ||
-    pixelPos.x <= 0 || pixelPos.y <= 0
+    pixelPos.x >= texSize.x - 1 ||
+    pixelPos.y >= texSize.y - 1 ||
+    pixelPos.x <= 0 ||
+    pixelPos.y <= 0
   ) {
     std.textureStore(advectLayout.$.dst, pixelPos, d.vec4f(0, 0, 0, 1));
     return;
@@ -105,11 +90,7 @@ export const advectFn = tgpu.computeFn({
   const velocity = std.textureLoad(advectLayout.$.src, pixelPos, 0);
   const timeStep = advectLayout.$.simParams.dt;
   const prevPos = d.vec2f(pixelPos) - timeStep * velocity.xy;
-  const clampedPos = std.clamp(
-    prevPos,
-    d.vec2f(-0.5),
-    d.vec2f(texSize.xy) - 0.5,
-  );
+  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), d.vec2f(texSize.xy) - 0.5);
   const normalizedPos = (clampedPos + 0.5) / d.vec2f(texSize.xy);
 
   const prevVelocity = std.textureSampleLevel(
@@ -134,9 +115,7 @@ export const diffusionFn = tgpu.computeFn({
 })((input) => {
   'use gpu';
   const pixelPos = d.vec2i(input.gid.xy);
-  const texSize = d.vec2i(
-    std.textureDimensions(diffusionLayout.$.in),
-  );
+  const texSize = d.vec2i(std.textureDimensions(diffusionLayout.$.in));
   const centerVal = std.textureLoad(diffusionLayout.$.in, pixelPos, 0);
 
   const neighbors = getNeighbors(pixelPos, texSize);
@@ -151,8 +130,8 @@ export const diffusionFn = tgpu.computeFn({
 
   const diffuseRate = viscosity * timeStep;
   const blendFactor = 1 / (4 + diffuseRate);
-  const diffusedVal = d.vec4f(blendFactor) *
-    (leftVal + rightVal + upVal + downVal + centerVal * diffuseRate);
+  const diffusedVal =
+    d.vec4f(blendFactor) * (leftVal + rightVal + upVal + downVal + centerVal * diffuseRate);
 
   std.textureStore(diffusionLayout.$.out, pixelPos, diffusedVal);
 });
@@ -176,13 +155,8 @@ export const divergenceFn = tgpu.computeFn({
   const rightVel = std.textureLoad(divergenceLayout.$.vel, neighbors[2], 0);
   const downVel = std.textureLoad(divergenceLayout.$.vel, neighbors[3], 0);
 
-  const divergence = 0.5 *
-    (rightVel.x - leftVel.x + (downVel.y - upVel.y));
-  std.textureStore(
-    divergenceLayout.$.div,
-    pixelPos,
-    d.vec4f(divergence, 0, 0, 1),
-  );
+  const divergence = 0.5 * (rightVel.x - leftVel.x + (downVel.y - upVel.y));
+  std.textureStore(divergenceLayout.$.div, pixelPos, d.vec4f(divergence, 0, 0, 1));
 });
 
 export const pressureLayout = tgpu.bindGroupLayout({
@@ -206,14 +180,9 @@ export const pressureFn = tgpu.computeFn({
   const downPressure = std.textureLoad(pressureLayout.$.x, neighbors[3], 0);
 
   const divergence = std.textureLoad(pressureLayout.$.b, pixelPos, 0).x;
-  const newPressure = d.f32(0.25) *
-    (leftPressure.x + rightPressure.x + upPressure.x + downPressure.x -
-      divergence);
-  std.textureStore(
-    pressureLayout.$.out,
-    pixelPos,
-    d.vec4f(newPressure, 0, 0, 1),
-  );
+  const newPressure =
+    d.f32(0.25) * (leftPressure.x + rightPressure.x + upPressure.x + downPressure.x - divergence);
+  std.textureStore(pressureLayout.$.out, pixelPos, d.vec4f(newPressure, 0, 0, 1));
 });
 
 export const projectLayout = tgpu.bindGroupLayout({
@@ -265,11 +234,7 @@ export const advectInkFn = tgpu.computeFn({
   const velocity = std.textureLoad(advectInkLayout.$.vel, pixelPos, 0).xy;
   const timeStep = advectInkLayout.$.simParams.dt;
   const prevPos = d.vec2f(pixelPos) - timeStep * velocity;
-  const clampedPos = std.clamp(
-    prevPos,
-    d.vec2f(-0.5),
-    d.vec2f(texSize.xy) - d.vec2f(0.5),
-  );
+  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), d.vec2f(texSize.xy) - d.vec2f(0.5));
   const normalizedPos = (clampedPos + 0.5) / d.vec2f(texSize.xy);
 
   const inkVal = std.textureSampleLevel(
@@ -294,9 +259,5 @@ export const addInkFn = tgpu.computeFn({
   const pixelPos = input.gid.xy;
   const addVal = std.textureLoad(addInkLayout.$.add, pixelPos, 0).x;
   const srcVal = std.textureLoad(addInkLayout.$.src, pixelPos, 0).x;
-  std.textureStore(
-    addInkLayout.$.dst,
-    pixelPos,
-    d.vec4f(addVal + srcVal, 0, 0, 1),
-  );
+  std.textureStore(addInkLayout.$.dst, pixelPos, d.vec4f(addVal + srcVal, 0, 0, 1));
 });

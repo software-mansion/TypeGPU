@@ -27,9 +27,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 function draw(spanXValue: number, spanYValue: number) {
   spanUniform.write(d.vec2f(spanXValue, spanYValue));
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 }
 
 let spanX = 10;

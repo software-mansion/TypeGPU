@@ -19,20 +19,14 @@ import {
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import {
-  wgslExtensions,
-  wgslExtensionToFeatureName,
-} from '../../wgslExtensions.ts';
+import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
-import {
-  memoryLayoutOf,
-  type PrimitiveOffsetInfo,
-} from '../../data/offsetUtils.ts';
+import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -53,8 +47,7 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline
-  extends TgpuNamable, SelfResolvable, Timeable {
+export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -68,11 +61,7 @@ export interface TgpuComputePipeline
   ): this;
   with(bindGroup: TgpuBindGroup): this;
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number,
-    z?: number,
-  ): void;
+  dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
@@ -89,11 +78,10 @@ export interface TgpuComputePipeline
 }
 
 export declare namespace TgpuComputePipeline {
-  export type Descriptor<
-    Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>,
-  > = {
-    compute: TgpuComputeFn<Input>;
-  };
+  export type Descriptor<Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>> =
+    {
+      compute: TgpuComputeFn<Input>;
+    };
 }
 
 export function INTERNAL_createComputePipeline(
@@ -101,10 +89,7 @@ export function INTERNAL_createComputePipeline(
   slotBindings: [TgpuSlot<unknown>, unknown][],
   descriptor: TgpuComputePipeline.Descriptor,
 ) {
-  return new TgpuComputePipelineImpl(
-    new ComputePipelineCore(branch, slotBindings, descriptor),
-    {},
-  );
+  return new TgpuComputePipelineImpl(new ComputePipelineCore(branch, slotBindings, descriptor), {});
 }
 
 // --------------
@@ -137,9 +122,7 @@ function validateIndirectBufferSize(
   }
 
   if (offset % 4 !== 0) {
-    throw new Error(
-      `Indirect buffer offset must be a multiple of 4. Got: ${offset}`,
-    );
+    throw new Error(`Indirect buffer offset must be a multiple of 4. Got: ${offset}`);
   }
 }
 
@@ -183,10 +166,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
   with(bindGroup: TgpuBindGroup): this;
-  with(
-    layoutOrBindGroup: TgpuBindGroupLayout | TgpuBindGroup,
-    bindGroup?: TgpuBindGroup,
-  ): this {
+  with(layoutOrBindGroup: TgpuBindGroupLayout | TgpuBindGroup, bindGroup?: TgpuBindGroup): this {
     if (isBindGroup(layoutOrBindGroup)) {
       return new TgpuComputePipelineImpl(this._core, {
         ...this._priors,
@@ -206,14 +186,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }) as this;
   }
 
-  withPerformanceCallback(
-    callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): this {
-    const newPriors = createWithPerformanceCallback(
-      this._priors,
-      callback,
-      this._core.root,
-    );
+  withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
+    const newPriors = createWithPerformanceCallback(this._priors, callback, this._core.root);
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
@@ -222,19 +196,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   }): this {
-    const newPriors = createWithTimestampWrites(
-      this._priors,
-      options,
-      this._core.root,
-    );
+    const newPriors = createWithTimestampWrites(this._priors, options, this._core.root);
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number,
-    z?: number,
-  ): void {
+  dispatchWorkgroups(x: number, y?: number, z?: number): void {
     this._executeComputePass((pass) => pass.dispatchWorkgroups(x, y, z));
   }
 
@@ -277,13 +243,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     this._executeComputePass((pass) =>
-      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset)
+      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset),
     );
   }
 
-  private _executeComputePass(
-    dispatch: (pass: GPUComputePassEncoder) => void,
-  ): void {
+  private _executeComputePass(dispatch: (pass: GPUComputePassEncoder) => void): void {
     const memo = this._core.unwrap();
     const { root } = this._core;
 
@@ -299,10 +263,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     const missingBindGroups = new Set(memo.usedBindGroupLayouts);
 
-    warnIfOverflow(
-      memo.usedBindGroupLayouts,
-      this[$internal].root.device.limits,
-    );
+    warnIfOverflow(memo.usedBindGroupLayouts, this[$internal].root.device.limits);
 
     memo.usedBindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
@@ -375,7 +336,7 @@ class ComputePipelineCore implements SelfResolvable {
     if (this._memo === undefined) {
       const device = this.root.device;
       const enableExtensions = wgslExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension]),
       );
 
       // Resolving code
@@ -403,8 +364,7 @@ class ComputePipelineCore implements SelfResolvable {
         });
       }
 
-      const { code, usedBindGroupLayouts, catchall, logResources } =
-        resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -422,9 +382,7 @@ class ComputePipelineCore implements SelfResolvable {
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: usedBindGroupLayouts.map((l) =>
-              this.root.unwrap(l)
-            ),
+            bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
           }),
           compute: { module },
         }),

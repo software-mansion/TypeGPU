@@ -1,12 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type {
-  TgpuTexture,
-  TgpuTextureView,
-} from '../src/core/texture/texture.ts';
-import type {
-  RenderFlag,
-  SampledFlag,
-} from '../src/core/texture/usageExtension.ts';
+import type { TgpuTexture, TgpuTextureView } from '../src/core/texture/texture.ts';
+import type { RenderFlag, SampledFlag } from '../src/core/texture/usageExtension.ts';
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
@@ -17,7 +11,9 @@ import tgpu from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
 
 describe('TgpuTexture', () => {
-  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({ root }) => {
+  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
+    root,
+  }) => {
     const commonProps = {
       size: [512, 512],
       format: 'rgba8unorm',
@@ -121,9 +117,7 @@ describe('TgpuTexture', () => {
       format: 'rgba8unorm',
     });
 
-    expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [1, 2, 3]; format: 'rgba8unorm' }>
-    >();
+    expectTypeOf(texture).toEqualTypeOf<TgpuTexture<{ size: [1, 2, 3]; format: 'rgba8unorm' }>>();
   });
 
   it('rejects non-strict or invalid size tuples', ({ root }) => {
@@ -162,9 +156,7 @@ describe('TgpuTexture', () => {
       .$usage('sampled', 'render');
 
     expectTypeOf(texture).toEqualTypeOf<
-      & TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
-      & SampledFlag
-      & RenderFlag
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledFlag & RenderFlag
     >();
   });
 
@@ -214,28 +206,25 @@ describe('TgpuTexture', () => {
     });
 
     // @ts-expect-error
-    attest(texture.createView(d.texture2d(d.f32)))
-      .type.errors.snap(
-        "No overload matches this call.The last overload gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '\"(Error) Texture not usable as storage, call $usage('storage') first\" | \"(Error) Storage texture format 'rgba8unorm' incompatible with texture format 'rgba8unorm'\" | ... 38 more ... | \"(Error) Storage texture format 'rg11b10ufloat' incompatible with texture format 'rgba8unorm'\"'.",
-      );
+    attest(texture.createView(d.texture2d(d.f32))).type.errors.snap(
+      "No overload matches this call.The last overload gave the following error.Argument of type 'WgslTexture2d<F32>' is not assignable to parameter of type '\"(Error) Texture not usable as storage, call $usage('storage') first\" | \"(Error) Storage texture format 'rgba8unorm' incompatible with texture format 'rgba8unorm'\" | ... 38 more ... | \"(Error) Storage texture format 'rg11b10ufloat' incompatible with texture format 'rgba8unorm'\"'.",
+    );
 
     // @ts-expect-error
-    attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
-      .type.errors.snap(
-        'No overload matches this call.The last overload gave the following error.Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
-      );
+    attest(texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'))).type.errors.snap(
+      'No overload matches this call.The last overload gave the following error.Argument of type \'WgslStorageTexture2d<"rgba8unorm", "read-only">\' is not assignable to parameter of type \'"(Error) Texture not usable as storage, call $usage(\'storage\') first"\'.',
+    );
 
     const texture2 = texture.$usage('sampled');
 
     texture2.createView(d.texture2d(d.f32));
 
     // @ts-expect-error
-    attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only')))
-      .type.errors.snap(
-        `No overload matches this call.Overload 1 of 4, '(schema: "render", viewDescriptor?: TgpuTextureViewDescriptor | undefined): TgpuTextureRenderView', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"render"'.
+    attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only'))).type.errors.snap(
+      `No overload matches this call.Overload 1 of 4, '(schema: "render", viewDescriptor?: TgpuTextureViewDescriptor | undefined): TgpuTextureRenderView', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"render"'.
 Overload 2 of 4, '(schema: WgslTexture<WgslTextureProps>, viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type 'WgslTexture<WgslTextureProps>'.Type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is missing the following properties from type 'WgslTexture<WgslTextureProps>': sampleType, multisampled, bindingSampleType
 Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('storage') first", viewDescriptor?: TgpuTextureViewDescriptor | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as storage, call $usage('storage') first"'.`,
-      );
+    );
   });
 
   it('rejects invalid formats for storage texture views', ({ root }) => {
@@ -244,13 +233,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         size: [1, 1],
         format: 'rgba8unorm',
         viewFormats: ['rgba8unorm-srgb'],
-      }).$usage('storage');
+      })
+      .$usage('storage');
 
     // @ts-expect-error
-    attest(texture.createView(d.textureStorage2d('rgba8snorm', 'read-only')))
-      .type.errors.snap(
-        "No overload matches this call.The last overload gave the following error.Argument of type 'WgslStorageTexture2d<\"rgba8snorm\", \"read-only\">' is not assignable to parameter of type '\"(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'\"'.",
-      );
+    attest(texture.createView(d.textureStorage2d('rgba8snorm', 'read-only'))).type.errors.snap(
+      "No overload matches this call.The last overload gave the following error.Argument of type 'WgslStorageTexture2d<\"rgba8snorm\", \"read-only\">' is not assignable to parameter of type '\"(Error) Storage texture format 'rgba8snorm' incompatible with texture format 'rgba8unorm'\"'.",
+    );
 
     // valid
     texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
@@ -259,14 +248,15 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     attest(
       // @ts-expect-error
       d.textureStorage2d('rgba8unorm-srgb', 'read-only'),
-    )
-      .type.errors.snap(
-        "Argument of type '\"rgba8unorm-srgb\"' is not assignable to parameter of type 'StorageTextureFormats'.",
-      );
+    ).type.errors.snap(
+      "Argument of type '\"rgba8unorm-srgb\"' is not assignable to parameter of type 'StorageTextureFormats'.",
+    );
   });
 
   describe('Texture view', () => {
-    it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({ root }) => {
+    it('the default view inherits the dimension and sample type from its owner texture, rejects if not a valid usage', ({
+      root,
+    }) => {
       const texture1 = root
         .createTexture({
           size: [512, 512],
@@ -274,9 +264,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         })
         .$usage('sampled');
 
-      expectTypeOf(texture1.createView()).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture2d<d.F32>>
-      >();
+      expectTypeOf(texture1.createView()).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
 
       const texture2 = root
         .createTexture({
@@ -286,9 +274,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         })
         .$usage('sampled');
 
-      expectTypeOf(texture2.createView()).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture3d<d.U32>>
-      >();
+      expectTypeOf(texture2.createView()).toEqualTypeOf<TgpuTextureView<d.WgslTexture3d<d.U32>>>();
 
       const texture3 = root
         .createTexture({
@@ -299,9 +285,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         })
         .$usage('sampled');
 
-      expectTypeOf(texture3.createView()).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture1d<d.I32>>
-      >();
+      expectTypeOf(texture3.createView()).toEqualTypeOf<TgpuTextureView<d.WgslTexture1d<d.I32>>>();
 
       const texture4 = root
         .createTexture({
@@ -311,9 +295,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         .$usage('storage');
 
       // @ts-expect-error
-      attest(texture4.createView()).type.errors.snap(
-        'Expected 1-2 arguments, but got 0.',
-      );
+      attest(texture4.createView()).type.errors.snap('Expected 1-2 arguments, but got 0.');
     });
 
     describe('Texture methods', () => {
@@ -357,7 +339,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('calls queue.writeTexture for specific mip level when clear is called with mipLevel', ({ root, device }) => {
+      it('calls queue.writeTexture for specific mip level when clear is called with mipLevel', ({
+        root,
+        device,
+      }) => {
         const texture = root.createTexture({
           size: [64, 32],
           format: 'rgba8unorm',
@@ -376,20 +361,21 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('calls appropriate device methods when generateMipmaps is called', ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-          mipLevelCount: 4,
-        }).$usage('render');
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+            mipLevelCount: 4,
+          })
+          .$usage('render');
 
         texture.generateMipmaps();
 
         expect(
           device.mock.createShaderModule.mock.calls.flatMap((call) =>
-            call.flatMap((arg) => (arg as { code: string }).code)
+            call.flatMap((arg) => (arg as { code: string }).code),
           ),
-        )
-          .toMatchInlineSnapshot(`
+        ).toMatchInlineSnapshot(`
             [
               "
             struct VertexOutput {
@@ -452,11 +438,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('calls generateMipmaps with specific parameters', ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-          mipLevelCount: 5,
-        }).$usage('render');
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+            mipLevelCount: 5,
+          })
+          .$usage('render');
 
         texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
 
@@ -470,8 +458,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
       it('caches blit resources appropriately per level', ({ root, device }) => {
         const createTex = (format: GPUTextureFormat) =>
-          root.createTexture({ size: [32, 32], format, mipLevelCount: 2 })
-            .$usage('render');
+          root.createTexture({ size: [32, 32], format, mipLevelCount: 2 }).$usage('render');
 
         const getCalls = () => ({
           shaderModule: device.mock.createShaderModule.mock.calls.length,
@@ -558,7 +545,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('calls queue.copyExternalImageToTexture when write is called with image source', ({ root, device }) => {
+      it('calls queue.copyExternalImageToTexture when write is called with image source', ({
+        root,
+        device,
+      }) => {
         const texture = root.createTexture({
           size: [32, 32],
           format: 'rgba8unorm',
@@ -571,14 +561,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage);
 
-        expect(device.mock.queue.copyExternalImageToTexture)
-          .toHaveBeenCalledWith(
-            { source: mockImage },
-            expect.objectContaining({
-              texture: expect.anything(),
-            }),
-            [32, 32],
-          );
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mockImage },
+          expect.objectContaining({
+            texture: expect.anything(),
+          }),
+          [32, 32],
+        );
       });
 
       it('handles resizing when image dimensions do not match texture', ({ root, device }) => {
@@ -620,9 +609,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
         expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
 
-        const commandEncoder = device.mock.createCommandEncoder.mock
-          .results[device.mock.createCommandEncoder.mock.results.length - 1]
-          ?.value;
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
         expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
           { texture: expect.anything() },
           { texture: expect.anything() },
@@ -645,9 +635,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         });
 
         // @ts-expect-error - Testing format mismatch error
-        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
-          'Texture format mismatch',
-        );
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow('Texture format mismatch');
       });
 
       it('throws error when copyFrom is called with mismatched size', ({ root }) => {
@@ -662,9 +650,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         });
 
         // @ts-expect-error - Testing size mismatch error
-        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow(
-          'Texture size mismatch',
-        );
+        expect(() => targetTexture.copyFrom(sourceTexture)).toThrow('Texture size mismatch');
       });
 
       it('throws error when write is called with incorrect buffer size', ({ root }) => {
@@ -675,21 +661,19 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         const incorrectData = new Uint8Array(32); // Should be 64 bytes for 4x4x4
 
-        expect(() => texture.write(incorrectData)).toThrow(
-          'Buffer size mismatch',
-        );
+        expect(() => texture.write(incorrectData)).toThrow('Buffer size mismatch');
       });
 
       it('warns and returns early when generateMipmaps would generate no mipmaps', ({ root }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-          mipLevelCount: 3,
-        }).$usage('render');
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+            mipLevelCount: 3,
+          })
+          .$usage('render');
 
-        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
-          () => {},
-        );
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
         // Base mip level 3 would result in 0 mip levels to generate, so it should return early
         expect(() => texture.generateMipmaps(3)).not.toThrow();
@@ -702,15 +686,15 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('warns when generateMipmaps would generate only 1 mip level', ({ root }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-          mipLevelCount: 3,
-        }).$usage('render');
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+            mipLevelCount: 3,
+          })
+          .$usage('render');
 
-        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(
-          () => {},
-        );
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
         // Base mip level 2 would result in 1 mip level to generate (3-2=1), so it should warn and return early
         expect(() => texture.generateMipmaps(2)).not.toThrow();
@@ -722,7 +706,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         consoleSpy.mockRestore();
       });
 
-      it('throws an error and warns on the type level when the required render usage is missing', ({ root }) => {
+      it('throws an error and warns on the type level when the required render usage is missing', ({
+        root,
+      }) => {
         const texture = root.createTexture({
           size: [32, 32],
           format: 'rgba8unorm',
@@ -737,10 +723,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         //   ) => void
         // >;
 
-        expect(() => texture.generateMipmaps())
-          .toThrowErrorMatchingInlineSnapshot(
-            `[Error: generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.]`,
-          );
+        expect(() => texture.generateMipmaps()).toThrowErrorMatchingInlineSnapshot(
+          `[Error: generateMipmaps called without specifying 'render' usage. Add it via the $usage('render') method.]`,
+        );
       });
     });
   });
@@ -760,10 +745,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
 
     const createRenderPipeline = (root: ExperimentalTgpuRoot) =>
-      root
-        .withVertex(vertexFn)
-        .withFragment(fragmentFn, { format: 'rgba8unorm' })
-        .createPipeline();
+      root.withVertex(vertexFn).withFragment(fragmentFn, { format: 'rgba8unorm' }).createPipeline();
 
     it('works correctly when using either a texture or its view as a render target', ({ root }) => {
       const texture = root
@@ -792,7 +774,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         });
     });
 
-    it('works correctly when using either a texture or its view as a depth-stencil attachment', ({ root }) => {
+    it('works correctly when using either a texture or its view as a depth-stencil attachment', ({
+      root,
+    }) => {
       const texture = root
         .createTexture({
           size: [128, 128],
@@ -818,12 +802,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         })
         .$usage('render');
 
-      (() => {
+      () => {
         createRenderPipeline(root).withDepthStencilAttachment({
           // @ts-expect-error
           view: texture,
         });
-      });
+      };
     });
 
     it('rejects storage views for color attachments', ({ root }) => {
@@ -834,18 +818,16 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         })
         .$usage('storage');
 
-      const textureView = texture.createView(
-        d.textureStorage2d('rgba8unorm', 'read-write'),
-      );
+      const textureView = texture.createView(d.textureStorage2d('rgba8unorm', 'read-write'));
 
-      (() => {
+      () => {
         createRenderPipeline(root).withColorAttachment({
           // @ts-expect-error
           view: textureView,
           loadOp: 'clear',
           storeOp: 'store',
         });
-      });
+      };
     });
   });
 });

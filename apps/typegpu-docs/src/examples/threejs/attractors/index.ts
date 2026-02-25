@@ -49,42 +49,30 @@ orbitControls.maxDistance = 50;
 
 // attractors
 
-const attractorsPositions = t3.uniformArray([
-  new THREE.Vector3(-1, 0, 0),
-  new THREE.Vector3(1, 0, -0.5),
-  new THREE.Vector3(0, 0.5, 1),
-], d.vec4f);
-const attractorsRotationAxes = t3.uniformArray([
-  new THREE.Vector3(0, 1, 0),
-  new THREE.Vector3(0, 1, 0),
-  new THREE.Vector3(1, 0, -0.5).normalize(),
-], d.vec4f);
-const attractorsLength = t3.uniform(
-  attractorsPositions.node.array.length,
-  d.u32,
+const attractorsPositions = t3.uniformArray(
+  [new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, -0.5), new THREE.Vector3(0, 0.5, 1)],
+  d.vec4f,
 );
-const helpersRingGeometry = new THREE.RingGeometry(
-  1,
-  1.02,
-  32,
-  1,
-  0,
-  Math.PI * 1.5,
+const attractorsRotationAxes = t3.uniformArray(
+  [
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(1, 0, -0.5).normalize(),
+  ],
+  d.vec4f,
 );
+const attractorsLength = t3.uniform(attractorsPositions.node.array.length, d.u32);
+const helpersRingGeometry = new THREE.RingGeometry(1, 1.02, 32, 1, 0, Math.PI * 1.5);
 const helpersArrowGeometry = new THREE.ConeGeometry(0.1, 0.4, 12, 1, false);
 const helpersMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 
-const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] =
-  [];
+const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] = [];
 for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   const position = attractorsPositions.node.array[i] as THREE.Vector3;
   const orientation = attractorsRotationAxes.node.array[i] as THREE.Vector3;
   const reference = new THREE.Object3D();
   reference.position.copy(position);
-  reference.quaternion.setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    orientation,
-  );
+  reference.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), orientation);
   scene.add(reference);
 
   const arrowHelper = new THREE.Group();
@@ -115,9 +103,7 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
 
   attractorControls.addEventListener('change', () => {
     position.copy(reference.position);
-    orientation.copy(
-      new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion),
-    );
+    orientation.copy(new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion));
   });
 
   attractorsHelpers.push({ controls: attractorControls, arrow: arrowHelper });
@@ -149,10 +135,7 @@ const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 const seed = Math.random();
 
-const velocityBufferAttributeTA = t3.fromTSL(
-  velocityBuffer.node.toAttribute(),
-  d.vec3f,
-);
+const velocityBufferAttributeTA = t3.fromTSL(velocityBuffer.node.toAttribute(), d.vec3f);
 
 // init compute
 
@@ -160,11 +143,7 @@ const sphericalToVec3 = (phi: number, theta: number) => {
   'use gpu';
   const sinPhiRadius = std.sin(phi);
 
-  return d.vec3f(
-    sinPhiRadius * std.sin(theta),
-    std.cos(phi),
-    sinPhiRadius * std.cos(theta),
-  );
+  return d.vec3f(sinPhiRadius * std.sin(theta), std.cos(phi), sinPhiRadius * std.cos(theta));
 };
 
 const initCompute = t3.toTSL(() => {
@@ -190,7 +169,7 @@ const getParticleMassMultiplier = () => {
   'use gpu';
   randf.seed(t3.instanceIndex.$ / count + seed);
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
-  const base = 0.25 + randf.sample() * 3 / 4;
+  const base = 0.25 + (randf.sample() * 3) / 4;
   return base;
 };
 
@@ -217,16 +196,12 @@ const update = t3.toTSL(() => {
     const direction = std.normalize(toAttractor);
 
     // gravity
-    const gravityStrength = attractorMass.$ *
-      getParticleMass() *
-      gravityConstant /
-      (distance ** 2);
+    const gravityStrength = (attractorMass.$ * getParticleMass() * gravityConstant) / distance ** 2;
     const gravityForce = direction * gravityStrength;
     force += gravityForce;
 
     // spinning
-    const spinningForce = attractorRotationAxis * gravityStrength *
-      spinningStrength.$;
+    const spinningForce = attractorRotationAxis * gravityStrength * spinningStrength.$;
     const spinningVelocity = std.cross(spinningForce, toAttractor);
     force += spinningVelocity;
   }
@@ -244,8 +219,7 @@ const update = t3.toTSL(() => {
 
   // box loop
   const halfHalfExtent = boundHalfExtent.$ / 2;
-  position = std.mod(position + halfHalfExtent, boundHalfExtent.$) -
-    halfHalfExtent;
+  position = std.mod(position + halfHalfExtent, boundHalfExtent.$) - halfHalfExtent;
 
   positionBuffer.$[t3.instanceIndex.$] = d.vec3f(position);
   velocityBuffer.$[t3.instanceIndex.$] = d.vec3f(velocity);
@@ -367,7 +341,7 @@ export const controls = defineControls({
       spinningStrength.node.value = newValue;
     },
   },
-  'Scale': {
+  Scale: {
     initial: 0.008,
     min: 0,
     max: 0.1,
@@ -386,21 +360,13 @@ export const controls = defineControls({
     },
   },
   'Color A': {
-    initial: d.vec3f(
-      colorA.node.value.r,
-      colorA.node.value.g,
-      colorA.node.value.b,
-    ),
+    initial: d.vec3f(colorA.node.value.r, colorA.node.value.g, colorA.node.value.b),
     onColorChange: (newValue) => {
       colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: d.vec3f(
-      colorB.node.value.r,
-      colorB.node.value.g,
-      colorB.node.value.b,
-    ),
+    initial: d.vec3f(colorB.node.value.r, colorB.node.value.g, colorB.node.value.b),
     onColorChange: (newValue) => {
       colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },

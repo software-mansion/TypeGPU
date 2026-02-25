@@ -75,10 +75,7 @@ const bindGroup = root.createBindGroup(layout, {
   resultMatrix: resultMatrixBuffer,
 });
 
-function createMatrix(
-  size: d.v2f,
-  initValue: (row: number, col: number) => number,
-) {
+function createMatrix(size: d.v2f, initValue: (row: number, col: number) => number) {
   return {
     size: size,
     numbers: Array(size.x * size.y)
@@ -88,13 +85,11 @@ function createMatrix(
 }
 
 async function run() {
-  const firstMatrix = createMatrix(
-    d.vec2f(firstRowCount, firstColumnCount),
-    () => Math.floor(Math.random() * 10),
+  const firstMatrix = createMatrix(d.vec2f(firstRowCount, firstColumnCount), () =>
+    Math.floor(Math.random() * 10),
   );
-  const secondMatrix = createMatrix(
-    d.vec2f(firstColumnCount, secondColumnCount),
-    () => Math.floor(Math.random() * 10),
+  const secondMatrix = createMatrix(d.vec2f(firstColumnCount, secondColumnCount), () =>
+    Math.floor(Math.random() * 10),
   );
 
   firstMatrixBuffer.write(firstMatrix);
@@ -128,10 +123,7 @@ const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
-function printMatrixToHtml(
-  element: HTMLDivElement,
-  matrix: d.Infer<typeof MatrixStruct>,
-) {
+function printMatrixToHtml(element: HTMLDivElement, matrix: d.Infer<typeof MatrixStruct>) {
   element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
   element.innerHTML = matrix.numbers
     .slice(0, matrix.size.x * matrix.size.y)

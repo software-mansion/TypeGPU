@@ -2,7 +2,9 @@
   "name": "eslint-plugin-typegpu",
   "version": "0.10.0",
   "description": "An eslint plugin containing custom rules for TypeGPU.",
+  "license": "MIT",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -22,14 +24,8 @@
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "test": "vitest"
   },
-  "sideEffects": false,
-  "license": "MIT",
-  "packageManager": "pnpm@10.15.1",
   "dependencies": {
     "@typescript-eslint/utils": "^8.53.0"
-  },
-  "peerDependencies": {
-    "eslint": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
@@ -38,5 +34,9 @@
     "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
-  }
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "packageManager": "pnpm@10.15.1"
 }

@@ -10,11 +10,14 @@ describe('copy error example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'tests',
-      name: 'copy-error',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'tests',
+        name: 'copy-error',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "
