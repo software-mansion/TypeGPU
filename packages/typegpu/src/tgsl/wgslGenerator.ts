@@ -410,7 +410,9 @@ ${this.ctx.pre}}`;
           );
         }
 
+        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
+          op === '=' &&
           rhsExpr.origin === 'argument' &&
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
