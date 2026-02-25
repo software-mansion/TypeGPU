@@ -4,36 +4,28 @@ import * as std from 'typegpu/std';
 import type { InstanceInfo } from './instanceInfo.ts';
 import { BASE_TRIANGLE_HALF_SIDE } from './geometry.ts';
 
-const interpolate = tgpu.fn(
-  [d.f32, d.f32, d.f32, d.f32, d.f32],
-  d.f32,
-)(
-  (
-    inputValue: number,
-    inputLowerEndpoint: number,
-    inputUpperEndpoint: number,
-    outputLowerEndpoint: number,
-    outputUpperEndpoint: number,
-  ) => {
-    const inputProgress = inputValue - inputLowerEndpoint;
-    const inputInterval = inputUpperEndpoint - inputLowerEndpoint;
-    const progressPercentage = inputProgress / inputInterval;
-    const outputInterval = std.sub(outputUpperEndpoint, outputLowerEndpoint);
-    const outputValue = outputLowerEndpoint +
-      outputInterval * progressPercentage;
-    return outputValue;
-  },
-);
+function interpolate(
+  inputValue: number,
+  inputLowerEndpoint: number,
+  inputUpperEndpoint: number,
+  outputLowerEndpoint: number,
+  outputUpperEndpoint: number,
+) {
+  'use gpu';
+  const inputProgress = inputValue - inputLowerEndpoint;
+  const inputInterval = inputUpperEndpoint - inputLowerEndpoint;
+  const progressPercentage = inputProgress / inputInterval;
+  const outputInterval = outputUpperEndpoint - outputLowerEndpoint;
+  const outputValue = outputLowerEndpoint +
+    outputInterval * progressPercentage;
+  return outputValue;
+}
 
 const interpolateBezier = tgpu.fn(
   [d.f32, d.f32, d.f32],
   d.f32,
 )(
-  (
-    inputValue: number,
-    outputLowerEndpoint: number,
-    outputUpperEndpoint: number,
-  ) => {
+  (inputValue, outputLowerEndpoint, outputUpperEndpoint) => {
     return interpolate(
       inputValue,
       d.f32(0),

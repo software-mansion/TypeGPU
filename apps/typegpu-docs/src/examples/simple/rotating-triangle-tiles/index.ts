@@ -1,8 +1,6 @@
 import { colors } from './geometry.ts';
 import { createBezier } from './bezier.ts';
 import {
-  backgroundFragment,
-  backgroundVertex,
   foregroundFragment,
   foregroundVertex,
   midgroundFragment,
@@ -19,6 +17,7 @@ import {
   ROTATION_OPTIONS,
   updateAnimationDuration,
   updateAspectRatio,
+  updateCubicBezierControlPoints,
   updateGridParams,
   updateStepRotation,
 } from './params.ts';
@@ -43,18 +42,18 @@ let ease = createBezier(getCubicBezierControlPoints());
 export const root = await tgpu.init();
 
 const {
-  aspectRatioBuffer,
+  aspectRatioUniform,
   animationProgressUniform,
-  drawOverNeighborsBuffer,
+  drawOverNeighborsUniform,
   getInstanceInfoBindGroup,
-  scaleBuffer,
-  shiftedColorsBuffer,
-  middleSquareScaleBuffer,
+  scaleUniform,
+  shiftedColorsUniform,
+  middleSquareScaleUniform,
   updateInstanceInfoBufferAndBindGroup,
-  stepRotationBuffer,
+  stepRotationUniform,
 } = createBuffers(root);
 
-updateAspectRatio(canvas.width, canvas.height, aspectRatioBuffer);
+updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
 
 context.configure({
   device: root.device,
@@ -62,31 +61,25 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const backgroundPipeline = root['~unstable']
-  .with(shiftedColorsAccess, shiftedColorsBuffer)
-  .withVertex(backgroundVertex)
-  .withFragment(backgroundFragment, { format: presentationFormat })
-  .createPipeline();
-
 const midgroundPipeline = root['~unstable']
   .with(animationProgressAccess, animationProgressUniform)
-  .with(stepRotationAccess, stepRotationBuffer)
-  .with(drawOverNeighborsAccess, drawOverNeighborsBuffer)
-  .with(shiftedColorsAccess, shiftedColorsBuffer)
-  .with(middleSquareScaleAccess, middleSquareScaleBuffer)
-  .with(scaleAccess, scaleBuffer)
-  .with(aspectRatioAccess, aspectRatioBuffer)
+  .with(stepRotationAccess, stepRotationUniform)
+  .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
+  .with(shiftedColorsAccess, shiftedColorsUniform)
+  .with(middleSquareScaleAccess, middleSquareScaleUniform)
+  .with(scaleAccess, scaleUniform)
+  .with(aspectRatioAccess, aspectRatioUniform)
   .withVertex(midgroundVertex)
   .withFragment(midgroundFragment, { format: presentationFormat })
   .createPipeline();
 
 const foregroundPipeline = root['~unstable']
-  .with(drawOverNeighborsAccess, drawOverNeighborsBuffer)
+  .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
   .with(animationProgressAccess, animationProgressUniform)
-  .with(stepRotationAccess, stepRotationBuffer)
-  .with(shiftedColorsAccess, shiftedColorsBuffer)
-  .with(scaleAccess, scaleBuffer)
-  .with(aspectRatioAccess, aspectRatioBuffer)
+  .with(stepRotationAccess, stepRotationUniform)
+  .with(shiftedColorsAccess, shiftedColorsUniform)
+  .with(scaleAccess, scaleUniform)
+  .with(aspectRatioAccess, aspectRatioUniform)
   .withVertex(foregroundVertex)
   .withFragment(foregroundFragment, { format: presentationFormat })
   .createPipeline();
@@ -103,28 +96,21 @@ function getShiftedColors(timestamp: number) {
 function draw(timestamp: number) {
   if (!isRunning) return;
 
-  shiftedColorsBuffer.write(getShiftedColors(timestamp));
+  const shiftedColors = getShiftedColors(timestamp);
+
+  shiftedColorsUniform.write(shiftedColors);
   animationProgressUniform.write(
     ease((timestamp % getAnimationDuration()) / getAnimationDuration()),
   );
 
   const view = context.getCurrentTexture().createView();
 
-  backgroundPipeline
-    .withColorAttachment(
-      {
-        view,
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ).draw(6);
-
   midgroundPipeline
     .withColorAttachment({
       view,
-      loadOp: 'load',
+      loadOp: 'clear',
       storeOp: 'store',
+      clearValue: shiftedColors[0],
     })
     .with(getInstanceInfoBindGroup())
     .draw(3, getGridParams().triangleCount);
@@ -146,8 +132,8 @@ requestAnimationFrame(draw);
 // cleanup
 
 const resizeObserver = new ResizeObserver(() => {
-  updateAspectRatio(canvas.width, canvas.height, aspectRatioBuffer);
-  updateGridParams(scaleBuffer, updateInstanceInfoBufferAndBindGroup);
+  updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
+  updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup);
   updateInstanceInfoBufferAndBindGroup();
 });
 
@@ -170,7 +156,7 @@ export const controls = {
     step: 0.01,
     onSliderChange: (newValue: number) =>
       updateGridParams(
-        scaleBuffer,
+        scaleUniform,
         updateInstanceInfoBufferAndBindGroup,
         newValue,
       ),
@@ -186,12 +172,16 @@ export const controls = {
     initial: INITIAL_STEP_ROTATION,
     options: ROTATION_OPTIONS,
     onSelectChange: (newValue: number) =>
-      updateStepRotation(newValue, stepRotationBuffer, middleSquareScaleBuffer),
+      updateStepRotation(
+        newValue,
+        stepRotationUniform,
+        middleSquareScaleUniform,
+      ),
   },
   'Draw over neighbors': {
     initial: false,
     onToggleChange(value: boolean) {
-      drawOverNeighborsBuffer.write(value ? 1 : 0);
+      drawOverNeighborsUniform.write(value ? 1 : 0);
     },
   },
   'Cubic Bezier Control Points': {
@@ -199,6 +189,7 @@ export const controls = {
     async onTextChange(value: string) {
       const newPoints = parseControlPoints(value);
 
+      updateCubicBezierControlPoints(newPoints);
       ease = createBezier(
         newPoints,
       );
