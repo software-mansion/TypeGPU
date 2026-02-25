@@ -13,7 +13,6 @@
  */
 
 import tgpu, { d, std } from 'typegpu';
-// deno-fmt-ignore: just a list of standard functions
 import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 import {

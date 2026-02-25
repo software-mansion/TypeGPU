@@ -42,7 +42,6 @@ describe('struct', () => {
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
-    // deno-fmt-ignore
     expect([...new Uint32Array(buffer)]).toStrictEqual([
       1, 0, 0, 0, 1, 2, 3, 0,
     ]);

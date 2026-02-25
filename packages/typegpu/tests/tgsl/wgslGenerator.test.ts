@@ -181,7 +181,6 @@ describe('wgslGenerator', () => {
       // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                   ^ this should be a u32
       const res1 = wgslGenerator.expression(
-        // deno-fmt-ignore: it's better that way
         (
         (
           astInfo.ast?.body[1][0] as tinyest.Return
@@ -194,7 +193,6 @@ describe('wgslGenerator', () => {
       // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                                       ^ this should be a u32
       const res2 = wgslGenerator.expression(
-        // deno-fmt-ignore: it's better that way
         (
         (
           astInfo.ast?.body[1][0] as tinyest.Return
@@ -1141,7 +1139,6 @@ describe('wgslGenerator', () => {
       //                        ^ this should be an array<u32, 3>
       wgslGenerator.initGenerator(ctx);
       const res = wgslGenerator.expression(
-        // deno-fmt-ignore: it's better that way
         (
           astInfo.ast?.body[1][0] as tinyest.Const
         )[2] as unknown as tinyest.Expression,
@@ -1195,7 +1192,6 @@ describe('wgslGenerator', () => {
       //                        ^ this should be an array<u32, 3>
       wgslGenerator.initGenerator(ctx);
       const res = wgslGenerator.expression(
-        // deno-fmt-ignore: it's better that way
         (
           astInfo.ast?.body[1][0] as tinyest.Const
         )[2] as unknown as tinyest.Expression,

@@ -95,12 +95,13 @@ export function createPlane({
   const w = size[0] / 2;
   const h = size[1] / 2;
 
-  // deno-fmt-ignore
-  const vertices = createFaceVertices([
-    [-w, h, 0], [-w, -h, 0], [w, -h, 0], [w, h, 0],
-  ], [0, 0, 1]);
+  // oxfmt-ignore
+  const vertices = createFaceVertices(
+    [[-w, h, 0], [-w, -h, 0], [w, -h, 0], [w, h, 0]],
+    [0, 0, 1],
+  );
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   const indices = [
     0, 1, 3,
     1, 2, 3
@@ -145,7 +146,7 @@ export function createCuboid({
   const h = size[1] / 2; // height
   const d = size[2] / 2; // depth
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   const vertices = [
     // Front face
     ...createFaceVertices([[-w, -h, d], [w, -h, d], [w, h, d], [-w, h, d]], [0, 0, 1]),
@@ -161,7 +162,6 @@ export function createCuboid({
     ...createFaceVertices([[-w, -h, -d], [w, -h, -d], [w, -h, d], [-w, -h, d]], [0, -1, 0]),
   ];
 
-  // deno-fmt-ignore
   const indices = [
     // Front face
     0, 1, 2,  0, 2, 3,

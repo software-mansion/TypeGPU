@@ -1110,7 +1110,6 @@ export interface Mat3x3f extends BaseData {
   readonly [$validUniformSchema]: true;
   // ---
 
-  // deno-fmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
   (): m3x3f;
@@ -1130,7 +1129,7 @@ export interface Mat4x4f extends BaseData {
   readonly [$validUniformSchema]: true;
   // ---
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
   (): m4x4f;

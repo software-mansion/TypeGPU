@@ -254,7 +254,6 @@ export declare namespace TgpuRenderPipeline {
   }
 }
 
-// deno-fmt-ignore: More readable branching logic
 export type FragmentOutToTargets<T> =
   T extends
       // (shell-less) no return

@@ -28,7 +28,7 @@ const readTile = (x: number, y: number): number => {
 
 const countNeighborsInTile = (x: number, y: number): number => {
   'use gpu';
-  // deno-fmt-ignore <I think it's easier to read like that>
+  // oxfmt-ignore
   return readTile(x - 1, y - 1) + readTile(x, y - 1) + readTile(x + 1, y - 1) +
          readTile(x - 1, y)                                + readTile(x + 1, y) +
          readTile(x - 1, y + 1) + readTile(x, y + 1) + readTile(x + 1, y + 1);

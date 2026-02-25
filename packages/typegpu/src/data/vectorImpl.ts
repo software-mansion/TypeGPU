@@ -9,7 +9,6 @@ type VecSchema<S> = BaseData & ((v?: S) => S);
 const XYZW = ['x', 'y', 'z', 'w'];
 const RGBA = ['r', 'g', 'b', 'a'];
 
-// deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract readonly [$internal]: {
     elementSchema: VecSchema<S>;

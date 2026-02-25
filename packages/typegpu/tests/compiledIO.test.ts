@@ -119,7 +119,7 @@ describe('buildWriter', () => {
   it('should compile a writer for deeply nested arrays', () => {
     // The WGSL minimum maximum nesting depth of a composite type is 15
     // https://www.w3.org/TR/WGSL/#limits
-    // deno-fmt-ignore
+    // oxfmt-ignore
     const veryDeeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2), 2);
 
     const writer = buildWriter(veryDeeplyNested, 'offset', 'value');
@@ -400,7 +400,6 @@ describe('createCompileInstructions', () => {
     const dataView = new DataView(arr);
 
     writer(dataView, 0, {
-      // deno-fmt-ignore
       transform: d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
     });
 
@@ -424,7 +423,6 @@ describe('createCompileInstructions', () => {
     });
 
     expect(arr.byteLength).toBe(48);
-    // deno-fmt-ignore
     expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]);
   });
 

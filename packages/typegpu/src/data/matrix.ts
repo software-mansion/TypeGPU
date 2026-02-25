@@ -595,7 +595,7 @@ const identityFunctions = {
 export const translation4 = dualImpl({
   name: 'translation4',
   normalImpl: (vector: v3f) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       1, 0, 0, 0,
       0, 1, 0, 0,
@@ -617,7 +617,7 @@ export const translation4 = dualImpl({
 export const scaling4 = dualImpl({
   name: 'scaling4',
   normalImpl: (vector: v3f) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       vector.x, 0, 0, 0,
       0, vector.y, 0, 0,
@@ -639,7 +639,7 @@ export const scaling4 = dualImpl({
 export const rotationX4 = dualImpl({
   name: 'rotationX4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       1, 0, 0, 0,
       0, Math.cos(a), Math.sin(a), 0,
@@ -661,7 +661,7 @@ export const rotationX4 = dualImpl({
 export const rotationY4 = dualImpl({
   name: 'rotationY4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       Math.cos(a), 0, -Math.sin(a), 0,
       0, 1, 0, 0,
@@ -683,7 +683,7 @@ export const rotationY4 = dualImpl({
 export const rotationZ4 = dualImpl({
   name: 'rotationZ4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       Math.cos(a), Math.sin(a), 0, 0,
       -Math.sin(a), Math.cos(a), 0, 0,

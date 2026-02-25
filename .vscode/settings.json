@@ -3,20 +3,5 @@
   "[astro]": {
     "editor.defaultFormatter": "astro-build.astro-vscode"
   },
-  "[typescript]": {
-    "editor.defaultFormatter": null
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": null
-  },
-  "emeraldwalk.runonsave": {
-    "commands": [
-      {
-        "match": ".*",
-        "cmd": "echo \"Formatting ${relativeFile}\" && deno fmt ./${relativeFile}"
-      }
-    ]
-  },
-  "deno.enable": false,
   "typescript.preferences.importModuleSpecifier": "relative"
 }

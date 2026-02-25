@@ -82,27 +82,27 @@ export type MemIdentityRecord<
   [Key in keyof T]: MemIdentity<T[Key]>;
 };
 
+// The check below can eval to `boolean` if parts of the union
+// are valid, but some aren't. We only treat schemas invalid if all
+// union elements are invalid.
 export type IsValidStorageSchema<T> =
   (T extends { readonly [$validStorageSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
   false ? false
     : true;
 
+// The check below can eval to `boolean` if parts of the union
+// are valid, but some aren't. We only treat schemas invalid if all
+// union elements are invalid.
 export type IsValidUniformSchema<T> =
   (T extends { readonly [$validUniformSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
   false ? false
     : true;
 
+// The check below can eval to `boolean` if parts of the union
+// are valid, but some aren't. We only treat schemas invalid if all
+// union elements are invalid.
 export type IsValidVertexSchema<T> =
   (T extends { readonly [$validVertexSchema]: true } ? true : false) extends //
-  // The check above can eval to `boolean` if parts of the union
-  // are valid, but some aren't. We only treat schemas invalid if all
-  // union elements are invalid.
   false ? false
     : true;
 

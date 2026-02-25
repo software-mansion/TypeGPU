@@ -17,7 +17,7 @@ export const endCapSlot = tgpu.slot(roundCap);
 const getJoinParent = tgpu.fn([u32], u32)((i) => (i - 4) >> 1);
 
 const getJoinVertexPath = tgpu.fn([u32], JoinPath)((vertexIndex) => {
-  // deno-fmt-ignore
+  // oxfmt-ignore
   const lookup = [u32(0), u32(0), /* dont care */u32(0), u32(1), u32(1), u32(2), u32(2), /* dont care */u32(2), u32(3), u32(3)];
   if (vertexIndex < 10) {
     return JoinPath({
@@ -182,14 +182,14 @@ export const lineSegmentVariableWidth = tgpu.fn([
 
   let vertexPosition = vec2f();
 
-  // deno-fmt-ignore
   if (isCap) {
     if (isCSide) {
-      vertexPosition =   endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
+      vertexPosition = endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
     } else {
       vertexPosition = startCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nCB, j4);
     }
   } else {
+    // oxfmt-ignore
     vertexPosition = joinSlot.$(
       situationIndex, vertexIndex,
       joinPath,

@@ -79,14 +79,14 @@ const deserializerMap: DeserializerMap = {
   mat2x2f: (d: Uint32Array) =>
     mat2x2f(toF(d[0]), toF(d[1]), toF(d[2]), toF(d[3])),
   mat3x3f: (d: Uint32Array) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat3x3f(
       toF(d[0]), toF(d[1]), toF(d[2]),
       toF(d[4]), toF(d[5]), toF(d[6]),
       toF(d[8]), toF(d[9]), toF(d[10]),
     ),
   mat4x4f: (d: Uint32Array) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       toF(d[0]),  toF(d[1]),  toF(d[2]),  toF(d[3]),
       toF(d[4]),  toF(d[5]),  toF(d[6]),  toF(d[7]),

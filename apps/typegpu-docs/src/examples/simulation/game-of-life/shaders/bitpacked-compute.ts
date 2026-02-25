@@ -3,14 +3,14 @@ import * as std from 'typegpu/std';
 import tgpu from 'typegpu';
 import { computeLayout, gameSizeAccessor, TILE_SIZE } from './common.ts';
 
-// deno-fmt-ignore
+// oxfmt-ignore
 const Neighborhood3x3 = d.struct({
   tl: d.u32, tc: d.u32, tr: d.u32,
   ml: d.u32, mc: d.u32, mr: d.u32,
   bl: d.u32, bc: d.u32, br: d.u32,
 });
 
-// deno-fmt-ignore
+// oxfmt-ignore
 const Neighbors8 = d.struct({
   nw: d.u32, n: d.u32, ne: d.u32,
   w:  d.u32,            e: d.u32,
@@ -45,7 +45,7 @@ const gatherNeighborhood = (
   );
   const g4 = std.textureGather(0, texture, sampler, uv.add(texelSize));
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   return Neighborhood3x3({
      tl: d.u32(g1.w), tc: d.u32(g1.z), tr: d.u32(g2.z),
      ml: d.u32(g1.x), mc: d.u32(g1.y), mr: d.u32(g2.y),
@@ -67,7 +67,7 @@ const bitpackedNeighbors = (
   n: d.Infer<typeof Neighborhood3x3>,
 ): d.Infer<typeof Neighbors8> => {
   'use gpu';
-  // deno-fmt-ignore
+  // oxfmt-ignore
   return Neighbors8({
     nw: shiftLeft(n.tc, n.tl), n: n.tc, ne: shiftRight(n.tc, n.tr),
     w:  shiftLeft(n.mc, n.ml),          e:  shiftRight(n.mc, n.mr),
