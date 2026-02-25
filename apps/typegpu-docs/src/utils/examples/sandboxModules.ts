@@ -112,8 +112,8 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     typeDef: { reroute: 'tinyest/src/index.ts' },
   },
   typegpu: {
-    import: { reroute: 'typegpu/src/index.ts' },
-    typeDef: { reroute: 'typegpu/src/index.ts' },
+    import: { reroute: 'typegpu/src/index.js' },
+    typeDef: { reroute: 'typegpu/src/index.d.ts' },
   },
   'typegpu/data': {
     import: { reroute: 'typegpu/src/data/index.ts' },
