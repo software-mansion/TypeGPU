@@ -73,13 +73,12 @@ const terrainBindGroup = root.createBindGroup(terrainLayout, {
   terrain: terrainBuffer,
 });
 
-const pipeline = root['~unstable']
+const pipeline = root
   .pipe(perlinCache.inject())
   .createRenderPipeline({
     attribs: vertexLayout.attrib,
     vertex: vertexFn,
     fragment: fragmentFn,
-    targets: { format: presentationFormat },
     depthStencil: {
       format: 'depth24plus',
       depthWriteEnabled: true,

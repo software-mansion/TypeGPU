@@ -37,7 +37,7 @@ const fbm = tgpu.fn(
   return value;
 });
 
-export const vertexFn = tgpu['~unstable'].vertexFn({
+export const vertexFn = tgpu.vertexFn({
   in: {
     ...Vertex.propTypes,
     instanceIndex: d.builtin.instanceIndex,
@@ -49,11 +49,12 @@ export const vertexFn = tgpu['~unstable'].vertexFn({
     worldPos: d.vec3f,
   },
 })((input) => {
+  'use gpu';
   const cube = cubeLayout.$.cubes[input.instanceIndex];
   const cam = cameraLayout.$.camera;
   const params = terrainLayout.$.terrain;
 
-  const worldPos = std.mul(cube.model, d.vec4f(input.position, 1));
+  const worldPos = cube.model * d.vec4f(input.position, 1);
 
   const cubeCenter = cube.model.columns[3];
   const noiseCoord = d.vec2f(
@@ -65,21 +66,21 @@ export const vertexFn = tgpu['~unstable'].vertexFn({
   const displaced = d.vec4f(worldPos.x, worldPos.y + height, worldPos.z, 1);
 
   const worldNormal = std.normalize(
-    std.mul(cube.model, d.vec4f(input.normal, 0)).xyz,
+    (cube.model * d.vec4f(input.normal, 0)).xyz,
   );
 
   const t = height / params.terrainHeight + 0.5;
   const color = heightColor(t);
 
   return {
-    pos: std.mul(cam.projection, std.mul(cam.view, displaced)),
+    pos: cam.projection * cam.view * displaced,
     worldNormal,
     color,
     worldPos: displaced.xyz,
   };
 });
 
-export const fragmentFn = tgpu['~unstable'].fragmentFn({
+export const fragmentFn = tgpu.fragmentFn({
   in: {
     worldNormal: d.vec3f,
     color: d.vec3f,
