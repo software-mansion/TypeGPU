@@ -20,16 +20,9 @@ import {
   type SelfResolvable,
 } from '../../types.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
-import {
-  getGpuValueRecursively,
-  valueProxyHandler,
-} from '../valueProxyUtils.ts';
+import { getGpuValueRecursively, valueProxyHandler } from '../valueProxyUtils.ts';
 import { slot as slotConstructor } from './slot.ts';
-import type {
-  TgpuAccessor,
-  TgpuMutableAccessor,
-  TgpuSlot,
-} from './slotTypes.ts';
+import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
 // Public API
@@ -38,15 +31,12 @@ export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuAccessor.In<NoInfer<T>>,
 ): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
-  return new TgpuAccessorImpl(
-    schemaOrConstructor,
-    defaultValue,
-  ) as unknown as TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+  return new TgpuAccessorImpl(schemaOrConstructor, defaultValue) as unknown as TgpuAccessor<
+    UnwrapRuntimeConstructor<T>
+  >;
 }
 
-export function mutableAccessor<
-  T extends AnyData | ((count: number) => AnyData),
->(
+export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
@@ -78,7 +68,7 @@ abstract class AccessorBase<
   ) {
     this.schema = isData(schemaOrConstructor)
       ? schemaOrConstructor
-      : (schemaOrConstructor as ((count: number) => T))(0);
+      : (schemaOrConstructor as (count: number) => T)(0);
     this.defaultValue = defaultValue;
 
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
@@ -87,12 +77,15 @@ abstract class AccessorBase<
   }
 
   get [$gpuValueOf](): InferGPU<T> {
-    return new Proxy({
-      [$internal]: true,
-      [$ownSnippet]: this.#createSnippet(),
-      [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `${this.resourceType}:${getName(this) ?? '<unnamed>'}.$`,
-    }, valueProxyHandler) as InferGPU<T>;
+    return new Proxy(
+      {
+        [$internal]: true,
+        [$ownSnippet]: this.#createSnippet(),
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `${this.resourceType}:${getName(this) ?? '<unnamed>'}.$`,
+      },
+      valueProxyHandler,
+    ) as InferGPU<T>;
   }
 
   /**
@@ -103,11 +96,7 @@ abstract class AccessorBase<
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
-    while (
-      typeof value === 'function' &&
-      !isTgpuFn(value) &&
-      !hasTinyestMetadata(value)
-    ) {
+    while (typeof value === 'function' && !isTgpuFn(value) && !hasTinyestMetadata(value)) {
       // Not a GPU function, so has to be a resource accessor (ran in codegen mode) or comptime
       value = value();
       if (isSnippet(value)) {
@@ -122,11 +111,7 @@ abstract class AccessorBase<
 
     if (isTgpuFn(value) || hasTinyestMetadata(value)) {
       return ctx.withResetIndentLevel(() =>
-        snip(
-          `${ctx.resolve(value).value}()`,
-          this.schema,
-          /* origin */ 'runtime',
-        )
+        snip(`${ctx.resolve(value).value}()`, this.schema, /* origin */ 'runtime'),
       );
     }
 
@@ -145,7 +130,8 @@ abstract class AccessorBase<
 
     // Passing the name down to the default callback, if it has no name yet
     if (
-      this.defaultValue && typeof this.defaultValue === 'function' &&
+      this.defaultValue &&
+      typeof this.defaultValue === 'function' &&
       !getName(this.defaultValue)
     ) {
       setName(this.defaultValue as object, label);
@@ -176,7 +162,8 @@ abstract class AccessorBase<
 
 export class TgpuAccessorImpl<T extends BaseData>
   extends AccessorBase<T, TgpuAccessor.In<T>>
-  implements TgpuAccessor<T> {
+  implements TgpuAccessor<T>
+{
   readonly resourceType = 'accessor';
 
   constructor(
@@ -199,7 +186,8 @@ export class TgpuAccessorImpl<T extends BaseData>
 
 export class TgpuMutableAccessorImpl<T extends BaseData>
   extends AccessorBase<T, TgpuMutableAccessor.In<T>>
-  implements TgpuMutableAccessor<T> {
+  implements TgpuMutableAccessor<T>
+{
   readonly resourceType = 'mutable-accessor';
 
   constructor(

@@ -3,9 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { operatorSlot, WORKGROUP_SIZE } from '../schemas.ts';
 
-export const workgroupMemory = tgpu.workgroupVar(
-  d.arrayOf(d.f32, WORKGROUP_SIZE),
-);
+export const workgroupMemory = tgpu.workgroupVar(d.arrayOf(d.f32, WORKGROUP_SIZE));
 
 export const upsweep = tgpu.fn([d.u32])((localIdx) => {
   let offset = d.u32(1);
@@ -33,10 +31,7 @@ export const downsweep = tgpu.fn([d.u32])((localIdx) => {
       const bi = offset * (2 * localIdx + 2) - 1;
       const t = workgroupMemory.$[ai] as number;
       workgroupMemory.$[ai] = workgroupMemory.$[bi] as number;
-      workgroupMemory.$[bi] = operatorSlot.$(
-        workgroupMemory.$[bi] as number,
-        t,
-      );
+      workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi] as number, t);
     }
   }
 });

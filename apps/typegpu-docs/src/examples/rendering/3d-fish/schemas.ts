@@ -61,13 +61,10 @@ export const FishBehaviorParams = d.struct({
 // layouts
 
 export const modelVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(d.struct(ModelVertexInput), n)
+  d.arrayOf(d.struct(ModelVertexInput), n),
 );
 
-export const renderInstanceLayout = tgpu.vertexLayout(
-  ModelDataArray,
-  'instance',
-);
+export const renderInstanceLayout = tgpu.vertexLayout(ModelDataArray, 'instance');
 
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   modelData: { storage: ModelDataArray },

@@ -16,19 +16,17 @@ async function generateTestFiles() {
       log: exportName,
     }));
 
-  const dAllImports = Object.keys(dAll)
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu/data',
-      log: exportName,
-    }));
+  const dAllImports = Object.keys(dAll).map((exportName) => ({
+    export: exportName,
+    from: 'typegpu/data',
+    log: exportName,
+  }));
 
-  const stdAllImports = Object.keys(stdAll)
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu/std',
-      log: exportName,
-    }));
+  const stdAllImports = Object.keys(stdAll).map((exportName) => ({
+    export: exportName,
+    from: 'typegpu/std',
+    log: exportName,
+  }));
 
   const tgpuImports = Object.keys(tgpuAll.tgpu)
     .filter((key) => key !== '~unstable')

@@ -9,7 +9,10 @@ beforeEach(() => {
 });
 
 it('implicitly casts right-hand side, with a warning', () => {
-  const foo = tgpu.fn([d.f32], d.i32)((arg) => {
+  const foo = tgpu.fn(
+    [d.f32],
+    d.i32,
+  )((arg) => {
     let a = 12; // inferred to be i32
     a = arg;
     return a;

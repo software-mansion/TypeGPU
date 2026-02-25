@@ -37,9 +37,7 @@ export function ExampleLink(props: Props) {
       onClick={handleClick}
       className={cs(
         'block overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow',
-        isCurrentExample
-          ? 'shadow-lg ring-3 ring-purple-500'
-          : 'hover:shadow-lg',
+        isCurrentExample ? 'shadow-lg ring-3 ring-purple-500' : 'hover:shadow-lg',
       )}
     >
       {children}

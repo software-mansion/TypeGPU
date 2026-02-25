@@ -14,12 +14,7 @@ const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
-const camera = new THREE.PerspectiveCamera(
-  50,
-  canvas.clientWidth / canvas.clientHeight,
-  0.1,
-  10,
-);
+const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 10);
 camera.position.set(0, 0, 1);
 
 const scene = new THREE.Scene();
@@ -27,9 +22,7 @@ const scene = new THREE.Scene();
 const bgColor = TSL.screenUV.y.mix(TSL.color(0x9f87f7), TSL.color(0xf2cdcd));
 const bgVignette = TSL.screenUV.distance(0.5).remapClamp(0.3, 0.8).oneMinus();
 const bgIntensity = 4;
-scene.backgroundNode = bgColor.mul(
-  bgVignette.mul(TSL.color(0xa78ff6).mul(bgIntensity)),
-);
+scene.backgroundNode = bgColor.mul(bgVignette.mul(TSL.color(0xa78ff6).mul(bgIntensity)));
 
 const pointerPosition = t3.uniform(TSL.vec4(0), d.vec4f);
 const elasticity = t3.uniform(0.4, d.f32);
@@ -40,71 +33,58 @@ const brushStrength = t3.uniform(0.22, d.f32);
 const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   const count = geometry.attributes.position.count;
 
-  const positionStorageBufferAttribute = new THREE.StorageBufferAttribute(
-    count,
-    3,
-  );
+  const positionStorageBufferAttribute = new THREE.StorageBufferAttribute(count, 3);
   geometry.setAttribute('storagePosition', positionStorageBufferAttribute);
 
   const basePositionAccessor = t3.fromTSL(
-    TSL.storage(
-      geometry.attributes.position as THREE.BufferAttribute,
-      'vec3',
-      count,
-    ),
+    TSL.storage(geometry.attributes.position as THREE.BufferAttribute, 'vec3', count),
     d.arrayOf(d.vec3f),
   );
   const positionAccessor = t3.fromTSL(
-    TSL.storage(
-      positionStorageBufferAttribute,
-      'vec3',
-      count,
-    ),
+    TSL.storage(positionStorageBufferAttribute, 'vec3', count),
     d.arrayOf(d.vec3f),
   );
   const speedAccessor = t3.fromTSL(
-    TSL.storage(
-      new THREE.StorageBufferAttribute(count, 3),
-      'vec3',
-      count,
-    ),
+    TSL.storage(new THREE.StorageBufferAttribute(count, 3), 'vec3', count),
     d.arrayOf(d.vec3f),
   );
 
-  const computeInit = t3.toTSL(() => {
-    'use gpu';
-    positionAccessor.$[t3.instanceIndex.$] =
-      basePositionAccessor.$[t3.instanceIndex.$];
-  }).compute(count).setName('Init Mesh');
+  const computeInit = t3
+    .toTSL(() => {
+      'use gpu';
+      positionAccessor.$[t3.instanceIndex.$] = basePositionAccessor.$[t3.instanceIndex.$];
+    })
+    .compute(count)
+    .setName('Init Mesh');
 
-  const modelMatrixAccessor = t3.fromTSL(
-    TSL.objectWorldMatrix(object),
-    d.mat4x4f,
-  );
+  const modelMatrixAccessor = t3.fromTSL(TSL.objectWorldMatrix(object), d.mat4x4f);
 
-  const computeUpdate = t3.toTSL(() => {
-    'use gpu';
-    const instanceIdx = t3.instanceIndex.$;
-    const basePosition = basePositionAccessor.$[instanceIdx];
-    let position = positionAccessor.$[instanceIdx];
+  const computeUpdate = t3
+    .toTSL(() => {
+      'use gpu';
+      const instanceIdx = t3.instanceIndex.$;
+      const basePosition = basePositionAccessor.$[instanceIdx];
+      let position = positionAccessor.$[instanceIdx];
 
-    if (pointerPosition.$.w === 1) {
-      const worldPosition = (modelMatrixAccessor.$ * d.vec4f(position, 1)).xyz;
-      const dist = std.distance(worldPosition, pointerPosition.$.xyz);
-      const direction = std.normalize(pointerPosition.$.xyz - worldPosition);
-      const power = std.max(brushSize.$ - dist, 0) * brushStrength.$;
+      if (pointerPosition.$.w === 1) {
+        const worldPosition = (modelMatrixAccessor.$ * d.vec4f(position, 1)).xyz;
+        const dist = std.distance(worldPosition, pointerPosition.$.xyz);
+        const direction = std.normalize(pointerPosition.$.xyz - worldPosition);
+        const power = std.max(brushSize.$ - dist, 0) * brushStrength.$;
 
-      positionAccessor.$[instanceIdx] = position + direction * power;
-      position = positionAccessor.$[instanceIdx];
-    }
+        positionAccessor.$[instanceIdx] = position + direction * power;
+        position = positionAccessor.$[instanceIdx];
+      }
 
-    const dist = std.distance(basePosition, position);
-    const force = (basePosition - position) * elasticity.$ * dist;
-    const speed = (speedAccessor.$[instanceIdx] + force) * damping.$;
+      const dist = std.distance(basePosition, position);
+      const force = (basePosition - position) * elasticity.$ * dist;
+      const speed = (speedAccessor.$[instanceIdx] + force) * damping.$;
 
-    speedAccessor.$[instanceIdx] = d.vec3f(speed);
-    positionAccessor.$[instanceIdx] = position.add(speed);
-  }).compute(count).setName('Update Jelly');
+      speedAccessor.$[instanceIdx] = d.vec3f(speed);
+      positionAccessor.$[instanceIdx] = position.add(speed);
+    })
+    .compute(count)
+    .setName('Update Jelly');
 
   computeUpdate.onInit(() => renderer.compute(computeInit));
 

@@ -12,8 +12,7 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() {
       return colorSlot;
-    }`
-      .$uses({ colorSlot });
+    }`.$uses({ colorSlot });
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f{
@@ -27,13 +26,13 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() {
       return colorSlot;
-    }`
-      .$uses({ colorSlot });
+    }`.$uses({ colorSlot });
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const main = tgpu.fn([])(`() {
+    const main = tgpu
+      .fn([])(`() {
       getColorWithGreen();
     }`)
       .$uses({ getColorWithGreen });
@@ -54,16 +53,14 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() {
         return colorSlot;
-      }`
-      .$uses({ colorSlot });
+      }`.$uses({ colorSlot });
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
 
     const main = tgpu.fn([])`() {
         getColorWithGreen();
-      }`
-      .$uses({ getColorWithGreen });
+      }`.$uses({ getColorWithGreen });
 
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -82,11 +79,9 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() {
         return colorSlot;
-      }`
-      .$uses({ colorSlot });
+      }`.$uses({ colorSlot });
 
-    expect(() => tgpu.resolve([getColor]))
-      .toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
@@ -99,8 +94,7 @@ describe('tgpu.slot', () => {
 
     const getColor = tgpu.fn([], d.vec3f)`() -> vec3f {
       return colorSlot;
-    }`
-      .$uses({ colorSlot });
+    }`.$uses({ colorSlot });
 
     const getColorWithRed = getColor.with(colorSlot, RED);
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
@@ -114,8 +108,7 @@ describe('tgpu.slot', () => {
     const main = tgpu.fn([])`() {
       getColorWithRed();
       wrapper();
-    }`
-      .$uses({ getColorWithRed, wrapper });
+    }`.$uses({ getColorWithRed, wrapper });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f{
@@ -141,36 +134,23 @@ describe('tgpu.slot', () => {
     const sizeSlot = tgpu.slot<1 | 100>();
     const colorSlot = tgpu.slot<typeof RED | typeof GREEN>();
 
-    const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`
-      .$uses({ sizeSlot });
+    const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`.$uses({ sizeSlot });
 
-    const getColor = tgpu.fn([], d.vec3f)`() -> vec3f { return colorSlot; }`
-      .$uses({ colorSlot });
+    const getColor = tgpu.fn([], d.vec3f)`() -> vec3f { return colorSlot; }`.$uses({ colorSlot });
 
     const sizeAndColor = tgpu.fn([])`() {
         getSize();
         getColor();
-      }`
-      .$uses({ getSize, getColor });
+      }`.$uses({ getSize, getColor });
 
-    const wrapper = tgpu
-      .fn([])`() {
+    const wrapper = tgpu.fn([])`() {
         sizeAndColor();
-      }`
-      .$uses({ sizeAndColor });
+      }`.$uses({ sizeAndColor });
 
-    const wrapperWithSmallRed = wrapper
-      .with(sizeSlot, 1)
-      .with(colorSlot, RED);
-    const wrapperWithBigRed = wrapper
-      .with(sizeSlot, 100)
-      .with(colorSlot, RED);
-    const wrapperWithSmallGreen = wrapper
-      .with(sizeSlot, 1)
-      .with(colorSlot, GREEN);
-    const wrapperWithBigGreen = wrapper
-      .with(sizeSlot, 100)
-      .with(colorSlot, GREEN);
+    const wrapperWithSmallRed = wrapper.with(sizeSlot, 1).with(colorSlot, RED);
+    const wrapperWithBigRed = wrapper.with(sizeSlot, 100).with(colorSlot, RED);
+    const wrapperWithSmallGreen = wrapper.with(sizeSlot, 1).with(colorSlot, GREEN);
+    const wrapperWithBigGreen = wrapper.with(sizeSlot, 100).with(colorSlot, GREEN);
 
     const main = tgpu.fn([])`() {
         wrapperWithSmallRed();
@@ -246,19 +226,11 @@ describe('tgpu.slot', () => {
     const slotC = tgpu.slot(3);
     const slotD = tgpu.slot(4);
 
-    const fn1 = tgpu.fn([])`() { let value = slotA; }`
-      .$uses({ slotA });
-    const fn2 = tgpu.fn([])`() { fn1(); }`
-      .$uses({ fn1 })
-      .with(slotC, slotD);
-    const fn3 = tgpu.fn([])`() { fn2(); }`
-      .$uses({ fn2 })
-      .with(slotB, slotC);
-    const fn4 = tgpu.fn([])`() { fn3(); }`
-      .$uses({ fn3 })
-      .with(slotA, slotB);
-    const main = tgpu.fn([])`() { fn4(); }`
-      .$uses({ fn4 });
+    const fn1 = tgpu.fn([])`() { let value = slotA; }`.$uses({ slotA });
+    const fn2 = tgpu.fn([])`() { fn1(); }`.$uses({ fn1 }).with(slotC, slotD);
+    const fn3 = tgpu.fn([])`() { fn2(); }`.$uses({ fn2 }).with(slotB, slotC);
+    const fn4 = tgpu.fn([])`() { fn3(); }`.$uses({ fn3 }).with(slotA, slotB);
+    const main = tgpu.fn([])`() { fn4(); }`.$uses({ fn4 });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn fn1() { let value = 4; }
@@ -331,7 +303,10 @@ describe('tgpu.slot', () => {
     // ---
 
     // Core shader
-    const main = tgpu.fn([d.vec2f], d.vec3f)((uv) => {
+    const main = tgpu.fn(
+      [d.vec2f],
+      d.vec3f,
+    )((uv) => {
       let color = d.vec3f(1, 0, 1);
 
       if (gammaCorrectionSlot.$) {
@@ -350,8 +325,7 @@ describe('tgpu.slot', () => {
     `);
 
     // Gamma Correction: ON
-    expect(tgpu.resolve([main.with(gammaCorrectionSlot, true)]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([main.with(gammaCorrectionSlot, true)])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
         {
@@ -367,9 +341,11 @@ describe('tgpu.slot', () => {
     const secondSlot = tgpu.slot<number>();
     const thirdSlot = tgpu.slot<number>();
 
-    const getSize = tgpu.fn([], d.f32)(() =>
-      firstSlot.$ + secondSlot.$ + thirdSlot.$
-    )
+    const getSize = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => firstSlot.$ + secondSlot.$ + thirdSlot.$)
       .with(firstSlot, 1)
       .with(secondSlot, 2)
       .with(thirdSlot, 3);
@@ -382,18 +358,25 @@ describe('tgpu.slot', () => {
   it('safe stringifies in toString', () => {
     const slot = tgpu.slot<d.v4f>();
 
-    const getSize = tgpu.fn([], d.f32)(() => slot.$.x)
+    const getSize = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => slot.$.x)
       .with(slot, d.vec4f(1, 2, 3, 4));
 
-    expect(getSize.toString()).toMatchInlineSnapshot(
-      `"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`,
-    );
+    expect(getSize.toString()).toMatchInlineSnapshot(`"fn:getSize[slot=vec4f(1, 2, 3, 4)]"`);
   });
 
   it('sets names only for bound functions', () => {
     const colorSlot = tgpu.slot<d.v3f>();
 
-    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getColor = tgpu
+      .fn(
+        [],
+        d.vec3f,
+      )(() => colorSlot.$)
+      .$name('colorFn');
     const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
     const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
 
@@ -405,7 +388,12 @@ describe('tgpu.slot', () => {
   it('uses bound name for code generation', () => {
     const colorSlot = tgpu.slot<d.v3f>(d.vec3f(0, 0, 0));
 
-    const getColor = tgpu.fn([], d.vec3f)(() => colorSlot.$).$name('colorFn');
+    const getColor = tgpu
+      .fn(
+        [],
+        d.vec3f,
+      )(() => colorSlot.$)
+      .$name('colorFn');
     const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
     const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
 

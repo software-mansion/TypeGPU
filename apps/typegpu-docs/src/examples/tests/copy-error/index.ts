@@ -34,16 +34,14 @@ const pipeline = device.createComputePipeline({
 const sourceBuffer = device.createBuffer({
   label: 'source buffer',
   size: 16,
-  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
-    GPUBufferUsage.COPY_DST,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
 });
 
 // work buffer 2
 const targetBuffer = device.createBuffer({
   label: 'target buffer',
   size: 16,
-  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC |
-    GPUBufferUsage.COPY_DST,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
 });
 
 // buffer for reading the results
@@ -94,9 +92,10 @@ if (!table) {
   throw new Error('Nowhere to display the results');
 }
 
-table.innerText = (input.getUint32(12) === result.getUint32(12))
-  ? 'The bug DOES NOT occur on this device.'
-  : 'The bug DOES occur on this device.';
+table.innerText =
+  input.getUint32(12) === result.getUint32(12)
+    ? 'The bug DOES NOT occur on this device.'
+    : 'The bug DOES occur on this device.';
 
 // #region Example controls and cleanup
 

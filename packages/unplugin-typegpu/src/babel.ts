@@ -21,22 +21,15 @@ import { createFilterForId } from './filter.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
-const template = (
-  Babel as unknown as { packages: { template: typeof TemplateGenerator } }
-).packages.template;
-const types = (Babel as unknown as { packages: { types: typeof babel } })
-  .packages.types;
+const template = (Babel as unknown as { packages: { template: typeof TemplateGenerator } }).packages
+  .template;
+const types = (Babel as unknown as { packages: { types: typeof babel } }).packages.types;
 
 function containsUseGpuDirective(
-  node:
-    | babel.FunctionDeclaration
-    | babel.FunctionExpression
-    | babel.ArrowFunctionExpression,
+  node: babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
 ): boolean {
-  return ((
-    'directives' in node.body ? (node.body?.directives ?? []) : []
-  )
-    .map((directive) => directive.value.value))
+  return ('directives' in node.body ? (node.body?.directives ?? []) : [])
+    .map((directive) => directive.value.value)
     .includes(useGpuDirective);
 }
 
@@ -45,28 +38,19 @@ function i(identifier: string): babel.Identifier {
 }
 
 const fnNodeToOriginalMap = new WeakMap<
-  | babel.FunctionDeclaration
-  | babel.FunctionExpression
-  | babel.ArrowFunctionExpression,
-  | babel.FunctionDeclaration
-  | babel.FunctionExpression
-  | babel.ArrowFunctionExpression
+  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
+  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression
 >();
 
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
   parent: babel.Node | null,
 ): babel.CallExpression {
-  const { params, body, externalNames } = transpileFn(
-    fnNodeToOriginalMap.get(node) ?? node,
-  );
+  const { params, body, externalNames } = transpileFn(fnNodeToOriginalMap.get(node) ?? node);
   const maybeName = getFunctionName(node, parent);
 
   const metadata = types.objectExpression([
-    types.objectProperty(
-      i('v'),
-      types.numericLiteral(FORMAT_VERSION),
-    ),
+    types.objectProperty(i('v'), types.numericLiteral(FORMAT_VERSION)),
     types.objectProperty(
       i('name'),
       maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
@@ -83,12 +67,7 @@ function functionToTranspiled(
           types.returnStatement(
             types.objectExpression(
               externalNames.map((name) =>
-                types.objectProperty(
-                  i(name),
-                  i(name),
-                  false,
-                  /* shorthand */ name !== 'this',
-                )
+                types.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
               ),
             ),
           ),
@@ -111,14 +90,7 @@ function functionToTranspiled(
             ),
             i('set'),
           ),
-          [
-            types.assignmentExpression(
-              '=',
-              types.memberExpression(i('$'), i('f')),
-              node,
-            ),
-            metadata,
-          ],
+          [types.assignmentExpression('=', types.memberExpression(i('$'), i('f')), node), metadata],
         ),
         types.memberExpression(i('$'), i('f')),
       ),
@@ -127,10 +99,7 @@ function functionToTranspiled(
   );
 }
 
-function wrapInAutoName(
-  node: babel.Expression,
-  name: string,
-) {
+function wrapInAutoName(node: babel.Expression, name: string) {
   return types.callExpression(
     template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
       placeholderPattern: false,
@@ -151,8 +120,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
     AssignmentExpression(path) {
       if (inUseGpuScope) {
-        const runtimeFn =
-          operators[path.node.operator as keyof typeof operators];
+        const runtimeFn = operators[path.node.operator as keyof typeof operators];
 
         if (runtimeFn) {
           path.replaceWith(
@@ -195,8 +163,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
           return;
         }
 
-        const runtimeFn =
-          operators[path.node.operator as keyof typeof operators];
+        const runtimeFn = operators[path.node.operator as keyof typeof operators];
 
         if (runtimeFn) {
           path.replaceWith(
@@ -262,8 +229,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
         }
       },
       exit(path) {
-        const node = (fnNodeToOriginalMap.get(path.node) ??
-          path.node) as babel.FunctionDeclaration;
+        const node = (fnNodeToOriginalMap.get(path.node) ?? path.node) as babel.FunctionDeclaration;
         if (containsUseGpuDirective(node)) {
           inUseGpuScope = false;
 
@@ -272,18 +238,11 @@ function functionVisitor(ctx: Context): TraverseOptions {
           }
 
           const parent = path.parentPath.node;
-          const expression = types.functionExpression(
-            node.id,
-            node.params,
-            node.body,
-          );
+          const expression = types.functionExpression(node.id, node.params, node.body);
 
           path.replaceWith(
             types.variableDeclaration('const', [
-              types.variableDeclarator(
-                node.id,
-                functionToTranspiled(expression, parent),
-              ),
+              types.variableDeclarator(node.id, functionToTranspiled(expression, parent)),
             ]),
           );
           path.skip();
@@ -303,16 +262,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
             (implementation.type === 'FunctionExpression' ||
               implementation.type === 'ArrowFunctionExpression')
           ) {
-            const transpiled = functionToTranspiled(
-              implementation,
-              null,
-            );
+            const transpiled = functionToTranspiled(implementation, null);
 
-            path.replaceWith(
-              types.callExpression(node.callee, [
-                transpiled,
-              ]),
-            );
+            path.replaceWith(types.callExpression(node.callee, [transpiled]));
 
             path.skip();
           }
@@ -337,9 +289,7 @@ export default function () {
         }
 
         const ctx: Context = {
-          tgpuAliases: new Set<string>(
-            options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
-          ),
+          tgpuAliases: new Set<string>(options.forceTgpuAlias ? [options.forceTgpuAlias] : []),
           fileId: id,
           autoNamingEnabled: options.autoNamingEnabled,
         };

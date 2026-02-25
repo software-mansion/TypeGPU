@@ -26,22 +26,17 @@ export const prepareModelInput = (x: number, y: number) => {
     videoUV,
   );
 
-  prepareModelInputLayout.$
-    .outputBuffer[y * MODEL_WIDTH + x] = col.x;
-  prepareModelInputLayout.$
-    .outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.y;
-  prepareModelInputLayout.$
-    .outputBuffer[2 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] = col.z;
+  prepareModelInputLayout.$.outputBuffer[y * MODEL_WIDTH + x] = col.x;
+  prepareModelInputLayout.$.outputBuffer[1 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] =
+    col.y;
+  prepareModelInputLayout.$.outputBuffer[2 * MODEL_WIDTH * MODEL_HEIGHT + y * MODEL_WIDTH + x] =
+    col.z;
 };
 
 export const generateMaskFromOutput = (x: number, y: number) => {
   'use gpu';
   const color = generateMaskLayout.$.outputBuffer[y * MODEL_WIDTH + x];
-  std.textureStore(
-    generateMaskLayout.$.maskTexture,
-    d.vec2u(x, y),
-    d.vec4f(color),
-  );
+  std.textureStore(generateMaskLayout.$.maskTexture, d.vec2u(x, y), d.vec4f(color));
 };
 
 const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec3f, 128), 4));
@@ -53,8 +48,7 @@ export const computeFn = tgpu.computeFn({
   const filterOffset = d.i32((filterDim - 1) / 2);
   const dims = d.vec2i(std.textureDimensions(blurLayout.$.inTexture));
   const baseIndex =
-    d.vec2i(wid.xy * d.vec2u(blockDim, 4) + lid.xy * d.vec2u(4, 1)) -
-    d.vec2i(filterOffset, 0);
+    d.vec2i(wid.xy * d.vec2u(blockDim, 4) + lid.xy * d.vec2u(4, 1)) - d.vec2i(filterOffset, 0);
 
   // Load a tile of pixels into shared memory
   for (const r of tgpu.unroll([0, 1, 2, 3])) {
@@ -135,10 +129,7 @@ export const fragmentFn = (input: { uv: d.v2f }) => {
     maskUV,
   ).x;
 
-  const inCropRegion = uv.x >= uvMin.x &&
-    uv.x <= uvMax.x &&
-    uv.y >= uvMin.y &&
-    uv.y <= uvMax.y;
+  const inCropRegion = uv.x >= uvMin.x && uv.x <= uvMax.x && uv.y >= uvMin.y && uv.y <= uvMax.y;
   // use mask only inside the crop region
   const mask = std.select(0, sampledMask, inCropRegion);
 

@@ -89,9 +89,7 @@ export function setupInput(canvas: HTMLCanvasElement): InputState {
     'wheel',
     (e) => {
       e.preventDefault();
-      const delta = e.deltaY > 0
-        ? -state.zoomSensitivity
-        : state.zoomSensitivity;
+      const delta = e.deltaY > 0 ? -state.zoomSensitivity : state.zoomSensitivity;
       applyZoom(delta);
     },
     { passive: false },

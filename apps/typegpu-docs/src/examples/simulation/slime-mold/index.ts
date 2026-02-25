@@ -32,19 +32,18 @@ const defaultParams = {
 const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root.createGuardedComputePipeline((x) => {
-  'use gpu';
-  randf.seed(x / NUM_AGENTS + 0.1);
-  const pos = randf.inUnitCircle() * (resolution.x / 2 - 10) + (resolution / 2);
-  const angle = std.atan2(
-    resolution.y / 2 - pos.y,
-    resolution.x / 2 - pos.x,
-  );
-  agentsData.$[x] = Agent({
-    position: pos,
-    angle,
-  });
-}).dispatchThreads(NUM_AGENTS);
+root
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed(x / NUM_AGENTS + 0.1);
+    const pos = randf.inUnitCircle() * (resolution.x / 2 - 10) + resolution / 2;
+    const angle = std.atan2(resolution.y / 2 - pos.y, resolution.x / 2 - pos.x);
+    agentsData.$[x] = Agent({
+      position: pos,
+      angle,
+    });
+  })
+  .dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, defaultParams);
 const deltaTime = root.createUniform(d.f32, 0.016);
@@ -56,7 +55,7 @@ const textures = [0, 1].map(() =>
       format: 'rgba8unorm',
       mipLevelCount: 1,
     })
-    .$usage('sampled', 'storage')
+    .$usage('sampled', 'storage'),
 );
 
 const computeLayout = tgpu.bindGroupLayout({
@@ -97,11 +96,7 @@ const updateAgents = tgpu.computeFn({
 
   const weightForward = sense(agent.position, agent.angle, d.f32(0));
   const weightLeft = sense(agent.position, agent.angle, params.$.sensorAngle);
-  const weightRight = sense(
-    agent.position,
-    agent.angle,
-    -params.$.sensorAngle,
-  );
+  const weightRight = sense(agent.position, agent.angle, -params.$.sensorAngle);
 
   let angle = agent.angle;
 
@@ -122,9 +117,7 @@ const updateAgents = tgpu.computeFn({
   let newPos = agent.position + dir * params.$.moveSpeed * deltaTime.$;
 
   const dimsf = d.vec2f(dims);
-  if (
-    newPos.x < 0 || newPos.x > dimsf.x || newPos.y < 0 || newPos.y > dimsf.y
-  ) {
+  if (newPos.x < 0 || newPos.x > dimsf.x || newPos.y < 0 || newPos.y > dimsf.y) {
     newPos = std.clamp(newPos, d.vec2f(0), dimsf - 1);
 
     if (newPos.x <= 0 || newPos.x >= dimsf.x - 1) {
@@ -142,14 +135,9 @@ const updateAgents = tgpu.computeFn({
     angle,
   });
 
-  const oldState =
-    std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).rgb;
+  const oldState = std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).rgb;
   const newState = oldState + 1;
-  std.textureStore(
-    computeLayout.$.newState,
-    d.vec2u(newPos),
-    d.vec4f(newState, 1),
-  );
+  std.textureStore(computeLayout.$.newState, d.vec2u(newPos), d.vec4f(newState, 1));
 });
 
 const blur = tgpu.computeFn({
@@ -169,12 +157,8 @@ const blur = tgpu.computeFn({
       const samplePos = d.vec2i(gid.xy) + d.vec2i(offsetX, offsetY);
       const dimsi = d.vec2i(dims);
 
-      if (
-        samplePos.x >= 0 && samplePos.x < dimsi.x && samplePos.y >= 0 &&
-        samplePos.y < dimsi.y
-      ) {
-        const color =
-          std.textureLoad(computeLayout.$.oldState, d.vec2u(samplePos)).rgb;
+      if (samplePos.x >= 0 && samplePos.x < dimsi.x && samplePos.y >= 0 && samplePos.y < dimsi.y) {
+        const color = std.textureLoad(computeLayout.$.oldState, d.vec2u(samplePos)).rgb;
         sum += color;
         count += 1;
       }
@@ -183,11 +167,7 @@ const blur = tgpu.computeFn({
 
   const blurred = sum / count;
   const newColor = std.saturate(blurred - params.$.evaporationRate);
-  std.textureStore(
-    computeLayout.$.newState,
-    gid.xy,
-    d.vec4f(newColor, 1),
-  );
+  std.textureStore(computeLayout.$.newState, gid.xy, d.vec4f(newColor, 1));
 });
 
 const fullScreenTriangle = tgpu.vertexFn({
@@ -228,13 +208,13 @@ const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
     oldState: textures[i],
     newState: textures[1 - i],
-  })
+  }),
 );
 
 const renderBindGroups = [0, 1].map((i) =>
   root.createBindGroup(renderLayout, {
     state: textures[i],
-  })
+  }),
 );
 
 let lastTime = performance.now();
@@ -248,16 +228,9 @@ function frame(now: number) {
 
   blurPipeline
     .with(bindGroups[currentTexture])
-    .dispatchWorkgroups(
-      Math.ceil(resolution.x / 16),
-      Math.ceil(resolution.y / 16),
-    );
+    .dispatchWorkgroups(Math.ceil(resolution.x / 16), Math.ceil(resolution.y / 16));
 
-  computePipeline
-    .with(bindGroups[currentTexture])
-    .dispatchWorkgroups(
-      Math.ceil(NUM_AGENTS / 64),
-    );
+  computePipeline.with(bindGroups[currentTexture]).dispatchWorkgroups(Math.ceil(NUM_AGENTS / 64));
 
   renderPipeline
     .withColorAttachment({ view: context })

@@ -11,14 +11,17 @@ describe('xor dev runner example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'xor-dev-runner',
-      expectedCalls: 1,
-      setupMocks: () => {
-        mockResizeObserver();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'xor-dev-runner',
+        expectedCalls: 1,
+        setupMocks: () => {
+          mockResizeObserver();
+        },
       },
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct vertexMain_Output {

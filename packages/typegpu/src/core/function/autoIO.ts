@@ -4,11 +4,7 @@ import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
 import type { BaseData, v4f } from '../../data/wgslTypes.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type {
-  InferGPU,
-  InferGPURecord,
-  InferRecord,
-} from '../../shared/repr.ts';
+import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -21,18 +17,15 @@ const builtinVertexIn = {
   $instanceIndex: builtin.instanceIndex,
 } as const;
 
-export type AutoVertexIn<T extends AnyAutoCustoms> =
-  & T
-  & InferRecord<typeof builtinVertexIn>;
+export type AutoVertexIn<T extends AnyAutoCustoms> = T & InferRecord<typeof builtinVertexIn>;
 
 const builtinVertexOut = {
   $clipDistances: builtin.clipDistances,
   $position: builtin.position,
 } as const;
 
-export type AutoVertexOut<T extends AnyAutoCustoms> =
-  & OmitBuiltins<T>
-  & Partial<InferGPURecord<typeof builtinVertexOut>>;
+export type AutoVertexOut<T extends AnyAutoCustoms> = OmitBuiltins<T> &
+  Partial<InferGPURecord<typeof builtinVertexOut>>;
 
 const builtinFragmentIn = {
   $position: builtin.position,
@@ -44,18 +37,16 @@ const builtinFragmentIn = {
   $subgroupSize: builtin.subgroupSize,
 } as const;
 
-export type AutoFragmentIn<T extends AnyAutoCustoms> =
-  & T
-  & InferRecord<typeof builtinFragmentIn>;
+export type AutoFragmentIn<T extends AnyAutoCustoms> = T & InferRecord<typeof builtinFragmentIn>;
 
 const builtinFragmentOut = {
   $fragDepth: builtin.fragDepth,
   $sampleMask: builtin.sampleMask,
 } as const;
 
-export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> =
-  T extends undefined | v4f ? T
-    : T & Partial<InferGPURecord<typeof builtinFragmentOut>>;
+export type AutoFragmentOut<T extends undefined | v4f | AnyAutoCustoms> = T extends undefined | v4f
+  ? T
+  : T & Partial<InferGPURecord<typeof builtinFragmentOut>>;
 
 type AutoFragmentFnImpl = (
   input: AutoFragmentIn<Record<string, never>>,
@@ -83,11 +74,7 @@ export class AutoFragmentFn implements SelfResolvable {
       setName(impl, 'fragmentFn');
     }
     this.#core = createFnCore(impl, '@fragment ');
-    this.#autoIn = new AutoStruct(
-      { ...builtinFragmentIn, ...varyings },
-      undefined,
-      locations,
-    );
+    this.#autoIn = new AutoStruct({ ...builtinFragmentIn, ...varyings }, undefined, locations);
     setName(this.#autoIn, 'FragmentIn');
     this.#autoOut = new AutoStruct(builtinFragmentOut, vec4f);
     setName(this.#autoOut, 'FragmentOut');
@@ -131,11 +118,7 @@ export class AutoVertexFn implements SelfResolvable {
       setName(impl, 'vertexFn');
     }
     this.#core = createFnCore(impl, '@vertex ');
-    this.#autoIn = new AutoStruct(
-      { ...builtinVertexIn, ...attribs },
-      undefined,
-      locations,
-    );
+    this.#autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined, locations);
     setName(this.#autoIn, 'VertexIn');
     this.#autoOut = new AutoStruct(builtinVertexOut, undefined);
     setName(this.#autoOut, 'VertexOut');

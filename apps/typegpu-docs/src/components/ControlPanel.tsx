@@ -6,10 +6,7 @@ import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import {
-  codeEditorShownAtom,
-  menuShownAtom,
-} from '../utils/examples/exampleViewStateAtoms.ts';
+import { codeEditorShownAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -37,12 +34,9 @@ function ToggleRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
-      <label
-        htmlFor={toggleId}
-        className='grid h-10 cursor-pointer items-center justify-end'
-      >
+      <label htmlFor={toggleId} className="grid h-10 cursor-pointer items-center justify-end">
         <Toggle
           id={toggleId}
           checked={value}
@@ -76,7 +70,7 @@ function SliderRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <Slider
         min={min}
@@ -112,7 +106,7 @@ function VectorSliderRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <VectorSlider
         min={min}
@@ -142,7 +136,7 @@ function ColorPickerRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <ColorPicker
         value={value}
@@ -169,7 +163,7 @@ function TextAreaRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <TextArea
         value={value}
@@ -198,7 +192,7 @@ function SelectRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <Select
         value={value}
@@ -216,94 +210,74 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
-    <div className='col-span-2 grid h-10'>
+    <div className="col-span-2 grid h-10">
       <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
 }
 
 function paramToControlRow(param: ExampleControlParam) {
-  return 'onSelectChange' in param
-    ? (
-      <SelectRow
-        label={param.label}
-        key={param.label}
-        options={param.options}
-        initial={param.initial}
-        onChange={param.onSelectChange}
-      />
-    )
-    : 'onToggleChange' in param
-    ? (
-      <ToggleRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onToggleChange}
-        initial={param.initial}
-      />
-    )
-    : 'onSliderChange' in param
-    ? (
-      <SliderRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onSliderChange}
-        min={param.min}
-        max={param.max}
-        step={param.step}
-        initial={param.initial}
-      />
-    )
-    : 'onVectorSliderChange' in param
-    ? (
-      <VectorSliderRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onVectorSliderChange}
-        min={param.min}
-        max={param.max}
-        step={param.step}
-        initial={param.initial}
-      />
-    )
-    : 'onColorChange' in param
-    ? (
-      <ColorPickerRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onColorChange}
-        initial={param.initial}
-      />
-    )
-    : 'onButtonClick' in param
-    ? (
-      <ButtonRow
-        key={param.label}
-        label={param.label}
-        onClick={param.onButtonClick}
-      />
-    )
-    : 'onTextChange' in param
-    ? (
-      <TextAreaRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onTextChange}
-        initial={param.initial}
-      />
-    )
-    : (
-      unreachable(param)
-    );
+  return 'onSelectChange' in param ? (
+    <SelectRow
+      label={param.label}
+      key={param.label}
+      options={param.options}
+      initial={param.initial}
+      onChange={param.onSelectChange}
+    />
+  ) : 'onToggleChange' in param ? (
+    <ToggleRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onToggleChange}
+      initial={param.initial}
+    />
+  ) : 'onSliderChange' in param ? (
+    <SliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onSliderChange}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onVectorSliderChange' in param ? (
+    <VectorSliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onVectorSliderChange}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onColorChange' in param ? (
+    <ColorPickerRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onColorChange}
+      initial={param.initial}
+    />
+  ) : 'onButtonClick' in param ? (
+    <ButtonRow key={param.label} label={param.label} onClick={param.onButtonClick} />
+  ) : 'onTextChange' in param ? (
+    <TextAreaRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onTextChange}
+      initial={param.initial}
+    />
+  ) : (
+    unreachable(param)
+  );
 }
 
 const unreachable = (_: never) => null;
 
 export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
-  const [codeEditorShowing, setCodeEditorShowing] = useAtom(
-    codeEditorShownAtom,
-  );
+  const [codeEditorShowing, setCodeEditorShowing] = useAtom(codeEditorShownAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   const showLeftMenuId = useId();
@@ -317,12 +291,12 @@ export function ControlPanel() {
       )}
     >
       <FPSCounter />
-      <div className='hidden flex-col gap-4 md:flex'>
-        <h2 className='font-medium text-xl'>Control panel</h2>
+      <div className="hidden flex-col gap-4 md:flex">
+        <h2 className="font-medium text-xl">Control panel</h2>
 
         <label
           htmlFor={showLeftMenuId}
-          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
+          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
         >
           <span>Show left menu</span>
           <Toggle
@@ -333,7 +307,7 @@ export function ControlPanel() {
         </label>
         <label
           htmlFor={showCodeEditorId}
-          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
+          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
         >
           <span>Show code editor</span>
           <Toggle
@@ -343,13 +317,13 @@ export function ControlPanel() {
           />
         </label>
 
-        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+        <hr className="my-0 box-border w-full border-tameplum-100 border-t" />
       </div>
 
       {isGPUSupported && (
         <>
-          <h2 className='m-0 font-medium text-xl'>Example controls</h2>
-          <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
+          <h2 className="m-0 font-medium text-xl">Example controls</h2>
+          <div className="grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2">
             {exampleControlParams.map(paramToControlRow)}
           </div>
         </>
