@@ -182,7 +182,6 @@ describe('TgpuBindGroupLayout', () => {
     const getFirst = () => {
       'use gpu';
       const boids = layout.$.boids;
-      // oxlint-disable-next-line typescript/no-non-null-assertion -- it's definitely there
       return Boid(boids[0]!);
     };
 
