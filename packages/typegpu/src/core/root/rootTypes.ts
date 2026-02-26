@@ -697,9 +697,9 @@ export interface RenderBundleEncoderPass {
    */
   draw(
     vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws indexed primitives.
@@ -711,10 +711,10 @@ export interface RenderBundleEncoderPass {
    */
   drawIndexed(
     indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws primitives using parameters read from a {@link GPUBuffer}.

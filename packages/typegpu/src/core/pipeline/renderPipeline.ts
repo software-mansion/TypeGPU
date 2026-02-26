@@ -798,7 +798,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       internals.priors.stencilReference !== undefined &&
       'setStencilReference' in encoder
     ) {
-      (encoder as GPURenderPassEncoder).setStencilReference(
+      encoder.setStencilReference(
         internals.priors.stencilReference,
       );
     }

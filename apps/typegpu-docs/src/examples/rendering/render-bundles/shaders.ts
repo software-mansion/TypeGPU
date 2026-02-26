@@ -1,6 +1,6 @@
-import { perlin2d } from "@typegpu/noise";
-import tgpu, { d, std } from "typegpu";
-import { Vertex, cameraLayout, cubeLayout, terrainLayout } from "./schemas.ts";
+import { perlin2d } from '@typegpu/noise';
+import tgpu, { d, std } from 'typegpu';
+import { cameraLayout, cubeLayout, terrainLayout, Vertex } from './schemas.ts';
 
 const LOW_COLOR = d.vec3f(0.28, 0.52, 0.3);
 const MID_COLOR = d.vec3f(0.76, 0.7, 0.5);
@@ -37,7 +37,7 @@ const fbm = tgpu.fn(
   return value;
 });
 
-export const vertexFn = tgpu["~unstable"].vertexFn({
+export const vertexFn = tgpu['~unstable'].vertexFn({
   in: {
     ...Vertex.propTypes,
     instanceIndex: d.builtin.instanceIndex,
@@ -79,7 +79,7 @@ export const vertexFn = tgpu["~unstable"].vertexFn({
   };
 });
 
-export const fragmentFn = tgpu["~unstable"].fragmentFn({
+export const fragmentFn = tgpu['~unstable'].fragmentFn({
   in: {
     worldNormal: d.vec3f,
     color: d.vec3f,

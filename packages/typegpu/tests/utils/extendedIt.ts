@@ -162,7 +162,9 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
-  renderBundleEncoder: GPURenderBundleEncoder;
+  renderBundleEncoder: GPURenderBundleEncoder & {
+    mock: typeof mockRenderBundleEncoder;
+  };
   root: ExperimentalTgpuRoot;
 }>({
   _global: [
@@ -187,7 +189,7 @@ export const it = base.extend<{
 
   renderBundleEncoder: async ({ task }, use) => {
     await use(
-      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder,
+      mockRenderBundleEncoder,
     );
   },
 

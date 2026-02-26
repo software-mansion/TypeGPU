@@ -61,7 +61,7 @@ export function applyBindGroups(
         if (isBindGroup(bindGroup)) {
           encoder.setBindGroup(idx, root.unwrap(bindGroup));
         } else {
-          encoder.setBindGroup(idx, bindGroup as GPUBindGroup);
+          encoder.setBindGroup(idx, bindGroup);
         }
       }
     }

@@ -1,22 +1,30 @@
-import { perlin2d } from "@typegpu/noise";
-import tgpu, { d } from "typegpu";
-import * as m from "wgpu-matrix";
-import { defineControls } from "../../common/defineControls.ts";
-import { setupOrbitCamera } from "../../common/setup-orbit-camera.ts";
-import { createCubeGeometry } from "./geometry.ts";
+import { perlin2d } from '@typegpu/noise';
+import tgpu, { d } from 'typegpu';
+import * as m from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { createCubeGeometry } from './geometry.ts';
 import {
   Camera,
-  Cube,
-  TerrainParams,
   cameraLayout,
+  Cube,
   cubeLayout,
   terrainLayout,
+  TerrainParams,
   vertexLayout,
-} from "./schemas.ts";
-import { fragmentFn, vertexFn } from "./shaders.ts";
+} from './schemas.ts';
+import { fragmentFn, vertexFn } from './shaders.ts';
 
 const CUBE_COUNTS = [
-  1024, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288,
+  1024,
+  4096,
+  8192,
+  16384,
+  32768,
+  65536,
+  131072,
+  262144,
+  524288,
 ];
 const INITIAL_CUBE_COUNT = CUBE_COUNTS[0];
 const TERRAIN_SIZE = 50;
@@ -24,8 +32,8 @@ const TERRAIN_HEIGHT = 6;
 const NOISE_SCALE = 0.3;
 
 const root = await tgpu.init();
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: "premultiplied" });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const perlinCache = perlin2d.staticCache({ root, size: d.vec2u(16, 16) });
@@ -35,16 +43,16 @@ const VERTS_PER_CUBE = cubeVerts.length;
 
 const vertexBuffer = root
   .createBuffer(vertexLayout.schemaForCount(VERTS_PER_CUBE), cubeVerts)
-  .$usage("vertex");
+  .$usage('vertex');
 
-const cameraBuffer = root.createBuffer(Camera).$usage("uniform");
+const cameraBuffer = root.createBuffer(Camera).$usage('uniform');
 
 const terrainBuffer = root
   .createBuffer(TerrainParams, {
     terrainHeight: TERRAIN_HEIGHT,
     noiseScale: NOISE_SCALE,
   })
-  .$usage("uniform");
+  .$usage('uniform');
 
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
@@ -65,7 +73,7 @@ const terrainBindGroup = root.createBindGroup(terrainLayout, {
   terrain: terrainBuffer,
 });
 
-const pipeline = root["~unstable"]
+const pipeline = root['~unstable']
   .pipe(perlinCache.inject())
   .createRenderPipeline({
     attribs: vertexLayout.attrib,
@@ -73,15 +81,15 @@ const pipeline = root["~unstable"]
     fragment: fragmentFn,
     targets: { format: presentationFormat },
     depthStencil: {
-      format: "depth24plus",
+      format: 'depth24plus',
       depthWriteEnabled: true,
-      depthCompare: "less",
+      depthCompare: 'less',
     },
   });
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height],
-  format: "depth24plus",
+  format: 'depth24plus',
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
@@ -89,7 +97,7 @@ let cubeCount = INITIAL_CUBE_COUNT;
 let cubeData: d.Infer<typeof Cube>[] = [];
 let cubeBuffer = root
   .createBuffer(d.arrayOf(Cube, INITIAL_CUBE_COUNT))
-  .$usage("storage");
+  .$usage('storage');
 let cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 let renderBundle: GPURenderBundle;
 
@@ -115,10 +123,10 @@ function generateCubes(count: number) {
 }
 
 function buildBundle(): GPURenderBundle {
-  return root["~unstable"].beginRenderBundleEncoder(
+  return root['~unstable'].beginRenderBundleEncoder(
     {
       colorFormats: [presentationFormat],
-      depthStencilFormat: "depth24plus",
+      depthStencilFormat: 'depth24plus',
     },
     (pass) => {
       pass.setPipeline(pipeline);
@@ -141,7 +149,7 @@ function setCubeCount(count: number) {
   cubeBuffer.destroy();
   cubeBuffer = root
     .createBuffer(d.arrayOf(Cube, count), cubeData)
-    .$usage("storage");
+    .$usage('storage');
 
   cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 
@@ -165,7 +173,7 @@ function frame() {
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
       size: [canvas.width, canvas.height],
-      format: "depth24plus",
+      format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
   }
@@ -175,19 +183,19 @@ function frame() {
       {
         view: context.getCurrentTexture().createView(),
         clearValue: [1, 0.85, 0.74, 1] as const,
-        loadOp: "clear" as const,
-        storeOp: "store" as const,
+        loadOp: 'clear' as const,
+        storeOp: 'store' as const,
       },
     ],
     depthStencilAttachment: {
       view: depthTexture.createView(),
       depthClearValue: 1,
-      depthLoadOp: "clear" as const,
-      depthStoreOp: "store" as const,
+      depthLoadOp: 'clear' as const,
+      depthStoreOp: 'store' as const,
     },
   };
 
-  root["~unstable"].beginRenderPass(passDescriptor, (pass) => {
+  root['~unstable'].beginRenderPass(passDescriptor, (pass) => {
     if (useBundles) {
       pass.executeBundles([renderBundle]);
     } else {
@@ -211,14 +219,14 @@ requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  "cube count": {
+  'cube count': {
     initial: INITIAL_CUBE_COUNT,
     options: CUBE_COUNTS,
     onSelectChange: (value: number) => {
       setCubeCount(value);
     },
   },
-  "use render bundles": {
+  'use render bundles': {
     initial: true,
     onToggleChange: (value: boolean) => {
       useBundles = value;
