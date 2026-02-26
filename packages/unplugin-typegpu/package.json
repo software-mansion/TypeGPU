@@ -191,6 +191,8 @@
     "acorn": "^8.14.1",
     "rolldown": "1.0.0-beta.33",
     "rollup": "~4.37.0",
+    "webpack": "^5.0.0",
+    "webpack-virtual-modules": "^0.6.2",
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
   }
