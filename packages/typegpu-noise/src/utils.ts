@@ -28,5 +28,5 @@ export function quinticDerivative(t: d.v2f): d.v2f;
 export function quinticDerivative(t: d.v3f): d.v3f;
 export function quinticDerivative(t: d.vecBase): d.vecBase {
   'use gpu';
-  return 30 * t * t * (t * (t - 2)) + 1;
+  return 30 * t * t * ((t * (t - 2)) + 1);
 }
