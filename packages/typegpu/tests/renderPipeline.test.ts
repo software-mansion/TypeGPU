@@ -1834,3 +1834,47 @@ describe('TgpuRenderPipeline', () => {
     helper(pipeline);
   });
 });
+
+describe('Render Bundles', () => {
+  const vertexFn = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })('');
+
+  const fragmentFn = tgpu.fragmentFn({
+    out: { color: d.vec4f },
+  })('');
+
+  function createPipeline(
+    root: Parameters<Parameters<typeof it>[1]>[0]['root'],
+  ) {
+    return root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
+      .createPipeline()
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+  }
+
+  it('routes draw calls through the bundle encoder', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root);
+    pipeline.with(renderBundleEncoder).draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledWith(
+      6,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+});
