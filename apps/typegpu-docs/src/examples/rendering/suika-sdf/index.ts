@@ -13,10 +13,12 @@ import {
   MIN_RADIUS,
   OFFSCREEN,
   PLAYFIELD_HALF_WIDTH,
+  SHARP_FACTOR,
   SMOOTH_MIN_K,
   SPAWN_COOLDOWN,
   SPAWN_WEIGHT_TOTAL,
   SPAWN_WEIGHTS,
+  SPEED_BLEND_MAX,
   WALL_COLOR,
   WALL_DEFS,
   WALL_ROUNDNESS,
@@ -69,6 +71,8 @@ interface ActiveFruit {
   radius: number;
   bodyIndex: number;
   dead: boolean;
+  spawnTime: number;
+  isMerge: boolean;
 }
 
 function randomLevel(): number {
@@ -135,12 +139,14 @@ const SdCircle = d.struct({
   radius: d.f32,
   level: d.i32,
   angle: d.f32,
+  speed: d.f32,
 });
 const INACTIVE_CIRCLE = {
   center: d.vec2f(OFFSCREEN, OFFSCREEN),
   radius: 0,
   level: 0,
   angle: 0,
+  speed: 0,
 };
 
 const circleUniform = root.createUniform(
@@ -283,7 +289,8 @@ const mergedFieldPipeline = root.createRenderPipeline({
         const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
         const uvLocal = circleUv(clamped);
         const dist = sampleSdf(uvLocal, circle.radius, localPos, circle.level);
-        const weight = std.exp(-SMOOTH_MIN_K * dist);
+        const k = SMOOTH_MIN_K * (1 + (1 - circle.speed) * SHARP_FACTOR);
+        const weight = std.exp(-k * dist);
 
         smoothAccum = smoothAccum + weight;
         uvAccum = uvAccum + uvLocal * weight;
@@ -353,6 +360,7 @@ function spawnFruit(
   vx = 0,
   vy = 0,
   angle = 0,
+  isMerge = false,
 ) {
   const radius = LEVEL_RADII[level];
   const bodyIndex = physics.addBall(
@@ -365,7 +373,14 @@ function spawnFruit(
     vy,
     angle,
   );
-  activeFruits.push({ level, radius, bodyIndex, dead: false });
+  activeFruits.push({
+    level,
+    radius,
+    bodyIndex,
+    dead: false,
+    spawnTime: performance.now(),
+    isMerge,
+  });
 }
 
 function pruneDead() {
@@ -404,6 +419,7 @@ function checkMerges() {
             Math.sin(sa.angle) + Math.sin(sb.angle),
             Math.cos(sa.angle) + Math.cos(sb.angle),
           ),
+          true,
         );
         merged = true;
         break;
@@ -452,11 +468,27 @@ function frame() {
       break;
     }
 
+    let speed = Math.min(
+      Math.sqrt(state.vel.x ** 2 + state.vel.y ** 2) / SPEED_BLEND_MAX,
+      1,
+    );
+    let visualRadius = f.radius;
+
+    if (f.isMerge) {
+      const t = Math.min((now - f.spawnTime) / 500, 1);
+      const p = 0.4;
+      const ease =
+        Math.pow(2, -9 * t) * Math.sin(((t - p / 4) * 2 * Math.PI) / p) + 1;
+      visualRadius = f.radius * ease;
+      speed = Math.max(speed, 1 - t * t);
+    }
+
     circleData[drawCount] = {
       center: d.vec2f(state.pos.x, state.pos.y),
-      radius: f.radius,
+      radius: visualRadius,
       level: f.level,
       angle: state.angle,
+      speed,
     };
     drawCount++;
   }
@@ -470,6 +502,7 @@ function frame() {
       radius: LEVEL_RADII[ghostLevel],
       level: ghostLevel,
       angle: 0,
+      speed: 0,
     },
   });
 
