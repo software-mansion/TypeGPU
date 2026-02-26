@@ -149,7 +149,7 @@ export const sdBezierApprox = tgpu.fn(
   const y = cross(v1, v0);
   const z = cross(v2, v1);
 
-  const s = (j * y + k * z) * 2 - (i * x);
+  const s = (j * y + k * z) * 2 - i * x;
 
   const r = (y * z - x * x * 0.25) / dot2(s);
   const t = saturate((0.5 * x + y + r * dot(s, w)) / (x + y + z));
