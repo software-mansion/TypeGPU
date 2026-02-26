@@ -33,10 +33,7 @@ import {
 } from './buffers.ts';
 import tgpu from 'typegpu';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 let ease = createBezier(getCubicBezierControlPoints());
 
 export const root = await tgpu.init();
@@ -55,37 +52,26 @@ const {
 
 updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
 
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const midgroundPipeline = root['~unstable']
+const pipelineBase = root
   .with(animationProgressAccess, animationProgressUniform)
   .with(stepRotationAccess, stepRotationUniform)
   .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
   .with(shiftedColorsAccess, shiftedColorsUniform)
   .with(middleSquareScaleAccess, middleSquareScaleUniform)
   .with(scaleAccess, scaleUniform)
-  .with(aspectRatioAccess, aspectRatioUniform)
-  .withVertex(midgroundVertex)
-  .withFragment(midgroundFragment, { format: presentationFormat })
-  .createPipeline();
+  .with(aspectRatioAccess, aspectRatioUniform);
 
-const foregroundPipeline = root['~unstable']
-  .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
-  .with(animationProgressAccess, animationProgressUniform)
-  .with(stepRotationAccess, stepRotationUniform)
-  .with(shiftedColorsAccess, shiftedColorsUniform)
-  .with(scaleAccess, scaleUniform)
-  .with(aspectRatioAccess, aspectRatioUniform)
-  .withVertex(foregroundVertex)
-  .withFragment(foregroundFragment, { format: presentationFormat })
-  .createPipeline();
+const midgroundPipeline = pipelineBase.createRenderPipeline({
+  vertex: midgroundVertex,
+  fragment: midgroundFragment,
+});
 
-// main drawing loop
-let isRunning = true;
+const foregroundPipeline = pipelineBase.createRenderPipeline({
+  vertex: foregroundVertex,
+  fragment: foregroundFragment,
+});
 
 function getShiftedColors(timestamp: number) {
   const shiftBy = Math.floor(timestamp / getAnimationDuration()) %
@@ -93,9 +79,9 @@ function getShiftedColors(timestamp: number) {
   return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
 }
 
-function draw(timestamp: number) {
-  if (!isRunning) return;
+let animationFrame: number;
 
+function draw(timestamp: number) {
   const shiftedColors = getShiftedColors(timestamp);
 
   shiftedColorsUniform.write(shiftedColors);
@@ -124,13 +110,12 @@ function draw(timestamp: number) {
     .with(getInstanceInfoBindGroup())
     .draw(3, getGridParams().triangleCount);
 
-  requestAnimationFrame(draw);
+  animationFrame = requestAnimationFrame(draw);
 }
 
-requestAnimationFrame(draw);
+animationFrame = requestAnimationFrame(draw);
 
 // cleanup
-
 const resizeObserver = new ResizeObserver(() => {
   updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
   updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup);
@@ -140,8 +125,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
-  isRunning = false;
-
+  cancelAnimationFrame(animationFrame);
   resizeObserver.disconnect();
   root.destroy();
 }
