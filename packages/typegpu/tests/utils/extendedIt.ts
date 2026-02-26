@@ -64,6 +64,18 @@ const mockRenderPassEncoder = {
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
   setStencilReference: vi.fn(),
+  executeBundles: vi.fn(),
+};
+
+const mockRenderBundleEncoder = {
+  draw: vi.fn(),
+  drawIndexed: vi.fn(),
+  setBindGroup: vi.fn(),
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  finish: vi.fn(() => 'mockRenderBundle'),
+  label: '<unnamed>',
 };
 
 const mockQuerySet = {
@@ -150,6 +162,9 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
+  renderBundleEncoder: GPURenderBundleEncoder & {
+    mock: typeof mockRenderBundleEncoder;
+  };
   root: ExperimentalTgpuRoot;
 }>({
   _global: [
@@ -168,6 +183,14 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  renderBundleEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+        mock: typeof mockRenderBundleEncoder;
       },
     );
   },

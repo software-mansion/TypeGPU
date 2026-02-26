@@ -642,7 +642,98 @@ export type CreateTextureResult<
   >
 >;
 
-export interface RenderPass {
+export interface RenderBundleEncoderPass {
+  /**
+   * Sets the current {@link TgpuRenderPipeline} for subsequent draw calls.
+   * @param pipeline - The render pipeline to use.
+   */
+  setPipeline(pipeline: TgpuRenderPipeline): void;
+
+  /**
+   * Sets the current index buffer.
+   * @param buffer - Buffer containing index data to use for subsequent drawing commands.
+   * @param indexFormat - Format of the index data contained in `buffer`.
+   * @param offset - Offset in bytes into `buffer` where the index data begins. Defaults to `0`.
+   * @param size - Size in bytes of the index data in `buffer`.
+   *               Defaults to the size of the buffer minus the offset.
+   */
+  setIndexBuffer<TData extends WgslArray | Disarray>(
+    buffer: TgpuBuffer<TData> | GPUBuffer,
+    indexFormat: GPUIndexFormat,
+    offset?: GPUSize64,
+    size?: GPUSize64,
+  ): void;
+
+  /**
+   * Binds a vertex buffer to the given vertex layout for subsequent draw calls.
+   * @param vertexLayout - The vertex layout describing the buffer's structure.
+   * @param buffer - The vertex buffer to bind.
+   * @param offset - Offset in bytes into `buffer`. Defaults to `0`.
+   * @param size - Size in bytes to bind. Defaults to the remainder of the buffer.
+   */
+  setVertexBuffer<TData extends WgslArray | Disarray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
+    offset?: GPUSize64,
+    size?: GPUSize64,
+  ): void;
+
+  /**
+   * Associates a bind group with the given layout for subsequent draw calls.
+   * @param bindGroupLayout - The layout the bind group conforms to.
+   * @param bindGroup - The bind group to associate.
+   */
+  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+  ): void;
+
+  /**
+   * Draws primitives.
+   * @param vertexCount - The number of vertices to draw.
+   * @param instanceCount - The number of instances to draw.
+   * @param firstVertex - Offset into the vertex buffers, in vertices, to begin drawing from.
+   * @param firstInstance - First instance to draw.
+   */
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void;
+  /**
+   * Draws indexed primitives.
+   * @param indexCount - The number of indices to draw.
+   * @param instanceCount - The number of instances to draw.
+   * @param firstIndex - Offset into the index buffer, in indices, begin drawing from.
+   * @param baseVertex - Added to each index value before indexing into the vertex buffers.
+   * @param firstInstance - First instance to draw.
+   */
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void;
+  /**
+   * Draws primitives using parameters read from a {@link GPUBuffer}.
+   * @param indirectBuffer - Buffer containing the indirect draw parameters.
+   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
+   */
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
+  /**
+   * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
+   * @param indirectBuffer - Buffer containing the indirect drawIndexed parameters.
+   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
+   */
+  drawIndexedIndirect(
+    indirectBuffer: GPUBuffer,
+    indirectOffset: GPUSize64,
+  ): void;
+}
+
+export interface RenderPass extends RenderBundleEncoderPass {
   /**
    * Sets the viewport used during the rasterization stage to linearly map from
    * NDC (i.e., normalized device coordinates) to viewport coordinates.
@@ -685,14 +776,14 @@ export interface RenderPass {
    * the {@link GPUStencilOperation#"replace"} {@link GPUStencilOperation}.
    * @param reference - The new stencil reference value.
    */
-  setStencilReference(reference: GPUStencilValue): undefined;
+  setStencilReference(reference: GPUStencilValue): void;
 
   /**
    * @param queryIndex - The index of the query in the query set.
    */
-  beginOcclusionQuery(queryIndex: GPUSize32): undefined;
+  beginOcclusionQuery(queryIndex: GPUSize32): void;
 
-  endOcclusionQuery(): undefined;
+  endOcclusionQuery(): void;
 
   /**
    * Executes the commands previously recorded into the given {@link GPURenderBundle}s as part of
@@ -706,7 +797,6 @@ export interface RenderPass {
    * @param bundles - List of render bundles to execute.
    */
   executeBundles(bundles: Iterable<GPURenderBundle>): undefined;
-
   setPipeline(pipeline: TgpuRenderPipeline): void;
 
   /**
@@ -724,14 +814,12 @@ export interface RenderPass {
     offset?: GPUSize64,
     size?: GPUSize64,
   ): void;
-
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
     offset?: GPUSize64,
     size?: GPUSize64,
   ): void;
-
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
@@ -772,7 +860,7 @@ export interface RenderPass {
    * @param indirectBuffer - Buffer containing the indirect draw parameters.
    * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
    */
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): undefined;
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
   /**
    * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
    * Tightly packed block of **five 32-bit unsigned integer values (20 bytes total)**, given in
@@ -783,7 +871,7 @@ export interface RenderPass {
   drawIndexedIndirect(
     indirectBuffer: GPUBuffer,
     indirectOffset: GPUSize64,
-  ): undefined;
+  ): void;
 }
 
 export type ValidateBufferSchema<TData extends BaseData> =
@@ -1006,6 +1094,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   '~unstable': Pick<
     ExperimentalTgpuRoot,
     | 'beginRenderPass'
+    | 'beginRenderBundleEncoder'
     | 'createComparisonSampler'
     | 'createGuardedComputePipeline'
     | 'createSampler'
@@ -1064,6 +1153,23 @@ export interface ExperimentalTgpuRoot
     descriptor: GPURenderPassDescriptor,
     callback: (pass: RenderPass) => void,
   ): void;
+
+  /**
+   * Creates a {@link GPURenderBundle} by recording draw commands into a
+   * {@link GPURenderBundleEncoder}. The resulting bundle can be replayed in a
+   * render pass via {@link RenderPass.executeBundles}.
+   *
+   * The caller is responsible for ensuring that the `descriptor` (e.g.
+   * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
+   * in which the bundle will be executed.
+   *
+   * @param descriptor - Describes the formats the bundle must be compatible with.
+   * @param callback - A function that records draw commands into the bundle.
+   */
+  beginRenderBundleEncoder(
+    descriptor: GPURenderBundleEncoderDescriptor,
+    callback: (pass: RenderBundleEncoderPass) => void,
+  ): GPURenderBundle;
 
   createSampler(props: WgslSamplerProps): TgpuFixedSampler;
 
