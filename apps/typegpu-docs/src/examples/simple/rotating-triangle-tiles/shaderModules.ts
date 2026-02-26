@@ -27,7 +27,7 @@ const MidgroundVertexOutput = {
 };
 
 /** draws middle triangle expanding to fill in the full base triangle */
-const midgroundVertex = tgpu['~unstable'].vertexFn({
+const midgroundVertex = tgpu.vertexFn({
   in: {
     vertexIndex: d.builtin.vertexIndex,
     instanceIndex: d.builtin.instanceIndex,
@@ -53,8 +53,7 @@ const midgroundVertex = tgpu['~unstable'].vertexFn({
     middleSquareScaleAccess.$,
   );
 
-  let calculatedPosition = rotate(vertexPosition, angle);
-  calculatedPosition = std.mul(calculatedPosition, scaleFactor);
+  const calculatedPosition = rotate(vertexPosition, angle).mul(scaleFactor);
 
   const finalPosition = instanceTransform(
     calculatedPosition,
@@ -97,25 +96,36 @@ function edgeFunction(a: d.v2f, b: d.v2f, p: d.v2f) {
   return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
 }
 
-const midgroundFragment = tgpu['~unstable'].fragmentFn({
-  in: MidgroundVertexOutput,
-  out: d.vec4f,
-})(({ maskP0, maskP1, maskP2, vertexClipPos }) => {
+function isOutsideMask(
+  maskP0: d.v2f,
+  maskP1: d.v2f,
+  maskP2: d.v2f,
+  vertexClipPos: d.v2f,
+) {
+  'use gpu';
   const e0 = edgeFunction(maskP0, maskP1, vertexClipPos);
   const e1 = edgeFunction(maskP1, maskP2, vertexClipPos);
   const e2 = edgeFunction(maskP2, maskP0, vertexClipPos);
 
-  if ((e0 > 0 || e1 > 0 || e2 > 0) && drawOverNeighborsAccess.$ === 0) {
+  return (e0 > 0 || e1 > 0 || e2 > 0);
+}
+
+const midgroundFragment = tgpu.fragmentFn({
+  in: MidgroundVertexOutput,
+  out: d.vec4f,
+})(({ maskP0, maskP1, maskP2, vertexClipPos }) => {
+  if (
+    drawOverNeighborsAccess.$ === 0 &&
+    isOutsideMask(maskP0, maskP1, maskP2, vertexClipPos)
+  ) {
     std.discard();
   }
 
-  const color = d.vec4f(shiftedColorsAccess.$[1]);
-
-  return color;
+  return d.vec4f(shiftedColorsAccess.$[1]);
 });
 
 /** the smallest triangle that appears from nothing and goes to half the size of the base triangle*/
-const foregroundVertex = tgpu['~unstable'].vertexFn({
+const foregroundVertex = tgpu.vertexFn({
   in: {
     vertexIndex: d.builtin.vertexIndex,
     instanceIndex: d.builtin.instanceIndex,
@@ -136,8 +146,7 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
   );
 
   const scaleFactor = animationProgressAccess.$;
-  calculatedPosition = rotate(calculatedPosition, angle);
-  calculatedPosition = std.mul(calculatedPosition, scaleFactor);
+  calculatedPosition = rotate(calculatedPosition, angle).mul(scaleFactor);
 
   const finalPosition = instanceTransform(
     calculatedPosition,
@@ -151,7 +160,7 @@ const foregroundVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const foregroundFragment = tgpu['~unstable'].fragmentFn({
+const foregroundFragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(() => {
   const color = d.vec4f(shiftedColorsAccess.$[2]);

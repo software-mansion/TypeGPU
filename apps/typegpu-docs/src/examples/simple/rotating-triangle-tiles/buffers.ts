@@ -8,13 +8,13 @@ import {
   INITIAL_STEP_ROTATION,
 } from './params.ts';
 
-const stepRotationAccess = tgpu['~unstable'].accessor(d.f32);
-const shiftedColorsAccess = tgpu['~unstable'].accessor(d.arrayOf(d.vec4f, 3));
-const animationProgressAccess = tgpu['~unstable'].accessor(d.f32);
-const middleSquareScaleAccess = tgpu['~unstable'].accessor(d.f32);
-const drawOverNeighborsAccess = tgpu['~unstable'].accessor(d.u32);
-const scaleAccess = tgpu['~unstable'].accessor(d.f32);
-const aspectRatioAccess = tgpu['~unstable'].accessor(d.f32);
+const stepRotationAccess = tgpu.accessor(d.f32);
+const shiftedColorsAccess = tgpu.accessor(d.arrayOf(d.vec4f, 3));
+const animationProgressAccess = tgpu.accessor(d.f32);
+const middleSquareScaleAccess = tgpu.accessor(d.f32);
+const drawOverNeighborsAccess = tgpu.accessor(d.u32);
+const scaleAccess = tgpu.accessor(d.f32);
+const aspectRatioAccess = tgpu.accessor(d.f32);
 
 const instanceInfoLayout = tgpu.bindGroupLayout({
   instanceInfo: { storage: InstanceInfoArray },

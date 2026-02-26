@@ -19,27 +19,7 @@ describe('rotating-triangle-tiles example', () => {
     }, device);
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct backgroundVertex_Output {
-        @builtin(position) outPos: vec4f,
-      }
-
-      struct backgroundVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn backgroundVertex(_arg_0: backgroundVertex_Input) -> backgroundVertex_Output {
-        var positions = array<vec2f, 6>(vec2f(1, -1), vec2f(-1, 1), vec2f(-1), vec2f(1), vec2f(-1, 1), vec2f(1, -1));
-        return backgroundVertex_Output(vec4f(positions[_arg_0.vertexIndex], 0f, 1f));
-      }
-
-      @group(0) @binding(0) var<storage, read> shiftedColorsBuffer: array<vec4f, 3>;
-
-      @fragment fn backgroundFragment() -> @location(0) vec4f {
-        var color = shiftedColorsBuffer[0i];
-        return color;
-      }
-
-      const originalVertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0.8660253882408142, -0.5), vec2f(0, 1), vec2f(-0.8660253882408142, -0.5));
+      "const originalVertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0.8660253882408142, -0.5), vec2f(0, 1), vec2f(-0.8660253882408142, -0.5));
 
       struct InstanceInfo {
         offset: vec2f,
@@ -48,7 +28,7 @@ describe('rotating-triangle-tiles example', () => {
 
       @group(1) @binding(0) var<storage, read> instanceInfo: array<InstanceInfo>;
 
-      @group(0) @binding(0) var<uniform> stepRotationBuffer: f32;
+      @group(0) @binding(0) var<uniform> stepRotationUniform: f32;
 
       fn interpolate(inputValue: f32, inputLowerEndpoint: f32, inputUpperEndpoint: f32, outputLowerEndpoint: f32, outputUpperEndpoint: f32) -> f32 {
         let inputProgress = (inputValue - inputLowerEndpoint);
@@ -65,7 +45,7 @@ describe('rotating-triangle-tiles example', () => {
 
       @group(0) @binding(1) var<uniform> animationProgressUniform: f32;
 
-      @group(0) @binding(2) var<uniform> middleSquareScaleBuffer: f32;
+      @group(0) @binding(2) var<uniform> middleSquareScaleUniform: f32;
 
       fn rotate(coordinate: vec2f, angleInDegrees: f32) -> vec2f {
         let angle = ((angleInDegrees * 3.141592653589793f) / 180f);
@@ -85,9 +65,9 @@ describe('rotating-triangle-tiles example', () => {
         return (mat2x2f((1f / aspectRatioValue), 0f, 0f, 1f) * transformedPoint);
       }
 
-      @group(0) @binding(3) var<uniform> scaleBuffer: f32;
+      @group(0) @binding(3) var<uniform> scaleUniform: f32;
 
-      @group(0) @binding(4) var<uniform> aspectRatioBuffer: f32;
+      @group(0) @binding(4) var<uniform> aspectRatioUniform: f32;
 
       struct midgroundVertex_Output {
         @builtin(position) outPos: vec4f,
@@ -106,24 +86,30 @@ describe('rotating-triangle-tiles example', () => {
         const SMALLEST_LOOPING_ROTATION_ANGLE = 120f;
         var vertexPosition = originalVertices[_arg_0.vertexIndex];
         let instanceInfo_1 = (&instanceInfo[_arg_0.instanceIndex]);
-        let angle = interpolateBezier(animationProgressUniform, (stepRotationBuffer % SMALLEST_LOOPING_ROTATION_ANGLE), (stepRotationBuffer + (stepRotationBuffer % SMALLEST_LOOPING_ROTATION_ANGLE)));
-        let scaleFactor = interpolateBezier(animationProgressUniform, 0.5f, middleSquareScaleBuffer);
-        var calculatedPosition = rotate(vertexPosition, angle);
-        calculatedPosition = (calculatedPosition * scaleFactor);
-        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
-        var maskP0 = instanceTransform(originalVertices[0i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
-        var maskP1 = instanceTransform(originalVertices[1i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
-        var maskP2 = instanceTransform(originalVertices[2i], (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
+        let angle = interpolateBezier(animationProgressUniform, (stepRotationUniform % SMALLEST_LOOPING_ROTATION_ANGLE), (stepRotationUniform + (stepRotationUniform % SMALLEST_LOOPING_ROTATION_ANGLE)));
+        let scaleFactor = interpolateBezier(animationProgressUniform, 0.5f, middleSquareScaleUniform);
+        var calculatedPosition = (rotate(vertexPosition, angle) * scaleFactor);
+        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleUniform, aspectRatioUniform);
+        var maskP0 = instanceTransform(originalVertices[0i], (*instanceInfo_1), scaleUniform, aspectRatioUniform);
+        var maskP1 = instanceTransform(originalVertices[1i], (*instanceInfo_1), scaleUniform, aspectRatioUniform);
+        var maskP2 = instanceTransform(originalVertices[2i], (*instanceInfo_1), scaleUniform, aspectRatioUniform);
         return midgroundVertex_Output(vec4f(finalPosition, 0f, 1f), maskP0, maskP1, maskP2, finalPosition);
       }
+
+      @group(0) @binding(5) var<uniform> drawOverNeighborsUniform: u32;
 
       fn edgeFunction(a: vec2f, b: vec2f, p: vec2f) -> f32 {
         return (((p.x - a.x) * (b.y - a.y)) - ((p.y - a.y) * (b.x - a.x)));
       }
 
-      @group(0) @binding(5) var<uniform> drawOverNeighborsBuffer: u32;
+      fn isOutsideMask(maskP0: vec2f, maskP1: vec2f, maskP2: vec2f, vertexClipPos: vec2f) -> bool {
+        let e0 = edgeFunction(maskP0, maskP1, vertexClipPos);
+        let e1 = edgeFunction(maskP1, maskP2, vertexClipPos);
+        let e2 = edgeFunction(maskP2, maskP0, vertexClipPos);
+        return (((e0 > 0f) || (e1 > 0f)) || (e2 > 0f));
+      }
 
-      @group(0) @binding(6) var<storage, read> shiftedColorsBuffer: array<vec4f, 3>;
+      @group(0) @binding(6) var<uniform> shiftedColorsUniform: array<vec4f, 3>;
 
       struct midgroundFragment_Input {
         @builtin(position) outPos: vec4f,
@@ -134,14 +120,10 @@ describe('rotating-triangle-tiles example', () => {
       }
 
       @fragment fn midgroundFragment(_arg_0: midgroundFragment_Input) -> @location(0) vec4f {
-        let e0 = edgeFunction(_arg_0.maskP0, _arg_0.maskP1, _arg_0.vertexClipPos);
-        let e1 = edgeFunction(_arg_0.maskP1, _arg_0.maskP2, _arg_0.vertexClipPos);
-        let e2 = edgeFunction(_arg_0.maskP2, _arg_0.maskP0, _arg_0.vertexClipPos);
-        if (((((e0 > 0f) || (e1 > 0f)) || (e2 > 0f)) && (drawOverNeighborsBuffer == 0u))) {
+        if (((drawOverNeighborsUniform == 0u) && isOutsideMask(_arg_0.maskP0, _arg_0.maskP1, _arg_0.maskP2, _arg_0.vertexClipPos))) {
           discard;;
         }
-        var color = shiftedColorsBuffer[1i];
-        return color;
+        return shiftedColorsUniform[1i];
       }
 
       const originalVertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0.8660253882408142, -0.5), vec2f(0, 1), vec2f(-0.8660253882408142, -0.5));
@@ -168,7 +150,7 @@ describe('rotating-triangle-tiles example', () => {
 
       @group(0) @binding(0) var<uniform> animationProgressUniform: f32;
 
-      @group(0) @binding(1) var<uniform> stepRotationBuffer: f32;
+      @group(0) @binding(1) var<uniform> stepRotationUniform: f32;
 
       fn rotate(coordinate: vec2f, angleInDegrees: f32) -> vec2f {
         let angle = ((angleInDegrees * 3.141592653589793f) / 180f);
@@ -188,9 +170,9 @@ describe('rotating-triangle-tiles example', () => {
         return (mat2x2f((1f / aspectRatioValue), 0f, 0f, 1f) * transformedPoint);
       }
 
-      @group(0) @binding(2) var<uniform> scaleBuffer: f32;
+      @group(0) @binding(2) var<uniform> scaleUniform: f32;
 
-      @group(0) @binding(3) var<uniform> aspectRatioBuffer: f32;
+      @group(0) @binding(3) var<uniform> aspectRatioUniform: f32;
 
       struct foregroundVertex_Output {
         @builtin(position) outPos: vec4f,
@@ -205,18 +187,17 @@ describe('rotating-triangle-tiles example', () => {
         var vertexPosition = originalVertices[_arg_0.vertexIndex];
         var calculatedPosition = (mat2x2f(0.5, 0, 0, 0.5) * vertexPosition);
         let instanceInfo_1 = (&instanceInfo[_arg_0.instanceIndex]);
-        let angle = interpolateBezier(animationProgressUniform, 0f, stepRotationBuffer);
+        let angle = interpolateBezier(animationProgressUniform, 0f, stepRotationUniform);
         let scaleFactor = animationProgressUniform;
-        calculatedPosition = rotate(calculatedPosition, angle);
-        calculatedPosition = (calculatedPosition * scaleFactor);
-        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleBuffer, aspectRatioBuffer);
+        calculatedPosition = (rotate(calculatedPosition, angle) * scaleFactor);
+        var finalPosition = instanceTransform(calculatedPosition, (*instanceInfo_1), scaleUniform, aspectRatioUniform);
         return foregroundVertex_Output(vec4f(finalPosition, 0f, 1f));
       }
 
-      @group(0) @binding(4) var<storage, read> shiftedColorsBuffer: array<vec4f, 3>;
+      @group(0) @binding(4) var<uniform> shiftedColorsUniform: array<vec4f, 3>;
 
       @fragment fn foregroundFragment() -> @location(0) vec4f {
-        var color = shiftedColorsBuffer[2i];
+        var color = shiftedColorsUniform[2i];
         return color;
       }"
     `);
