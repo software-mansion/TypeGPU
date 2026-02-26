@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 
 describe('Math', () => {
   it('allows using Math.PI', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.ts';
+import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 const RED = d.vec3f(1, 0, 0);

@@ -9,7 +9,7 @@
     "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
     "fix": "oxlint --fix && deno fmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
-    "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/index.ts",
+    "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/src/index.ts packages/**/src/index.js !packages/**/node_modules",
     "test:types": "pnpm run -r --parallel test:types",
     "test:style": "oxlint --max-warnings=0 --type-aware --report-unused-disable-directives && deno fmt --check",
     "test:unit-and-attest": "vitest run --project=!browser",

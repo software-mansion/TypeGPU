@@ -125,8 +125,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/typegpu
       unplugin-typegpu:
-        specifier: ^0.9.0
-        version: 0.9.0(typegpu@packages+typegpu)
+        specifier: workspace:*
+        version: link:../../packages/unplugin-typegpu
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -437,7 +437,7 @@ importers:
         specifier: ^2.21.2
         version: 2.21.2
       typegpu:
-        specifier: workspace:^0.9.0
+        specifier: workspace:^0.10.1
         version: link:../typegpu
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -463,7 +463,7 @@ importers:
   packages/tinyest-for-wgsl:
     dependencies:
       tinyest:
-        specifier: workspace:~0.2.0
+        specifier: workspace:~0.3.0
         version: link:../tinyest
     devDependencies:
       '@babel/parser':
@@ -489,7 +489,7 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.2.0
+        specifier: workspace:~0.3.0
         version: link:../tinyest
       tsover-runtime:
         specifier: ^0.0.5
@@ -690,13 +690,13 @@ importers:
         specifier: ^4.0.3
         version: 4.0.3
       tinyest:
-        specifier: workspace:~0.2.0
+        specifier: workspace:~0.3.0
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.2.0
+        specifier: workspace:~0.3.0
         version: link:../tinyest-for-wgsl
       typegpu:
-        specifier: workspace:^0.9.0
+        specifier: workspace:^0.10.1
         version: link:../typegpu
       unplugin:
         specifier: ^2.3.5
@@ -1020,10 +1020,6 @@ packages:
 
   '@babel/runtime@7.26.9':
     resolution: {integrity: sha512-aA63XwOkcl4xxQa3HjPMqOP6LiK0ZDv3mUPYEFXkpHbaFjtGggE1A61FjFzJnB+p7/oy2gA8E+rcBNl/zC1tMg==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/standalone@7.27.0':
-    resolution: {integrity: sha512-UxFDpi+BuSz6Q1X73P3ZSM1CB7Nbbqys+7COi/tdouRuaqRsJ6GAzUyxTswbqItHSItVY3frQdd+paBHHGEk9g==}
     engines: {node: '>=6.9.0'}
 
   '@babel/standalone@7.28.6':
@@ -6835,14 +6831,6 @@ packages:
     resolution: {integrity: sha512-74pmf47HY/bHqamcCMGris+1AtGGsqTZ3Hc/UK4QvSmRuf/9PIF9753+c8XBh7JfX2r9KeZtVjOYjd6vFpc0qQ==}
     engines: {node: '>=18.0.0'}
 
-  tinyest-for-wgsl@0.2.0:
-    resolution: {integrity: sha512-aFKlgGEjQJYcq31+5ykwyd0Cbw5BCb3s/ATje9wlkgyNPwKtSZCSXAPsCswjaQBCiHXub0onzsfgYvy7ez8t0Q==}
-    engines: {node: '>=12.20.0'}
-
-  tinyest@0.2.0:
-    resolution: {integrity: sha512-k8XL8FipMVboHtNwAJ6PgGVkWk+9hWEROGoxEXJKmO9ZOXehlBgdGY5uCkGRgT60TYJhtfOelvC/ikMpKYAmHA==}
-    engines: {node: '>=12.20.0'}
-
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
@@ -7163,11 +7151,6 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
-
-  unplugin-typegpu@0.9.0:
-    resolution: {integrity: sha512-xEuOgh9u5BXAG+T2kiBKT2Dn5+gTkcBeHFGMMNMjOx5NT6HcKI/uu6XucAnGxaE/hkJzwR6aQxxmMe6lhbcxcg==}
-    peerDependencies:
-      typegpu: ^0.9.0
 
   unplugin@2.3.5:
     resolution: {integrity: sha512-RyWSb5AHmGtjjNQ6gIlA67sHOsWpsbWpwDokLwTcejVdOjEkJZh7QKu14J00gDDVSh8kGH4KYC/TNBceXFZhtw==}
@@ -8356,8 +8339,6 @@ snapshots:
   '@babel/runtime@7.26.9':
     dependencies:
       regenerator-runtime: 0.14.1
-
-  '@babel/standalone@7.27.0': {}
 
   '@babel/standalone@7.28.6': {}
 
@@ -14701,12 +14682,6 @@ snapshots:
 
   tinybench@3.1.1: {}
 
-  tinyest-for-wgsl@0.2.0:
-    dependencies:
-      tinyest: 0.2.0
-
-  tinyest@0.2.0: {}
-
   tinyexec@0.3.2: {}
 
   tinyexec@1.0.2: {}
@@ -15058,19 +15033,6 @@ snapshots:
     optional: true
 
   universalify@2.0.1: {}
-
-  unplugin-typegpu@0.9.0(typegpu@packages+typegpu):
-    dependencies:
-      '@babel/standalone': 7.27.0
-      defu: 6.1.4
-      estree-walker: 3.0.3
-      magic-string-ast: 1.0.0
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      tinyest: 0.2.0
-      tinyest-for-wgsl: 0.2.0
-      typegpu: link:packages/typegpu
-      unplugin: 2.3.5
 
   unplugin@2.3.5:
     dependencies:

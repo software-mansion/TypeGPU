@@ -7,7 +7,7 @@ import type {
 } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.ts';
+import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
 import type { Prettify } from '../src/shared/utilityTypes.ts';
 
 const empty = tgpu.fn([])`() {

@@ -1,4 +1,4 @@
-import { d, std } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import * as p from './params.ts';
 import { computeBindGroupLayout as layout } from './schemas.ts';
 import { projectPointOnLine } from './tgsl-helpers.ts';
@@ -39,7 +39,7 @@ export const simulate = (fishIndex: number) => {
   if (cohesionCount > 0) {
     cohesion = cohesion / cohesionCount - fishData.position;
   }
-  for (let i = 0; i < 3; i += 1) {
+  for (const i of tgpu.unroll([0, 1, 2])) {
     const repulsion = d.vec3f();
     repulsion[i] = 1;
 

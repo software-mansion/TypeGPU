@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { textureGather } from '../../../src/std/texture.ts';
-import tgpu from '../../../src/index.ts';
+import tgpu from '../../../src/index.js';
 import * as d from '../../../src/data/index.ts';
 import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
 import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {

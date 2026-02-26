@@ -1,4 +1,4 @@
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 

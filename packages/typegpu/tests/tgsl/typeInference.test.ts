@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';

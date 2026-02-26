@@ -6,7 +6,7 @@ import {
   type TgpuBuffer,
   type TgpuTextureView,
   type UniformFlag,
-} from '../src/index.ts';
+} from '../src/index.js';
 import {
   type ExtractBindGroupInputFromLayout,
   MissingBindingError,

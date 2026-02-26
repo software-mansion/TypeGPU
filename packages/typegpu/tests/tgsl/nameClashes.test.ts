@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 import { test } from '../utils/extendedIt.ts';
 
 test('should differentiate parameter names from existing declarations', () => {

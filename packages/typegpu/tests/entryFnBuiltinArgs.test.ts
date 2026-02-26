@@ -4,7 +4,7 @@ import tgpu, {
   type TgpuComputeFn,
   type TgpuFragmentFn,
   type TgpuVertexFn,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { attest } from '@ark/attest';
 
 describe('entry functions accepting only the allowed subset of builtins', () => {

@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { d, tgpu } from '../../src/index.ts';
+import { d, tgpu } from '../../src/index.js';
 import { test } from '../utils/extendedIt.ts';
 
 test('vec3f() +', () => {
@@ -109,6 +109,43 @@ test('vec3f() %', () => {
   expect(String(main())).toMatchInlineSnapshot(
     `"vec3f(1, 2, 1)"`,
   );
+});
+
+test('+= refOfVec3f', () => {
+  const constant = tgpu.const(d.vec3f, d.vec3f(-10));
+  const foo = (arg: d.v3f) => {
+    'use gpu';
+    const local = d.vec3f(100, 10, 1);
+
+    let result = d.vec3f();
+    result += local;
+    result += arg;
+    result += constant.$;
+    return result;
+  };
+
+  const main = () => {
+    'use gpu';
+    return foo(d.vec3f(1, 2, 3));
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "const constant: vec3f = vec3f(-10);
+
+    fn foo(arg: vec3f) -> vec3f {
+      var local = vec3f(100, 10, 1);
+      var result = vec3f();
+      result += local;
+      result += arg;
+      result += constant;
+      return result;
+    }
+
+    fn main() -> vec3f {
+      return foo(vec3f(1, 2, 3));
+    }"
+  `);
+  expect(main().toString()).toMatchInlineSnapshot(`"vec3f(91, 2, -6)"`);
 });
 
 describe('num op', () => {

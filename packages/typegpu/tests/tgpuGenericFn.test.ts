@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { std } from '../src/index.ts';
+import tgpu, { std } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {

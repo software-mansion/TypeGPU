@@ -2,7 +2,7 @@ import { attest } from '@ark/attest';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
-import { d, tgpu } from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';

@@ -18,8 +18,10 @@ import {
   isPtr,
   isVec,
   isWgslArray,
+  isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
+import { accessProp } from './accessProp.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
 const indexableTypeToResult = {
@@ -114,7 +116,7 @@ export function accessIndex(
   // matrix
   if ((target.dataType as BaseData).type in indexableTypeToResult) {
     throw new Error(
-      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+      "The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.",
     );
   }
 
@@ -127,6 +129,13 @@ export function accessIndex(
       // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
       (target.value as any)[index.value as number],
     );
+  }
+
+  if (
+    isWgslStruct(target.dataType) && isKnownAtComptime(index) &&
+    typeof index.value === 'string'
+  ) {
+    return accessProp(target, index.value);
   }
 
   return undefined;

@@ -608,9 +608,81 @@ describe('jelly-slider example', () => {
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         var dimensions = textureDimensions(currentTexture);
-        for (var x = -1; (x <= 1i); x++) {
-          for (var y = -1; (y <= 1i); y++) {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(x, y));
+        // unrolled iteration #0
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        // unrolled iteration #1
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i());
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        // unrolled iteration #2
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);

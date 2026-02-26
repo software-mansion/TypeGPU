@@ -8,7 +8,7 @@ import type {
   TgpuReadonly,
   TgpuUniform,
   UniformFlag,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { attest } from '@ark/attest';
 
 describe('root.createMutable', () => {

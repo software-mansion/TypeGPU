@@ -95,7 +95,7 @@ const sampleWithChromaticAberration = (
 ) => {
   'use gpu';
   const samples = d.arrayOf(d.vec3f, 3)();
-  for (let i = 0; i < 3; i++) {
+  for (const i of tgpu.unroll([0, 1, 2])) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
     samples[i] =
       std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).rgb;

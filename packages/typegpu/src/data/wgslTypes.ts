@@ -1,5 +1,7 @@
-// oxlint-disable-next-line no-unused-vars -- it is used
-import type { Operator } from 'tsover-runtime';
+// We import tsover-runtime, then use Symbol.* types, because tsdown strips the imported `Operator`
+// type no matter what. Seems like a bug in tsdown.
+// oxlint-disable-next-line no-unassigned-import
+import 'tsover-runtime';
 import type { TgpuNamable } from '../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -65,14 +67,14 @@ export interface vecInfixNotation<T extends vecBase> {
   div(other: T | number): T;
   mod(other: T | number): T;
 
-  [Operator.plus](lhs: T | number, rhs: T | number): T;
-  [Operator.minus](lhs: T | number, rhs: T | number): T;
-  [Operator.star](
+  [Symbol.operatorPlus](lhs: T | number, rhs: T | number): T;
+  [Symbol.operatorMinus](lhs: T | number, rhs: T | number): T;
+  [Symbol.operatorStar](
     lhs: mBaseForVec<T> | T | number,
     rhs: mBaseForVec<T> | T | number,
   ): T;
-  [Operator.slash](lhs: T | number, rhs: T | number): T;
-  [Operator.percent](lhs: T | number, rhs: T | number): T;
+  [Symbol.operatorSlash](lhs: T | number, rhs: T | number): T;
+  [Symbol.operatorPercent](lhs: T | number, rhs: T | number): T;
 }
 
 /**
@@ -88,11 +90,11 @@ export interface matInfixNotation<T extends matBase> {
   mul(other: T | number): T;
   mul(other: vBaseForMat<T>): vBaseForMat<T>;
 
-  [Operator.plus](lhs: T, rhs: T): T;
-  [Operator.minus](lhs: T, rhs: T): T;
-  [Operator.star](lhs: T | number, rhs: T | number): T;
-  [Operator.star](lhs: T, rhs: vBaseForMat<T>): vBaseForMat<T>;
-  [Operator.star](lhs: vBaseForMat<T>, rhs: T): vBaseForMat<T>;
+  [Symbol.operatorPlus](lhs: T, rhs: T): T;
+  [Symbol.operatorMinus](lhs: T, rhs: T): T;
+  [Symbol.operatorStar](lhs: T | number, rhs: T | number): T;
+  [Symbol.operatorStar](lhs: T, rhs: vBaseForMat<T>): vBaseForMat<T>;
+  [Symbol.operatorStar](lhs: vBaseForMat<T>, rhs: T): vBaseForMat<T>;
 }
 
 /**

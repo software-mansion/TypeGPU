@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d, tgpu } from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {

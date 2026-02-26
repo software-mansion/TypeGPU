@@ -80,9 +80,161 @@ describe('jump flood (distance) example', () => {
         var bestOutsideCoord = vec2f(-1);
         var bestInsideDist = 1e+20;
         var bestOutsideDist = 1e+20;
-        for (var dy = -1; (dy <= 1i); dy++) {
-          for (var dx = -1; (dx <= 1i); dx++) {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((dx * offset), (dy * offset)));
+        // unrolled iteration #0
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+        }
+        // unrolled iteration #1
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+        }
+        // unrolled iteration #2
+        {
+          // unrolled iteration #0
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #1
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
+            if ((sample.inside.x >= 0f)) {
+              let dInside = distance(pos, (sample.inside * vec2f(size)));
+              if ((dInside < bestInsideDist)) {
+                bestInsideDist = dInside;
+                bestInsideCoord = sample.inside;
+              }
+            }
+            if ((sample.outside.x >= 0f)) {
+              let dOutside = distance(pos, (sample.outside * vec2f(size)));
+              if ((dOutside < bestOutsideDist)) {
+                bestOutsideDist = dOutside;
+                bestOutsideCoord = sample.outside;
+              }
+            }
+          }
+          // unrolled iteration #2
+          {
+            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {

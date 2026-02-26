@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { setName } from '../src/shared/meta.ts';
 import {
   $gpuValueOf,

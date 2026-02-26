@@ -8,7 +8,7 @@ import tgpu, {
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,
   type TgpuVertexFnShell,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 
