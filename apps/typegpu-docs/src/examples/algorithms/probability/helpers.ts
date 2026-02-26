@@ -1,8 +1,7 @@
-import { randf } from '@typegpu/noise';
 import tgpu, { d } from 'typegpu';
-
+import { BPETER, LCG, randf, type StatefulGenerator } from '@typegpu/noise';
+import { Distribution, Generator, PlotType, type PRNG } from './types.ts';
 import * as c from './constants.ts';
-import { Distribution, PlotType, type PRNG } from './types.ts';
 
 const normal = d.vec3f(1.41, 1.41, 0);
 const z2D = 0.5;
@@ -95,3 +94,11 @@ const distributionCameras = {
 export function getCameraPosition(distribution: Distribution): number[] {
   return distributionCameras[distribution];
 }
+
+const GENERATOR_MAP = {
+  [Generator.BPETER]: BPETER,
+  [Generator.LCG]: LCG,
+};
+
+export const getGenerator = (gen: Generator): StatefulGenerator =>
+  GENERATOR_MAP[gen];

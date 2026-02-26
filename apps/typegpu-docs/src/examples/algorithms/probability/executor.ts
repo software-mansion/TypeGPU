@@ -1,4 +1,8 @@
-import { randf } from '@typegpu/noise';
+import {
+  randf,
+  randomGeneratorSlot,
+  type StatefulGenerator,
+} from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -35,7 +39,11 @@ export class Executor {
       & StorageFlag,
     ]
   >;
-  readonly #pipelineCache: Map<TgpuFn, TgpuComputePipeline>;
+  // they can be WeakMaps, because we always have reference to distribution and PRNG
+  readonly #pipelineCache: WeakMap<
+    TgpuFn,
+    WeakMap<StatefulGenerator, TgpuComputePipeline>
+  >;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
@@ -92,32 +100,41 @@ export class Executor {
     });
   }
 
-  cachedPipeline(distribution: TgpuFn<() => d.Vec3f>) {
-    if (!import.meta.env.DEV) {
-      throw new Error('Function only for testing purposes');
+  #pipelineCacheSet(
+    distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
+    pipeline: TgpuComputePipeline,
+  ) {
+    let distributionMap = this.#pipelineCache.get(distribution);
+    if (!distributionMap) {
+      distributionMap = new WeakMap();
+      this.#pipelineCache.set(distribution, distributionMap);
     }
 
-    if (!this.#pipelineCache.has(distribution)) {
-      const pipeline = this.#root
+    distributionMap.set(generator, pipeline);
+  }
+
+  pipelineCacheGet(
+    distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
+  ): TgpuComputePipeline {
+    let pipeline = this.#pipelineCache.get(distribution)?.get(generator);
+    if (!pipeline) {
+      pipeline = this.#root
+        .with(randomGeneratorSlot, generator)
         .with(this.#distributionSlot, distribution)
         .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
-      this.#pipelineCache.set(distribution, pipeline);
+      this.#pipelineCacheSet(distribution, generator, pipeline);
     }
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion just checked it above
-    return this.#pipelineCache.get(distribution)!;
+    return pipeline;
   }
 
   async executeMoreWorkers(
     distribution: TgpuFn<() => d.Vec3f>,
+    generator: StatefulGenerator,
   ): Promise<d.v3f[]> {
-    let pipeline = this.#pipelineCache.get(distribution);
-    if (!pipeline) {
-      pipeline = this.#root
-        .with(this.#distributionSlot, distribution)
-        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
-      this.#pipelineCache.set(distribution, pipeline);
-    }
+    const pipeline = this.pipelineCacheGet(distribution, generator);
 
     pipeline
       .with(this.#bindGroup)
