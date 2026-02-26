@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
+import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import tgpu, {
   common,
@@ -1844,13 +1845,13 @@ describe('Render Bundles', () => {
     out: { color: d.vec4f },
   })('');
 
-  function createPipeline(
-    root: Parameters<Parameters<typeof it>[1]>[0]['root'],
-  ) {
+  function createPipeline(root: ExperimentalTgpuRoot) {
     return root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
       .withColorAttachment({
         color: {
           view: {} as unknown as GPUTextureView,
@@ -1876,5 +1877,98 @@ describe('Render Bundles', () => {
       undefined,
       undefined,
     );
+  });
+
+  it('skips redundant state application when same pipeline draws twice (dirty flag)', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline.draw(3);
+    pipeline.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-applies state when a different pipeline draws on the same encoder', ({ root, renderBundleEncoder }) => {
+    const pipeline1 = createPipeline(root).with(renderBundleEncoder);
+    const pipeline2 = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline1.draw(3);
+    pipeline2.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws on missing bind groups when using bundle encoder', ({ root, renderBundleEncoder }) => {
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
+
+    const vertexWithLayout = tgpu
+      .vertexFn({ out: { pos: d.builtin.position } })`{ layout.$.alpha; }`
+      .$uses({ layout });
+
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: vertexWithLayout,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    expect(() => pipeline.with(renderBundleEncoder).draw(6)).toThrowError(
+      new MissingBindGroupsError([layout]),
+    );
+  });
+
+  it('sets index buffer when drawIndexed is called on bundle encoder', ({ root, renderBundleEncoder }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index');
+
+    const pipeline = createPipeline(root)
+      .withIndexBuffer(indexBuffer)
+      .with(renderBundleEncoder);
+
+    pipeline.drawIndexed(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      setIndexBuffer: ReturnType<typeof vi.fn>;
+      drawIndexed: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalled();
+    expect(encoder.setIndexBuffer).toHaveBeenCalled();
+    expect(encoder.drawIndexed).toHaveBeenCalledWith(
+      6,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('creates its own render pass when using external command encoder', ({ root, commandEncoder }) => {
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const pipeline = createPipeline(root);
+    pipeline.with(commandEncoder).draw(3);
+
+    expect(beginRenderPassSpy).toHaveBeenCalled();
+    const pass = beginRenderPassSpy.mock.results[0]!.value;
+    expect(pass.setPipeline).toHaveBeenCalled();
+    expect(pass.draw).toHaveBeenCalledWith(3, undefined, undefined, undefined);
+    expect(pass.end).toHaveBeenCalled();
   });
 });
