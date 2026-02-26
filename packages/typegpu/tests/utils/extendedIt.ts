@@ -189,7 +189,9 @@ export const it = base.extend<{
 
   renderBundleEncoder: async ({ task }, use) => {
     await use(
-      mockRenderBundleEncoder,
+      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+        mock: typeof mockRenderBundleEncoder;
+      },
     );
   },
 
