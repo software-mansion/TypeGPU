@@ -152,4 +152,8 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   '@typegpu/three': {
     typeDef: { reroute: 'typegpu-three/src/index.ts' },
   },
+  '@typegpu/sort': {
+    import: { reroute: 'typegpu-sort/src/index.ts' },
+    typeDef: { reroute: 'typegpu-sort/src/index.ts' },
+  },
 };

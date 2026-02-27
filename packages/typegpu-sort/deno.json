@@ -1,0 +1,7 @@
+{
+  "exclude": ["."],
+  "fmt": {
+    "exclude": ["!.", "./dist"],
+    "singleQuote": true
+  }
+}

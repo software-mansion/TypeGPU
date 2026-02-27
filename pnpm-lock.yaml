@@ -218,6 +218,9 @@ importers:
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
+      '@typegpu/sort':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-sort
       '@typegpu/three':
         specifier: workspace:*
         version: link:../../packages/typegpu-three
@@ -635,6 +638,28 @@ importers:
       unbuild:
         specifier: catalog:build
         version: 3.5.0(tsover@5.9.11)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-sort:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.66
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: catalog:types
+        version: 5.9.3
+      unbuild:
+        specifier: catalog:build
+        version: 3.5.0(typescript@5.9.3)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
